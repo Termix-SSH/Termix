@@ -30,6 +30,6 @@ COPY package*.json ./
 RUN npm install
 
 # Copy server.js from its new location
-COPY /app/src/components/server.js /app/src/components
+COPY /home/bugattiguy527/src/components/server.js /app/src/components
 EXPOSE 3001
 CMD ["node", "server.js"]
