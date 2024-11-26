@@ -1,0 +1,16 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #1e1e1e;
+  color: white;
+}
+
+.display {
+  width: 80%;
+  height: 70vh;
+  border: 2px solid #444;
+  background: black;
+}

@@ -1,0 +1,24 @@
+services:
+  frontend:
+    build:
+      context: /workspaces/codespaces-react  # Path to your project root
+      dockerfile: Dockerfile
+      target: frontend-server  # Building the frontend server
+    ports:
+      - "80:80"  # Port mapping for HTTP traffic
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: /workspaces/codespaces-react  # Path to your project root
+      dockerfile: Dockerfile
+      target: backend  # Building the backend
+    ports:
+      - "3005:3005"  # Port mapping for your Node backend
+    networks:
+      - app-network
+
+networks:
+  app-network:  # Define a network for containers to communicate
+    driver: bridge
