@@ -128,7 +128,20 @@ yarn-error.log*
 
 # VSCode Files
 .vscode-server/
-/vscode-server
 
 # Configs
-.config
+.config/
+
+# .dotnet
+.dotnet/
+
+# .local
+.local/
+
+# Extras
+.bash_history
+.bashrc
+.init_done
+.profile
+.sudo_as_admin_successful
+.wget-hsts
