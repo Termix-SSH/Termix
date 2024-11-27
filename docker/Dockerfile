@@ -13,6 +13,7 @@ COPY backend/package*.json ./
 RUN npm install
 COPY backend/ .
 
+# Configure nginx
 FROM nginx:alpine
 
 RUN apk add --no-cache nodejs npm
