@@ -126,6 +126,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+.bash_history
+.bashrc
+.init_done
+.profile
+.sudo_as_admin_successful
+.wget-hsts
+
 # VSCode Files
 .vscode-server/
 
@@ -137,11 +144,3 @@ yarn-error.log*
 
 # .local
 .local/
-
-# Extras
-.bash_history
-.bashrc
-.init_done
-.profile
-.sudo_as_admin_successful
-.wget-hsts
