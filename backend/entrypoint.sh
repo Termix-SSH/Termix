@@ -1,5 +1,7 @@
 #!/bin/sh
-# Start the backend server in the background
+
+# Start the backend server
 node /backend/server.js &
-# Start Nginx in the foreground
-nginx -g "daemon off;"
+
+# Start nginx in the foreground
+nginx -g 'daemon off;'
