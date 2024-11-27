@@ -1,6 +1,7 @@
 # Stage 1: Build the React app (Frontend)
 FROM node:18-slim AS frontend-build
 WORKDIR /app
+COPY . .
 
 # Copy frontend files
 COPY frontend/package*.json ./frontend/
@@ -20,7 +21,6 @@ FROM node:18-slim AS backend
 WORKDIR /app
 
 # Copy package.json to /app directory
-COPY frontend/package*.json ./
 RUN npm install
 
 # Copy remaining backend files
