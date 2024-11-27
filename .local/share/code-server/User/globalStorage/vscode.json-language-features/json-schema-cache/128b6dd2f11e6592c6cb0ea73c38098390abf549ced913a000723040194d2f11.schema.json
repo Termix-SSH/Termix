@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/semantic-release.json",
+  "definitions": {
+    "branch-object": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        },
+        "range": {
+          "type": "string"
+        },
+        "prerelease": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "properties": {
+    "extends": {
+      "description": "List of modules or file paths containing a shareable configuration. If multiple shareable configurations are set, they will be imported in the order defined with each configuration option taking precedence over the options defined in a previous shareable configuration",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "branches": {
+      "description": "The branches on which releases should happen.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/definitions/branch-object"
+        },
+        {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/branch-object"
+              }
+            ]
+          }
+        }
+      ],
+      "default": [
+        "+([0-9])?(.{+([0-9]),x}).x",
+        "master",
+        "next",
+        "next-major",
+        {
+          "name": "beta",
+          "prerelease": true
+        },
+        {
+          "name": "alpha",
+          "prerelease": true
+        }
+      ]
+    },
+    "repositoryUrl": {
+      "type": "string",
+      "description": "The git repository URL"
+    },
+    "tagFormat": {
+      "type": "string",
+      "description": "The Git tag format used by semantic-release to identify releases. The tag name is generated with Lodash template and will be compiled with the version variable.",
+      "default": "v${version}"
+    },
+    "plugins": {
+      "type": "array",
+      "description": "Define the list of plugins to use. Plugins will run in series, in the order defined",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "array"
+          }
+        ]
+      },
+      "default": [
+        "@semantic-release/commit-analyzer",
+        "@semantic-release/release-notes-generator",
+        "@semantic-release/npm",
+        "@semantic-release/github"
+      ]
+    },
+    "dryRun": {
+      "type": "boolean",
+      "description": "The objective of the dry-run mode is to get a preview of the pending release. Dry-run mode skips the following steps: prepare, publish, success and fail. In addition to this it prints the next version and release notes to the console"
+    },
+    "ci": {
+      "type": "boolean",
+      "description": "Set to false to skip Continuous Integration environment verifications. This allows for making releases from a local machine",
+      "default": true
+    }
+  },
+  "title": "semantic-release Schema",
+  "type": "object"
+}

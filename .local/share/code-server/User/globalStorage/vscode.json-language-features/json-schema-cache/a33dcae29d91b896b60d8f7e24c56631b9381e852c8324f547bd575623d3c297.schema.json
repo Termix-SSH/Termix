@@ -1,0 +1,405 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/jscpd.json",
+  "additionalProperties": false,
+  "definitions": {
+    "colorPreset": {
+      "enum": [
+        "green",
+        "blue",
+        "red",
+        "yellow",
+        "orange",
+        "purple",
+        "pink",
+        "grey",
+        "gray",
+        "cyan",
+        "black"
+      ]
+    },
+    "colorHex": {
+      "type": "string",
+      "pattern": "([0-9a-fA-F]{3}){1,2}"
+    },
+    "color": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/colorPreset"
+        },
+        {
+          "$ref": "#/definitions/colorHex"
+        }
+      ]
+    },
+    "format": {
+      "enum": [
+        "abap",
+        "actionscript",
+        "ada",
+        "apacheconf",
+        "apl",
+        "applescript",
+        "arduino",
+        "arff",
+        "asciidoc",
+        "asm6502",
+        "aspnet",
+        "autohotkey",
+        "autoit",
+        "bash",
+        "basic",
+        "batch",
+        "bison",
+        "brainfuck",
+        "bro",
+        "c",
+        "c-header",
+        "clike",
+        "clojure",
+        "coffeescript",
+        "comments",
+        "cpp",
+        "cpp-header",
+        "crystal",
+        "csharp",
+        "csp",
+        "css-extras",
+        "css",
+        "d",
+        "dart",
+        "diff",
+        "django",
+        "docker",
+        "eiffel",
+        "elixir",
+        "elm",
+        "erb",
+        "erlang",
+        "flow",
+        "fortran",
+        "fsharp",
+        "gedcom",
+        "gherkin",
+        "git",
+        "glsl",
+        "go",
+        "graphql",
+        "groovy",
+        "haml",
+        "handlebars",
+        "haskell",
+        "haxe",
+        "hpkp",
+        "hsts",
+        "http",
+        "ichigojam",
+        "icon",
+        "inform7",
+        "ini",
+        "io",
+        "j",
+        "java",
+        "javascript",
+        "jolie",
+        "json",
+        "jsx",
+        "julia",
+        "keymap",
+        "kotlin",
+        "latex",
+        "less",
+        "liquid",
+        "lisp",
+        "livescript",
+        "lolcode",
+        "lua",
+        "makefile",
+        "markdown",
+        "markup",
+        "matlab",
+        "mel",
+        "mizar",
+        "monkey",
+        "n4js",
+        "nasm",
+        "nginx",
+        "nim",
+        "nix",
+        "nsis",
+        "objectivec",
+        "ocaml",
+        "opencl",
+        "oz",
+        "parigp",
+        "pascal",
+        "perl",
+        "php",
+        "plsql",
+        "powershell",
+        "processing",
+        "prolog",
+        "properties",
+        "protobuf",
+        "pug",
+        "puppet",
+        "pure",
+        "python",
+        "q",
+        "qore",
+        "r",
+        "reason",
+        "renpy",
+        "rest",
+        "rip",
+        "roboconf",
+        "ruby",
+        "rust",
+        "sas",
+        "sass",
+        "scala",
+        "scheme",
+        "scss",
+        "smalltalk",
+        "smarty",
+        "soy",
+        "sql",
+        "stylus",
+        "swift",
+        "tap",
+        "tcl",
+        "textile",
+        "tsx",
+        "tt2",
+        "twig",
+        "typescript",
+        "vbnet",
+        "velocity",
+        "verilog",
+        "vhdl",
+        "vim",
+        "visual-basic",
+        "wasm",
+        "url",
+        "wiki",
+        "xeora",
+        "xojo",
+        "xquery",
+        "yaml"
+      ]
+    }
+  },
+  "properties": {
+    "minLines": {
+      "type": "integer",
+      "default": 5,
+      "description": "minimum size of code block in lines to check for duplication"
+    },
+    "maxLines": {
+      "type": "integer",
+      "default": 1000,
+      "description": "maximum size of source file in lines to check for duplication"
+    },
+    "maxSize": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^\\+?[0-9]+(\\.[0-9]+)? *[kKmMgGtTpP][bB]$"
+        },
+        {
+          "type": "integer"
+        }
+      ],
+      "default": "100kb",
+      "description": "maximum size of source file in bytes to check for duplication (e.g.,: 1kb, 1mb, 120kb)"
+    },
+    "minTokens": {
+      "type": "integer",
+      "default": 50,
+      "description": "minimum size of code block in tokens to check for duplication"
+    },
+    "threshold": {
+      "type": "number",
+      "description": "maximum allowed duplicate lines expressed as a percentage; exit with error and exit code 1 when threshold exceeded"
+    },
+    "formatsExts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "default": {},
+      "description": "custom mapping from formats to file extensions (default: https://github.com/kucherenko/jscpd/blob/master/packages/tokenizer/src/formats.ts); see https://github.com/kucherenko/jscpd/blob/master/supported_formats.md"
+    },
+    "output": {
+      "type": "string",
+      "default": "./report",
+      "description": "path to directory for non-console reports"
+    },
+    "path": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "paths that should be included in duplicate detection (default: [process.cwd()])"
+    },
+    "pattern": {
+      "type": "string",
+      "default": "**/*",
+      "description": "glob pattern for files that should be included in duplicate detection (e.g., **/*.txt); only used to filter directories configured via path option"
+    },
+    "ignorePattern": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "ignore code blocks matching these regular expressions"
+    },
+    "mode": {
+      "enum": ["mild", "strict", "weak"],
+      "default": "mild",
+      "description": "mode of detection quality; see https://github.com/kucherenko/jscpd/blob/master/packages/jscpd/README.md#mode"
+    },
+    "ignore": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "glob pattern for files that should be excluded from duplicate detection"
+    },
+    "format": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/format"
+      },
+      "description": "list of formats for which to detect duplication (default: all); see https://github.com/kucherenko/jscpd/blob/master/supported_formats.md"
+    },
+    "store": {
+      "enum": ["leveldb", "redis"],
+      "description": "store used to collect information about code (default: in-memory store); install @jscpd/leveldb-store and use leveldb for big repositories"
+    },
+    "reporters": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "xml",
+          "json",
+          "csv",
+          "markdown",
+          "consoleFull",
+          "html",
+          "console",
+          "silent",
+          "threshold",
+          "xcode"
+        ]
+      },
+      "default": ["console"],
+      "description": "a list of reporters to use to output information about duplication; see https://github.com/kucherenko/jscpd/blob/master/packages/jscpd/README.md#reporters"
+    },
+    "blame": {
+      "type": "boolean",
+      "default": false,
+      "description": "get information about authors and dates of duplicated blocks from Git"
+    },
+    "silent": {
+      "type": "boolean",
+      "default": false,
+      "description": "do not write duplicate detection progress and result to console"
+    },
+    "verbose": {
+      "type": "boolean",
+      "default": false,
+      "description": "show full information during duplicate detection"
+    },
+    "absolute": {
+      "type": "boolean",
+      "default": false,
+      "description": "use absolute paths in reports"
+    },
+    "noSymlinks": {
+      "type": "boolean",
+      "default": false,
+      "description": "do not follow symlinks"
+    },
+    "skipLocal": {
+      "type": "boolean",
+      "default": false,
+      "description": "skip duplicates within folders; just detect cross-folder duplicates"
+    },
+    "ignoreCase": {
+      "type": "boolean",
+      "default": false,
+      "description": "ignore case of symbols in code (experimental)"
+    },
+    "gitignore": {
+      "type": "boolean",
+      "default": false,
+      "description": "ignore all files from .gitignore file"
+    },
+    "reportersOptions": {
+      "type": "object",
+      "default": {},
+      "additionalProperties": false,
+      "properties": {
+        "badge": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "output path for duplication level badge (default: path.join(output, 'jscpd-badge.svg'))"
+            },
+            "label": {
+              "type": "string",
+              "default": "Copy/Paste",
+              "description": "badge subject text (URL-encoding needed for spaces or special characters)"
+            },
+            "labelColor": {
+              "$ref": "#/definitions/color",
+              "default": "555",
+              "description": "badge label color (name or RGB code without #); see https://github.com/badgen/badgen/blob/master/src/color-presets.ts"
+            },
+            "status": {
+              "type": "string",
+              "description": "badge value text (URL-encoding needed for spaces or special characters, default: duplication %)"
+            },
+            "color": {
+              "$ref": "#/definitions/color",
+              "description": "badge color (name or RGB code without #, default: green if beneath threshold, red if above threshold, grey if threshold not set); see https://github.com/badgen/badgen/blob/master/src/color-presets.ts"
+            },
+            "style": {
+              "enum": ["flat", "classic"],
+              "default": "classic",
+              "description": "badge look: flat or classic"
+            },
+            "icon": {
+              "type": "string",
+              "description": "URL for icon to display in front of badge subject text (e.g., data:image/svg+xml;base64,...)"
+            },
+            "iconWidth": {
+              "type": "number",
+              "default": 13,
+              "description": "SVG width of icon to display in front of badge subject text; set this if icon is not square"
+            },
+            "scale": {
+              "type": "number",
+              "default": 1,
+              "description": "size of badge relative to default of 1"
+            }
+          }
+        }
+      }
+    },
+    "exitCode": {
+      "type": "integer",
+      "default": 0,
+      "description": "exit code to use when at least one duplicate code block is detected but threshold is not exceeded"
+    }
+  },
+  "type": "object"
+}

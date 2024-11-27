@@ -1,0 +1,3663 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/stylelintrc.json",
+  "definitions": {
+    "allRules": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/atRule"
+        },
+        {
+          "$ref": "#/definitions/block"
+        },
+        {
+          "$ref": "#/definitions/color"
+        },
+        {
+          "$ref": "#/definitions/comment"
+        },
+        {
+          "$ref": "#/definitions/customMedia"
+        },
+        {
+          "$ref": "#/definitions/customProperty"
+        },
+        {
+          "$ref": "#/definitions/declaration"
+        },
+        {
+          "$ref": "#/definitions/declarationBlock"
+        },
+        {
+          "$ref": "#/definitions/font"
+        },
+        {
+          "$ref": "#/definitions/function"
+        },
+        {
+          "$ref": "#/definitions/generalSheet"
+        },
+        {
+          "$ref": "#/definitions/keyframeDeclaration"
+        },
+        {
+          "$ref": "#/definitions/length"
+        },
+        {
+          "$ref": "#/definitions/lightness"
+        },
+        {
+          "$ref": "#/definitions/mediaFeature"
+        },
+        {
+          "$ref": "#/definitions/mediaQuery"
+        },
+        {
+          "$ref": "#/definitions/mediaQueryList"
+        },
+        {
+          "$ref": "#/definitions/number"
+        },
+        {
+          "$ref": "#/definitions/property"
+        },
+        {
+          "$ref": "#/definitions/rootRule"
+        },
+        {
+          "$ref": "#/definitions/rule"
+        },
+        {
+          "$ref": "#/definitions/selector"
+        },
+        {
+          "$ref": "#/definitions/selectorList"
+        },
+        {
+          "$ref": "#/definitions/shorthandProperty"
+        },
+        {
+          "$ref": "#/definitions/string"
+        },
+        {
+          "$ref": "#/definitions/stylelintDisableComment"
+        },
+        {
+          "$ref": "#/definitions/time"
+        },
+        {
+          "$ref": "#/definitions/unit"
+        },
+        {
+          "$ref": "#/definitions/value"
+        },
+        {
+          "$ref": "#/definitions/valueList"
+        }
+      ]
+    },
+    "alwaysMultiLineRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": ["always", "always-multi-line", []]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["always", "always-multi-line", {}]
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "alwaysNeverRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": ["always", "never", []]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["always", "never", {}]
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "arrayStringRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": ["null", "string"]
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "array", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [[], {}]
+              },
+              {
+                "$ref": "#/definitions/simpleArrayStringRule"
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "booleanRule": {
+      "default": true,
+      "type": ["null", "boolean", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["boolean", "object"],
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "coreRule": {
+      "type": "object",
+      "properties": {
+        "disableFix": {
+          "type": "boolean"
+        },
+        "message": {
+          "description": "Custom message that will be used in errors and warnings",
+          "type": "string"
+        },
+        "reportDisables": {
+          "type": "boolean"
+        },
+        "severity": {
+          "description": "Message status",
+          "type": "string",
+          "enum": ["warning", "error"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "integerRule": {
+      "type": ["null", "integer", "array"],
+      "oneOf": [
+        {
+          "type": ["null", "integer"]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["integer", "object"],
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [{}]
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "lowerUpperRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": ["lower", "upper", []]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["lower", "upper", {}]
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "newlineRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": ["always", "always-multi-line", "never-multi-line", []]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["always", "always-multi-line", "never-multi-line", {}]
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "newlineSpaceRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "always",
+            "never",
+            "always-single-line",
+            "never-single-line",
+            "always-multi-line",
+            "never-multi-line",
+            []
+          ]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "always",
+                  "never",
+                  "always-single-line",
+                  "never-single-line",
+                  "always-multi-line",
+                  "never-multi-line",
+                  {}
+                ]
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "newlineSpaceWithIgnoreRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "always",
+            "never",
+            "always-single-line",
+            "never-single-line",
+            "always-multi-line",
+            "never-multi-line",
+            []
+          ]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "always",
+                  "always-single-line",
+                  "never-single-line",
+                  "always-multi-line",
+                  "never-multi-line",
+                  {}
+                ]
+              },
+              {
+                "type": "object",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ],
+                "properties": {
+                  "ignoreAtRules": {
+                    "$ref": "#/definitions/simpleStringOrArrayStringRule"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "objectRule": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/simpleStringOrArrayStringRule"
+          }
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/simpleStringOrArrayStringRule"
+              }
+            },
+            {
+              "$ref": "#/definitions/coreRule"
+            }
+          ]
+        }
+      ]
+    },
+    "simpleArrayStringRule": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "simpleStringOrArrayStringRule": {
+      "type": ["string", "array"],
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/definitions/simpleArrayStringRule"
+        }
+      ]
+    },
+    "singleDoubleRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": ["single", "double", []]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["single", "double", {}]
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "spaceRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "always",
+            "never",
+            "always-single-line",
+            "never-single-line",
+            []
+          ]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "always",
+                  "never",
+                  "always-single-line",
+                  "never-single-line",
+                  {}
+                ]
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "stringRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": ["null", "string"]
+        },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "object"],
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/coreRule"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "unitRule": {
+      "type": ["null", "string", "array"],
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "em",
+            "ex",
+            "px",
+            "%",
+            "rem",
+            "vw",
+            "vh",
+            "vm",
+            "vmin",
+            "vmax",
+            "ch",
+            "in",
+            "cm",
+            "mm",
+            "q",
+            "pt",
+            "pc",
+            "deg",
+            "grad",
+            "rad",
+            "turn",
+            "ms",
+            "s",
+            "Hz",
+            "kHz",
+            "dpi",
+            "dpcm",
+            "dppx",
+            "fr",
+            []
+          ]
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": ["string", "array", "object"],
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "em",
+                  "ex",
+                  "px",
+                  "%",
+                  "rem",
+                  "vw",
+                  "vh",
+                  "vm",
+                  "vmin",
+                  "vmax",
+                  "ch",
+                  "in",
+                  "cm",
+                  "mm",
+                  "q",
+                  "pt",
+                  "pc",
+                  "deg",
+                  "grad",
+                  "rad",
+                  "turn",
+                  "ms",
+                  "s",
+                  "Hz",
+                  "kHz",
+                  "dpi",
+                  "dpcm",
+                  "dppx",
+                  "fr",
+                  [],
+                  {}
+                ]
+              },
+              {
+                "type": "array",
+                "uniqueItems": true,
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "em",
+                    "ex",
+                    "px",
+                    "%",
+                    "rem",
+                    "vw",
+                    "vh",
+                    "vm",
+                    "vmin",
+                    "vmax",
+                    "ch",
+                    "in",
+                    "cm",
+                    "mm",
+                    "q",
+                    "pt",
+                    "pc",
+                    "deg",
+                    "grad",
+                    "rad",
+                    "turn",
+                    "ms",
+                    "s",
+                    "Hz",
+                    "kHz",
+                    "dpi",
+                    "dpcm",
+                    "dppx",
+                    "fr"
+                  ]
+                }
+              },
+              {
+                "type": "object",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ],
+                "properties": {
+                  "ignoreProperties": {
+                    "description": "Ignore units in the values of declarations with the specified properties",
+                    "type": "object",
+                    "patternProperties": {
+                      "(em|ex|ch|vw|vh|cm|mm|in|pt|pc|px|rem|vmin|vmax|%)": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "atRule": {
+      "properties": {
+        "at-rule-blacklist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a blacklist of disallowed at-rules"
+        },
+        "at-rule-empty-line-before": {
+          "description": "Require or disallow an empty line before at-rules",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always", "never", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always", "never", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "except": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "all-nested",
+                            "after-same-name",
+                            "inside-block",
+                            "blockless-after-same-name-blockless",
+                            "blockless-after-blockless",
+                            "first-nested"
+                          ]
+                        }
+                      },
+                      "ignore": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "after-comment",
+                            "first-nested",
+                            "inside-block",
+                            "blockless-after-same-name-blockless",
+                            "blockless-after-blockless"
+                          ]
+                        }
+                      },
+                      "ignoreAtRules": {
+                        "$ref": "#/definitions/simpleStringOrArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "at-rule-name-case": {
+          "$ref": "#/definitions/lowerUpperRule",
+          "description": "Specify lowercase or uppercase for at-rules names",
+          "deprecated": true
+        },
+        "at-rule-name-newline-after": {
+          "$ref": "#/definitions/alwaysMultiLineRule",
+          "description": "Require a newline after at-rule names",
+          "deprecated": true
+        },
+        "at-rule-name-space-after": {
+          "description": "Require a single space after at-rule names",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always", "always-single-line", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always", "always-single-line", {}]
+                  },
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ]
+              }
+            }
+          ],
+          "deprecated": true
+        },
+        "at-rule-no-unknown": {
+          "description": "Disallow unknown at-rules",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignoreAtRules": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "at-rule-no-vendor-prefix": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow vendor prefixes for at-rules"
+        },
+        "at-rule-semicolon-newline-after": {
+          "description": "Require a newline after the semicolon of at-rules",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always", {}]
+                  },
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ]
+              }
+            }
+          ],
+          "deprecated": true
+        },
+        "at-rule-semicolon-space-before": {
+          "description": "Require a single space or disallow whitespace before the semicolons of at-rules",
+          "deprecated": true
+        },
+        "at-rule-whitelist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a whitelist of allowed at-rules"
+        }
+      }
+    },
+    "block": {
+      "properties": {
+        "block-closing-brace-empty-line-before": {
+          "description": "Require or disallow an empty line before the closing brace of blocks",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always-multi-line", "never", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always-multi-line", "never", {}]
+                  },
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ]
+              }
+            }
+          ],
+          "deprecated": true
+        },
+        "block-closing-brace-newline-after": {
+          "$ref": "#/definitions/newlineSpaceWithIgnoreRule",
+          "description": "Require a newline or disallow whitespace after the closing brace of blocks",
+          "deprecated": true
+        },
+        "block-closing-brace-newline-before": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace before the closing brace of blocks",
+          "deprecated": true
+        },
+        "block-closing-brace-space-after": {
+          "$ref": "#/definitions/newlineSpaceRule",
+          "description": "Require a single space or disallow whitespace after the closing brace of blocks",
+          "deprecated": true
+        },
+        "block-closing-brace-space-before": {
+          "$ref": "#/definitions/newlineSpaceRule",
+          "description": "Require a single space or disallow whitespace before the closing brace of blocks",
+          "deprecated": true
+        },
+        "block-no-empty": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow empty blocks"
+        },
+        "block-no-single-line": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow single-line blocks"
+        },
+        "block-opening-brace-newline-after": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline after the opening brace of blocks",
+          "deprecated": true
+        },
+        "block-opening-brace-newline-before": {
+          "description": "Require a newline or disallow whitespace before the opening brace of blocks",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "always",
+                "always-single-line",
+                "never-single-line",
+                "always-multi-line",
+                "never-multi-line",
+                []
+              ]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "always",
+                      "always-single-line",
+                      "never-single-line",
+                      "always-multi-line",
+                      "never-multi-line",
+                      {}
+                    ]
+                  },
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ]
+              }
+            }
+          ],
+          "deprecated": true
+        },
+        "block-opening-brace-space-after": {
+          "$ref": "#/definitions/newlineSpaceRule",
+          "description": "Require a single space or disallow whitespace after the opening brace of blocks",
+          "deprecated": true
+        },
+        "block-opening-brace-space-before": {
+          "$ref": "#/definitions/newlineSpaceWithIgnoreRule",
+          "description": "Require a single space or disallow whitespace before the opening brace of blocks",
+          "deprecated": true
+        }
+      }
+    },
+    "color": {
+      "properties": {
+        "color-hex-case": {
+          "$ref": "#/definitions/lowerUpperRule",
+          "description": "Specify lowercase or uppercase for hex colors",
+          "deprecated": true
+        },
+        "color-hex-length": {
+          "description": "Specify short or long notation for hex colors",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["short", "long", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["short", "long", {}]
+                  },
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "color-named": {
+          "description": "Require (where possible) or disallow named colors",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always-where-possible", "never", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always-where-possible", "never", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignore": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "color-no-hex": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow hex colors"
+        },
+        "color-no-invalid-hex": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow invalid hex colors"
+        }
+      }
+    },
+    "comment": {
+      "properties": {
+        "comment-empty-line-before": {
+          "description": "Require or disallow an empty line before comments",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always", "never", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always", "never", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "except": {
+                        "description": "Reverse the primary option for comments that are nested and the first child of their parent node",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["first-nested"]
+                        }
+                      },
+                      "ignore": {
+                        "description": "Don't require an empty line between comments",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "between-comments",
+                            "after-comment",
+                            "stylelint-command",
+                            "stylelint-commands"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "comment-no-empty": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow empty comments"
+        },
+        "comment-whitespace-inside": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require or disallow whitespace on the inside of comment markers"
+        },
+        "comment-word-blacklist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a blacklist of disallowed words within comments"
+        }
+      }
+    },
+    "customMedia": {
+      "properties": {
+        "custom-media-pattern": {
+          "$ref": "#/definitions/stringRule",
+          "description": "Specify a pattern for custom media query names"
+        },
+        "no-unknown-custom-media": {
+          "oneOf": [
+            {
+              "oneOf": [{ "const": true }, { "type": "null" }]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [{ "const": true }, { "type": "null" }]
+                },
+                {
+                  "$ref": "#/definitions/coreRule",
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ],
+          "description": "Disallow unknown custom media queries"
+        }
+      }
+    },
+    "customProperty": {
+      "properties": {
+        "custom-property-empty-line-before": {
+          "description": "Require or disallow an empty line before custom properties",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always", "never", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always", "never", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "except": {
+                        "description": "Reverse the primary option for custom properties that come after a comment, custom property or first child of their parent node",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "after-comment",
+                            "after-custom-property",
+                            "first-nested"
+                          ]
+                        }
+                      },
+                      "ignore": {
+                        "description": "Ignore custom properties that are preceded by comments or inside single-line blocks",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["after-comment", "inside-single-line-block"]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "custom-property-no-outside-root": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow custom properties outside of `:root` rules"
+        },
+        "custom-property-pattern": {
+          "$ref": "#/definitions/stringRule",
+          "description": "Specify a pattern for custom properties"
+        },
+        "no-unknown-custom-properties": {
+          "oneOf": [
+            {
+              "oneOf": [{ "const": true }, { "type": "null" }]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [{ "const": true }, { "type": "null" }]
+                },
+                {
+                  "$ref": "#/definitions/coreRule",
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ],
+          "description": "Disallow unknown custom properties"
+        }
+      }
+    },
+    "declaration": {
+      "properties": {
+        "declaration-bang-space-after": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace after the bang of declarations",
+          "deprecated": true
+        },
+        "declaration-bang-space-before": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace before the bang of declarations",
+          "deprecated": true
+        },
+        "declaration-colon-newline-after": {
+          "$ref": "#/definitions/alwaysMultiLineRule",
+          "description": "Require a newline or disallow whitespace after the colon of declarations",
+          "deprecated": true
+        },
+        "declaration-colon-space-after": {
+          "description": "Require a single space or disallow whitespace after the colon of declarations",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always", "never", "always-single-line", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always", "never", "always-single-line", {}]
+                  },
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ]
+              }
+            }
+          ],
+          "deprecated": true
+        },
+        "declaration-colon-space-before": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace before the colon of declarations",
+          "deprecated": true
+        },
+        "declaration-empty-line-before": {
+          "description": "Require or disallow an empty line before declarations",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always", "never", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always", "never", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "except": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "after-comment",
+                            "after-declaration",
+                            "first-nested"
+                          ]
+                        }
+                      },
+                      "ignore": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "after-comment",
+                            "after-declaration",
+                            "first-nested",
+                            "inside-single-line-block"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "declaration-no-important": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow `!important` within declarations"
+        },
+        "declaration-property-unit-blacklist": {
+          "$ref": "#/definitions/objectRule",
+          "description": "Specify a blacklist of disallowed property and unit pairs within declarations"
+        },
+        "declaration-property-unit-whitelist": {
+          "$ref": "#/definitions/objectRule",
+          "description": "Specify a whitelist of allowed property and unit pairs within declarations"
+        },
+        "declaration-property-value-blacklist": {
+          "$ref": "#/definitions/objectRule",
+          "description": "Specify a blacklist of disallowed property and value pairs within declarations"
+        },
+        "declaration-property-value-no-unknown": {
+          "oneOf": [
+            {
+              "oneOf": [{ "const": true }, { "type": "null" }]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [{ "const": true }, { "type": "null" }]
+                },
+                {
+                  "type": "object",
+                  "allOf": [{ "$ref": "#/definitions/coreRule" }],
+                  "properties": {
+                    "ignoreProperties": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "oneOf": [
+                              { "type": "string" },
+                              {
+                                "type": "array",
+                                "items": { "type": "string" }
+                              }
+                            ]
+                          },
+                          {
+                            "oneOf": [
+                              {
+                                "oneOf": [
+                                  {
+                                    "type": "object"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "pattern": "^\\/.+\\/i?$"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "^\\/.+\\/i?$"
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "propertiesSyntax": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "typesSyntax": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "description": "Disallow unknown values for properties within declarations"
+        },
+        "declaration-property-value-whitelist": {
+          "$ref": "#/definitions/objectRule",
+          "description": "Specify a whitelist of allowed property and value pairs within declarations"
+        }
+      }
+    },
+    "declarationBlock": {
+      "properties": {
+        "declaration-block-no-duplicate-properties": {
+          "description": "Disallow duplicate properties within declaration blocks",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignore": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "consecutive-duplicates",
+                            "consecutive-duplicates-with-different-values",
+                            "consecutive-duplicates-with-different-syntaxes",
+                            "consecutive-duplicates-with-same-prefixless-values"
+                          ]
+                        }
+                      },
+                      "ignoreProperties": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "declaration-block-no-ignored-properties": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow property values that are ignored due to another property value in the same rule"
+        },
+        "declaration-block-no-redundant-longhand-properties": {
+          "description": "Disallow longhand properties that can be combined into one shorthand property",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignoreShorthands": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "declaration-block-no-shorthand-property-overrides": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow shorthand properties that override related longhand properties"
+        },
+        "declaration-block-properties-order": {
+          "description": "Specify the order of properties within declaration blocks",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["alphabetical", []]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "array", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["alphabetical", [], {}]
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/definitions/simpleArrayStringRule"
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "dependencies": {
+                      "order": ["properties"],
+                      "properties": ["order"]
+                    },
+                    "properties": {
+                      "unspecified": {
+                        "description": "These options only apply if you've defined your own array of properties",
+                        "type": "string",
+                        "enum": [
+                          "top",
+                          "bottom",
+                          "bottomAlphabetical",
+                          "ignore"
+                        ]
+                      },
+                      "order": {
+                        "type": "string",
+                        "enum": ["strict", "flexible"]
+                      },
+                      "properties": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "declaration-block-semicolon-newline-after": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace after the semicolons of declaration blocks",
+          "deprecated": true
+        },
+        "declaration-block-semicolon-newline-before": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace before the semicolons of declaration blocks",
+          "deprecated": true
+        },
+        "declaration-block-semicolon-space-after": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace after the semicolons of declaration blocks",
+          "deprecated": true
+        },
+        "declaration-block-semicolon-space-before": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace before the semicolons of declaration blocks",
+          "deprecated": true
+        },
+        "declaration-block-single-line-max-declarations": {
+          "$ref": "#/definitions/integerRule",
+          "description": "Limit the number of declaration within a single line declaration block"
+        },
+        "declaration-block-trailing-semicolon": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require or disallow a trailing semicolon within declaration blocks",
+          "deprecated": true
+        }
+      }
+    },
+    "font": {
+      "properties": {
+        "font-family-name-quotes": {
+          "description": "Specify whether or not quotation marks should be used around font family names",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "always-where-required",
+                "always-where-recommended",
+                "always-unless-keyword",
+                []
+              ]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "always-where-required",
+                      "always-where-recommended",
+                      "always-unless-keyword",
+                      {}
+                    ]
+                  },
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "font-weight-notation": {
+          "description": "Require numeric or named (where possible) `font-weight` values. Also, when named values are expected, require only valid names",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["numeric", "named-where-possible", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["numeric", "named-where-possible", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignore": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["relative"]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "function": {
+      "properties": {
+        "function-blacklist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a blacklist of disallowed functions"
+        },
+        "function-calc-no-unspaced-operator": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow an unspaced operator within `calc` functions"
+        },
+        "function-comma-newline-after": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace after the commas of functions",
+          "deprecated": true
+        },
+        "function-comma-newline-before": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace before the commas of functions",
+          "deprecated": true
+        },
+        "function-comma-space-after": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace after the commas of functions",
+          "deprecated": true
+        },
+        "function-comma-space-before": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace before the commas of functions",
+          "deprecated": true
+        },
+        "function-linear-gradient-no-nonstandard-direction": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow direction values in `linear-gradient()` calls that are not valid according to the standard syntax"
+        },
+        "function-max-empty-lines": {
+          "$ref": "#/definitions/integerRule",
+          "description": "Limit the number of adjacent empty lines within functions",
+          "deprecated": true
+        },
+        "function-name-case": {
+          "description": "Specify lowercase or uppercase for function names",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["lower", "upper", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["lower", "upper", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "description": "Ignore case of function names",
+                    "properties": {
+                      "ignoreFunctions": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "function-parentheses-newline-inside": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace on the inside of the parentheses of functions",
+          "deprecated": true
+        },
+        "function-parentheses-space-inside": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace on the inside of the parentheses of functions",
+          "deprecated": true
+        },
+        "function-url-data-uris": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require or disallow data URIs for urls"
+        },
+        "function-url-no-scheme-relative": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow scheme-relative urls"
+        },
+        "function-url-quotes": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require or disallow quotes for urls"
+        },
+        "function-url-scheme-whitelist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a whitelist of allowed url schemes"
+        },
+        "function-whitelist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a whitelist of allowed functions"
+        },
+        "function-whitespace-after": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require or disallow whitespace after functions",
+          "deprecated": true
+        }
+      }
+    },
+    "generalSheet": {
+      "properties": {
+        "indentation": {
+          "description": "Specify indentation",
+          "type": ["null", "integer", "string", "array"],
+          "oneOf": [
+            {
+              "type": ["null", "integer"]
+            },
+            {
+              "type": "string",
+              "enum": ["tab", []]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "integer"
+              }
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["integer", "string", "object"],
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["tab", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "indentInsideParens": {
+                        "description": "If `true`, the closing brace of a block (rule or at-rule) will be expected at the same indentation level as the block's inner nodes",
+                        "type": "string",
+                        "enum": ["twice", "once-at-root-twice-in-block"]
+                      },
+                      "except": {
+                        "description": "Do not indent for these things",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["block", "param", "value"]
+                        }
+                      },
+                      "ignore": {
+                        "description": "Ignore the indentation inside parentheses",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["inside-parens", "param", "value"]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "deprecated": true
+        },
+        "linebreaks": {
+          "description": "Specify unix or windows linebreaks",
+          "deprecated": true
+        },
+        "max-empty-lines": {
+          "$ref": "#/definitions/integerRule",
+          "description": "Limit the number of adjacent empty lines",
+          "deprecated": true
+        },
+        "max-line-length": {
+          "description": "Limit the length of a line",
+          "type": ["null", "integer", "array"],
+          "oneOf": [
+            {
+              "type": ["null", "integer"]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["integer", "object"],
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignore": {
+                        "type": ["string", "array"],
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": ["non-comments", "comments"]
+                          },
+                          {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "minItems": 1,
+                            "items": {
+                              "type": "string",
+                              "enum": ["non-comments", "comments"]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "deprecated": true
+        },
+        "max-nesting-depth": {
+          "description": "Limit the allowed nesting depth",
+          "type": ["null", "integer", "array"],
+          "oneOf": [
+            {
+              "type": ["null", "integer"]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["integer", "object"],
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignore": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "at-rules-without-declaration-blocks",
+                            "blockless-at-rules",
+                            "pseudo-classes"
+                          ]
+                        }
+                      },
+                      "ignoreAtRules": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "no-browser-hacks": {
+          "description": "Disallow browser hacks that are irrelevant to the browsers you are targeting",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "browsers": {
+                        "$ref": "#/definitions/simpleStringOrArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "no-descending-specificity": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow selectors of lower specificity from coming after overriding selectors of higher specificity"
+        },
+        "no-duplicate-selectors": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow duplicate selectors within a stylesheet"
+        },
+        "no-empty-first-line": {
+          "description": "Disallow empty first lines",
+          "deprecated": true
+        },
+        "no-empty-source": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow empty sources"
+        },
+        "no-eol-whitespace": {
+          "description": "Disallow end-of-line whitespace",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignore": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["empty-lines"]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "deprecated": true
+        },
+        "no-extra-semicolons": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow extra semicolons",
+          "deprecated": true
+        },
+        "no-indistinguishable-colors": {
+          "description": "Disallow colors that are suspiciously close to being identical",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "threshold": {
+                        "type": "integer",
+                        "default": 3,
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "ignore": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      },
+                      "whitelist": {
+                        "description": "An array of color pairs to ignore. Each pair is an array with two items",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "$ref": "#/definitions/simpleArrayStringRule"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "no-invalid-double-slash-comments": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow double-slash comments `(//...)` which are not supported by CSS and could lead to unexpected results"
+        },
+        "no-missing-end-of-source-newline": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow missing end-of-source newlines",
+          "deprecated": true
+        },
+        "no-unknown-animations": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow animation names that do not correspond to a `@keyframes` declaration"
+        },
+        "unicode-bom": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require or disallow Unicode BOM",
+          "deprecated": true
+        },
+        "no-unsupported-browser-features": {
+          "description": "Disallow features that are unsupported by the browsers that you are targeting",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "browsers": {
+                        "type": "string"
+                      },
+                      "ignore": {
+                        "$ref": "#/definitions/simpleStringOrArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "keyframeDeclaration": {
+      "properties": {
+        "keyframe-declaration-no-important": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow !important within keyframe declarations"
+        }
+      }
+    },
+    "length": {
+      "properties": {
+        "length-zero-no-unit": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow units for zero lengths"
+        }
+      }
+    },
+    "lightness": {
+      "properties": {
+        "lightness-notation": {
+          "oneOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": ["percentage", "number"]
+                },
+                { "type": "null" }
+              ]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": ["percentage", "number"]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                {
+                  "$ref": "#/definitions/coreRule",
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ],
+          "description": "Specify number or percentage notation for lightness"
+        }
+      }
+    },
+    "mediaFeature": {
+      "properties": {
+        "media-feature-colon-space-after": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace after the colon in media features",
+          "deprecated": true
+        },
+        "media-feature-colon-space-before": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace before the colon in media features",
+          "deprecated": true
+        },
+        "media-feature-name-case": {
+          "$ref": "#/definitions/lowerUpperRule",
+          "description": "Specify lowercase or uppercase for media feature names",
+          "deprecated": true
+        },
+        "media-feature-name-no-unknown": {
+          "description": "Disallow unknown media feature names",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignoreMediaFeatureNames": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "media-feature-name-value-no-unknown": {
+          "oneOf": [
+            {
+              "oneOf": [{ "const": true }, { "type": "null" }]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [{ "const": true }, { "type": "null" }]
+                },
+                {
+                  "$ref": "#/definitions/coreRule",
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ],
+          "description": "Disallow unknown values for media features"
+        },
+        "media-feature-name-no-vendor-prefix": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow vendor prefixes for media feature names"
+        },
+        "media-feature-name-unit-allowed-list": {
+          "oneOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "oneOf": [
+                      { "type": "string" },
+                      {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      }
+                    ]
+                  }
+                },
+                { "type": "null" }
+              ]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "oneOf": [
+                          { "type": "string" },
+                          {
+                            "type": "array",
+                            "items": { "type": "string" }
+                          }
+                        ]
+                      }
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                {
+                  "$ref": "#/definitions/coreRule",
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ],
+          "description": "Specify a list of allowed name and unit pairs within media features"
+        },
+        "media-feature-no-missing-punctuation": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow missing punctuation for non-boolean media features"
+        },
+        "media-feature-parentheses-space-inside": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace on the inside of the parentheses within media features",
+          "deprecated": true
+        },
+        "media-feature-range-notation": {
+          "oneOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": ["prefix", "context"]
+                },
+                { "type": "null" }
+              ]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": ["prefix", "context"]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                {
+                  "$ref": "#/definitions/coreRule",
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ],
+          "description": "Specify context or prefix notation for media feature ranges"
+        },
+        "media-feature-range-operator-space-after": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace after the range operator in media features",
+          "deprecated": true
+        },
+        "media-feature-range-operator-space-before": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace before the range operator in media features",
+          "deprecated": true
+        }
+      }
+    },
+    "mediaQuery": {
+      "properties": {
+        "media-query-no-invalid": {
+          "oneOf": [
+            {
+              "oneOf": [{ "const": true }, { "type": "null" }]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [{ "const": true }, { "type": "null" }]
+                },
+                {
+                  "$ref": "#/definitions/coreRule",
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ],
+          "description": "Disallow invalid media queries"
+        }
+      }
+    },
+    "mediaQueryList": {
+      "properties": {
+        "media-query-list-comma-newline-after": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace after the commas of media query lists",
+          "deprecated": true
+        },
+        "media-query-list-comma-newline-before": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace before the commas of media query lists",
+          "deprecated": true
+        },
+        "media-query-list-comma-space-after": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace after the commas of media query lists",
+          "deprecated": true
+        },
+        "media-query-list-comma-space-before": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace before the commas of media query lists",
+          "deprecated": true
+        }
+      }
+    },
+    "number": {
+      "properties": {
+        "number-leading-zero": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require or disallow a leading zero for fractional numbers less than 1",
+          "deprecated": true
+        },
+        "number-max-precision": {
+          "$ref": "#/definitions/integerRule",
+          "description": "Limit the number of decimal places allowed in numbers"
+        },
+        "number-no-trailing-zeros": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow trailing zeros in numbers",
+          "deprecated": true
+        }
+      }
+    },
+    "property": {
+      "properties": {
+        "property-blacklist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a blacklist of disallowed properties"
+        },
+        "property-case": {
+          "$ref": "#/definitions/lowerUpperRule",
+          "description": "Specify lowercase or uppercase for properties",
+          "deprecated": true
+        },
+        "property-no-unknown": {
+          "description": "Disallow unknown properties",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignoreProperties": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      },
+                      "checkPrefixed": {
+                        "description": "If `true`, this rule will check vendor-prefixed properties",
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "property-no-vendor-prefix": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow vendor prefixes for properties"
+        },
+        "property-whitelist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a whitelist of allowed properties"
+        }
+      }
+    },
+    "rootRule": {
+      "properties": {
+        "root-no-standard-properties": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow standard properties inside `:root` rules"
+        }
+      }
+    },
+    "rule": {
+      "properties": {
+        "rule-nested-empty-line-before": {
+          "description": "Require or disallow an empty line before nested rules",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "always",
+                "never",
+                "always-multi-line",
+                "never-multi-line",
+                []
+              ]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "always",
+                      "never",
+                      "always-multi-line",
+                      "never-multi-line",
+                      {}
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "except": {
+                        "description": "Reverse the primary option if the rule is the first in a block",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["first-nested"]
+                        }
+                      },
+                      "ignore": {
+                        "description": "Ignore rules that come after a comment",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["after-comment"]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "rule-non-nested-empty-line-before": {
+          "description": "Require or disallow an empty line before non-nested rules",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "always",
+                "never",
+                "always-multi-line",
+                "never-multi-line",
+                []
+              ]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "always",
+                      "never",
+                      "always-multi-line",
+                      "never-multi-line",
+                      {}
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "except": {
+                        "description": "Reverse the primary option if the rule is the first in a block",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["after-single-line-comment"]
+                        }
+                      },
+                      "ignore": {
+                        "description": "Ignore rules that come after a comment",
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["after-comment"]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "selector": {
+      "properties": {
+        "selector-anb-no-unmatchable": {
+          "oneOf": [
+            {
+              "oneOf": [{ "const": true }, { "type": "null" }]
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": [
+                {
+                  "oneOf": [{ "const": true }, { "type": "null" }]
+                },
+                {
+                  "$ref": "#/definitions/coreRule",
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ],
+          "description": "Disallow unmatchable An+B selectors"
+        },
+        "selector-attribute-brackets-space-inside": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace on the inside of the brackets within attribute selector",
+          "deprecated": true
+        },
+        "selector-attribute-operator-blacklist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a blacklist of disallowed attribute operators"
+        },
+        "selector-attribute-operator-space-after": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace after operators within attribute selectors",
+          "deprecated": true
+        },
+        "selector-attribute-operator-space-before": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace before operators within attribute selectors",
+          "deprecated": true
+        },
+        "selector-attribute-operator-whitelist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a whitelist of allowed attribute operators"
+        },
+        "selector-attribute-quotes": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require or disallow quotes for attribute values"
+        },
+        "selector-class-pattern": {
+          "description": "Specify a pattern for class selectors",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": ["null", "string"]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "resolveNestedSelectors": {
+                        "description": "This option will resolve nested selectors with `&` interpolation",
+                        "type": "boolean",
+                        "default": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "selector-combinator-space-after": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace after the combinators of selectors",
+          "deprecated": true
+        },
+        "selector-combinator-space-before": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace before the combinators of selectors",
+          "deprecated": true
+        },
+        "selector-descendant-combinator-no-non-space": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow non-space characters for descendant combinators of selectors",
+          "deprecated": true
+        },
+        "selector-id-pattern": {
+          "$ref": "#/definitions/stringRule",
+          "description": "Specify a pattern for id selectors"
+        },
+        "selector-max-compound-selectors": {
+          "$ref": "#/definitions/integerRule",
+          "description": "Limit the number of compound selectors in a selector"
+        },
+        "selector-max-specificity": {
+          "$ref": "#/definitions/stringRule",
+          "description": "Limit the specificity of selectors"
+        },
+        "selector-nested-pattern": {
+          "$ref": "#/definitions/stringRule",
+          "description": "Specify a pattern for the selectors of rules nested within rules"
+        },
+        "selector-no-attribute": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow attribute selectors"
+        },
+        "selector-no-combinator": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow combinators in selectors"
+        },
+        "selector-no-id": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow id selectors"
+        },
+        "selector-no-qualifying-type": {
+          "description": "Disallow qualifying a selector by type",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignore": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["attribute", "class", "id"]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "selector-no-type": {
+          "description": "Disallow type selectors",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignore": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["compounded", "descendant"]
+                        }
+                      },
+                      "ignoreTypes": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "selector-no-universal": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow the universal selector"
+        },
+        "selector-no-vendor-prefix": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow vendor prefixes for selectors"
+        },
+        "selector-pseudo-class-case": {
+          "$ref": "#/definitions/lowerUpperRule",
+          "description": "Specify lowercase or uppercase for pseudo-class selectors",
+          "deprecated": true
+        },
+        "selector-pseudo-class-no-unknown": {
+          "description": "Disallow unknown pseudo-class selectors",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignorePseudoClasses": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "selector-pseudo-class-parentheses-space-inside": {
+          "$ref": "#/definitions/alwaysNeverRule",
+          "description": "Require a single space or disallow whitespace on the inside of the parentheses within pseudo-class selectors",
+          "deprecated": true
+        },
+        "selector-pseudo-class-whitelist": {
+          "$ref": "#/definitions/arrayStringRule",
+          "description": "Specify a whitelist of allowed pseudo-class selectors"
+        },
+        "selector-pseudo-element-case": {
+          "$ref": "#/definitions/lowerUpperRule",
+          "description": "Specify lowercase or uppercase for pseudo-element selectors",
+          "deprecated": true
+        },
+        "selector-pseudo-element-colon-notation": {
+          "$ref": "#/definitions/singleDoubleRule",
+          "description": "Specify single or double colon notation for applicable pseudo-elements"
+        },
+        "selector-pseudo-element-no-unknown": {
+          "description": "Disallow unknown pseudo-element selectors",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignorePseudoElements": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "selector-root-no-composition": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow the composition of :root in selectors"
+        },
+        "selector-type-case": {
+          "$ref": "#/definitions/lowerUpperRule",
+          "description": "Specify lowercase or uppercase for type selectors"
+        },
+        "selector-type-no-unknown": {
+          "description": "Disallow unknown type selectors",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignoreTypes": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "selector-max-empty-lines": {
+          "$ref": "#/definitions/integerRule",
+          "description": "Limit the number of adjacent empty lines within selectors",
+          "deprecated": true
+        }
+      }
+    },
+    "selectorList": {
+      "properties": {
+        "selector-list-comma-newline-after": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace after the commas of selector lists",
+          "deprecated": true
+        },
+        "selector-list-comma-newline-before": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace before the commas of selector lists",
+          "deprecated": true
+        },
+        "selector-list-comma-space-after": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace after the commas of selector lists",
+          "deprecated": true
+        },
+        "selector-list-comma-space-before": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace before the commas of selector lists",
+          "deprecated": true
+        }
+      }
+    },
+    "shorthandProperty": {
+      "properties": {
+        "shorthand-property-no-redundant-values": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow redundant values in shorthand properties"
+        }
+      }
+    },
+    "string": {
+      "properties": {
+        "string-no-newline": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow (unescaped) newlines in strings"
+        },
+        "string-quotes": {
+          "$ref": "#/definitions/singleDoubleRule",
+          "description": "Specify single or double quotes around strings",
+          "deprecated": true
+        }
+      }
+    },
+    "stylelintDisableComment": {
+      "properties": {
+        "stylelint-disable-reason": {
+          "description": "Require a reason comment before or after `stylelint-disable` comments",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["always-before", "always-after", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["always-before", "always-after", {}]
+                  },
+                  {
+                    "$ref": "#/definitions/coreRule"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "time": {
+      "properties": {
+        "time-no-imperceptible": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow `animation` and `transition` less than or equal to 100ms"
+        }
+      }
+    },
+    "unit": {
+      "properties": {
+        "unit-blacklist": {
+          "$ref": "#/definitions/unitRule",
+          "description": "Specify a blacklist of disallowed units"
+        },
+        "unit-case": {
+          "$ref": "#/definitions/lowerUpperRule",
+          "description": "Specify lowercase or uppercase for units",
+          "deprecated": true
+        },
+        "unit-no-unknown": {
+          "description": "Disallow unknown units",
+          "type": ["null", "boolean", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean",
+              "enum": [true, []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["boolean", "object"],
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [true, {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignoreUnits": {
+                        "$ref": "#/definitions/simpleArrayStringRule"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "unit-whitelist": {
+          "$ref": "#/definitions/unitRule",
+          "description": "Specify a whitelist of allowed units"
+        }
+      }
+    },
+    "value": {
+      "properties": {
+        "value-keyword-case": {
+          "description": "Specify lowercase or uppercase for keywords values",
+          "type": ["null", "string", "array"],
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "enum": ["lower", "upper", []]
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": ["string", "object"],
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["lower", "upper", {}]
+                  },
+                  {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/coreRule"
+                      }
+                    ],
+                    "properties": {
+                      "ignoreKeywords": {
+                        "$ref": "#/definitions/simpleArrayStringRule",
+                        "description": "Ignore case of keywords values"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "value-no-vendor-prefix": {
+          "$ref": "#/definitions/booleanRule",
+          "description": "Disallow vendor prefixes for values"
+        }
+      }
+    },
+    "valueList": {
+      "properties": {
+        "value-list-comma-newline-after": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace after the commas of value lists",
+          "deprecated": true
+        },
+        "value-list-comma-newline-before": {
+          "$ref": "#/definitions/newlineRule",
+          "description": "Require a newline or disallow whitespace before the commas of value lists",
+          "deprecated": true
+        },
+        "value-list-comma-space-after": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace after the commas of value lists",
+          "deprecated": true
+        },
+        "value-list-comma-space-before": {
+          "$ref": "#/definitions/spaceRule",
+          "description": "Require a single space or disallow whitespace before the commas of value lists",
+          "deprecated": true
+        },
+        "value-list-max-empty-lines": {
+          "$ref": "#/definitions/integerRule",
+          "description": "Limit the number of adjacent empty lines within value lists",
+          "deprecated": true
+        }
+      }
+    }
+  },
+  "properties": {
+    "extends": {
+      "$ref": "#/definitions/simpleStringOrArrayStringRule",
+      "description": "Your configuration can extend an existing configuration(s) (whether your own or a third-party config)"
+    },
+    "plugins": {
+      "$ref": "#/definitions/simpleArrayStringRule",
+      "description": "Plugins are rules or sets of rules built by the community that support methodologies, toolsets, non-standard CSS features, or very specific use cases"
+    },
+    "customSyntax": {
+      "description": "Specify a custom syntax to use on your code.",
+      "type": "string"
+    },
+    "overrides": {
+      "description": "Provide rule and behavior overrides for files that match particular glob patterns.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "customSyntax": {
+            "type": "string"
+          },
+          "rules": {
+            "$ref": "#/definitions/allRules"
+          }
+        }
+      }
+    },
+    "processors": {
+      "description": "Processors are functions that hook into stylelint's pipeline, modifying code on its way into stylelint and modifying results on their way out",
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": [
+              {
+                "type": "string"
+              }
+            ],
+            "additionalItems": {
+              "type": "object"
+            }
+          }
+        ]
+      }
+    },
+    "ignoreDisables": {
+      "description": "Ignore stylelint-disable (e.g. /* stylelint-disable block-no-empty */) comments.",
+      "type": "boolean"
+    },
+    "ignoreFiles": {
+      "$ref": "#/definitions/simpleStringOrArrayStringRule",
+      "description": "Provide a glob or array of globs to ignore specific files"
+    },
+    "defaultSeverity": {
+      "description": "The default severity level for all rules that do not have a severity specified in their secondary options",
+      "type": "string",
+      "enum": ["warning", "error"]
+    },
+    "reportDescriptionlessDisables": {
+      "$ref": "#/definitions/booleanRule",
+      "description": "Report stylelint-disable comments without a description."
+    },
+    "reportInvalidScopeDisables": {
+      "$ref": "#/definitions/booleanRule",
+      "description": "Report stylelint-disable comments that don't match rules that are specified in the configuration object."
+    },
+    "reportNeedlessDisables": {
+      "$ref": "#/definitions/booleanRule",
+      "description": "Report stylelint-disable comments that don't actually match any lints that need to be disabled"
+    },
+    "rules": {
+      "$ref": "#/definitions/allRules"
+    }
+  },
+  "title": "JSON schema for the Stylelint configuration files",
+  "type": "object"
+}
