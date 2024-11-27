@@ -131,4 +131,5 @@ yarn-error.log*
 /vscode-server
 
 # Configs
-.config/ngrok
+.config/
+/config
