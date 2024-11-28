@@ -2,16 +2,13 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - testing
-      - pre-release
-      - alpha
-      - beta
+      - development
   workflow_dispatch:
     inputs:
       tag_name:
         description: "Custom tag name for the Docker image"
         required: false
-        default: ""
+        default: "development-latest"
 
 jobs:
   build:
@@ -50,17 +47,7 @@ jobs:
           if [ -n "${{ github.event.inputs.tag_name }}" ]; then
             IMAGE_TAG="${{ github.event.inputs.tag_name }}"
           else
-            git fetch --tags --force
-            tag_list=$(git tag -l 'testing-*')
-            echo "Tag list: $tag_list"
-            if [ -z "$tag_list" ]; then
-              IMAGE_TAG="testing-1"
-            else
-              latest_tag=$(echo "$tag_list" | sed 's/testing-//' | sort -n | tail -n 1)
-              echo "Latest tag derived: $latest_tag"
-              next_tag=$((latest_tag + 1))
-              IMAGE_TAG="testing-$next_tag"
-            fi
+            IMAGE_TAG="development-latest"
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
       
