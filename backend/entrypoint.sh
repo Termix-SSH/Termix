@@ -1,10 +1,5 @@
 #!/bin/sh
 
-# Inject environment variables into env.js
-envsubst < /usr/share/nginx/html/env.template.js > /usr/share/nginx/html/env.js
-echo "Generated env.js:"
-cat /usr/share/nginx/html/env.js
-
 # Start the backend server
 node /backend/server.js &
 
