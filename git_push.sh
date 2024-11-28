@@ -54,7 +54,6 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Pushing changes forcefully to branch: $BRANCH_NAME"
-# Set GIT_ASKPASS to bypass the password prompt using the stored credentials
 export GIT_ASKPASS=echo
 git push -f origin "$BRANCH_NAME"
 if [ $? -ne 0 ]; then
