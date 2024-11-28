@@ -1,56 +1,83 @@
-name: Docker Build and Push
+name: Build and Push Docker Image
 
 on:
+  push:
+    branches:
+      - testing
+      - pre-release
+      - alpha
+      - beta
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Optional: Tag to use instead of auto-incrementing'
+        description: "Custom tag name for the Docker image"
         required: false
+        default: ""
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: 'ssh-project'  # assuming a static name, change if dynamic
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Set Environment Variables
-      run: |
-        REPO_OWNER=${GITHUB_REPOSITORY%/*} # Extract the owner from the repo slug
-        echo "REPO_OWNER=${REPO_OWNER}" >> $GITHUB_ENV
-        if [ -n "${{ github.event.inputs.tag_name }}" ]; then
-          echo "IMAGE_TAG=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
-        else
-          # Fetch all testing-* tags and determine the next build number
-          all_tags=$(curl -s "https://api.github.com/repos/${REPO_OWNER}/${{ github.repository }}/tags")
-          last_build_number=$(echo "$all_tags" | jq -r 'map(select(.name | startswith("testing-"))) | .[].name' | sed 's/^testing-//' | sort -n | tail -n 1)
-          
-          if [[ -z "$last_build_number" ]]; then
-            next_build_number=1
+      - name: Setup Node.js for Building Frontend
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies and Build Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine Docker image tag
+        id: tag
+        run: |
+          echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            IMAGE_TAG="${{ github.event.inputs.tag_name }}"
           else
-            next_build_number=$((last_build_number + 1))
+            # Fetch only tags that start with 'testing-'
+            all_tags=$(git tag -l 'testing-*')
+            if [ -z "$all_tags" ]; then
+              next_build_number=1
+            else
+              last_build_number=$(echo "$all_tags" | sed 's/testing-//' | sort -n | tail -n 1)
+              next_build_number=$((last_build_number + 1))
+            fi
+            IMAGE_TAG="testing-$next_build_number"
           fi
-          
-          echo "IMAGE_TAG=testing-${next_build_number}" >> $GITHUB_ENV
-        fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-    - name: Debug Environment Variables
-      run: |
-        echo "REPO_OWNER=${{ env.REPO_OWNER }}"
-        echo "IMAGE_TAG=${{ env.IMAGE_TAG }}"
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          tags: ghcr.io/${{ env.REPO_OWNER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
-    - name: Log into GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Cleanup Docker images
+        run: |
+          docker image prune -af --filter="label!=keep"  # Adjust or remove labels according to your needs
 
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./docker/Dockerfile
-        push: true
-        tags: ghcr.io/${{ env.REPO_OWNER }}/ssh-project:${{ env.IMAGE_TAG }}
+      - name: Post-build clean-up
+        run: docker system prune -af
