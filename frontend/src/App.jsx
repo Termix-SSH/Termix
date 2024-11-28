@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Terminal } from 'xterm';
 import 'xterm/css/xterm.css';
 
@@ -9,6 +9,9 @@ const App = () => {
   const inputBuffer = useRef('');
 
   useEffect(() => {
+    // Dynamically get the WebSocket URL
+    const WEBSOCKET_URL = window.__ENV__?.WEBSOCKET_URL || 'ws://localhost:8081';
+
     // Initialize xterm.js Terminal
     terminal.current = new Terminal({
       cursorBlink: true,
@@ -16,14 +19,14 @@ const App = () => {
         background: '#1e1e1e',
         foreground: '#ffffff',
       },
-      macOptionIsMeta: true, // Enable Meta key for Mac users
-      allowProposedApi: true, // Allow advanced terminal features
+      macOptionIsMeta: true,
+      allowProposedApi: true,
     });
 
     terminal.current.open(terminalRef.current);
 
     // Connect to the WebSocket server
-    socket.current = new WebSocket('ws://192.210.197.55:3501');
+    socket.current = new WebSocket(WEBSOCKET_URL);
 
     // WebSocket Event Handlers
     socket.current.onopen = () => {
@@ -45,24 +48,20 @@ const App = () => {
     // Handle terminal input
     terminal.current.onData((data) => {
       if (data === '\r') {
-        // On Enter
         if (inputBuffer.current.trim() !== '') {
-          socket.current.send(inputBuffer.current + '\n'); // Send the buffer to the server
+          socket.current.send(inputBuffer.current + '\n');
         }
-        terminal.current.write('\r\nbugattiguy527@oracle1:~$ '); // Always write a new prompt
-        inputBuffer.current = ''; // Clear the buffer
+        inputBuffer.current = '';
       } else if (data === '\u007F') {
-        // Handle Backspace
         if (inputBuffer.current.length > 0) {
           inputBuffer.current = inputBuffer.current.slice(0, -1);
           terminal.current.write('\b \b');
         }
       } else {
-        // Append input to buffer and display
         inputBuffer.current += data;
         terminal.current.write(data);
       }
-    });    
+    });
 
     return () => {
       terminal.current.dispose();
