@@ -1,94 +1,55 @@
-name: Build and Push Docker Image
+name: Docker Build and Push
+
 on:
-  push:
-    branches:
-      - testing
-      - pre-release
-      - alpha
-      - beta
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Custom tag name for the Docker image"
+        description: 'Optional: Tag to use instead of auto-incrementing'
         required: false
-        default: ""
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      - name: Setup Node.js for Building Frontend
-        uses: actions/setup-node@v2
-        with:
-          node-version: '18'
-
-      - name: Install Dependencies and Build Frontend
-        run: |
-          cd frontend
-          npm install
-          npm run build
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-
-      - name: Login to Docker Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Determine Docker image tag
-        id: tag
-        run: |
-          # Fetch tags from the repository
-          tags=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/tags")
-
-          # Parse and find the latest testing-* tag
-          last_tag=$(echo "$tags" | jq -r 'map(select(.name | test("^testing-\\d+$"))) | .[].name' | sed 's/testing-//' | sort -n | tail -n 1)
-
-          # Increment tag
-          if [[ -z "$last_tag" ]]; then
-            next_tag="testing-1"
+    - name: Set Environment Variables
+      run: |
+        echo "REPO_OWNER=${{ github.repository_owner }}" >> $GITHUB_ENV
+        if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+          echo "IMAGE_TAG=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
+        else
+          # Fetch all testing-* tags and determine the next build number
+          all_tags=$(curl -s "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/tags")
+          last_build_number=$(echo "$all_tags" | jq -r 'map(select(.name | startswith("testing-"))) | .[].name' | sed 's/^testing-//' | sort -n | tail -n 1)
+          
+          if [[ -z "$last_build_number" ]]; then
+            next_build_number=1
           else
-            next_tag="testing-$((last_tag + 1))"
+            next_build_number=$((last_build_number + 1))
           fi
+          
+          echo "IMAGE_TAG=testing-${next_build_number}" >> $GITHUB_ENV
+        fi
 
-          echo "IMAGE_TAG=${next_tag}" >> $GITHUB_ENV
+    - name: Debug Environment Variables
+      run: |
+        echo "REPO_OWNER=${{ env.REPO_OWNER }}"
+        echo "IMAGE_TAG=${{ env.IMAGE_TAG }}"
 
-      - name: Build and Push Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./docker/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ env.REPO_OWNER }}/ssh-project:${{ env.IMAGE_TAG }}
+    - name: Log into GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Delete old Docker images (keep only 6 latest)
-        run: |
-          # Fetch tags and keep only the latest 6
-          tags=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/tags")
-          all_tags=$(echo "$tags" | jq -r 'map(select(.name | test("^testing-\\d+$"))) | .[].name' | sed 's/testing-//' | sort -n)
-          total_tags=$(echo "$all_tags" | wc -l)
-
-          if [[ "$total_tags" -gt 6 ]]; then
-            # Get tags to delete
-            tags_to_delete=$(echo "$all_tags" | head -n $(($total_tags - 6)))
-            for tag in $tags_to_delete; do
-              gh api --method DELETE \
-                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                "/repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/git/refs/tags/testing-${tag}"
-            done
-          fi
-
-      - name: Post-build clean-up
-        run: docker system prune -af
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        push: true
+        tags: ghcr.io/${{ env.REPO_OWNER }}/ssh-project:${{ env.IMAGE_TAG }}
