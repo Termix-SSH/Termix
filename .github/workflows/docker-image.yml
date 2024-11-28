@@ -69,6 +69,7 @@ jobs:
             # Define the Docker image tag
             echo "IMAGE_TAG=testing-${next_build_number}" >> $GITHUB_ENV
           fi
+
       - name: Build and Push Docker image
         uses: docker/build-push-action@v2
         with:
