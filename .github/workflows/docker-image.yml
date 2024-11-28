@@ -48,7 +48,7 @@ jobs:
         id: lowercase_repo_owner
         run: echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-            - name: Determine Docker image tag
+      - name: Determine Docker image tag
         id: tag
         run: |
           # If tag_name is provided in workflow_dispatch, use it directly
