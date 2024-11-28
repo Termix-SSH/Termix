@@ -26,5 +26,5 @@ COPY --from=backend-build /backend/entrypoint.sh /backend/entrypoint.sh
 RUN chmod +x /backend/entrypoint.sh
 ENTRYPOINT ["/backend/entrypoint.sh"]
 
-EXPOSE 80
-EXPOSE 3001
+EXPOSE 8080
+EXPOSE 8081

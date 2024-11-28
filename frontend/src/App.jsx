@@ -23,7 +23,7 @@ const App = () => {
     terminal.current.open(terminalRef.current);
 
     // Connect to the WebSocket server
-    socket.current = new WebSocket('localhost:3001');
+    socket.current = new WebSocket('localhost:8081');
 
     // WebSocket Event Handlers
     socket.current.onopen = () => {

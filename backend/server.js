@@ -63,7 +63,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Start the WebSocket server on port 3001
-server.listen(3001, () => {
-  console.log('WebSocket server is listening on ws://localhost:3001');
+// Start the WebSocket server on port 8081
+server.listen(8081, () => {
+  console.log('WebSocket server is listening on ws://localhost:8081');
 });
