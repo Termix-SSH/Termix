@@ -22,8 +22,8 @@ COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 COPY --from=backend-build /backend /backend
 COPY --from=backend-build /backend/entrypoint.sh /backend/entrypoint.sh
 
+# Configure start-up
 RUN chmod +x /backend/entrypoint.sh
-
 ENTRYPOINT ["/backend/entrypoint.sh"]
 
 EXPOSE 80
