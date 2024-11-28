@@ -29,6 +29,12 @@ else
     fi
 fi
 
+# Check if there are any changes to commit
+if git diff --quiet; then
+    echo "No changes to commit."
+    exit 0
+fi
+
 # Perform git operations
 echo "Adding all changes..."
 git add .
