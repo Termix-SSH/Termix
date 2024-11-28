@@ -1,5 +1,4 @@
 name: Build and Push Docker Image
-
 on:
   push:
     branches:
@@ -17,53 +16,54 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
+      
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '18'
-
+      
       - name: Install Dependencies and Build Frontend
         run: |
           cd frontend
           npm install
           npm run build
-
+      
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
-
+      
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
-
+      
       - name: Login to Docker Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+      
       - name: Determine Docker image tag
         run: |
           echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
           if [ -n "${{ github.event.inputs.tag_name }}" ]; then
             IMAGE_TAG="${{ github.event.inputs.tag_name }}"
           else
-            git fetch --tags
+            git fetch --tags --force
             tag_list=$(git tag -l 'testing-*')
+            echo "Tag list: $tag_list"
             if [ -z "$tag_list" ]; then
               IMAGE_TAG="testing-1"
             else
               latest_tag=$(echo "$tag_list" | sed 's/testing-//' | sort -n | tail -n 1)
+              echo "Latest tag derived: $latest_tag"
               next_tag=$((latest_tag + 1))
               IMAGE_TAG="testing-$next_tag"
             fi
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-
+      
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v2
         with:
@@ -72,6 +72,6 @@ jobs:
           push: true
           tags: ghcr.io/${{ env.REPO_OWNER }}/ssh-project:${{ env.IMAGE_TAG }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
-
+      
       - name: Cleanup Docker Images
         run: docker image prune -af
