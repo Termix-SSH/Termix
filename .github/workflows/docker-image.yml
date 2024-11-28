@@ -17,12 +17,13 @@ jobs:
 
     - name: Set Environment Variables
       run: |
-        echo "REPO_OWNER=${{ github.repository_owner }}" >> $GITHUB_ENV
+        REPO_OWNER=${GITHUB_REPOSITORY%/*} # Extract the owner from the repo slug
+        echo "REPO_OWNER=${REPO_OWNER}" >> $GITHUB_ENV
         if [ -n "${{ github.event.inputs.tag_name }}" ]; then
           echo "IMAGE_TAG=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
         else
           # Fetch all testing-* tags and determine the next build number
-          all_tags=$(curl -s "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/tags")
+          all_tags=$(curl -s "https://api.github.com/repos/${REPO_OWNER}/${{ github.repository }}/tags")
           last_build_number=$(echo "$all_tags" | jq -r 'map(select(.name | startswith("testing-"))) | .[].name' | sed 's/^testing-//' | sort -n | tail -n 1)
           
           if [[ -z "$last_build_number" ]]; then
