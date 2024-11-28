@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - testing
+      - pre-release
+      - alpha
+      - beta
   workflow_dispatch:
     inputs:
       tag_name:
