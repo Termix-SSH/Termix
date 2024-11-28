@@ -6,7 +6,7 @@ const App = () => {
   const terminalRef = useRef(null);
   const terminal = useRef(null);
   const socket = useRef(null);
-  const inputBuffer = useRef(''); // Buffer to hold user input
+  const inputBuffer = useRef('');
 
   useEffect(() => {
     // Initialize xterm.js Terminal
