@@ -52,12 +52,17 @@ jobs:
         if [ -n "${{ github.event.inputs.tag_name }}" ]; then
           IMAGE_TAG="${{ github.event.inputs.tag_name }}"
         else
-          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-          regex="testing-([0-9]+)"
-          if [[ "$latest_tag" =~ $regex ]]; then
-            num=$((BASH_REMATCH[1] + 1))
-            IMAGE_TAG="testing-$num"
+          # Try to get the most recent tag; safely handle the case where no tags exist
+          if git fetch --tags && latest_tag=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null); then
+            regex="testing-([0-9]+)"
+            if [[ "$latest_tag" =~ $regex ]]; then
+              num=$((BASH_REMATCH[1] + 1))
+              IMAGE_TAG="testing-$num"
+            else
+              IMAGE_TAG="testing-1"
+            fi
           else
+            # If no tags are found, start at testing-1
             IMAGE_TAG="testing-1"
           fi
         fi
@@ -66,6 +71,8 @@ jobs:
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v2
       with:
+        context: .
+        file: ./docker/Dockerfile
         push: true
         tags: ghcr.io/${{ env.REPO_OWNER }}/ssh-project:${{ env.IMAGE_TAG }}
         labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
