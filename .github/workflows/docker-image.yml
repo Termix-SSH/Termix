@@ -48,7 +48,7 @@ jobs:
         id: lowercase_repo_owner
         run: echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Determine Docker image tag
+            - name: Determine Docker image tag
         id: tag
         run: |
           # If tag_name is provided in workflow_dispatch, use it directly
@@ -56,7 +56,8 @@ jobs:
             echo "IMAGE_TAG=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
           else
             # Fetch all testing-* tags and determine the next build number
-            all_tags=$(curl -s "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/tags")
+            all_tags=$(curl -s "https://api.github.com/repos/${{ github.repository_owner }}/{{ github.repository }}/tags")
+            # Extract the latest "testing-" tag number
             last_build_number=$(echo "$all_tags" | jq -r 'map(select(.name | startswith("testing-"))) | .[].name' | sed 's/^testing-//' | sort -n | tail -n 1)
             
             if [[ -z "$last_build_number" ]]; then
@@ -64,9 +65,17 @@ jobs:
             else
               next_build_number=$((last_build_number + 1))
             fi
-            
+
+            # Define the Docker image tag
             echo "IMAGE_TAG=testing-${next_build_number}" >> $GITHUB_ENV
           fi
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          tags: ghcr.io/${{ env.REPO_OWNER }}/ssh-project:${{ env.IMAGE_TAG }}
 
       - name: Build and Push Docker image
         uses: docker/build-push-action@v2
