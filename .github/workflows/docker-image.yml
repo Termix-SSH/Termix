@@ -66,7 +66,7 @@ jobs:
               next_build_number=$((last_build_number + 1))
             fi
 
-            # Define the Docker image tag
+            # Define the Docker image tag with testing-{next_build_number}
             echo "IMAGE_TAG=testing-${next_build_number}" >> $GITHUB_ENV
           fi
 
@@ -77,7 +77,7 @@ jobs:
           file: ./docker/Dockerfile
           push: true
           tags: ghcr.io/${{ env.REPO_OWNER }}/ssh-project:${{ env.IMAGE_TAG }}
-
+        
       - name: Delete old Docker images (keep only 6 latest)
         run: |
           # Get a list of all Docker images tagged with the repository and filter the oldest ones
