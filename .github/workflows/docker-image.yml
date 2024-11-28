@@ -56,9 +56,8 @@ jobs:
             echo "IMAGE_TAG=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
           else
             # Fetch all testing-* tags and determine the next build number
-            all_tags=$(curl -s "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/tags" | jq -r '.[].name')
-            # Extract only the testing-* tags and get the latest build number
-            last_build_number=$(echo "$all_tags" | grep '^testing-' | sed 's/^testing-//' | sort -n | tail -n 1)
+            all_tags=$(curl -s "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/tags")
+            last_build_number=$(echo "$all_tags" | jq -r 'map(select(.name | startswith("testing-"))) | .[].name' | sed 's/^testing-//' | sort -n | tail -n 1)
             if [[ -z "$last_build_number" ]]; then
               next_build_number=1
             else
