@@ -22,7 +22,9 @@
     "postcss": "^8.4.31"
   },
   "scripts": {
-    "start": "BROWSER=none WDS_SOCKET_PORT=0 vite --port 3000",
+    "start-vite": "cross-env BROWSER=none WDS_SOCKET_PORT=0 vite --port 8080",
+    "start-server": "node 'D:/Programming Projects/SSH-Project/ssh-project/backend/server.js'",
+    "start": "npm run start-vite && npm run start-server",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest"
@@ -47,6 +49,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.1.1",
+    "cross-env": "^7.0.3",
     "jsdom": "^22.1.0",
     "vite": "^4.5.5",
     "vitest": "^0.34.6"

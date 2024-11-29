@@ -1,20 +1,20 @@
 {
-    "version": "0.2.0",
-    "configurations": [
+  "version": "0.2.0",
+  "configurations": [
       {
-        "name": "Run application",
-        "type": "node",
-        "request": "launch",
-        "cwd": "${workspaceFolder}",
-        "console": "integratedTerminal",
-        "runtimeExecutable": "npm",
-        "runtimeArgs": [
-          "run-script",
-          "start"
-        ],
-        "skipFiles": [
-          "<node_internals>/**"
-        ]
+          "name": "Run application",
+          "type": "node",
+          "request": "launch",
+          "cwd": "D:/Programming Projects/SSH-Project/ssh-project/frontend",
+          "console": "integratedTerminal",
+          "runtimeExecutable": "npm",
+          "runtimeArgs": [
+              "run-script",
+              "start"
+          ],
+          "skipFiles": [
+              "<node_internals>/**"
+          ]
       }
-    ]
+  ]
 }
