@@ -1,0 +1,5 @@
+Overall Features:
+SSH/RDP(?)/VNC(?)
+Split Screen & Tabs
+ChatGPT/Ollama Stuff
+SMTP(?)

@@ -14,7 +14,8 @@
     "ssh2": "^1.16.0",
     "web-vitals": "^3.1.0",
     "ws": "^8.18.0",
-    "xterm": "^5.3.0"
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
   },
   "overrides": {
     "@svgr/webpack": "^8.0.1",
