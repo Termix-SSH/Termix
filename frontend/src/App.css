@@ -2,27 +2,20 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f4f4f4;
+  background-color: #000000;
   font-family: Arial, sans-serif;
-}
-
-.app-header {
-  background-color: #2c3e50;
-  color: white;
-  padding: 10px 20px;
-  width: 100%;
-  text-align: center;
 }
 
 .main-content {
   display: flex;
-  height: 80vh;
+  height: 100vh;
   width: 100%;
+  margin: 0;
 }
 
 .sidebar {
-  background-color: #34495e;
-  padding: 20px;
+  background-color: #1a1a1a;
+  padding: 35px 35px 35px 20px;
   width: 250px;
   color: white;
   display: flex;
@@ -30,7 +23,11 @@
   align-items: flex-start;
   justify-content: space-between;
   border-radius: 5px;
-  margin-right: 20px;
+  position: relative;
+}
+
+.sidebar.hidden {
+  display: none;
 }
 
 .sidebar h2 {
@@ -41,27 +38,49 @@
   margin-bottom: 10px;
   padding: 10px;
   width: 100%;
+  background-color: rgb(108, 108, 108);
   border: 1px solid #bdc3c7;
   border-radius: 5px;
+  margin-left: -4px;
+  color: white;
 }
 
 .sidebar button {
   padding: 10px;
-  background-color: #2ecc71;
+  background-color: rgb(108, 108, 108);
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-size: 16px;
+  margin-left: -4px;
 }
 
 .sidebar button:disabled {
-  background-color: #95a5a6;
+  background-color: #141414;
+}
+
+.hide-sidebar-button {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgb(108, 108, 108);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  z-index: 10;
 }
 
 .terminal-container {
   background-color: #1e1e1e;
-  border-radius: 5px;
+  border-radius: 0px;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
   height: 100%;
   flex-grow: 1;
