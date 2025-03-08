@@ -40,6 +40,9 @@ Termix is an open-source forever free self-hosted SSH (other protocols planned, 
 # Installation
 Visit the Termix [Wiki](https://github.com/LukeGus/Termix/wiki) for information on how to install Termix. You can also use these links to go directly to guide. [Docker](https://github.com/LukeGus/Termix/wiki/Docker) or [Manual](https://github.com/LukeGus/Termix/wiki/Manual).
 
+# Support
+If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues) repo.
+
 # Show-off
 
 ![Demo Image](repo-images/DemoImage1.png)
