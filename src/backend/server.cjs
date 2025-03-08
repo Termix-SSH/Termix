@@ -22,8 +22,17 @@ io.on("connection", (socket) => {
             console.error("Invalid hostConfig received:", hostConfig);
             return;
         }
-
-        console.log("Received hostConfig:", hostConfig);
+        
+        // Redact only sensitive info for logging
+        const safeHostConfig = {
+            ip: hostConfig.ip,
+            port: hostConfig.port,
+            user: hostConfig.user,
+            password: hostConfig.password ? '***REDACTED***' : undefined,
+            rsaKey: hostConfig.rsaKey ? '***REDACTED***' : undefined,
+        };
+        
+        console.log("Received hostConfig:", safeHostConfig);
         const { ip, port, user, password, rsaKey } = hostConfig;
 
         const conn = new SSHClient();
