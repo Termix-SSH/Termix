@@ -16,9 +16,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
         const terminalContainer = terminalRef.current;
         const parentContainer = terminalContainer?.parentElement;
 
-        if (!parentContainer || !isVisible) return;
-
-        void parentContainer.offsetHeight;
+        if (!parentContainer || parentContainer.clientWidth === 0) return;
 
         const parentWidth = parentContainer.clientWidth;
         const parentHeight = parentContainer.clientHeight;
@@ -26,12 +24,13 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
         terminalContainer.style.width = `${parentWidth}px`;
         terminalContainer.style.height = `${parentHeight}px`;
 
-        fitAddon.current.fit();
-
-        if (socketRef.current && terminalInstance.current) {
-            const { cols, rows } = terminalInstance.current;
-            socketRef.current.emit("resize", { cols, rows });
-        }
+        requestAnimationFrame(() => {
+            fitAddon.current.fit();
+            if (socketRef.current && terminalInstance.current) {
+                const { cols, rows } = terminalInstance.current;
+                socketRef.current.emit("resize", { cols, rows });
+            }
+        });
     };
 
     useImperativeHandle(ref, () => ({
@@ -50,7 +49,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
             },
             fontSize: 14,
             scrollback: 1000,
-            fontFamily: 'monospace',
             ignoreBracketedPasteMode: true,
         });
 
@@ -86,24 +84,29 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
             terminalInstance.current.write(decoder.decode(new Uint8Array(data)));
         });
 
+        let isPasting = false;
+
         terminalInstance.current.onData((data) => {
             socketRef.current.emit("data", data);
         });
 
         terminalInstance.current.attachCustomKeyEventHandler((event) => {
-            if (
-                (event.ctrlKey && event.key === "v") ||
-                (event.metaKey && event.key === "v") ||
-                (event.shiftKey && event.key === "Insert")
-            ) {
-                navigator.clipboard
-                    .readText()
-                    .then((text) => {
-                        socketRef.current.emit("data", text);
-                    })
-                    .catch((err) => {
-                        console.error("Failed to read clipboard contents:", err);
-                    });
+            console.log("Event caled");
+            if (isPasting) return;
+
+            isPasting = true;
+            setTimeout(() => {
+                isPasting = false;
+            }, 200);
+
+            if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+                event.preventDefault();
+
+                navigator.clipboard.readText().then((text) => {
+                    socketRef.current.emit("data", text);
+                }).catch((err) => {
+                    console.error("Failed to read clipboard contents:", err);
+                });
                 return false;
             }
             return true;
@@ -129,20 +132,21 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
     }, [hostConfig]);
 
     useEffect(() => {
-        if (isVisible) {
-            resizeTerminal();
-        }
+        resizeTerminal();
     }, [isVisible]);
 
     useEffect(() => {
         const terminalContainer = terminalRef.current;
         if (!terminalContainer) return;
 
+        const parentContainer = terminalContainer.parentElement;
+        if (!parentContainer) return;
+
         const observer = new ResizeObserver(() => {
             resizeTerminal();
         });
 
-        observer.observe(terminalContainer);
+        observer.observe(parentContainer);
 
         return () => {
             observer.disconnect();
@@ -153,7 +157,12 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
         <div
             ref={terminalRef}
             className="w-full h-full overflow-hidden text-left"
-            style={{ display: isVisible ? "block" : "none" }}
+            style={{
+                visibility: isVisible ? 'visible' : 'hidden',
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+            }}
         />
     );
 });

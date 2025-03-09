@@ -46,11 +46,10 @@ io.on("connection", (socket) => {
                         socket.emit("error", err.message);
                         return;
                     }
-
                     stream = newStream;
+
                     // Set initial terminal size
                     stream.setWindow(rows, cols, rows * 100, cols * 100);
-                    console.log(`Initial terminal size: cols=${cols}, rows=${rows}`);
 
                     // Pipe SSH output to client
                     stream.on("data", function (data) {
@@ -71,7 +70,6 @@ io.on("connection", (socket) => {
                     socket.on("resize", ({ cols, rows }) => {
                         if (stream && stream.setWindow) {
                             stream.setWindow(rows, cols, rows * 100, cols * 100);
-                            console.log(`Terminal resized: cols=${cols}, rows=${rows}`);
                         }
                     });
 
