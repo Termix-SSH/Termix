@@ -16,3 +16,23 @@
 .terminal-container > div {
   min-height: 0;
 }
+
+.tablist::-webkit-scrollbar {
+  width: 1px !important;
+  height: 1px !important;
+  background: transparent !important;
+}
+
+.tablist::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}

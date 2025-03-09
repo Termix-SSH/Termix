@@ -18,8 +18,8 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
 
         if (!parentContainer || parentContainer.clientWidth === 0) return;
 
-        const parentWidth = parentContainer.clientWidth;
-        const parentHeight = parentContainer.clientHeight;
+        const parentWidth = parentContainer.clientWidth - 10;
+        const parentHeight = parentContainer.clientHeight - 10;
 
         terminalContainer.style.width = `${parentWidth}px`;
         terminalContainer.style.height = `${parentHeight}px`;
@@ -162,6 +162,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
                 position: 'absolute',
                 width: '100%',
                 height: '100%',
+                transform: 'translateY(5px) translateX(5px)',
             }}
         />
     );
