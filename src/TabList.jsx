@@ -5,12 +5,11 @@ function TabList({ terminals, activeTab, setActiveTab, closeTab, toggleSplit, sp
     const isSplitScreenActive = splitTabIds.length > 0;
 
     return (
-        <div className="inline-flex items-center h-full px-[0.5rem]">
+        <div className="tablist inline-flex items-center h-full px-[0.5rem] overflow-x-auto">
             {terminals.map((terminal, index) => {
                 const isActive = terminal.id === activeTab;
                 const isSplit = splitTabIds.includes(terminal.id);
-
-                const isSplitButtonDisabled = isActive && !isSplitScreenActive || splitTabIds.length >= 3 && !isSplit;
+                const isSplitButtonDisabled = (isActive && !isSplitScreenActive) || (splitTabIds.length >= 3 && !isSplit);
 
                 return (
                     <div key={terminal.id} className={index < terminals.length - 1 ? "mr-[0.5rem]" : ""}>
@@ -20,8 +19,7 @@ function TabList({ terminals, activeTab, setActiveTab, closeTab, toggleSplit, sp
                                 onClick={() => setActiveTab(terminal.id)}
                                 disabled={isSplit}
                                 sx={{
-                                    backgroundColor:
-                                        isActive ? theme.palette.general.primary : theme.palette.general.disabled,
+                                    backgroundColor: isActive ? theme.palette.general.primary : theme.palette.general.disabled,
                                     color: theme.palette.text.primary,
                                     "&:hover": { backgroundColor: theme.palette.general.secondary },
                                     ":disabled": { backgroundColor: theme.palette.general.disabled },
@@ -40,9 +38,7 @@ function TabList({ terminals, activeTab, setActiveTab, closeTab, toggleSplit, sp
                                 onClick={() => toggleSplit(terminal.id)}
                                 disabled={isSplitButtonDisabled || isActive}
                                 sx={{
-                                    backgroundColor: isSplit
-                                        ? theme.palette.general.primary
-                                        : theme.palette.general.tertiary,
+                                    backgroundColor: isSplit ? theme.palette.general.primary : theme.palette.general.tertiary,
                                     color: theme.palette.text.primary,
                                     ":disabled": { backgroundColor: theme.palette.general.disabled },
                                     "&:hover": { backgroundColor: theme.palette.general.secondary },
@@ -58,7 +54,7 @@ function TabList({ terminals, activeTab, setActiveTab, closeTab, toggleSplit, sp
                             {/* Close Tab Button */}
                             <Button
                                 onClick={() => closeTab(terminal.id)}
-                                disabled={isSplitScreenActive && isActive || isSplit}
+                                disabled={(isSplitScreenActive && isActive) || isSplit}
                                 sx={{
                                     backgroundColor: theme.palette.general.tertiary,
                                     color: theme.palette.text.primary,

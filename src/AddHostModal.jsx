@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { CssVarsProvider } from '@mui/joy/styles';
-import { Modal, Button, FormControl, FormLabel, Input, Stack, DialogTitle, DialogContent, ModalDialog, Select, Option, FormHelperText } from '@mui/joy';
+import { Modal, Button, FormControl, FormLabel, Input, Stack, DialogTitle, DialogContent, ModalDialog, Select, Option } from '@mui/joy';
 import theme from './theme';
 
 const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
@@ -31,15 +31,22 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
         <CssVarsProvider theme={theme}>
             <Modal open={!isHidden} onClose={() => setIsAddHostHidden(true)}>
                 <ModalDialog
+                    layout="center"
                     sx={{
                         backgroundColor: theme.palette.general.tertiary,
                         borderColor: theme.palette.general.secondary,
                         color: theme.palette.text.primary,
                         padding: 3,
                         borderRadius: 10,
-                        overflowX: 'hidden',
-                        overflowY: 'auto',
-                    }}>
+                        width: "auto",
+                        maxWidth: "90vw",
+                        minWidth: "fit-content",
+                        overflow: "hidden",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                    }}
+                >
                     <DialogTitle>Add Host</DialogTitle>
                     <DialogContent>
                         <form
@@ -48,7 +55,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                 if (isFormValid()) handleAddHost();
                             }}
                         >
-                            <Stack spacing={2}>
+                            <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
                                 <FormControl>
                                     <FormLabel>Host Name</FormLabel>
                                     <Input
