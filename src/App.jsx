@@ -21,6 +21,7 @@ function App() {
         user: "",
         password: "",
         port: 22,
+        authMethod: "Select Auth",
     });
     const [isLaunchpadOpen, setIsLaunchpadOpen] = useState(false);
     const [splitTabIds, setSplitTabIds] = useState([]);
@@ -90,7 +91,7 @@ function App() {
                     user: form.user,
                     password: form.authMethod === 'password' ? form.password : undefined,
                     rsaKey: form.authMethod === 'rsaKey' ? form.rsaKey : undefined,
-                    port: Number(form.port),
+                    port: String(form.port),
                 },
                 terminalRef: null,
             };

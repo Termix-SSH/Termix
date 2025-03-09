@@ -50,8 +50,8 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
             },
             fontSize: 14,
             scrollback: 1000,
-            rendererType: "canvas",
-            allowTransparency: true,
+            fontFamily: 'monospace',
+            ignoreBracketedPasteMode: true,
         });
 
         terminalInstance.current.loadAddon(fitAddon.current);
@@ -62,8 +62,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
             resizeTerminal();
             terminalInstance.current.focus();
         }, 50);
-
-        terminalInstance.current.write("\r\n*** Connecting to backend ***\r\n");
 
         const socket = io(
             window.location.hostname === "localhost"
@@ -81,23 +79,47 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
             resizeTerminal();
             const { cols, rows } = terminalInstance.current;
             socket.emit("connectToHost", cols, rows, hostConfig);
-            terminalInstance.current.write("\r\n*** Connected to backend ***\r\n");
         });
 
         socket.on("data", (data) => {
-            terminalInstance.current.write(data);
+            const decoder = new TextDecoder("utf-8");
+            terminalInstance.current.write(decoder.decode(new Uint8Array(data)));
         });
 
-        socket.on("disconnect", () => {
-            terminalInstance.current.write("\r\n*** Disconnected from backend ***\r\n");
+        terminalInstance.current.onData((data) => {
+            socketRef.current.emit("data", data);
         });
 
-        terminalInstance.current.onKey(({ key }) => {
-            socket.emit("data", key);
+        terminalInstance.current.attachCustomKeyEventHandler((event) => {
+            if (
+                (event.ctrlKey && event.key === "v") ||
+                (event.metaKey && event.key === "v") ||
+                (event.shiftKey && event.key === "Insert")
+            ) {
+                navigator.clipboard
+                    .readText()
+                    .then((text) => {
+                        socketRef.current.emit("data", text);
+                    })
+                    .catch((err) => {
+                        console.error("Failed to read clipboard contents:", err);
+                    });
+                return false;
+            }
+            return true;
         });
 
-        socket.on("connect_error", (err) => {
-            terminalInstance.current.write(`\r\n*** Error: ${err.message} ***\r\n`);
+        terminalInstance.current.onKey(({ domEvent }) => {
+            if (domEvent.key === "c" && (domEvent.ctrlKey || domEvent.metaKey)) {
+                const selection = terminalInstance.current.getSelection();
+                if (selection) {
+                    navigator.clipboard.writeText(selection);
+                }
+            }
+        });
+
+        socket.on("error", (err) => {
+            terminalInstance.current.write(`\r\n*** Error: ${err} ***\r\n`);
         });
 
         return () => {
