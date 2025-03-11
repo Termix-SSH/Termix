@@ -91,7 +91,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
         });
 
         terminalInstance.current.attachCustomKeyEventHandler((event) => {
-            console.log("Event caled");
             if (isPasting) return;
 
             isPasting = true;
