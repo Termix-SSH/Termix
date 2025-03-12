@@ -31,7 +31,7 @@ RUN mkdir -p /var/log/nginx && \
     chown -R nginx:nginx /var/log/nginx /var/lib/nginx
 
 # Expose ports
-EXPOSE 8080 8081
+EXPOSE 8080 8081 8082
 
 # Use a entrypoint script to run all services
 COPY docker/entrypoint.sh /entrypoint.sh
