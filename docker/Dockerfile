@@ -25,8 +25,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get update && apt-get install -y mongodb-org \
     && rm -rf /var/lib/apt/lists/*
 
-# Create mongodb user and group
-RUN groupadd -r mongodb && useradd -r -g mongodb mongodb
+# Create mongodb user and group if they do not exist
+RUN getent group mongodb || groupadd -r mongodb && \
+    getent passwd mongodb || useradd -r -g mongodb mongodb
 
 # Stage 4: Final production image
 FROM node:18-alpine
@@ -46,7 +47,7 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
 
-# Create necessary directories for MongoDB
+# Create necessary directories for MongoDB and set proper permissions
 ENV MONGO_DATA_DIR=/data/db
 RUN mkdir -p $MONGO_DATA_DIR && \
     chown -R mongodb:mongodb $MONGO_DATA_DIR
