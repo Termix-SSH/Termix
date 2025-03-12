@@ -24,6 +24,7 @@
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dayjs": "^1.11.13",
+    "dotenv": "^16.4.7",
     "embla-carousel-react": "^7.1.0",
     "express": "^4.21.2",
     "is-stream": "^4.0.1",

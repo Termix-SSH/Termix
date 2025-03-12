@@ -2,6 +2,7 @@ const http = require("http");
 const socketIo = require("socket.io");
 const mongoose = require("mongoose");
 const crypto = require('crypto');
+require('dotenv').config();
 
 const server = http.createServer();
 const io = socketIo(server, {

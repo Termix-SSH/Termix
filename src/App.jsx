@@ -349,14 +349,6 @@ function App() {
                     handleAddHost={handleAddHost}
                     setIsAddHostHidden={setIsAddHostHidden}
                 />
-                <LoginUserModal
-                    isHidden={isLoginUserHidden}
-                    form={loginUserForm}
-                    setForm={setLoginUserForm}
-                    handleLoginUser={handleLoginUser}
-                    setIsLoginUserHidden={setIsLoginUserHidden}
-                    setIsCreateUserHidden={setIsCreateUserHidden}
-                />
                 <CreateUserModal
                     isHidden={isCreateUserHidden}
                     form={createUserForm}
