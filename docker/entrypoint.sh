@@ -1,20 +1,17 @@
-#!/bin/sh
+#!/bin/bash
 
-# Start MongoDB in the background
+# Start MongoDB (it should already be running from the mongo:5 container)
 echo "Starting MongoDB..."
-mongod --fork --logpath /var/log/mongodb/mongod.log --bind_ip 0.0.0.0 --dbpath /data/db
+# MongoDB will run in a separate container, no need to start it here.
 
-# Wait for MongoDB to fully start (you can adjust the sleep if needed)
-sleep 5
-
-# Start NGINX in the background
-echo "Starting Nginx..."
+# Start NGINX
+echo "Starting NGINX..."
 nginx -g "daemon off;" &
 
-# Start Node.js backend (adjust as needed for your backend setup)
+# Start Node.js backend
 echo "Starting Node.js backend..."
-node /usr/app/src/backend/ssh.cjs &
-node /usr/app/src/backend/database.cjs &
+node /app/src/backend/ssh.cjs &
+node /app/src/backend/database.cjs &
 
 # Keep the container running
 wait
