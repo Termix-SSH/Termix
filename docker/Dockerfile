@@ -27,14 +27,6 @@ RUN apk add --no-cache \
     libcurl \
     && update-ca-certificates
 
-# Install MongoDB manually
-RUN wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-5.0.7.tgz -O /tmp/mongodb.tgz \
-    && tar -xvzf /tmp/mongodb.tgz -C /usr/local \
-    && rm /tmp/mongodb.tgz \
-    && ln -s /usr/local/mongodb-linux-x86_64-5.0.7/bin/* /usr/local/bin/ \
-    && mkdir -p /data/db /var/log/mongodb \
-    && chown -R mongodb:mongodb /data/db /var/log/mongodb
-
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
@@ -42,6 +34,9 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 # Copy backend
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
+
+# Use MongoDB image (version 5)
+FROM mongo:5 AS mongodb
 
 # Expose necessary ports
 EXPOSE 8080 8081 27017
