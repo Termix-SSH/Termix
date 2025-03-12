@@ -20,6 +20,9 @@
     <img alt="Termix Banner" src=./repo-images/TermixLogo.png style="width: 125px; height: auto;">  </a>
 </p>
 
+If you would like, you can support the project here!\
+[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/LukeGustafson803)
+
 # Overview
 Termix is an open-source forever free self-hosted SSH (other protocols planned, see [Planned Features](#planned-features)) server management panel inspired by [Nexterm](https://github.com/gnmyt/Nexterm). Its purpose is to provide an all-in-one docker-hosted web solution to manage your servers in one easy place. I'm using this project to help me learn [React](https://github.com/facebook/react), [Vite](https://github.com/vitejs/vite-plugin-react), and [Docker](https://www.docker.com) but also because I could never settle on a server management software that I enjoyed to use.
 
@@ -44,8 +47,7 @@ Termix is an open-source forever free self-hosted SSH (other protocols planned, 
 Visit the Termix [Wiki](https://github.com/LukeGus/Termix/wiki) for information on how to install Termix. You can also use these links to go directly to guide. [Docker](https://github.com/LukeGus/Termix/wiki/Docker) or [Manual](https://github.com/LukeGus/Termix/wiki/Manual).
 
 # Support
-If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues) repo.
-
+If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues) repo. If you would like to support me financially, you can on [Paypal](https://paypal.me/LukeGustafson803).
 # Show-off
 
 ![Demo Image](repo-images/DemoImage1.png)
