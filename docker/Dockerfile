@@ -20,12 +20,14 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     ca-certificates \
     lsb-release \
-    && wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - \
-    && echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/debian $(lsb_release -c | awk '{print $2}')/mongodb-org/5.0 main" > /etc/apt/sources.list.d/mongodb-org-5.0.list \
-    && apt-get update && apt-get install -y mongodb-org \
-    && rm -rf /var/lib/apt/lists/*
+    sudo \
+    shadow && \
+    wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - && \
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/debian $(lsb_release -c | awk '{print $2}')/mongodb-org/5.0 main" > /etc/apt/sources.list.d/mongodb-org-5.0.list && \
+    apt-get update && apt-get install -y mongodb-org && \
+    rm -rf /var/lib/apt/lists/*
 
-# Create mongodb user and group
+# Create mongodb user and group in the final image
 RUN getent group mongodb || groupadd -r mongodb && \
     getent passwd mongodb || useradd -r -g mongodb mongodb
 
