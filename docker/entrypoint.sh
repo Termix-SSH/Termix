@@ -1,16 +1,20 @@
 #!/bin/sh
-# Start MongoDB in the background before the delay
-mongod --fork --logpath /var/log/mongodb.log --bind_ip 0.0.0.0
 
-# Delay for 5 seconds to ensure MongoDB has started
+# Start MongoDB in the background
+echo "Starting MongoDB..."
+mongod --fork --logpath /var/log/mongodb.log --bind_ip 0.0.0.0 --dbpath /data/db
+
+# Wait for MongoDB to fully start (you can adjust the sleep if needed)
 sleep 5
 
 # Start NGINX in the background
+echo "Starting Nginx..."
 nginx -g "daemon off;" &
 
-# Start Node.js backend
-node src/backend/ssh.cjs &
-node src/backend/database.cjs &
+# Start Node.js backend (adjust as needed for your backend setup)
+echo "Starting Node.js backend..."
+node /app/src/backend/ssh.cjs &
+node /app/src/backend/database.cjs &
 
-# Wait for processes to keep the container running
+# Keep the container running
 wait

@@ -13,16 +13,28 @@ COPY package*.json ./
 RUN npm install
 COPY src/backend/ ./src/backend/
 
-# Stage 3: Final production image
+# Stage 3: Build MongoDB (Debian-based)
+FROM debian:bullseye-slim AS mongodb-builder
+
+# Install MongoDB dependencies on Debian
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    lsb-release \
+    && wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - \
+    && echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/debian $(lsb_release -c | awk '{print $2}')/mongodb-org/5.0 main" > /etc/apt/sources.list.d/mongodb-org-5.0.list \
+    && apt-get update && apt-get install -y \
+    mongodb-org \
+    && rm -rf /var/lib/apt/lists/*
+
+# Stage 4: Final production image
 FROM node:18-alpine
 
-# Install nginx and MongoDB (from the MongoDB repository)
+# Install nginx
 RUN apk add --no-cache \
     nginx \
-    bash \
-    && echo "https://repo.mongodb.org/repo/alpine-3.18/mongodb-org/5.0/main" >> /etc/apk/repositories \
-    && apk update \
-    && apk add --no-cache mongodb-org
+    bash
 
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -31,6 +43,10 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 # Copy backend
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
+
+# MongoDB setup from MongoDB builder stage
+COPY --from=mongodb-builder /usr/bin/mongod /usr/bin/mongod
+COPY --from=mongodb-builder /usr/bin/mongo /usr/bin/mongo
 
 # Create necessary directories
 RUN mkdir -p /var/log/nginx && \
