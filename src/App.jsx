@@ -371,6 +371,15 @@ function App() {
                 />
                 {isLaunchpadOpen && <Launchpad onClose={() => setIsLaunchpadOpen(false)} />}
 
+                <LoginUserModal
+                    isHidden={isLoginUserHidden}
+                    form={loginUserForm}
+                    setForm={setLoginUserForm}
+                    handleLoginUser={handleLoginUser}
+                    setIsLoginUserHidden={setIsLoginUserHidden}
+                    setIsCreateUserHidden={setIsCreateUserHidden}
+                />
+
                 {/* User component */}
                 <User
                     ref={userRef}

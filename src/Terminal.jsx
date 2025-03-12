@@ -66,7 +66,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
                 ? "http://localhost:8081"
                 : "/",
             {
-                path: "/ssh-socket.io/",
+                path: "/ssh.io/",
                 transports: ["websocket", "polling"],
             }
         );

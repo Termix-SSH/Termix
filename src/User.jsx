@@ -2,15 +2,15 @@ import { useRef, forwardRef, useImperativeHandle } from "react";
 import io from "socket.io-client";
 import PropTypes from "prop-types";
 
-let socket = null;
+let socket;
 
-if (socket === null) {
+if (!socket) {
     socket = io(
         window.location.hostname === "localhost"
             ? "http://localhost:8082"
             : "/",
         {
-            path: window.location.hostname === "localhost" ? "/" : "/database-socket.io/",
+            path: "/database.io",
             transports: ["websocket", "polling"],
         }
     );
