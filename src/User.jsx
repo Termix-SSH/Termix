@@ -7,10 +7,10 @@ let socket;
 if (!socket) {
     socket = io(
         window.location.hostname === "localhost"
-            ? "http://localhost:8082"
-            : "/",
+            ? "http://localhost:8082/database.io"
+            : "/database.io",
         {
-            path: "/database.io",
+            path: "/database.io/socket.io",
             transports: ["websocket", "polling"],
         }
     );

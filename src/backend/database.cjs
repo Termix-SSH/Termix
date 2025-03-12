@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const server = http.createServer();
 const io = socketIo(server, {
+    path: "/database.io/socket.io",
     cors: {
         origin: "*",
         methods: ["GET", "POST"],
@@ -13,6 +14,8 @@ const io = socketIo(server, {
     },
     allowEIO3: true
 });
+
+const dbNamespace = io.of("/database.io");
 
 async function connectToMongoDB() {
     try {
@@ -103,15 +106,15 @@ async function deleteUser(userId) {
             await User.deleteOne({ _id: userId });
             return { success: true };
         } else {
-            return { error: 'User not found'};
+            return { error: 'User not found' };
         }
     } catch (err) {
         return { error: 'Error removing user: ' + err.message };
     }
 }
 
-io.on("connection", (socket) => {
-    console.log("New socket connection established");
+dbNamespace.on("connection", (socket) => {
+    console.log("New socket connection established on");
 
     socket.on("createUser", async (data) => {
         const { username, password } = data;

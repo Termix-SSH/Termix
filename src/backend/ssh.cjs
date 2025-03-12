@@ -4,6 +4,7 @@ const SSHClient = require("ssh2").Client;
 
 const server = http.createServer();
 const io = socketIo(server, {
+    path: "/ssh.io/socket.io",
     cors: {
         origin: "*",
         methods: ["GET", "POST"],
