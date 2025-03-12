@@ -13,8 +13,10 @@ COPY package*.json ./
 RUN npm install
 COPY src/backend/ ./src/backend/
 
-# Stage 3: Build MongoDB on Debian-based image
+# Stage 3: Install MongoDB on Debian-based image
 FROM debian:bullseye AS mongodb-builder
+
+# Install dependencies and MongoDB
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -27,21 +29,16 @@ RUN apt-get update && apt-get install -y \
     apt-get update && apt-get install -y mongodb-org && \
     rm -rf /var/lib/apt/lists/*
 
-# Create mongodb user and group in the final image
-RUN getent group mongodb || groupadd -r mongodb && \
-    getent passwd mongodb || useradd -r -g mongodb mongodb
-
 # Stage 4: Final production image
 FROM node:18-alpine
 
-# Install nginx
+# Install Nginx and required packages
 RUN apk add --no-cache nginx bash
 
 # Create mongodb user and group in the final image
-RUN getent group mongodb || groupadd -r mongodb && \
-    getent passwd mongodb || useradd -r -g mongodb mongodb
+RUN addgroup -g 1001 mongodb && adduser -D -u 1001 -G mongodb mongodb
 
-# Install MongoDB from the mongodb-builder stage
+# Install MongoDB binaries from mongodb-builder
 COPY --from=mongodb-builder /usr/bin/mongod /usr/bin/mongod
 COPY --from=mongodb-builder /usr/bin/mongo /usr/bin/mongo
 
@@ -49,11 +46,11 @@ COPY --from=mongodb-builder /usr/bin/mongo /usr/bin/mongo
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
-# Copy backend
+# Copy backend code
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
 
-# Create necessary directories for MongoDB and set proper permissions
+# Set permissions and prepare directories for MongoDB
 ENV MONGO_DATA_DIR=/data/db
 RUN mkdir -p $MONGO_DATA_DIR && \
     chown -R mongodb:mongodb $MONGO_DATA_DIR
@@ -61,7 +58,12 @@ RUN mkdir -p $MONGO_DATA_DIR && \
 # Expose necessary ports
 EXPOSE 8080 8081 8082 27017
 
-# Use an entrypoint script to run services (nginx, MongoDB, and Node backend)
+# Use an entrypoint script to start services (MongoDB, Nginx, and Node backend)
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Switch to a non-root user for security
+USER mongodb
+
+# Default command to start the services
 CMD ["/entrypoint.sh"]
