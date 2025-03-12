@@ -13,65 +13,40 @@ COPY package*.json ./
 RUN npm install
 COPY src/backend/ ./src/backend/
 
-# Stage 3: Install MongoDB on Debian-based image
-FROM debian:bullseye AS mongodb-builder
-
-# Install dependencies and MongoDB
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    ca-certificates \
-    lsb-release \
-    sudo && \
-    wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - && \
-    # Dynamically set the architecture and MongoDB version
-    ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-        echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/debian $(lsb_release -c | awk '{print $2}')/mongodb-org/5.0 main" > /etc/apt/sources.list.d/mongodb-org-5.0.list; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-        echo "deb [ arch=arm64 ] https://repo.mongodb.org/apt/debian $(lsb_release -c | awk '{print $2}')/mongodb-org/5.0 main" > /etc/apt/sources.list.d/mongodb-org-5.0.list; \
-    else \
-        echo "Unsupported architecture $ARCH"; \
-        exit 1; \
-    fi && \
-    apt-get update && apt-get install -y mongodb-org && \
-    rm -rf /var/lib/apt/lists/*
-
-# Stage 4: Final production image
+# Stage 3: Final production image
 FROM node:18-alpine
 
-# Install Nginx and required packages
-RUN apk add --no-cache nginx bash
+# Install dependencies
+RUN apk add --no-cache \
+    wget \
+    bash \
+    curl \
+    ca-certificates \
+    gnupg \
+    bash \
+    libcurl \
+    && update-ca-certificates
 
-# Create mongodb user and group in the final image
-RUN addgroup -g 1001 mongodb && adduser -D -u 1001 -G mongodb mongodb
-
-# Install MongoDB binaries from mongodb-builder
-COPY --from=mongodb-builder /usr/bin/mongod /usr/bin/mongod
-COPY --from=mongodb-builder /usr/bin/mongo /usr/bin/mongo
+# Install MongoDB manually
+RUN wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-5.0.7.tgz -O /tmp/mongodb.tgz \
+    && tar -xvzf /tmp/mongodb.tgz -C /usr/local \
+    && rm /tmp/mongodb.tgz \
+    && ln -s /usr/local/mongodb-linux-x86_64-5.0.7/bin/* /usr/local/bin/ \
+    && mkdir -p /data/db /var/log/mongodb \
+    && chown -R mongodb:mongodb /data/db /var/log/mongodb
 
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
-# Copy backend code
+# Copy backend
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
 
-# Set permissions and prepare directories for MongoDB
-ENV MONGO_DATA_DIR=/data/db
-RUN mkdir -p $MONGO_DATA_DIR && \
-    chown -R mongodb:mongodb $MONGO_DATA_DIR
-
 # Expose necessary ports
-EXPOSE 8080 8081 8082 27017
+EXPOSE 8080 8081 27017
 
-# Use an entrypoint script to start services (MongoDB, Nginx, and Node backend)
+# Use an entrypoint script to run services (nginx, MongoDB, Node backend)
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-# Switch to a non-root user for security
-USER mongodb
-
-# Default command to start the services
 CMD ["/entrypoint.sh"]
