@@ -15,7 +15,7 @@ const io = socketIo(server, {
 
 async function connectToMongoDB() {
     try {
-        const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017/termix';
+        const mongoUrl = process.env.MONGO_URL || 'mongodb://mongodb:27017/termix';
         await mongoose.connect(mongoUrl, {});
         console.log('Connected to MongoDB');
 
