@@ -13,10 +13,10 @@ COPY package*.json ./
 RUN npm install
 COPY src/backend/ ./src/backend/
 
-# Stage 3: Final production image (based on node:18-alpine)
+# Stage 3: Final production image
 FROM node:18-alpine
 
-# Install dependencies
+# Install dependencies including nginx
 RUN apk add --no-cache \
     nginx \
     bash \
@@ -25,6 +25,9 @@ RUN apk add --no-cache \
     gnupg \
     libcurl \
     && update-ca-certificates
+
+# Install MongoDB image (version 5)
+FROM mongo:5 AS mongodb
 
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -38,11 +41,8 @@ COPY --from=backend-builder /app/src/backend ./src/backend
 RUN mkdir -p /var/log/nginx /var/lib/nginx && \
     chown -R nginx:nginx /var/log/nginx /var/lib/nginx
 
-# Expose necessary ports (8080 for nginx, 8081 for backend, 27017 for MongoDB)
+# Expose necessary ports
 EXPOSE 8080 8081 27017
-
-# Use MongoDB image (version 5)
-FROM mongo:5 AS mongodb
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
