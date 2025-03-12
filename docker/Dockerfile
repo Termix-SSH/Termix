@@ -22,8 +22,7 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     ca-certificates \
     lsb-release \
-    sudo \
-    shadow && \
+    sudo && \
     wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - && \
     echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/debian $(lsb_release -c | awk '{print $2}')/mongodb-org/5.0 main" > /etc/apt/sources.list.d/mongodb-org-5.0.list && \
     apt-get update && apt-get install -y mongodb-org && \
