@@ -10,7 +10,7 @@ if (socket === null) {
             ? "http://localhost:8082"
             : "/",
         {
-            path: "/socket.io",
+            path: "/database-socket.io",
             transports: ["websocket", "polling"],
         }
     );
