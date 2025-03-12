@@ -13,10 +13,8 @@ COPY package*.json ./
 RUN npm install
 COPY src/backend/ ./src/backend/
 
-# Stage 3: Build MongoDB (Debian-based)
-FROM debian:bullseye-slim AS mongodb-builder
-
-# Install MongoDB dependencies on Debian
+# Stage 3: Build MongoDB on Debian-based image
+FROM debian:bullseye AS mongodb-builder
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -24,17 +22,21 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     && wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - \
     && echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/debian $(lsb_release -c | awk '{print $2}')/mongodb-org/5.0 main" > /etc/apt/sources.list.d/mongodb-org-5.0.list \
-    && apt-get update && apt-get install -y \
-    mongodb-org \
+    && apt-get update && apt-get install -y mongodb-org \
     && rm -rf /var/lib/apt/lists/*
+
+# Create mongodb user and group
+RUN groupadd -r mongodb && useradd -r -g mongodb mongodb
 
 # Stage 4: Final production image
 FROM node:18-alpine
 
 # Install nginx
-RUN apk add --no-cache \
-    nginx \
-    bash
+RUN apk add --no-cache nginx bash
+
+# Install MongoDB from the mongodb-builder stage
+COPY --from=mongodb-builder /usr/bin/mongod /usr/bin/mongod
+COPY --from=mongodb-builder /usr/bin/mongo /usr/bin/mongo
 
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -44,16 +46,7 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
 
-# MongoDB setup from MongoDB builder stage
-COPY --from=mongodb-builder /usr/bin/mongod /usr/bin/mongod
-COPY --from=mongodb-builder /usr/bin/mongo /usr/bin/mongo
-
-# Create necessary directories
-RUN mkdir -p /var/log/nginx && \
-    mkdir -p /var/lib/nginx && \
-    chown -R nginx:nginx /var/log/nginx /var/lib/nginx
-
-# MongoDB setup
+# Create necessary directories for MongoDB
 ENV MONGO_DATA_DIR=/data/db
 RUN mkdir -p $MONGO_DATA_DIR && \
     chown -R mongodb:mongodb $MONGO_DATA_DIR
