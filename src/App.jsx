@@ -192,6 +192,12 @@ function App() {
         }
     };
 
+    const getUser = () => {
+        if (userRef.current) {
+            return userRef.current.getUser();
+        }
+    }
+
     const closeTab = (id) => {
         const newTerminals = terminals.filter((t) => t.id !== id);
         setTerminals(newTerminals);
@@ -361,6 +367,7 @@ function App() {
                 />
                 <ProfileModal
                     isHidden={isProfileHidden}
+                    getUser={getUser}
                     handleDeleteUser={handleDeleteUser}
                     handleLogoutUser={handleLogoutUser}
                     setIsProfileHidden={setIsProfileHidden}

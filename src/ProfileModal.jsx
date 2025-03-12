@@ -3,7 +3,7 @@ import { CssVarsProvider } from '@mui/joy/styles';
 import {Modal, Button, DialogTitle, DialogContent, ModalDialog, Stack } from '@mui/joy';
 import theme from './theme';
 
-const ProfileModal = ({ isHidden, handleDeleteUser, handleLogoutUser, setIsProfileHidden }) => {
+const ProfileModal = ({ isHidden, getUser, handleDeleteUser, handleLogoutUser, setIsProfileHidden }) => {
     const handleDelete = () => {
         handleDeleteUser({
             onSuccess: () => {
@@ -18,6 +18,11 @@ const ProfileModal = ({ isHidden, handleDeleteUser, handleLogoutUser, setIsProfi
                 window.location.reload();
             }
         });
+    }
+
+    const getUserName = () => {
+        const user = getUser();
+        return user ? user.username : '';
     }
 
     return (
@@ -42,7 +47,9 @@ const ProfileModal = ({ isHidden, handleDeleteUser, handleLogoutUser, setIsProfi
                         gap: 1,
                     }}
                 >
-                    <DialogTitle sx={{ marginBottom: 1.5 }}>Profile</DialogTitle>
+                    <DialogTitle sx={{ marginBottom: 1.5 }}>
+                        {getUserName()}
+                    </DialogTitle>
                     <DialogContent>
                         <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden", mt: 1.5 }}>
                             <Button
@@ -77,6 +84,7 @@ const ProfileModal = ({ isHidden, handleDeleteUser, handleLogoutUser, setIsProfi
 
 ProfileModal.propTypes = {
     isHidden: PropTypes.bool.isRequired,
+    getUser: PropTypes.func.isRequired,
     handleDeleteUser: PropTypes.func.isRequired,
     handleLogoutUser: PropTypes.func.isRequired,
     setIsProfileHidden: PropTypes.func.isRequired,

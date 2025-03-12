@@ -2,9 +2,9 @@ import { useRef, forwardRef, useImperativeHandle } from "react";
 import io from "socket.io-client";
 import PropTypes from "prop-types";
 
-let socket;
+let socket = null;
 
-if (!socket) {
+if (socket === null) {
     socket = io(
         window.location.hostname === "localhost"
             ? "http://localhost:8082"
@@ -28,7 +28,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
             });
 
             socketRef.current.once("userCreated", (data) => {
-                console.log("User created", data);
                 currentUser.current = {
                     id: data.user._id,
                     username: data.user.username,
@@ -58,7 +57,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 });
 
                 socketRef.current.once("userFound", (data) => {
-                    console.log("User found", data);
                     currentUser.current = {
                         id: data._id,
                         username: data.username,
@@ -91,7 +89,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
             });
 
             socketRef.current.once("userDeleted", (data) => {
-                console.log("User deleted", data);
                 onDeleteSuccess(data);
                 currentUser.current = null;
                 localStorage.removeItem('sessionToken');
@@ -109,11 +106,16 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         }
     };
 
+    const getUser = () => {
+        return currentUser.current;
+    }
+
     useImperativeHandle(ref, () => ({
         createUser,
         loginUser,
         logoutUser,
         deleteUser,
+        getUser,
     }));
 
     return <div></div>;

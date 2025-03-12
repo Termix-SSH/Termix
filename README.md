@@ -8,8 +8,11 @@
 [![Javascript Badge](https://img.shields.io/badge/-Javascript-F0DB4F?style=flat-square&labelColor=black&logo=javascript&logoColor=F0DB4F)](#)
 [![Nodejs Badge](https://img.shields.io/badge/-Nodejs-3C873A?style=flat-square&labelColor=black&logo=node.js&logoColor=3C873A)](#)
 [![HTML Badge](https://img.shields.io/badge/-HTML-E34F26?style=flat-square&labelColor=black&logo=html5&logoColor=E34F26)](#)
-[![CSS Badge](https://img.shields.io/badge/-CSS-1572B6?style=flat-square&labelColor=black&logo=css3&logoColor=1572B6)](#)
+[![Tailwind CSS Badge](https://img.shields.io/badge/-TailwindCSS-38B2AC?style=flat-square&labelColor=black&logo=tailwindcss&logoColor=38B2AC)](#)
 [![Docker Badge](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&labelColor=black&logo=docker&logoColor=2496ED)](#)
+[![MongoDB Badge](https://img.shields.io/badge/-MongoDB-47A248?style=flat-square&labelColor=black&logo=mongodb&logoColor=47A248)](#)
+[![MUI Joy Badge](https://img.shields.io/badge/-MUI%20Joy-007FFF?style=flat-square&labelColor=black&logo=mui&logoColor=007FFF)](#)
+
 
 <br />
 <p align="center">
