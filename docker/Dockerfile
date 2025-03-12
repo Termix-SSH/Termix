@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
     && apt-get update && apt-get install -y mongodb-org \
     && rm -rf /var/lib/apt/lists/*
 
-# Create mongodb user and group if they do not exist
+# Create mongodb user and group
 RUN getent group mongodb || groupadd -r mongodb && \
     getent passwd mongodb || useradd -r -g mongodb mongodb
 
@@ -34,6 +34,10 @@ FROM node:18-alpine
 
 # Install nginx
 RUN apk add --no-cache nginx bash
+
+# Create mongodb user and group in the final image
+RUN getent group mongodb || groupadd -r mongodb && \
+    getent passwd mongodb || useradd -r -g mongodb mongodb
 
 # Install MongoDB from the mongodb-builder stage
 COPY --from=mongodb-builder /usr/bin/mongod /usr/bin/mongod
