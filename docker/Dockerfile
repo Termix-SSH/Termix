@@ -15,16 +15,7 @@ COPY src/backend/ ./src/backend/
 
 # Stage 3: Final production image
 FROM node:18-alpine
-
-# Install dependencies including nginx
-RUN apk add --no-cache \
-    nginx \
-    bash \
-    curl \
-    ca-certificates \
-    gnupg \
-    libcurl \
-    && update-ca-certificates
+RUN apk add --no-cache nginx
 
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -34,19 +25,15 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
 
-# Ensure nginx user is created, if not already created
-RUN adduser -D -g 'www' nginx
-
-# Create separate directories for nginx logs and data
-RUN mkdir -p /var/log/nginx /var/lib/nginx && \
+# Create separate directories for nginx and node
+RUN mkdir -p /var/log/nginx && \
+    mkdir -p /var/lib/nginx && \
     chown -R nginx:nginx /var/log/nginx /var/lib/nginx
 
-# Expose necessary ports
-EXPOSE 8080 8081 27017
+# Expose ports
+EXPOSE 8080 8081
 
-# Copy entrypoint script
+# Use a entrypoint script to run all services
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-# Start services (nginx, MongoDB, Node backend)
 CMD ["/entrypoint.sh"]

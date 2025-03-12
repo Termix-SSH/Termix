@@ -1,13 +1,11 @@
-#!/bin/bash
+#!/bin/sh
 
-# Start NGINX
-echo "Starting NGINX..."
+# Start NGINX in background
 nginx -g "daemon off;" &
 
 # Start Node.js backend
-echo "Starting Node.js backend..."
-node /app/src/backend/ssh.cjs &
-node /app/src/backend/database.cjs &
+node src/backend/ssh.cjs
+node src/backend/database.cjs
 
-# Keep the container running
+# Keep container running
 wait
