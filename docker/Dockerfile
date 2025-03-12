@@ -26,9 +26,6 @@ RUN apk add --no-cache \
     libcurl \
     && update-ca-certificates
 
-# Install MongoDB image (version 5)
-FROM mongo:5 AS mongodb
-
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
@@ -36,6 +33,9 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 # Copy backend
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
+
+# Ensure nginx user is created, if not already created
+RUN adduser -D -g 'www' nginx
 
 # Create separate directories for nginx logs and data
 RUN mkdir -p /var/log/nginx /var/lib/nginx && \
