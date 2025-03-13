@@ -1,6 +1,19 @@
 import PropTypes from 'prop-types';
 import { CssVarsProvider } from '@mui/joy/styles';
-import { Modal, Button, FormControl, FormLabel, Input, Stack, DialogTitle, DialogContent, ModalDialog, Select, Option } from '@mui/joy';
+import {
+    Modal,
+    Button,
+    FormControl,
+    FormLabel,
+    Input,
+    Stack,
+    DialogTitle,
+    DialogContent,
+    ModalDialog,
+    Select,
+    Option,
+    Checkbox
+} from '@mui/joy';
 import theme from './theme';
 
 const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
@@ -160,6 +173,16 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                         }}
                                     />
                                 </FormControl>
+                                <FormControl>
+                                    <FormLabel>Remember Host</FormLabel>
+                                    <Checkbox
+                                        checked={form.rememberHost ?? false}
+                                        onChange={(e) => setForm({ ...form, rememberHost: e.target.checked })}
+                                        sx={{
+                                            color: theme.palette.text.primary,
+                                        }}
+                                    />
+                                </FormControl>
                                 <Button
                                     type="submit"
                                     disabled={!isFormValid()}
@@ -191,6 +214,7 @@ AddHostModal.propTypes = {
         rsaKey: PropTypes.string,
         port: PropTypes.number.isRequired,
         authMethod: PropTypes.string.isRequired,
+        rememberHost: PropTypes.bool,
     }).isRequired,
     setForm: PropTypes.func.isRequired,
     handleAddHost: PropTypes.func.isRequired,

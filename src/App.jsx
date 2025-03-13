@@ -34,6 +34,7 @@ function App() {
         password: "",
         port: 22,
         authMethod: "Select Auth",
+        rememberHost: false,
     });
     const [loginUserForm, setLoginUserForm] = useState({
         username: "",
@@ -123,28 +124,64 @@ function App() {
     }, []);
 
     const handleAddHost = () => {
-        if (addHostForm.ip && addHostForm.user && ((addHostForm.authMethod === 'password' && addHostForm.password) || (addHostForm.authMethod === 'rsaKey' && addHostForm.rsaKey)) && addHostForm.port) {
-            const newTerminal = {
-                id: nextId,
-                title: addHostForm.name || addHostForm.ip,
-                hostConfig: {
-                    ip: addHostForm.ip,
-                    user: addHostForm.user,
-                    password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
-                    rsaKey: addHostForm.authMethod === 'rsaKey' ? addHostForm.rsaKey : undefined,
-                    port: String(addHostForm.port),
-                },
-                terminalRef: null,
-            };
-            setTerminals([...terminals, newTerminal]);
-            setActiveTab(nextId);
-            setNextId(nextId + 1);
-            setIsAddHostHidden(true);
-            setAddHostForm({ name: "", ip: "", user: "", password: "", rsaKey: "", port: 22, authMethod: "Select Auth" });
+        if (addHostForm.ip && addHostForm.user && ((addHostForm.authMethod === 'password' && addHostForm.password) || (addHostForm.authMethod === 'rsaKey' && addHostForm.rsaKey)) && addHostForm.port && addHostForm.authMethod !== 'Select Auth') {
+            connectToHost();
+            if (addHostForm.rememberHost) {
+                handleSaveHost();
+            }
         } else {
             alert("Please fill out all fields.");
         }
     };
+
+    const connectToHost = () => {
+        const newTerminal = {
+            id: nextId,
+            title: addHostForm.name || addHostForm.ip,
+            hostConfig: {
+                ip: addHostForm.ip,
+                user: addHostForm.user,
+                password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
+                rsaKey: addHostForm.authMethod === 'rsaKey' ? addHostForm.rsaKey : undefined,
+                port: String(addHostForm.port),
+            },
+            terminalRef: null,
+        };
+        setTerminals([...terminals, newTerminal]);
+        setActiveTab(nextId);
+        setNextId(nextId + 1);
+        setIsAddHostHidden(true);
+        setAddHostForm({ name: "", ip: "", user: "", password: "", rsaKey: "", port: 22, authMethod: "Select Auth" });
+    }
+
+    const connectToHostWithConfig = (hostConfig) => {
+        const newTerminal = {
+            id: nextId,
+            title: hostConfig.name || hostConfig.ip,
+            hostConfig: hostConfig,
+            terminalRef: null,
+        };
+        setTerminals([...terminals, newTerminal]);
+        setActiveTab(nextId);
+        setNextId(nextId + 1);
+        setIsLaunchpadOpen(false);
+    }
+
+    const handleSaveHost = () => {
+        let hostConfig = {
+            name: addHostForm.name,
+            ip: addHostForm.ip,
+            user: addHostForm.user,
+            password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
+            rsaKey: addHostForm.authMethod === 'rsaKey' ? addHostForm.rsaKey : undefined,
+            port: String(addHostForm.port),
+        }
+        if (userRef.current) {
+            userRef.current.saveHost({
+                hostConfig,
+            });
+        }
+    }
 
     const handleLoginUser = ({ username, password, sessionToken, onSuccess, onFailure }) => {
         if (userRef.current) {
@@ -195,6 +232,12 @@ function App() {
     const getUser = () => {
         if (userRef.current) {
             return userRef.current.getUser();
+        }
+    }
+
+    const getHosts = () => {
+        if (userRef.current) {
+            return userRef.current.getAllHosts();
         }
     }
 
@@ -369,7 +412,13 @@ function App() {
                     errorMessage={errorMessage}
                     setIsErrorHidden={setIsErrorHidden}
                 />
-                {isLaunchpadOpen && <Launchpad onClose={() => setIsLaunchpadOpen(false)} />}
+                {isLaunchpadOpen && (
+                    <Launchpad
+                        onClose={() => setIsLaunchpadOpen(false)}
+                        getHosts={getHosts}
+                        connectToHost={connectToHostWithConfig}
+                    />
+                )}
 
                 <LoginUserModal
                     isHidden={isLoginUserHidden}

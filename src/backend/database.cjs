@@ -113,6 +113,34 @@ async function deleteUser(userId) {
     }
 }
 
+async function saveHostConfig(userId, hostConfig) {
+    try {
+        const user = await User.findById(userId);
+        if (user) {
+            user.sshConnections.push(hostConfig);
+            await user.save();
+            return { success: true };
+        } else {
+            return { error: 'User not found' };
+        }
+    } catch (err) {
+        return { error: 'Error saving host config: ' + err.message };
+    }
+}
+
+async function getHosts(userId) {
+    try {
+        const user = await User.findById(userId);
+        if (user) {
+            return user.sshConnections;
+        } else {
+            return { error: 'User not found' };
+        }
+    } catch (err) {
+        return { error: 'Error getting hosts: ' + err.message };
+    }
+}
+
 dbNamespace.on("connection", (socket) => {
     console.log("New socket connection established on");
 
@@ -151,6 +179,28 @@ dbNamespace.on("connection", (socket) => {
         const result = await deleteUser(userId);
         socket.emit(result.error ? "error" : "userDeleted", result);
         console.log(result.error || `User deleted`);
+    });
+
+    socket.on("saveHostConfig", async (data) => {
+        const { userId, hostConfig } = data;
+        if (!userId || !hostConfig) {
+            socket.emit("error", "User ID and host config are required");
+            return;
+        }
+        const result = await saveHostConfig(userId, hostConfig);
+        socket.emit(result.error ? "error" : "hostConfigSaved", result);
+        console.log(result.error || `Host config saved`);
+    });
+
+    socket.on("getHosts", async (data) => {
+        const { userId } = data;
+        if (!userId) {
+            socket.emit("error", "User ID is required");
+            return;
+        }
+        const result = await getHosts(userId);
+        socket.emit(result.error ? "error" : "hostsFound", result);
+        console.log(result.error || `Hosts found`);
     });
 });
 

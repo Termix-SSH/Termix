@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import { useEffect, useRef } from 'react';
 import { CssVarsProvider } from '@mui/joy/styles';
-import { Button } from '@mui/joy';
 import theme from './theme';
 
-function Launchpad({ onClose }) {
+// Apps
+import HostViewer from './Apps/HostViewer';
+
+function Launchpad({ onClose, getHosts, connectToHost }) {
     const launchpadRef = useRef(null);
 
     useEffect(() => {
@@ -54,25 +56,7 @@ function Launchpad({ onClose }) {
                         padding: 3,
                     }}
                 >
-                    <div className="text-center">
-                        <h2 className="text-2xl font-bold mb-4">Launchpad</h2>
-                        <p className="mb-4">A one-stop shop for adding hosts, apps (AI, notes, etc.), and all new features to come! Coming to you in a future update. Stay tuned!</p>
-                        <p className="mb-4">
-                            Can also be opened using <code className="bg-gray-500 px-1 rounded">Ctrl + L</code>
-                        </p>
-                        <Button
-                            type="submit"
-                            onClick={onClose}
-                            sx={{
-                                backgroundColor: theme.palette.general.primary,
-                                '&:hover': {
-                                    backgroundColor: theme.palette.general.disabled,
-                                },
-                            }}
-                        >
-                            Close
-                        </Button>
-                    </div>
+                    <HostViewer getHosts={getHosts} connectToHost={connectToHost} />
                 </div>
             </div>
         </CssVarsProvider>
@@ -81,6 +65,8 @@ function Launchpad({ onClose }) {
 
 Launchpad.propTypes = {
     onClose: PropTypes.func.isRequired,
+    connectToHost: PropTypes.func.isRequired,
+    getHosts: PropTypes.func.isRequired,
 };
 
 export default Launchpad;
