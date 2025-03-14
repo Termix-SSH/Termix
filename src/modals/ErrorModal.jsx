@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { CssVarsProvider } from '@mui/joy/styles';
 import { Modal, Button, DialogTitle, DialogContent, ModalDialog } from '@mui/joy';
-import theme from './theme';
+import theme from '/src/theme';
 
 const ErrorModal = ({ isHidden, errorMessage, setIsErrorHidden }) => {
     return (

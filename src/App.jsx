@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { NewTerminal } from "./Terminal.jsx";
 import { User } from "./User.jsx";
-import AddHostModal from "./AddHostModal.jsx";
-import LoginUserModal from "./LoginUserModal.jsx";
+import AddHostModal from "./modals/AddHostModal.jsx";
+import LoginUserModal from "./modals/LoginUserModal.jsx";
 import { Button } from "@mui/joy";
 import { CssVarsProvider } from "@mui/joy";
 import theme from "./theme";
@@ -12,9 +12,10 @@ import { Debounce } from './Utils';
 import TermixIcon from "./images/termix_icon.png";
 import RocketIcon from './images/launchpad_rocket.png';
 import ProfileIcon from './images/profile_icon.png';
-import CreateUserModal from "./CreateUserModal.jsx";
-import ProfileModal from "./ProfileModal.jsx";
-import ErrorModal from "./ErrorModal.jsx";
+import CreateUserModal from "./modals/CreateUserModal.jsx";
+import ProfileModal from "./modals/ProfileModal.jsx";
+import ErrorModal from "./modals/ErrorModal.jsx";
+import EditHostModal from "./modals/EditHostModal.jsx";
 
 function App() {
     const [isAddHostHidden, setIsAddHostHidden] = useState(true);
@@ -36,6 +37,15 @@ function App() {
         authMethod: "Select Auth",
         rememberHost: false,
     });
+    const [editHostForm, setEditHostForm] = useState({
+        name: "",
+        ip: "",
+        user: "",
+        password: "",
+        port: 22,
+        authMethod: "Select Auth",
+        rememberHost: true,
+    });
     const [loginUserForm, setLoginUserForm] = useState({
         username: "",
         password: "",
@@ -46,6 +56,8 @@ function App() {
     });
     const [isLaunchpadOpen, setIsLaunchpadOpen] = useState(false);
     const [splitTabIds, setSplitTabIds] = useState([]);
+    const [isEditHostHidden, setIsEditHostHidden] = useState(true);
+    const [currentHostConfig, setCurrentHostConfig] = useState(null);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -183,6 +195,23 @@ function App() {
         }
     }
 
+    const createFolder = (folderName) => {
+        if (userRef.current) {
+            userRef.current.createFolder({
+                folderName,
+            });
+        }
+    }
+
+    const moveHostToFolder = (folderName, hostConfig) => {
+        if (userRef.current) {
+            userRef.current.moveHostToFolder({
+                folderName,
+                hostConfig,
+            });
+        }
+    }
+
     const handleLoginUser = ({ username, password, sessionToken, onSuccess, onFailure }) => {
         if (userRef.current) {
             if (sessionToken) {
@@ -240,6 +269,43 @@ function App() {
             return userRef.current.getAllHosts();
         }
     }
+
+    const deleteHost = (hostConfig) => {
+        if (userRef.current) {
+            userRef.current.deleteHost({
+                hostConfig,
+            });
+        }
+    }
+
+    const updateEditHostForm = (hostConfig) => {
+        if (hostConfig) {
+            setCurrentHostConfig(hostConfig);
+            setIsEditHostHidden(false);
+        } else {
+            console.error("hostConfig is null");
+        }
+    };
+
+    const handleEditHost = () => {
+        if (editHostForm.ip && editHostForm.user && ((editHostForm.authMethod === 'password' && editHostForm.password) || (editHostForm.authMethod === 'rsaKey' && editHostForm.rsaKey)) && editHostForm.port && editHostForm.authMethod !== 'Select Auth') {
+            const user = getUser();
+            editHostForm.rememberHost = true;
+
+            if (user && currentHostConfig) {
+                userRef.current.editExistingHost({
+                    userId: user.id,
+                    oldHostConfig: currentHostConfig,
+                    newHostConfig: editHostForm,
+                });
+                setIsEditHostHidden(true);
+            } else {
+                console.error("User or currentHostConfig is null");
+            }
+        } else {
+            alert("Please fill out all fields.");
+        }
+    };
 
     const closeTab = (id) => {
         const newTerminals = terminals.filter((t) => t.id !== id);
@@ -392,6 +458,14 @@ function App() {
                     handleAddHost={handleAddHost}
                     setIsAddHostHidden={setIsAddHostHidden}
                 />
+                <EditHostModal
+                    isHidden={isEditHostHidden}
+                    form={editHostForm}
+                    setForm={setEditHostForm}
+                    handleEditHost={handleEditHost}
+                    setIsEditHostHidden={setIsEditHostHidden}
+                    hostConfig={currentHostConfig}
+                />
                 <CreateUserModal
                     isHidden={isCreateUserHidden}
                     form={createUserForm}
@@ -417,6 +491,14 @@ function App() {
                         onClose={() => setIsLaunchpadOpen(false)}
                         getHosts={getHosts}
                         connectToHost={connectToHostWithConfig}
+                        isAddHostHidden={isAddHostHidden}
+                        setIsAddHostHidden={setIsAddHostHidden}
+                        isEditHostHidden={isEditHostHidden}
+                        isErrorHidden={isErrorHidden}
+                        deleteHost={deleteHost}
+                        editHost={updateEditHostForm}
+                        createFolder={createFolder}
+                        moveHostToFolder={moveHostToFolder}
                     />
                 )}
 

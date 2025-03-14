@@ -133,7 +133,11 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 });
 
                 socketRef.current.once("hostsFound", (data) => {
-                    resolve(data);
+                    if (data && Array.isArray(data)) {
+                        resolve(data);
+                    } else {
+                        reject("Invalid data received.");
+                    }
                 });
 
                 socketRef.current.once("error", (error) => {
@@ -149,6 +153,68 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         });
     };
 
+    const deleteHost = (hostConfig) => {
+        if (currentUser.current?.id && socketRef.current) {
+            socketRef.current.emit("deleteHost", {
+                userId: currentUser.current.id,
+                hostConfig: hostConfig,
+            });
+
+            socketRef.current.once("error", (error) => {
+                onFailure(error);
+            });
+        } else {
+            onFailure("No user is currently logged in.");
+        }
+    }
+
+    const editExistingHost = ({ userId, oldHostConfig, newHostConfig }) => {
+        if (currentUser.current?.id && socketRef.current) {
+            socketRef.current.emit("editHost", {
+                userId: userId,
+                oldHostConfig: oldHostConfig,
+                newHostConfig: newHostConfig,
+            });
+
+            socketRef.current.once("error", (error) => {
+                onFailure(error);
+            });
+        } else {
+            onFailure("No user is currently logged in.");
+        }
+    };
+
+    const createFolder = (folderName) => {
+        if (currentUser.current?.id && socketRef.current) {
+            socketRef.current.emit("createFolder", {
+                userId: currentUser.current.id,
+                folderName: folderName,
+            });
+
+            socketRef.current.once("error", (error) => {
+                onFailure(error);
+            });
+        } else {
+            onFailure("No user is currently logged in.");
+        }
+    }
+
+    const moveHostToFolder = (folderName, hostConfig) => {
+        if (currentUser.current?.id && socketRef.current) {
+            socketRef.current.emit("moveHostToFolder", {
+                userId: currentUser.current.id,
+                folderName: folderName,
+                hostConfig: hostConfig,
+            });
+
+            socketRef.current.once("error", (error) => {
+                onFailure(error);
+            });
+        } else {
+            onFailure("No user is currently logged in.");
+        }
+    }
+
     useImperativeHandle(ref, () => ({
         createUser,
         loginUser,
@@ -157,6 +223,10 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         saveHost,
         getUser,
         getAllHosts,
+        deleteHost,
+        editExistingHost,
+        createFolder,
+        moveHostToFolder,
     }));
 
     return <div></div>;

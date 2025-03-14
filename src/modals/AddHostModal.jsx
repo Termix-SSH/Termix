@@ -14,7 +14,7 @@ import {
     Option,
     Checkbox
 } from '@mui/joy';
-import theme from './theme';
+import theme from '/src/theme';
 
 const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
     const handleFileChange = (e) => {

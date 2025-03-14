@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { CssVarsProvider } from '@mui/joy/styles';
 import { Modal, Button, FormControl, FormLabel, Input, Stack, DialogTitle, DialogContent, ModalDialog } from '@mui/joy';
-import theme from './theme';
+import theme from '/src/theme';
 import {useEffect} from 'react';
 
 const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, setIsLoginUserHidden, setIsCreateUserHidden }) => {
