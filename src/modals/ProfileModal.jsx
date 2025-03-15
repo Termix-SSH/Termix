@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { CssVarsProvider } from '@mui/joy/styles';
-import {Modal, Button, DialogTitle, DialogContent, ModalDialog, Stack } from '@mui/joy';
+import { Modal, Button, DialogTitle, DialogContent, ModalDialog, Stack } from '@mui/joy';
 import theme from '/src/theme';
 
 const ProfileModal = ({ isHidden, getUser, handleDeleteUser, handleLogoutUser, setIsProfileHidden }) => {
@@ -61,7 +61,7 @@ const ProfileModal = ({ isHidden, getUser, handleDeleteUser, handleLogoutUser, s
                         Username: <br />
                         {getUserName()}
                     </DialogTitle>
-                    <DialogContent>
+                    <DialogContent sx={{ width: "100%" }}>
                         <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden", mt: 1.5 }}>
                             <Button
                                 onClick={handleDelete}
@@ -70,6 +70,7 @@ const ProfileModal = ({ isHidden, getUser, handleDeleteUser, handleLogoutUser, s
                                     '&:hover': {
                                         backgroundColor: theme.palette.general.disabled,
                                     },
+                                    width: "100%",
                                 }}
                             >
                                 Delete User
@@ -81,6 +82,7 @@ const ProfileModal = ({ isHidden, getUser, handleDeleteUser, handleLogoutUser, s
                                     '&:hover': {
                                         backgroundColor: theme.palette.general.disabled,
                                     },
+                                    width: "100%",
                                 }}
                             >
                                 Logout
