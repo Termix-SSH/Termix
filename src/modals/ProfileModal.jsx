@@ -47,7 +47,18 @@ const ProfileModal = ({ isHidden, getUser, handleDeleteUser, handleLogoutUser, s
                         gap: 1,
                     }}
                 >
-                    <DialogTitle sx={{ marginBottom: 1.5 }}>
+                    <DialogTitle
+                        sx={{
+                            marginBottom: 1.5,
+                            backgroundColor: theme.palette.general.primary,
+                            color: theme.palette.text.primary,
+                            padding: 1,
+                            borderRadius: 10,
+                            width: "100%",
+                            textAlign: "center",
+                        }}
+                    >
+                        Username: <br />
                         {getUserName()}
                     </DialogTitle>
                     <DialogContent>
