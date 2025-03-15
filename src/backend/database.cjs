@@ -67,7 +67,7 @@ const decryptData = (encryptedData, userId, sessionToken) => {
     }
 };
 
-mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost:27017/termix')
+mongoose.connect(process.env.MONGO_URL || 'mongodb://mongodb:27017/termix')
     .then(() => logger.info('Connected to MongoDB'))
     .catch(err => logger.error('MongoDB connection error:', err));
 
