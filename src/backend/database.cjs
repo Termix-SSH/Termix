@@ -1,341 +1,385 @@
-const http = require("http");
-const socketIo = require("socket.io");
-const mongoose = require("mongoose");
+const http = require('http');
+const socketIo = require('socket.io');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 require('dotenv').config();
 
+const logger = {
+    info: (...args) => console.log(`🔧 [${new Date().toISOString()}] INFO:`, ...args),
+    error: (...args) => console.error(`❌ [${new Date().toISOString()}] ERROR:`, ...args),
+    warn: (...args) => console.warn(`⚠️ [${new Date().toISOString()}] WARN:`, ...args),
+    debug: (...args) => console.debug(`🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
+};
+
 const server = http.createServer();
 const io = socketIo(server, {
-    path: "/database.io/socket.io",
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-        credentials: true
-    },
-    allowEIO3: true
+    path: '/database.io/socket.io',
+    cors: { origin: '*', methods: ['GET', 'POST'] }
 });
-
-const dbNamespace = io.of("/database.io");
-
-async function connectToMongoDB() {
-    try {
-        const mongoUrl = process.env.MONGO_URL || 'mongodb://mongodb:27017/termix';
-        await mongoose.connect(mongoUrl, {});
-        console.log('Connected to MongoDB');
-
-        const db = mongoose.connection.db;
-
-        // Create the 'users' collection if it doesn't exist
-        const collections = await db.listCollections().toArray();
-        if (!collections.find(col => col.name === 'users')) {
-            await db.createCollection('users');
-            console.log('Successfully created collection: users');
-        }
-    } catch (error) {
-        console.error('Error connecting to MongoDB:', error);
-    }
-}
 
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    sessionToken: { type: String, required: true },
-    sshConnections: { type: [Object], default: [] },
+    sessionToken: { type: String, required: true }
+});
+
+const hostSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    config: { type: String, required: true },
+    users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
 const User = mongoose.model('User', userSchema);
+const Host = mongoose.model('Host', hostSchema);
 
-async function createUser(username, password) {
+const getEncryptionKey = (userId, sessionToken) => {
+    return crypto.scryptSync(`${userId}-${sessionToken}`, 'salt', 32);
+};
+
+const encryptData = (data, userId, sessionToken) => {
     try {
-        const userExists = await User.findOne({ username });
-        if (userExists) {
-            return { error: "User already exists for username" };
-        }
-
-        const sessionToken = crypto.randomBytes(64).toString('hex');
-        const newUser = new User({ username, password, sessionToken });
-        await newUser.save();
-        return { success: true, user: { _id: newUser._id, username: newUser.username, sessionToken: newUser.sessionToken } };
-    } catch (err) {
-        return { error: 'Error creating user: ' + err.message };
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv('aes-256-gcm', getEncryptionKey(userId, sessionToken), iv);
+        const encrypted = Buffer.concat([cipher.update(JSON.stringify(data)), cipher.final()]);
+        return `${iv.toString('hex')}:${encrypted.toString('hex')}:${cipher.getAuthTag().toString('hex')}`;
+    } catch (error) {
+        logger.error('Encryption failed:', error);
+        return null;
     }
-}
+};
 
-async function loginUser(username, password) {
+const decryptData = (encryptedData, userId, sessionToken) => {
     try {
-        const user = await User.findOne({ username, password });
-        if (user) {
-            if (!user.sessionToken) {
-                user.sessionToken = crypto.randomBytes(64).toString('hex');
-                await user.save();
+        const [ivHex, contentHex, authTagHex] = encryptedData.split(':');
+        const iv = Buffer.from(ivHex, 'hex');
+        const content = Buffer.from(contentHex, 'hex');
+        const authTag = Buffer.from(authTagHex, 'hex');
+
+        const decipher = crypto.createDecipheriv('aes-256-gcm', getEncryptionKey(userId, sessionToken), iv);
+        decipher.setAuthTag(authTag);
+
+        return JSON.parse(Buffer.concat([decipher.update(content), decipher.final()]).toString());
+    } catch (error) {
+        logger.error('Decryption failed:', error);
+        return null;
+    }
+};
+
+mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost:27017/termix')
+    .then(() => logger.info('Connected to MongoDB'))
+    .catch(err => logger.error('MongoDB connection error:', err));
+
+io.of('/database.io').on('connection', (socket) => {
+    socket.on('createUser', async ({ username, password }, callback) => {
+        try {
+            logger.debug(`Creating user: ${username}`);
+
+            if (await User.exists({ username })) {
+                logger.warn(`Username already exists: ${username}`);
+                return callback({ error: 'Username already exists' });
             }
-            return {
-                _id: user._id,
-                username: user.username,
-                sessionToken: user.sessionToken,
-            };
-        } else {
-            return { error: 'User not found or incorrect credentials for username' };
-        }
-    } catch (err) {
-        return { error: 'Error checking user: ' + err.message };
-    }
-}
 
-async function loginWithToken(sessionToken) {
-    try {
-        const user = await User.findOne({ sessionToken });
-        if (user) {
-            return {
-                _id: user._id,
-                username: user.username,
-                sessionToken: user.sessionToken,
-            };
-        } else {
-            return { error: 'Invalid session token' };
-        }
-    } catch (err) {
-        return { error: 'Error checking session token: ' + err.message };
-    }
-}
-
-async function deleteUser(userId) {
-    try {
-        const user = await User.findById(userId);
-        if (user) {
-            await User.deleteOne({ _id: userId });
-            return { success: true };
-        } else {
-            return { error: 'User not found' };
-        }
-    } catch (err) {
-        return { error: 'Error removing user: ' + err.message };
-    }
-}
-
-async function saveHostConfig(userId, hostConfig) {
-    try {
-        const user = await User.findById(userId);
-        if (user) {
-            user.sshConnections.push(hostConfig);
-            await user.save();
-            return { success: true };
-        } else {
-            return { error: 'User not found' };
-        }
-    } catch (err) {
-        return { error: 'Error saving host config: ' + err.message };
-    }
-}
-
-async function getHosts(userId) {
-    try {
-        const user = await User.findById(userId);
-        if (user) {
-            return user.sshConnections;
-        } else {
-            return { error: 'User not found' };
-        }
-    } catch (err) {
-        return { error: 'Error getting hosts: ' + err.message };
-    }
-}
-
-async function deleteHost(userId, hostConfig) {
-    try {
-        const user = await User.findById(userId);
-        if (user) {
-            user.sshConnections = user.sshConnections.filter(connection => {
-                const matches =
-                    connection.name === hostConfig.name &&
-                    connection.ip === hostConfig.ip &&
-                    connection.port === hostConfig.port &&
-                    connection.user === hostConfig.user;
-
-                return !matches;
+            const sessionToken = crypto.randomBytes(64).toString('hex');
+            const user = await User.create({
+                username,
+                password: await bcrypt.hash(password, 10),
+                sessionToken
             });
 
-            await user.save();
-            return { success: true };
-        } else {
-            return { error: 'User not found' };
+            logger.info(`User created: ${username}`);
+            callback({ success: true, user: {
+                    id: user._id,
+                    username: user.username,
+                    sessionToken
+                }});
+        } catch (error) {
+            logger.error('User creation error:', error);
+            callback({ error: 'User creation failed' });
         }
-    } catch (err) {
-        return { error: 'Error deleting host: ' + err.message };
-    }
-}
+    });
 
-async function editHost(userId, oldHostConfig, newHostConfig) {
-    try {
-        const user = await User.findById(userId);
-        if (user) {
-            user.sshConnections = user.sshConnections.map(connection => {
-                const matches =
-                    connection.hostConfig.name === oldHostConfig.name &&
-                    connection.hostConfig.ip === oldHostConfig.ip &&
-                    connection.hostConfig.port === oldHostConfig.port &&
-                    connection.hostConfig.user === oldHostConfig.user;
-
-                if (matches) {
-                    return { hostConfig: newHostConfig };
-                } else {
-                    return connection;
-                }
-            });
-
-            await user.save();
-            return { success: true };
-        } else {
-            return { error: 'User not found' };
-        }
-    } catch (err) {
-        return { error: 'Error editing host: ' + err.message };
-    }
-}
-
-async function createFolder(userId, folderName) {
-    try {
-        const user = await User.findById(userId);
-        if (user) {
-            user.sshConnections.push({ folderName, connections: [] });
-            await user.save();
-            return { success: true };
-        } else {
-            return { error: 'User not found' };
-        }
-    } catch (err) {
-        return { error: 'Error creating folder: ' + err.message };
-    }
-}
-
-async function moveHostToFolder(userId, hostConfig, folderName) {
-    try {
-        const user = await User.findById(userId);
-        if (user) {
-            const folder = user.sshConnections.find(folder => folder.folderName === folderName);
-            if (folder) {
-                folder.connections.push(hostConfig);
-                await user.save();
-                return { success: true };
+    socket.on('loginUser', async ({ username, password, sessionToken }, callback) => {
+        try {
+            let user;
+            if (sessionToken) {
+                user = await User.findOne({ sessionToken });
             } else {
-                return { error: 'Folder not found' };
+                user = await User.findOne({ username });
+                if (!user || !(await bcrypt.compare(password, user.password))) {
+                    logger.warn(`Invalid credentials for: ${username}`);
+                    return callback({ error: 'Invalid credentials' });
+                }
             }
-        } else {
-            return { error: 'User not found' };
-        }
-    } catch (err) {
-        return { error: 'Error moving host to folder: ' + err.message };
-    }
-}
 
-dbNamespace.on("connection", (socket) => {
-    console.log("New socket connection established on");
+            if (!user) {
+                logger.warn('Login failed - user not found');
+                return callback({ error: 'Invalid credentials' });
+            }
 
-    socket.on("createUser", async (data) => {
-        const { username, password } = data;
-        if (!username || !password) {
-            socket.emit("error", "Please provide both username and password");
-            return;
+            logger.info(`User logged in: ${user.username}`);
+            callback({ success: true, user: {
+                    id: user._id,
+                    username: user.username,
+                    sessionToken: user.sessionToken
+                }});
+        } catch (error) {
+            logger.error('Login error:', error);
+            callback({ error: 'Login failed' });
         }
-        const result = await createUser(username, password);
-        socket.emit(result.error ? "error" : "userCreated", result);
-        console.log(result.error || `User created`);
     });
 
-    socket.on("loginUser", async (data) => {
-        const { username, password, sessionToken } = data;
-        let result;
-        if (sessionToken) {
-            result = await loginWithToken(sessionToken);
-        } else if (username && password) {
-            result = await loginUser(username, password);
-        } else {
-            socket.emit("error", "Please provide both username and password or a session token");
-            return;
+    socket.on('saveHostConfig', async ({ userId, sessionToken, hostConfig }, callback) => {
+        try {
+            if (!userId || !sessionToken) {
+                logger.warn('Missing authentication parameters');
+                return callback({ error: 'Authentication required' });
+            }
+
+            if (!hostConfig || typeof hostConfig !== 'object') {
+                logger.warn('Invalid host config format');
+                return callback({ error: 'Invalid host configuration' });
+            }
+
+            if (!hostConfig.ip || !hostConfig.user) {
+                logger.warn('Missing required fields:', hostConfig);
+                return callback({ error: 'IP and User are required' });
+            }
+
+            const user = await User.findOne({ _id: userId, sessionToken });
+            if (!user) {
+                logger.warn(`Invalid session for user: ${userId}`);
+                return callback({ error: 'Invalid session' });
+            }
+
+            const cleanConfig = {
+                name: hostConfig.name.trim(),
+                ip: hostConfig.ip.trim(),
+                user: hostConfig.user.trim(),
+                port: hostConfig.port || 22,
+                password: hostConfig.password?.trim() || undefined,
+                rsaKey: hostConfig.rsaKey?.trim() || undefined
+            };
+
+            const finalName = cleanConfig.name || cleanConfig.ip;
+
+            const existingHost = await Host.findOne({
+                name: finalName,
+                createdBy: userId
+            });
+
+            if (existingHost) {
+                logger.warn(`Host with name ${finalName} already exists for user: ${userId}`);
+                return callback({ error: 'Host with this name already exists' });
+            }
+
+            const encryptedConfig = encryptData(cleanConfig, userId, sessionToken);
+            if (!encryptedConfig) {
+                logger.error('Encryption failed for host config');
+                return callback({ error: 'Configuration encryption failed' });
+            }
+
+            await Host.create({
+                name: finalName,
+                config: encryptedConfig,
+                users: [userId],
+                createdBy: userId
+            });
+
+            logger.info(`Host created successfully: ${finalName}`);
+            callback({ success: true });
+        } catch (error) {
+            logger.error('Host save error:', error);
+            callback({ error: `Host save failed: ${error.message}` });
         }
-        socket.emit(result.error ? "error" : "userFound", result);
-        console.log(result.error || `User logged in`);
     });
 
-    socket.on("deleteUser", async (data) => {
-        const { userId } = data;
-        if (!userId) {
-            socket.emit("error", "User ID is required");
-            return;
+    socket.on('getHosts', async ({ userId, sessionToken }, callback) => {
+        try {
+            const user = await User.findOne({ _id: userId, sessionToken });
+            if (!user) {
+                logger.warn(`Invalid session for user: ${userId}`);
+                return callback({ error: 'Invalid session' });
+            }
+
+            const hosts = await Host.find({ users: userId });
+            const decryptedHosts = hosts.map(host => ({
+                ...host.toObject(),
+                config: decryptData(host.config, userId, sessionToken)
+            })).filter(host => host.config);
+
+            callback({ success: true, hosts: decryptedHosts });
+        } catch (error) {
+            logger.error('Get hosts error:', error);
+            callback({ error: 'Failed to fetch hosts' });
         }
-        const result = await deleteUser(userId);
-        socket.emit(result.error ? "error" : "userDeleted", result);
-        console.log(result.error || `User deleted`);
     });
 
-    socket.on("saveHostConfig", async (data) => {
-        const { userId, hostConfig } = data;
-        if (!userId || !hostConfig) {
-            socket.emit("error", "User ID and host config are required");
-            return;
+    socket.on('deleteHost', async ({ userId, sessionToken, hostId }, callback) => {
+        try {
+            logger.debug(`Deleting host: ${hostId} for user: ${userId}`);
+
+            if (!userId || !sessionToken) {
+                logger.warn('Missing authentication parameters');
+                return callback({ error: 'Authentication required' });
+            }
+
+            if (!hostId || typeof hostId !== 'string') {
+                logger.warn('Invalid host ID format');
+                return callback({ error: 'Invalid host ID' });
+            }
+
+            const user = await User.findOne({ _id: userId, sessionToken });
+            if (!user) {
+                logger.warn(`Invalid session for user: ${userId}`);
+                return callback({ error: 'Invalid session' });
+            }
+
+            const result = await Host.deleteOne({ _id: hostId, createdBy: userId });
+            if (result.deletedCount === 0) {
+                logger.warn(`Host not found or not authorized: ${hostId}`);
+                return callback({ error: 'Host not found or not authorized' });
+            }
+
+            logger.info(`Host deleted: ${hostId}`);
+            callback({ success: true });
+        } catch (error) {
+            logger.error('Host deletion error:', error);
+            callback({ error: `Host deletion failed: ${error.message}` });
         }
-        const result = await saveHostConfig(userId, hostConfig);
-        socket.emit(result.error ? "error" : "hostConfigSaved", result);
-        console.log(result.error || `Host config saved`);
     });
 
-    socket.on("getHosts", async (data) => {
-        const { userId } = data;
-        if (!userId) {
-            socket.emit("error", "User ID is required");
-            return;
+    socket.on('shareHost', async ({ userId, sessionToken, hostId, targetUsername }, callback) => {
+        try {
+            logger.debug(`Sharing host ${hostId} with ${targetUsername}`);
+
+            const user = await User.findOne({ _id: userId, sessionToken });
+            if (!user) {
+                logger.warn(`Invalid session for user: ${userId}`);
+                return callback({ error: 'Invalid session' });
+            }
+
+            const targetUser = await User.findOne({ username: targetUsername });
+            if (!targetUser) {
+                logger.warn(`Target user not found: ${targetUsername}`);
+                return callback({ error: 'User not found' });
+            }
+
+            const host = await Host.findOne({ _id: hostId, createdBy: userId });
+            if (!host) {
+                logger.warn(`Host not found or unauthorized: ${hostId}`);
+                return callback({ error: 'Host not found' });
+            }
+
+            if (host.users.includes(targetUser._id)) {
+                logger.warn(`Host already shared with user: ${targetUsername}`);
+                return callback({ error: 'Already shared' });
+            }
+
+            host.users.push(targetUser._id);
+            await host.save();
+
+            logger.info(`Host shared successfully: ${hostId} -> ${targetUsername}`);
+            callback({ success: true });
+        } catch (error) {
+            logger.error('Host sharing error:', error);
+            callback({ error: 'Failed to share host' });
         }
-        const result = await getHosts(userId);
-        socket.emit(result.error ? "error" : "hostsFound", result);
-        console.log(result.error || `Hosts found`);
     });
 
-    socket.on("deleteHost", async (data) => {
-        const { userId, hostConfig } = data;
-        if (!userId || !hostConfig) {
-            socket.emit("error", "User ID and host config are required");
-            return;
+    socket.on('deleteUser', async ({ userId, sessionToken }, callback) => {
+        try {
+            logger.debug(`Deleting user: ${userId}`);
+
+            const user = await User.findOne({ _id: userId, sessionToken });
+            if (!user) {
+                logger.warn(`Invalid session for user: ${userId}`);
+                return callback({ error: 'Invalid session' });
+            }
+
+            await Host.deleteMany({ createdBy: userId });
+            await User.deleteOne({ _id: userId });
+
+            logger.info(`User deleted: ${userId}`);
+            callback({ success: true });
+        } catch (error) {
+            logger.error('User deletion error:', error);
+            callback({ error: 'Failed to delete user' });
         }
-        const result = await deleteHost(userId, hostConfig);
-        socket.emit(result.error ? "error" : "hostDeleted", result);
-        console.log(result.error || `Host deleted`);
     });
 
-    socket.on("editHost", async (data) => {
-        const { userId, oldHostConfig, newHostConfig } = data;
-        if (!userId || !oldHostConfig || !newHostConfig) {
-            socket.emit("error", "User ID, old host config, and new host config are required");
-            return;
+    socket.on("editHost", async ({ userId, sessionToken, oldHostConfig, newHostConfig }, callback) => {
+        try {
+            logger.debug(`Editing host for user: ${userId}`);
+
+            if (!oldHostConfig || !newHostConfig) {
+                logger.warn('Missing host configurations');
+                return callback({ error: 'Missing host configurations' });
+            }
+
+            const user = await User.findOne({ _id: userId, sessionToken });
+            if (!user) {
+                logger.warn(`Invalid session for user: ${userId}`);
+                return callback({ error: 'Invalid session' });
+            }
+
+            const hosts = await Host.find({ createdBy: userId });
+            const host = hosts.find(h => {
+                const decryptedConfig = decryptData(h.config, userId, sessionToken);
+                return decryptedConfig && decryptedConfig.ip === oldHostConfig.ip;
+            });
+
+            if (!host) {
+                logger.warn(`Host not found or unauthorized`);
+                return callback({ error: 'Host not found' });
+            }
+
+            const cleanConfig = {
+                ip: newHostConfig.ip.trim(),
+                user: newHostConfig.user.trim(),
+                port: newHostConfig.port || 22,
+                name: newHostConfig.name.trim(),
+                password: newHostConfig.password?.trim() || undefined,
+                rsaKey: newHostConfig.rsaKey?.trim() || undefined
+            };
+
+            const encryptedConfig = encryptData(cleanConfig, userId, sessionToken);
+            if (!encryptedConfig) {
+                logger.error('Encryption failed for host config');
+                return callback({ error: 'Configuration encryption failed' });
+            }
+
+            host.config = encryptedConfig;
+            await host.save();
+
+            logger.info(`Host edited successfully`);
+            callback({ success: true });
+        } catch (error) {
+            logger.error('Host edit error:', error);
+            callback({ error: 'Failed to edit host' });
         }
-        const result = await editHost(userId, oldHostConfig, newHostConfig);
-        socket.emit(result.error ? "error" : "hostEdited", result);
-        console.log(result.error || `Host edited`);
     });
 
-    socket.on("createFolder", async (data) => {
-        const { userId, folderName } = data;
-        if (!userId || !folderName) {
-            socket.emit("error", "User ID and folder name are required");
-            return;
-        }
-        const result = await createFolder(userId, folderName);
-        socket.emit(result.error ? "error" : "folderCreated", result);
-        console.log(result.error || `Folder created`);
-    });
+    socket.on('verifySession', async ({ sessionToken }, callback) => {
+        try {
+            const user = await User.findOne({ sessionToken });
+            if (!user) {
+                logger.warn(`Invalid session token: ${sessionToken}`);
+                return callback({ error: 'Invalid session' });
+            }
 
-    socket.on("moveHostToFolder", async (data) => {
-        const { userId, hostConfig, folderName } = data;
-        if (!userId || !hostConfig || !folderName) {
-            socket.emit("error", "User ID, host config, and folder name are required");
-            return;
+            callback({ success: true, user: {
+                    id: user._id,
+                    username: user.username
+                }});
+        } catch (error) {
+            logger.error('Session verification error:', error);
+            callback({ error: 'Session verification failed' });
         }
-        const result = await moveHostToFolder(userId, hostConfig, folderName);
-        socket.emit(result.error ? "error" : "hostMoved", result);
-        console.log(result.error || `Host moved to folder`);
     });
 });
 
-server.listen(8082, '0.0.0.0', async () => {
-    console.log("Server is running on port 8082");
-    await connectToMongoDB();
+server.listen(8082, () => {
+    logger.info('Server running on port 8082');
 });

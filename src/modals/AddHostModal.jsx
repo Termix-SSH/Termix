@@ -20,7 +20,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.name.endsWith('.rsa') || file.name.endsWith('.key') || file.name.endsWith('.pem') || file.name.endsWith('.der') || file.name.endsWith('.p8') || file.name.endsWith('.ssh')) {
+            if (file.name.endsWith('.rsa') || file.name.endsWith('.key') || file.name.endsWith('.pem') || file.name.endsWith('.der') || file.name.endsWith('.p8') || file.name.endsWith('.ssh') || file.name.endsWith('.pub')) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     setForm({ ...form, rsaKey: event.target.result });
@@ -65,7 +65,9 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                         <form
                             onSubmit={(event) => {
                                 event.preventDefault();
-                                if (isFormValid()) handleAddHost();
+                                if (isFormValid()) {
+                                    handleAddHost();
+                                }
                             }}
                         >
                             <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
@@ -176,10 +178,13 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                 <FormControl>
                                     <FormLabel>Remember Host</FormLabel>
                                     <Checkbox
-                                        checked={form.rememberHost ?? false}
+                                        checked={form.rememberHost}
                                         onChange={(e) => setForm({ ...form, rememberHost: e.target.checked })}
                                         sx={{
                                             color: theme.palette.text.primary,
+                                            '&.Mui-checked': {
+                                                color: theme.palette.text.primary,
+                                            },
                                         }}
                                     />
                                 </FormControl>

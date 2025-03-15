@@ -181,7 +181,7 @@ function App() {
 
     const handleSaveHost = () => {
         let hostConfig = {
-            name: addHostForm.name,
+            name: addHostForm.name || addHostForm.ip,
             ip: addHostForm.ip,
             user: addHostForm.user,
             password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
@@ -273,10 +273,10 @@ function App() {
     const deleteHost = (hostConfig) => {
         if (userRef.current) {
             userRef.current.deleteHost({
-                hostConfig,
+                hostId: hostConfig._id,
             });
         }
-    }
+    };
 
     const updateEditHostForm = (hostConfig) => {
         if (hostConfig) {
@@ -289,18 +289,16 @@ function App() {
 
     const handleEditHost = () => {
         if (editHostForm.ip && editHostForm.user && ((editHostForm.authMethod === 'password' && editHostForm.password) || (editHostForm.authMethod === 'rsaKey' && editHostForm.rsaKey)) && editHostForm.port && editHostForm.authMethod !== 'Select Auth') {
-            const user = getUser();
             editHostForm.rememberHost = true;
 
-            if (user && currentHostConfig) {
-                userRef.current.editExistingHost({
-                    userId: user.id,
+            if (currentHostConfig) {
+                userRef.current.editHost({
                     oldHostConfig: currentHostConfig,
                     newHostConfig: editHostForm,
                 });
                 setIsEditHostHidden(true);
             } else {
-                console.error("User or currentHostConfig is null");
+                alert("Host not found");
             }
         } else {
             alert("Please fill out all fields.");

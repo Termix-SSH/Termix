@@ -27,13 +27,12 @@ function Launchpad({
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            // Close the launchpad when neither form is visible and no error is showing
             if (
                 launchpadRef.current &&
                 !launchpadRef.current.contains(event.target) &&
-                isAddHostHidden &&  // Only close if addHost form is hidden
-                isEditHostHidden &&  // Only close if editHost form is hidden
-                isErrorHidden        // Only close if error is hidden
+                isAddHostHidden &&
+                isEditHostHidden &&
+                isErrorHidden
             ) {
                 onClose();
             }
@@ -47,8 +46,8 @@ function Launchpad({
     }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden]);
 
     const handleEditHostClick = () => {
-        setIsAddHostHidden(false); // Open the form for editing
-        setActiveApp('hostViewer'); // Set active app to HostViewer
+        setIsAddHostHidden(false);
+        setActiveApp('hostViewer');
     };
 
     return (
@@ -174,10 +173,10 @@ function Launchpad({
                                 connectToHost={connectToHost}
                                 setIsAddHostHidden={setIsAddHostHidden}
                                 deleteHost={deleteHost}
-                                editHost={editHost} // Pass editHost here
+                                editHost={editHost}
                                 createFolder={createFolder}
                                 moveHostToFolder={moveHostToFolder}
-                                onEditHostClick={handleEditHostClick} // Pass the handler to the form
+                                onEditHostClick={handleEditHostClick}
                             />
                         )}
                     </div>

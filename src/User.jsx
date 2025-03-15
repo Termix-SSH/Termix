@@ -1,219 +1,237 @@
-import { useRef, forwardRef, useImperativeHandle } from "react";
+import { useRef, forwardRef, useImperativeHandle, useEffect } from "react";
 import io from "socket.io-client";
 import PropTypes from "prop-types";
 
-let socket;
+const SOCKET_URL = window.location.hostname === "localhost"
+    ? "http://localhost:8082/database.io"
+    : "/database.io";
 
-if (!socket) {
-    socket = io(
-        window.location.hostname === "localhost"
-            ? "http://localhost:8082/database.io"
-            : "/database.io",
-        {
-            path: "/database.io/socket.io",
-            transports: ["websocket", "polling"],
-        }
-    );
-}
+const socket = io(SOCKET_URL, {
+    path: "/database.io/socket.io",
+    transports: ["websocket", "polling"],
+    autoConnect: false,
+});
 
-export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSuccess, onFailure }, ref) => {
+export const User = forwardRef(({
+                                    onLoginSuccess,
+                                    onCreateSuccess,
+                                    onDeleteSuccess,
+                                    onFailure
+                                }, ref) => {
     const socketRef = useRef(socket);
     const currentUser = useRef(null);
 
-    const createUser = (userConfig) => {
-        if (socketRef.current) {
-            socketRef.current.emit("createUser", {
-                username: userConfig.username,
-                password: userConfig.password,
+    useEffect(() => {
+        socketRef.current.connect();
+        return () => socketRef.current.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const verifySession = async () => {
+            const storedSession = localStorage.getItem("sessionToken");
+            if (!storedSession || storedSession === "undefined") return;
+
+            try {
+                const response = await new Promise((resolve) => {
+                    socketRef.current.emit("verifySession", { sessionToken: storedSession }, resolve);
+                });
+
+                if (response?.success) {
+                    currentUser.current = {
+                        id: response.user.id,
+                        username: response.user.username,
+                        sessionToken: storedSession,
+                    };
+                    onLoginSuccess(response.user);
+                } else {
+                    localStorage.removeItem("sessionToken");
+                    onFailure("Session expired");
+                }
+            } catch (error) {
+                onFailure(error.message);
+            }
+        };
+
+        verifySession();
+    }, []);
+
+    const createUser = async (userConfig) => {
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("createUser", userConfig, resolve);
             });
 
-            socketRef.current.once("userCreated", (data) => {
+            if (response?.user?.sessionToken) {
                 currentUser.current = {
-                    id: data.user._id,
-                    username: data.user.username,
-                    sessionToken: data.user.sessionToken,
+                    id: response.user.id,
+                    username: response.user.username,
+                    sessionToken: response.user.sessionToken,
                 };
-                localStorage.setItem('sessionToken', data.user.sessionToken);
-                onCreateSuccess(data);
-            });
-
-            socketRef.current.once("error", (error) => {
-                console.error(error);
-                const errorMsg = (error && typeof error === 'object' && error !== null)
-                    ? error.error || error.message || 'An error occurred'
-                    : String(error);
-                onFailure(errorMsg);
-            });
+                localStorage.setItem("sessionToken", response.user.sessionToken);
+                onCreateSuccess(response.user);
+            } else {
+                throw new Error(response?.error || "User creation failed");
+            }
+        } catch (error) {
+            onFailure(error.message);
         }
     };
 
-    const loginUser = (userConfig) => {
-        if (socketRef.current) {
-            setTimeout(() => {
-                socketRef.current.emit("loginUser", {
-                    username: userConfig.username,
-                    password: userConfig.password,
-                    sessionToken: userConfig.sessionToken,
-                });
+    const loginUser = async ({ username, password, sessionToken }) => {
+        try {
+            const response = await new Promise((resolve) => {
+                const credentials = sessionToken ? { sessionToken } : { username, password };
+                socketRef.current.emit("loginUser", credentials, resolve);
+            });
 
-                socketRef.current.once("userFound", (data) => {
-                    currentUser.current = {
-                        id: data._id,
-                        username: data.username,
-                        sessionToken: data.sessionToken,
-                    };
-                    localStorage.setItem('sessionToken', data.sessionToken);
-                    onLoginSuccess(data);
-                });
-
-                socketRef.current.once("error", (error) => {
-                    console.error(error);
-                    const errorMsg = (error && typeof error === 'object' && error !== null)
-                        ? error.error || error.message || 'An error occurred'
-                        : String(error);
-                    onFailure(errorMsg);
-                });
-            }, 500);
+            if (response?.success) {
+                currentUser.current = {
+                    id: response.user.id,
+                    username: response.user.username,
+                    sessionToken: response.user.sessionToken,
+                };
+                localStorage.setItem("sessionToken", response.user.sessionToken);
+                onLoginSuccess(response.user);
+            } else {
+                throw new Error(response?.error || "Login failed");
+            }
+        } catch (error) {
+            onFailure(error.message);
         }
     };
 
     const logoutUser = () => {
-        localStorage.removeItem('sessionToken');
+        localStorage.removeItem("sessionToken");
         currentUser.current = null;
+        onLoginSuccess(null);
     };
 
-    const deleteUser = () => {
-        if (currentUser.current?.id && socketRef.current) {
-            socketRef.current.emit("deleteUser", {
-                userId: currentUser.current.id,
+    const deleteUser = async () => {
+        if (!currentUser.current) return onFailure("No user logged in");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("deleteUser", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                }, resolve);
             });
 
-            socketRef.current.once("userDeleted", (data) => {
-                onDeleteSuccess(data);
-                currentUser.current = null;
-                localStorage.removeItem('sessionToken');
-            });
-
-            socketRef.current.once("error", (error) => {
-                console.error(error);
-                const errorMsg = (error && typeof error === 'object' && error !== null)
-                    ? error.error || error.message || 'An error occurred'
-                    : String(error);
-                onFailure(errorMsg);
-            });
-        } else {
-            onFailure("No user is currently logged in.");
+            if (response?.success) {
+                logoutUser();
+                onDeleteSuccess(response);
+            } else {
+                throw new Error(response?.error || "User deletion failed");
+            }
+        } catch (error) {
+            onFailure(error.message);
         }
     };
 
-    const saveHost = (hostConfig) => {
-        if (currentUser.current?.id && socketRef.current) {
-            socketRef.current.emit("saveHostConfig", {
-                userId: currentUser.current.id,
-                hostConfig: hostConfig,
+    const saveHost = async (hostConfig) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("saveHostConfig", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    ...hostConfig
+                }, resolve);
             });
 
-            socketRef.current.once("error", (error) => {
-                onFailure(error);
-            });
-        } else {
-            onFailure("No user is currently logged in.");
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to save host");
+            }
+        } catch (error) {
+            onFailure(error.message);
         }
-    }
+    };
 
-    const getUser = () => {
-        return currentUser.current;
-    }
+    const getAllHosts = async () => {
+        if (!currentUser.current) return [];
 
-    const getAllHosts = () => {
-        return new Promise((resolve, reject) => {
-            if (currentUser.current?.id && socketRef.current) {
+        try {
+            const response = await new Promise((resolve) => {
                 socketRef.current.emit("getHosts", {
                     userId: currentUser.current.id,
-                });
+                    sessionToken: currentUser.current.sessionToken,
+                }, resolve);
+            });
 
-                socketRef.current.once("hostsFound", (data) => {
-                    if (data && Array.isArray(data)) {
-                        resolve(data);
-                    } else {
-                        reject("Invalid data received.");
-                    }
-                });
-
-                socketRef.current.once("error", (error) => {
-                    console.error(error);
-                    const errorMsg = (error && typeof error === 'object' && error !== null)
-                        ? error.error || error.message || 'An error occurred'
-                        : String(error);
-                    reject(errorMsg);
-                });
+            if (response?.success) {
+                return response.hosts;
             } else {
-                reject("No user is currently logged in.");
+                throw new Error(response?.error || "Failed to fetch hosts");
             }
-        });
-    };
-
-    const deleteHost = (hostConfig) => {
-        if (currentUser.current?.id && socketRef.current) {
-            socketRef.current.emit("deleteHost", {
-                userId: currentUser.current.id,
-                hostConfig: hostConfig,
-            });
-
-            socketRef.current.once("error", (error) => {
-                onFailure(error);
-            });
-        } else {
-            onFailure("No user is currently logged in.");
-        }
-    }
-
-    const editExistingHost = ({ userId, oldHostConfig, newHostConfig }) => {
-        if (currentUser.current?.id && socketRef.current) {
-            socketRef.current.emit("editHost", {
-                userId: userId,
-                oldHostConfig: oldHostConfig,
-                newHostConfig: newHostConfig,
-            });
-
-            socketRef.current.once("error", (error) => {
-                onFailure(error);
-            });
-        } else {
-            onFailure("No user is currently logged in.");
+        } catch (error) {
+            onFailure(error.message);
+            return [];
         }
     };
 
-    const createFolder = (folderName) => {
-        if (currentUser.current?.id && socketRef.current) {
-            socketRef.current.emit("createFolder", {
-                userId: currentUser.current.id,
-                folderName: folderName,
+    const deleteHost = async ({ hostId }) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("deleteHost", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    hostId: hostId,
+                }, resolve);
             });
 
-            socketRef.current.once("error", (error) => {
-                onFailure(error);
-            });
-        } else {
-            onFailure("No user is currently logged in.");
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to delete host");
+            }
+        } catch (error) {
+            onFailure(error.message);
         }
-    }
+    };
 
-    const moveHostToFolder = (folderName, hostConfig) => {
-        if (currentUser.current?.id && socketRef.current) {
-            socketRef.current.emit("moveHostToFolder", {
-                userId: currentUser.current.id,
-                folderName: folderName,
-                hostConfig: hostConfig,
+    const editHost = async ({ oldHostConfig, newHostConfig }) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            console.log('Editing host with configs:', { oldHostConfig, newHostConfig });
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("editHost", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    oldHostConfig,
+                    newHostConfig,
+                }, resolve);
             });
 
-            socketRef.current.once("error", (error) => {
-                onFailure(error);
-            });
-        } else {
-            onFailure("No user is currently logged in.");
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to edit host");
+            }
+        } catch (error) {
+            onFailure(error.message);
         }
-    }
+    };
+
+    const shareHost = async (hostId, targetUsername) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("shareHost", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    hostId,
+                    targetUsername,
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to share host");
+            }
+        } catch (error) {
+            onFailure(error.message);
+        }
+    };
 
     useImperativeHandle(ref, () => ({
         createUser,
@@ -221,15 +239,14 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         logoutUser,
         deleteUser,
         saveHost,
-        getUser,
         getAllHosts,
         deleteHost,
-        editExistingHost,
-        createFolder,
-        moveHostToFolder,
+        shareHost,
+        editHost,
+        getUser: () => currentUser.current,
     }));
 
-    return <div></div>;
+    return null;
 });
 
 User.displayName = "User";

@@ -4,27 +4,33 @@ const SSHClient = require("ssh2").Client;
 
 const server = http.createServer();
 const io = socketIo(server, {
-    path: "/ssh.io/socket.io",  // Corrected path for socket.io
+    path: "/ssh.io/socket.io",
     cors: {
-        origin: "*",  // Temporarily set to '*' to allow all origins. Change to specific URLs if needed.
+        origin: "*",
         methods: ["GET", "POST"],
         credentials: true
     },
     allowEIO3: true
 });
 
+const logger = {
+    info: (...args) => console.log(`🔧 [${new Date().toISOString()}] INFO:`, ...args),
+    error: (...args) => console.error(`❌ [${new Date().toISOString()}] ERROR:`, ...args),
+    warn: (...args) => console.warn(`⚠️ [${new Date().toISOString()}] WARN:`, ...args),
+    debug: (...args) => console.debug(`🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
+};
+
 io.on("connection", (socket) => {
-    console.log("New socket connection established");
+    logger.info("New socket connection established");
 
     let stream = null;
 
     socket.on("connectToHost", (cols, rows, hostConfig) => {
         if (!hostConfig || !hostConfig.ip || !hostConfig.user || (!hostConfig.password && !hostConfig.rsaKey) || !hostConfig.port) {
-            console.error("Invalid hostConfig received:", hostConfig);
+            logger.error("Invalid hostConfig received:", hostConfig);
             return;
         }
 
-        // Redact only sensitive info for logging
         const safeHostConfig = {
             ip: hostConfig.ip,
             port: hostConfig.port,
@@ -33,57 +39,52 @@ io.on("connection", (socket) => {
             rsaKey: hostConfig.rsaKey ? '***REDACTED***' : undefined,
         };
 
-        console.log("Received hostConfig:", safeHostConfig);
+        logger.info("Received hostConfig:", safeHostConfig);
         const { ip, port, user, password, rsaKey } = hostConfig;
 
         const conn = new SSHClient();
         conn
             .on("ready", function () {
-                console.log("SSH connection established");
+                logger.info("SSH connection established");
 
                 conn.shell({ term: "xterm-256color" }, function (err, newStream) {
                     if (err) {
-                        console.error("Error:", err.message);
+                        logger.error("Error:", err.message);
                         socket.emit("error", err.message);
                         return;
                     }
                     stream = newStream;
 
-                    // Set initial terminal size
                     stream.setWindow(rows, cols, rows * 100, cols * 100);
 
-                    // Pipe SSH output to client
                     stream.on("data", function (data) {
                         socket.emit("data", data);
                     });
 
                     stream.on("close", function () {
-                        console.log("SSH stream closed");
+                        logger.info("SSH stream closed");
                         conn.end();
                     });
 
-                    // Send keystrokes from terminal to SSH
                     socket.on("data", function (data) {
                         stream.write(data);
                     });
 
-                    // Resize SSH terminal when client resizes
                     socket.on("resize", ({ cols, rows }) => {
                         if (stream && stream.setWindow) {
                             stream.setWindow(rows, cols, rows * 100, cols * 100);
                         }
                     });
 
-                    // Auto-send initial terminal size to backend
                     socket.emit("resize", { cols, rows });
                 });
             })
             .on("close", function () {
-                console.log("SSH connection closed");
+                logger.info("SSH connection closed");
                 socket.emit("error", "SSH connection closed");
             })
             .on("error", function (err) {
-                console.error("Error:", err.message);
+                logger.error("Error:", err.message);
                 socket.emit("error", err.message);
             })
             .connect({
@@ -96,10 +97,10 @@ io.on("connection", (socket) => {
     });
 
     socket.on("disconnect", () => {
-        console.log("Client disconnected");
+        logger.info("Client disconnected");
     });
 });
 
 server.listen(8081, '0.0.0.0', () => {
-    console.log("Server is running on port 8081");
+    logger.info("Server is running on port 8081");
 });

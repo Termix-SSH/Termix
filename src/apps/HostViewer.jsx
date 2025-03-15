@@ -4,46 +4,38 @@ import { Button } from "@mui/joy";
 
 function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, editHost }) {
     const [hosts, setHosts] = useState([]);
-    const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const isMounted = useRef(true);
+
+    const fetchHosts = async () => {
+        try {
+            const savedHosts = await getHosts();
+            if (isMounted.current) {
+                setHosts(savedHosts || []);
+                setIsLoading(false);
+            }
+        } catch (error) {
+            console.error("Host fetch failed:", error);
+            if (isMounted.current) {
+                setHosts([]);
+                setIsLoading(false);
+            }
+        }
+    };
 
     useEffect(() => {
         isMounted.current = true;
+        fetchHosts();
 
-        async function fetchInitialHosts() {
-            try {
-                const savedHosts = await getHosts();
-                if (isMounted.current) {
-                    setHosts(savedHosts || []);
-                    setInitialLoadComplete(true);
-                }
-            } catch (error) {
-                console.error("Initial host fetch failed:", error);
-                if (isMounted.current) {
-                    setHosts([]);
-                    setInitialLoadComplete(true);
-                }
-            }
-        }
-
-        fetchInitialHosts();
-
-        const intervalId = setInterval(async () => {
-            try {
-                const savedHosts = await getHosts();
-                if (isMounted.current) {
-                    setHosts(savedHosts || []);
-                }
-            } catch (error) {
-                console.error("Periodic host update failed:", error);
-            }
+        const intervalId = setInterval(() => {
+            fetchHosts();
         }, 2000);
 
         return () => {
             isMounted.current = false;
             clearInterval(intervalId);
         };
-    }, [getHosts]);
+    }, []);
 
     return (
         <div className="h-full w-full p-4 text-white flex flex-col">
@@ -61,25 +53,29 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                 </Button>
             </div>
             <div className="flex-grow overflow-auto">
-                {hosts.length > 0 ? (
+                {isLoading ? (
+                    <p className="text-gray-300">Loading hosts...</p>
+                ) : hosts.length > 0 ? (
                     <div className="flex flex-col gap-2 w-full">
                         {hosts.map((hostWrapper, index) => {
-                            const hostConfig = hostWrapper.hostConfig || {};
+                            const hostConfig = hostWrapper.config || {};
+
+                            if (!hostConfig) {
+                                return null;
+                            }
 
                             return (
                                 <div key={index} className="flex justify-between items-center bg-neutral-800 p-3 rounded-lg shadow-md border border-neutral-700 w-full">
                                     <div>
                                         <p className="font-semibold">{hostConfig.name || hostConfig.ip}</p>
                                         <p className="text-sm text-gray-400">
-                                            {hostConfig.user ? `${hostConfig.user}@${hostConfig.ip}` : hostConfig.ip}:{hostConfig.port}
+                                            {hostConfig.user ? `${hostConfig.user}@${hostConfig.ip}` : `${hostConfig.ip}:${hostConfig.port}`}
                                         </p>
                                     </div>
                                     <div className="flex gap-2">
                                         <Button
                                             className="text-black"
-                                            onClick={() => {
-                                                connectToHost(hostConfig);
-                                            }}
+                                            onClick={() => connectToHost(hostConfig)}
                                             sx={{
                                                 backgroundColor: "#6e6e6e",
                                                 "&:hover": { backgroundColor: "#0f0f0f" }
@@ -90,7 +86,7 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                                         <Button
                                             className="text-black"
                                             onClick={() => {
-                                                deleteHost(hostConfig);
+                                                deleteHost({ ...hostConfig, _id: hostWrapper._id });
                                             }}
                                             sx={{
                                                 backgroundColor: "#6e6e6e",
@@ -117,7 +113,7 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                         })}
                     </div>
                 ) : (
-                    <p className="text-gray-300">Hosts are either loading or do not exist...</p>
+                    <p className="text-gray-300">No hosts available...</p>
                 )}
             </div>
         </div>

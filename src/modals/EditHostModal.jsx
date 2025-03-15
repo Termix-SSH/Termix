@@ -12,8 +12,7 @@ import {
     DialogContent,
     ModalDialog,
     Select,
-    Option,
-    Checkbox
+    Option
 } from '@mui/joy';
 import theme from '/src/theme';
 
@@ -39,6 +38,11 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
         if (form.authMethod === 'rsaKey' && !form.rsaKey) return false;
         if (form.authMethod === 'password' && !form.password) return false;
         return true;
+    };
+
+    const handleEditHostInternal = (form) => {
+        const updatedForm = { ...form, name: form.name || form.ip };
+        handleEditHost(updatedForm);
     };
 
     useEffect(() => {
@@ -81,7 +85,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                         <form
                             onSubmit={(event) => {
                                 event.preventDefault();
-                                if (isFormValid()) handleEditHost();
+                                if (isFormValid()) handleEditHostInternal(form);
                             }}
                         >
                             <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
