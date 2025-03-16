@@ -55,6 +55,7 @@ If you need help with Termix, you can join the [Discord](https://discord.gg/jVQG
 # Show-off
 
 ![Demo Image](repo-images/DemoImage1.png)
+![Demo Image](repo-images/DemoImage2.png)
 
 # License
 Distributed under the MIT license. See LICENSE for more information.

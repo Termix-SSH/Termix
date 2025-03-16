@@ -1,5 +1,5 @@
 # Stage 1: Build frontend
-FROM --platform=$BUILDPLATFORM node:18-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:18 AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Build backend
-FROM --platform=$BUILDPLATFORM node:18-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM node:18 AS backend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -19,6 +19,8 @@ FROM mongo:5
 RUN apt-get update && apt-get install -y \
     curl \
     nginx \
+    python3 \
+    build-essential \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
@@ -28,8 +30,10 @@ RUN apt-get update && apt-get install -y \
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
-# Copy backend
-COPY --from=backend-builder /app/node_modules ./node_modules
+# Setup backend
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --omit=dev
 COPY --from=backend-builder /app/src/backend ./src/backend
 
 # Create directories for MongoDB and nginx
