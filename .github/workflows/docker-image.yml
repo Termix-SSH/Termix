@@ -65,7 +65,7 @@ jobs:
       - name: Notify via ntfy
         run: |
           curl -d "Docker image build and push completed successfully for tag: ${{ env.IMAGE_TAG }}" \
-          https://ntfy.karmaashomepage.online/termix-build
+          https://ntfy.karmaa.site/termix-build
 
       - name: Delete all untagged image versions
         uses: quartx-analytics/ghcr-cleaner@v1
