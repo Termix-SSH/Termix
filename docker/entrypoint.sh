@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
-# Start MongoDB with custom data directory
-mongod --fork --dbpath $MONGODB_DATA_DIR --logpath $MONGODB_LOG_DIR/mongodb.log
+# Start MongoDB
+mongod --fork --logpath /var/log/mongodb.log
 
 # Start nginx
 nginx
@@ -12,5 +12,5 @@ node src/backend/ssh.cjs &
 # Start the database service
 node src/backend/database.cjs &
 
-# Keep the container running
-tail -f /dev/null
+# Keep the container running and show MongoDB logs
+tail -f /var/log/mongodb.log

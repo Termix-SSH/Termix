@@ -14,8 +14,15 @@ RUN npm install
 COPY src/backend/ ./src/backend/
 
 # Stage 3: Final production image
-FROM node:18-alpine
-RUN apk add --no-cache nginx mongodb~=5
+FROM mongo:5
+# Install Node.js
+RUN apt-get update && apt-get install -y \
+    curl \
+    nginx \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -25,20 +32,13 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src/backend ./src/backend
 
-# Create persistent directories for MongoDB and nginx
-RUN mkdir -p /usr/local/mongodb/data/db && \
-    mkdir -p /var/log/nginx && \
+# Create directories for nginx
+RUN mkdir -p /var/log/nginx && \
     mkdir -p /var/lib/nginx && \
-    mkdir -p /var/log/mongodb && \
-    chown -R nginx:nginx /var/log/nginx /var/lib/nginx && \
-    chown -R mongodb:mongodb /usr/local/mongodb/data/db /var/log/mongodb
+    chown -R www-data:www-data /var/log/nginx /var/lib/nginx
 
 # Set environment variables
-ENV MONGO_URL=mongodb://localhost:27017/termix \
-    MONGODB_DATA_DIR=/usr/local/mongodb/data/db \
-    MONGODB_LOG_DIR=/var/log/mongodb
-
-VOLUME ["/usr/local/mongodb/data/db"]
+ENV MONGO_URL=mongodb://localhost:27017/termix
 
 # Expose ports
 EXPOSE 8080 8081 8082 27017
