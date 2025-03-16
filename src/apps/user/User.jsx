@@ -261,6 +261,26 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         }
     };
 
+    const removeShare = async (hostId) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("removeShare", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    hostId,
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to remove share");
+            }
+        } catch (error) {
+            onFailure(error.message);
+        }
+    };
+
     useImperativeHandle(ref, () => ({
         createUser,
         loginUser,
@@ -272,6 +292,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         deleteHost,
         shareHost,
         editHost,
+        removeShare,
         getUser: () => currentUser.current,
     }));
 

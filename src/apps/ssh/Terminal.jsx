@@ -87,14 +87,12 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             fitAddon.current.fit();
             resizeTerminal();
             const { cols, rows } = terminalInstance.current;
-            
-            // Check if we have authentication
+
             if (!hostConfig.password?.trim() && !hostConfig.rsaKey?.trim()) {
                 setIsNoAuthHidden(false);
                 return;
             }
 
-            // Only connect if we have authentication
             const sshConfig = {
                 ip: hostConfig.ip,
                 user: hostConfig.user,
@@ -106,7 +104,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             socket.emit("connectToHost", cols, rows, sshConfig);
         });
 
-        // Fit and focus the terminal after it's opened
         setTimeout(() => {
             fitAddon.current.fit();
             resizeTerminal();
@@ -175,7 +172,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         let authModalShown = false;
 
         socket.on("noAuthRequired", () => {
-            // Only show auth modal if we don't have valid credentials
             if (!hostConfig.password?.trim() && !hostConfig.rsaKey?.trim() && !authModalShown) {
                 authModalShown = true;
                 setIsNoAuthHidden(false);

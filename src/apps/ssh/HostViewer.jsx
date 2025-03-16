@@ -1,8 +1,9 @@
 import PropTypes from "prop-types";
 import { useState, useEffect, useRef } from "react";
 import { Button, Input } from "@mui/joy";
+import ShareHostModal from "../../modals/ShareHostModal";
 
-function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, editHost, openEditPanel }) {
+function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, editHost, openEditPanel, shareHost, onModalOpen, onModalClose, userRef }) {
     const [hosts, setHosts] = useState([]);
     const [filteredHosts, setFilteredHosts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -12,6 +13,8 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
     const [isDraggingOver, setIsDraggingOver] = useState(null);
     const isMounted = useRef(true);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isShareModalHidden, setIsShareModalHidden] = useState(true);
+    const [selectedHostForShare, setSelectedHostForShare] = useState(null);
 
     const fetchHosts = async () => {
         try {
@@ -54,6 +57,14 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
         });
         setFilteredHosts(filtered);
     }, [searchTerm, hosts]);
+
+    useEffect(() => {
+        if (!isShareModalHidden) {
+            onModalOpen();
+        } else {
+            onModalClose();
+        }
+    }, [isShareModalHidden, onModalOpen, onModalClose]);
 
     const toggleFolder = (folderName) => {
         setCollapsedFolders(prev => {
@@ -160,18 +171,33 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
         
         setIsDeleting(true);
         try {
-            await deleteHost({ _id: hostWrapper._id });
-            await new Promise(resolve => setTimeout(resolve, 500)); // Add a small delay for UX
+            const isOwner = hostWrapper.createdBy?._id === userRef.current?.getUser()?.id;
+            if (isOwner) {
+                await deleteHost({ _id: hostWrapper._id });
+            } else {
+                await userRef.current.removeShare(hostWrapper._id);
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
             await fetchHosts();
         } catch (error) {
-            console.error('Failed to delete host:', error);
+            console.error('Failed to delete/remove host:', error);
         } finally {
             setIsDeleting(false);
         }
     };
 
+    const handleShare = async (hostId, username) => {
+        try {
+            await shareHost(hostId, username);
+            await fetchHosts();
+        } catch (error) {
+            console.error('Failed to share host:', error);
+        }
+    };
+
     const renderHostItem = (hostWrapper) => {
         const hostConfig = hostWrapper.config || {};
+        const isOwner = hostWrapper.createdBy?._id === userRef.current?.getUser()?.id;
 
         if (!hostConfig) {
             return null;
@@ -181,14 +207,21 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
             <div
                 key={hostWrapper._id}
                 className={`flex justify-between items-center bg-neutral-800 p-3 rounded-lg shadow-md border border-neutral-700 w-full cursor-grab active:cursor-grabbing hover:border-neutral-500 transition-colors ${draggedHost === hostWrapper ? 'opacity-50' : ''}`}
-                draggable
-                onDragStart={(e) => handleDragStart(e, hostWrapper)}
+                draggable={isOwner}
+                onDragStart={(e) => isOwner && handleDragStart(e, hostWrapper)}
                 onDragEnd={() => setDraggedHost(null)}
             >
                 <div className="flex items-center gap-2 flex-1">
                     <div className="text-neutral-500 cursor-grab active:cursor-grabbing">⋮⋮</div>
                     <div>
-                        <p className="font-semibold">{hostConfig.name || hostConfig.ip}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="font-semibold">{hostConfig.name || hostConfig.ip}</p>
+                            {!isOwner && (
+                                <span className="text-xs bg-neutral-700 text-neutral-300 px-2 py-1 rounded">
+                                    Shared by {hostWrapper.createdBy?.username}
+                                </span>
+                            )}
+                        </div>
                         <p className="text-sm text-gray-400">
                             {hostConfig.user ? `${hostConfig.user}@${hostConfig.ip}` : `${hostConfig.ip}:${hostConfig.port}`}
                         </p>
@@ -214,35 +247,71 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                     >
                         Connect
                     </Button>
-                    <Button
-                        className="text-black"
-                        onClick={(e) => handleDelete(e, hostWrapper)}
-                        disabled={isDeleting}
-                        sx={{
-                            backgroundColor: "#6e6e6e",
-                            "&:hover": { backgroundColor: "#0f0f0f" },
-                            opacity: isDeleting ? 0.5 : 1,
-                            cursor: isDeleting ? "not-allowed" : "pointer"
-                        }}
-                    >
-                        {isDeleting ? "Deleting..." : "Delete"}
-                    </Button>
-                    <Button
-                        className="text-black"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            openEditPanel(hostConfig);
-                        }}
-                        disabled={isDeleting}
-                        sx={{
-                            backgroundColor: "#6e6e6e",
-                            "&:hover": { backgroundColor: "#0f0f0f" },
-                            opacity: isDeleting ? 0.5 : 1,
-                            cursor: isDeleting ? "not-allowed" : "pointer"
-                        }}
-                    >
-                        Edit
-                    </Button>
+                    {isOwner && (
+                        <>
+                            <Button
+                                className="text-black"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedHostForShare(hostWrapper);
+                                    setIsShareModalHidden(false);
+                                }}
+                                disabled={isDeleting}
+                                sx={{
+                                    backgroundColor: "#6e6e6e",
+                                    "&:hover": { backgroundColor: "#0f0f0f" },
+                                    opacity: isDeleting ? 0.5 : 1,
+                                    cursor: isDeleting ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                Share
+                            </Button>
+                            <Button
+                                className="text-black"
+                                onClick={(e) => handleDelete(e, hostWrapper)}
+                                disabled={isDeleting}
+                                sx={{
+                                    backgroundColor: "#6e6e6e",
+                                    "&:hover": { backgroundColor: "#0f0f0f" },
+                                    opacity: isDeleting ? 0.5 : 1,
+                                    cursor: isDeleting ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                            </Button>
+                            <Button
+                                className="text-black"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditPanel(hostConfig);
+                                }}
+                                disabled={isDeleting}
+                                sx={{
+                                    backgroundColor: "#6e6e6e",
+                                    "&:hover": { backgroundColor: "#0f0f0f" },
+                                    opacity: isDeleting ? 0.5 : 1,
+                                    cursor: isDeleting ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                Edit
+                            </Button>
+                        </>
+                    )}
+                    {!isOwner && (
+                        <Button
+                            className="text-black"
+                            onClick={(e) => handleDelete(e, hostWrapper)}
+                            disabled={isDeleting}
+                            sx={{
+                                backgroundColor: "#6e6e6e",
+                                "&:hover": { backgroundColor: "#0f0f0f" },
+                                opacity: isDeleting ? 0.5 : 1,
+                                cursor: isDeleting ? "not-allowed" : "pointer"
+                            }}
+                        >
+                            {isDeleting ? "Removing..." : "Remove Share"}
+                        </Button>
+                    )}
                 </div>
             </div>
         );
@@ -328,6 +397,12 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                     <p className="text-gray-300">No hosts available...</p>
                 )}
             </div>
+            <ShareHostModal
+                isHidden={isShareModalHidden}
+                setIsHidden={setIsShareModalHidden}
+                handleShare={handleShare}
+                hostConfig={selectedHostForShare}
+            />
         </div>
     );
 }
@@ -339,6 +414,10 @@ HostViewer.propTypes = {
     deleteHost: PropTypes.func.isRequired,
     editHost: PropTypes.func.isRequired,
     openEditPanel: PropTypes.func.isRequired,
+    shareHost: PropTypes.func.isRequired,
+    onModalOpen: PropTypes.func.isRequired,
+    onModalClose: PropTypes.func.isRequired,
+    userRef: PropTypes.object.isRequired,
 };
 
 export default HostViewer;

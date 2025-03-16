@@ -223,14 +223,12 @@ function App() {
 
     const handleAddHost = () => {
         if (addHostForm.ip && addHostForm.user && addHostForm.port) {
-            // If not remembering the host, just connect without auth validation
             if (!addHostForm.rememberHost) {
                 connectToHost();
                 setIsAddHostHidden(true);
                 return;
             }
 
-            // If remembering the host, validate auth method
             if (addHostForm.authMethod === 'Select Auth') {
                 alert("Please select an authentication method.");
                 return;
@@ -244,7 +242,6 @@ function App() {
                 return;
             }
 
-            // Connect and save if all validation passes
             connectToHost();
             if (!addHostForm.storePassword) {
                 addHostForm.password = '';
@@ -257,7 +254,6 @@ function App() {
     };
 
     const connectToHost = () => {
-        // Create a clean host config object
         const hostConfig = {
             name: addHostForm.name || '',
             folder: addHostForm.folder || '',
@@ -300,17 +296,14 @@ function App() {
     };
 
     const connectToHostWithConfig = (hostConfig) => {
-        // Ensure we have a valid host config
         if (!hostConfig || typeof hostConfig !== 'object') {
             return;
         }
 
-        // Ensure all required fields are present
         if (!hostConfig.ip || !hostConfig.user) {
             return;
         }
 
-        // Create a clean host config object with all required fields
         const cleanHostConfig = {
             name: hostConfig.name || '',
             folder: hostConfig.folder || '',
@@ -459,8 +452,7 @@ function App() {
                         oldHostConfig: oldConfig,
                         newHostConfig: newConfig,
                     });
-                    
-                    // Keep the modal visible during the delay
+
                     await new Promise(resolve => setTimeout(resolve, 3000));
                 } finally {
                     setIsEditing(false);
@@ -700,6 +692,8 @@ function App() {
                                     isErrorHidden={isErrorHidden}
                                     deleteHost={deleteHost}
                                     editHost={handleEditHost}
+                                    shareHost={(hostId, username) => userRef.current?.shareHost(hostId, username)}
+                                    userRef={userRef}
                                 />
                             )}
                         </>

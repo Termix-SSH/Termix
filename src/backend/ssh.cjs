@@ -32,7 +32,6 @@ io.on("connection", (socket) => {
             return;
         }
 
-        // Require authentication
         if (!hostConfig.password && !hostConfig.rsaKey) {
             logger.error("No authentication provided");
             socket.emit("error", "Authentication required");

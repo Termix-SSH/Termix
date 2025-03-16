@@ -41,7 +41,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                 port: hostConfig.port || 22,
                 authMethod: hostConfig.password ? 'password' : hostConfig.rsaKey ? 'rsaKey' : 'Select Auth',
                 rememberHost: true,
-                storePassword: true,
+                storePassword: !!(hostConfig.password || hostConfig.rsaKey),
             });
         }
     }, [isHidden, hostConfig]);

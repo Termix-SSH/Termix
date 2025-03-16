@@ -1,13 +1,11 @@
 import PropTypes from 'prop-types';
-import { Modal, Typography, Button } from "@mui/joy";
+import { Modal, Button } from "@mui/joy";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import theme from "../theme";
 
 export default function ProfileModal({
     isHidden,
-    getUser,
     handleDeleteUser,
     handleLogoutUser,
     setIsProfileHidden,

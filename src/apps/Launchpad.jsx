@@ -16,10 +16,13 @@ function Launchpad({
     isErrorHidden,
     deleteHost,
     editHost,
+    shareHost,
+    userRef,
 }) {
     const launchpadRef = useRef(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeApp, setActiveApp] = useState('hostViewer');
+    const [isAnyModalOpen, setIsAnyModalOpen] = useState(false);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -28,7 +31,8 @@ function Launchpad({
                 !launchpadRef.current.contains(event.target) &&
                 isAddHostHidden &&
                 isEditHostHidden &&
-                isErrorHidden
+                isErrorHidden &&
+                !isAnyModalOpen
             ) {
                 onClose();
             }
@@ -39,7 +43,15 @@ function Launchpad({
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden]);
+    }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden, isAnyModalOpen]);
+
+    const handleModalOpen = () => {
+        setIsAnyModalOpen(true);
+    };
+
+    const handleModalClose = () => {
+        setIsAnyModalOpen(false);
+    };
 
     return (
         <CssVarsProvider theme={theme}>
@@ -174,6 +186,10 @@ function Launchpad({
                                 deleteHost={deleteHost}
                                 editHost={editHost}
                                 openEditPanel={editHost}
+                                shareHost={shareHost}
+                                onModalOpen={handleModalOpen}
+                                onModalClose={handleModalClose}
+                                userRef={userRef}
                             />
                         )}
                     </div>
@@ -193,6 +209,8 @@ Launchpad.propTypes = {
     isErrorHidden: PropTypes.bool.isRequired,
     deleteHost: PropTypes.func.isRequired,
     editHost: PropTypes.func.isRequired,
+    shareHost: PropTypes.func.isRequired,
+    userRef: PropTypes.object.isRequired,
 };
 
 export default Launchpad;

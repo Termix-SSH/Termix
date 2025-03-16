@@ -33,10 +33,9 @@ Termix is an open-source forever free self-hosted SSH (other protocols planned, 
 - SSH
 - Split Screen (Up to 4) & Tab System
 - User Authentication
-- Data Persistence
+- Save Hosts (and easily view, connect, and manage them)
 
 # Planned Features
-- Organize Hosts (folders, tags, etc.)
 - VNC
 - RDP
 - SFTP (build in file transfer)
@@ -46,8 +45,7 @@ Termix is an open-source forever free self-hosted SSH (other protocols planned, 
 - User Management (roles, permissions, etc.)
 - SSH Tunneling
 - More Authentication Methods
-- Share Hosts
-- More Security Features (like 2FA, optionally store host passwords, etc.)
+- More Security Features (like 2FA, etc.)
 
 # Installation
 Visit the Termix [Wiki](https://github.com/LukeGus/Termix/wiki) for information on how to install Termix. You can also use these links to go directly to guide. [Docker](https://github.com/LukeGus/Termix/wiki/Docker) or [Manual](https://github.com/LukeGus/Termix/wiki/Manual).

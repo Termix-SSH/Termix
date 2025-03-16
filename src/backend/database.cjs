@@ -230,13 +230,32 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Invalid session' });
             }
 
-            const hosts = await Host.find({ users: userId });
-            const decryptedHosts = hosts.map(host => ({
-                ...host.toObject(),
-                config: decryptData(host.config, userId, sessionToken)
-            })).filter(host => host.config);
+            const hosts = await Host.find({ users: userId }).populate('createdBy');
+            const decryptedHosts = await Promise.all(hosts.map(async host => {
+                try {
+                    const ownerUser = host.createdBy;
+                    if (!ownerUser) {
+                        logger.warn(`Owner not found for host: ${host._id}`);
+                        return null;
+                    }
 
-            callback({ success: true, hosts: decryptedHosts });
+                    const decryptedConfig = decryptData(host.config, ownerUser._id.toString(), ownerUser.sessionToken);
+                    if (!decryptedConfig) {
+                        logger.warn(`Failed to decrypt host config for host: ${host._id}`);
+                        return null;
+                    }
+
+                    return {
+                        ...host.toObject(),
+                        config: decryptedConfig
+                    };
+                } catch (error) {
+                    logger.error(`Failed to process host ${host._id}:`, error);
+                    return null;
+                }
+            }));
+
+            callback({ success: true, hosts: decryptedHosts.filter(host => host && host.config) });
         } catch (error) {
             logger.error('Get hosts error:', error);
             callback({ error: 'Failed to fetch hosts' });
@@ -312,6 +331,33 @@ io.of('/database.io').on('connection', (socket) => {
         } catch (error) {
             logger.error('Host sharing error:', error);
             callback({ error: 'Failed to share host' });
+        }
+    });
+
+    socket.on('removeShare', async ({ userId, sessionToken, hostId }, callback) => {
+        try {
+            logger.debug(`Removing share for host ${hostId} from user ${userId}`);
+
+            const user = await User.findOne({ _id: userId, sessionToken });
+            if (!user) {
+                logger.warn(`Invalid session for user: ${userId}`);
+                return callback({ error: 'Invalid session' });
+            }
+
+            const host = await Host.findById(hostId);
+            if (!host) {
+                logger.warn(`Host not found: ${hostId}`);
+                return callback({ error: 'Host not found' });
+            }
+
+            host.users = host.users.filter(id => id.toString() !== userId);
+            await host.save();
+
+            logger.info(`Share removed successfully: ${hostId} -> ${userId}`);
+            callback({ success: true });
+        } catch (error) {
+            logger.error('Share removal error:', error);
+            callback({ error: 'Failed to remove share' });
         }
     });
 

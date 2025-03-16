@@ -53,12 +53,10 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
     };
 
     const isFormValid = () => {
-        // Basic validation for required fields
         if (!form.ip || !form.user || !form.port) return false;
         const portNum = Number(form.port);
         if (isNaN(portNum) || portNum < 1 || portNum > 65535) return false;
 
-        // Only validate auth method if rememberHost is true
         if (form.rememberHost) {
             if (form.authMethod === 'Select Auth') return false;
             if (form.authMethod === 'rsaKey' && !form.rsaKey) return false;
@@ -71,15 +69,12 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
     const handleSubmit = (event) => {
         event.preventDefault();
         if (isFormValid()) {
-            // If not remembering the host, only send basic connection info
             if (!form.rememberHost) {
                 handleAddHost();
             } else {
-                // Only include auth details if remembering the host
                 handleAddHost();
             }
-            
-            // Reset form after successful submission
+
             setForm({
                 name: '',
                 folder: '',
@@ -242,7 +237,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                 onChange={(e) => setForm({ 
                                                     ...form, 
                                                     rememberHost: e.target.checked,
-                                                    // Reset auth fields if unchecking remember host
+
                                                     ...((!e.target.checked) && {
                                                         authMethod: 'Select Auth',
                                                         password: '',

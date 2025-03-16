@@ -22,7 +22,6 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, handleAuthSubmit }) => {
     const [showPassword, setShowPassword] = useState(false);
 
-    // Initialize form with default values if not provided
     useEffect(() => {
         if (!form.authMethod) {
             setForm(prev => ({
