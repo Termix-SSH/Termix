@@ -11,6 +11,7 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
     const [draggedHost, setDraggedHost] = useState(null);
     const [isDraggingOver, setIsDraggingOver] = useState(null);
     const isMounted = useRef(true);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const fetchHosts = async () => {
         try {
@@ -153,6 +154,22 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
         setDraggedHost(null);
     };
 
+    const handleDelete = async (e, hostWrapper) => {
+        e.stopPropagation();
+        if (isDeleting) return;
+        
+        setIsDeleting(true);
+        try {
+            await deleteHost({ _id: hostWrapper._id });
+            await new Promise(resolve => setTimeout(resolve, 500)); // Add a small delay for UX
+            await fetchHosts();
+        } catch (error) {
+            console.error('Failed to delete host:', error);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const renderHostItem = (hostWrapper) => {
         const hostConfig = hostWrapper.config || {};
 
@@ -182,27 +199,33 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                         className="text-black"
                         onClick={(e) => {
                             e.stopPropagation();
-                            connectToHost(hostConfig);
+                            if (!hostWrapper.config || !hostWrapper.config.ip || !hostWrapper.config.user) {
+                                return;
+                            }
+                            connectToHost(hostWrapper.config);
                         }}
+                        disabled={isDeleting}
                         sx={{
                             backgroundColor: "#6e6e6e",
-                            "&:hover": { backgroundColor: "#0f0f0f" }
+                            "&:hover": { backgroundColor: "#0f0f0f" },
+                            opacity: isDeleting ? 0.5 : 1,
+                            cursor: isDeleting ? "not-allowed" : "pointer"
                         }}
                     >
                         Connect
                     </Button>
                     <Button
                         className="text-black"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            deleteHost({ ...hostConfig, _id: hostWrapper._id });
-                        }}
+                        onClick={(e) => handleDelete(e, hostWrapper)}
+                        disabled={isDeleting}
                         sx={{
                             backgroundColor: "#6e6e6e",
-                            "&:hover": { backgroundColor: "#0f0f0f" }
+                            "&:hover": { backgroundColor: "#0f0f0f" },
+                            opacity: isDeleting ? 0.5 : 1,
+                            cursor: isDeleting ? "not-allowed" : "pointer"
                         }}
                     >
-                        Delete
+                        {isDeleting ? "Deleting..." : "Delete"}
                     </Button>
                     <Button
                         className="text-black"
@@ -210,9 +233,12 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                             e.stopPropagation();
                             openEditPanel(hostConfig);
                         }}
+                        disabled={isDeleting}
                         sx={{
                             backgroundColor: "#6e6e6e",
-                            "&:hover": { backgroundColor: "#0f0f0f" }
+                            "&:hover": { backgroundColor: "#0f0f0f" },
+                            opacity: isDeleting ? 0.5 : 1,
+                            cursor: isDeleting ? "not-allowed" : "pointer"
                         }}
                     >
                         Edit

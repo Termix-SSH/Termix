@@ -69,6 +69,7 @@ function App() {
     const [isEditHostHidden, setIsEditHostHidden] = useState(true);
     const [currentHostConfig, setCurrentHostConfig] = useState(null);
     const [isLoggingIn, setIsLoggingIn] = useState(true);
+    const [isEditing, setIsEditing] = useState(false);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -221,38 +222,56 @@ function App() {
     }, []);
 
     const handleAddHost = () => {
-        if (addHostForm.ip && addHostForm.user && addHostForm.port && addHostForm.authMethod !== 'Select Auth') {
+        if (addHostForm.ip && addHostForm.user && addHostForm.port) {
+            // If not remembering the host, just connect without auth validation
+            if (!addHostForm.rememberHost) {
+                connectToHost();
+                setIsAddHostHidden(true);
+                return;
+            }
+
+            // If remembering the host, validate auth method
+            if (addHostForm.authMethod === 'Select Auth') {
+                alert("Please select an authentication method.");
+                return;
+            }
             if (addHostForm.authMethod === 'password' && !addHostForm.password) {
                 setIsNoAuthHidden(false);
-            } else if (addHostForm.authMethod === 'rsaKey' && !addHostForm.rsaKey) {
-                setIsNoAuthHidden(false);
-            } else {
-                connectToHost();
-                if (addHostForm.rememberHost) {
-                    if (!addHostForm.storePassword) {
-                        addHostForm.password = '';
-                    }
-                    handleSaveHost();
-                }
+                return;
             }
+            if (addHostForm.authMethod === 'rsaKey' && !addHostForm.rsaKey) {
+                setIsNoAuthHidden(false);
+                return;
+            }
+
+            // Connect and save if all validation passes
+            connectToHost();
+            if (!addHostForm.storePassword) {
+                addHostForm.password = '';
+            }
+            handleSaveHost();
+            setIsAddHostHidden(true);
         } else {
-            alert("Please fill out all fields.");
+            alert("Please fill out all required fields (IP, User, Port).");
         }
     };
 
     const connectToHost = () => {
+        // Create a clean host config object
+        const hostConfig = {
+            name: addHostForm.name || '',
+            folder: addHostForm.folder || '',
+            ip: addHostForm.ip,
+            user: addHostForm.user,
+            port: String(addHostForm.port),
+            password: addHostForm.rememberHost && addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
+            rsaKey: addHostForm.rememberHost && addHostForm.authMethod === 'rsaKey' ? addHostForm.rsaKey : undefined,
+        };
+
         const newTerminal = {
             id: nextId,
-            title: addHostForm.name || addHostForm.ip,
-            hostConfig: {
-                name: addHostForm.name,
-                folder: addHostForm.folder,
-                ip: addHostForm.ip,
-                user: addHostForm.user,
-                password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
-                rsaKey: addHostForm.authMethod === 'rsaKey' ? addHostForm.rsaKey : undefined,
-                port: String(addHostForm.port),
-            },
+            title: hostConfig.name || hostConfig.ip,
+            hostConfig,
             terminalRef: null,
         };
         setTerminals([...terminals, newTerminal]);
@@ -281,10 +300,31 @@ function App() {
     };
 
     const connectToHostWithConfig = (hostConfig) => {
+        // Ensure we have a valid host config
+        if (!hostConfig || typeof hostConfig !== 'object') {
+            return;
+        }
+
+        // Ensure all required fields are present
+        if (!hostConfig.ip || !hostConfig.user) {
+            return;
+        }
+
+        // Create a clean host config object with all required fields
+        const cleanHostConfig = {
+            name: hostConfig.name || '',
+            folder: hostConfig.folder || '',
+            ip: hostConfig.ip.trim(),
+            user: hostConfig.user.trim(),
+            port: hostConfig.port || '22',
+            password: hostConfig.password?.trim(),
+            rsaKey: hostConfig.rsaKey?.trim(),
+        };
+
         const newTerminal = {
             id: nextId,
-            title: hostConfig.name || hostConfig.ip,
-            hostConfig: hostConfig,
+            title: cleanHostConfig.name || cleanHostConfig.ip,
+            hostConfig: cleanHostConfig,
             terminalRef: null,
         };
         setTerminals([...terminals, newTerminal]);
@@ -411,10 +451,21 @@ function App() {
     const handleEditHost = async (oldConfig, newConfig = null) => {
         try {
             if (newConfig) {
-                await userRef.current.editHost({
-                    oldHostConfig: oldConfig,
-                    newHostConfig: newConfig,
-                });
+                if (isEditing) return;
+                setIsEditing(true);
+                
+                try {
+                    await userRef.current.editHost({
+                        oldHostConfig: oldConfig,
+                        newHostConfig: newConfig,
+                    });
+                    
+                    // Keep the modal visible during the delay
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                } finally {
+                    setIsEditing(false);
+                    setIsEditHostHidden(true);
+                }
                 return;
             }
 
@@ -423,6 +474,7 @@ function App() {
             console.error('Edit failed:', error);
             setErrorMessage(`Edit failed: ${error}`);
             setIsErrorHidden(false);
+            setIsEditing(false);
         }
     };
 

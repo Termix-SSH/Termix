@@ -31,32 +31,58 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.name.endsWith('.rsa') || file.name.endsWith('.key') || file.name.endsWith('.pem') || file.name.endsWith('.der') || file.name.endsWith('.p8') || file.name.endsWith('.ssh') || file.name.endsWith('.pub')) {
+            if (file.name.endsWith('.key') || file.name.endsWith('.pem') || file.name.endsWith('.pub')) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     setForm({ ...form, rsaKey: event.target.result });
                 };
                 reader.readAsText(file);
             } else {
-                alert("Please upload a valid RSA private key file.");
+                alert("Please upload a valid public key file.");
             }
         }
     };
 
+    const handleAuthChange = (newMethod) => {
+        setForm((prev) => ({
+            ...prev,
+            authMethod: newMethod,
+            password: "",
+            rsaKey: ""
+        }));
+    };
+
     const isFormValid = () => {
-        if (form.authMethod === 'Select Auth') return false;
+        // Basic validation for required fields
         if (!form.ip || !form.user || !form.port) return false;
-        if (form.authMethod === 'rsaKey' && !form.rsaKey) return false;
-        if (form.authMethod === 'password' && !form.password) return false;
+        const portNum = Number(form.port);
+        if (isNaN(portNum) || portNum < 1 || portNum > 65535) return false;
+
+        // Only validate auth method if rememberHost is true
+        if (form.rememberHost) {
+            if (form.authMethod === 'Select Auth') return false;
+            if (form.authMethod === 'rsaKey' && !form.rsaKey) return false;
+            if (form.authMethod === 'password' && !form.password) return false;
+        }
+
         return true;
     };
 
     const handleSubmit = (event) => {
         event.preventDefault();
         if (isFormValid()) {
-            handleAddHost();
+            // If not remembering the host, only send basic connection info
+            if (!form.rememberHost) {
+                handleAddHost();
+            } else {
+                // Only include auth details if remembering the host
+                handleAddHost();
+            }
+            
+            // Reset form after successful submission
             setForm({
                 name: '',
+                folder: '',
                 ip: '',
                 user: '',
                 password: '',
@@ -66,6 +92,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                 rememberHost: false,
                 storePassword: true,
             });
+            setIsAddHostHidden(true);
         }
     };
 
@@ -212,7 +239,17 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                             <FormLabel>Remember Host</FormLabel>
                                             <Checkbox
                                                 checked={form.rememberHost}
-                                                onChange={(e) => setForm({ ...form, rememberHost: e.target.checked })}
+                                                onChange={(e) => setForm({ 
+                                                    ...form, 
+                                                    rememberHost: e.target.checked,
+                                                    // Reset auth fields if unchecking remember host
+                                                    ...((!e.target.checked) && {
+                                                        authMethod: 'Select Auth',
+                                                        password: '',
+                                                        rsaKey: '',
+                                                        storePassword: true
+                                                    })
+                                                })}
                                                 sx={{
                                                     color: theme.palette.text.primary,
                                                     '&.Mui-checked': {
@@ -239,44 +276,38 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                 <FormControl error={!form.authMethod || form.authMethod === 'Select Auth'}>
                                                     <FormLabel>Authentication Method</FormLabel>
                                                     <Select
-                                                        value={form.authMethod || 'Select Auth'}
-                                                        onChange={(e, newValue) => setForm({ ...form, authMethod: newValue })}
-                                                        required
+                                                        value={form.authMethod}
+                                                        onChange={(e, val) => handleAuthChange(val)}
                                                         sx={{
-                                                            backgroundColor: !form.authMethod || form.authMethod === 'Select Auth' ? theme.palette.general.tertiary : theme.palette.general.primary,
+                                                            backgroundColor: theme.palette.general.primary,
                                                             color: theme.palette.text.primary,
-                                                            '&:hover': {
-                                                                backgroundColor: theme.palette.general.disabled,
-                                                            },
                                                         }}
                                                     >
-                                                        <Option value="Select Auth" disabled>
-                                                            Select Auth
-                                                        </Option>
+                                                        <Option value="Select Auth" disabled>Select Auth</Option>
                                                         <Option value="password">Password</Option>
-                                                        <Option value="rsaKey">RSA Key</Option>
+                                                        <Option value="rsaKey">Public Key</Option>
                                                     </Select>
                                                 </FormControl>
+
                                                 {form.authMethod === 'password' && (
                                                     <FormControl error={!form.password}>
-                                                        <FormLabel>Host Password</FormLabel>
+                                                        <FormLabel>Password</FormLabel>
                                                         <div style={{ display: 'flex', alignItems: 'center' }}>
                                                             <Input
                                                                 type={showPassword ? 'text' : 'password'}
                                                                 value={form.password}
                                                                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                                                required
                                                                 sx={{
                                                                     backgroundColor: theme.palette.general.primary,
                                                                     color: theme.palette.text.primary,
-                                                                    flex: 1,
+                                                                    flex: 1
                                                                 }}
                                                             />
                                                             <IconButton
                                                                 onClick={() => setShowPassword(!showPassword)}
                                                                 sx={{
                                                                     color: theme.palette.text.primary,
-                                                                    marginLeft: 1,
+                                                                    marginLeft: 1
                                                                 }}
                                                             >
                                                                 {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -284,9 +315,10 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                         </div>
                                                     </FormControl>
                                                 )}
+
                                                 {form.authMethod === 'rsaKey' && (
                                                     <FormControl error={!form.rsaKey}>
-                                                        <FormLabel>RSA Key</FormLabel>
+                                                        <FormLabel>Public Key</FormLabel>
                                                         <Button
                                                             component="label"
                                                             sx={{
@@ -302,11 +334,10 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                                 },
                                                             }}
                                                         >
-                                                            {form.rsaKey ? 'Change RSA Key File' : 'Upload RSA Key File'}
+                                                            {form.rsaKey ? 'Change Public Key File' : 'Upload Public Key File'}
                                                             <Input
                                                                 type="file"
                                                                 onChange={handleFileChange}
-                                                                required
                                                                 sx={{ display: 'none' }}
                                                             />
                                                         </Button>

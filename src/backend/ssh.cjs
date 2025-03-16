@@ -26,9 +26,16 @@ io.on("connection", (socket) => {
     let stream = null;
 
     socket.on("connectToHost", (cols, rows, hostConfig) => {
-        if (!hostConfig || !hostConfig.ip || !hostConfig.user || (!hostConfig.password && !hostConfig.rsaKey) || !hostConfig.port) {
-            logger.error("Invalid hostConfig received:", hostConfig);
-            socket.emit("noAuthRequired");
+        if (!hostConfig || !hostConfig.ip || !hostConfig.user || !hostConfig.port) {
+            logger.error("Invalid hostConfig received - missing required fields:", hostConfig);
+            socket.emit("error", "Missing required connection details (IP, user, or port)");
+            return;
+        }
+
+        // Require authentication
+        if (!hostConfig.password && !hostConfig.rsaKey) {
+            logger.error("No authentication provided");
+            socket.emit("error", "Authentication required");
             return;
         }
 
@@ -36,11 +43,10 @@ io.on("connection", (socket) => {
             ip: hostConfig.ip,
             port: hostConfig.port,
             user: hostConfig.user,
-            password: hostConfig.password ? '***REDACTED***' : undefined,
-            rsaKey: hostConfig.rsaKey ? '***REDACTED***' : undefined,
+            authType: hostConfig.password ? 'password' : 'public key',
         };
 
-        logger.info("Received hostConfig:", safeHostConfig);
+        logger.info("Connecting with config:", safeHostConfig);
         const { ip, port, user, password, rsaKey } = hostConfig;
 
         const conn = new SSHClient();
@@ -50,7 +56,7 @@ io.on("connection", (socket) => {
 
                 conn.shell({ term: "xterm-256color" }, function (err, newStream) {
                     if (err) {
-                        logger.error("Error:", err.message);
+                        logger.error("Shell error:", err.message);
                         socket.emit("error", err.message);
                         return;
                     }

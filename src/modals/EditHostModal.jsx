@@ -27,22 +27,24 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostHidden, hostConfig }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        if (hostConfig && !isHidden) {
+        if (!isHidden && hostConfig) {
             setForm({
-                name: hostConfig.name || "",
-                folder: hostConfig.folder || "",
-                ip: hostConfig.ip || "",
-                user: hostConfig.user || "",
-                password: hostConfig.password || "",
+                name: hostConfig.name || '',
+                folder: hostConfig.folder || '',
+                ip: hostConfig.ip || '',
+                user: hostConfig.user || '',
+                password: hostConfig.password || '',
+                rsaKey: hostConfig.rsaKey || '',
                 port: hostConfig.port || 22,
-                authMethod: hostConfig.password ? "password" : hostConfig.rsaKey ? "rsaKey" : "Select Auth",
+                authMethod: hostConfig.password ? 'password' : hostConfig.rsaKey ? 'rsaKey' : 'Select Auth',
                 rememberHost: true,
                 storePassword: true,
             });
         }
-    }, [hostConfig, isHidden]);
+    }, [isHidden, hostConfig]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -68,7 +70,9 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
         setForm((prev) => ({
             ...prev,
             storePassword: Boolean(checked),
-            authMethod: checked ? 'password' : 'Select Auth'
+            password: checked ? prev.password : "",
+            rsaKey: checked ? prev.rsaKey : "",
+            authMethod: checked ? prev.authMethod : "Select Auth"
         }));
     };
 
@@ -85,22 +89,23 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
         return true;
     };
 
-    const handleSave = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        if (isLoading) return;
+        
+        setIsLoading(true);
         try {
-            const newConfig = {
-                ...form,
+            await handleEditHost(hostConfig, {
+                name: form.name || form.ip,
+                folder: form.folder,
+                ip: form.ip,
+                user: form.user,
+                password: form.authMethod === 'password' ? form.password : undefined,
+                rsaKey: form.authMethod === 'rsaKey' ? form.rsaKey : undefined,
                 port: String(form.port),
-            };
-
-            if (form.authMethod === 'rsaKey' || !form.storePassword) {
-                newConfig.password = '';
-            }
-
-            await handleEditHost(hostConfig, newConfig);
-            setIsEditHostHidden(true);
-        } catch (error) {
-            console.error('Failed to save:', error);
+            });
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -108,15 +113,20 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
         <CssVarsProvider theme={theme}>
             <Modal 
                 open={!isHidden} 
-                onClose={() => setIsEditHostHidden(true)}
+                onClose={() => !isLoading && setIsEditHostHidden(true)}
                 sx={{
+                    position: 'fixed',
+                    inset: 0,
                     display: 'flex',
-                    justifyContent: 'center',
                     alignItems: 'center',
+                    justifyContent: 'center',
+                    backdropFilter: 'blur(5px)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
                 }}
             >
                 <ModalDialog
                     layout="center"
+                    variant="outlined"
                     sx={{
                         backgroundColor: theme.palette.general.tertiary,
                         borderColor: theme.palette.general.secondary,
@@ -133,7 +143,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                 >
                     <DialogTitle sx={{ mb: 2 }}>Edit Host</DialogTitle>
                     <DialogContent>
-                        <form onSubmit={handleSave}>
+                        <form onSubmit={handleSubmit}>
                             <Tabs 
                                 value={activeTab} 
                                 onChange={(e, val) => setActiveTab(val)}
@@ -270,7 +280,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                                                 >
                                                     <Option value="Select Auth" disabled>Select Auth</Option>
                                                     <Option value="password">Password</Option>
-                                                    <Option value="rsaKey">RSA Key</Option>
+                                                    <Option value="rsaKey">Public Key</Option>
                                                 </Select>
                                             </FormControl>
                                         )}
@@ -304,7 +314,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
 
                                         {form.authMethod === 'rsaKey' && form.storePassword && (
                                             <FormControl error={!form.rsaKey && !hostConfig?.rsaKey}>
-                                                <FormLabel>RSA Key</FormLabel>
+                                                <FormLabel>Public Key</FormLabel>
                                                 <Button
                                                     component="label"
                                                     sx={{
@@ -320,7 +330,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                                                         },
                                                     }}
                                                 >
-                                                    {form.rsaKey ? 'Change RSA Key File' : 'Upload RSA Key File'}
+                                                    {form.rsaKey ? 'Change Public Key File' : 'Upload Public Key File'}
                                                     <Input
                                                         type="file"
                                                         onChange={handleFileChange}
@@ -348,7 +358,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
 
                             <Button
                                 type="submit"
-                                disabled={!isFormValid()}
+                                disabled={!isFormValid() || isLoading}
                                 sx={{
                                     backgroundColor: theme.palette.general.primary,
                                     color: theme.palette.text.primary,
@@ -364,7 +374,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                                     height: '40px',
                                 }}
                             >
-                                Save Changes
+                                {isLoading ? "Saving..." : "Save Changes"}
                             </Button>
                         </form>
                     </DialogContent>

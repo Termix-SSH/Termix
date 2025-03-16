@@ -55,12 +55,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         terminalInstance.current.loadAddon(fitAddon.current);
         terminalInstance.current.open(terminalRef.current);
 
-        setTimeout(() => {
-            fitAddon.current.fit();
-            resizeTerminal();
-            terminalInstance.current.focus();
-        }, 50);
-
         const socket = io(
             window.location.hostname === "localhost"
                 ? "http://localhost:8081"
@@ -72,16 +66,52 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         );
         socketRef.current = socket;
 
+        socket.on("connect_error", (error) => {
+            terminalInstance.current.write(`\r\n*** Socket connection error: ${error.message} ***\r\n`);
+        });
+
+        socket.on("connect_timeout", () => {
+            terminalInstance.current.write(`\r\n*** Socket connection timeout ***\r\n`);
+        });
+
+        socket.on("error", (err) => {
+            const isAuthError = err.toLowerCase().includes("authentication") || err.toLowerCase().includes("auth");
+            if (isAuthError && !hostConfig.password?.trim() && !hostConfig.rsaKey?.trim() && !authModalShown) {
+                authModalShown = true;
+                setIsNoAuthHidden(false);
+            }
+            terminalInstance.current.write(`\r\n*** Error: ${err} ***\r\n`);
+        });
+
         socket.on("connect", () => {
             fitAddon.current.fit();
             resizeTerminal();
             const { cols, rows } = terminalInstance.current;
-            if (!hostConfig.password && !hostConfig.rsaKey) {
+            
+            // Check if we have authentication
+            if (!hostConfig.password?.trim() && !hostConfig.rsaKey?.trim()) {
                 setIsNoAuthHidden(false);
-            } else {
-                socket.emit("connectToHost", cols, rows, hostConfig);
+                return;
             }
+
+            // Only connect if we have authentication
+            const sshConfig = {
+                ip: hostConfig.ip,
+                user: hostConfig.user,
+                port: Number(hostConfig.port) || 22,
+                password: hostConfig.password?.trim(),
+                rsaKey: hostConfig.rsaKey?.trim()
+            };
+
+            socket.emit("connectToHost", cols, rows, sshConfig);
         });
+
+        // Fit and focus the terminal after it's opened
+        setTimeout(() => {
+            fitAddon.current.fit();
+            resizeTerminal();
+            terminalInstance.current.focus();
+        }, 50);
 
         socket.on("data", (data) => {
             const decoder = new TextDecoder("utf-8");
@@ -142,17 +172,26 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         });
 
-        socket.on("noAuthRequired", () => {
-            setIsNoAuthHidden(false);
-        });
+        let authModalShown = false;
 
-        socket.on("error", (err) => {
-            terminalInstance.current.write(`\r\n*** Error: ${err} ***\r\n`);
+        socket.on("noAuthRequired", () => {
+            // Only show auth modal if we don't have valid credentials
+            if (!hostConfig.password?.trim() && !hostConfig.rsaKey?.trim() && !authModalShown) {
+                authModalShown = true;
+                setIsNoAuthHidden(false);
+            }
         });
 
         return () => {
-            terminalInstance.current.dispose();
-            socket.disconnect();
+            if (terminalInstance.current) {
+                terminalInstance.current.dispose();
+                terminalInstance.current = null;
+            }
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+            }
+            authModalShown = false;
         };
     }, [hostConfig]);
 
@@ -201,7 +240,7 @@ NewTerminal.propTypes = {
         user: PropTypes.string.isRequired,
         password: PropTypes.string,
         rsaKey: PropTypes.string,
-        port: PropTypes.number.isRequired,
+        port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     }).isRequired,
     isVisible: PropTypes.bool.isRequired,
     setIsNoAuthHidden: PropTypes.func.isRequired,

@@ -161,7 +161,15 @@ function Launchpad({
                         {activeApp === 'hostViewer' && (
                             <HostViewer
                                 getHosts={getHosts}
-                                connectToHost={connectToHost}
+                                connectToHost={(hostConfig) => {
+                                    if (!hostConfig || typeof hostConfig !== 'object') {
+                                        return;
+                                    }
+                                    if (!hostConfig.ip || !hostConfig.user) {
+                                        return;
+                                    }
+                                    connectToHost(hostConfig);
+                                }}
                                 setIsAddHostHidden={setIsAddHostHidden}
                                 deleteHost={deleteHost}
                                 editHost={editHost}

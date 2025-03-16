@@ -15,15 +15,25 @@ import {
     Option,
 } from '@mui/joy';
 import theme from '/src/theme';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, handleAuthSubmit }) => {
     const [showPassword, setShowPassword] = useState(false);
 
+    // Initialize form with default values if not provided
+    useEffect(() => {
+        if (!form.authMethod) {
+            setForm(prev => ({
+                ...prev,
+                authMethod: 'Select Auth'
+            }));
+        }
+    }, []);
+
     const isFormValid = () => {
-        if (form.authMethod === 'Select Auth') return false;
+        if (!form.authMethod || form.authMethod === 'Select Auth') return false;
         if (form.authMethod === 'rsaKey' && !form.rsaKey) return false;
         if (form.authMethod === 'password' && !form.password) return false;
         return true;
@@ -46,7 +56,11 @@ const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, han
                         setIsNoAuthHidden(true);
                     }
                 }}
-                disableBackdropClic
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}
             >
                 <ModalDialog
                     layout="center"
@@ -56,58 +70,53 @@ const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, han
                         color: theme.palette.text.primary,
                         padding: 3,
                         borderRadius: 10,
-                        width: "auto",
-                        maxWidth: "90vw",
-                        minWidth: "fit-content",
-                        overflow: "hidden",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
+                        maxWidth: '500px',
+                        width: '100%',
+                        maxHeight: '80vh',
+                        overflow: 'auto',
+                        boxSizing: 'border-box',
+                        mx: 2,
                     }}
                 >
-                    <DialogTitle>Authentication Required</DialogTitle>
+                    <DialogTitle sx={{ mb: 2 }}>Authentication Required</DialogTitle>
                     <DialogContent>
                         <form onSubmit={handleSubmit}>
-                            <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+                            <Stack spacing={2}>
                                 <FormControl error={!form.authMethod || form.authMethod === 'Select Auth'}>
-                                    <FormLabel sx={{ color: theme.palette.text.primary }}>Authentication Method</FormLabel>
+                                    <FormLabel>Authentication Method</FormLabel>
                                     <Select
                                         value={form.authMethod || 'Select Auth'}
-                                        onChange={(e, newValue) => setForm({ ...form, authMethod: newValue })}
-                                        required
+                                        onChange={(e, val) => setForm(prev => ({ ...prev, authMethod: val, password: '', rsaKey: '' }))}
                                         sx={{
-                                            backgroundColor: !form.authMethod || form.authMethod === 'Select Auth' ? theme.palette.general.tertiary : theme.palette.general.primary,
+                                            backgroundColor: theme.palette.general.primary,
                                             color: theme.palette.text.primary,
-                                            '&:hover': {
-                                                backgroundColor: theme.palette.general.disabled,
-                                            },
                                         }}
                                     >
                                         <Option value="Select Auth" disabled>Select Auth</Option>
                                         <Option value="password">Password</Option>
-                                        <Option value="rsaKey">RSA Key</Option>
+                                        <Option value="rsaKey">Public Key</Option>
                                     </Select>
                                 </FormControl>
+
                                 {form.authMethod === 'password' && (
                                     <FormControl error={!form.password}>
-                                        <FormLabel sx={{ color: theme.palette.text.primary }}>Password</FormLabel>
+                                        <FormLabel>Password</FormLabel>
                                         <div style={{ display: 'flex', alignItems: 'center' }}>
                                             <Input
                                                 type={showPassword ? 'text' : 'password'}
-                                                value={form.password}
-                                                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                                required
+                                                value={form.password || ''}
+                                                onChange={(e) => setForm(prev => ({ ...prev, password: e.target.value }))}
                                                 sx={{
                                                     backgroundColor: theme.palette.general.primary,
                                                     color: theme.palette.text.primary,
-                                                    flex: 1,
+                                                    flex: 1
                                                 }}
                                             />
                                             <IconButton
                                                 onClick={() => setShowPassword(!showPassword)}
                                                 sx={{
                                                     color: theme.palette.text.primary,
-                                                    marginLeft: 1,
+                                                    marginLeft: 1
                                                 }}
                                             >
                                                 {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -115,34 +124,44 @@ const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, han
                                         </div>
                                     </FormControl>
                                 )}
+
                                 {form.authMethod === 'rsaKey' && (
                                     <FormControl error={!form.rsaKey}>
-                                        <FormLabel sx={{ color: theme.palette.text.primary }}>RSA Key</FormLabel>
-                                        <Input
-                                            type="file"
-                                            onChange={(e) => {
-                                                const file = e.target.files[0];
-                                                if (file) {
-                                                    const reader = new FileReader();
-                                                    reader.onload = (event) => {
-                                                        setForm({ ...form, rsaKey: event.target.result });
-                                                    };
-                                                    reader.readAsText(file);
-                                                }
-                                            }}
-                                            required
+                                        <FormLabel>Public Key</FormLabel>
+                                        <Button
+                                            component="label"
                                             sx={{
                                                 backgroundColor: theme.palette.general.primary,
                                                 color: theme.palette.text.primary,
-                                                padding: 1,
-                                                textAlign: 'center',
                                                 width: '100%',
-                                                minWidth: 'auto',
-                                                minHeight: 'auto',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                height: '40px',
+                                                '&:hover': {
+                                                    backgroundColor: theme.palette.general.disabled,
+                                                },
                                             }}
-                                        />
+                                        >
+                                            {form.rsaKey ? 'Change Public Key File' : 'Upload Public Key File'}
+                                            <Input
+                                                type="file"
+                                                onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onload = (event) => {
+                                                            setForm({ ...form, rsaKey: event.target.result });
+                                                        };
+                                                        reader.readAsText(file);
+                                                    }
+                                                }}
+                                                sx={{ display: 'none' }}
+                                            />
+                                        </Button>
                                     </FormControl>
                                 )}
+
                                 <Button
                                     type="submit"
                                     disabled={!isFormValid()}
@@ -152,6 +171,12 @@ const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, han
                                         '&:hover': {
                                             backgroundColor: theme.palette.general.disabled,
                                         },
+                                        '&:disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                        },
+                                        marginTop: 2,
+                                        height: '40px',
                                     }}
                                 >
                                     Connect

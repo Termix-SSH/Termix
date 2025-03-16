@@ -177,7 +177,18 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
             });
 
             if (response?.success) {
-                return response.hosts;
+                return response.hosts.map(host => ({
+                    ...host,
+                    config: host.config ? {
+                        name: host.config.name || '',
+                        folder: host.config.folder || '',
+                        ip: host.config.ip || '',
+                        user: host.config.user || '',
+                        port: host.config.port || '22',
+                        password: host.config.password || '',
+                        rsaKey: host.config.rsaKey || '',
+                    } : {}
+                })).filter(host => host.config && host.config.ip && host.config.user);
             } else {
                 throw new Error(response?.error || "Failed to fetch hosts");
             }
