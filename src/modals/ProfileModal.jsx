@@ -1,101 +1,83 @@
 import PropTypes from 'prop-types';
-import { CssVarsProvider } from '@mui/joy/styles';
-import { Modal, Button, DialogTitle, DialogContent, ModalDialog, Stack } from '@mui/joy';
-import theme from '/src/theme';
+import { Modal, Typography, Button } from "@mui/joy";
+import LogoutIcon from "@mui/icons-material/Logout";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import theme from "../theme";
 
-const ProfileModal = ({ isHidden, getUser, handleDeleteUser, handleLogoutUser, setIsProfileHidden }) => {
-    const handleDelete = () => {
-        handleDeleteUser({
-            onSuccess: () => {
-                window.location.reload();
-            }
-        });
-    };
-
-    const handleLogout = () => {
-        handleLogoutUser({
-            onSuccess: () => {
-                window.location.reload();
-            }
-        });
-    }
-
-    const getUserName = () => {
-        const user = getUser();
-        return user ? user.username : '';
-    }
-
+export default function ProfileModal({
+    isHidden,
+    getUser,
+    handleDeleteUser,
+    handleLogoutUser,
+    setIsProfileHidden,
+}) {
     return (
-        <CssVarsProvider theme={theme}>
-            <Modal open={!isHidden} onClose={() => setIsProfileHidden(true)}>
-                <ModalDialog
-                    layout="center"
-                    sx={{
-                        backgroundColor: theme.palette.general.tertiary,
-                        borderColor: theme.palette.general.secondary,
-                        color: theme.palette.text.primary,
-                        padding: 3,
-                        borderRadius: 10,
-                        width: "auto",
-                        maxWidth: "90vw",
-                        minWidth: "fit-content",
-                        overflow: "hidden",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 1,
-                    }}
-                >
-                    <DialogTitle
+        <Modal
+            open={!isHidden}
+            onClose={() => setIsProfileHidden(true)}
+            sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+            }}
+        >
+            <div style={{
+                backgroundColor: theme.palette.general.tertiary,
+                borderColor: theme.palette.general.secondary,
+                borderWidth: "1px",
+                borderStyle: "solid",
+                borderRadius: "0.5rem",
+                width: "400px",
+                overflow: "hidden",
+            }}>
+                <div className="p-4 flex flex-col gap-4">
+                    <Button
+                        fullWidth
+                        onClick={handleLogoutUser}
+                        startDecorator={<LogoutIcon />}
                         sx={{
-                            marginBottom: 1.5,
-                            backgroundColor: theme.palette.general.primary,
-                            color: theme.palette.text.primary,
-                            padding: 1,
-                            borderRadius: 10,
-                            width: "100%",
-                            textAlign: "center",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
+                            backgroundColor: theme.palette.general.tertiary,
+                            color: "white",
+                            "&:hover": {
+                                backgroundColor: theme.palette.general.secondary,
+                            },
+                            height: "40px",
+                            border: `1px solid ${theme.palette.general.secondary}`,
                         }}
                     >
-                        User: {getUserName()}
-                    </DialogTitle>
-                    <DialogContent sx={{ width: "100%" }}>
-                        <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden", mt: 1.5 }}>
-                            <Button
-                                onClick={handleDelete}
-                                sx={{
-                                    backgroundColor: theme.palette.general.primary,
-                                    '&:hover': {
-                                        backgroundColor: theme.palette.general.disabled,
-                                    },
-                                    width: "100%",
-                                }}
-                            >
-                                Delete User
-                            </Button>
-                            <Button
-                                onClick={handleLogout}
-                                sx={{
-                                    backgroundColor: theme.palette.general.primary,
-                                    '&:hover': {
-                                        backgroundColor: theme.palette.general.disabled,
-                                    },
-                                    width: "100%",
-                                }}
-                            >
-                                Logout
-                            </Button>
-                        </Stack>
-                    </DialogContent>
-                </ModalDialog>
-            </Modal>
-        </CssVarsProvider>
+                        Logout
+                    </Button>
+
+                    <Button
+                        fullWidth
+                        color="danger"
+                        onClick={() => {
+                            if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+                                handleDeleteUser({
+                                    onSuccess: () => setIsProfileHidden(true),
+                                    onFailure: (error) => console.error(error),
+                                });
+                            }
+                        }}
+                        startDecorator={<DeleteForeverIcon />}
+                        sx={{
+                            backgroundColor: "#c53030",
+                            color: "white",
+                            "&:hover": {
+                                backgroundColor: "#9b2c2c",
+                            },
+                            height: "40px",
+                            border: "1px solid #9b2c2c",
+                        }}
+                    >
+                        Delete Account
+                    </Button>
+                </div>
+            </div>
+        </Modal>
     );
-};
+}
 
 ProfileModal.propTypes = {
     isHidden: PropTypes.bool.isRequired,
@@ -104,5 +86,3 @@ ProfileModal.propTypes = {
     handleLogoutUser: PropTypes.func.isRequired,
     setIsProfileHidden: PropTypes.func.isRequired,
 };
-
-export default ProfileModal;

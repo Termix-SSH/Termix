@@ -4,20 +4,19 @@ import { CssVarsProvider } from '@mui/joy/styles';
 import { Button } from '@mui/joy';
 import HostViewerIcon from '../images/host_viewer_icon.png';
 import theme from '../theme.js';
-
-// Apps
 import HostViewer from './ssh/HostViewer.jsx';
 
-function Launchpad({onClose,
-                       getHosts,
-                       connectToHost,
-                       isAddHostHidden,
-                       setIsAddHostHidden,
-                       isEditHostHidden,
-                       isErrorHidden,
-                       deleteHost,
-                       editHost,
-                   }) {
+function Launchpad({
+    onClose,
+    getHosts,
+    connectToHost,
+    isAddHostHidden,
+    setIsAddHostHidden,
+    isEditHostHidden,
+    isErrorHidden,
+    deleteHost,
+    editHost,
+}) {
     const launchpadRef = useRef(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeApp, setActiveApp] = useState('hostViewer');
@@ -41,11 +40,6 @@ function Launchpad({onClose,
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden]);
-
-    const handleEditHostClick = () => {
-        setIsAddHostHidden(false);
-        setActiveApp('hostViewer');
-    };
 
     return (
         <CssVarsProvider theme={theme}>
@@ -163,7 +157,7 @@ function Launchpad({onClose,
                     </div>
 
                     {/* Main Content */}
-                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
                         {activeApp === 'hostViewer' && (
                             <HostViewer
                                 getHosts={getHosts}
@@ -171,7 +165,7 @@ function Launchpad({onClose,
                                 setIsAddHostHidden={setIsAddHostHidden}
                                 deleteHost={deleteHost}
                                 editHost={editHost}
-                                onEditHostClick={handleEditHostClick}
+                                openEditPanel={editHost}
                             />
                         )}
                     </div>

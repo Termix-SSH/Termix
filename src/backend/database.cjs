@@ -28,7 +28,8 @@ const hostSchema = new mongoose.Schema({
     name: { type: String, required: true },
     config: { type: String, required: true },
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    folder: { type: String, default: null }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -178,7 +179,8 @@ io.of('/database.io').on('connection', (socket) => {
             }
 
             const cleanConfig = {
-                name: hostConfig.name.trim(),
+                name: hostConfig.name?.trim(),
+                folder: hostConfig.folder?.trim() || null,
                 ip: hostConfig.ip.trim(),
                 user: hostConfig.user.trim(),
                 port: hostConfig.port || 22,
@@ -208,7 +210,8 @@ io.of('/database.io').on('connection', (socket) => {
                 name: finalName,
                 config: encryptedConfig,
                 users: [userId],
-                createdBy: userId
+                createdBy: userId,
+                folder: cleanConfig.folder
             });
 
             logger.info(`Host created successfully: ${finalName}`);
@@ -360,10 +363,11 @@ io.of('/database.io').on('connection', (socket) => {
             }
 
             const cleanConfig = {
+                name: newHostConfig.name?.trim(),
+                folder: newHostConfig.folder?.trim() || null,
                 ip: newHostConfig.ip.trim(),
                 user: newHostConfig.user.trim(),
                 port: newHostConfig.port || 22,
-                name: newHostConfig.name.trim(),
                 password: newHostConfig.password?.trim() || undefined,
                 rsaKey: newHostConfig.rsaKey?.trim() || undefined
             };
@@ -375,6 +379,7 @@ io.of('/database.io').on('connection', (socket) => {
             }
 
             host.config = encryptedConfig;
+            host.folder = cleanConfig.folder;
             await host.save();
 
             logger.info(`Host edited successfully`);

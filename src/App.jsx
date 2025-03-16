@@ -31,6 +31,7 @@ function App() {
     const [nextId, setNextId] = useState(1);
     const [addHostForm, setAddHostForm] = useState({
         name: "",
+        folder: "",
         ip: "",
         user: "",
         password: "",
@@ -41,6 +42,7 @@ function App() {
     });
     const [editHostForm, setEditHostForm] = useState({
         name: "",
+        folder: "",
         ip: "",
         user: "",
         password: "",
@@ -66,6 +68,7 @@ function App() {
     const [splitTabIds, setSplitTabIds] = useState([]);
     const [isEditHostHidden, setIsEditHostHidden] = useState(true);
     const [currentHostConfig, setCurrentHostConfig] = useState(null);
+    const [isLoggingIn, setIsLoggingIn] = useState(true);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -124,23 +127,97 @@ function App() {
 
     useEffect(() => {
         const sessionToken = localStorage.getItem('sessionToken');
-        if (sessionToken) {
-            setTimeout(() => {
-                handleLoginUser({
+        let isComponentMounted = true;
+        let isLoginInProgress = false;
+
+        if (userRef.current?.getUser()) {
+            setIsLoggingIn(false);
+            setIsLoginUserHidden(true);
+            return;
+        }
+
+        if (!sessionToken) {
+            setIsLoggingIn(false);
+            setIsLoginUserHidden(false);
+            return;
+        }
+
+        setIsLoggingIn(true);
+        let loginAttempts = 0;
+        const maxAttempts = 50;
+        let attemptLoginInterval;
+        
+        const loginTimeout = setTimeout(() => {
+            if (isComponentMounted) {
+                clearInterval(attemptLoginInterval);
+                if (!userRef.current?.getUser()) {
+                    localStorage.removeItem('sessionToken');
+                    setIsLoginUserHidden(false);
+                    setIsLoggingIn(false);
+                    setErrorMessage('Login timed out. Please try again.');
+                    setIsErrorHidden(false);
+                }
+            }
+        }, 10000);
+
+        const attemptLogin = () => {
+            if (!isComponentMounted || isLoginInProgress) return;
+            
+            if (loginAttempts >= maxAttempts || userRef.current?.getUser()) {
+                clearTimeout(loginTimeout);
+                clearInterval(attemptLoginInterval);
+                
+                if (!userRef.current?.getUser()) {
+                    localStorage.removeItem('sessionToken');
+                    setIsLoginUserHidden(false);
+                    setIsLoggingIn(false);
+                    setErrorMessage('Login timed out. Please try again.');
+                    setIsErrorHidden(false);
+                }
+                return;
+            }
+
+            if (userRef.current) {
+                isLoginInProgress = true;
+                userRef.current.loginUser({
                     sessionToken,
                     onSuccess: () => {
-                        setIsLoginUserHidden(true);
+                        if (isComponentMounted) {
+                            clearTimeout(loginTimeout);
+                            clearInterval(attemptLoginInterval);
+                            setIsLoginUserHidden(true);
+                            setIsLoggingIn(false);
+                            setIsErrorHidden(true);
+                        }
+                        isLoginInProgress = false;
                     },
                     onFailure: (error) => {
-                        setErrorMessage(`Auto-login failed: ${error}`);
-                        setIsErrorHidden(false);
-                        setIsLoginUserHidden(false);
+                        if (isComponentMounted) {
+                            if (!userRef.current?.getUser()) {
+                                clearTimeout(loginTimeout);
+                                clearInterval(attemptLoginInterval);
+                                localStorage.removeItem('sessionToken');
+                                setErrorMessage(`Auto-login failed: ${error}`);
+                                setIsErrorHidden(false);
+                                setIsLoginUserHidden(false);
+                                setIsLoggingIn(false);
+                            }
+                        }
+                        isLoginInProgress = false;
                     },
                 });
-            }, 500);
-        } else {
-            setIsLoginUserHidden(false);
-        }
+            }
+            loginAttempts++;
+        };
+
+        attemptLoginInterval = setInterval(attemptLogin, 100);
+        attemptLogin();
+
+        return () => {
+            isComponentMounted = false;
+            clearTimeout(loginTimeout);
+            clearInterval(attemptLoginInterval);
+        };
     }, []);
 
     const handleAddHost = () => {
@@ -168,6 +245,8 @@ function App() {
             id: nextId,
             title: addHostForm.name || addHostForm.ip,
             hostConfig: {
+                name: addHostForm.name,
+                folder: addHostForm.folder,
                 ip: addHostForm.ip,
                 user: addHostForm.user,
                 password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
@@ -180,7 +259,7 @@ function App() {
         setActiveTab(nextId);
         setNextId(nextId + 1);
         setIsAddHostHidden(true);
-        setAddHostForm({ name: "", ip: "", user: "", password: "", rsaKey: "", port: 22, authMethod: "Select Auth" });
+        setAddHostForm({ name: "", folder: "", ip: "", user: "", password: "", rsaKey: "", port: 22, authMethod: "Select Auth", rememberHost: false, storePassword: true });
     }
 
     const handleAuthSubmit = (form) => {
@@ -217,6 +296,7 @@ function App() {
     const handleSaveHost = () => {
         let hostConfig = {
             name: addHostForm.name || addHostForm.ip,
+            folder: addHostForm.folder,
             ip: addHostForm.ip,
             user: addHostForm.user,
             password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
@@ -235,15 +315,32 @@ function App() {
             if (sessionToken) {
                 userRef.current.loginUser({
                     sessionToken,
-                    onSuccess,
-                    onFailure,
+                    onSuccess: () => {
+                        setIsLoginUserHidden(true);
+                        setIsLoggingIn(false);
+                        if (onSuccess) onSuccess();
+                    },
+                    onFailure: (error) => {
+                        localStorage.removeItem('sessionToken');
+                        setIsLoginUserHidden(false);
+                        setIsLoggingIn(false);
+                        if (onFailure) onFailure(error);
+                    },
                 });
             } else {
                 userRef.current.loginUser({
                     username,
                     password,
-                    onSuccess,
-                    onFailure,
+                    onSuccess: () => {
+                        setIsLoginUserHidden(true);
+                        setIsLoggingIn(false);
+                        if (onSuccess) onSuccess();
+                    },
+                    onFailure: (error) => {
+                        setIsLoginUserHidden(false);
+                        setIsLoggingIn(false);
+                        if (onFailure) onFailure(error);
+                    },
                 });
             }
         }
@@ -264,7 +361,7 @@ function App() {
                 onFailure,
             });
         }
-    }
+    };
 
     const handleDeleteUser = ({ onSuccess, onFailure }) => {
         if (userRef.current) {
@@ -311,31 +408,21 @@ function App() {
         }
     };
 
-    const handleEditHost = async () => {
+    const handleEditHost = async (oldConfig, newConfig = null) => {
         try {
-            // Only clear the password if switching to RSA or storePassword is false
-            if (editHostForm.authMethod === 'rsaKey') {
-                editHostForm.password = '';
-            } else if (!editHostForm.storePassword) {
-                editHostForm.password = '';
+            if (newConfig) {
+                await userRef.current.editHost({
+                    oldHostConfig: oldConfig,
+                    newHostConfig: newConfig,
+                });
+                return;
             }
 
-            await userRef.current.editHost({
-                oldHostConfig: currentHostConfig,
-                newHostConfig: editHostForm,
-            });
-
-            // Refresh the updated config
-            const refreshedHosts = await userRef.current.getAllHosts();
-            const updated = refreshedHosts.find(
-                (h) => h.config.ip === editHostForm.ip && h.config.user === editHostForm.user
-            );
-            if (updated) {
-                setCurrentHostConfig(updated.config);
-            }
-            setIsEditHostHidden(true);
+            updateEditHostForm(oldConfig);
         } catch (error) {
-            alert('Edit failed: ' + error);
+            console.error('Edit failed:', error);
+            setErrorMessage(`Edit failed: ${error}`);
+            setIsErrorHidden(false);
         }
     };
 
@@ -398,88 +485,124 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Launchpad Button */}
-                        <Button
-                            onClick={() => setIsLaunchpadOpen(true)}
-                            sx={{
-                                backgroundColor: theme.palette.general.tertiary,
-                                "&:hover": { backgroundColor: theme.palette.general.secondary },
-                                flexShrink: 0,
-                                height: "52px",
-                                width: "52px",
-                                padding: 0,
-                            }}
-                        >
-                            <img src={RocketIcon} alt="Launchpad" style={{ width: "70%", height: "70", objectFit: "contain" }} />
-                        </Button>
+                        {/* Action Buttons */}
+                        <div className="flex gap-4">
+                            {/* Launchpad Button */}
+                            <Button
+                                disabled={isLoggingIn || !userRef.current?.getUser()}
+                                onClick={() => setIsLaunchpadOpen(true)}
+                                sx={{
+                                    backgroundColor: theme.palette.general.tertiary,
+                                    "&:hover": { backgroundColor: theme.palette.general.secondary },
+                                    flexShrink: 0,
+                                    height: "52px",
+                                    width: "52px",
+                                    padding: 0,
+                                    opacity: (!userRef.current?.getUser() || isLoggingIn) ? 0.3 : 1,
+                                    cursor: (!userRef.current?.getUser() || isLoggingIn) ? 'not-allowed' : 'pointer',
+                                    "&:disabled": {
+                                        opacity: 0.3,
+                                        backgroundColor: theme.palette.general.tertiary,
+                                    }
+                                }}
+                            >
+                                <img src={RocketIcon} alt="Launchpad" style={{ width: "70%", height: "70%", objectFit: "contain" }} />
+                            </Button>
 
-                        {/* Add Host Button */}
-                        <Button
-                            onClick={() => setIsAddHostHidden(false)}
-                            sx={{
-                                backgroundColor: theme.palette.general.tertiary,
-                                "&:hover": { backgroundColor: theme.palette.general.secondary },
-                                flexShrink: 0,
-                                height: "52px",
-                                width: "52px",
-                                fontSize: "3.5rem",
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                paddingTop: "2px",
-                            }}
-                        >
-                            +
-                        </Button>
+                            {/* Add Host Button */}
+                            <Button
+                                disabled={isLoggingIn || !userRef.current?.getUser()}
+                                onClick={() => setIsAddHostHidden(false)}
+                                sx={{
+                                    backgroundColor: theme.palette.general.tertiary,
+                                    "&:hover": { backgroundColor: theme.palette.general.secondary },
+                                    flexShrink: 0,
+                                    height: "52px",
+                                    width: "52px",
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    padding: 0,
+                                    opacity: (!userRef.current?.getUser() || isLoggingIn) ? 0.3 : 1,
+                                    cursor: (!userRef.current?.getUser() || isLoggingIn) ? 'not-allowed' : 'pointer',
+                                    "&:disabled": {
+                                        opacity: 0.3,
+                                        backgroundColor: theme.palette.general.tertiary,
+                                    },
+                                    fontSize: "4rem",
+                                    fontWeight: "600",
+                                    lineHeight: "0",
+                                    paddingBottom: "8px",
+                                }}
+                            >
+                                +
+                            </Button>
 
-                        {/* Profile Button */}
-                        <Button
-                            onClick={() => setIsProfileHidden(false)}
-                            sx={{
-                                backgroundColor: theme.palette.general.tertiary,
-                                "&:hover": { backgroundColor: theme.palette.general.secondary },
-                                flexShrink: 0,
-                                height: "52px",
-                                width: "52px",
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                padding: 0,
-                            }}
-                        >
-                            <img
-                                src={ProfileIcon}
-                                alt="Profile"
-                                style={{ width: "70%", height: "70%", objectFit: "contain" }}
-                            />
-                        </Button>
+                            {/* Profile Button */}
+                            <Button
+                                disabled={isLoggingIn}
+                                onClick={() => userRef.current?.getUser() ? setIsProfileHidden(false) : setIsLoginUserHidden(false)}
+                                sx={{
+                                    backgroundColor: theme.palette.general.tertiary,
+                                    "&:hover": { backgroundColor: theme.palette.general.secondary },
+                                    flexShrink: 0,
+                                    height: "52px",
+                                    width: "52px",
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    padding: 0,
+                                    opacity: isLoggingIn ? 0.3 : 1,
+                                    cursor: isLoggingIn ? 'not-allowed' : 'pointer',
+                                    "&:disabled": {
+                                        opacity: 0.3,
+                                        backgroundColor: theme.palette.general.tertiary,
+                                    }
+                                }}
+                            >
+                                <img
+                                    src={ProfileIcon}
+                                    alt="Profile"
+                                    style={{ width: "70%", height: "70%", objectFit: "contain" }}
+                                />
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Terminal Views */}
                     <div className={`relative p-4 terminal-container ${getLayoutStyle()}`}>
-                        {terminals.map((terminal) => (
-                            <div
-                                key={terminal.id}
-                                className={`bg-neutral-800 rounded-lg overflow-hidden shadow-xl border-5 border-neutral-700 ${
-                                    splitTabIds.includes(terminal.id) || activeTab === terminal.id ? "block" : "hidden"
-                                } flex-1`}
-                                style={{
-                                    order: splitTabIds.includes(terminal.id)
-                                        ? splitTabIds.indexOf(terminal.id)
-                                        : 0,
-                                }}
-                            >
-                                <NewTerminal
+                        {userRef.current?.getUser() ? (
+                            terminals.map((terminal) => (
+                                <div
                                     key={terminal.id}
-                                    hostConfig={terminal.hostConfig}
-                                    isVisible={activeTab === terminal.id || splitTabIds.includes(terminal.id)}
-                                    setIsNoAuthHidden={setIsNoAuthHidden}
-                                    ref={(ref) => {
-                                        terminal.terminalRef = ref;
+                                    className={`bg-neutral-800 rounded-lg overflow-hidden shadow-xl border-5 border-neutral-700 ${
+                                        splitTabIds.includes(terminal.id) || activeTab === terminal.id ? "block" : "hidden"
+                                    } flex-1`}
+                                    style={{
+                                        order: splitTabIds.includes(terminal.id)
+                                            ? splitTabIds.indexOf(terminal.id)
+                                            : 0,
                                     }}
-                                />
+                                >
+                                    <NewTerminal
+                                        key={terminal.id}
+                                        hostConfig={terminal.hostConfig}
+                                        isVisible={activeTab === terminal.id || splitTabIds.includes(terminal.id)}
+                                        setIsNoAuthHidden={setIsNoAuthHidden}
+                                        ref={(ref) => {
+                                            terminal.terminalRef = ref;
+                                        }}
+                                    />
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center text-neutral-400">
+                                    <h2 className="text-2xl font-bold mb-4">Welcome to Termix</h2>
+                                    <p>{isLoggingIn ? "Checking login status..." : "Please login to start managing your SSH connections"}</p>
+                                </div>
                             </div>
-                        ))}
+                        )}
                         <NoAuthenticationModal
                             isHidden={isNoAuthHidden}
                             form={authForm}
@@ -488,85 +611,108 @@ function App() {
                             handleAuthSubmit={handleAuthSubmit}
                         />
                     </div>
-                </div>
 
-                {/* Modals */}
-                <AddHostModal
-                    isHidden={isAddHostHidden}
-                    form={addHostForm}
-                    setForm={setAddHostForm}
-                    handleAddHost={handleAddHost}
-                    setIsAddHostHidden={setIsAddHostHidden}
-                />
-                <EditHostModal
-                    isHidden={isEditHostHidden}
-                    form={editHostForm}
-                    setForm={setEditHostForm}
-                    handleEditHost={handleEditHost}
-                    setIsEditHostHidden={setIsEditHostHidden}
-                    hostConfig={currentHostConfig}
-                />
-                <CreateUserModal
-                    isHidden={isCreateUserHidden}
-                    form={createUserForm}
-                    setForm={setCreateUserForm}
-                    handleCreateUser={handleCreateUser}
-                    setIsCreateUserHidden={setIsCreateUserHidden}
-                    setIsLoginUserHidden={setIsLoginUserHidden}
-                />
-                <ProfileModal
-                    isHidden={isProfileHidden}
-                    getUser={getUser}
-                    handleDeleteUser={handleDeleteUser}
-                    handleLogoutUser={handleLogoutUser}
-                    setIsProfileHidden={setIsProfileHidden}
-                />
-                <ErrorModal
-                    isHidden={isErrorHidden}
-                    errorMessage={errorMessage}
-                    setIsErrorHidden={setIsErrorHidden}
-                />
-                {isLaunchpadOpen && (
-                    <Launchpad
-                        onClose={() => setIsLaunchpadOpen(false)}
-                        getHosts={getHosts}
-                        connectToHost={connectToHostWithConfig}
-                        isAddHostHidden={isAddHostHidden}
-                        setIsAddHostHidden={setIsAddHostHidden}
-                        isEditHostHidden={isEditHostHidden}
-                        isErrorHidden={isErrorHidden}
-                        deleteHost={deleteHost}
-                        editHost={updateEditHostForm}
+                    {/* Modals */}
+                    {userRef.current?.getUser() && (
+                        <>
+                            <AddHostModal
+                                isHidden={isAddHostHidden}
+                                form={addHostForm}
+                                setForm={setAddHostForm}
+                                handleAddHost={handleAddHost}
+                                setIsAddHostHidden={setIsAddHostHidden}
+                            />
+                            <EditHostModal
+                                isHidden={isEditHostHidden}
+                                form={editHostForm}
+                                setForm={setEditHostForm}
+                                handleEditHost={handleEditHost}
+                                setIsEditHostHidden={setIsEditHostHidden}
+                                hostConfig={currentHostConfig}
+                            />
+                            <ProfileModal
+                                isHidden={isProfileHidden}
+                                getUser={getUser}
+                                handleDeleteUser={handleDeleteUser}
+                                handleLogoutUser={handleLogoutUser}
+                                setIsProfileHidden={setIsProfileHidden}
+                            />
+                            {isLaunchpadOpen && (
+                                <Launchpad
+                                    onClose={() => setIsLaunchpadOpen(false)}
+                                    getHosts={getHosts}
+                                    connectToHost={connectToHostWithConfig}
+                                    isAddHostHidden={isAddHostHidden}
+                                    setIsAddHostHidden={setIsAddHostHidden}
+                                    isEditHostHidden={isEditHostHidden}
+                                    isErrorHidden={isErrorHidden}
+                                    deleteHost={deleteHost}
+                                    editHost={handleEditHost}
+                                />
+                            )}
+                        </>
+                    )}
+
+                    <ErrorModal
+                        isHidden={isErrorHidden}
+                        errorMessage={errorMessage}
+                        setIsErrorHidden={setIsErrorHidden}
                     />
-                )}
 
-                <LoginUserModal
-                    isHidden={isLoginUserHidden}
-                    form={loginUserForm}
-                    setForm={setLoginUserForm}
-                    handleLoginUser={handleLoginUser}
-                    handleGuestLogin={handleGuestLogin}
-                    setIsLoginUserHidden={setIsLoginUserHidden}
-                    setIsCreateUserHidden={setIsCreateUserHidden}
-                />
+                    <LoginUserModal
+                        isHidden={isLoginUserHidden}
+                        form={loginUserForm}
+                        setForm={setLoginUserForm}
+                        handleLoginUser={handleLoginUser}
+                        handleGuestLogin={handleGuestLogin}
+                        setIsLoginUserHidden={setIsLoginUserHidden}
+                        setIsCreateUserHidden={setIsCreateUserHidden}
+                    />
 
-                {/* User component */}
-                <User
-                    ref={userRef}
-                    onLoginSuccess={() => setIsLoginUserHidden(true)}
-                    onCreateSuccess={() => {
-                        setIsCreateUserHidden(true);
-                        handleLoginUser({ username: createUserForm.username, password: createUserForm.password })}
-                    }
-                    onDeleteSuccess={() => {
-                        setIsProfileHidden(true);
-                        window.location.reload();
-                    }}
-                    onFailure={(error) => {
-                        setErrorMessage(`Action failed: ${error}`);
-                        setIsErrorHidden(false);
-                    }}
-                />
+                    <CreateUserModal
+                        isHidden={isCreateUserHidden}
+                        form={createUserForm}
+                        setForm={setCreateUserForm}
+                        handleCreateUser={handleCreateUser}
+                        setIsCreateUserHidden={setIsCreateUserHidden}
+                        setIsLoginUserHidden={setIsLoginUserHidden}
+                    />
+
+                    {/* User component */}
+                    <User
+                        ref={userRef}
+                        onLoginSuccess={() => {
+                            setIsLoginUserHidden(true);
+                            setIsLoggingIn(false);
+                            setIsErrorHidden(true);
+                        }}
+                        onCreateSuccess={() => {
+                            setIsCreateUserHidden(true);
+                            handleLoginUser({ 
+                                username: createUserForm.username, 
+                                password: createUserForm.password,
+                                onSuccess: () => {
+                                    setIsLoginUserHidden(true);
+                                    setIsLoggingIn(false);
+                                    setIsErrorHidden(true);
+                                },
+                                onFailure: (error) => {
+                                    setErrorMessage(`Login failed: ${error}`);
+                                    setIsErrorHidden(false);
+                                }
+                            });
+                        }}
+                        onDeleteSuccess={() => {
+                            setIsProfileHidden(true);
+                            window.location.reload();
+                        }}
+                        onFailure={(error) => {
+                            setErrorMessage(`Action failed: ${error}`);
+                            setIsErrorHidden(false);
+                            setIsLoggingIn(false);
+                        }}
+                    />
+                </div>
             </div>
         </CssVarsProvider>
     );
