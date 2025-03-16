@@ -52,6 +52,7 @@ Visit the Termix [Wiki](https://github.com/LukeGus/Termix/wiki) for information 
 
 # Support
 If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues) repo. If you would like to support me financially, you can on [Paypal](https://paypal.me/LukeGustafson803).
+
 # Show-off
 
 ![Demo Image](repo-images/DemoImage1.png)
