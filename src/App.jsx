@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import { NewTerminal } from "./Terminal.jsx";
-import { User } from "./User.jsx";
+import { NewTerminal } from "./apps/ssh/Terminal.jsx";
+import { User } from "./apps/user/User.jsx";
 import AddHostModal from "./modals/AddHostModal.jsx";
 import LoginUserModal from "./modals/LoginUserModal.jsx";
 import { Button } from "@mui/joy";
 import { CssVarsProvider } from "@mui/joy";
 import theme from "./theme";
-import TabList from "./TabList.jsx";
-import Launchpad from "./Launchpad.jsx";
-import { Debounce } from './Utils';
+import TabList from "./ui/TabList.jsx";
+import Launchpad from "./apps/Launchpad.jsx";
+import { Debounce } from './other/Utils.jsx';
 import TermixIcon from "./images/termix_icon.png";
 import RocketIcon from './images/launchpad_rocket.png';
 import ProfileIcon from './images/profile_icon.png';
@@ -16,6 +16,7 @@ import CreateUserModal from "./modals/CreateUserModal.jsx";
 import ProfileModal from "./modals/ProfileModal.jsx";
 import ErrorModal from "./modals/ErrorModal.jsx";
 import EditHostModal from "./modals/EditHostModal.jsx";
+import NoAuthenticationModal from "./modals/NoAuthenticationModal.jsx";
 
 function App() {
     const [isAddHostHidden, setIsAddHostHidden] = useState(true);
@@ -36,6 +37,7 @@ function App() {
         port: 22,
         authMethod: "Select Auth",
         rememberHost: false,
+        storePassword: true,
     });
     const [editHostForm, setEditHostForm] = useState({
         name: "",
@@ -45,6 +47,12 @@ function App() {
         port: 22,
         authMethod: "Select Auth",
         rememberHost: true,
+        storePassword: true,
+    });
+    const [isNoAuthHidden, setIsNoAuthHidden] = useState(true);
+    const [authForm, setAuthForm] = useState({
+        password: "",
+        rsaKey: "",
     });
     const [loginUserForm, setLoginUserForm] = useState({
         username: "",
@@ -136,10 +144,19 @@ function App() {
     }, []);
 
     const handleAddHost = () => {
-        if (addHostForm.ip && addHostForm.user && ((addHostForm.authMethod === 'password' && addHostForm.password) || (addHostForm.authMethod === 'rsaKey' && addHostForm.rsaKey)) && addHostForm.port && addHostForm.authMethod !== 'Select Auth') {
-            connectToHost();
-            if (addHostForm.rememberHost) {
-                handleSaveHost();
+        if (addHostForm.ip && addHostForm.user && addHostForm.port && addHostForm.authMethod !== 'Select Auth') {
+            if (addHostForm.authMethod === 'password' && !addHostForm.password) {
+                setIsNoAuthHidden(false);
+            } else if (addHostForm.authMethod === 'rsaKey' && !addHostForm.rsaKey) {
+                setIsNoAuthHidden(false);
+            } else {
+                connectToHost();
+                if (addHostForm.rememberHost) {
+                    if (!addHostForm.storePassword) {
+                        addHostForm.password = '';
+                    }
+                    handleSaveHost();
+                }
             }
         } else {
             alert("Please fill out all fields.");
@@ -165,6 +182,24 @@ function App() {
         setIsAddHostHidden(true);
         setAddHostForm({ name: "", ip: "", user: "", password: "", rsaKey: "", port: 22, authMethod: "Select Auth" });
     }
+
+    const handleAuthSubmit = (form) => {
+        const updatedTerminals = terminals.map((terminal) => {
+            if (terminal.id === activeTab) {
+                return {
+                    ...terminal,
+                    hostConfig: {
+                        ...terminal.hostConfig,
+                        password: form.password,
+                        rsaKey: form.rsaKey
+                    }
+                };
+            }
+            return terminal;
+        });
+        setTerminals(updatedTerminals);
+        setIsNoAuthHidden(true);
+    };
 
     const connectToHostWithConfig = (hostConfig) => {
         const newTerminal = {
@@ -195,23 +230,6 @@ function App() {
         }
     }
 
-    const createFolder = (folderName) => {
-        if (userRef.current) {
-            userRef.current.createFolder({
-                folderName,
-            });
-        }
-    }
-
-    const moveHostToFolder = (folderName, hostConfig) => {
-        if (userRef.current) {
-            userRef.current.moveHostToFolder({
-                folderName,
-                hostConfig,
-            });
-        }
-    }
-
     const handleLoginUser = ({ username, password, sessionToken, onSuccess, onFailure }) => {
         if (userRef.current) {
             if (sessionToken) {
@@ -230,6 +248,12 @@ function App() {
             }
         }
     };
+
+    const handleGuestLogin = () => {
+        if (userRef.current) {
+            userRef.current.loginAsGuest();
+        }
+    }
 
     const handleCreateUser = ({ username, password, onSuccess, onFailure }) => {
         if (userRef.current) {
@@ -287,21 +311,31 @@ function App() {
         }
     };
 
-    const handleEditHost = () => {
-        if (editHostForm.ip && editHostForm.user && ((editHostForm.authMethod === 'password' && editHostForm.password) || (editHostForm.authMethod === 'rsaKey' && editHostForm.rsaKey)) && editHostForm.port && editHostForm.authMethod !== 'Select Auth') {
-            editHostForm.rememberHost = true;
-
-            if (currentHostConfig) {
-                userRef.current.editHost({
-                    oldHostConfig: currentHostConfig,
-                    newHostConfig: editHostForm,
-                });
-                setIsEditHostHidden(true);
-            } else {
-                alert("Host not found");
+    const handleEditHost = async () => {
+        try {
+            // Only clear the password if switching to RSA or storePassword is false
+            if (editHostForm.authMethod === 'rsaKey') {
+                editHostForm.password = '';
+            } else if (!editHostForm.storePassword) {
+                editHostForm.password = '';
             }
-        } else {
-            alert("Please fill out all fields.");
+
+            await userRef.current.editHost({
+                oldHostConfig: currentHostConfig,
+                newHostConfig: editHostForm,
+            });
+
+            // Refresh the updated config
+            const refreshedHosts = await userRef.current.getAllHosts();
+            const updated = refreshedHosts.find(
+                (h) => h.config.ip === editHostForm.ip && h.config.user === editHostForm.user
+            );
+            if (updated) {
+                setCurrentHostConfig(updated.config);
+            }
+            setIsEditHostHidden(true);
+        } catch (error) {
+            alert('Edit failed: ' + error);
         }
     };
 
@@ -439,12 +473,20 @@ function App() {
                                     key={terminal.id}
                                     hostConfig={terminal.hostConfig}
                                     isVisible={activeTab === terminal.id || splitTabIds.includes(terminal.id)}
+                                    setIsNoAuthHidden={setIsNoAuthHidden}
                                     ref={(ref) => {
                                         terminal.terminalRef = ref;
                                     }}
                                 />
                             </div>
                         ))}
+                        <NoAuthenticationModal
+                            isHidden={isNoAuthHidden}
+                            form={authForm}
+                            setForm={setAuthForm}
+                            setIsNoAuthHidden={setIsNoAuthHidden}
+                            handleAuthSubmit={handleAuthSubmit}
+                        />
                     </div>
                 </div>
 
@@ -495,8 +537,6 @@ function App() {
                         isErrorHidden={isErrorHidden}
                         deleteHost={deleteHost}
                         editHost={updateEditHostForm}
-                        createFolder={createFolder}
-                        moveHostToFolder={moveHostToFolder}
                     />
                 )}
 
@@ -505,6 +545,7 @@ function App() {
                     form={loginUserForm}
                     setForm={setLoginUserForm}
                     handleLoginUser={handleLoginUser}
+                    handleGuestLogin={handleGuestLogin}
                     setIsLoginUserHidden={setIsLoginUserHidden}
                     setIsCreateUserHidden={setIsCreateUserHidden}
                 />

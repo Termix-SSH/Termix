@@ -35,7 +35,8 @@ const User = mongoose.model('User', userSchema);
 const Host = mongoose.model('Host', hostSchema);
 
 const getEncryptionKey = (userId, sessionToken) => {
-    return crypto.scryptSync(`${userId}-${sessionToken}`, 'salt', 32);
+    const salt = process.env.SALT || 'default_salt';
+    return crypto.scryptSync(`${userId}-${sessionToken}`, salt, 32);
 };
 
 const encryptData = (data, userId, sessionToken) => {
@@ -127,6 +128,29 @@ io.of('/database.io').on('connection', (socket) => {
         } catch (error) {
             logger.error('Login error:', error);
             callback({ error: 'Login failed' });
+        }
+    });
+
+    socket.on('loginAsGuest', async (callback) => {
+        try {
+            const username = `guest-${crypto.randomBytes(4).toString('hex')}`;
+            const sessionToken = crypto.randomBytes(64).toString('hex');
+
+            const user = await User.create({
+                username,
+                password: await bcrypt.hash(username, 10),
+                sessionToken
+            });
+
+            logger.info(`Guest user created: ${username}`);
+            callback({ success: true, user: {
+                    id: user._id,
+                    username: user.username,
+                    sessionToken
+                }});
+        } catch (error) {
+            logger.error('Guest login error:', error);
+            callback({error: 'Guest login failed'});
         }
     });
 

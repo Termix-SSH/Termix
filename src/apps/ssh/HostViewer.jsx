@@ -1,10 +1,12 @@
 import PropTypes from "prop-types";
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@mui/joy";
+import { Button, Input } from "@mui/joy";
 
 function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, editHost }) {
     const [hosts, setHosts] = useState([]);
+    const [filteredHosts, setFilteredHosts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
     const isMounted = useRef(true);
 
     const fetchHosts = async () => {
@@ -12,12 +14,14 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
             const savedHosts = await getHosts();
             if (isMounted.current) {
                 setHosts(savedHosts || []);
+                setFilteredHosts(savedHosts || []);
                 setIsLoading(false);
             }
         } catch (error) {
             console.error("Host fetch failed:", error);
             if (isMounted.current) {
                 setHosts([]);
+                setFilteredHosts([]);
                 setIsLoading(false);
             }
         }
@@ -37,10 +41,28 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
         };
     }, []);
 
+    useEffect(() => {
+        const filtered = hosts.filter((hostWrapper) => {
+            const hostConfig = hostWrapper.config || {};
+            return hostConfig.name?.toLowerCase().includes(searchTerm.toLowerCase()) || hostConfig.ip?.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+        setFilteredHosts(filtered);
+    }, [searchTerm, hosts]);
+
     return (
         <div className="h-full w-full p-4 text-white flex flex-col">
-            <div className="flex items-center justify-between mb-2 w-full">
-                <h2 className="text-lg font-bold">Hosts</h2>
+            <div className="flex items-center justify-between mb-2 w-full gap-2">
+                <Input
+                    placeholder="Search hosts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    sx={{
+                        flex: 1,
+                        backgroundColor: "#6e6e6e",
+                        color: "#fff",
+                        "&::placeholder": { color: "#ccc" },
+                    }}
+                />
                 <Button
                     className="text-black"
                     onClick={() => setIsAddHostHidden(false)}
@@ -55,9 +77,9 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
             <div className="flex-grow overflow-auto">
                 {isLoading ? (
                     <p className="text-gray-300">Loading hosts...</p>
-                ) : hosts.length > 0 ? (
+                ) : filteredHosts.length > 0 ? (
                     <div className="flex flex-col gap-2 w-full">
-                        {hosts.map((hostWrapper, index) => {
+                        {filteredHosts.map((hostWrapper, index) => {
                             const hostConfig = hostWrapper.config || {};
 
                             if (!hostConfig) {

@@ -1,12 +1,18 @@
 import PropTypes from 'prop-types';
 import { CssVarsProvider } from '@mui/joy/styles';
-import { Modal, Button, FormControl, FormLabel, Input, Stack, DialogTitle, DialogContent, ModalDialog } from '@mui/joy';
+import { Modal, Button, FormControl, FormLabel, Input, Stack, DialogTitle, DialogContent, ModalDialog, IconButton } from '@mui/joy';
 import theme from '/src/theme';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const CreateUserModal = ({ isHidden, form, setForm, handleCreateUser, setIsCreateUserHidden, setIsLoginUserHidden }) => {
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
     const isFormValid = () => {
-        if (!form.username || !form.password) return false;
+        if (!form.username || !form.password || form.password !== confirmPassword) return false;
         return true;
     };
 
@@ -19,6 +25,7 @@ const CreateUserModal = ({ isHidden, form, setForm, handleCreateUser, setIsCreat
     useEffect(() => {
         if (isHidden) {
             setForm({ username: '', password: '' });
+            setConfirmPassword('');
         }
     }, [isHidden]);
 
@@ -64,15 +71,51 @@ const CreateUserModal = ({ isHidden, form, setForm, handleCreateUser, setIsCreat
                                 </FormControl>
                                 <FormControl>
                                     <FormLabel>Password</FormLabel>
-                                    <Input
-                                        type="password"
-                                        value={form.password}
-                                        onChange={(event) => setForm({ ...form, password: event.target.value })}
-                                        sx={{
-                                            backgroundColor: theme.palette.general.primary,
-                                            color: theme.palette.text.primary,
-                                        }}
-                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <Input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={form.password}
+                                            onChange={(event) => setForm({ ...form, password: event.target.value })}
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                                flex: 1,
+                                            }}
+                                        />
+                                        <IconButton
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            sx={{
+                                                color: theme.palette.text.primary,
+                                                marginLeft: 1,
+                                            }}
+                                        >
+                                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </div>
+                                </FormControl>
+                                <FormControl>
+                                    <FormLabel>Confirm Password</FormLabel>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <Input
+                                            type={showConfirmPassword ? 'text' : 'password'}
+                                            value={confirmPassword}
+                                            onChange={(event) => setConfirmPassword(event.target.value)}
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                                flex: 1,
+                                            }}
+                                        />
+                                        <IconButton
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            sx={{
+                                                color: theme.palette.text.primary,
+                                                marginLeft: 1,
+                                            }}
+                                        >
+                                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </div>
                                 </FormControl>
                                 <Button
                                     type="submit"
@@ -89,6 +132,7 @@ const CreateUserModal = ({ isHidden, form, setForm, handleCreateUser, setIsCreat
                                 <Button
                                     onClick={() => {
                                         setForm({ username: '', password: '' });
+                                        setConfirmPassword('');
                                         setIsCreateUserHidden(true);
                                         setIsLoginUserHidden(false);
                                     }}

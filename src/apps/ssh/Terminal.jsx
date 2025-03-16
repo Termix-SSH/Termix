@@ -4,9 +4,9 @@ import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import io from "socket.io-client";
 import PropTypes from "prop-types";
-import theme from "./theme";
+import theme from "../../theme.js";
 
-export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
+export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidden }, ref) => {
     const terminalRef = useRef(null);
     const socketRef = useRef(null);
     const fitAddon = useRef(new FitAddon());
@@ -76,7 +76,11 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
             fitAddon.current.fit();
             resizeTerminal();
             const { cols, rows } = terminalInstance.current;
-            socket.emit("connectToHost", cols, rows, hostConfig);
+            if (!hostConfig.password && !hostConfig.rsaKey) {
+                setIsNoAuthHidden(false);
+            } else {
+                socket.emit("connectToHost", cols, rows, hostConfig);
+            }
         });
 
         socket.on("data", (data) => {
@@ -91,23 +95,41 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
         });
 
         terminalInstance.current.attachCustomKeyEventHandler((event) => {
-            if (isPasting) return;
-
-            isPasting = true;
-            setTimeout(() => {
-                isPasting = false;
-            }, 200);
-
             if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+                if (isPasting) return false;
+                isPasting = true;
+
                 event.preventDefault();
 
                 navigator.clipboard.readText().then((text) => {
-                    socketRef.current.emit("data", text);
+                    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+                    const lines = text.split("\n");
+
+                    if (socketRef.current) {
+                        let index = 0;
+
+                        const sendLine = () => {
+                            if (index < lines.length) {
+                                socketRef.current.emit("data", lines[index] + "\r");
+                                index++;
+                                setTimeout(sendLine, 10);
+                            } else {
+                                isPasting = false;
+                            }
+                        };
+
+                        sendLine();
+                    } else {
+                        isPasting = false;
+                    }
                 }).catch((err) => {
                     console.error("Failed to read clipboard contents:", err);
+                    isPasting = false;
                 });
+
                 return false;
             }
+
             return true;
         });
 
@@ -118,6 +140,10 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible }, ref) => {
                     navigator.clipboard.writeText(selection);
                 }
             }
+        });
+
+        socket.on("noAuthRequired", () => {
+            setIsNoAuthHidden(false);
         });
 
         socket.on("error", (err) => {
@@ -173,8 +199,10 @@ NewTerminal.propTypes = {
     hostConfig: PropTypes.shape({
         ip: PropTypes.string.isRequired,
         user: PropTypes.string.isRequired,
-        password: PropTypes.string.isRequired,
-        port: PropTypes.string.isRequired,
+        password: PropTypes.string,
+        rsaKey: PropTypes.string,
+        port: PropTypes.number.isRequired,
     }).isRequired,
     isVisible: PropTypes.bool.isRequired,
+    setIsNoAuthHidden: PropTypes.func.isRequired,
 };

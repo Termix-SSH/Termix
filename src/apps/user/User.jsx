@@ -12,12 +12,7 @@ const socket = io(SOCKET_URL, {
     autoConnect: false,
 });
 
-export const User = forwardRef(({
-                                    onLoginSuccess,
-                                    onCreateSuccess,
-                                    onDeleteSuccess,
-                                    onFailure
-                                }, ref) => {
+export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSuccess, onFailure }, ref) => {
     const socketRef = useRef(socket);
     const currentUser = useRef(null);
 
@@ -99,6 +94,28 @@ export const User = forwardRef(({
             onFailure(error.message);
         }
     };
+
+    const loginAsGuest = async () => {
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("loginAsGuest", resolve);
+            });
+
+            if (response?.success) {
+                currentUser.current = {
+                    id: response.user.id,
+                    username: response.user.username,
+                    sessionToken: response.user.sessionToken,
+                };
+                localStorage.setItem("sessionToken", response.user.sessionToken);
+                onLoginSuccess(response.user);
+            } else {
+                throw new Error(response?.error || "Guest login failed");
+            }
+        } catch (error) {
+            onFailure(error.message);
+        }
+    }
 
     const logoutUser = () => {
         localStorage.removeItem("sessionToken");
@@ -236,6 +253,7 @@ export const User = forwardRef(({
     useImperativeHandle(ref, () => ({
         createUser,
         loginUser,
+        loginAsGuest,
         logoutUser,
         deleteUser,
         saveHost,

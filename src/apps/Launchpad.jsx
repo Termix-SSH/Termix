@@ -2,14 +2,13 @@ import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
 import { CssVarsProvider } from '@mui/joy/styles';
 import { Button } from '@mui/joy';
-import HostViewerIcon from './images/host_viewer_icon.png';
-import theme from './theme';
+import HostViewerIcon from '../images/host_viewer_icon.png';
+import theme from '../theme.js';
 
 // Apps
-import HostViewer from './apps/HostViewer';
+import HostViewer from './ssh/HostViewer.jsx';
 
-function Launchpad({
-                       onClose,
+function Launchpad({onClose,
                        getHosts,
                        connectToHost,
                        isAddHostHidden,
@@ -18,8 +17,6 @@ function Launchpad({
                        isErrorHidden,
                        deleteHost,
                        editHost,
-                       createFolder,
-                       moveHostToFolder,
                    }) {
     const launchpadRef = useRef(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -174,8 +171,6 @@ function Launchpad({
                                 setIsAddHostHidden={setIsAddHostHidden}
                                 deleteHost={deleteHost}
                                 editHost={editHost}
-                                createFolder={createFolder}
-                                moveHostToFolder={moveHostToFolder}
                                 onEditHostClick={handleEditHostClick}
                             />
                         )}
@@ -196,8 +191,6 @@ Launchpad.propTypes = {
     isErrorHidden: PropTypes.bool.isRequired,
     deleteHost: PropTypes.func.isRequired,
     editHost: PropTypes.func.isRequired,
-    createFolder: PropTypes.func.isRequired,
-    moveHostToFolder: PropTypes.func.isRequired,
 };
 
 export default Launchpad;

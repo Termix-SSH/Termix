@@ -12,11 +12,17 @@ import {
     ModalDialog,
     Select,
     Option,
-    Checkbox
+    Checkbox,
+    IconButton
 } from '@mui/joy';
 import theme from '/src/theme';
+import { useState } from 'react';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
+    const [showPassword, setShowPassword] = useState(false);
+
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -40,9 +46,34 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
         return true;
     };
 
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        if (isFormValid()) {
+            handleAddHost();
+            setForm({
+                name: '',
+                ip: '',
+                user: '',
+                password: '',
+                rsaKey: '',
+                port: 22,
+                authMethod: 'Select Auth',
+                rememberHost: false,
+                storePassword: true,
+            });
+        }
+    };
+
     return (
         <CssVarsProvider theme={theme}>
-            <Modal open={!isHidden} onClose={() => setIsAddHostHidden(true)}>
+            <Modal open={!isHidden} onClose={() => setIsAddHostHidden(true)}
+                   sx={{
+                       overflow: 'hidden',
+                       display: 'flex',
+                       justifyContent: 'center',
+                       alignItems: 'center',
+                   }}
+            >
                 <ModalDialog
                     layout="center"
                     sx={{
@@ -51,26 +82,17 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                         color: theme.palette.text.primary,
                         padding: 3,
                         borderRadius: 10,
-                        width: "auto",
-                        maxWidth: "90vw",
-                        minWidth: "fit-content",
-                        overflow: "hidden",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
+                        maxWidth: '400px',
+                        width: '100%',
+                        overflow: 'hidden',
+                        boxSizing: 'border-box',
+                        mx: 2,
                     }}
                 >
                     <DialogTitle>Add Host</DialogTitle>
                     <DialogContent>
-                        <form
-                            onSubmit={(event) => {
-                                event.preventDefault();
-                                if (isFormValid()) {
-                                    handleAddHost();
-                                }
-                            }}
-                        >
-                            <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+                        <form onSubmit={handleSubmit}>
+                            <Stack spacing={2} sx={{ width: '100%' }}>
                                 <FormControl>
                                     <FormLabel>Host Name</FormLabel>
                                     <Input
@@ -130,16 +152,28 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                 {form.authMethod === 'password' && (
                                     <FormControl error={!form.password}>
                                         <FormLabel>Host Password</FormLabel>
-                                        <Input
-                                            type="password"
-                                            value={form.password}
-                                            onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                            required
-                                            sx={{
-                                                backgroundColor: theme.palette.general.primary,
-                                                color: theme.palette.text.primary,
-                                            }}
-                                        />
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <Input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={form.password}
+                                                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                                                required
+                                                sx={{
+                                                    backgroundColor: theme.palette.general.primary,
+                                                    color: theme.palette.text.primary,
+                                                    flex: 1,
+                                                }}
+                                            />
+                                            <IconButton
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                sx={{
+                                                    color: theme.palette.text.primary,
+                                                    marginLeft: 1,
+                                                }}
+                                            >
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </div>
                                     </FormControl>
                                 )}
                                 {form.authMethod === 'rsaKey' && (
@@ -155,8 +189,6 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                 padding: 1,
                                                 textAlign: 'center',
                                                 width: '100%',
-                                                minWidth: 'auto',
-                                                minHeight: 'auto',
                                             }}
                                         />
                                     </FormControl>
@@ -188,6 +220,21 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                         }}
                                     />
                                 </FormControl>
+                                {form.rememberHost && (
+                                    <FormControl>
+                                        <FormLabel>Store Password</FormLabel>
+                                        <Checkbox
+                                            checked={form.storePassword}
+                                            onChange={(e) => setForm({ ...form, storePassword: e.target.checked })}
+                                            sx={{
+                                                color: theme.palette.text.primary,
+                                                '&.Mui-checked': {
+                                                    color: theme.palette.text.primary,
+                                                },
+                                            }}
+                                        />
+                                    </FormControl>
+                                )}
                                 <Button
                                     type="submit"
                                     disabled={!isFormValid()}
@@ -220,6 +267,7 @@ AddHostModal.propTypes = {
         port: PropTypes.number.isRequired,
         authMethod: PropTypes.string.isRequired,
         rememberHost: PropTypes.bool,
+        storePassword: PropTypes.bool,
     }).isRequired,
     setForm: PropTypes.func.isRequired,
     handleAddHost: PropTypes.func.isRequired,

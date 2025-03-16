@@ -28,6 +28,7 @@ io.on("connection", (socket) => {
     socket.on("connectToHost", (cols, rows, hostConfig) => {
         if (!hostConfig || !hostConfig.ip || !hostConfig.user || (!hostConfig.password && !hostConfig.rsaKey) || !hostConfig.port) {
             logger.error("Invalid hostConfig received:", hostConfig);
+            socket.emit("noAuthRequired");
             return;
         }
 

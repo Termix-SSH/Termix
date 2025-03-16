@@ -13,6 +13,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/inter": "^5.1.1",
+    "@mui/icons-material": "^6.4.7",
     "@mui/joy": "^5.0.0-beta.51",
     "@tailwindcss/vite": "^4.0.8",
     "@tiptap/extension-link": "^2.11.5",

@@ -56,10 +56,12 @@ const ProfileModal = ({ isHidden, getUser, handleDeleteUser, handleLogoutUser, s
                             borderRadius: 10,
                             width: "100%",
                             textAlign: "center",
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
                         }}
                     >
-                        Username: <br />
-                        {getUserName()}
+                        User: {getUserName()}
                     </DialogTitle>
                     <DialogContent sx={{ width: "100%" }}>
                         <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden", mt: 1.5 }}>

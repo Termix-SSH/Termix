@@ -1,10 +1,14 @@
 import PropTypes from 'prop-types';
 import { CssVarsProvider } from '@mui/joy/styles';
-import { Modal, Button, FormControl, FormLabel, Input, Stack, DialogTitle, DialogContent, ModalDialog } from '@mui/joy';
+import { Modal, Button, FormControl, FormLabel, Input, Stack, DialogTitle, DialogContent, ModalDialog, IconButton } from '@mui/joy';
 import theme from '/src/theme';
-import {useEffect} from 'react';
+import { useEffect, useState } from 'react';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, setIsLoginUserHidden, setIsCreateUserHidden }) => {
+const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, handleGuestLogin, setIsLoginUserHidden, setIsCreateUserHidden }) => {
+    const [showPassword, setShowPassword] = useState(false);
+
     const isFormValid = () => {
         if (!form.username || !form.password) return false;
         return true;
@@ -64,15 +68,27 @@ const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, setIsLoginUs
                                 </FormControl>
                                 <FormControl>
                                     <FormLabel>Password</FormLabel>
-                                    <Input
-                                        type="password"
-                                        value={form.password}
-                                        onChange={(event) => setForm({ ...form, password: event.target.value })}
-                                        sx={{
-                                            backgroundColor: theme.palette.general.primary,
-                                            color: theme.palette.text.primary,
-                                        }}
-                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <Input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={form.password}
+                                            onChange={(event) => setForm({ ...form, password: event.target.value })}
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                                flex: 1,
+                                            }}
+                                        />
+                                        <IconButton
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            sx={{
+                                                color: theme.palette.text.primary,
+                                                marginLeft: 1,
+                                            }}
+                                        >
+                                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </div>
                                 </FormControl>
                                 <Button
                                     type="submit"
@@ -101,6 +117,17 @@ const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, setIsLoginUs
                                 >
                                     Create User
                                 </Button>
+                                <Button
+                                    onClick={handleGuestLogin}
+                                    sx={{
+                                        backgroundColor: theme.palette.general.primary,
+                                        '&:hover': {
+                                            backgroundColor: theme.palette.general.disabled,
+                                        },
+                                    }}
+                                >
+                                    Login as Guest
+                                </Button>
                             </Stack>
                         </form>
                     </DialogContent>
@@ -115,6 +142,7 @@ LoginUserModal.propTypes = {
     form: PropTypes.object.isRequired,
     setForm: PropTypes.func.isRequired,
     handleLoginUser: PropTypes.func.isRequired,
+    handleGuestLogin: PropTypes.func.isRequired,
     setIsLoginUserHidden: PropTypes.func.isRequired,
     setIsCreateUserHidden: PropTypes.func.isRequired,
 };
