@@ -15,12 +15,25 @@ RUN npm ci --only=production
 COPY src/backend/ ./src/backend/
 
 # Stage 3: Build bcrypt for the target platform
-FROM node:18-alpine AS bcrypt-builder
+FROM ubuntu:focal AS bcrypt-builder
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_VERSION=18.x
 WORKDIR /app
 COPY package*.json ./
-RUN apk add --no-cache python3 make g++ \
-    && npm ci --only=production bcrypt \
-    && rm -rf /root/.npm
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        make \
+        g++ \
+        wget \
+        ca-certificates \
+        gnupg && \
+    wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    apt-get update && \
+    apt-get install -y nodejs && \
+    npm ci --only=production bcrypt && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/*
 
 # Stage 4: Final production image
 FROM ubuntu:focal AS base
