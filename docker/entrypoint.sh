@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Create required directories
+# Create required directories and set permissions
 mkdir -p /data/db /var/log/mongodb /var/run/mongodb
 chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb
-chmod 755 /data/db
+chmod 755 /data/db /var/log/mongodb /var/run/mongodb
 
 # Start MongoDB
 echo "Starting MongoDB..."
