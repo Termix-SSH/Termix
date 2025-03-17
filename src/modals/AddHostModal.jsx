@@ -24,7 +24,20 @@ import { useState } from 'react';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
+const AddHostModal = ({ isHidden, setIsAddHostHidden, handleAddHost }) => {
+    const [form, setForm] = useState({
+        name: '',
+        folder: '',
+        ip: '',
+        user: '',
+        port: 22,
+        password: '',
+        privateKey: '',
+        keyType: '',
+        passphrase: '',
+        authMethod: 'Select Auth',
+        rememberHost: true
+    });
     const [showPassword, setShowPassword] = useState(false);
     const [showPassphrase, setShowPassphrase] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
@@ -62,12 +75,12 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                     keyType = 'DSA';
                 }
 
-                setForm({ 
-                    ...form, 
+                setForm(prev => ({ 
+                    ...prev, 
                     privateKey: keyContent,
                     keyType: keyType,
                     authMethod: 'key'
-                });
+                }));
             };
             reader.readAsText(file);
         } else {
@@ -348,7 +361,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                     </FormControl>
                                                 )}
 
-                                                {form.authMethod === 'key' && (
+                                                {form.authMethod === 'key' && form.rememberHost && (
                                                     <Stack spacing={2}>
                                                         <FormControl error={!form.privateKey}>
                                                             <FormLabel>SSH Key</FormLabel>
@@ -363,7 +376,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                                     alignItems: 'center',
                                                                     height: '40px',
                                                                     '&:hover': {
-                                                                        backgroundColor: theme.palette.general.disabled,
+                                                                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
                                                                     },
                                                                 }}
                                                             >
@@ -378,16 +391,27 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                         {form.privateKey && (
                                                             <FormControl>
                                                                 <FormLabel>Key Passphrase (optional)</FormLabel>
-                                                                <Input
-                                                                    type={showPassphrase ? "text" : "password"}
-                                                                    value={form.passphrase || ''}
-                                                                    onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
-                                                                    endDecorator={
-                                                                        <IconButton onClick={() => setShowPassphrase(!showPassphrase)}>
-                                                                            {showPassphrase ? <VisibilityOff /> : <Visibility />}
-                                                                        </IconButton>
-                                                                    }
-                                                                />
+                                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                                    <Input
+                                                                        type={showPassphrase ? "text" : "password"}
+                                                                        value={form.passphrase || ''}
+                                                                        onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
+                                                                        sx={{
+                                                                            backgroundColor: theme.palette.general.primary,
+                                                                            color: theme.palette.text.primary,
+                                                                            flex: 1
+                                                                        }}
+                                                                    />
+                                                                    <IconButton
+                                                                        onClick={() => setShowPassphrase(!showPassphrase)}
+                                                                        sx={{
+                                                                            color: theme.palette.text.primary,
+                                                                            marginLeft: 1
+                                                                        }}
+                                                                    >
+                                                                        {showPassphrase ? <VisibilityOff /> : <Visibility />}
+                                                                    </IconButton>
+                                                                </div>
                                                             </FormControl>
                                                         )}
                                                     </Stack>
@@ -428,22 +452,8 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
 
 AddHostModal.propTypes = {
     isHidden: PropTypes.bool.isRequired,
-    form: PropTypes.shape({
-        name: PropTypes.string,
-        folder: PropTypes.string,
-        ip: PropTypes.string.isRequired,
-        user: PropTypes.string.isRequired,
-        password: PropTypes.string,
-        privateKey: PropTypes.string,
-        keyType: PropTypes.string,
-        port: PropTypes.number.isRequired,
-        authMethod: PropTypes.string.isRequired,
-        rememberHost: PropTypes.bool,
-        storePassword: PropTypes.bool,
-    }).isRequired,
-    setForm: PropTypes.func.isRequired,
-    handleAddHost: PropTypes.func.isRequired,
     setIsAddHostHidden: PropTypes.func.isRequired,
+    handleAddHost: PropTypes.func.isRequired,
 };
 
 export default AddHostModal;

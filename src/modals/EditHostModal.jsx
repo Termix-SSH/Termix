@@ -24,11 +24,24 @@ import theme from '/src/theme';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostHidden, hostConfig }) => {
+const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHost }) => {
+    const [form, setForm] = useState({
+        name: hostConfig?.name || '',
+        folder: hostConfig?.folder || '',
+        ip: hostConfig?.ip || '',
+        user: hostConfig?.user || '',
+        port: hostConfig?.port || '',
+        password: '',
+        privateKey: hostConfig?.privateKey || '',
+        keyType: hostConfig?.keyType || '',
+        passphrase: '',
+        authMethod: hostConfig?.authMethod || 'Select Auth',
+        storePassword: true
+    });
     const [showPassword, setShowPassword] = useState(false);
+    const [showPassphrase, setShowPassphrase] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
-    const [showPassphrase, setShowPassphrase] = useState(false);
 
     useEffect(() => {
         if (!isHidden && hostConfig) {
@@ -314,7 +327,6 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                                                 >
                                                     <Option value="Select Auth" disabled>Select Auth</Option>
                                                     <Option value="password">Password</Option>
-                                                    <Option value="rsaKey">Public Key</Option>
                                                     <Option value="key">SSH Key</Option>
                                                 </Select>
                                             </FormControl>
@@ -403,7 +415,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                                                             alignItems: 'center',
                                                             height: '40px',
                                                             '&:hover': {
-                                                                backgroundColor: theme.palette.general.disabled,
+                                                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
                                                             },
                                                         }}
                                                     >
@@ -431,16 +443,27 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                                                 {form.privateKey && (
                                                     <FormControl>
                                                         <FormLabel>Key Passphrase (optional)</FormLabel>
-                                                        <Input
-                                                            type={showPassphrase ? "text" : "password"}
-                                                            value={form.passphrase || ''}
-                                                            onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
-                                                            endDecorator={
-                                                                <IconButton onClick={() => setShowPassphrase(!showPassphrase)}>
-                                                                    {showPassphrase ? <VisibilityOff /> : <Visibility />}
-                                                                </IconButton>
-                                                            }
-                                                        />
+                                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                            <Input
+                                                                type={showPassphrase ? "text" : "password"}
+                                                                value={form.passphrase || ''}
+                                                                onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
+                                                                sx={{
+                                                                    backgroundColor: theme.palette.general.primary,
+                                                                    color: theme.palette.text.primary,
+                                                                    flex: 1
+                                                                }}
+                                                            />
+                                                            <IconButton
+                                                                onClick={() => setShowPassphrase(!showPassphrase)}
+                                                                sx={{
+                                                                    color: theme.palette.text.primary,
+                                                                    marginLeft: 1
+                                                                }}
+                                                            >
+                                                                {showPassphrase ? <VisibilityOff /> : <Visibility />}
+                                                            </IconButton>
+                                                        </div>
                                                     </FormControl>
                                                 )}
                                             </Stack>
@@ -479,11 +502,9 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
 
 EditHostModal.propTypes = {
     isHidden: PropTypes.bool.isRequired,
-    form: PropTypes.object.isRequired,
-    setForm: PropTypes.func.isRequired,
-    handleEditHost: PropTypes.func.isRequired,
+    hostConfig: PropTypes.object.isRequired,
     setIsEditHostHidden: PropTypes.func.isRequired,
-    hostConfig: PropTypes.object
+    handleEditHost: PropTypes.func.isRequired
 };
 
 export default EditHostModal;
