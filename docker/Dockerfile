@@ -14,7 +14,7 @@ RUN npm install
 COPY src/backend/ ./src/backend/
 
 # Stage 3: Final production image
-FROM mongo:5
+FROM mongo:4.4
 # Install Node.js
 RUN apt-get update && apt-get install -y \
     curl \

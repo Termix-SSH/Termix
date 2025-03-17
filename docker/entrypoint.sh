@@ -7,7 +7,7 @@ mongod --fork --dbpath $MONGODB_DATA_DIR --logpath $MONGODB_LOG_DIR/mongodb.log
 
 # Wait for MongoDB to be ready
 echo "Waiting for MongoDB to start..."
-until mongosh --eval "print(\"waited for connection\")" > /dev/null 2>&1; do
+until mongo --eval "print(\"waited for connection\")" > /dev/null 2>&1; do
     sleep 0.5
 done
 echo "MongoDB has started"
