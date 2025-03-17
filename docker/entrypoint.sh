@@ -2,32 +2,24 @@
 set -e
 
 # Create required directories and set permissions
-mkdir -p /data/db /var/log/mongodb /var/run/mongodb /tmp/mongodb
-chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb /tmp/mongodb
-chmod 755 /data/db /var/log/mongodb /var/run/mongodb /tmp/mongodb
+mkdir -p /data/db /var/log/mongodb /var/run/mongodb
+chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb
+chmod 755 /data/db /var/log/mongodb /var/run/mongodb
 
-# Start MongoDB with proper permissions
+# Start MongoDB
 echo "Starting MongoDB..."
-gosu mongodb mongod --dbpath $MONGODB_DATA_DIR \
-    --logpath $MONGODB_LOG_DIR/mongodb.log \
-    --pidfilepath /tmp/mongodb/mongodb.pid \
-    --bind_ip_all \
-    --port 27017 \
-    --wiredTigerCacheSizeGB 1 &
+gosu mongodb mongod --dbpath $MONGODB_DATA_DIR --logpath $MONGODB_LOG_DIR/mongodb.log --bind_ip 0.0.0.0 &
+MONGO_PID=$!
 
 # Wait for MongoDB to be ready
 echo "Waiting for MongoDB to start..."
-max_attempts=30
-attempt=0
-until gosu mongodb mongosh --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
-    attempt=$((attempt + 1))
-    if [ $attempt -gt $max_attempts ]; then
+until gosu mongodb mongo --eval "print(\"waited for connection\")" > /dev/null 2>&1; do
+    sleep 0.5
+    if ! kill -0 $MONGO_PID 2>/dev/null; then
         echo "MongoDB failed to start. Checking logs:"
         cat $MONGODB_LOG_DIR/mongodb.log
         exit 1
     fi
-    echo "Waiting for MongoDB... (attempt $attempt/$max_attempts)"
-    sleep 2
 done
 echo "MongoDB started successfully"
 
@@ -39,35 +31,14 @@ nginx
 echo "Starting backend services..."
 cd /app
 export NODE_ENV=production
-export MONGO_URL=mongodb://localhost:27017/termix
 
 # Start SSH service
-echo "Starting SSH service..."
-gosu node node src/backend/ssh.cjs &
-SSH_PID=$!
+su -s /bin/bash node -c "node src/backend/ssh.cjs" &
 
 # Start database service
-echo "Starting database service..."
-gosu node node src/backend/database.cjs &
-DB_PID=$!
+su -s /bin/bash node -c "node src/backend/database.cjs" &
 
-# Wait a moment to ensure services are starting
-sleep 2
-
-# Check if services are running
-if ! kill -0 $SSH_PID 2>/dev/null; then
-    echo "SSH service failed to start. Checking logs..."
-    tail -n 50 /var/log/mongodb/mongodb.log
-    exit 1
-fi
-
-if ! kill -0 $DB_PID 2>/dev/null; then
-    echo "Database service failed to start. Checking logs..."
-    tail -n 50 /var/log/mongodb/mongodb.log
-    exit 1
-fi
-
-echo "All services started successfully"
+echo "All services started"
 
 # Keep container running and show logs
-exec tail -f $MONGODB_LOG_DIR/mongodb.log
+tail -f $MONGODB_LOG_DIR/mongodb.log
