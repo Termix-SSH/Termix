@@ -22,39 +22,52 @@ RUN apk add --no-cache python3 make g++ \
     && rm -rf /root/.npm
 
 # Stage 4: Final production image
-FROM ubuntu:20.04
+FROM ubuntu:20.04 as base
 
 # Prevent interactive prompts during package installation
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_VERSION=18.x \
+    MONGO_VERSION=4.4.24 \
+    MONGO_URL=mongodb://localhost:27017/termix \
+    MONGODB_DATA_DIR=/data/db \
+    MONGODB_LOG_DIR=/var/log/mongodb \
+    NODE_ENV=production
 
-# Install MongoDB 4.4
+# Create users first
+RUN groupadd -r mongodb && useradd -r -g mongodb mongodb \
+    && groupadd -r node && useradd -r -g node -m node
+
+# Install all dependencies in one layer
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        wget \
-        gnupg \
-        ca-certificates && \
+        wget gnupg ca-certificates gosu \
+        nginx supervisor && \
+    # Add MongoDB repo
     wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
     echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
-    # Install Node.js, nginx, and MongoDB
-    wget -qO- https://deb.nodesource.com/setup_18.x | bash - && \
+    # Add Node.js repo
+    wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    # Install Node.js and MongoDB
     apt-get update && \
     apt-get install -y --no-install-recommends \
         nodejs \
-        nginx \
-        mongodb-org=4.4.24 \
-        mongodb-org-server=4.4.24 \
-        mongodb-org-shell=4.4.24 \
-        mongodb-org-mongos=4.4.24 \
-        mongodb-org-tools=4.4.24 && \
+        mongodb-org=${MONGO_VERSION} \
+        mongodb-org-server=${MONGO_VERSION} \
+        mongodb-org-shell=${MONGO_VERSION} \
+        mongodb-org-mongos=${MONGO_VERSION} \
+        mongodb-org-tools=${MONGO_VERSION} && \
     # Cleanup
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    rm -rf /var/cache/apt/* && \
-    rm -rf /root/.npm /tmp/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/* && \
+    # Create necessary directories
+    mkdir -p /data/db /var/log/{nginx,mongodb} /var/lib/nginx /var/run/mongodb && \
+    chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb && \
+    chown -R www-data:www-data /var/log/nginx /var/lib/nginx
 
 # Configure nginx and copy frontend
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+RUN chown -R www-data:www-data /usr/share/nginx/html
 
 # Setup backend with pre-built bcrypt
 WORKDIR /app
@@ -62,18 +75,7 @@ COPY package*.json ./
 RUN npm ci --only=production --ignore-scripts
 COPY --from=bcrypt-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
 COPY --from=backend-builder /app/src/backend ./src/backend
-
-# Create necessary directories and set permissions
-RUN mkdir -p /data/db /var/log/{nginx,mongodb} /var/lib/nginx /var/run/mongodb \
-    && chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb \
-    && chown -R www-data:www-data /var/log/nginx /var/lib/nginx \
-    && rm -rf /root/.npm /tmp/*
-
-# Set environment variables
-ENV MONGO_URL=mongodb://localhost:27017/termix \
-    MONGODB_DATA_DIR=/data/db \
-    MONGODB_LOG_DIR=/var/log/mongodb \
-    NODE_ENV=production
+RUN chown -R node:node /app
 
 # Create volume for MongoDB data
 VOLUME ["/data/db"]
