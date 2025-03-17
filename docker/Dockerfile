@@ -85,5 +85,8 @@ EXPOSE 8080 8081 8082 27017
 
 # Copy and set entrypoint
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN chmod +x /entrypoint.sh && \
+    mkdir -p /var/log/supervisor && \
+    chown -R root:root /var/log/supervisor
 CMD ["/entrypoint.sh"]
