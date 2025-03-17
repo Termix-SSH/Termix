@@ -2,8 +2,8 @@
 FROM node:18-alpine AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci && npm cache clean --force
+RUN npm ci --force && \
+    npm cache clean --force
 COPY . .
 RUN npm run build
 
@@ -11,8 +11,8 @@ RUN npm run build
 FROM node:18-alpine AS backend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production --force && \
+    npm cache clean --force
 COPY src/backend/ ./src/backend/
 
 # Stage 3: Build bcrypt for Ubuntu
@@ -34,7 +34,7 @@ RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/loc
     wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get update && \
     apt-get install -y nodejs && \
-    npm ci --only=production bcrypt && \
+    npm ci --only=production bcrypt --force && \
     npm cache clean --force && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/*
@@ -83,8 +83,7 @@ RUN chown -R www-data:www-data /usr/share/nginx/html
 # Setup backend
 WORKDIR /app
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production --ignore-scripts && \
+RUN npm ci --only=production --ignore-scripts --force && \
     npm cache clean --force && \
     rm -rf /tmp/*
 COPY --from=bcrypt-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
