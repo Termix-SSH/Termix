@@ -18,12 +18,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
         with:
-          buildkitd-flags: --debug
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
           driver-opts: |
-            image=moby/buildkit:v0.12.0
+            image=moby/buildkit:master
+            network=host
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -34,7 +48,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Login to Docker Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -51,18 +65,21 @@ jobs:
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Build and Push Multi-Arch Docker Image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/${{ env.REPO_OWNER }}/termix:${{ env.IMAGE_TAG }}
-          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+          outputs: type=registry,compression=zstd,compression-level=19
 
       # Temp fix for https://github.com/docker/build-push-action/issues/252
       - name: Move cache

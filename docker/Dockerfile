@@ -2,7 +2,8 @@
 FROM --platform=$BUILDPLATFORM node:18-alpine AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+# Install all dependencies including dev dependencies needed for build
+RUN npm ci
 COPY . .
 RUN npm run build
 
@@ -22,7 +23,7 @@ RUN apk add --no-cache python3 make g++ \
     && rm -rf /root/.npm
 
 # Stage 4: Final production image
-FROM ubuntu:20.04 as base
+FROM ubuntu:20.04-slim as base
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -47,15 +48,12 @@ RUN apt-get update && \
     echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
     # Add Node.js repo
     wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
-    # Install Node.js and MongoDB
+    # Install Node.js and MongoDB (minimal install)
     apt-get update && \
     apt-get install -y --no-install-recommends \
         nodejs \
-        mongodb-org=${MONGO_VERSION} \
         mongodb-org-server=${MONGO_VERSION} \
-        mongodb-org-shell=${MONGO_VERSION} \
-        mongodb-org-mongos=${MONGO_VERSION} \
-        mongodb-org-tools=${MONGO_VERSION} && \
+        mongodb-org-shell=${MONGO_VERSION} && \
     # Cleanup
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/* && \
