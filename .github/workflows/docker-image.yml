@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - development
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
   workflow_dispatch:
     inputs:
       tag_name:
@@ -16,7 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -34,7 +39,10 @@ jobs:
       - name: Cache npm dependencies
         uses: actions/cache@v3
         with:
-          path: ~/.npm
+          path: |
+            ~/.npm
+            node_modules
+            */*/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
@@ -79,6 +87,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+            BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           outputs: type=registry,compression=zstd,compression-level=19
 
       - name: Move cache
@@ -87,11 +96,13 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Notify via ntfy
+        if: success()
         run: |
           curl -d "Docker image build and push completed successfully for tag: ${{ env.IMAGE_TAG }}" \
           https://ntfy.karmaa.site/termix-build
 
       - name: Delete all untagged image versions
+        if: success()
         uses: quartx-analytics/ghcr-cleaner@v1
         with:
           owner-type: user
@@ -100,6 +111,7 @@ jobs:
           delete-untagged: true
 
       - name: Cleanup Docker Images Locally
+        if: always()
         run: |
           docker image prune -af
           docker system prune -af --volumes

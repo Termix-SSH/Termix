@@ -2,7 +2,8 @@
 FROM node:18-alpine AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 COPY . .
 RUN npm run build
 
@@ -10,53 +11,62 @@ RUN npm run build
 FROM node:18-alpine AS backend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production
 COPY src/backend/ ./src/backend/
 
-# Stage 3: Build bcrypt for the target platform
+# Stage 3: Build bcrypt for Ubuntu
 FROM ubuntu:focal AS bcrypt-builder
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_VERSION=18.x
 WORKDIR /app
 COPY package*.json ./
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         python3 make g++ wget ca-certificates gnupg && \
     wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get update && \
     apt-get install -y nodejs && \
-    npm ci --only=production bcrypt && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/*
+    npm ci --only=production bcrypt
 
 # Final stage
 FROM ubuntu:focal
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_VERSION=18.x \
     MONGO_VERSION=4.4.24 \
+    MONGO_URL=mongodb://localhost:27017/termix \
+    MONGODB_DATA_DIR=/data/db \
+    MONGODB_LOG_DIR=/var/log/mongodb \
     PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Create users
+# Create users first
 RUN groupadd -r mongodb && useradd -r -g mongodb mongodb \
     && groupadd -r node && useradd -r -g node -m node
 
-# Install dependencies
-RUN set -ex \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates gnupg wget nginx-light \
-    && wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - \
-    && echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list \
-    && wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
+# Install all dependencies in one layer
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    set -ex && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        gnupg \
+        nginx-light \
+        wget && \
+    wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
+    wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
         nodejs \
         mongodb-org-server=${MONGO_VERSION} \
-        mongodb-org-shell=${MONGO_VERSION} \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/* \
-    && mkdir -p /data/db /var/log/mongodb /var/run/mongodb \
-    && chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb
+        mongodb-org-shell=${MONGO_VERSION} && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/* && \
+    mkdir -p /data/db /var/log/mongodb /var/run/mongodb && \
+    chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb
 
 # Setup nginx and frontend
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -66,8 +76,9 @@ RUN chown -R www-data:www-data /usr/share/nginx/html
 # Setup backend
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production --ignore-scripts \
-    && rm -rf /root/.npm /tmp/*
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production --ignore-scripts && \
+    rm -rf /root/.npm /tmp/*
 COPY --from=bcrypt-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
 COPY --from=backend-builder /app/src/backend ./src/backend
 RUN chown -R node:node /app
