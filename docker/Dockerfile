@@ -21,15 +21,22 @@ ENV DEBIAN_FRONTEND=noninteractive \
     NODE_VERSION=18.x
 WORKDIR /app
 COPY package*.json ./
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
+RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* && \
+    apt-get clean && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        python3 make g++ wget ca-certificates gnupg && \
+        python3 \
+        make \
+        g++ \
+        wget \
+        ca-certificates \
+        gnupg && \
     wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get update && \
     apt-get install -y nodejs && \
-    npm ci --only=production bcrypt
+    npm ci --only=production bcrypt && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/*
 
 # Final stage
 FROM ubuntu:focal
@@ -46,9 +53,8 @@ RUN groupadd -r mongodb && useradd -r -g mongodb mongodb \
     && groupadd -r node && useradd -r -g node -m node
 
 # Install all dependencies in one layer
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
-    set -ex && \
+RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* && \
+    apt-get clean && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
