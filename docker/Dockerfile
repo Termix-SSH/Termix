@@ -1,5 +1,5 @@
 # Stage 1: Build frontend
-FROM --platform=$BUILDPLATFORM node:18-alpine AS frontend-builder
+FROM node:18-alpine AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 # Install all dependencies including dev dependencies needed for build
@@ -8,14 +8,14 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Build backend
-FROM --platform=$BUILDPLATFORM node:18-alpine AS backend-builder
+FROM node:18-alpine AS backend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY src/backend/ ./src/backend/
 
 # Stage 3: Build bcrypt for the target platform
-FROM --platform=$TARGETPLATFORM node:18-alpine AS bcrypt-builder
+FROM node:18-alpine AS bcrypt-builder
 WORKDIR /app
 COPY package*.json ./
 RUN apk add --no-cache python3 make g++ \
@@ -23,7 +23,7 @@ RUN apk add --no-cache python3 make g++ \
     && rm -rf /root/.npm
 
 # Stage 4: Final production image
-FROM ubuntu:20.04-slim as base
+FROM ubuntu:focal-slim AS base
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive \
