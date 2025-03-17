@@ -25,7 +25,8 @@ RUN apk add --no-cache python3 make g++ \
 FROM mongo:4.4-focal
 
 # Install Node.js and nginx
-RUN apt-get update && \
+RUN rm -f /etc/apt/sources.list.d/mongodb*.list && \
+    apt-get update && \
     # Install curl and gnupg for Node.js repository
     apt-get install -y --no-install-recommends \
         curl \
@@ -38,7 +39,7 @@ RUN apt-get update && \
         nginx && \
     # Cleanup
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* \
+    rm -rf /var/lib/apt/lists/* && \
     rm -rf /var/cache/apt/*
 
 # Configure nginx and copy frontend
