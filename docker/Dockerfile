@@ -22,25 +22,35 @@ RUN apk add --no-cache python3 make g++ \
     && rm -rf /root/.npm
 
 # Stage 4: Final production image
-FROM mongo:4.4-focal
+FROM ubuntu:20.04
 
-# Install Node.js and nginx
-RUN rm -f /etc/apt/sources.list.d/mongodb*.list && \
-    apt-get update && \
-    # Install curl and gnupg for Node.js repository
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install MongoDB 4.4
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        curl \
-        gnupg && \
-    # Add Node.js repository and install Node.js and nginx
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+        wget \
+        gnupg \
+        ca-certificates && \
+    wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
+    # Install Node.js, nginx, and MongoDB
+    wget -qO- https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         nodejs \
-        nginx && \
+        nginx \
+        mongodb-org=4.4.24 \
+        mongodb-org-server=4.4.24 \
+        mongodb-org-shell=4.4.24 \
+        mongodb-org-mongos=4.4.24 \
+        mongodb-org-tools=4.4.24 && \
     # Cleanup
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -rf /var/cache/apt/*
+    rm -rf /var/cache/apt/* && \
+    rm -rf /root/.npm /tmp/*
 
 # Configure nginx and copy frontend
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -54,8 +64,8 @@ COPY --from=bcrypt-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
 COPY --from=backend-builder /app/src/backend ./src/backend
 
 # Create necessary directories and set permissions
-RUN mkdir -p /data/db /var/log/{nginx,mongodb} /var/lib/nginx \
-    && chown -R mongodb:mongodb /data/db /var/log/mongodb \
+RUN mkdir -p /data/db /var/log/{nginx,mongodb} /var/lib/nginx /var/run/mongodb \
+    && chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb \
     && chown -R www-data:www-data /var/log/nginx /var/lib/nginx \
     && rm -rf /root/.npm /tmp/*
 
