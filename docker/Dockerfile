@@ -23,7 +23,7 @@ RUN apk add --no-cache python3 make g++ \
     && rm -rf /root/.npm
 
 # Stage 4: Final production image
-FROM ubuntu:focal-slim AS base
+FROM ubuntu:focal AS base
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -32,35 +32,36 @@ ENV DEBIAN_FRONTEND=noninteractive \
     MONGO_URL=mongodb://localhost:27017/termix \
     MONGODB_DATA_DIR=/data/db \
     MONGODB_LOG_DIR=/var/log/mongodb \
-    NODE_ENV=production
+    NODE_ENV=production \
+    PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # Create users first
 RUN groupadd -r mongodb && useradd -r -g mongodb mongodb \
     && groupadd -r node && useradd -r -g node -m node
 
-# Install all dependencies in one layer
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        wget gnupg ca-certificates gosu \
-        nginx supervisor && \
-    # Add MongoDB repo
-    wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
-    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
-    # Add Node.js repo
-    wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
-    # Install Node.js and MongoDB (minimal install)
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Install all dependencies in one layer and clean up in the same layer to keep the image small
+RUN set -ex \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        gnupg \
+        gosu \
+        nginx-light \
+        supervisor \
+        wget \
+    && wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - \
+    && echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list \
+    && wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
         nodejs \
         mongodb-org-server=${MONGO_VERSION} \
-        mongodb-org-shell=${MONGO_VERSION} && \
-    # Cleanup
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/* && \
-    # Create necessary directories
-    mkdir -p /data/db /var/log/{nginx,mongodb} /var/lib/nginx /var/run/mongodb && \
-    chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb && \
-    chown -R www-data:www-data /var/log/nginx /var/lib/nginx
+        mongodb-org-shell=${MONGO_VERSION} \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/* \
+    && mkdir -p /data/db /var/log/{nginx,mongodb} /var/lib/nginx /var/run/mongodb \
+    && chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb \
+    && chown -R www-data:www-data /var/log/nginx /var/lib/nginx
 
 # Configure nginx and copy frontend
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -70,7 +71,8 @@ RUN chown -R www-data:www-data /usr/share/nginx/html
 # Setup backend with pre-built bcrypt
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production --ignore-scripts
+RUN npm ci --only=production --ignore-scripts \
+    && rm -rf /root/.npm /tmp/*
 COPY --from=bcrypt-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
 COPY --from=backend-builder /app/src/backend ./src/backend
 RUN chown -R node:node /app
