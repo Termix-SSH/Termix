@@ -3,7 +3,7 @@ FROM node:18-alpine AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm ci && npm cache clean --force
 COPY . .
 RUN npm run build
 
@@ -12,7 +12,7 @@ FROM node:18-alpine AS backend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production
+    npm ci --only=production && npm cache clean --force
 COPY src/backend/ ./src/backend/
 
 # Stage 3: Build bcrypt for Ubuntu
@@ -35,8 +35,9 @@ RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/loc
     apt-get update && \
     apt-get install -y nodejs && \
     npm ci --only=production bcrypt && \
+    npm cache clean --force && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/*
 
 # Final stage
 FROM ubuntu:focal
@@ -70,7 +71,7 @@ RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/loc
         mongodb-org-server=${MONGO_VERSION} \
         mongodb-org-shell=${MONGO_VERSION} && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /root/.npm /tmp/* && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* && \
     mkdir -p /data/db /var/log/mongodb /var/run/mongodb && \
     chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb
 
@@ -84,7 +85,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --only=production --ignore-scripts && \
-    rm -rf /root/.npm /tmp/*
+    npm cache clean --force && \
+    rm -rf /tmp/*
 COPY --from=bcrypt-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
 COPY --from=backend-builder /app/src/backend ./src/backend
 RUN chown -R node:node /app
