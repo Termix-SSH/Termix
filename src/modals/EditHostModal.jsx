@@ -28,6 +28,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
     const [showPassword, setShowPassword] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassphrase, setShowPassphrase] = useState(false);
 
     useEffect(() => {
         if (!isHidden && hostConfig) {
@@ -48,14 +49,47 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
-        if (file.name.endsWith('.rsa') || file.name.endsWith('.key') || file.name.endsWith('.pem') || file.name.endsWith('.der') || file.name.endsWith('.p8') || file.name.endsWith('.ssh') || file.name.endsWith('.pub')) {
+        const supportedKeyTypes = {
+            'id_rsa': 'RSA',
+            'id_ed25519': 'ED25519',
+            'id_ecdsa': 'ECDSA',
+            'id_dsa': 'DSA',
+            '.pem': 'PEM',
+            '.key': 'KEY',
+            '.ppk': 'PPK'
+        };
+
+        const isValidKeyFile = Object.keys(supportedKeyTypes).some(ext => 
+            file.name.toLowerCase().includes(ext) || file.name.endsWith('.pub')
+        );
+
+        if (isValidKeyFile) {
             const reader = new FileReader();
             reader.onload = (evt) => {
-                setForm((prev) => ({ ...prev, rsaKey: evt.target.result }));
+                const keyContent = evt.target.result;
+                let keyType = 'UNKNOWN';
+                
+                // Detect key type from content
+                if (keyContent.includes('BEGIN RSA PRIVATE KEY') || keyContent.includes('BEGIN RSA PUBLIC KEY')) {
+                    keyType = 'RSA';
+                } else if (keyContent.includes('BEGIN OPENSSH PRIVATE KEY') && keyContent.includes('ssh-ed25519')) {
+                    keyType = 'ED25519';
+                } else if (keyContent.includes('BEGIN EC PRIVATE KEY') || keyContent.includes('BEGIN EC PUBLIC KEY')) {
+                    keyType = 'ECDSA';
+                } else if (keyContent.includes('BEGIN DSA PRIVATE KEY')) {
+                    keyType = 'DSA';
+                }
+
+                setForm((prev) => ({ 
+                    ...prev, 
+                    privateKey: keyContent,
+                    keyType: keyType,
+                    authMethod: 'key'
+                }));
             };
             reader.readAsText(file);
         } else {
-            alert('Please upload a valid RSA private key file.');
+            alert('Please upload a valid SSH key file (RSA, ED25519, ECDSA, DSA, PEM, or PPK format).');
         }
     };
 
@@ -281,6 +315,7 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                                                     <Option value="Select Auth" disabled>Select Auth</Option>
                                                     <Option value="password">Password</Option>
                                                     <Option value="rsaKey">Public Key</Option>
+                                                    <Option value="key">SSH Key</Option>
                                                 </Select>
                                             </FormControl>
                                         )}
@@ -351,6 +386,64 @@ const EditHostModal = ({ isHidden, form, setForm, handleEditHost, setIsEditHostH
                                                     </FormLabel>
                                                 )}
                                             </FormControl>
+                                        )}
+
+                                        {form.authMethod === 'key' && form.storePassword && (
+                                            <Stack spacing={2}>
+                                                <FormControl error={!form.privateKey && !hostConfig?.privateKey}>
+                                                    <FormLabel>SSH Key</FormLabel>
+                                                    <Button
+                                                        component="label"
+                                                        sx={{
+                                                            backgroundColor: theme.palette.general.primary,
+                                                            color: theme.palette.text.primary,
+                                                            width: '100%',
+                                                            display: 'flex',
+                                                            justifyContent: 'center',
+                                                            alignItems: 'center',
+                                                            height: '40px',
+                                                            '&:hover': {
+                                                                backgroundColor: theme.palette.general.disabled,
+                                                            },
+                                                        }}
+                                                    >
+                                                        {form.privateKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
+                                                        <Input
+                                                            type="file"
+                                                            onChange={handleFileChange}
+                                                            sx={{ display: 'none' }}
+                                                        />
+                                                    </Button>
+                                                    {hostConfig?.privateKey && !form.privateKey && (
+                                                        <FormLabel 
+                                                            sx={{ 
+                                                                color: theme.palette.text.secondary,
+                                                                fontSize: '0.875rem',
+                                                                mt: 1,
+                                                                display: 'block',
+                                                                textAlign: 'center'
+                                                            }}
+                                                        >
+                                                            Existing {hostConfig.keyType || 'SSH'} key detected. Upload to replace.
+                                                        </FormLabel>
+                                                    )}
+                                                </FormControl>
+                                                {form.privateKey && (
+                                                    <FormControl>
+                                                        <FormLabel>Key Passphrase (optional)</FormLabel>
+                                                        <Input
+                                                            type={showPassphrase ? "text" : "password"}
+                                                            value={form.passphrase || ''}
+                                                            onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
+                                                            endDecorator={
+                                                                <IconButton onClick={() => setShowPassphrase(!showPassphrase)}>
+                                                                    {showPassphrase ? <VisibilityOff /> : <Visibility />}
+                                                                </IconButton>
+                                                            }
+                                                        />
+                                                    </FormControl>
+                                                )}
+                                            </Stack>
                                         )}
                                     </Stack>
                                 </TabPanel>

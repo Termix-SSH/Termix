@@ -24,14 +24,23 @@ RUN apk add --no-cache python3 make g++ \
 # Stage 4: Final production image
 FROM mongo:4.4-focal
 # Install Node.js and nginx, cleanup in the same layer
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx \
-    curl \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /var/cache/apt/*
+RUN set -ex; \
+    # Add MongoDB repository key
+    curl -fsSL https://pgp.mongodb.com/server-4.4.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-archive-keyring.gpg; \
+    echo "deb [signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list; \
+    # Update and install packages
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        nginx \
+        curl \
+        gnupg && \
+    # Install Node.js
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    # Cleanup
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /var/cache/apt/*
 
 # Configure nginx and copy frontend
 COPY docker/nginx.conf /etc/nginx/nginx.conf

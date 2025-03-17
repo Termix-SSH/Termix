@@ -26,20 +26,52 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
     const [showPassword, setShowPassword] = useState(false);
+    const [showPassphrase, setShowPassphrase] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            if (file.name.endsWith('.key') || file.name.endsWith('.pem') || file.name.endsWith('.pub')) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    setForm({ ...form, rsaKey: event.target.result });
-                };
-                reader.readAsText(file);
-            } else {
-                alert("Please upload a valid public key file.");
-            }
+        const supportedKeyTypes = {
+            'id_rsa': 'RSA',
+            'id_ed25519': 'ED25519',
+            'id_ecdsa': 'ECDSA',
+            'id_dsa': 'DSA',
+            '.pem': 'PEM',
+            '.key': 'KEY',
+            '.ppk': 'PPK'
+        };
+
+        const isValidKeyFile = Object.keys(supportedKeyTypes).some(ext => 
+            file.name.toLowerCase().includes(ext) || file.name.endsWith('.pub')
+        );
+
+        if (isValidKeyFile) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const keyContent = event.target.result;
+                let keyType = 'UNKNOWN';
+                
+                // Detect key type from content
+                if (keyContent.includes('BEGIN RSA PRIVATE KEY') || keyContent.includes('BEGIN RSA PUBLIC KEY')) {
+                    keyType = 'RSA';
+                } else if (keyContent.includes('BEGIN OPENSSH PRIVATE KEY') && keyContent.includes('ssh-ed25519')) {
+                    keyType = 'ED25519';
+                } else if (keyContent.includes('BEGIN EC PRIVATE KEY') || keyContent.includes('BEGIN EC PUBLIC KEY')) {
+                    keyType = 'ECDSA';
+                } else if (keyContent.includes('BEGIN DSA PRIVATE KEY')) {
+                    keyType = 'DSA';
+                }
+
+                setForm({ 
+                    ...form, 
+                    privateKey: keyContent,
+                    keyType: keyType,
+                    authMethod: 'key'
+                });
+            };
+            reader.readAsText(file);
+        } else {
+            alert('Please upload a valid SSH key file (RSA, ED25519, ECDSA, DSA, PEM, or PPK format).');
         }
     };
 
@@ -48,7 +80,9 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
             ...prev,
             authMethod: newMethod,
             password: "",
-            rsaKey: ""
+            privateKey: "",
+            keyType: "",
+            passphrase: ""
         }));
     };
 
@@ -59,7 +93,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
 
         if (form.rememberHost) {
             if (form.authMethod === 'Select Auth') return false;
-            if (form.authMethod === 'rsaKey' && !form.rsaKey) return false;
+            if (form.authMethod === 'key' && !form.privateKey) return false;
             if (form.authMethod === 'password' && !form.password) return false;
         }
 
@@ -81,7 +115,8 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                 ip: '',
                 user: '',
                 password: '',
-                rsaKey: '',
+                privateKey: '',
+                keyType: '',
                 port: 22,
                 authMethod: 'Select Auth',
                 rememberHost: false,
@@ -241,7 +276,9 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                     ...((!e.target.checked) && {
                                                         authMethod: 'Select Auth',
                                                         password: '',
-                                                        rsaKey: '',
+                                                        privateKey: '',
+                                                        keyType: '',
+                                                        passphrase: '',
                                                         storePassword: true
                                                     })
                                                 })}
@@ -280,7 +317,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                     >
                                                         <Option value="Select Auth" disabled>Select Auth</Option>
                                                         <Option value="password">Password</Option>
-                                                        <Option value="rsaKey">Public Key</Option>
+                                                        <Option value="key">SSH Key</Option>
                                                     </Select>
                                                 </FormControl>
 
@@ -311,32 +348,49 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                     </FormControl>
                                                 )}
 
-                                                {form.authMethod === 'rsaKey' && (
-                                                    <FormControl error={!form.rsaKey}>
-                                                        <FormLabel>Public Key</FormLabel>
-                                                        <Button
-                                                            component="label"
-                                                            sx={{
-                                                                backgroundColor: theme.palette.general.primary,
-                                                                color: theme.palette.text.primary,
-                                                                width: '100%',
-                                                                display: 'flex',
-                                                                justifyContent: 'center',
-                                                                alignItems: 'center',
-                                                                height: '40px',
-                                                                '&:hover': {
-                                                                    backgroundColor: theme.palette.general.disabled,
-                                                                },
-                                                            }}
-                                                        >
-                                                            {form.rsaKey ? 'Change Public Key File' : 'Upload Public Key File'}
-                                                            <Input
-                                                                type="file"
-                                                                onChange={handleFileChange}
-                                                                sx={{ display: 'none' }}
-                                                            />
-                                                        </Button>
-                                                    </FormControl>
+                                                {form.authMethod === 'key' && (
+                                                    <Stack spacing={2}>
+                                                        <FormControl error={!form.privateKey}>
+                                                            <FormLabel>SSH Key</FormLabel>
+                                                            <Button
+                                                                component="label"
+                                                                sx={{
+                                                                    backgroundColor: theme.palette.general.primary,
+                                                                    color: theme.palette.text.primary,
+                                                                    width: '100%',
+                                                                    display: 'flex',
+                                                                    justifyContent: 'center',
+                                                                    alignItems: 'center',
+                                                                    height: '40px',
+                                                                    '&:hover': {
+                                                                        backgroundColor: theme.palette.general.disabled,
+                                                                    },
+                                                                }}
+                                                            >
+                                                                {form.privateKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
+                                                                <Input
+                                                                    type="file"
+                                                                    onChange={handleFileChange}
+                                                                    sx={{ display: 'none' }}
+                                                                />
+                                                            </Button>
+                                                        </FormControl>
+                                                        {form.privateKey && (
+                                                            <FormControl>
+                                                                <FormLabel>Key Passphrase (optional)</FormLabel>
+                                                                <Input
+                                                                    type={showPassphrase ? "text" : "password"}
+                                                                    value={form.passphrase || ''}
+                                                                    onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
+                                                                    endDecorator={
+                                                                        <IconButton onClick={() => setShowPassphrase(!showPassphrase)}>
+                                                                            {showPassphrase ? <VisibilityOff /> : <Visibility />}
+                                                                        </IconButton>
+                                                                    }
+                                                                />
+                                                            </FormControl>
+                                                        )}
+                                                    </Stack>
                                                 )}
                                             </>
                                         )}
@@ -380,7 +434,8 @@ AddHostModal.propTypes = {
         ip: PropTypes.string.isRequired,
         user: PropTypes.string.isRequired,
         password: PropTypes.string,
-        rsaKey: PropTypes.string,
+        privateKey: PropTypes.string,
+        keyType: PropTypes.string,
         port: PropTypes.number.isRequired,
         authMethod: PropTypes.string.isRequired,
         rememberHost: PropTypes.bool,

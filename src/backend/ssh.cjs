@@ -32,7 +32,7 @@ io.on("connection", (socket) => {
             return;
         }
 
-        if (!hostConfig.password && !hostConfig.rsaKey) {
+        if (!hostConfig.password && !hostConfig.privateKey) {
             logger.error("No authentication provided");
             socket.emit("error", "Authentication required");
             return;
@@ -42,11 +42,12 @@ io.on("connection", (socket) => {
             ip: hostConfig.ip,
             port: hostConfig.port,
             user: hostConfig.user,
-            authType: hostConfig.password ? 'password' : 'public key',
+            authType: hostConfig.password ? 'password' : 'key',
+            keyType: hostConfig.keyType
         };
 
         logger.info("Connecting with config:", safeHostConfig);
-        const { ip, port, user, password, rsaKey } = hostConfig;
+        const { ip, port, user, password, privateKey, passphrase } = hostConfig;
 
         const conn = new SSHClient();
         conn
@@ -98,7 +99,30 @@ io.on("connection", (socket) => {
                 port: port,
                 username: user,
                 password: password,
-                privateKey: rsaKey ? Buffer.from(rsaKey) : undefined,
+                privateKey: privateKey ? Buffer.from(privateKey) : undefined,
+                passphrase: passphrase,
+                tryKeyboard: true,
+                algorithms: {
+                    kex: [
+                        'curve25519-sha256',
+                        'curve25519-sha256@libssh.org',
+                        'ecdh-sha2-nistp256',
+                        'ecdh-sha2-nistp384',
+                        'ecdh-sha2-nistp521',
+                        'diffie-hellman-group-exchange-sha256',
+                        'diffie-hellman-group14-sha256',
+                        'diffie-hellman-group14-sha1'
+                    ],
+                    serverHostKey: [
+                        'ssh-ed25519',
+                        'ecdsa-sha2-nistp256',
+                        'ecdsa-sha2-nistp384',
+                        'ecdsa-sha2-nistp521',
+                        'rsa-sha2-512',
+                        'rsa-sha2-256',
+                        'ssh-rsa'
+                    ]
+                }
             });
     });
 
