@@ -1,22 +1,45 @@
 #!/bin/bash
-set -ex
+set -e
 
-# Create required directories
-mkdir -p /var/run/{mongodb,supervisor} /data/db /var/log/{mongodb,supervisor,nginx} /var/lib/nginx
-chown -R mongodb:mongodb /var/run/mongodb /data/db /var/log/mongodb
-chown -R www-data:www-data /var/log/nginx /var/lib/nginx /usr/share/nginx/html
+# Create required directories and set permissions
+mkdir -p /data/db /var/log/mongodb /var/run/mongodb
+chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb
 chown -R node:node /app
 
-# Ensure MongoDB data directory has correct permissions
-chmod 755 /data/db
+# Start MongoDB
+echo "Starting MongoDB..."
+mongod --dbpath /data/db --logpath /var/log/mongodb/mongodb.log --bind_ip 0.0.0.0 &
+MONGO_PID=$!
 
-# Check if mongod is available
-which mongod || echo "mongod not found in PATH: $PATH"
+# Wait for MongoDB to be ready
+echo "Waiting for MongoDB to start..."
+until mongo --eval "print(\"waited for connection\")" > /dev/null 2>&1; do
+    sleep 0.5
+    if ! kill -0 $MONGO_PID 2>/dev/null; then
+        echo "MongoDB failed to start. Checking logs:"
+        cat /var/log/mongodb/mongodb.log
+        exit 1
+    fi
+done
+echo "MongoDB started successfully"
 
-# Start supervisor with proper environment
+# Start nginx
+echo "Starting nginx..."
+nginx
+
+# Start backend services
+echo "Starting backend services..."
+cd /app
 export NODE_ENV=production
 export MONGO_URL=mongodb://localhost:27017/termix
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Start all services using supervisor
-exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
+# Start SSH service
+su -s /bin/bash node -c "node src/backend/ssh.cjs" &
+
+# Start database service
+su -s /bin/bash node -c "node src/backend/database.cjs" &
+
+echo "All services started"
+
+# Keep container running and show logs
+tail -f /var/log/mongodb/mongodb.log

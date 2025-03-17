@@ -13,7 +13,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: laptop1
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -81,7 +81,6 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
           outputs: type=registry,compression=zstd,compression-level=19
 
-      # Temp fix for https://github.com/docker/build-push-action/issues/252
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
