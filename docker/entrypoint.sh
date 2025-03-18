@@ -18,7 +18,7 @@ check_mongo_version() {
         
         # First, start MongoDB 5.0 to set compatibility version
         echo "Starting MongoDB 5.0 to set compatibility version..."
-        MONGODB_VERSION=5.0 gosu mongodb mongod --dbpath $MONGODB_DATA_DIR --port 27017 --bind_ip 127.0.0.1 &
+        gosu mongodb /usr/bin/mongod --dbpath $MONGODB_DATA_DIR --port 27017 --bind_ip 127.0.0.1 --config /etc/mongod.conf &
         MONGO_PID=$!
         
         # Wait for MongoDB 5.0 to start
@@ -52,9 +52,9 @@ check_mongo_version() {
             sleep 1
         done
         
-        # Run repair
-        echo "Running repair..."
-        gosu mongodb mongod --dbpath $MONGODB_DATA_DIR --repair
+        # Run repair with MongoDB 4.4
+        echo "Running repair with MongoDB 4.4..."
+        gosu mongodb /usr/bin/mongod --dbpath $MONGODB_DATA_DIR --repair
         
         return 0
     fi
@@ -82,9 +82,9 @@ if [ $MIGRATION_ATTEMPT -gt $MAX_MIGRATION_ATTEMPTS ]; then
     exit 1
 fi
 
-# Start MongoDB normally
-echo "Starting MongoDB..."
-gosu mongodb mongod --dbpath $MONGODB_DATA_DIR --logpath $MONGODB_LOG_DIR/mongodb.log --bind_ip 0.0.0.0 &
+# Start MongoDB 4.4 normally
+echo "Starting MongoDB 4.4..."
+gosu mongodb /usr/bin/mongod --dbpath $MONGODB_DATA_DIR --logpath $MONGODB_LOG_DIR/mongodb.log --bind_ip 0.0.0.0 &
 MONGO_PID=$!
 
 # Wait for MongoDB to be ready

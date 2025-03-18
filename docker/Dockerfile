@@ -63,14 +63,21 @@ RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/loc
         gosu \
         nginx-light \
         wget && \
+    # Add MongoDB 4.4 repository
     wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
     echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
+    # Add MongoDB 5.0 repository
+    wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - && \
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-5.0.list && \
+    # Add NodeJS repository
     wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get update && \
+    # Install MongoDB 4.4 and 5.0 packages
     apt-get install -y --no-install-recommends \
         nodejs \
         mongodb-org-server=${MONGO_VERSION} \
-        mongodb-org-shell=${MONGO_VERSION} && \
+        mongodb-org-shell=${MONGO_VERSION} \
+        mongodb-org-server=5.0.21 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* && \
     mkdir -p /data/db /var/log/mongodb /var/run/mongodb && \
