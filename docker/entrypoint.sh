@@ -16,46 +16,47 @@ check_mongo_version() {
         rm -f /tmp/mongodb-27017.sock
         rm -f /data/db/mongod.lock
         
-        # Run repair first
-        echo "Running initial repair..."
-        gosu mongodb mongod --dbpath $MONGODB_DATA_DIR --repair
-        
-        # Start MongoDB in standalone mode for version check
-        echo "Starting MongoDB for version check..."
-        gosu mongodb mongod --dbpath $MONGODB_DATA_DIR --port 27017 --bind_ip 127.0.0.1 &
+        # First, start MongoDB 5.0 to set compatibility version
+        echo "Starting MongoDB 5.0 to set compatibility version..."
+        MONGODB_VERSION=5.0 gosu mongodb mongod --dbpath $MONGODB_DATA_DIR --port 27017 --bind_ip 127.0.0.1 &
         MONGO_PID=$!
         
-        # Wait for MongoDB to start
-        echo "Waiting for MongoDB to start..."
+        # Wait for MongoDB 5.0 to start
+        echo "Waiting for MongoDB 5.0 to start..."
         MAX_TRIES=30
         COUNT=0
         while ! gosu mongodb mongo --quiet --eval "db.version()" > /dev/null 2>&1; do
             sleep 2
             COUNT=$((COUNT + 1))
             if [ $COUNT -ge $MAX_TRIES ]; then
-                echo "Failed to start MongoDB after $MAX_TRIES attempts"
+                echo "Failed to start MongoDB 5.0 after $MAX_TRIES attempts"
                 kill -9 $MONGO_PID 2>/dev/null || true
                 return 1
             fi
         done
         
-        # Try to set compatibility version
-        echo "Attempting to set feature compatibility version..."
-        if gosu mongodb mongo --quiet --eval 'db.adminCommand({setFeatureCompatibilityVersion: "4.4"})'; then
-            echo "Successfully set feature compatibility version to 4.4"
-            kill $MONGO_PID
-            while kill -0 $MONGO_PID 2>/dev/null; do
-                sleep 1
-            done
-            return 0
-        else
+        # Set compatibility version to 4.4
+        echo "Setting feature compatibility version to 4.4..."
+        if ! gosu mongodb mongo --quiet --eval 'db.adminCommand({setFeatureCompatibilityVersion: "4.4"})'; then
             echo "Failed to set feature compatibility version"
-            kill $MONGO_PID
-            while kill -0 $MONGO_PID 2>/dev/null; do
-                sleep 1
-            done
+            kill -9 $MONGO_PID 2>/dev/null || true
             return 1
         fi
+        
+        # Shutdown MongoDB 5.0 cleanly
+        echo "Shutting down MongoDB 5.0..."
+        gosu mongodb mongo --quiet --eval "db.adminCommand({shutdown: 1})" || kill $MONGO_PID
+        
+        # Wait for process to end
+        while kill -0 $MONGO_PID 2>/dev/null; do
+            sleep 1
+        done
+        
+        # Run repair
+        echo "Running repair..."
+        gosu mongodb mongod --dbpath $MONGODB_DATA_DIR --repair
+        
+        return 0
     fi
     return 0
 }
