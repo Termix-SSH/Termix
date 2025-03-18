@@ -24,20 +24,7 @@ import { useState } from 'react';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-const AddHostModal = ({ isHidden, setIsAddHostHidden, handleAddHost }) => {
-    const [form, setForm] = useState({
-        name: '',
-        folder: '',
-        ip: '',
-        user: '',
-        port: 22,
-        password: '',
-        privateKey: '',
-        keyType: '',
-        passphrase: '',
-        authMethod: 'Select Auth',
-        rememberHost: true
-    });
+const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showPassphrase, setShowPassphrase] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
@@ -100,14 +87,23 @@ const AddHostModal = ({ isHidden, setIsAddHostHidden, handleAddHost }) => {
     };
 
     const isFormValid = () => {
-        if (!form.ip || !form.user || !form.port) return false;
-        const portNum = Number(form.port);
+        const { ip, user, port, authMethod, password, privateKey } = form;
+        
+        // Basic validation for required fields
+        if (!ip?.trim() || !user?.trim() || !port) return false;
+        
+        // Port validation
+        const portNum = Number(port);
         if (isNaN(portNum) || portNum < 1 || portNum > 65535) return false;
 
+        // If not remembering host, only basic fields are required
+        if (!form.rememberHost) return true;
+
+        // Auth method validation only if remembering host
         if (form.rememberHost) {
-            if (form.authMethod === 'Select Auth') return false;
-            if (form.authMethod === 'key' && !form.privateKey) return false;
-            if (form.authMethod === 'password' && !form.password) return false;
+            if (authMethod === 'Select Auth') return false;
+            if (authMethod === 'password' && !password?.trim()) return false;
+            if (authMethod === 'key' && !privateKey?.trim()) return false;
         }
 
         return true;
@@ -115,28 +111,11 @@ const AddHostModal = ({ isHidden, setIsAddHostHidden, handleAddHost }) => {
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        if (isFormValid()) {
-            if (!form.rememberHost) {
-                handleAddHost();
-            } else {
-                handleAddHost();
-            }
-
-            setForm({
-                name: '',
-                folder: '',
-                ip: '',
-                user: '',
-                password: '',
-                privateKey: '',
-                keyType: '',
-                port: 22,
-                authMethod: 'Select Auth',
-                rememberHost: false,
-                storePassword: true,
-            });
-            setIsAddHostHidden(true);
+        if (!form.ip?.trim() || !form.user?.trim() || !form.port) {
+            alert("Please fill out all required fields (IP, User, Port).");
+            return;
         }
+        handleAddHost();
     };
 
     return (
@@ -146,15 +125,18 @@ const AddHostModal = ({ isHidden, setIsAddHostHidden, handleAddHost }) => {
                        display: 'flex',
                        justifyContent: 'center',
                        alignItems: 'center',
+                       backdropFilter: 'blur(5px)',
+                       backgroundColor: 'rgba(0, 0, 0, 0.2)',
                    }}
             >
                 <ModalDialog
                     layout="center"
+                    variant="outlined"
                     sx={{
                         backgroundColor: theme.palette.general.tertiary,
                         borderColor: theme.palette.general.secondary,
                         color: theme.palette.text.primary,
-                        padding: 3,
+                        padding: 0,
                         borderRadius: 10,
                         maxWidth: '500px',
                         width: '100%',
@@ -164,137 +146,239 @@ const AddHostModal = ({ isHidden, setIsAddHostHidden, handleAddHost }) => {
                         mx: 2,
                     }}
                 >
-                    <DialogTitle sx={{ mb: 2 }}>Add Host</DialogTitle>
-                    <DialogContent>
-                        <form onSubmit={handleSubmit}>
-                            <Tabs 
-                                value={activeTab} 
-                                onChange={(e, val) => setActiveTab(val)}
-                                sx={{ 
-                                    backgroundColor: theme.palette.general.disabled,
-                                    borderRadius: '8px',
-                                    padding: '8px',
-                                    marginBottom: '16px',
-                                    width: '100%',
-                                }}
-                            >
-                                <TabList
-                                    sx={{
-                                        width: '100%',
-                                        gap: 0,
-                                        mb: 2,
-                                        '& button': {
-                                            flex: 1,
-                                            bgcolor: 'transparent',
-                                            color: theme.palette.text.secondary,
-                                            '&:hover': {
-                                                bgcolor: 'rgba(255, 255, 255, 0.1)',
-                                            },
-                                            '&.Mui-selected': {
-                                                bgcolor: theme.palette.general.primary,
-                                                color: theme.palette.text.primary,
-                                                '&:hover': {
-                                                    bgcolor: theme.palette.general.primary,
-                                                },
-                                            },
+                    <Tabs 
+                        value={activeTab} 
+                        onChange={(e, val) => setActiveTab(val)}
+                        sx={{ 
+                            width: '100%',
+                            mb: 0,
+                            backgroundColor: theme.palette.general.tertiary,
+                        }}
+                    >
+                        <TabList
+                            sx={{
+                                width: '100%',
+                                gap: 0,
+                                borderTopLeftRadius: 10,
+                                borderTopRightRadius: 10,
+                                backgroundColor: theme.palette.general.primary,
+                                '& button': {
+                                    flex: 1,
+                                    bgcolor: 'transparent',
+                                    color: theme.palette.text.secondary,
+                                    '&:hover': {
+                                        bgcolor: theme.palette.general.disabled,
+                                    },
+                                    '&.Mui-selected': {
+                                        bgcolor: theme.palette.general.tertiary,
+                                        color: theme.palette.text.primary,
+                                        '&:hover': {
+                                            bgcolor: theme.palette.general.tertiary,
                                         },
-                                    }}
-                                >
-                                    <Tab>Basic Info</Tab>
-                                    <Tab>Connection</Tab>
-                                    <Tab>Authentication</Tab>
-                                </TabList>
+                                    },
+                                },
+                            }}
+                        >
+                            <Tab sx={{ flex: 1 }}>Basic Info</Tab>
+                            <Tab sx={{ flex: 1 }}>Connection</Tab>
+                            <Tab sx={{ flex: 1 }}>Authentication</Tab>
+                        </TabList>
 
-                                <TabPanel value={0}>
-                                    <Stack spacing={2}>
-                                        <FormControl>
-                                            <FormLabel>Host Name</FormLabel>
-                                            <Input
-                                                value={form.name}
-                                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                                sx={{
-                                                    backgroundColor: theme.palette.general.primary,
+                        <div style={{ padding: '24px', backgroundColor: theme.palette.general.tertiary }}>
+                            <TabPanel value={0}>
+                                <Stack spacing={2}>
+                                    <FormControl>
+                                        <FormLabel>Host Name</FormLabel>
+                                        <Input
+                                            value={form.name}
+                                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormControl>
+                                        <FormLabel>Folder</FormLabel>
+                                        <Input
+                                            value={form.folder || ''}
+                                            onChange={(e) => setForm({ ...form, folder: e.target.value })}
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormControl>
+                                        <FormLabel>Remember Host</FormLabel>
+                                        <Checkbox
+                                            checked={Boolean(form.rememberHost)}
+                                            onChange={(e) => setForm({ 
+                                                ...form, 
+                                                rememberHost: e.target.checked,
+                                            })}
+                                            sx={{
+                                                color: theme.palette.text.primary,
+                                                '&.Mui-checked': {
                                                     color: theme.palette.text.primary,
-                                                }}
-                                            />
-                                        </FormControl>
-                                        <FormControl>
-                                            <FormLabel>Folder</FormLabel>
-                                            <Input
-                                                value={form.folder || ''}
-                                                onChange={(e) => setForm({ ...form, folder: e.target.value })}
-                                                sx={{
-                                                    backgroundColor: theme.palette.general.primary,
-                                                    color: theme.palette.text.primary,
-                                                }}
-                                            />
-                                        </FormControl>
-                                    </Stack>
-                                </TabPanel>
+                                                },
+                                            }}
+                                        />
+                                    </FormControl>
+                                </Stack>
+                            </TabPanel>
 
-                                <TabPanel value={1}>
-                                    <Stack spacing={2}>
-                                        <FormControl error={!form.ip}>
-                                            <FormLabel>Host IP</FormLabel>
-                                            <Input
-                                                value={form.ip}
-                                                onChange={(e) => setForm({ ...form, ip: e.target.value })}
-                                                required
-                                                sx={{
-                                                    backgroundColor: theme.palette.general.primary,
-                                                    color: theme.palette.text.primary,
-                                                }}
-                                            />
-                                        </FormControl>
-                                        <FormControl error={!form.user}>
-                                            <FormLabel>Host User</FormLabel>
-                                            <Input
-                                                value={form.user}
-                                                onChange={(e) => setForm({ ...form, user: e.target.value })}
-                                                required
-                                                sx={{
-                                                    backgroundColor: theme.palette.general.primary,
-                                                    color: theme.palette.text.primary,
-                                                }}
-                                            />
-                                        </FormControl>
-                                        <FormControl error={form.port < 1 || form.port > 65535}>
-                                            <FormLabel>Host Port</FormLabel>
-                                            <Input
-                                                type="number"
-                                                value={form.port}
-                                                onChange={(e) => setForm({ ...form, port: e.target.value })}
-                                                min={1}
-                                                max={65535}
-                                                required
-                                                sx={{
-                                                    backgroundColor: theme.palette.general.primary,
-                                                    color: theme.palette.text.primary,
-                                                }}
-                                            />
-                                        </FormControl>
-                                    </Stack>
-                                </TabPanel>
+                            <TabPanel value={1}>
+                                <Stack spacing={2}>
+                                    <FormControl error={!form.ip}>
+                                        <FormLabel>Host IP</FormLabel>
+                                        <Input
+                                            value={form.ip}
+                                            onChange={(e) => setForm({ ...form, ip: e.target.value })}
+                                            required
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormControl error={!form.user}>
+                                        <FormLabel>Host User</FormLabel>
+                                        <Input
+                                            value={form.user}
+                                            onChange={(e) => setForm({ ...form, user: e.target.value })}
+                                            required
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormControl error={form.port < 1 || form.port > 65535}>
+                                        <FormLabel>Host Port</FormLabel>
+                                        <Input
+                                            type="number"
+                                            value={form.port}
+                                            onChange={(e) => setForm({ ...form, port: e.target.value })}
+                                            min={1}
+                                            max={65535}
+                                            required
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                            }}
+                                        />
+                                    </FormControl>
+                                </Stack>
+                            </TabPanel>
 
-                                <TabPanel value={2}>
-                                    <Stack spacing={2}>
+                            <TabPanel value={2}>
+                                <Stack spacing={2}>
+                                    <FormControl error={!form.authMethod || form.authMethod === 'Select Auth'}>
+                                        <FormLabel>Authentication Method</FormLabel>
+                                        <Select
+                                            value={form.authMethod}
+                                            onChange={(e, val) => handleAuthChange(val)}
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                            }}
+                                        >
+                                            <Option value="Select Auth" disabled>Select Auth</Option>
+                                            <Option value="password">Password</Option>
+                                            <Option value="key">SSH Key</Option>
+                                        </Select>
+                                    </FormControl>
+
+                                    {form.authMethod === 'password' && (
+                                        <FormControl error={!form.password}>
+                                            <FormLabel>Password</FormLabel>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                <Input
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    value={form.password}
+                                                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                                                    sx={{
+                                                        backgroundColor: theme.palette.general.primary,
+                                                        color: theme.palette.text.primary,
+                                                        flex: 1
+                                                    }}
+                                                />
+                                                <IconButton
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    sx={{
+                                                        color: theme.palette.text.primary,
+                                                        marginLeft: 1
+                                                    }}
+                                                >
+                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
+                                            </div>
+                                        </FormControl>
+                                    )}
+
+                                    {form.authMethod === 'key' && (
+                                        <Stack spacing={2}>
+                                            <FormControl error={!form.privateKey}>
+                                                <FormLabel>SSH Key</FormLabel>
+                                                <Button
+                                                    component="label"
+                                                    sx={{
+                                                        backgroundColor: theme.palette.general.primary,
+                                                        color: theme.palette.text.primary,
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        justifyContent: 'center',
+                                                        alignItems: 'center',
+                                                        height: '40px',
+                                                        '&:hover': {
+                                                            backgroundColor: theme.palette.general.disabled,
+                                                        },
+                                                    }}
+                                                >
+                                                    {form.privateKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
+                                                    <Input
+                                                        type="file"
+                                                        onChange={handleFileChange}
+                                                        sx={{ display: 'none' }}
+                                                    />
+                                                </Button>
+                                            </FormControl>
+                                            {form.privateKey && (
+                                                <FormControl>
+                                                    <FormLabel>Key Passphrase (optional)</FormLabel>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Input
+                                                            type={showPassphrase ? "text" : "password"}
+                                                            value={form.passphrase || ''}
+                                                            onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
+                                                            sx={{
+                                                                backgroundColor: theme.palette.general.primary,
+                                                                color: theme.palette.text.primary,
+                                                                flex: 1
+                                                            }}
+                                                        />
+                                                        <IconButton
+                                                            onClick={() => setShowPassphrase(!showPassphrase)}
+                                                            sx={{
+                                                                color: theme.palette.text.primary,
+                                                                marginLeft: 1
+                                                            }}
+                                                        >
+                                                            {showPassphrase ? <VisibilityOff /> : <Visibility />}
+                                                        </IconButton>
+                                                    </div>
+                                                </FormControl>
+                                            )}
+                                        </Stack>
+                                    )}
+
+                                    {form.rememberHost && (
                                         <FormControl>
-                                            <FormLabel>Remember Host</FormLabel>
+                                            <FormLabel>Store Password</FormLabel>
                                             <Checkbox
-                                                checked={form.rememberHost}
-                                                onChange={(e) => setForm({ 
-                                                    ...form, 
-                                                    rememberHost: e.target.checked,
-
-                                                    ...((!e.target.checked) && {
-                                                        authMethod: 'Select Auth',
-                                                        password: '',
-                                                        privateKey: '',
-                                                        keyType: '',
-                                                        passphrase: '',
-                                                        storePassword: true
-                                                    })
-                                                })}
+                                                checked={Boolean(form.storePassword)}
+                                                onChange={(e) => setForm({ ...form, storePassword: e.target.checked })}
                                                 sx={{
                                                     color: theme.palette.text.primary,
                                                     '&.Mui-checked': {
@@ -303,147 +387,31 @@ const AddHostModal = ({ isHidden, setIsAddHostHidden, handleAddHost }) => {
                                                 }}
                                             />
                                         </FormControl>
-                                        {form.rememberHost && (
-                                            <>
-                                                <FormControl>
-                                                    <FormLabel>Store Password</FormLabel>
-                                                    <Checkbox
-                                                        checked={form.storePassword}
-                                                        onChange={(e) => setForm({ ...form, storePassword: e.target.checked })}
-                                                        sx={{
-                                                            color: theme.palette.text.primary,
-                                                            '&.Mui-checked': {
-                                                                color: theme.palette.text.primary,
-                                                            },
-                                                        }}
-                                                    />
-                                                </FormControl>
-                                                <FormControl error={!form.authMethod || form.authMethod === 'Select Auth'}>
-                                                    <FormLabel>Authentication Method</FormLabel>
-                                                    <Select
-                                                        value={form.authMethod}
-                                                        onChange={(e, val) => handleAuthChange(val)}
-                                                        sx={{
-                                                            backgroundColor: theme.palette.general.primary,
-                                                            color: theme.palette.text.primary,
-                                                        }}
-                                                    >
-                                                        <Option value="Select Auth" disabled>Select Auth</Option>
-                                                        <Option value="password">Password</Option>
-                                                        <Option value="key">SSH Key</Option>
-                                                    </Select>
-                                                </FormControl>
+                                    )}
+                                </Stack>
+                            </TabPanel>
+                        </div>
 
-                                                {form.authMethod === 'password' && (
-                                                    <FormControl error={!form.password}>
-                                                        <FormLabel>Password</FormLabel>
-                                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                            <Input
-                                                                type={showPassword ? 'text' : 'password'}
-                                                                value={form.password}
-                                                                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                                                sx={{
-                                                                    backgroundColor: theme.palette.general.primary,
-                                                                    color: theme.palette.text.primary,
-                                                                    flex: 1
-                                                                }}
-                                                            />
-                                                            <IconButton
-                                                                onClick={() => setShowPassword(!showPassword)}
-                                                                sx={{
-                                                                    color: theme.palette.text.primary,
-                                                                    marginLeft: 1
-                                                                }}
-                                                            >
-                                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                                            </IconButton>
-                                                        </div>
-                                                    </FormControl>
-                                                )}
-
-                                                {form.authMethod === 'key' && form.rememberHost && (
-                                                    <Stack spacing={2}>
-                                                        <FormControl error={!form.privateKey}>
-                                                            <FormLabel>SSH Key</FormLabel>
-                                                            <Button
-                                                                component="label"
-                                                                sx={{
-                                                                    backgroundColor: theme.palette.general.primary,
-                                                                    color: theme.palette.text.primary,
-                                                                    width: '100%',
-                                                                    display: 'flex',
-                                                                    justifyContent: 'center',
-                                                                    alignItems: 'center',
-                                                                    height: '40px',
-                                                                    '&:hover': {
-                                                                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                                                                    },
-                                                                }}
-                                                            >
-                                                                {form.privateKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
-                                                                <Input
-                                                                    type="file"
-                                                                    onChange={handleFileChange}
-                                                                    sx={{ display: 'none' }}
-                                                                />
-                                                            </Button>
-                                                        </FormControl>
-                                                        {form.privateKey && (
-                                                            <FormControl>
-                                                                <FormLabel>Key Passphrase (optional)</FormLabel>
-                                                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                                    <Input
-                                                                        type={showPassphrase ? "text" : "password"}
-                                                                        value={form.passphrase || ''}
-                                                                        onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
-                                                                        sx={{
-                                                                            backgroundColor: theme.palette.general.primary,
-                                                                            color: theme.palette.text.primary,
-                                                                            flex: 1
-                                                                        }}
-                                                                    />
-                                                                    <IconButton
-                                                                        onClick={() => setShowPassphrase(!showPassphrase)}
-                                                                        sx={{
-                                                                            color: theme.palette.text.primary,
-                                                                            marginLeft: 1
-                                                                        }}
-                                                                    >
-                                                                        {showPassphrase ? <VisibilityOff /> : <Visibility />}
-                                                                    </IconButton>
-                                                                </div>
-                                                            </FormControl>
-                                                        )}
-                                                    </Stack>
-                                                )}
-                                            </>
-                                        )}
-                                    </Stack>
-                                </TabPanel>
-                            </Tabs>
-
-                            <Button
-                                type="submit"
-                                disabled={!isFormValid()}
-                                sx={{
-                                    backgroundColor: theme.palette.general.primary,
-                                    color: theme.palette.text.primary,
-                                    '&:hover': {
-                                        backgroundColor: theme.palette.general.disabled,
-                                    },
-                                    '&:disabled': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        color: 'rgba(255, 255, 255, 0.3)',
-                                    },
-                                    marginTop: 3,
-                                    width: '100%',
-                                    height: '40px',
-                                }}
-                            >
-                                Add Host
-                            </Button>
-                        </form>
-                    </DialogContent>
+                        <Button
+                            onClick={handleSubmit}
+                            sx={{
+                                backgroundColor: theme.palette.general.primary,
+                                color: theme.palette.text.primary,
+                                '&:hover': {
+                                    backgroundColor: theme.palette.general.disabled,
+                                },
+                                '&:disabled': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'rgba(255, 255, 255, 0.3)',
+                                },
+                                marginTop: 1,
+                                width: '100%',
+                                height: '40px',
+                            }}
+                        >
+                            Add Host
+                        </Button>
+                    </Tabs>
                 </ModalDialog>
             </Modal>
         </CssVarsProvider>
@@ -452,8 +420,10 @@ const AddHostModal = ({ isHidden, setIsAddHostHidden, handleAddHost }) => {
 
 AddHostModal.propTypes = {
     isHidden: PropTypes.bool.isRequired,
-    setIsAddHostHidden: PropTypes.func.isRequired,
+    form: PropTypes.object.isRequired,
+    setForm: PropTypes.func.isRequired,
     handleAddHost: PropTypes.func.isRequired,
+    setIsAddHostHidden: PropTypes.func.isRequired,
 };
 
 export default AddHostModal;

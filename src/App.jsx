@@ -222,13 +222,12 @@ function App() {
     }, []);
 
     const handleAddHost = () => {
-        if (addHostForm.ip && addHostForm.user && addHostForm.port) {
-            if (!addHostForm.rememberHost) {
-                connectToHost();
-                setIsAddHostHidden(true);
-                return;
-            }
+        if (!addHostForm.ip?.trim() || !addHostForm.user?.trim() || !addHostForm.port) {
+            alert("Please fill out all required fields (IP, User, Port).");
+            return;
+        }
 
+        if (addHostForm.rememberHost) {
             if (addHostForm.authMethod === 'Select Auth') {
                 alert("Please select an authentication method.");
                 return;
@@ -237,32 +236,41 @@ function App() {
                 setIsNoAuthHidden(false);
                 return;
             }
-            if (addHostForm.authMethod === 'rsaKey' && !addHostForm.rsaKey) {
+            if (addHostForm.authMethod === 'key' && !addHostForm.privateKey) {
                 setIsNoAuthHidden(false);
                 return;
             }
+        }
 
-            connectToHost();
+        connectToHost();
+        if (addHostForm.rememberHost) {
             if (!addHostForm.storePassword) {
                 addHostForm.password = '';
+                addHostForm.privateKey = '';
             }
             handleSaveHost();
-            setIsAddHostHidden(true);
-        } else {
-            alert("Please fill out all required fields (IP, User, Port).");
         }
+        setIsAddHostHidden(true);
     };
 
     const connectToHost = () => {
         const hostConfig = {
             name: addHostForm.name || '',
             folder: addHostForm.folder || '',
-            ip: addHostForm.ip,
-            user: addHostForm.user,
+            ip: addHostForm.ip.trim(),
+            user: addHostForm.user.trim(),
             port: String(addHostForm.port),
-            password: addHostForm.rememberHost && addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
-            rsaKey: addHostForm.rememberHost && addHostForm.authMethod === 'rsaKey' ? addHostForm.rsaKey : undefined,
         };
+
+        if (addHostForm.rememberHost && addHostForm.storePassword) {
+            if (addHostForm.authMethod === 'password') {
+                hostConfig.password = addHostForm.password;
+            } else if (addHostForm.authMethod === 'key') {
+                hostConfig.privateKey = addHostForm.privateKey;
+                hostConfig.keyType = addHostForm.keyType;
+                hostConfig.passphrase = addHostForm.passphrase;
+            }
+        }
 
         const newTerminal = {
             id: nextId,
@@ -273,9 +281,21 @@ function App() {
         setTerminals([...terminals, newTerminal]);
         setActiveTab(nextId);
         setNextId(nextId + 1);
-        setIsAddHostHidden(true);
-        setAddHostForm({ name: "", folder: "", ip: "", user: "", password: "", rsaKey: "", port: 22, authMethod: "Select Auth", rememberHost: false, storePassword: true });
-    }
+        setAddHostForm({
+            name: "",
+            folder: "",
+            ip: "",
+            user: "",
+            password: "",
+            privateKey: "",
+            keyType: "",
+            passphrase: "",
+            port: 22,
+            authMethod: "Select Auth",
+            rememberHost: true,
+            storePassword: true
+        });
+    };
 
     const handleAuthSubmit = (form) => {
         const updatedTerminals = terminals.map((terminal) => {
@@ -327,21 +347,30 @@ function App() {
     }
 
     const handleSaveHost = () => {
-        let hostConfig = {
+        const hostConfig = {
             name: addHostForm.name || addHostForm.ip,
             folder: addHostForm.folder,
-            ip: addHostForm.ip,
-            user: addHostForm.user,
-            password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
-            rsaKey: addHostForm.authMethod === 'rsaKey' ? addHostForm.rsaKey : undefined,
+            ip: addHostForm.ip.trim(),
+            user: addHostForm.user.trim(),
             port: String(addHostForm.port),
+        };
+
+        if (addHostForm.storePassword) {
+            if (addHostForm.authMethod === 'password') {
+                hostConfig.password = addHostForm.password;
+            } else if (addHostForm.authMethod === 'key') {
+                hostConfig.privateKey = addHostForm.privateKey;
+                hostConfig.keyType = addHostForm.keyType;
+                hostConfig.passphrase = addHostForm.passphrase;
+            }
         }
+
         if (userRef.current) {
             userRef.current.saveHost({
                 hostConfig,
             });
         }
-    }
+    };
 
     const handleLoginUser = ({ username, password, sessionToken, onSuccess, onFailure }) => {
         if (userRef.current) {
@@ -472,7 +501,6 @@ function App() {
 
             updateEditHostForm(oldConfig);
         } catch (error) {
-            console.error('Edit failed:', error);
             setErrorMessage(`Edit failed: ${error}`);
             setIsErrorHidden(false);
             setIsEditing(false);
@@ -658,10 +686,10 @@ function App() {
                         )}
                         <NoAuthenticationModal
                             isHidden={isNoAuthHidden}
+                            setIsHidden={setIsNoAuthHidden}
                             form={authForm}
                             setForm={setAuthForm}
-                            setIsNoAuthHidden={setIsNoAuthHidden}
-                            handleAuthSubmit={handleAuthSubmit}
+                            onAuthenticate={handleAuthSubmit}
                         />
                     </div>
 
@@ -681,7 +709,7 @@ function App() {
                                 setForm={setEditHostForm}
                                 handleEditHost={handleEditHost}
                                 setIsEditHostHidden={setIsEditHostHidden}
-                                hostConfig={currentHostConfig}
+                                hostConfig={currentHostConfig || {}}
                             />
                             <ProfileModal
                                 isHidden={isProfileHidden}

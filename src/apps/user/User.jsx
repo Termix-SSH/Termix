@@ -222,7 +222,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         if (!currentUser.current) return onFailure("Not authenticated");
 
         try {
-            console.log('Editing host with configs:', { oldHostConfig, newHostConfig });
             const response = await new Promise((resolve) => {
                 socketRef.current.emit("editHost", {
                     userId: currentUser.current.id,
