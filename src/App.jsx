@@ -379,9 +379,18 @@ function App() {
         }
     };
 
-    const handleGuestLogin = () => {
+    const handleGuestLogin = async ({ onSuccess, onFailure }) => {
         if (userRef.current) {
-            userRef.current.loginAsGuest();
+            try {
+                await userRef.current.loginAsGuest();
+                setIsLoginUserHidden(true);
+                setIsLoggingIn(false);
+                if (onSuccess) onSuccess();
+            } catch (error) {
+                setIsLoginUserHidden(false);
+                setIsLoggingIn(false);
+                if (onFailure) onFailure(error);
+            }
         }
     }
 

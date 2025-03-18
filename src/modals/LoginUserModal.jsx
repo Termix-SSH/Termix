@@ -8,21 +8,42 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, handleGuestLogin, setIsLoginUserHidden, setIsCreateUserHidden }) => {
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const isFormValid = () => {
         if (!form.username || !form.password) return false;
         return true;
     };
 
-    const handleLogin = () => {
-        handleLoginUser({
-            ...form,
-        });
+    const handleLogin = async () => {
+        setIsLoading(true);
+        try {
+            await handleLoginUser({
+                ...form,
+                onSuccess: () => setIsLoading(false),
+                onFailure: () => setIsLoading(false)
+            });
+        } catch (error) {
+            setIsLoading(false);
+        }
+    };
+
+    const handleGuest = async () => {
+        setIsLoading(true);
+        try {
+            await handleGuestLogin({
+                onSuccess: () => setIsLoading(false),
+                onFailure: () => setIsLoading(false)
+            });
+        } catch (error) {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
         if (isHidden) {
             setForm({ username: '', password: '' });
+            setIsLoading(false);
         }
     }, [isHidden]);
 
@@ -51,18 +72,23 @@ const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, handleGuestL
                         <form
                             onSubmit={(event) => {
                                 event.preventDefault();
-                                if (isFormValid()) handleLogin();
+                                if (isFormValid() && !isLoading) handleLogin();
                             }}
                         >
                             <Stack spacing={2} sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
                                 <FormControl>
                                     <FormLabel>Username</FormLabel>
                                     <Input
+                                        disabled={isLoading}
                                         value={form.username}
                                         onChange={(event) => setForm({ ...form, username: event.target.value })}
                                         sx={{
                                             backgroundColor: theme.palette.general.primary,
                                             color: theme.palette.text.primary,
+                                            '&:disabled': {
+                                                opacity: 0.5,
+                                                backgroundColor: theme.palette.general.primary,
+                                            },
                                         }}
                                     />
                                 </FormControl>
@@ -70,6 +96,7 @@ const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, handleGuestL
                                     <FormLabel>Password</FormLabel>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <Input
+                                            disabled={isLoading}
                                             type={showPassword ? 'text' : 'password'}
                                             value={form.password}
                                             onChange={(event) => setForm({ ...form, password: event.target.value })}
@@ -77,13 +104,21 @@ const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, handleGuestL
                                                 backgroundColor: theme.palette.general.primary,
                                                 color: theme.palette.text.primary,
                                                 flex: 1,
+                                                '&:disabled': {
+                                                    opacity: 0.5,
+                                                    backgroundColor: theme.palette.general.primary,
+                                                },
                                             }}
                                         />
                                         <IconButton
+                                            disabled={isLoading}
                                             onClick={() => setShowPassword(!showPassword)}
                                             sx={{
                                                 color: theme.palette.text.primary,
                                                 marginLeft: 1,
+                                                '&:disabled': {
+                                                    opacity: 0.5,
+                                                },
                                             }}
                                         >
                                             {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -92,17 +127,22 @@ const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, handleGuestL
                                 </FormControl>
                                 <Button
                                     type="submit"
-                                    disabled={!isFormValid()}
+                                    disabled={!isFormValid() || isLoading}
                                     sx={{
                                         backgroundColor: theme.palette.general.primary,
                                         '&:hover': {
                                             backgroundColor: theme.palette.general.disabled,
                                         },
+                                        '&:disabled': {
+                                            opacity: 0.5,
+                                            backgroundColor: theme.palette.general.primary,
+                                        },
                                     }}
                                 >
-                                    Login
+                                    {isLoading ? "Logging in..." : "Login"}
                                 </Button>
                                 <Button
+                                    disabled={isLoading}
                                     onClick={() => {
                                         setForm({ username: '', password: '' });
                                         setIsCreateUserHidden(false);
@@ -113,20 +153,29 @@ const LoginUserModal = ({ isHidden, form, setForm, handleLoginUser, handleGuestL
                                         '&:hover': {
                                             backgroundColor: theme.palette.general.disabled,
                                         },
+                                        '&:disabled': {
+                                            opacity: 0.5,
+                                            backgroundColor: theme.palette.general.primary,
+                                        },
                                     }}
                                 >
                                     Create User
                                 </Button>
                                 <Button
-                                    onClick={handleGuestLogin}
+                                    disabled={isLoading}
+                                    onClick={handleGuest}
                                     sx={{
                                         backgroundColor: theme.palette.general.primary,
                                         '&:hover': {
                                             backgroundColor: theme.palette.general.disabled,
                                         },
+                                        '&:disabled': {
+                                            opacity: 0.5,
+                                            backgroundColor: theme.palette.general.primary,
+                                        },
                                     }}
                                 >
-                                    Login as Guest
+                                    {isLoading ? "Logging in as guest..." : "Login as Guest"}
                                 </Button>
                             </Stack>
                         </form>
