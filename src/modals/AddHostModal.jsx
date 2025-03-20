@@ -7,8 +7,6 @@ import {
     FormLabel,
     Input,
     Stack,
-    DialogTitle,
-    DialogContent,
     ModalDialog,
     Select,
     Option,
@@ -394,6 +392,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
 
                         <Button
                             onClick={handleSubmit}
+                            disabled={!isFormValid()}
                             sx={{
                                 backgroundColor: theme.palette.general.primary,
                                 color: theme.palette.text.primary,

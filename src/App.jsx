@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { NewTerminal } from "./apps/ssh/Terminal.jsx";
 import { User } from "./apps/user/User.jsx";
 import AddHostModal from "./modals/AddHostModal.jsx";
-import LoginUserModal from "./modals/LoginUserModal.jsx";
+import AuthModal from "./modals/AuthModal.jsx";
 import { Button } from "@mui/joy";
 import { CssVarsProvider } from "@mui/joy";
 import theme from "./theme";
@@ -12,7 +12,6 @@ import { Debounce } from './other/Utils.jsx';
 import TermixIcon from "./images/termix_icon.png";
 import RocketIcon from './images/launchpad_rocket.png';
 import ProfileIcon from './images/profile_icon.png';
-import CreateUserModal from "./modals/CreateUserModal.jsx";
 import ProfileModal from "./modals/ProfileModal.jsx";
 import ErrorModal from "./modals/ErrorModal.jsx";
 import EditHostModal from "./modals/EditHostModal.jsx";
@@ -20,8 +19,7 @@ import NoAuthenticationModal from "./modals/NoAuthenticationModal.jsx";
 
 function App() {
     const [isAddHostHidden, setIsAddHostHidden] = useState(true);
-    const [isLoginUserHidden, setIsLoginUserHidden] = useState(true);
-    const [isCreateUserHidden, setIsCreateUserHidden] = useState(true);
+    const [isAuthModalHidden, setIsAuthModalHidden] = useState(true);
     const [isProfileHidden, setIsProfileHidden] = useState(true);
     const [isErrorHidden, setIsErrorHidden] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
@@ -37,7 +35,7 @@ function App() {
         password: "",
         port: 22,
         authMethod: "Select Auth",
-        rememberHost: false,
+        rememberHost: true,
         storePassword: true,
     });
     const [editHostForm, setEditHostForm] = useState({
@@ -53,14 +51,6 @@ function App() {
     });
     const [isNoAuthHidden, setIsNoAuthHidden] = useState(true);
     const [authForm, setAuthForm] = useState({
-        password: "",
-        rsaKey: "",
-    });
-    const [loginUserForm, setLoginUserForm] = useState({
-        username: "",
-        password: "",
-    });
-    const [createUserForm, setCreateUserForm] = useState({
         username: "",
         password: "",
     });
@@ -133,13 +123,13 @@ function App() {
 
         if (userRef.current?.getUser()) {
             setIsLoggingIn(false);
-            setIsLoginUserHidden(true);
+            setIsAuthModalHidden(true);
             return;
         }
 
         if (!sessionToken) {
             setIsLoggingIn(false);
-            setIsLoginUserHidden(false);
+            setIsAuthModalHidden(false);
             return;
         }
 
@@ -153,7 +143,7 @@ function App() {
                 clearInterval(attemptLoginInterval);
                 if (!userRef.current?.getUser()) {
                     localStorage.removeItem('sessionToken');
-                    setIsLoginUserHidden(false);
+                    setIsAuthModalHidden(false);
                     setIsLoggingIn(false);
                     setErrorMessage('Login timed out. Please try again.');
                     setIsErrorHidden(false);
@@ -170,7 +160,7 @@ function App() {
                 
                 if (!userRef.current?.getUser()) {
                     localStorage.removeItem('sessionToken');
-                    setIsLoginUserHidden(false);
+                    setIsAuthModalHidden(false);
                     setIsLoggingIn(false);
                     setErrorMessage('Login timed out. Please try again.');
                     setIsErrorHidden(false);
@@ -186,7 +176,7 @@ function App() {
                         if (isComponentMounted) {
                             clearTimeout(loginTimeout);
                             clearInterval(attemptLoginInterval);
-                            setIsLoginUserHidden(true);
+                            setIsAuthModalHidden(true);
                             setIsLoggingIn(false);
                             setIsErrorHidden(true);
                         }
@@ -200,7 +190,7 @@ function App() {
                                 localStorage.removeItem('sessionToken');
                                 setErrorMessage(`Auto-login failed: ${error}`);
                                 setIsErrorHidden(false);
-                                setIsLoginUserHidden(false);
+                                setIsAuthModalHidden(false);
                                 setIsLoggingIn(false);
                             }
                         }
@@ -372,39 +362,20 @@ function App() {
         }
     };
 
-    const handleLoginUser = ({ username, password, sessionToken, onSuccess, onFailure }) => {
+    const handleLoginUser = ({ username, password, onSuccess, onFailure }) => {
         if (userRef.current) {
-            if (sessionToken) {
-                userRef.current.loginUser({
-                    sessionToken,
-                    onSuccess: () => {
-                        setIsLoginUserHidden(true);
-                        setIsLoggingIn(false);
-                        if (onSuccess) onSuccess();
-                    },
-                    onFailure: (error) => {
-                        localStorage.removeItem('sessionToken');
-                        setIsLoginUserHidden(false);
-                        setIsLoggingIn(false);
-                        if (onFailure) onFailure(error);
-                    },
-                });
-            } else {
-                userRef.current.loginUser({
-                    username,
-                    password,
-                    onSuccess: () => {
-                        setIsLoginUserHidden(true);
-                        setIsLoggingIn(false);
-                        if (onSuccess) onSuccess();
-                    },
-                    onFailure: (error) => {
-                        setIsLoginUserHidden(false);
-                        setIsLoggingIn(false);
-                        if (onFailure) onFailure(error);
-                    },
-                });
-            }
+            userRef.current.loginUser({
+                username,
+                password,
+                onSuccess: () => {
+                    setIsAuthModalHidden(true);
+                    if (onSuccess) onSuccess();
+                },
+                onFailure: (error) => {
+                    setIsAuthModalHidden(false);
+                    if (onFailure) onFailure(error);
+                },
+            });
         }
     };
 
@@ -412,24 +383,28 @@ function App() {
         if (userRef.current) {
             try {
                 await userRef.current.loginAsGuest();
-                setIsLoginUserHidden(true);
-                setIsLoggingIn(false);
+                setIsAuthModalHidden(true);
                 if (onSuccess) onSuccess();
             } catch (error) {
-                setIsLoginUserHidden(false);
-                setIsLoggingIn(false);
+                setIsAuthModalHidden(false);
                 if (onFailure) onFailure(error);
             }
         }
-    }
+    };
 
     const handleCreateUser = ({ username, password, onSuccess, onFailure }) => {
         if (userRef.current) {
             userRef.current.createUser({
                 username,
                 password,
-                onSuccess,
-                onFailure,
+                onSuccess: () => {
+                    setIsAuthModalHidden(true);
+                    if (onSuccess) onSuccess();
+                },
+                onFailure: (error) => {
+                    setIsAuthModalHidden(false);
+                    if (onFailure) onFailure(error);
+                },
             });
         }
     };
@@ -622,7 +597,7 @@ function App() {
                             {/* Profile Button */}
                             <Button
                                 disabled={isLoggingIn}
-                                onClick={() => userRef.current?.getUser() ? setIsProfileHidden(false) : setIsLoginUserHidden(false)}
+                                onClick={() => userRef.current?.getUser() ? setIsProfileHidden(false) : setIsAuthModalHidden(false)}
                                 sx={{
                                     backgroundColor: theme.palette.general.tertiary,
                                     "&:hover": { backgroundColor: theme.palette.general.secondary },
@@ -742,40 +717,31 @@ function App() {
                         setIsErrorHidden={setIsErrorHidden}
                     />
 
-                    <LoginUserModal
-                        isHidden={isLoginUserHidden}
-                        form={loginUserForm}
-                        setForm={setLoginUserForm}
+                    <AuthModal
+                        isHidden={isAuthModalHidden}
+                        form={authForm}
+                        setForm={setAuthForm}
                         handleLoginUser={handleLoginUser}
                         handleGuestLogin={handleGuestLogin}
-                        setIsLoginUserHidden={setIsLoginUserHidden}
-                        setIsCreateUserHidden={setIsCreateUserHidden}
-                    />
-
-                    <CreateUserModal
-                        isHidden={isCreateUserHidden}
-                        form={createUserForm}
-                        setForm={setCreateUserForm}
                         handleCreateUser={handleCreateUser}
-                        setIsCreateUserHidden={setIsCreateUserHidden}
-                        setIsLoginUserHidden={setIsLoginUserHidden}
+                        setIsLoginUserHidden={setIsAuthModalHidden}
                     />
 
                     {/* User component */}
                     <User
                         ref={userRef}
                         onLoginSuccess={() => {
-                            setIsLoginUserHidden(true);
+                            setIsAuthModalHidden(true);
                             setIsLoggingIn(false);
                             setIsErrorHidden(true);
                         }}
                         onCreateSuccess={() => {
-                            setIsCreateUserHidden(true);
+                            setIsAuthModalHidden(true);
                             handleLoginUser({ 
-                                username: createUserForm.username, 
-                                password: createUserForm.password,
+                                username: authForm.username, 
+                                password: authForm.password,
                                 onSuccess: () => {
-                                    setIsLoginUserHidden(true);
+                                    setIsAuthModalHidden(true);
                                     setIsLoggingIn(false);
                                     setIsErrorHidden(true);
                                 },
