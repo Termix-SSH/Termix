@@ -16,6 +16,7 @@ import ProfileModal from "./modals/ProfileModal.jsx";
 import ErrorModal from "./modals/ErrorModal.jsx";
 import EditHostModal from "./modals/EditHostModal.jsx";
 import NoAuthenticationModal from "./modals/NoAuthenticationModal.jsx";
+import eventBus from "./other/eventBus.jsx";
 
 function App() {
     const [isAddHostHidden, setIsAddHostHidden] = useState(true);
@@ -33,6 +34,7 @@ function App() {
         ip: "",
         user: "",
         password: "",
+        sshKey: "",
         port: 22,
         authMethod: "Select Auth",
         rememberHost: true,
@@ -44,6 +46,7 @@ function App() {
         ip: "",
         user: "",
         password: "",
+        sshKey: "",
         port: 22,
         authMethod: "Select Auth",
         rememberHost: true,
@@ -51,9 +54,16 @@ function App() {
     });
     const [isNoAuthHidden, setIsNoAuthHidden] = useState(true);
     const [authForm, setAuthForm] = useState({
-        username: "",
-        password: "",
+        username: '',
+        password: '',
+        confirmPassword: ''
     });
+    const [noAuthenticationForm, setNoAuthenticationForm] = useState({
+        authMethod: 'Select Auth',
+        password: '',
+        sshKey: '',
+        keyType: '',
+    })
     const [isLaunchpadOpen, setIsLaunchpadOpen] = useState(false);
     const [splitTabIds, setSplitTabIds] = useState([]);
     const [isEditHostHidden, setIsEditHostHidden] = useState(true);
@@ -137,7 +147,7 @@ function App() {
         let loginAttempts = 0;
         const maxAttempts = 50;
         let attemptLoginInterval;
-        
+
         const loginTimeout = setTimeout(() => {
             if (isComponentMounted) {
                 clearInterval(attemptLoginInterval);
@@ -153,11 +163,11 @@ function App() {
 
         const attemptLogin = () => {
             if (!isComponentMounted || isLoginInProgress) return;
-            
+
             if (loginAttempts >= maxAttempts || userRef.current?.getUser()) {
                 clearTimeout(loginTimeout);
                 clearInterval(attemptLoginInterval);
-                
+
                 if (!userRef.current?.getUser()) {
                     localStorage.removeItem('sessionToken');
                     setIsAuthModalHidden(false);
@@ -212,12 +222,13 @@ function App() {
     }, []);
 
     const handleAddHost = () => {
-        if (!addHostForm.ip?.trim() || !addHostForm.user?.trim() || !addHostForm.port) {
-            alert("Please fill out all required fields (IP, User, Port).");
-            return;
-        }
+        if (addHostForm.ip && addHostForm.user && addHostForm.port) {
+            if (!addHostForm.rememberHost) {
+                connectToHost();
+                setIsAddHostHidden(true);
+                return;
+            }
 
-        if (addHostForm.rememberHost) {
             if (addHostForm.authMethod === 'Select Auth') {
                 alert("Please select an authentication method.");
                 return;
@@ -226,41 +237,32 @@ function App() {
                 setIsNoAuthHidden(false);
                 return;
             }
-            if (addHostForm.authMethod === 'key' && !addHostForm.privateKey) {
+            if (addHostForm.authMethod === 'sshKey' && !addHostForm.sshKey) {
                 setIsNoAuthHidden(false);
                 return;
             }
-        }
 
-        connectToHost();
-        if (addHostForm.rememberHost) {
+            connectToHost();
             if (!addHostForm.storePassword) {
                 addHostForm.password = '';
-                addHostForm.privateKey = '';
             }
             handleSaveHost();
+            setIsAddHostHidden(true);
+        } else {
+            alert("Please fill out all required fields (IP, User, Port).");
         }
-        setIsAddHostHidden(true);
     };
 
     const connectToHost = () => {
         const hostConfig = {
             name: addHostForm.name || '',
             folder: addHostForm.folder || '',
-            ip: addHostForm.ip.trim(),
-            user: addHostForm.user.trim(),
+            ip: addHostForm.ip,
+            user: addHostForm.user,
             port: String(addHostForm.port),
+            password: addHostForm.rememberHost && addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
+            sshKey: addHostForm.rememberHost && addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
         };
-
-        if (addHostForm.rememberHost && addHostForm.storePassword) {
-            if (addHostForm.authMethod === 'password') {
-                hostConfig.password = addHostForm.password;
-            } else if (addHostForm.authMethod === 'key') {
-                hostConfig.privateKey = addHostForm.privateKey;
-                hostConfig.keyType = addHostForm.keyType;
-                hostConfig.passphrase = addHostForm.passphrase;
-            }
-        }
 
         const newTerminal = {
             id: nextId,
@@ -271,21 +273,9 @@ function App() {
         setTerminals([...terminals, newTerminal]);
         setActiveTab(nextId);
         setNextId(nextId + 1);
-        setAddHostForm({
-            name: "",
-            folder: "",
-            ip: "",
-            user: "",
-            password: "",
-            privateKey: "",
-            keyType: "",
-            passphrase: "",
-            port: 22,
-            authMethod: "Select Auth",
-            rememberHost: true,
-            storePassword: true
-        });
-    };
+        setIsAddHostHidden(true);
+        setAddHostForm({ name: "", folder: "", ip: "", user: "", password: "", sshKey: "", port: 22, authMethod: "Select Auth", rememberHost: true, storePassword: true });
+    }
 
     const handleAuthSubmit = (form) => {
         const updatedTerminals = terminals.map((terminal) => {
@@ -295,7 +285,7 @@ function App() {
                     hostConfig: {
                         ...terminal.hostConfig,
                         password: form.password,
-                        rsaKey: form.rsaKey
+                        sshKey: form.sshKey
                     }
                 };
             }
@@ -321,7 +311,7 @@ function App() {
             user: hostConfig.user.trim(),
             port: hostConfig.port || '22',
             password: hostConfig.password?.trim(),
-            rsaKey: hostConfig.rsaKey?.trim(),
+            sshKey: hostConfig.sshKey?.trim(),
         };
 
         const newTerminal = {
@@ -337,74 +327,71 @@ function App() {
     }
 
     const handleSaveHost = () => {
-        const hostConfig = {
+        let hostConfig = {
             name: addHostForm.name || addHostForm.ip,
             folder: addHostForm.folder,
-            ip: addHostForm.ip.trim(),
-            user: addHostForm.user.trim(),
+            ip: addHostForm.ip,
+            user: addHostForm.user,
+            password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
+            sshKey: addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
             port: String(addHostForm.port),
-        };
-
-        if (addHostForm.storePassword) {
-            if (addHostForm.authMethod === 'password') {
-                hostConfig.password = addHostForm.password;
-            } else if (addHostForm.authMethod === 'key') {
-                hostConfig.privateKey = addHostForm.privateKey;
-                hostConfig.keyType = addHostForm.keyType;
-                hostConfig.passphrase = addHostForm.passphrase;
-            }
         }
-
         if (userRef.current) {
             userRef.current.saveHost({
                 hostConfig,
             });
         }
-    };
+    }
 
-    const handleLoginUser = ({ username, password, onSuccess, onFailure }) => {
+    const handleLoginUser = ({ username, password, sessionToken, onSuccess, onFailure }) => {
         if (userRef.current) {
-            userRef.current.loginUser({
-                username,
-                password,
-                onSuccess: () => {
-                    setIsAuthModalHidden(true);
-                    if (onSuccess) onSuccess();
-                },
-                onFailure: (error) => {
-                    setIsAuthModalHidden(false);
-                    if (onFailure) onFailure(error);
-                },
-            });
-        }
-    };
-
-    const handleGuestLogin = async ({ onSuccess, onFailure }) => {
-        if (userRef.current) {
-            try {
-                await userRef.current.loginAsGuest();
-                setIsAuthModalHidden(true);
-                if (onSuccess) onSuccess();
-            } catch (error) {
-                setIsAuthModalHidden(false);
-                if (onFailure) onFailure(error);
+            if (sessionToken) {
+                userRef.current.loginUser({
+                    sessionToken,
+                    onSuccess: () => {
+                        setIsAuthModalHidden(true);
+                        setIsLoggingIn(false);
+                        if (onSuccess) onSuccess();
+                    },
+                    onFailure: (error) => {
+                        localStorage.removeItem('sessionToken');
+                        setIsAuthModalHidden(false);
+                        setIsLoggingIn(false);
+                        if (onFailure) onFailure(error);
+                    },
+                });
+            } else {
+                userRef.current.loginUser({
+                    username,
+                    password,
+                    onSuccess: () => {
+                        setIsAuthModalHidden(true);
+                        setIsLoggingIn(false);
+                        if (onSuccess) onSuccess();
+                    },
+                    onFailure: (error) => {
+                        setIsAuthModalHidden(false);
+                        setIsLoggingIn(false);
+                        if (onFailure) onFailure(error);
+                    },
+                });
             }
         }
     };
+
+    const handleGuestLogin = () => {
+        if (userRef.current) {
+            userRef.current.loginAsGuest();
+        }
+    }
 
     const handleCreateUser = ({ username, password, onSuccess, onFailure }) => {
         if (userRef.current) {
             userRef.current.createUser({
                 username,
                 password,
-                onSuccess: () => {
-                    setIsAuthModalHidden(true);
-                    if (onSuccess) onSuccess();
-                },
-                onFailure: (error) => {
-                    setIsAuthModalHidden(false);
-                    if (onFailure) onFailure(error);
-                },
+                onSuccess,
+                onFailure,
             });
         }
     };
@@ -459,7 +446,7 @@ function App() {
             if (newConfig) {
                 if (isEditing) return;
                 setIsEditing(true);
-                
+
                 try {
                     await userRef.current.editHost({
                         oldHostConfig: oldConfig,
@@ -476,6 +463,7 @@ function App() {
 
             updateEditHostForm(oldConfig);
         } catch (error) {
+            console.error('Edit failed:', error);
             setErrorMessage(`Edit failed: ${error}`);
             setIsErrorHidden(false);
             setIsEditing(false);
@@ -661,10 +649,10 @@ function App() {
                         )}
                         <NoAuthenticationModal
                             isHidden={isNoAuthHidden}
-                            setIsHidden={setIsNoAuthHidden}
-                            form={authForm}
-                            setForm={setAuthForm}
-                            onAuthenticate={handleAuthSubmit}
+                            form={noAuthenticationForm}
+                            setForm={setNoAuthenticationForm}
+                            setIsNoAuthHidden={setIsNoAuthHidden}
+                            handleAuthSubmit={handleAuthSubmit}
                         />
                     </div>
 
@@ -684,7 +672,7 @@ function App() {
                                 setForm={setEditHostForm}
                                 handleEditHost={handleEditHost}
                                 setIsEditHostHidden={setIsEditHostHidden}
-                                hostConfig={currentHostConfig || {}}
+                                hostConfig={currentHostConfig}
                             />
                             <ProfileModal
                                 isHidden={isProfileHidden}
@@ -722,9 +710,9 @@ function App() {
                         form={authForm}
                         setForm={setAuthForm}
                         handleLoginUser={handleLoginUser}
-                        handleGuestLogin={handleGuestLogin}
                         handleCreateUser={handleCreateUser}
-                        setIsLoginUserHidden={setIsAuthModalHidden}
+                        handleGuestLogin={handleGuestLogin}
+                        setIsAuthModalHidden={setIsAuthModalHidden}
                     />
 
                     {/* User component */}
@@ -737,8 +725,8 @@ function App() {
                         }}
                         onCreateSuccess={() => {
                             setIsAuthModalHidden(true);
-                            handleLoginUser({ 
-                                username: authForm.username, 
+                            handleLoginUser({
+                                username: authForm.username,
                                 password: authForm.password,
                                 onSuccess: () => {
                                     setIsAuthModalHidden(true);
@@ -759,6 +747,7 @@ function App() {
                             setErrorMessage(`Action failed: ${error}`);
                             setIsErrorHidden(false);
                             setIsLoggingIn(false);
+                            eventBus.emit('failedLoginUser');
                         }}
                     />
                 </div>

@@ -185,7 +185,7 @@ io.of('/database.io').on('connection', (socket) => {
                 user: hostConfig.user.trim(),
                 port: hostConfig.port || 22,
                 password: hostConfig.password?.trim() || undefined,
-                rsaKey: hostConfig.rsaKey?.trim() || undefined
+                sshKey: hostConfig.sshKey?.trim() || undefined,
             };
 
             const finalName = cleanConfig.name || cleanConfig.ip;
@@ -415,7 +415,7 @@ io.of('/database.io').on('connection', (socket) => {
                 user: newHostConfig.user.trim(),
                 port: newHostConfig.port || 22,
                 password: newHostConfig.password?.trim() || undefined,
-                rsaKey: newHostConfig.rsaKey?.trim() || undefined
+                sshKey: newHostConfig.sshKey?.trim() || undefined,
             };
 
             const encryptedConfig = encryptData(cleanConfig, userId, sessionToken);

@@ -24,7 +24,6 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
     const [showPassword, setShowPassword] = useState(false);
-    const [showPassphrase, setShowPassphrase] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
 
     const handleFileChange = (e) => {
@@ -39,7 +38,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
             '.ppk': 'PPK'
         };
 
-        const isValidKeyFile = Object.keys(supportedKeyTypes).some(ext => 
+        const isValidKeyFile = Object.keys(supportedKeyTypes).some(ext =>
             file.name.toLowerCase().includes(ext) || file.name.endsWith('.pub')
         );
 
@@ -48,8 +47,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
             reader.onload = (event) => {
                 const keyContent = event.target.result;
                 let keyType = 'UNKNOWN';
-                
-                // Detect key type from content
+
                 if (keyContent.includes('BEGIN RSA PRIVATE KEY') || keyContent.includes('BEGIN RSA PUBLIC KEY')) {
                     keyType = 'RSA';
                 } else if (keyContent.includes('BEGIN OPENSSH PRIVATE KEY') && keyContent.includes('ssh-ed25519')) {
@@ -60,11 +58,11 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                     keyType = 'DSA';
                 }
 
-                setForm(prev => ({ 
-                    ...prev, 
-                    privateKey: keyContent,
+                setForm(prev => ({
+                    ...prev,
+                    sshKey: keyContent,
                     keyType: keyType,
-                    authMethod: 'key'
+                    authMethod: 'sshKey'
                 }));
             };
             reader.readAsText(file);
@@ -78,30 +76,25 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
             ...prev,
             authMethod: newMethod,
             password: "",
-            privateKey: "",
+            sshKey: "",
             keyType: "",
-            passphrase: ""
         }));
     };
 
     const isFormValid = () => {
-        const { ip, user, port, authMethod, password, privateKey } = form;
-        
-        // Basic validation for required fields
+        const { ip, user, port, authMethod, password, sshKey } = form;
+
         if (!ip?.trim() || !user?.trim() || !port) return false;
-        
-        // Port validation
+
         const portNum = Number(port);
         if (isNaN(portNum) || portNum < 1 || portNum > 65535) return false;
 
-        // If not remembering host, only basic fields are required
         if (!form.rememberHost) return true;
 
-        // Auth method validation only if remembering host
         if (form.rememberHost) {
             if (authMethod === 'Select Auth') return false;
             if (authMethod === 'password' && !password?.trim()) return false;
-            if (authMethod === 'key' && !privateKey?.trim()) return false;
+            if (authMethod === 'sshKey' && !sshKey?.trim()) return false;
         }
 
         return true;
@@ -114,6 +107,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
             return;
         }
         handleAddHost();
+        setActiveTab(0);
     };
 
     return (
@@ -144,10 +138,10 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                         mx: 2,
                     }}
                 >
-                    <Tabs 
-                        value={activeTab} 
+                    <Tabs
+                        value={activeTab}
                         onChange={(e, val) => setActiveTab(val)}
-                        sx={{ 
+                        sx={{
                             width: '100%',
                             mb: 0,
                             backgroundColor: theme.palette.general.tertiary,
@@ -211,8 +205,8 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                         <FormLabel>Remember Host</FormLabel>
                                         <Checkbox
                                             checked={Boolean(form.rememberHost)}
-                                            onChange={(e) => setForm({ 
-                                                ...form, 
+                                            onChange={(e) => setForm({
+                                                ...form,
                                                 rememberHost: e.target.checked,
                                             })}
                                             sx={{
@@ -284,7 +278,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                         >
                                             <Option value="Select Auth" disabled>Select Auth</Option>
                                             <Option value="password">Password</Option>
-                                            <Option value="key">SSH Key</Option>
+                                            <Option value="sshKey">SSH Key</Option>
                                         </Select>
                                     </FormControl>
 
@@ -315,9 +309,9 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                         </FormControl>
                                     )}
 
-                                    {form.authMethod === 'key' && (
+                                    {form.authMethod === 'sshKey' && (
                                         <Stack spacing={2}>
-                                            <FormControl error={!form.privateKey}>
+                                            <FormControl error={!form.sshKey}>
                                                 <FormLabel>SSH Key</FormLabel>
                                                 <Button
                                                     component="label"
@@ -334,7 +328,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                         },
                                                     }}
                                                 >
-                                                    {form.privateKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
+                                                    {form.sshKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
                                                     <Input
                                                         type="file"
                                                         onChange={handleFileChange}
@@ -342,32 +336,6 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                     />
                                                 </Button>
                                             </FormControl>
-                                            {form.privateKey && (
-                                                <FormControl>
-                                                    <FormLabel>Key Passphrase (optional)</FormLabel>
-                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                        <Input
-                                                            type={showPassphrase ? "text" : "password"}
-                                                            value={form.passphrase || ''}
-                                                            onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
-                                                            sx={{
-                                                                backgroundColor: theme.palette.general.primary,
-                                                                color: theme.palette.text.primary,
-                                                                flex: 1
-                                                            }}
-                                                        />
-                                                        <IconButton
-                                                            onClick={() => setShowPassphrase(!showPassphrase)}
-                                                            sx={{
-                                                                color: theme.palette.text.primary,
-                                                                marginLeft: 1
-                                                            }}
-                                                        >
-                                                            {showPassphrase ? <VisibilityOff /> : <Visibility />}
-                                                        </IconButton>
-                                                    </div>
-                                                </FormControl>
-                                            )}
                                         </Stack>
                                     )}
 

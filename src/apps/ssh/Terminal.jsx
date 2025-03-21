@@ -76,7 +76,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         socket.on("error", (err) => {
             const isAuthError = err.toLowerCase().includes("authentication") || err.toLowerCase().includes("auth");
-            if (isAuthError && !hostConfig.password?.trim() && !hostConfig.rsaKey?.trim() && !authModalShown) {
+            if (isAuthError && !hostConfig.password?.trim() && !hostConfig.sshKey?.trim() && !authModalShown) {
                 authModalShown = true;
                 setIsNoAuthHidden(false);
             }
@@ -88,7 +88,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             resizeTerminal();
             const { cols, rows } = terminalInstance.current;
 
-            if (!hostConfig.password?.trim() && !hostConfig.rsaKey?.trim()) {
+            if (!hostConfig.password?.trim() && !hostConfig.sshKey?.trim()) {
                 setIsNoAuthHidden(false);
                 return;
             }
@@ -98,7 +98,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 user: hostConfig.user,
                 port: Number(hostConfig.port) || 22,
                 password: hostConfig.password?.trim(),
-                rsaKey: hostConfig.rsaKey?.trim()
+                sshKey: hostConfig.sshKey?.trim()
             };
 
             socket.emit("connectToHost", cols, rows, sshConfig);
@@ -172,7 +172,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         let authModalShown = false;
 
         socket.on("noAuthRequired", () => {
-            if (!hostConfig.password?.trim() && !hostConfig.rsaKey?.trim() && !authModalShown) {
+            if (!hostConfig.password?.trim() && !hostConfig.sshKey?.trim() && !authModalShown) {
                 authModalShown = true;
                 setIsNoAuthHidden(false);
             }
@@ -235,7 +235,7 @@ NewTerminal.propTypes = {
         ip: PropTypes.string.isRequired,
         user: PropTypes.string.isRequired,
         password: PropTypes.string,
-        rsaKey: PropTypes.string,
+        sshKey: PropTypes.string,
         port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     }).isRequired,
     isVisible: PropTypes.bool.isRequired,

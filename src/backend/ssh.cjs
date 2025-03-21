@@ -47,7 +47,7 @@ io.on("connection", (socket) => {
         };
 
         logger.info("Connecting with config:", safeHostConfig);
-        const { ip, port, user, password, privateKey, passphrase } = hostConfig;
+        const { ip, port, user, password, sshKey, } = hostConfig;
 
         const conn = new SSHClient();
         conn
@@ -99,8 +99,7 @@ io.on("connection", (socket) => {
                 port: port,
                 username: user,
                 password: password,
-                privateKey: privateKey ? Buffer.from(privateKey) : undefined,
-                passphrase: passphrase,
+                sshKey: sshKey ? Buffer.from(sshKey) : undefined,
                 tryKeyboard: true,
                 algorithms: {
                     kex: [

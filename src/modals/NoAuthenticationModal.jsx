@@ -15,31 +15,44 @@ import {
     Option,
 } from '@mui/joy';
 import theme from '/src/theme';
-import { useState, useEffect } from 'react';
+import {useEffect, useState} from 'react';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
-    const [form, setForm] = useState({
-        authMethod: 'Select Auth',
-        password: '',
-        privateKey: '',
-        keyType: '',
-        passphrase: ''
-    });
+const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, handleAuthSubmit }) => {
     const [showPassword, setShowPassword] = useState(false);
-    const [showPassphrase, setShowPassphrase] = useState(false);
+
+    useEffect(() => {
+        if (!form.authMethod) {
+            setForm(prev => ({
+                ...prev,
+                authMethod: 'Select Auth',
+                password: '',
+                sshKey: '',
+                keyType: '',
+            }));
+        }
+    }, []);
+
+    const isFormValid = () => {
+        if (!form.authMethod || form.authMethod === 'Select Auth') return false;
+        if (form.authMethod === 'sshKey' && !form.sshKey) return false;
+        if (form.authMethod === 'password' && !form.password) return false;
+        return true;
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onAuthenticate({
-            authMethod: form.authMethod,
-            password: form.password,
-            privateKey: form.privateKey,
-            keyType: form.keyType,
-            passphrase: form.passphrase
-        });
-        setIsHidden(true);
+        if(isFormValid()) {
+            handleAuthSubmit(form);
+            setForm (prev => ({
+                ...prev,
+                authMethod: 'Select Auth',
+                password: '',
+                sshKey: '',
+                keyType: '',
+            }))
+        }
     };
 
     const handleFileChange = (e) => {
@@ -77,9 +90,9 @@ const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
 
                 setForm({ 
                     ...form, 
-                    privateKey: keyContent,
+                    sshKey: keyContent,
                     keyType: keyType,
-                    authMethod: 'key'
+                    authMethod: 'sshKey'
                 });
             };
             reader.readAsText(file);
@@ -92,12 +105,31 @@ const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
         <CssVarsProvider theme={theme}>
             <Modal
                 open={!isHidden}
-                onClose={() => setIsHidden(true)}
+                onClose={(e, reason) => {
+                    if (reason !== 'backdropClick') {
+                        setIsNoAuthHidden(true);
+                    }
+                }}
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}
             >
                 <ModalDialog
+                    layout="center"
                     sx={{
-                        backgroundColor: theme.palette.general.secondary,
+                        backgroundColor: theme.palette.general.tertiary,
+                        borderColor: theme.palette.general.secondary,
                         color: theme.palette.text.primary,
+                        padding: 3,
+                        borderRadius: 10,
+                        maxWidth: '500px',
+                        width: '100%',
+                        maxHeight: '80vh',
+                        overflow: 'auto',
+                        boxSizing: 'border-box',
+                        mx: 2,
                     }}
                 >
                     <DialogTitle sx={{ mb: 2 }}>Authentication Required</DialogTitle>
@@ -107,14 +139,13 @@ const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
                                 <FormControl error={!form.authMethod || form.authMethod === 'Select Auth'}>
                                     <FormLabel>Authentication Method</FormLabel>
                                     <Select
-                                        value={form.authMethod}
+                                        value={form.authMethod || 'Select Auth'}
                                         onChange={(e, val) => setForm(prev => ({ 
                                             ...prev, 
                                             authMethod: val, 
                                             password: '', 
-                                            privateKey: '',
+                                            sshKey: '',
                                             keyType: '',
-                                            passphrase: ''
                                         }))}
                                         sx={{
                                             backgroundColor: theme.palette.general.primary,
@@ -123,29 +154,43 @@ const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
                                     >
                                         <Option value="Select Auth" disabled>Select Auth</Option>
                                         <Option value="password">Password</Option>
-                                        <Option value="key">SSH Key</Option>
+                                        <Option value="sshKey">SSH Key</Option >
                                     </Select>
                                 </FormControl>
 
                                 {form.authMethod === 'password' && (
                                     <FormControl error={!form.password}>
                                         <FormLabel>Password</FormLabel>
-                                        <Input
-                                            type={showPassword ? "text" : "password"}
-                                            value={form.password}
-                                            onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                            endDecorator={
-                                                <IconButton onClick={() => setShowPassword(!showPassword)}>
-                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                                                </IconButton>
-                                            }
-                                        />
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <Input
+                                                type={showPassword ? "text" : "password"}
+                                                value={form.password || ''}
+                                                onChange={(e) => setForm({...form, password: e.target.value})}
+                                                sx={{
+                                                    backgroundColor: theme.palette.general.primary,
+                                                    color: theme.palette.text.primary,
+                                                    flex: 1
+                                                }}
+                                            />
+                                            <IconButton
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                sx={{
+                                                    color: theme.palette.text.primary,
+                                                    marginLeft: 1,
+                                                    '&:disabled': {
+                                                        opacity: 0.5,
+                                                    },
+                                                }}
+                                            >
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </div>
                                     </FormControl>
                                 )}
 
-                                {form.authMethod === 'key' && (
+                                {form.authMethod === 'sshKey' && (
                                     <Stack spacing={2}>
-                                        <FormControl error={!form.privateKey}>
+                                        <FormControl error={!form.sshKey}>
                                             <FormLabel>SSH Key</FormLabel>
                                             <Button
                                                 component="label"
@@ -162,7 +207,7 @@ const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
                                                     },
                                                 }}
                                             >
-                                                {form.privateKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
+                                                {form.sshKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
                                                 <Input
                                                     type="file"
                                                     onChange={handleFileChange}
@@ -170,29 +215,12 @@ const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
                                                 />
                                             </Button>
                                         </FormControl>
-                                        {form.privateKey && (
-                                            <FormControl>
-                                                <FormLabel>Key Passphrase (optional)</FormLabel>
-                                                <Input
-                                                    type={showPassphrase ? "text" : "password"}
-                                                    value={form.passphrase || ''}
-                                                    onChange={(e) => setForm(prev => ({ ...prev, passphrase: e.target.value }))}
-                                                    endDecorator={
-                                                        <IconButton onClick={() => setShowPassphrase(!showPassphrase)}>
-                                                            {showPassphrase ? <VisibilityOff /> : <Visibility />}
-                                                        </IconButton>
-                                                    }
-                                                />
-                                            </FormControl>
-                                        )}
                                     </Stack>
                                 )}
 
                                 <Button
                                     type="submit"
-                                    disabled={!form.authMethod || form.authMethod === 'Select Auth' || 
-                                            (form.authMethod === 'password' && !form.password) ||
-                                            (form.authMethod === 'key' && !form.privateKey)}
+                                    disabled={!isFormValid()}
                                     sx={{
                                         backgroundColor: theme.palette.general.primary,
                                         color: theme.palette.text.primary,
@@ -203,6 +231,8 @@ const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
                                             backgroundColor: 'rgba(255, 255, 255, 0.1)',
                                             color: 'rgba(255, 255, 255, 0.3)',
                                         },
+                                        marginTop: 2,
+                                        height: '40px',
                                     }}
                                 >
                                     Connect
@@ -218,8 +248,10 @@ const NoAuthenticationModal = ({ isHidden, setIsHidden, onAuthenticate }) => {
 
 NoAuthenticationModal.propTypes = {
     isHidden: PropTypes.bool.isRequired,
-    setIsHidden: PropTypes.func.isRequired,
-    onAuthenticate: PropTypes.func.isRequired,
+    form: PropTypes.object.isRequired,
+    setForm: PropTypes.func.isRequired,
+    setIsNoAuthHidden: PropTypes.func.isRequired,
+    handleAuthSubmit: PropTypes.func.isRequired,
 };
 
 export default NoAuthenticationModal;
