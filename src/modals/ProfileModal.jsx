@@ -73,7 +73,7 @@ export default function ProfileModal({
                     </Button>
 
                     <div className="text-center text-xs text-gray-400">
-                        v2.0.1
+                        v2.1
                     </div>
                 </div>
             </div>
