@@ -32,7 +32,7 @@ io.on("connection", (socket) => {
             return;
         }
 
-        if (!hostConfig.password && !hostConfig.privateKey) {
+        if (!hostConfig.password && !hostConfig.sshKey) {
             logger.error("No authentication provided");
             socket.emit("error", "Authentication required");
             return;
@@ -43,7 +43,6 @@ io.on("connection", (socket) => {
             port: hostConfig.port,
             user: hostConfig.user,
             authType: hostConfig.password ? 'password' : 'key',
-            keyType: hostConfig.keyType
         };
 
         logger.info("Connecting with config:", safeHostConfig);
@@ -98,29 +97,11 @@ io.on("connection", (socket) => {
                 host: ip,
                 port: port,
                 username: user,
-                password: password,
-                sshKey: sshKey ? Buffer.from(sshKey) : undefined,
-                tryKeyboard: true,
+                password: password || undefined,
+                privateKey: sshKey ? Buffer.from(sshKey) : undefined,
                 algorithms: {
-                    kex: [
-                        'curve25519-sha256',
-                        'curve25519-sha256@libssh.org',
-                        'ecdh-sha2-nistp256',
-                        'ecdh-sha2-nistp384',
-                        'ecdh-sha2-nistp521',
-                        'diffie-hellman-group-exchange-sha256',
-                        'diffie-hellman-group14-sha256',
-                        'diffie-hellman-group14-sha1'
-                    ],
-                    serverHostKey: [
-                        'ssh-ed25519',
-                        'ecdsa-sha2-nistp256',
-                        'ecdsa-sha2-nistp384',
-                        'ecdsa-sha2-nistp521',
-                        'rsa-sha2-512',
-                        'rsa-sha2-256',
-                        'ssh-rsa'
-                    ]
+                    kex: ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'ecdh-sha2-nistp256'],
+                    serverHostKey: ['ssh-ed25519', 'ecdsa-sha2-nistp256']
                 }
             });
     });

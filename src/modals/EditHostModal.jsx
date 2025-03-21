@@ -442,7 +442,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
 
 EditHostModal.propTypes = {
     isHidden: PropTypes.bool.isRequired,
-    hostConfig: PropTypes.object.isRequired,
+    hostConfig: PropTypes.object,
     setIsEditHostHidden: PropTypes.func.isRequired,
     handleEditHost: PropTypes.func.isRequired
 };

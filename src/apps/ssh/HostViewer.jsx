@@ -1,9 +1,22 @@
 import PropTypes from "prop-types";
 import { useState, useEffect, useRef } from "react";
-import { Button, Input } from "@mui/joy";
+import { Button, Input, Menu, MenuItem, IconButton } from "@mui/joy";
 import ShareHostModal from "../../modals/ShareHostModal";
 
-function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, editHost, openEditPanel, shareHost, onModalOpen, onModalClose, userRef }) {
+function HostViewer({
+                        getHosts,
+                        connectToHost,
+                        setIsAddHostHidden,
+                        deleteHost,
+                        editHost,
+                        openEditPanel,
+                        shareHost,
+                        onModalOpen,
+                        onModalClose,
+                        userRef,
+                        isMenuOpen,
+                        setIsMenuOpen,
+                    }) {
     const [hosts, setHosts] = useState([]);
     const [filteredHosts, setFilteredHosts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -15,6 +28,24 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
     const [isDeleting, setIsDeleting] = useState(false);
     const [isShareModalHidden, setIsShareModalHidden] = useState(true);
     const [selectedHostForShare, setSelectedHostForShare] = useState(null);
+    const [selectedHost, setSelectedHost] = useState(null);
+    const anchorEl = useRef(null);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target) && anchorEl.current && !anchorEl.current.contains(event.target)) {
+                setIsMenuOpen(false);
+                setSelectedHost(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     const fetchHosts = async () => {
         try {
@@ -51,9 +82,9 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
     useEffect(() => {
         const filtered = hosts.filter((hostWrapper) => {
             const hostConfig = hostWrapper.config || {};
-            return hostConfig.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                   hostConfig.ip?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                   hostConfig.folder?.toLowerCase().includes(searchTerm.toLowerCase());
+            return hostConfig.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                hostConfig.ip?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                hostConfig.folder?.toLowerCase().includes(searchTerm.toLowerCase());
         });
         setFilteredHosts(filtered);
     }, [searchTerm, hosts]);
@@ -168,7 +199,7 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
     const handleDelete = async (e, hostWrapper) => {
         e.stopPropagation();
         if (isDeleting) return;
-        
+
         setIsDeleting(true);
         try {
             const isOwner = hostWrapper.createdBy?._id === userRef.current?.getUser()?.id;
@@ -229,7 +260,8 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                 </div>
                 <div className="flex gap-2">
                     <Button
-                        className="text-black"
+                        variant="outlined"
+                        className="text-white"
                         onClick={(e) => {
                             e.stopPropagation();
                             if (!hostWrapper.config || !hostWrapper.config.ip || !hostWrapper.config.user) {
@@ -242,76 +274,36 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                             backgroundColor: "#6e6e6e",
                             "&:hover": { backgroundColor: "#0f0f0f" },
                             opacity: isDeleting ? 0.5 : 1,
-                            cursor: isDeleting ? "not-allowed" : "pointer"
+                            cursor: isDeleting ? "not-allowed" : "pointer",
+                            borderColor: "#3d3d3d",
+                            borderWidth: "2px",
+                            color: "#fff",
                         }}
                     >
                         Connect
                     </Button>
-                    {isOwner && (
-                        <>
-                            <Button
-                                className="text-black"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedHostForShare(hostWrapper);
-                                    setIsShareModalHidden(false);
-                                }}
-                                disabled={isDeleting}
-                                sx={{
-                                    backgroundColor: "#6e6e6e",
-                                    "&:hover": { backgroundColor: "#0f0f0f" },
-                                    opacity: isDeleting ? 0.5 : 1,
-                                    cursor: isDeleting ? "not-allowed" : "pointer"
-                                }}
-                            >
-                                Share
-                            </Button>
-                            <Button
-                                className="text-black"
-                                onClick={(e) => handleDelete(e, hostWrapper)}
-                                disabled={isDeleting}
-                                sx={{
-                                    backgroundColor: "#6e6e6e",
-                                    "&:hover": { backgroundColor: "#0f0f0f" },
-                                    opacity: isDeleting ? 0.5 : 1,
-                                    cursor: isDeleting ? "not-allowed" : "pointer"
-                                }}
-                            >
-                                {isDeleting ? "Deleting..." : "Delete"}
-                            </Button>
-                            <Button
-                                className="text-black"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEditPanel(hostConfig);
-                                }}
-                                disabled={isDeleting}
-                                sx={{
-                                    backgroundColor: "#6e6e6e",
-                                    "&:hover": { backgroundColor: "#0f0f0f" },
-                                    opacity: isDeleting ? 0.5 : 1,
-                                    cursor: isDeleting ? "not-allowed" : "pointer"
-                                }}
-                            >
-                                Edit
-                            </Button>
-                        </>
-                    )}
-                    {!isOwner && (
-                        <Button
-                            className="text-black"
-                            onClick={(e) => handleDelete(e, hostWrapper)}
-                            disabled={isDeleting}
-                            sx={{
-                                backgroundColor: "#6e6e6e",
-                                "&:hover": { backgroundColor: "#0f0f0f" },
-                                opacity: isDeleting ? 0.5 : 1,
-                                cursor: isDeleting ? "not-allowed" : "pointer"
-                            }}
-                        >
-                            {isDeleting ? "Removing..." : "Remove Share"}
-                        </Button>
-                    )}
+                    <IconButton
+                        variant="outlined"
+                        className="text-white"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedHost(hostWrapper);
+                            setIsMenuOpen(!isMenuOpen);
+                            anchorEl.current = e.currentTarget;
+                        }}
+                        disabled={isDeleting}
+                        sx={{
+                            backgroundColor: "#6e6e6e",
+                            "&:hover": { backgroundColor: "#0f0f0f" },
+                            opacity: isDeleting ? 0.5 : 1,
+                            cursor: isDeleting ? "not-allowed" : "pointer",
+                            borderColor: "#3d3d3d",
+                            borderWidth: "2px",
+                            color: "#fff",
+                        }}
+                    >
+                        ⋮
+                    </IconButton>
                 </div>
             </div>
         );
@@ -352,7 +344,6 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
 
                             return (
                                 <>
-                                    {/* Render hosts without folders first */}
                                     <div
                                         className={`flex flex-col gap-2 p-2 rounded-lg transition-colors ${isDraggingOver === 'no-folder' ? 'bg-neutral-700' : ''}`}
                                         onDragOver={(e) => handleDragOver(e, 'no-folder')}
@@ -362,7 +353,6 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                                         {noFolder.map((host) => renderHostItem(host))}
                                     </div>
 
-                                    {/* Render folders and their hosts */}
                                     {sortedFolders.map((folderName) => (
                                         <div key={folderName} className="mb-2">
                                             <div
@@ -403,6 +393,68 @@ function HostViewer({ getHosts, connectToHost, setIsAddHostHidden, deleteHost, e
                 handleShare={handleShare}
                 hostConfig={selectedHostForShare}
             />
+            <Menu
+                ref={menuRef}
+                anchorEl={anchorEl.current}
+                open={isMenuOpen}
+                onClose={() => {
+                    setIsMenuOpen(false);
+                    setSelectedHost(null);
+                }}
+                sx={{
+                    "& .MuiMenu-list": {
+                        backgroundColor: "#6e6e6e",
+                        color: "white"
+                    }
+                }}
+            >
+                {selectedHost && (
+                    selectedHost.createdBy?._id === userRef.current?.getUser()?.id ? (
+                        <>
+                            <MenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedHostForShare(selectedHost);
+                                    setIsShareModalHidden(false);
+                                    setIsMenuOpen(false);
+                                }}
+                            >
+                                Share
+                            </MenuItem>
+                            <MenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditPanel(selectedHost.config);
+                                    setIsMenuOpen(false);
+                                }}
+                            >
+                                Edit
+                            </MenuItem>
+                            <MenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(e, selectedHost);
+                                    setIsMenuOpen(false);
+                                }}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                            </MenuItem>
+                        </>
+                    ) : (
+                        <MenuItem
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(e, selectedHost);
+                                setIsMenuOpen(false);
+                            }}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? "Removing..." : "Remove Share"}
+                        </MenuItem>
+                    )
+                )}
+            </Menu>
         </div>
     );
 }
@@ -418,6 +470,8 @@ HostViewer.propTypes = {
     onModalOpen: PropTypes.func.isRequired,
     onModalClose: PropTypes.func.isRequired,
     userRef: PropTypes.object.isRequired,
+    isMenuOpen: PropTypes.bool.isRequired,
+    setIsMenuOpen: PropTypes.func.isRequired,
 };
 
 export default HostViewer;

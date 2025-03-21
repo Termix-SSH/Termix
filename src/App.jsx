@@ -70,6 +70,7 @@ function App() {
     const [currentHostConfig, setCurrentHostConfig] = useState(null);
     const [isLoggingIn, setIsLoggingIn] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
+    const [isHostViewerMenuOpen, setIsHostViewerMenuOpen] = useState(null);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -694,6 +695,8 @@ function App() {
                                     editHost={handleEditHost}
                                     shareHost={(hostId, username) => userRef.current?.shareHost(hostId, username)}
                                     userRef={userRef}
+                                    isHostViewerMenuOpen={isHostViewerMenuOpen}
+                                    setIsHostViewerMenuOpen={setIsHostViewerMenuOpen}
                                 />
                             )}
                         </>

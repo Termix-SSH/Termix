@@ -18,6 +18,8 @@ function Launchpad({
     editHost,
     shareHost,
     userRef,
+    isHostViewerMenuOpen,
+    setIsHostViewerMenuOpen,
 }) {
     const launchpadRef = useRef(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -32,6 +34,7 @@ function Launchpad({
                 isAddHostHidden &&
                 isEditHostHidden &&
                 isErrorHidden &&
+                !isHostViewerMenuOpen &&
                 !isAnyModalOpen
             ) {
                 onClose();
@@ -43,7 +46,7 @@ function Launchpad({
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden, isAnyModalOpen]);
+    }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden, isHostViewerMenuOpen, isAnyModalOpen]);
 
     const handleModalOpen = () => {
         setIsAnyModalOpen(true);
@@ -190,6 +193,8 @@ function Launchpad({
                                 onModalOpen={handleModalOpen}
                                 onModalClose={handleModalClose}
                                 userRef={userRef}
+                                isMenuOpen={isHostViewerMenuOpen || false}
+                                setIsMenuOpen={setIsHostViewerMenuOpen}
                             />
                         )}
                     </div>
@@ -211,6 +216,8 @@ Launchpad.propTypes = {
     editHost: PropTypes.func.isRequired,
     shareHost: PropTypes.func.isRequired,
     userRef: PropTypes.object.isRequired,
+    isHostViewerMenuOpen: PropTypes.bool,
+    setIsHostViewerMenuOpen: PropTypes.func.isRequired,
 };
 
 export default Launchpad;
