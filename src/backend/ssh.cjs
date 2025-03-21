@@ -53,7 +53,7 @@ io.on("connection", (socket) => {
             .on("ready", function () {
                 logger.info("SSH connection established");
 
-                conn.shell({ term: "xterm-256color" }, function (err, newStream) {
+                conn.shell({ term: "xterm-256color", keepaliveInterval: 30000 }, function (err, newStream) {
                     if (err) {
                         logger.error("Shell error:", err.message);
                         socket.emit("error", err.message);
@@ -93,6 +93,9 @@ io.on("connection", (socket) => {
                 logger.error("Error:", err.message);
                 socket.emit("error", err.message);
             })
+            .on("ping", function () {
+                socket.emit("ping");
+            })
             .connect({
                 host: ip,
                 port: port,
@@ -102,7 +105,9 @@ io.on("connection", (socket) => {
                 algorithms: {
                     kex: ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'ecdh-sha2-nistp256'],
                     serverHostKey: ['ssh-ed25519', 'ecdsa-sha2-nistp256']
-                }
+                },
+                keepaliveInterval: 30000,
+                keepaliveCountMax: 3,
             });
     });
 

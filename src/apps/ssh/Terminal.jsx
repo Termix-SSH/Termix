@@ -178,7 +178,16 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         });
 
+        const pingInterval = setInterval(() => {
+            socketRef.current.emit("ping");
+        }, 5000);
+
+        socketRef.current.on("pong", () => {
+            console.log("Received pong from server.");
+        });
+
         return () => {
+            clearInterval(pingInterval);
             if (terminalInstance.current) {
                 terminalInstance.current.dispose();
                 terminalInstance.current = null;
