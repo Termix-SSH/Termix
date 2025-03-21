@@ -115,8 +115,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             terminalInstance.current.write(decoder.decode(new Uint8Array(data)));
         });
 
-        let isPasting = false;
-
         let buffer = "";
         let bufferTimeout = null;
 
@@ -131,38 +129,25 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         });
 
-        terminalInstance.current.attachCustomKeyEventHandler((event) => {
+        terminalInstance.current.attachCustomKeyEventHandler(async (event) => {
             if ((event.ctrlKey || event.metaKey) && event.key === "v") {
-                if (isPasting) return false;
-                isPasting = true;
-
                 event.preventDefault();
 
-                navigator.clipboard.readText().then((text) => {
-                    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-                    const lines = text.split("\n");
+                if (!socketRef.current) return false;
 
-                    if (socketRef.current) {
-                        let index = 0;
+                try {
+                    const text = await navigator.clipboard.readText();
+                    const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
 
-                        const sendLine = () => {
-                            if (index < lines.length) {
-                                socketRef.current.emit("data", lines[index] + "\r");
-                                index++;
-                                setTimeout(sendLine, 10);
-                            } else {
-                                isPasting = false;
-                            }
-                        };
-
-                        sendLine();
-                    } else {
-                        isPasting = false;
-                    }
-                }).catch((err) => {
+                    await Promise.all(lines.map(line => {
+                        return new Promise(resolve => {
+                            socketRef.current.emit("data", line + "\r");
+                            resolve();
+                        });
+                    }));
+                } catch (err) {
                     console.error("Failed to read clipboard contents:", err);
-                    isPasting = false;
-                });
+                }
 
                 return false;
             }
