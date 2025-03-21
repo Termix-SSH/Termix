@@ -10,7 +10,10 @@ const io = socketIo(server, {
         methods: ["GET", "POST"],
         credentials: true
     },
-    allowEIO3: true
+    allowEIO3: true,
+    pingInterval: 2500,
+    pingTimeout: 5000,
+    maxHttpBufferSize: 1e7,
 });
 
 const logger = {
@@ -106,8 +109,9 @@ io.on("connection", (socket) => {
                     kex: ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'ecdh-sha2-nistp256'],
                     serverHostKey: ['ssh-ed25519', 'ecdsa-sha2-nistp256']
                 },
-                keepaliveInterval: 30000,
-                keepaliveCountMax: 3,
+                keepaliveInterval: 10000,
+                keepaliveCountMax: 5,
+                readyTimeout: 5000,
             });
     });
 

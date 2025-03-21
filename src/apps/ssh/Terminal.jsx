@@ -117,8 +117,18 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         let isPasting = false;
 
+        let buffer = "";
+        let bufferTimeout = null;
+
         terminalInstance.current.onData((data) => {
-            socketRef.current.emit("data", data);
+            buffer += data;
+            if (!bufferTimeout) {
+                bufferTimeout = setTimeout(() => {
+                    socketRef.current.emit("data", buffer);
+                    buffer = "";
+                    bufferTimeout = null;
+                }, 20);
+            }
         });
 
         terminalInstance.current.attachCustomKeyEventHandler((event) => {
