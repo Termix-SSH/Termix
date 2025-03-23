@@ -18,17 +18,31 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         if (!parentContainer || parentContainer.clientWidth === 0) return;
 
-        const parentWidth = parentContainer.clientWidth - 10;
-        const parentHeight = parentContainer.clientHeight - 10;
+        const parentWidth = parentContainer.clientWidth - 8;
+        const parentHeight = parentContainer.clientHeight - 12;
 
         terminalContainer.style.width = `${parentWidth}px`;
         terminalContainer.style.height = `${parentHeight}px`;
 
         requestAnimationFrame(() => {
-            fitAddon.current.fit();
-            if (socketRef.current && terminalInstance.current) {
-                const { cols, rows } = terminalInstance.current;
-                socketRef.current.emit("resize", { cols, rows });
+            if (fitAddon.current && terminalInstance.current) {
+                fitAddon.current.fit();
+                
+                if (socketRef.current) {
+                    let { cols, rows } = terminalInstance.current;
+                    const originalCols = cols;
+                    const originalRows = rows;
+                    
+                    cols += 1;
+                    
+                    try {
+                        terminalInstance.current.resize(cols, rows);
+                        socketRef.current.emit("resize", { cols, rows });
+                    } catch (e) {
+                        terminalInstance.current.resize(originalCols, originalRows);
+                        socketRef.current.emit("resize", { cols: originalCols, rows: originalRows });
+                    }
+                }
             }
         });
     };
@@ -50,6 +64,11 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             fontSize: 14,
             scrollback: 1000,
             ignoreBracketedPasteMode: true,
+            fastScrollModifier: 'alt',
+            fastScrollSensitivity: 5,
+            letterSpacing: 0,
+            lineHeight: 1,
+            padding: 2,
         });
 
         terminalInstance.current.loadAddon(fitAddon.current);
@@ -115,19 +134,47 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             terminalInstance.current.write(decoder.decode(new Uint8Array(data)));
         });
 
-        let buffer = "";
-        let bufferTimeout = null;
-
         terminalInstance.current.onData((data) => {
-            buffer += data;
-            if (!bufferTimeout) {
-                bufferTimeout = setTimeout(() => {
-                    socketRef.current.emit("data", buffer);
-                    buffer = "";
-                    bufferTimeout = null;
-                }, 20);
+            if (data.length === 1) {
+                socketRef.current.emit("data", data);
+                return;
+            }
+
+            if (socketRef.current) {
+                socketRef.current.emit("data", data);
             }
         });
+
+        const getClipboardText = async () => {
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    return await navigator.clipboard.readText();
+                }
+
+                if (document.queryCommandSupported && document.queryCommandSupported('paste')) {
+                    const textarea = document.createElement('textarea');
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    
+                    try {
+                        document.execCommand('paste');
+                        const text = textarea.value;
+                        document.body.removeChild(textarea);
+                        return text;
+                    } catch (e) {
+                        document.body.removeChild(textarea);
+                        throw new Error('Fallback clipboard paste failed');
+                    }
+                }
+                
+                throw new Error('No clipboard access methods available');
+            } catch (err) {
+                console.error("Failed to read clipboard contents:", err);
+                return null;
+            }
+        };
 
         terminalInstance.current.attachCustomKeyEventHandler(async (event) => {
             if ((event.ctrlKey || event.metaKey) && event.key === "v") {
@@ -136,17 +183,33 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 if (!socketRef.current) return false;
 
                 try {
-                    const text = await navigator.clipboard.readText();
+                    const text = await getClipboardText();
+                    if (!text) {
+                        terminalInstance.current.write("\r\nClipboard access denied or empty\r\n");
+                        return false;
+                    }
+                    
                     const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-
-                    await Promise.all(lines.map(line => {
-                        return new Promise(resolve => {
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        
+                        if (i === 0) {
+                            socketRef.current.emit("data", line);
+                        } 
+                        else if (i < lines.length - 1) {
+                            socketRef.current.emit("data", "\r" + line);
+                        } 
+                        else if (i > 0) {
+                            const endsWithNewline = text.endsWith("\n") || text.endsWith("\r\n") || text.endsWith("\r");
+                            socketRef.current.emit("data", "\r" + line + (endsWithNewline ? "\r" : ""));
+                        }
+                        else if (lines.length === 1 && (text.endsWith("\n") || text.endsWith("\r\n") || text.endsWith("\r"))) {
                             socketRef.current.emit("data", line + "\r");
-                            resolve();
-                        });
-                    }));
+                        }
+                    }
                 } catch (err) {
-                    console.error("Failed to read clipboard contents:", err);
+                    console.error("Failed to process clipboard contents:", err);
                 }
 
                 return false;
@@ -155,11 +218,43 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             return true;
         });
 
+        const setClipboardText = (text) => {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text);
+                    return true;
+                }
+
+                if (document.queryCommandSupported && document.queryCommandSupported('copy')) {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    
+                    try {
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        return true;
+                    } catch (e) {
+                        document.body.removeChild(textarea);
+                        return false;
+                    }
+                }
+                
+                return false;
+            } catch (err) {
+                console.error("Failed to write to clipboard:", err);
+                return false;
+            }
+        };
+
         terminalInstance.current.onKey(({ domEvent }) => {
             if (domEvent.key === "c" && (domEvent.ctrlKey || domEvent.metaKey)) {
                 const selection = terminalInstance.current.getSelection();
                 if (selection) {
-                    navigator.clipboard.writeText(selection);
+                    setClipboardText(selection);
                 }
             }
         });
@@ -206,14 +301,21 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         const parentContainer = terminalContainer.parentElement;
         if (!parentContainer) return;
 
-        const observer = new ResizeObserver(() => {
+        const resizeObserver = new ResizeObserver(() => {
             resizeTerminal();
         });
 
-        observer.observe(parentContainer);
+        resizeObserver.observe(parentContainer);
+
+        const handleWindowResize = () => {
+            resizeTerminal();
+        };
+        
+        window.addEventListener('resize', handleWindowResize);
 
         return () => {
-            observer.disconnect();
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', handleWindowResize);
         };
     }, []);
 
@@ -226,7 +328,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 position: 'absolute',
                 width: '100%',
                 height: '100%',
-                transform: 'translateY(5px) translateX(5px)',
+                transform: 'translateY(2px) translateX(3px)',
             }}
         />
     );
