@@ -146,78 +146,108 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
                 event.preventDefault();
 
-                // Check if clipboard API is available
-                if (navigator.clipboard && navigator.clipboard.readText) {
-                    navigator.clipboard.readText().then((text) => {
-                        text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-                        
-                        if (socketRef.current && socketRef.current.connected) {
-                            const processedText = text.replace(/\n/g, "\r");
-                            socketRef.current.emit("data", processedText);
-                            
-                            setTimeout(() => {
-                                isPasting = false;
-                            }, 50);
-                        } else {
-                            isPasting = false;
+                // Use a multi-layered approach for clipboard access
+                const pasteFromClipboard = async () => {
+                    try {
+                        // Try modern Clipboard API first
+                        if (navigator.clipboard && navigator.clipboard.readText) {
+                            try {
+                                const text = await navigator.clipboard.readText();
+                                if (text && socketRef.current?.connected) {
+                                    const processedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
+                                    socketRef.current.emit("data", processedText);
+                                    return true;
+                                }
+                            } catch (clipboardErr) {
+                                console.warn("Clipboard API failed:", clipboardErr);
+                                // Continue to fallbacks
+                            }
                         }
-                    }).catch((err) => {
-                        console.error("Failed to read clipboard contents:", err);
-                        // Try to handle paste manually using execCommand for fallback
-                        tryFallbackPaste();
-                    });
-                } else {
-                    // Fallback for browsers where clipboard API is not yet available
-                    tryFallbackPaste();
-                }
 
+                        // Try execCommand fallback
+                        if (document.queryCommandSupported && document.queryCommandSupported('paste')) {
+                            const textarea = document.createElement('textarea');
+                            textarea.style.position = 'fixed';
+                            textarea.style.opacity = '0';
+                            document.body.appendChild(textarea);
+                            textarea.focus();
+                            
+                            try {
+                                const successful = document.execCommand('paste');
+                                if (successful) {
+                                    const text = textarea.value;
+                                    if (text && socketRef.current?.connected) {
+                                        const processedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
+                                        socketRef.current.emit("data", processedText);
+                                        document.body.removeChild(textarea);
+                                        return true;
+                                    }
+                                }
+                            } catch (execErr) {
+                                console.warn("execCommand paste failed:", execErr);
+                            }
+                            document.body.removeChild(textarea);
+                        }
+
+                        // Show permissions warning and instructions
+                        terminalInstance.current.write("\r\n*** To paste: Right-click in terminal and select Paste from context menu ***\r\n");
+                        return false;
+                    } finally {
+                        setTimeout(() => {
+                            isPasting = false;
+                        }, 100);
+                    }
+                };
+
+                pasteFromClipboard();
                 return false;
             }
 
             return true;
         });
 
-        // Add fallback paste method using execCommand or input element
-        const tryFallbackPaste = () => {
-            try {
-                // Create temporary textarea for paste operation
-                const textarea = document.createElement('textarea');
-                textarea.style.position = 'absolute';
-                textarea.style.left = '-9999px';
-                textarea.style.top = '0px';
-                document.body.appendChild(textarea);
-                textarea.focus();
-                
-                // Try execCommand paste (works in some browsers)
-                const successful = document.execCommand('paste');
-                if (successful) {
-                    const text = textarea.value;
-                    if (text && socketRef.current && socketRef.current.connected) {
-                        const processedText = text.replace(/\r\n/g, "\r").replace(/\n/g, "\r");
-                        socketRef.current.emit("data", processedText);
-                    }
-                } else {
-                    console.log("Fallback paste failed, clipboard permissions may be needed");
-                    terminalInstance.current.write("\r\n*** Paste failed: Please try again or grant clipboard permissions ***\r\n");
-                }
-                
-                // Clean up
-                document.body.removeChild(textarea);
-                setTimeout(() => {
-                    isPasting = false;
-                }, 50);
-            } catch (err) {
-                console.error("Fallback paste failed:", err);
-                terminalInstance.current.write("\r\n*** Paste failed: Try clicking in the terminal first ***\r\n");
-                isPasting = false;
-            }
-        };
-
         terminalInstance.current.onKey(({ domEvent }) => {
             if (domEvent.key === "c" && (domEvent.ctrlKey || domEvent.metaKey)) {
                 const selection = terminalInstance.current.getSelection();
                 if (selection) {
-                    navigator.clipboard.writeText(selection);
+                    // Use a try-catch to handle clipboard failures
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(selection)
+                                .catch(err => {
+                                    console.warn("Clipboard write failed:", err);
+                                    terminalInstance.current.write("\r\n*** Copy failed: Text copied to internal buffer ***\r\n");
+                                    // Store selection in a variable as fallback
+                                    window.termixInternalClipboard = selection;
+                                });
+                        } else {
+                            // Fallback for browsers without clipboard API
+                            const textarea = document.createElement('textarea');
+                            textarea.value = selection;
+                            textarea.style.position = 'fixed';
+                            textarea.style.opacity = '0';
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            
+                            try {
+                                const successful = document.execCommand('copy');
+                                if (!successful) {
+                                    terminalInstance.current.write("\r\n*** Copy failed: Text copied to internal buffer ***\r\n");
+                                    window.termixInternalClipboard = selection;
+                                }
+                            } catch (err) {
+                                console.warn("execCommand copy failed:", err);
+                                terminalInstance.current.write("\r\n*** Copy failed: Text copied to internal buffer ***\r\n");
+                                window.termixInternalClipboard = selection;
+                            }
+                            
+                            document.body.removeChild(textarea);
+                        }
+                    } catch (err) {
+                        console.error("Copy failed:", err);
+                        terminalInstance.current.write("\r\n*** Copy failed: Text copied to internal buffer ***\r\n");
+                        window.termixInternalClipboard = selection;
+                    }
                 }
             }
         });
@@ -253,6 +283,127 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         }, 5000);
 
         socketRef.current.on("pong", () => {});
+
+        // Add right-click context menu for paste
+        const element = terminalInstance.current.element;
+        if (element) {
+            element.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                
+                // Create and show context menu
+                const contextMenu = document.createElement('div');
+                contextMenu.className = 'terminal-context-menu';
+                contextMenu.style.position = 'fixed';
+                contextMenu.style.left = `${event.clientX}px`;
+                contextMenu.style.top = `${event.clientY}px`;
+                contextMenu.style.backgroundColor = '#1e1e1e';
+                contextMenu.style.border = '1px solid #555';
+                contextMenu.style.borderRadius = '4px';
+                contextMenu.style.padding = '4px 0';
+                contextMenu.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                contextMenu.style.zIndex = '1000';
+                
+                // Create copy option
+                const copyOption = document.createElement('div');
+                copyOption.innerText = 'Copy';
+                copyOption.className = 'terminal-context-menu-item';
+                copyOption.style.padding = '6px 12px';
+                copyOption.style.cursor = 'pointer';
+                copyOption.style.color = 'white';
+                copyOption.style.fontSize = '14px';
+                copyOption.onmouseover = () => {
+                    copyOption.style.backgroundColor = '#3a3a3a';
+                };
+                copyOption.onmouseout = () => {
+                    copyOption.style.backgroundColor = 'transparent';
+                };
+                
+                // Handle copy action
+                copyOption.onclick = () => {
+                    const selection = terminalInstance.current.getSelection();
+                    if (selection) {
+                        // Try to copy using clipboard API
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(selection)
+                                .catch(err => {
+                                    console.warn("Clipboard write failed:", err);
+                                    window.termixInternalClipboard = selection;
+                                    terminalInstance.current.write("\r\n*** Copied to internal clipboard ***\r\n");
+                                });
+                        } else {
+                            // Store in internal clipboard
+                            window.termixInternalClipboard = selection;
+                            terminalInstance.current.write("\r\n*** Copied to internal clipboard ***\r\n");
+                        }
+                    }
+                    document.body.removeChild(contextMenu);
+                };
+                
+                // Create paste option
+                const pasteOption = document.createElement('div');
+                pasteOption.innerText = 'Paste';
+                pasteOption.className = 'terminal-context-menu-item';
+                pasteOption.style.padding = '6px 12px';
+                pasteOption.style.cursor = 'pointer';
+                pasteOption.style.color = 'white';
+                pasteOption.style.fontSize = '14px';
+                pasteOption.onmouseover = () => {
+                    pasteOption.style.backgroundColor = '#3a3a3a';
+                };
+                pasteOption.onmouseout = () => {
+                    pasteOption.style.backgroundColor = 'transparent';
+                };
+                
+                // Handle paste action
+                pasteOption.onclick = async () => {
+                    try {
+                        // Try clipboard API first
+                        if (navigator.clipboard && navigator.clipboard.readText) {
+                            try {
+                                const text = await navigator.clipboard.readText();
+                                if (text && socketRef.current?.connected) {
+                                    const processedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
+                                    socketRef.current.emit("data", processedText);
+                                }
+                            } catch (err) {
+                                // Use fallback or internal clipboard
+                                if (window.termixInternalClipboard) {
+                                    const processedText = window.termixInternalClipboard.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
+                                    socketRef.current.emit("data", processedText);
+                                } else {
+                                    terminalInstance.current.write("\r\n*** Paste failed: No clipboard content available ***\r\n");
+                                }
+                            }
+                        } else if (window.termixInternalClipboard) {
+                            // Use internal clipboard if available
+                            const processedText = window.termixInternalClipboard.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
+                            socketRef.current.emit("data", processedText);
+                        } else {
+                            terminalInstance.current.write("\r\n*** Paste failed: No clipboard content available ***\r\n");
+                        }
+                    } finally {
+                        document.body.removeChild(contextMenu);
+                    }
+                };
+                
+                // Add options to menu
+                contextMenu.appendChild(copyOption);
+                contextMenu.appendChild(pasteOption);
+                document.body.appendChild(contextMenu);
+                
+                // Remove menu when clicking elsewhere
+                const removeMenu = (e) => {
+                    if (!contextMenu.contains(e.target)) {
+                        document.body.removeChild(contextMenu);
+                        document.removeEventListener('click', removeMenu);
+                    }
+                };
+                
+                setTimeout(() => {
+                    document.addEventListener('click', removeMenu);
+                }, 0);
+            });
+        }
 
         return () => {
             clearInterval(pingInterval);
