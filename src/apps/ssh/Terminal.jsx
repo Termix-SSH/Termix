@@ -117,14 +117,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 rsaKey: hostConfig.sshKey?.trim() || hostConfig.rsaKey?.trim(),
             };
 
-            console.log("Connecting to SSH with config:", {
-                ip: sshConfig.ip,
-                user: sshConfig.user,
-                port: sshConfig.port,
-                hasPassword: !!sshConfig.password,
-                hasKey: !!sshConfig.sshKey,
-            });
-
             socket.emit("connectToHost", cols, rows, sshConfig);
         });
 
@@ -154,29 +146,72 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
                 event.preventDefault();
 
-                navigator.clipboard.readText().then((text) => {
-                    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-                    
-                    if (socketRef.current && socketRef.current.connected) {
-                        const processedText = text.replace(/\n/g, "\r");
-                        socketRef.current.emit("data", processedText);
+                // Check if clipboard API is available
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    navigator.clipboard.readText().then((text) => {
+                        text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
                         
-                        setTimeout(() => {
+                        if (socketRef.current && socketRef.current.connected) {
+                            const processedText = text.replace(/\n/g, "\r");
+                            socketRef.current.emit("data", processedText);
+                            
+                            setTimeout(() => {
+                                isPasting = false;
+                            }, 50);
+                        } else {
                             isPasting = false;
-                        }, 50);
-                    } else {
-                        isPasting = false;
-                    }
-                }).catch((err) => {
-                    console.error("Failed to read clipboard contents:", err);
-                    isPasting = false;
-                });
+                        }
+                    }).catch((err) => {
+                        console.error("Failed to read clipboard contents:", err);
+                        // Try to handle paste manually using execCommand for fallback
+                        tryFallbackPaste();
+                    });
+                } else {
+                    // Fallback for browsers where clipboard API is not yet available
+                    tryFallbackPaste();
+                }
 
                 return false;
             }
 
             return true;
         });
+
+        // Add fallback paste method using execCommand or input element
+        const tryFallbackPaste = () => {
+            try {
+                // Create temporary textarea for paste operation
+                const textarea = document.createElement('textarea');
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+                textarea.style.top = '0px';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                
+                // Try execCommand paste (works in some browsers)
+                const successful = document.execCommand('paste');
+                if (successful) {
+                    const text = textarea.value;
+                    if (text && socketRef.current && socketRef.current.connected) {
+                        const processedText = text.replace(/\r\n/g, "\r").replace(/\n/g, "\r");
+                        socketRef.current.emit("data", processedText);
+                    }
+                } else {
+                    console.log("Fallback paste failed, clipboard permissions may be needed");
+                    terminalInstance.current.write("\r\n*** Paste failed: Please try again or grant clipboard permissions ***\r\n");
+                }
+                
+                // Clean up
+                document.body.removeChild(textarea);
+                setTimeout(() => {
+                    isPasting = false;
+                }, 50);
+            } catch (err) {
+                console.error("Fallback paste failed:", err);
+                terminalInstance.current.write("\r\n*** Paste failed: Try clicking in the terminal first ***\r\n");
+                isPasting = false;
+            }
+        };
 
         terminalInstance.current.onKey(({ domEvent }) => {
             if (domEvent.key === "c" && (domEvent.ctrlKey || domEvent.metaKey)) {
@@ -217,9 +252,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         }, 5000);
 
-        socketRef.current.on("pong", () => {
-            console.log("Received pong from server.");
-        });
+        socketRef.current.on("pong", () => {});
 
         return () => {
             clearInterval(pingInterval);
