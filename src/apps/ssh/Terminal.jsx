@@ -147,10 +147,17 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         const getClipboardText = async () => {
             try {
+                // Modern Clipboard API - this will work in secure contexts (HTTPS or localhost)
                 if (navigator.clipboard && navigator.clipboard.readText) {
-                    return await navigator.clipboard.readText();
+                    try {
+                        return await navigator.clipboard.readText();
+                    } catch (clipboardErr) {
+                        console.warn("Navigator clipboard API failed:", clipboardErr);
+                        // Continue to fallback methods
+                    }
                 }
 
+                // Fallback method using document.execCommand
                 if (document.queryCommandSupported && document.queryCommandSupported('paste')) {
                     const textarea = document.createElement('textarea');
                     textarea.style.position = 'fixed';
@@ -162,11 +169,47 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                         document.execCommand('paste');
                         const text = textarea.value;
                         document.body.removeChild(textarea);
-                        return text;
-                    } catch (e) {
+                        if (text) return text;
+                    } catch (execErr) {
                         document.body.removeChild(textarea);
-                        throw new Error('Fallback clipboard paste failed');
+                        console.warn("execCommand paste failed:", execErr);
+                        // Continue to next fallback
                     }
+                }
+
+                // Fallback UI prompt for non-secure contexts where clipboard API is restricted
+                if (!window.location.hostname.includes('localhost') && 
+                    !window.location.protocol.includes('https')) {
+                    
+                    // Display input prompt in the terminal itself
+                    terminalInstance.current.write("\r\n\r\nPaste access denied. Please type or paste content here:\r\n");
+                    
+                    // Use a terminal-based input method
+                    return new Promise(resolve => {
+                        let inputText = '';
+                        const dataHandler = terminalInstance.current.onData(data => {
+                            // Check for enter key (carriage return)
+                            if (data === '\r') {
+                                terminalInstance.current.write('\r\n');
+                                dataHandler.dispose(); // Remove the handler
+                                resolve(inputText);
+                                return;
+                            }
+                            
+                            // Handle backspace
+                            if (data === '\x7f') {
+                                if (inputText.length > 0) {
+                                    inputText = inputText.slice(0, -1);
+                                    terminalInstance.current.write('\b \b'); // Erase the character
+                                }
+                                return;
+                            }
+                            
+                            // Normal character input
+                            inputText += data;
+                            terminalInstance.current.write(data);
+                        });
+                    });
                 }
                 
                 throw new Error('No clipboard access methods available');
@@ -176,16 +219,23 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         };
 
+        // Track if paste is in progress to prevent double paste
+        let pasteInProgress = false;
+
         terminalInstance.current.attachCustomKeyEventHandler(async (event) => {
             if ((event.ctrlKey || event.metaKey) && event.key === "v") {
                 event.preventDefault();
 
-                if (!socketRef.current) return false;
-
+                // Prevent double paste execution
+                if (pasteInProgress || !socketRef.current) return false;
+                
+                pasteInProgress = true;
+                
                 try {
                     const text = await getClipboardText();
                     if (!text) {
                         terminalInstance.current.write("\r\nClipboard access denied or empty\r\n");
+                        pasteInProgress = false;
                         return false;
                     }
                     
@@ -211,6 +261,11 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 } catch (err) {
                     console.error("Failed to process clipboard contents:", err);
                 }
+                
+                // Set timeout to reset paste lock
+                setTimeout(() => {
+                    pasteInProgress = false;
+                }, 100);
 
                 return false;
             }
