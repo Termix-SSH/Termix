@@ -25,24 +25,10 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         terminalContainer.style.height = `${parentHeight}px`;
 
         requestAnimationFrame(() => {
-            if (fitAddon.current && terminalInstance.current) {
-                fitAddon.current.fit();
-                
-                if (socketRef.current) {
-                    let { cols, rows } = terminalInstance.current;
-                    const originalCols = cols;
-                    const originalRows = rows;
-                    
-                    cols += 1;
-                    
-                    try {
-                        terminalInstance.current.resize(cols, rows);
-                        socketRef.current.emit("resize", { cols, rows });
-                    } catch (e) {
-                        terminalInstance.current.resize(originalCols, originalRows);
-                        socketRef.current.emit("resize", { cols: originalCols, rows: originalRows });
-                    }
-                }
+            fitAddon.current.fit();
+            if (socketRef.current && terminalInstance.current) {
+                const { cols, rows } = terminalInstance.current;
+                socketRef.current.emit("resize", { cols, rows });
             }
         });
     };
@@ -64,8 +50,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             fontSize: 14,
             scrollback: 1000,
             ignoreBracketedPasteMode: true,
-            fastScrollModifier: 'alt',
-            fastScrollSensitivity: 5,
             letterSpacing: 0,
             lineHeight: 1,
             padding: 2,
@@ -81,19 +65,26 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             {
                 path: "/ssh.io/socket.io",
                 transports: ["websocket", "polling"],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                timeout: 20000,
             }
         );
         socketRef.current = socket;
 
         socket.on("connect_error", (error) => {
             terminalInstance.current.write(`\r\n*** Socket connection error: ${error.message} ***\r\n`);
+            console.error("Socket connection error:", error);
         });
 
         socket.on("connect_timeout", () => {
             terminalInstance.current.write(`\r\n*** Socket connection timeout ***\r\n`);
+            console.error("Socket connection timeout");
         });
 
         socket.on("error", (err) => {
+            console.error("SSH connection error:", err);
             const isAuthError = err.toLowerCase().includes("authentication") || err.toLowerCase().includes("auth");
             if (isAuthError && !hostConfig.password?.trim() && !hostConfig.sshKey?.trim() && !authModalShown) {
                 authModalShown = true;
@@ -103,22 +94,36 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         });
 
         socket.on("connect", () => {
+            console.log("Socket connected, attempting SSH connection...");
+            
             fitAddon.current.fit();
             resizeTerminal();
             const { cols, rows } = terminalInstance.current;
 
+            // Check for authentication details
             if (!hostConfig.password?.trim() && !hostConfig.sshKey?.trim()) {
+                console.log("No authentication provided, showing modal");
                 setIsNoAuthHidden(false);
                 return;
             }
 
+            // Ensure we have proper SSH config with both key field names for backward compatibility
             const sshConfig = {
                 ip: hostConfig.ip,
                 user: hostConfig.user,
                 port: Number(hostConfig.port) || 22,
                 password: hostConfig.password?.trim(),
-                sshKey: hostConfig.sshKey?.trim()
+                sshKey: hostConfig.sshKey?.trim(),
+                rsaKey: hostConfig.sshKey?.trim() || hostConfig.rsaKey?.trim(),
             };
+
+            console.log("Connecting to SSH with config:", {
+                ip: sshConfig.ip,
+                user: sshConfig.user,
+                port: sshConfig.port,
+                hasPassword: !!sshConfig.password,
+                hasKey: !!sshConfig.sshKey,
+            });
 
             socket.emit("connectToHost", cols, rows, sshConfig);
         });
@@ -134,138 +139,38 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             terminalInstance.current.write(decoder.decode(new Uint8Array(data)));
         });
 
-        terminalInstance.current.onData((data) => {
-            if (data.length === 1) {
-                socketRef.current.emit("data", data);
-                return;
-            }
+        let isPasting = false;
 
-            if (socketRef.current) {
+        terminalInstance.current.onData((data) => {
+            if (socketRef.current && socketRef.current.connected) {
                 socketRef.current.emit("data", data);
             }
         });
 
-        const getClipboardText = async () => {
-            try {
-                // Modern Clipboard API - this will work in secure contexts (HTTPS or localhost)
-                if (navigator.clipboard && navigator.clipboard.readText) {
-                    try {
-                        return await navigator.clipboard.readText();
-                    } catch (clipboardErr) {
-                        console.warn("Navigator clipboard API failed:", clipboardErr);
-                        // Continue to fallback methods
-                    }
-                }
-
-                // Fallback method using document.execCommand
-                if (document.queryCommandSupported && document.queryCommandSupported('paste')) {
-                    const textarea = document.createElement('textarea');
-                    textarea.style.position = 'fixed';
-                    textarea.style.opacity = '0';
-                    document.body.appendChild(textarea);
-                    textarea.focus();
-                    
-                    try {
-                        document.execCommand('paste');
-                        const text = textarea.value;
-                        document.body.removeChild(textarea);
-                        if (text) return text;
-                    } catch (execErr) {
-                        document.body.removeChild(textarea);
-                        console.warn("execCommand paste failed:", execErr);
-                        // Continue to next fallback
-                    }
-                }
-
-                // Fallback UI prompt for non-secure contexts where clipboard API is restricted
-                if (!window.location.hostname.includes('localhost') && 
-                    !window.location.protocol.includes('https')) {
-                    
-                    // Display input prompt in the terminal itself
-                    terminalInstance.current.write("\r\n\r\nPaste access denied. Please type or paste content here:\r\n");
-                    
-                    // Use a terminal-based input method
-                    return new Promise(resolve => {
-                        let inputText = '';
-                        const dataHandler = terminalInstance.current.onData(data => {
-                            // Check for enter key (carriage return)
-                            if (data === '\r') {
-                                terminalInstance.current.write('\r\n');
-                                dataHandler.dispose(); // Remove the handler
-                                resolve(inputText);
-                                return;
-                            }
-                            
-                            // Handle backspace
-                            if (data === '\x7f') {
-                                if (inputText.length > 0) {
-                                    inputText = inputText.slice(0, -1);
-                                    terminalInstance.current.write('\b \b'); // Erase the character
-                                }
-                                return;
-                            }
-                            
-                            // Normal character input
-                            inputText += data;
-                            terminalInstance.current.write(data);
-                        });
-                    });
-                }
-                
-                throw new Error('No clipboard access methods available');
-            } catch (err) {
-                console.error("Failed to read clipboard contents:", err);
-                return null;
-            }
-        };
-
-        // Track if paste is in progress to prevent double paste
-        let pasteInProgress = false;
-
-        terminalInstance.current.attachCustomKeyEventHandler(async (event) => {
+        terminalInstance.current.attachCustomKeyEventHandler((event) => {
             if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+                if (isPasting) return false;
+                isPasting = true;
+
                 event.preventDefault();
 
-                // Prevent double paste execution
-                if (pasteInProgress || !socketRef.current) return false;
-                
-                pasteInProgress = true;
-                
-                try {
-                    const text = await getClipboardText();
-                    if (!text) {
-                        terminalInstance.current.write("\r\nClipboard access denied or empty\r\n");
-                        pasteInProgress = false;
-                        return false;
-                    }
+                navigator.clipboard.readText().then((text) => {
+                    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
                     
-                    const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-                    
-                    for (let i = 0; i < lines.length; i++) {
-                        const line = lines[i];
+                    if (socketRef.current && socketRef.current.connected) {
+                        const processedText = text.replace(/\n/g, "\r");
+                        socketRef.current.emit("data", processedText);
                         
-                        if (i === 0) {
-                            socketRef.current.emit("data", line);
-                        } 
-                        else if (i < lines.length - 1) {
-                            socketRef.current.emit("data", "\r" + line);
-                        } 
-                        else if (i > 0) {
-                            const endsWithNewline = text.endsWith("\n") || text.endsWith("\r\n") || text.endsWith("\r");
-                            socketRef.current.emit("data", "\r" + line + (endsWithNewline ? "\r" : ""));
-                        }
-                        else if (lines.length === 1 && (text.endsWith("\n") || text.endsWith("\r\n") || text.endsWith("\r"))) {
-                            socketRef.current.emit("data", line + "\r");
-                        }
+                        setTimeout(() => {
+                            isPasting = false;
+                        }, 50);
+                    } else {
+                        isPasting = false;
                     }
-                } catch (err) {
-                    console.error("Failed to process clipboard contents:", err);
-                }
-                
-                // Set timeout to reset paste lock
-                setTimeout(() => {
-                    pasteInProgress = false;
-                }, 100);
+                }).catch((err) => {
+                    console.error("Failed to read clipboard contents:", err);
+                    isPasting = false;
+                });
 
                 return false;
             }
@@ -273,43 +178,11 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             return true;
         });
 
-        const setClipboardText = (text) => {
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text);
-                    return true;
-                }
-
-                if (document.queryCommandSupported && document.queryCommandSupported('copy')) {
-                    const textarea = document.createElement('textarea');
-                    textarea.value = text;
-                    textarea.style.position = 'fixed';
-                    textarea.style.opacity = '0';
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    
-                    try {
-                        document.execCommand('copy');
-                        document.body.removeChild(textarea);
-                        return true;
-                    } catch (e) {
-                        document.body.removeChild(textarea);
-                        return false;
-                    }
-                }
-                
-                return false;
-            } catch (err) {
-                console.error("Failed to write to clipboard:", err);
-                return false;
-            }
-        };
-
         terminalInstance.current.onKey(({ domEvent }) => {
             if (domEvent.key === "c" && (domEvent.ctrlKey || domEvent.metaKey)) {
                 const selection = terminalInstance.current.getSelection();
                 if (selection) {
-                    setClipboardText(selection);
+                    navigator.clipboard.writeText(selection);
                 }
             }
         });
@@ -323,8 +196,25 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         });
 
+        socket.on("disconnect", (reason) => {
+            console.log("Socket disconnected:", reason);
+            terminalInstance.current.write(`\r\n*** Socket disconnected: ${reason} ***\r\n`);
+        });
+
+        socket.on("reconnect", (attemptNumber) => {
+            console.log("Socket reconnected after", attemptNumber, "attempts");
+            terminalInstance.current.write(`\r\n*** Socket reconnected after ${attemptNumber} attempts ***\r\n`);
+        });
+
+        socket.on("reconnect_error", (error) => {
+            console.error("Socket reconnect error:", error);
+            terminalInstance.current.write(`\r\n*** Socket reconnect error: ${error.message} ***\r\n`);
+        });
+
         const pingInterval = setInterval(() => {
-            socketRef.current.emit("ping");
+            if (socketRef.current && socketRef.current.connected) {
+                socketRef.current.emit("ping");
+            }
         }, 5000);
 
         socketRef.current.on("pong", () => {
@@ -397,6 +287,7 @@ NewTerminal.propTypes = {
         user: PropTypes.string.isRequired,
         password: PropTypes.string,
         sshKey: PropTypes.string,
+        rsaKey: PropTypes.string,
         port: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     }).isRequired,
     isVisible: PropTypes.bool.isRequired,
