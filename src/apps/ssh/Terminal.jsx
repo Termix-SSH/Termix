@@ -6,7 +6,7 @@ import io from "socket.io-client";
 import PropTypes from "prop-types";
 import theme from "../../theme.js";
 
-export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidden }, ref) => {
+export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidden, setErrorMessage, setIsErrorHidden }, ref) => {
     const terminalRef = useRef(null);
     const socketRef = useRef(null);
     const fitAddon = useRef(new FitAddon());
@@ -139,21 +139,23 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
             terminalInstance.current.attachCustomKeyEventHandler((event) => {
                 if ((event.ctrlKey || event.metaKey) && event.key === "v") {
-                    event.preventDefault();
-                    
-                    navigator.clipboard.readText()
-                        .then(text => {
-                            if (text && socketRef.current?.connected) {
-                                const processedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
-                                socketRef.current.emit("data", processedText);
-                            }
-                        })
-                        .catch(() => {
-                            if (terminalInstance.current) {
-                                terminalInstance.current.write("\r\n*** Paste failed: Clipboard access denied. Please check browser permissions. ***\r\n");
-                            }
-                        });
+                    if (isPasting) return false;
+                    isPasting = true;
 
+                    event.preventDefault();
+                    navigator.clipboard.readText().then(text => {
+                        if (text && socketRef.current?.connected) {
+                            const processedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
+                            socketRef.current.emit("data", processedText);
+                        }
+                    }).catch(() => {
+                        setErrorMessage("Paste failed: Clipboard access denied. Instead, use Control Shift V.");
+                        setIsErrorHidden(false);
+                    }).finally(() => {
+                        setTimeout(() => {
+                            isPasting = false;
+                        }, 300);
+                    });
                     return false;
                 }
                 return true;
@@ -163,12 +165,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 if (domEvent.key === "c" && (domEvent.ctrlKey || domEvent.metaKey)) {
                     const selection = terminalInstance.current.getSelection();
                     if (selection) {
-                        navigator.clipboard.writeText(selection)
-                            .catch(() => {
-                                if (terminalInstance.current) {
-                                    terminalInstance.current.write("\r\n*** Copy failed: Clipboard access denied. Please check browser permissions. ***\r\n");
-                                }
-                            });
+                        navigator.clipboard.writeText(selection);
                     }
                 }
             });
@@ -209,120 +206,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         }, 5000);
 
         socketRef.current.on("pong", () => {});
-
-        if (terminalInstance.current && terminalInstance.current.element) {
-            const element = terminalInstance.current.element;
-            element.addEventListener('contextmenu', (event) => {
-                event.preventDefault();
-
-                const contextMenu = document.createElement('div');
-                contextMenu.className = 'terminal-context-menu';
-                contextMenu.style.position = 'fixed';
-                contextMenu.style.left = `${event.clientX}px`;
-                contextMenu.style.top = `${event.clientY}px`;
-                contextMenu.style.backgroundColor = '#1e1e1e';
-                contextMenu.style.border = '1px solid #555';
-                contextMenu.style.borderRadius = '4px';
-                contextMenu.style.padding = '4px 0';
-                contextMenu.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                contextMenu.style.zIndex = '1000';
-
-                const copyOption = document.createElement('div');
-                copyOption.innerText = 'Copy';
-                copyOption.className = 'terminal-context-menu-item';
-                copyOption.style.padding = '6px 12px';
-                copyOption.style.cursor = 'pointer';
-                copyOption.style.color = 'white';
-                copyOption.style.fontSize = '14px';
-                copyOption.onmouseover = () => {
-                    copyOption.style.backgroundColor = '#3a3a3a';
-                };
-                copyOption.onmouseout = () => {
-                    copyOption.style.backgroundColor = 'transparent';
-                };
-
-                copyOption.onclick = () => {
-                    if (terminalInstance.current) {
-                        const selection = terminalInstance.current.getSelection();
-                        if (selection) {
-                            if (navigator.clipboard && navigator.clipboard.writeText) {
-                                navigator.clipboard.writeText(selection)
-                                    .catch(err => {
-                                        console.warn("Clipboard write failed:", err);
-                                        window.termixInternalClipboard = selection;
-                                        if (terminalInstance.current) {
-                                            terminalInstance.current.write("\r\n*** Copied to internal clipboard ***\r\n");
-                                        }
-                                    });
-                            } else {
-                                window.termixInternalClipboard = selection;
-                                if (terminalInstance.current) {
-                                    terminalInstance.current.write("\r\n*** Copied to internal clipboard ***\r\n");
-                                }
-                            }
-                        }
-                    }
-                    document.body.removeChild(contextMenu);
-                };
-
-                const pasteOption = document.createElement('div');
-                pasteOption.innerText = 'Paste';
-                pasteOption.className = 'terminal-context-menu-item';
-                pasteOption.style.padding = '6px 12px';
-                pasteOption.style.cursor = 'pointer';
-                pasteOption.style.color = 'white';
-                pasteOption.style.fontSize = '14px';
-                pasteOption.onmouseover = () => {
-                    pasteOption.style.backgroundColor = '#3a3a3a';
-                };
-                pasteOption.onmouseout = () => {
-                    pasteOption.style.backgroundColor = 'transparent';
-                };
-
-                pasteOption.onclick = async () => {
-                    try {
-                        if (navigator.clipboard && navigator.clipboard.readText) {
-                            try {
-                                const text = await navigator.clipboard.readText();
-                                if (text && socketRef.current?.connected) {
-                                    const processedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
-                                    socketRef.current.emit("data", processedText);
-                                }
-                            } catch (err) {
-                                if (window.termixInternalClipboard) {
-                                    const processedText = window.termixInternalClipboard.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
-                                    socketRef.current.emit("data", processedText);
-                                } else if (terminalInstance.current) {
-                                    terminalInstance.current.write("\r\n*** Paste failed: No clipboard content available ***\r\n");
-                                }
-                            }
-                        } else if (window.termixInternalClipboard) {
-                            const processedText = window.termixInternalClipboard.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
-                            socketRef.current.emit("data", processedText);
-                        } else if (terminalInstance.current) {
-                            terminalInstance.current.write("\r\n*** Paste failed: No clipboard content available ***\r\n");
-                        }
-                    } finally {
-                        document.body.removeChild(contextMenu);
-                    }
-                };
-
-                contextMenu.appendChild(copyOption);
-                contextMenu.appendChild(pasteOption);
-                document.body.appendChild(contextMenu);
-
-                const removeMenu = (e) => {
-                    if (!contextMenu.contains(e.target)) {
-                        document.body.removeChild(contextMenu);
-                        document.removeEventListener('click', removeMenu);
-                    }
-                };
-                
-                setTimeout(() => {
-                    document.addEventListener('click', removeMenu);
-                }, 0);
-            });
-        }
 
         return () => {
             clearInterval(pingInterval);
@@ -395,4 +278,6 @@ NewTerminal.propTypes = {
     }).isRequired,
     isVisible: PropTypes.bool.isRequired,
     setIsNoAuthHidden: PropTypes.func.isRequired,
+    setErrorMessage: PropTypes.func.isRequired,
+    setIsErrorHidden: PropTypes.func.isRequired,
 };

@@ -688,6 +688,8 @@ function App() {
                                         hostConfig={terminal.hostConfig}
                                         isVisible={activeTab === terminal.id || splitTabIds.includes(terminal.id)}
                                         setIsNoAuthHidden={setIsNoAuthHidden}
+                                        setErrorMessage={setErrorMessage}
+                                        setIsErrorHidden={setIsErrorHidden}
                                         ref={(ref) => {
                                             terminal.terminalRef = ref;
                                         }}
