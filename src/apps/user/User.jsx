@@ -208,6 +208,9 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                         port: host.config.port || '22',
                         password: host.config.password || '',
                         sshKey: host.config.sshKey || '',
+                        keyType: host.config.keyType || '',
+                        isPinned: host.isPinned || false,
+                        tags: host.config.tags || host.tags || []
                     } : {}
                 })).filter(host => host.config && host.config.ip && host.config.user);
             } else {

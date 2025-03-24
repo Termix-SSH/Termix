@@ -77,6 +77,7 @@ function App() {
     const [isLoggingIn, setIsLoggingIn] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [isHostViewerMenuOpen, setIsHostViewerMenuOpen] = useState(null);
+    const [hosts, setHosts] = useState([]);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -228,6 +229,16 @@ function App() {
         };
     }, []);
 
+    useEffect(() => {
+        const fetchHosts = async () => {
+            if (userRef.current?.getUser()) {
+                const fetchedHosts = await userRef.current.getAllHosts();
+                setHosts(fetchedHosts);
+            }
+        };
+        fetchHosts();
+    }, [userRef.current?.getUser()]);
+
     const handleAddHost = () => {
         if (addHostForm.ip && addHostForm.port) {
             if (addHostForm.connectionType === 'ssh' && !addHostForm.user) {
@@ -371,30 +382,28 @@ function App() {
 
     const handleSaveHost = async () => {
         try {
-            let hostConfig = {
-                name: addHostForm.name || addHostForm.ip,
-                folder: addHostForm.folder,
-                ip: addHostForm.ip,
-                user: addHostForm.user,
-                password: (addHostForm.authMethod === 'password' || addHostForm.connectionType === 'vnc' || addHostForm.connectionType === 'rdp') ? addHostForm.password : undefined,
-                sshKey: addHostForm.connectionType === 'ssh' && addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
-                port: String(addHostForm.port),
-                connectionType: addHostForm.connectionType,
-                rdpDomain: addHostForm.connectionType === 'rdp' ? addHostForm.rdpDomain : undefined,
-                rdpWindowsAuthentication: addHostForm.connectionType === 'rdp' ? addHostForm.rdpWindowsAuthentication : undefined,
-                rdpConsole: addHostForm.connectionType === 'rdp' ? addHostForm.rdpConsole : undefined,
-                vncScaling: addHostForm.connectionType === 'vnc' ? addHostForm.vncScaling : undefined,
-                vncQuality: addHostForm.connectionType === 'vnc' ? addHostForm.vncQuality : undefined
-            }
-            if (userRef.current) {
-                await userRef.current.saveHost({
-                    hostConfig,
-                });
-            }
-        } catch (error) {
-            throw error;
+            await userRef.current.saveHost({
+                hostConfig: {
+                    name: addHostForm.name,
+                    folder: addHostForm.folder,
+                    ip: addHostForm.ip,
+                    user: addHostForm.user,
+                    port: addHostForm.port,
+                    password: addHostForm.storePassword ? addHostForm.password : "",
+                    sshKey: addHostForm.storePassword ? addHostForm.sshKey : "",
+                    keyType: addHostForm.keyType,
+                    isPinned: addHostForm.isPinned,
+                    tags: addHostForm.tags || []
+                }
+            });
+            setIsAddHostHidden(true);
+            return true;
+        } catch (err) {
+            setErrorMessage(err.toString());
+            setIsErrorHidden(false);
+            return false;
         }
-    }
+    };
 
     const handleLoginUser = ({ username, password, sessionToken, onSuccess, onFailure }) => {
         if (userRef.current) {
@@ -496,32 +505,40 @@ function App() {
 
     const handleEditHost = async (oldConfig, newConfig = null) => {
         try {
-            if (newConfig) {
-                if (isEditing) return;
-                setIsEditing(true);
-
-                try {
-                    await userRef.current.editHost({
-                        oldHostConfig: oldConfig,
-                        newHostConfig: newConfig,
-                    });
-
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    setIsEditHostHidden(true);
-                } catch (error) {
-                    throw error;
-                } finally {
-                    setIsEditing(false);
-                }
+            if (!oldConfig) {
                 return;
             }
 
-            updateEditHostForm(oldConfig);
-        } catch (error) {
-            console.error('Edit failed:', error);
-            setErrorMessage(`Edit failed: ${error.message || error}`);
+            if (!newConfig) {
+                updateEditHostForm(oldConfig);
+                setIsEditHostHidden(false);
+                return;
+            }
+            
+            // Make sure tags are included in newConfig
+            if (!newConfig.tags && oldConfig.tags) {
+                newConfig.tags = oldConfig.tags;
+            }
+
+            // The HostViewer should already have set the editing indicator
+            // Wait a bit to ensure the UI has updated before processing
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Process the edit
+            await userRef.current.editHost({
+                oldHostConfig: oldConfig,
+                newHostConfig: newConfig
+            });
+
+            // Keep modal hidden after successful edit
+            setIsEditHostHidden(true);
+            
+            // Allow the "Updating..." indicator to be visible for at least 1 second
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (err) {
+            console.error(err);
+            setErrorMessage(err.toString());
             setIsErrorHidden(false);
-            setIsEditing(false);
         }
     };
 
@@ -722,6 +739,7 @@ function App() {
                                 setForm={setAddHostForm}
                                 handleAddHost={handleAddHost}
                                 setIsAddHostHidden={setIsAddHostHidden}
+                                hosts={hosts}
                             />
                             <EditHostModal
                                 isHidden={isEditHostHidden}

@@ -16,11 +16,15 @@ import {
     Tabs,
     TabList,
     Tab,
-    TabPanel
+    TabPanel,
+    Box,
+    Chip
 } from '@mui/joy';
 import theme from '/src/theme';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 
 const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHost }) => {
     const [form, setForm] = useState({
@@ -34,13 +38,16 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
         keyType: '',
         authMethod: 'Select Auth',
         storePassword: true,
-        rememberHost: true
+        rememberHost: true,
+        tags: [],
+        isPinned: false
     });
     const [showPassword, setShowPassword] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [showError, setShowError] = useState(false);
+    const [newTag, setNewTag] = useState("");
 
     useEffect(() => {
         if (!isHidden && hostConfig) {
@@ -53,9 +60,11 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                 sshKey: hostConfig.sshKey || '',
                 keyType: hostConfig.keyType || '',
                 port: hostConfig.port || 22,
-                authMethod: hostConfig.password ? 'password' : hostConfig.sshKey ? 'key' : 'Select Auth',
+                authMethod: hostConfig.password ? 'password' : hostConfig.sshKey ? 'sshKey' : 'Select Auth',
                 rememberHost: true,
                 storePassword: !!(hostConfig.password || hostConfig.sshKey),
+                tags: hostConfig.tags || [],
+                isPinned: hostConfig.isPinned || false
             });
         }
     }, [isHidden, hostConfig]);
@@ -72,14 +81,14 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
             '.ppk': 'PPK'
         };
 
-        const isValidKeyFile = Object.keys(supportedKeyTypes).some(ext => 
+        const isValidKeyFile = Object.keys(supportedKeyTypes).some(ext =>
             file.name.toLowerCase().includes(ext) || file.name.endsWith('.pub')
         );
 
         if (isValidKeyFile) {
             const reader = new FileReader();
-            reader.onload = (evt) => {
-                const keyContent = evt.target.result;
+            reader.onload = (event) => {
+                const keyContent = event.target.result;
                 let keyType = 'UNKNOWN';
 
                 if (keyContent.includes('BEGIN RSA PRIVATE KEY') || keyContent.includes('BEGIN RSA PUBLIC KEY')) {
@@ -92,11 +101,11 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                     keyType = 'DSA';
                 }
 
-                setForm((prev) => ({ 
-                    ...prev, 
+                setForm(prev => ({
+                    ...prev,
                     sshKey: keyContent,
                     keyType: keyType,
-                    authMethod: 'key'
+                    authMethod: 'sshKey'
                 }));
             };
             reader.readAsText(file);
@@ -123,10 +132,12 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
         const portNum = Number(port);
         if (isNaN(portNum) || portNum < 1 || portNum > 65535) return false;
 
-        if (form.storePassword) {
+        if (!form.rememberHost) return true;
+
+        if (form.rememberHost) {
             if (authMethod === 'Select Auth') return false;
             if (authMethod === 'password' && !password?.trim()) return false;
-            if (authMethod === 'key' && !sshKey?.trim()) return false;
+            if (authMethod === 'sshKey' && !sshKey?.trim()) return false;
         }
 
         return true;
@@ -141,15 +152,15 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
             setErrorMessage("");
             setShowError(false);
 
-            if (!form.ip || !form.user) {
-                setErrorMessage("IP and Username are required fields");
+            if (!form.ip?.trim()) {
+                setErrorMessage("Please provide an IP address.");
                 setShowError(true);
                 setIsLoading(false);
                 return;
             }
-
-            if (!form.port) {
-                setErrorMessage("Port is required");
+            
+            if (!form.user?.trim()) {
+                setErrorMessage("Please provide a username.");
                 setShowError(true);
                 setIsLoading(false);
                 return;
@@ -161,26 +172,52 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                 ip: form.ip,
                 user: form.user,
                 port: String(form.port),
+                tags: form.tags,
+                isPinned: form.isPinned
             };
 
             if (form.storePassword) {
                 if (form.authMethod === 'password') {
                     newConfig.password = form.password;
-                } else if (form.authMethod === 'key') {
+                } else if (form.authMethod === 'sshKey') {
                     newConfig.sshKey = form.sshKey;
                     newConfig.keyType = form.keyType;
                 }
             }
 
+            setIsEditHostHidden(true);
+            
             await handleEditHost(hostConfig, newConfig);
+            
             setActiveTab(0);
         } catch (error) {
             console.error("Edit host error:", error);
             setErrorMessage(error.message || "Failed to edit host. The host name may already exist.");
             setShowError(true);
+            setIsEditHostHidden(false);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleAddTag = (e) => {
+        if (e && e.preventDefault) {
+            e.preventDefault();
+        }
+        if (newTag.trim() && !form.tags?.includes(newTag.trim())) {
+            setForm(prev => ({
+                ...prev,
+                tags: [...(prev.tags || []), newTag.trim()]
+            }));
+            setNewTag("");
+        }
+    };
+
+    const handleRemoveTag = (tagToRemove) => {
+        setForm(prev => ({
+            ...prev,
+            tags: prev.tags ? prev.tags.filter(tag => tag !== tagToRemove) : []
+        }));
     };
 
     return (
@@ -277,14 +314,129 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                                             }}
                                         />
                                     </FormControl>
+                                    
                                     <FormControl>
                                         <FormLabel>Folder</FormLabel>
-                                        <Input
-                                            value={form.folder || ''}
-                                            onChange={(e) => setForm({ ...form, folder: e.target.value })}
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <Input
+                                                value={form.folder || ''}
+                                                onChange={(e) => setForm({ ...form, folder: e.target.value })}
+                                                placeholder="New folder"
+                                                sx={{
+                                                    flex: 1,
+                                                    backgroundColor: theme.palette.general.primary,
+                                                    color: theme.palette.text.primary,
+                                                }}
+                                            />
+                                            <Select
+                                                value={form.folder || ''}
+                                                onChange={(e, val) => setForm({ ...form, folder: val })}
+                                                placeholder="Select folder"
+                                                sx={{
+                                                    width: '180px',
+                                                    backgroundColor: theme.palette.general.primary,
+                                                    color: theme.palette.text.primary,
+                                                }}
+                                            >
+                                                <Option value="">No Folder</Option>
+                                                {Array.from(new Set([
+                                                    ...(hostConfig?.folder ? [hostConfig.folder] : []),
+                                                    ...Array.from(new Set(window.availableFolders || []))
+                                                ].filter(Boolean))).map(folder => (
+                                                    <Option key={folder} value={folder}>{folder}</Option>
+                                                ))}
+                                                {form.folder && !Array.from(new Set([
+                                                    ...(hostConfig?.folder ? [hostConfig.folder] : []),
+                                                    ...Array.from(new Set(window.availableFolders || []))
+                                                ])).includes(form.folder) && (
+                                                    <Option key={form.folder} value={form.folder}>New Folder</Option>
+                                                )}
+                                            </Select>
+                                        </div>
+                                    </FormControl>
+
+                                    <FormControl>
+                                        <FormLabel>Tags</FormLabel>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                                            {form.tags?.map((tag) => (
+                                                <Chip
+                                                    key={tag}
+                                                    variant="soft"
+                                                    color="neutral"
+                                                    endDecorator={
+                                                        <DeleteIcon 
+                                                            fontSize="small" 
+                                                            sx={{ 
+                                                                color: 'red !important', 
+                                                                cursor: 'pointer',
+                                                                marginLeft: '4px'
+                                                            }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleRemoveTag(tag);
+                                                            }}
+                                                        />
+                                                    }
+                                                    sx={{
+                                                        backgroundColor: theme.palette.general.primary,
+                                                        color: theme.palette.text.primary,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        padding: '4px 8px',
+                                                        '& .MuiChip-endDecorator': {
+                                                            visibility: 'visible !important',
+                                                            display: 'flex !important',
+                                                            opacity: '1 !important',
+                                                            marginLeft: '4px',
+                                                            marginRight: '0px'
+                                                        }
+                                                    }}
+                                                >
+                                                    {tag}
+                                                </Chip>
+                                            ))}
+                                        </Box>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <Input
+                                                value={newTag}
+                                                onChange={(e) => setNewTag(e.target.value)}
+                                                placeholder="Add tag"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleAddTag();
+                                                    }
+                                                }}
+                                                sx={{
+                                                    flex: 1,
+                                                    backgroundColor: theme.palette.general.primary,
+                                                    color: theme.palette.text.primary,
+                                                }}
+                                            />
+                                            <IconButton
+                                                size="sm"
+                                                onClick={handleAddTag}
+                                                disabled={!newTag.trim()}
+                                            >
+                                                <AddIcon />
+                                            </IconButton>
+                                        </div>
+                                    </FormControl>
+
+                                    <FormControl>
+                                        <FormLabel>Pin Connection</FormLabel>
+                                        <Checkbox
+                                            checked={Boolean(form.isPinned)}
+                                            onChange={(e) => setForm({
+                                                ...form,
+                                                isPinned: e.target.checked,
+                                            })}
                                             sx={{
-                                                backgroundColor: theme.palette.general.primary,
                                                 color: theme.palette.text.primary,
+                                                '&.Mui-checked': {
+                                                    color: theme.palette.text.primary,
+                                                },
                                             }}
                                         />
                                     </FormControl>
@@ -337,94 +489,90 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
 
                             <TabPanel value={2}>
                                 <Stack spacing={2}>
-                                    {form.storePassword && (
-                                        <>
-                                            <FormControl error={!form.authMethod || form.authMethod === 'Select Auth'}>
-                                                <FormLabel>Authentication Method</FormLabel>
-                                                <Select
-                                                    value={form.authMethod}
-                                                    onChange={(e, val) => handleAuthChange(val)}
+                                    <FormControl error={!form.authMethod || form.authMethod === 'Select Auth'}>
+                                        <FormLabel>Authentication Method</FormLabel>
+                                        <Select
+                                            value={form.authMethod}
+                                            onChange={(e, val) => handleAuthChange(val)}
+                                            sx={{
+                                                backgroundColor: theme.palette.general.primary,
+                                                color: theme.palette.text.primary,
+                                            }}
+                                        >
+                                            <Option value="Select Auth" disabled>Select Auth</Option>
+                                            <Option value="password">Password</Option>
+                                            <Option value="sshKey">SSH Key</Option>
+                                        </Select>
+                                    </FormControl>
+
+                                    {form.authMethod === 'password' && (
+                                        <FormControl error={!form.password}>
+                                            <FormLabel>Password</FormLabel>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                <Input
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    value={form.password}
+                                                    onChange={(e) => setForm({ ...form, password: e.target.value })}
                                                     sx={{
                                                         backgroundColor: theme.palette.general.primary,
                                                         color: theme.palette.text.primary,
+                                                        flex: 1
+                                                    }}
+                                                />
+                                                <IconButton
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    sx={{
+                                                        color: theme.palette.text.primary,
+                                                        marginLeft: 1
                                                     }}
                                                 >
-                                                    <Option value="Select Auth" disabled>Select Auth</Option>
-                                                    <Option value="password">Password</Option>
-                                                    <Option value="key">SSH Key</Option>
-                                                </Select>
+                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
+                                            </div>
+                                        </FormControl>
+                                    )}
+
+                                    {form.authMethod === 'sshKey' && (
+                                        <Stack spacing={2}>
+                                            <FormControl error={!form.sshKey}>
+                                                <FormLabel>SSH Key</FormLabel>
+                                                <Button
+                                                    component="label"
+                                                    sx={{
+                                                        backgroundColor: theme.palette.general.primary,
+                                                        color: theme.palette.text.primary,
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        justifyContent: 'center',
+                                                        alignItems: 'center',
+                                                        height: '40px',
+                                                        '&:hover': {
+                                                            backgroundColor: theme.palette.general.disabled,
+                                                        },
+                                                    }}
+                                                >
+                                                    {form.sshKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
+                                                    <Input
+                                                        type="file"
+                                                        onChange={handleFileChange}
+                                                        sx={{ display: 'none' }}
+                                                    />
+                                                </Button>
+                                                {hostConfig?.sshKey && !form.sshKey && (
+                                                    <FormLabel 
+                                                        sx={{ 
+                                                            color: theme.palette.text.secondary,
+                                                            fontSize: '0.875rem',
+                                                            mt: 1,
+                                                            display: 'block',
+                                                            textAlign: 'center'
+                                                        }}
+                                                    >
+                                                        Existing {hostConfig.keyType || 'SSH'} key detected. Upload to replace.
+                                                    </FormLabel>
+                                                )}
                                             </FormControl>
-
-                                            {form.authMethod === 'password' && (
-                                                <FormControl error={!form.password}>
-                                                    <FormLabel>Password</FormLabel>
-                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                        <Input
-                                                            type={showPassword ? 'text' : 'password'}
-                                                            value={form.password}
-                                                            onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                                            sx={{
-                                                                backgroundColor: theme.palette.general.primary,
-                                                                color: theme.palette.text.primary,
-                                                                flex: 1
-                                                            }}
-                                                        />
-                                                        <IconButton
-                                                            onClick={() => setShowPassword(!showPassword)}
-                                                            sx={{
-                                                                color: theme.palette.text.primary,
-                                                                marginLeft: 1
-                                                            }}
-                                                        >
-                                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                                        </IconButton>
-                                                    </div>
-                                                </FormControl>
-                                            )}
-
-                                            {form.authMethod === 'key' && (
-                                                <Stack spacing={2}>
-                                                    <FormControl error={!form.sshKey}>
-                                                        <FormLabel>SSH Key</FormLabel>
-                                                        <Button
-                                                            component="label"
-                                                            sx={{
-                                                                backgroundColor: theme.palette.general.primary,
-                                                                color: theme.palette.text.primary,
-                                                                width: '100%',
-                                                                display: 'flex',
-                                                                justifyContent: 'center',
-                                                                alignItems: 'center',
-                                                                height: '40px',
-                                                                '&:hover': {
-                                                                    backgroundColor: theme.palette.general.disabled,
-                                                                },
-                                                            }}
-                                                        >
-                                                            {form.sshKey ? `Change ${form.keyType || 'SSH'} Key File` : 'Upload SSH Key File'}
-                                                            <Input
-                                                                type="file"
-                                                                onChange={handleFileChange}
-                                                                sx={{ display: 'none' }}
-                                                            />
-                                                        </Button>
-                                                        {hostConfig?.sshKey && !form.sshKey && (
-                                                            <FormLabel 
-                                                                sx={{ 
-                                                                    color: theme.palette.text.secondary,
-                                                                    fontSize: '0.875rem',
-                                                                    mt: 1,
-                                                                    display: 'block',
-                                                                    textAlign: 'center'
-                                                                }}
-                                                            >
-                                                                Existing {hostConfig.keyType || 'SSH'} key detected. Upload to replace.
-                                                            </FormLabel>
-                                                        )}
-                                                    </FormControl>
-                                                </Stack>
-                                            )}
-                                        </>
+                                        </Stack>
                                     )}
 
                                     <FormControl>
@@ -468,7 +616,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                                 height: '40px',
                             }}
                         >
-                            {isLoading ? "Saving changes..." : "Save changes"}
+                            {isLoading ? "Updating..." : "Save changes"}
                         </Button>
                     </Tabs>
                 </ModalDialog>

@@ -15,18 +15,103 @@ import {
     Tabs,
     TabList,
     Tab,
-    TabPanel
+    TabPanel,
+    Chip,
+    Box,
+    Typography
 } from '@mui/joy';
+import { Collapse } from '@mui/material';
 import theme from '/src/theme';
 import { useState } from 'react';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import AddIcon from '@mui/icons-material/Add';
+import FolderIcon from '@mui/icons-material/Folder';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import DeleteIcon from '@mui/icons-material/Delete';
 
-const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
+const FolderTree = ({ folders, selectedFolder, onSelectFolder, onAddFolder, onDeleteFolder }) => {
+    const [newFolderName, setNewFolderName] = useState('');
+    const [isAddingFolder, setIsAddingFolder] = useState(false);
+
+    const handleAddFolder = () => {
+        if (newFolderName.trim()) {
+            onAddFolder(newFolderName.trim());
+            setNewFolderName('');
+            setIsAddingFolder(false);
+        }
+    };
+
+    return (
+        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Typography level="body-sm" sx={{ mb: 1 }}>Folders</Typography>
+            <div style={{ display: 'flex', gap: '8px' }}>
+                <Select
+                    value={selectedFolder || ''}
+                    onChange={(e, val) => onSelectFolder(val)}
+                    sx={{
+                        flex: 1,
+                        backgroundColor: theme.palette.general.primary,
+                        color: theme.palette.text.primary,
+                    }}
+                >
+                    <Option value="">No Folder</Option>
+                    {folders.map(folder => (
+                        <Option key={folder} value={folder}>{folder}</Option>
+                    ))}
+                </Select>
+                {isAddingFolder ? (
+                    <>
+                        <Input
+                            size="sm"
+                            value={newFolderName}
+                            onChange={(e) => setNewFolderName(e.target.value)}
+                            placeholder="New folder name"
+                            autoFocus
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddFolder()}
+                            sx={{
+                                backgroundColor: theme.palette.general.primary,
+                                color: theme.palette.text.primary,
+                            }}
+                        />
+                        <IconButton
+                            size="sm"
+                            onClick={handleAddFolder}
+                            disabled={!newFolderName.trim()}
+                        >
+                            <AddIcon />
+                        </IconButton>
+                        <IconButton
+                            size="sm"
+                            onClick={() => {
+                                setIsAddingFolder(false);
+                                setNewFolderName('');
+                            }}
+                        >
+                            <DeleteIcon />
+                        </IconButton>
+                    </>
+                ) : (
+                    <IconButton
+                        size="sm"
+                        onClick={() => setIsAddingFolder(true)}
+                    >
+                        <AddIcon />
+                    </IconButton>
+                )}
+            </div>
+        </Box>
+    );
+};
+
+const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden, hosts }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [errorMessage, setErrorMessage] = useState("");
     const [showError, setShowError] = useState(false);
+    const [newTag, setNewTag] = useState("");
+    const [availableFolders, setAvailableFolders] = useState([]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -130,6 +215,39 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
         }
     };
 
+    const handleAddTag = (e) => {
+        if (e && e.preventDefault) {
+            e.preventDefault();
+        }
+        if (newTag.trim() && !form.tags?.includes(newTag.trim())) {
+            setForm(prev => ({
+                ...prev,
+                tags: [...(prev.tags || []), newTag.trim()]
+            }));
+            setNewTag("");
+        }
+    };
+
+    const handleRemoveTag = (tagToRemove) => {
+        setForm(prev => ({
+            ...prev,
+            tags: prev.tags ? prev.tags.filter(tag => tag !== tagToRemove) : []
+        }));
+    };
+
+    const handleAddFolder = (folderPath) => {
+        if (!availableFolders.includes(folderPath)) {
+            setAvailableFolders(prev => [...prev, folderPath]);
+        }
+    };
+
+    const handleDeleteFolder = (folderPath) => {
+        setAvailableFolders(prev => prev.filter(f => f !== folderPath));
+        if (form.folder === folderPath) {
+            setForm(prev => ({ ...prev, folder: null }));
+        }
+    };
+
     return (
         <CssVarsProvider theme={theme}>
             <Modal open={!isHidden} onClose={() => setIsAddHostHidden(true)}
@@ -222,17 +340,115 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                             }}
                                         />
                                     </FormControl>
+                                    
                                     <FormControl>
                                         <FormLabel>Folder</FormLabel>
-                                        <Input
-                                            value={form.folder || ''}
-                                            onChange={(e) => setForm({ ...form, folder: e.target.value })}
-                                            sx={{
-                                                backgroundColor: theme.palette.general.primary,
-                                                color: theme.palette.text.primary,
-                                            }}
-                                        />
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <Input
+                                                value={form.folder || ''}
+                                                onChange={(e) => setForm({ ...form, folder: e.target.value })}
+                                                placeholder="New folder"
+                                                sx={{
+                                                    flex: 1,
+                                                    backgroundColor: theme.palette.general.primary,
+                                                    color: theme.palette.text.primary,
+                                                }}
+                                            />
+                                            <Select
+                                                value={form.folder || ''}
+                                                onChange={(e, val) => setForm({ ...form, folder: val })}
+                                                placeholder="Select folder"
+                                                sx={{
+                                                    width: '180px',
+                                                    backgroundColor: theme.palette.general.primary,
+                                                    color: theme.palette.text.primary,
+                                                }}
+                                            >
+                                                <Option value="">No Folder</Option>
+                                                {Array.from(new Set([
+                                                    ...Array.from(new Set(hosts?.map(host => host.config?.folder).filter(Boolean) || [])),
+                                                    ...Array.from(new Set(window.availableFolders || []))
+                                                ].filter(Boolean))).map(folder => (
+                                                    <Option key={folder} value={folder}>{folder}</Option>
+                                                ))}
+                                                {form.folder && !Array.from(new Set([
+                                                    ...Array.from(new Set(hosts?.map(host => host.config?.folder).filter(Boolean) || [])),
+                                                    ...Array.from(new Set(window.availableFolders || []))
+                                                ])).includes(form.folder) && (
+                                                    <Option key={form.folder} value={form.folder}>New Folder</Option>
+                                                )}
+                                            </Select>
+                                        </div>
                                     </FormControl>
+                                    
+                                    <FormControl>
+                                        <FormLabel>Tags</FormLabel>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                                            {form.tags?.map((tag) => (
+                                                <Chip
+                                                    key={tag}
+                                                    variant="soft"
+                                                    color="neutral"
+                                                    sx={{
+                                                        backgroundColor: theme.palette.general.primary,
+                                                        color: theme.palette.text.primary,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '2px',
+                                                        padding: '4px 4px 4px 8px',
+                                                        position: 'relative'
+                                                    }}
+                                                >
+                                                    <span>{tag}</span>
+                                                    <span
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveTag(tag);
+                                                        }}
+                                                        style={{
+                                                            marginLeft: '4px',
+                                                            color: 'red',
+                                                            padding: '0 8px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '16px',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        ×
+                                                    </span>
+                                                </Chip>
+                                            ))}
+                                        </Box>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <Input
+                                                value={newTag}
+                                                onChange={(e) => setNewTag(e.target.value)}
+                                                placeholder="Add tag"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleAddTag();
+                                                    }
+                                                }}
+                                                sx={{
+                                                    flex: 1,
+                                                    backgroundColor: theme.palette.general.primary,
+                                                    color: theme.palette.text.primary,
+                                                }}
+                                            />
+                                            <IconButton
+                                                size="sm"
+                                                onClick={handleAddTag}
+                                                disabled={!newTag.trim()}
+                                            >
+                                                <AddIcon />
+                                            </IconButton>
+                                        </div>
+                                    </FormControl>
+
                                     <FormControl>
                                         <FormLabel>Remember Host</FormLabel>
                                         <Checkbox
@@ -240,6 +456,23 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                             onChange={(e) => setForm({
                                                 ...form,
                                                 rememberHost: e.target.checked,
+                                            })}
+                                            sx={{
+                                                color: theme.palette.text.primary,
+                                                '&.Mui-checked': {
+                                                    color: theme.palette.text.primary,
+                                                },
+                                            }}
+                                        />
+                                    </FormControl>
+
+                                    <FormControl>
+                                        <FormLabel>Pin Connection</FormLabel>
+                                        <Checkbox
+                                            checked={Boolean(form.isPinned)}
+                                            onChange={(e) => setForm({
+                                                ...form,
+                                                isPinned: e.target.checked,
                                             })}
                                             sx={{
                                                 color: theme.palette.text.primary,
@@ -423,6 +656,7 @@ AddHostModal.propTypes = {
     setForm: PropTypes.func.isRequired,
     handleAddHost: PropTypes.func.isRequired,
     setIsAddHostHidden: PropTypes.func.isRequired,
+    hosts: PropTypes.array
 };
 
 export default AddHostModal;

@@ -29,7 +29,9 @@ const hostSchema = new mongoose.Schema({
     config: { type: String, required: true },
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    folder: { type: String, default: null }
+    folder: { type: String, default: null },
+    tags: [{ type: String }],
+    isPinned: { type: Boolean, default: false }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -186,6 +188,7 @@ io.of('/database.io').on('connection', (socket) => {
                 port: hostConfig.port || 22,
                 password: hostConfig.password?.trim() || undefined,
                 sshKey: hostConfig.sshKey?.trim() || undefined,
+                tags: hostConfig.tags || [],
             };
 
             const finalName = cleanConfig.name || cleanConfig.ip;
@@ -228,7 +231,9 @@ io.of('/database.io').on('connection', (socket) => {
                 config: encryptedConfig,
                 users: [userId],
                 createdBy: userId,
-                folder: cleanConfig.folder
+                folder: cleanConfig.folder,
+                isPinned: hostConfig.isPinned || false,
+                tags: hostConfig.tags || []
             });
 
             logger.info(`Host created successfully: ${finalName}`);
@@ -465,6 +470,8 @@ io.of('/database.io').on('connection', (socket) => {
                 port: newHostConfig.port || 22,
                 password: newHostConfig.password?.trim() || undefined,
                 sshKey: newHostConfig.sshKey?.trim() || undefined,
+                tags: newHostConfig.tags || [],
+                isPinned: newHostConfig.isPinned || false
             };
 
             const encryptedConfig = encryptData(cleanConfig, userId, sessionToken);
@@ -476,6 +483,8 @@ io.of('/database.io').on('connection', (socket) => {
             host.name = finalName;
             host.config = encryptedConfig;
             host.folder = cleanConfig.folder;
+            host.isPinned = newHostConfig.isPinned || false;
+            host.tags = newHostConfig.tags || [];
             await host.save();
 
             logger.info(`Host edited successfully`);
