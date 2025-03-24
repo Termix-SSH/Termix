@@ -25,6 +25,8 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidden }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [showError, setShowError] = useState(false);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -102,12 +104,30 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        if (!form.ip?.trim() || !form.user?.trim() || !form.port) {
-            alert("Please fill out all required fields (IP, User, Port).");
+        
+        setErrorMessage("");
+        setShowError(false);
+
+        if (!form.ip?.trim()) {
+            setErrorMessage("Please provide an IP address.");
+            setShowError(true);
             return;
         }
-        handleAddHost();
-        setActiveTab(0);
+        
+        if (form.connectionType === 'ssh' && !form.user?.trim()) {
+            setErrorMessage("Please provide a username for SSH connection.");
+            setShowError(true);
+            return;
+        }
+        
+        try {
+            handleAddHost();
+            setActiveTab(0);
+        } catch (error) {
+            console.error("Add host error:", error);
+            setErrorMessage(error.message || "Failed to add host. The host name or IP may already exist.");
+            setShowError(true);
+        }
     };
 
     return (
@@ -138,6 +158,18 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                         mx: 2,
                     }}
                 >
+                    {showError && (
+                        <div style={{ 
+                            backgroundColor: "#c53030", 
+                            color: "white", 
+                            padding: "10px", 
+                            textAlign: "center",
+                            borderTopLeftRadius: "10px",
+                            borderTopRightRadius: "10px"
+                        }}>
+                            {errorMessage}
+                        </div>
+                    )}
                     <Tabs
                         value={activeTab}
                         onChange={(e, val) => setActiveTab(val)}

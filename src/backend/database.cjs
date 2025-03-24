@@ -190,14 +190,31 @@ io.of('/database.io').on('connection', (socket) => {
 
             const finalName = cleanConfig.name || cleanConfig.ip;
 
-            const existingHost = await Host.findOne({
-                name: finalName,
-                createdBy: userId
+            // Check for hosts with the same name (case insensitive)
+            const existingHostByName = await Host.findOne({
+                createdBy: userId,
+                name: { $regex: new RegExp('^' + finalName + '$', 'i') }
             });
 
-            if (existingHost) {
+            if (existingHostByName) {
                 logger.warn(`Host with name ${finalName} already exists for user: ${userId}`);
-                return callback({ error: 'Host with this name already exists' });
+                return callback({ error: `Host with name "${finalName}" already exists. Please choose a different name.` });
+            }
+
+            // Prevent duplicate IPs if using IP as name
+            if (!cleanConfig.name) {
+                const existingHostByIp = await Host.findOne({
+                    createdBy: userId,
+                    config: { $regex: new RegExp(cleanConfig.ip, 'i') }
+                });
+
+                if (existingHostByIp) {
+                    const decryptedConfig = decryptData(existingHostByIp.config, userId, sessionToken);
+                    if (decryptedConfig && decryptedConfig.ip.toLowerCase() === cleanConfig.ip.toLowerCase()) {
+                        logger.warn(`Host with IP ${cleanConfig.ip} already exists for user: ${userId}`);
+                        return callback({ error: `Host with IP "${cleanConfig.ip}" already exists. Please provide a unique name.` });
+                    }
+                }
             }
 
             const encryptedConfig = encryptData(cleanConfig, userId, sessionToken);
@@ -397,6 +414,7 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Invalid session' });
             }
 
+            // Find the host to be edited
             const hosts = await Host.find({ createdBy: userId });
             const host = hosts.find(h => {
                 const decryptedConfig = decryptData(h.config, userId, sessionToken);
@@ -406,6 +424,37 @@ io.of('/database.io').on('connection', (socket) => {
             if (!host) {
                 logger.warn(`Host not found or unauthorized`);
                 return callback({ error: 'Host not found' });
+            }
+
+            const finalName = newHostConfig.name?.trim() || newHostConfig.ip.trim();
+
+            // If the name is being changed, check for duplicates using case-insensitive comparison
+            if (finalName.toLowerCase() !== host.name.toLowerCase()) {
+                // Check for duplicate name using regex for case-insensitive comparison
+                const duplicateNameHost = await Host.findOne({
+                    createdBy: userId,
+                    _id: { $ne: host._id }, // Exclude the current host
+                    name: { $regex: new RegExp('^' + finalName + '$', 'i') }
+                });
+
+                if (duplicateNameHost) {
+                    logger.warn(`Host with name ${finalName} already exists for user: ${userId}`);
+                    return callback({ error: `Host with name "${finalName}" already exists. Please choose a different name.` });
+                }
+            }
+
+            // If IP is changed and no custom name provided, check for duplicate IP
+            if (newHostConfig.ip !== oldHostConfig.ip && !newHostConfig.name) {
+                const duplicateIpHost = hosts.find(h => {
+                    if (h._id.toString() === host._id.toString()) return false;
+                    const decryptedConfig = decryptData(h.config, userId, sessionToken);
+                    return decryptedConfig && decryptedConfig.ip.toLowerCase() === newHostConfig.ip.toLowerCase();
+                });
+
+                if (duplicateIpHost) {
+                    logger.warn(`Host with IP ${newHostConfig.ip} already exists for user: ${userId}`);
+                    return callback({ error: `Host with IP "${newHostConfig.ip}" already exists. Please provide a unique name.` });
+                }
             }
 
             const cleanConfig = {
@@ -424,6 +473,7 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Configuration encryption failed' });
             }
 
+            host.name = finalName;
             host.config = encryptedConfig;
             host.folder = cleanConfig.folder;
             await host.save();
@@ -432,7 +482,7 @@ io.of('/database.io').on('connection', (socket) => {
             callback({ success: true });
         } catch (error) {
             logger.error('Host edit error:', error);
-            callback({ error: 'Failed to edit host' });
+            callback({ error: `Failed to edit host: ${error.message}` });
         }
     });
 

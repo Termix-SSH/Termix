@@ -39,6 +39,12 @@ function App() {
         authMethod: "Select Auth",
         rememberHost: true,
         storePassword: true,
+        connectionType: "ssh",
+        rdpDomain: "",
+        rdpWindowsAuthentication: true,
+        rdpConsole: false,
+        vncScaling: "100%",
+        vncQuality: "High"
     });
     const [editHostForm, setEditHostForm] = useState({
         name: "",
@@ -223,34 +229,53 @@ function App() {
     }, []);
 
     const handleAddHost = () => {
-        if (addHostForm.ip && addHostForm.user && addHostForm.port) {
+        if (addHostForm.ip && addHostForm.port) {
+            if (addHostForm.connectionType === 'ssh' && !addHostForm.user) {
+                setErrorMessage("Please fill out all required fields (IP, User, Port).");
+                setIsErrorHidden(false);
+                return;
+            }
+
             if (!addHostForm.rememberHost) {
                 connectToHost();
                 setIsAddHostHidden(true);
                 return;
             }
 
-            if (addHostForm.authMethod === 'Select Auth') {
-                alert("Please select an authentication method.");
-                return;
+            if (addHostForm.connectionType === 'ssh') {
+                if (addHostForm.authMethod === 'Select Auth') {
+                    setErrorMessage("Please select an authentication method.");
+                    setIsErrorHidden(false);
+                    return;
+                }
+                if (addHostForm.authMethod === 'password' && !addHostForm.password) {
+                    setIsNoAuthHidden(false);
+                    return;
+                }
+                if (addHostForm.authMethod === 'sshKey' && !addHostForm.sshKey) {
+                    setIsNoAuthHidden(false);
+                    return;
+                }
             }
-            if (addHostForm.authMethod === 'password' && !addHostForm.password) {
-                setIsNoAuthHidden(false);
-                return;
-            }
-            if (addHostForm.authMethod === 'sshKey' && !addHostForm.sshKey) {
+            else if (!addHostForm.password) {
                 setIsNoAuthHidden(false);
                 return;
             }
 
-            connectToHost();
-            if (!addHostForm.storePassword) {
-                addHostForm.password = '';
+            try {
+                connectToHost();
+                if (!addHostForm.storePassword) {
+                    addHostForm.password = '';
+                }
+                handleSaveHost();
+                setIsAddHostHidden(true);
+            } catch (error) {
+                setErrorMessage(error.message || "Failed to add host");
+                setIsErrorHidden(false);
             }
-            handleSaveHost();
-            setIsAddHostHidden(true);
         } else {
-            alert("Please fill out all required fields (IP, User, Port).");
+            setErrorMessage("Please fill out all required fields.");
+            setIsErrorHidden(false);
         }
     };
 
@@ -275,25 +300,42 @@ function App() {
         setActiveTab(nextId);
         setNextId(nextId + 1);
         setIsAddHostHidden(true);
-        setAddHostForm({ name: "", folder: "", ip: "", user: "", password: "", sshKey: "", port: 22, authMethod: "Select Auth", rememberHost: true, storePassword: true });
+        setAddHostForm({ name: "", folder: "", ip: "", user: "", password: "", sshKey: "", port: 22, authMethod: "Select Auth", rememberHost: true, storePassword: true, connectionType: "ssh", rdpDomain: "", rdpWindowsAuthentication: true, rdpConsole: false, vncScaling: "100%", vncQuality: "High" });
     }
 
     const handleAuthSubmit = (form) => {
-        const updatedTerminals = terminals.map((terminal) => {
-            if (terminal.id === activeTab) {
-                return {
-                    ...terminal,
-                    hostConfig: {
-                        ...terminal.hostConfig,
-                        password: form.password,
-                        sshKey: form.sshKey
+        try {
+            setIsNoAuthHidden(true);
+
+            setTimeout(() => {
+                const updatedTerminals = terminals.map((terminal) => {
+                    if (terminal.id === activeTab) {
+                        return {
+                            ...terminal,
+                            hostConfig: {
+                                ...terminal.hostConfig,
+                                password: form.authMethod === 'password' ? form.password : undefined,
+                                sshKey: form.authMethod === 'sshKey' ? form.sshKey : undefined
+                            }
+                        };
                     }
-                };
-            }
-            return terminal;
-        });
-        setTerminals(updatedTerminals);
-        setIsNoAuthHidden(true);
+                    return terminal;
+                });
+                
+                setTerminals(updatedTerminals);
+
+                setNoAuthenticationForm({
+                    authMethod: 'Select Auth',
+                    password: '',
+                    sshKey: '',
+                    keyType: '',
+                });
+            }, 100);
+        } catch (error) {
+            console.error("Authentication error:", error);
+            setErrorMessage("Failed to authenticate: " + (error.message || "Unknown error"));
+            setIsErrorHidden(false);
+        }
     };
 
     const connectToHostWithConfig = (hostConfig) => {
@@ -327,20 +369,30 @@ function App() {
         setIsLaunchpadOpen(false);
     }
 
-    const handleSaveHost = () => {
-        let hostConfig = {
-            name: addHostForm.name || addHostForm.ip,
-            folder: addHostForm.folder,
-            ip: addHostForm.ip,
-            user: addHostForm.user,
-            password: addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
-            sshKey: addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
-            port: String(addHostForm.port),
-        }
-        if (userRef.current) {
-            userRef.current.saveHost({
-                hostConfig,
-            });
+    const handleSaveHost = async () => {
+        try {
+            let hostConfig = {
+                name: addHostForm.name || addHostForm.ip,
+                folder: addHostForm.folder,
+                ip: addHostForm.ip,
+                user: addHostForm.user,
+                password: (addHostForm.authMethod === 'password' || addHostForm.connectionType === 'vnc' || addHostForm.connectionType === 'rdp') ? addHostForm.password : undefined,
+                sshKey: addHostForm.connectionType === 'ssh' && addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
+                port: String(addHostForm.port),
+                connectionType: addHostForm.connectionType,
+                rdpDomain: addHostForm.connectionType === 'rdp' ? addHostForm.rdpDomain : undefined,
+                rdpWindowsAuthentication: addHostForm.connectionType === 'rdp' ? addHostForm.rdpWindowsAuthentication : undefined,
+                rdpConsole: addHostForm.connectionType === 'rdp' ? addHostForm.rdpConsole : undefined,
+                vncScaling: addHostForm.connectionType === 'vnc' ? addHostForm.vncScaling : undefined,
+                vncQuality: addHostForm.connectionType === 'vnc' ? addHostForm.vncQuality : undefined
+            }
+            if (userRef.current) {
+                await userRef.current.saveHost({
+                    hostConfig,
+                });
+            }
+        } catch (error) {
+            throw error;
         }
     }
 
@@ -455,9 +507,11 @@ function App() {
                     });
 
                     await new Promise(resolve => setTimeout(resolve, 3000));
+                    setIsEditHostHidden(true);
+                } catch (error) {
+                    throw error;
                 } finally {
                     setIsEditing(false);
-                    setIsEditHostHidden(true);
                 }
                 return;
             }
@@ -465,7 +519,7 @@ function App() {
             updateEditHostForm(oldConfig);
         } catch (error) {
             console.error('Edit failed:', error);
-            setErrorMessage(`Edit failed: ${error}`);
+            setErrorMessage(`Edit failed: ${error.message || error}`);
             setIsErrorHidden(false);
             setIsEditing(false);
         }

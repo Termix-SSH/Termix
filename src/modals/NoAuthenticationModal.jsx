@@ -43,15 +43,29 @@ const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, han
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if(isFormValid()) {
-            handleAuthSubmit(form);
-            setForm (prev => ({
-                ...prev,
-                authMethod: 'Select Auth',
-                password: '',
-                sshKey: '',
-                keyType: '',
-            }))
+        e.stopPropagation();
+        
+        try {
+            if(isFormValid()) {
+                const formData = {
+                    authMethod: form.authMethod,
+                    password: form.authMethod === 'password' ? form.password : '',
+                    sshKey: form.authMethod === 'sshKey' ? form.sshKey : '',
+                    keyType: form.authMethod === 'sshKey' ? form.keyType : '',
+                };
+
+                handleAuthSubmit(formData);
+
+                setForm(prev => ({
+                    ...prev,
+                    authMethod: 'Select Auth',
+                    password: '',
+                    sshKey: '',
+                    keyType: '',
+                }));
+            }
+        } catch (error) {
+            console.error("Authentication form error:", error);
         }
     };
 
@@ -76,8 +90,7 @@ const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, han
             reader.onload = (event) => {
                 const keyContent = event.target.result;
                 let keyType = 'UNKNOWN';
-                
-                // Detect key type from content
+
                 if (keyContent.includes('BEGIN RSA PRIVATE KEY') || keyContent.includes('BEGIN RSA PUBLIC KEY')) {
                     keyType = 'RSA';
                 } else if (keyContent.includes('BEGIN OPENSSH PRIVATE KEY') && keyContent.includes('ssh-ed25519')) {
