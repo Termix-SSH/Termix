@@ -35,6 +35,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
     useImperativeHandle(ref, () => ({
         resizeTerminal: resizeTerminal,
+        socketRef: socketRef,
     }));
 
     useEffect(() => {
@@ -72,6 +73,33 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         );
         socketRef.current = socket;
+        
+        // Use the provided terminal ID or create a unique socket ID
+        const terminalId = hostConfig.id || Date.now();
+        
+        // Set terminal-specific data on the socket for identification
+        socket.terminalId = terminalId;
+        socket.hostData = {
+            ip: hostConfig.ip,
+            user: hostConfig.user,
+        };
+        
+        // Store socket reference in global map for snippet pasting
+        if (!window.terminalSockets) {
+            window.terminalSockets = {};
+        }
+        
+        // Register this socket with the terminal ID
+        window.terminalSockets[terminalId] = socket;
+        console.log(`Terminal socket registered with ID: ${terminalId}`);
+        console.log(`Socket connection properties: ${socket.connected ? 'connected' : 'disconnected'}`);
+        
+        // For debugging, show all available sockets
+        console.log("Available terminal sockets:", Object.keys(window.terminalSockets).map(id => ({
+            id,
+            connected: window.terminalSockets[id].connected,
+            ip: window.terminalSockets[id].hostData?.ip
+        })));
 
         socket.on("connect_error", (error) => {
             terminalInstance.current.write(`\r\n*** Socket connection error: ${error.message} ***\r\n`);
@@ -209,6 +237,13 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         return () => {
             clearInterval(pingInterval);
+            
+            // Remove from global registry when terminal is unmounted
+            if (window.terminalSockets && window.terminalSockets[terminalId]) {
+                console.log(`Unregistering terminal socket: ${terminalId}`);
+                delete window.terminalSockets[terminalId];
+            }
+            
             if (terminalInstance.current) {
                 terminalInstance.current.dispose();
                 terminalInstance.current = null;

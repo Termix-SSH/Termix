@@ -2,6 +2,7 @@ import PropTypes from "prop-types";
 import { useState, useEffect, useRef } from "react";
 import { Button, Input, Menu, MenuItem, IconButton, Chip } from "@mui/joy";
 import ShareHostModal from "../../modals/ShareHostModal";
+import ConfirmDeleteModal from "../../modals/ConfirmDeleteModal";
 import { useTheme } from "@mui/material";
 
 function HostViewer({
@@ -17,6 +18,9 @@ function HostViewer({
                         userRef,
                         isMenuOpen,
                         setIsMenuOpen,
+                        isEditHostHidden,
+                        isConfirmDeleteHidden,
+                        setIsConfirmDeleteHidden,
                     }) {
     const [hosts, setHosts] = useState([]);
     const [filteredHosts, setFilteredHosts] = useState([]);
@@ -37,7 +41,9 @@ function HostViewer({
     const [lastPinnedHost, setLastPinnedHost] = useState(null);
     const [isPinningInProgress, setIsPinningInProgress] = useState(false);
     const [editingHostId, setEditingHostId] = useState(null);
+    const [hostToDelete, setHostToDelete] = useState(null);
     const theme = useTheme();
+    const editingTimeoutId = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -269,15 +275,22 @@ function HostViewer({
         setDraggedHost(null);
     };
 
+    const confirmDelete = async (hostWrapper) => {
+        setHostToDelete(hostWrapper);
+        setIsConfirmDeleteHidden(false);
+        setIsMenuOpen(false);
+        onModalOpen();
+    };
+
     const handleDelete = async (e, hostWrapper) => {
-        e.stopPropagation();
+        e?.stopPropagation();
         if (deletingHostId === hostWrapper._id) return;
 
         setDeletingHostId(hostWrapper._id);
-        setIsMenuOpen(false);
+        setIsConfirmDeleteHidden(true);
+        onModalClose();
         try {
-            const isOwner = hostWrapper.createdBy?._id === userRef.current?.getUser()?.id;
-            if (isOwner) {
+            if (hostWrapper.isOwner) {
                 await deleteHost({ _id: hostWrapper._id });
             } else {
                 await userRef.current.removeShare(hostWrapper._id);
@@ -288,6 +301,7 @@ function HostViewer({
             console.error('Failed to delete/remove host:', error);
         } finally {
             setDeletingHostId(null);
+            setHostToDelete(null);
         }
     };
 
@@ -387,55 +401,130 @@ function HostViewer({
 
     const handleEditHost = async (oldConfig, newConfig = null) => {
         try {
+            // Clear any existing timeout to prevent early state clearing
+            if (editingTimeoutId.current) {
+                clearTimeout(editingTimeoutId.current);
+                editingTimeoutId.current = null;
+            }
+            
             if (!oldConfig) {
+                console.error("Missing host configuration for edit");
                 return;
             }
 
+            // If we have a selected host, use its ID directly
+            let hostToEdit = selectedHost;
+            
+            // If no selected host, try to find the host being edited
+            if (!hostToEdit || !hostToEdit._id) {
+                hostToEdit = hosts.find(host => 
+                    host.config && host.config.ip === oldConfig.ip && 
+                    host.config.user === oldConfig.user
+                );
+            }
+            
+            // We need the host ID for setting the editing state
+            if (!hostToEdit || !hostToEdit._id) {
+                console.error("Could not find host ID for editing");
+                return;
+            }
+            
+            // Track the host ID being edited
+            const editingId = hostToEdit._id;
+            
+            // Set editing state for the UI
+            setEditingHostId(editingId);
+            console.log(`Starting edit for host ${hostToEdit.name || hostToEdit.config?.ip} (${editingId})`);
+            
             if (!newConfig) {
+                // Just open the edit panel - we'll keep the editing state active
                 openEditPanel(oldConfig);
+                // We don't clear editingHostId here - it will be cleared when the edit is completed
                 return;
             }
             
-            // Find the host being edited to track its ID
-            const hostToEdit = hosts.find(host => 
-                host.config && host.config.ip === oldConfig.ip && 
-                host.config.user === oldConfig.user
-            );
-            
-            if (hostToEdit) {
-                // Set editing state synchronously 
-                setEditingHostId(hostToEdit._id);
-                
-                // Make sure tags are included in newConfig
-                if (!newConfig.tags && oldConfig.tags) {
-                    newConfig.tags = oldConfig.tags;
-                }
-
-                // Apply the edit and fetch hosts
-                await editHost(oldConfig, newConfig);
-                await fetchHosts();
-
-                // Keep the editing indicator visible for a moment to provide feedback
-                setTimeout(() => {
-                    setEditingHostId(null);
-                }, 1500);
-            } else {
-                console.log("Host not found for editing");
-                await editHost(oldConfig, newConfig);
+            // Make sure tags are included in newConfig
+            if (!newConfig.tags && oldConfig.tags) {
+                newConfig.tags = oldConfig.tags;
             }
+
+            // Make sure _id is correctly passed if available
+            if (!newConfig._id && oldConfig._id) {
+                newConfig._id = oldConfig._id;
+            }
+
+            // Apply the edit
+            console.log(`Sending edit request to server for host ${hostToEdit.name || hostToEdit.config?.ip}`);
+            
+            const result = await editHost(oldConfig, newConfig);
+            
+            // First wait to ensure backend processing completes
+            console.log("Initial wait for backend processing...");
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Fetch fresh data after edit
+            console.log("Fetching updated host data...");
+            await fetchHosts();
+            
+            // Short wait to allow rendering to complete
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // One final fetch to ensure we have the latest data
+            console.log("Final data refresh...");
+            await fetchHosts();
+            
+            // Don't clear immediately, set a longer timeout
+            console.log(`Setting a timeout to clear editing state for host ${hostToEdit.name || hostToEdit.config?.ip}`);
+            
+            // Store the timeout ID so it can be cleared if needed
+            editingTimeoutId.current = setTimeout(() => {
+                console.log(`Timeout expired, clearing editing state for host ${editingId}`);
+                setEditingHostId(null);
+                editingTimeoutId.current = null;
+            }, 3000); // longer timeout
+            
+            return result;
         } catch (err) {
             console.error("Edit error:", err);
+            // Wait before clearing editing state on error
+            await new Promise(resolve => setTimeout(resolve, 500));
             setEditingHostId(null);
+            throw err; // Re-throw to allow error handling in the modal
         }
     };
 
+    // Add useEffect to reset editing state when modal is closed
+    useEffect(() => {
+        // When the edit host modal is hidden/closed, don't immediately clear the editing state
+        if (isEditHostHidden && editingHostId !== null) {
+            console.log(`Edit modal closed for host ${editingHostId}, but keeping editing state active...`);
+            
+            // If we already have a timeout running, let it complete naturally
+            // The editing state will be cleared by the existing timeout in handleEditHost
+            if (!editingTimeoutId.current) {
+                // Only if we don't have an active timeout, set a new one
+                console.log("No active timeout found, setting a new one");
+                editingTimeoutId.current = setTimeout(() => {
+                    console.log(`Modal close timeout expired, clearing editing state for host ${editingHostId}`);
+                    setEditingHostId(null);
+                    editingTimeoutId.current = null;
+                }, 2000);
+            }
+        }
+    }, [isEditHostHidden, editingHostId]);
+
     const renderHostItem = (hostWrapper) => {
         const hostConfig = hostWrapper.config || {};
-        const isOwner = hostWrapper.createdBy?._id === userRef.current?.getUser()?.id;
+        const isOwner = hostWrapper.isOwner === true;
         const isMenuActive = activeMenuButton === hostWrapper._id;
         const isPinningThisHost = isPinningInProgress && lastPinnedHost === hostWrapper._id;
         const isEditingThisHost = editingHostId === hostWrapper._id;
         const isThisHostBusy = isPinningThisHost || isEditingThisHost || deletingHostId === hostWrapper._id;
+
+        // Debug info for editing status
+        if (isEditingThisHost) {
+            console.log(`Host ${hostWrapper._id} (${hostConfig.name || hostConfig.ip}) is being edited`);
+        }
 
         const hostTags = hostWrapper.tags || hostWrapper.config?.tags || [];
         
@@ -544,6 +633,9 @@ function HostViewer({
                             borderColor: "#3d3d3d",
                             borderWidth: "2px",
                             color: "#fff",
+                            minWidth: "75px",
+                            fontSize: "15px",
+                            fontWeight: "bold"
                         }}
                     >
                         Connect
@@ -555,7 +647,7 @@ function HostViewer({
                             e.stopPropagation();
                             setSelectedHost(hostWrapper);
                             setActiveMenuButton(hostWrapper._id);
-                            setIsMenuOpen(true);
+                            setIsMenuOpen(!isMenuOpen);
                             anchorEl.current = e.currentTarget;
                         }}
                         disabled={isThisHostBusy}
@@ -567,6 +659,8 @@ function HostViewer({
                             borderColor: "#3d3d3d",
                             borderWidth: "2px",
                             color: "#fff",
+                            fontSize: "20px",
+                            fontWeight: "bold"
                         }}
                     >
                         ⋮
@@ -605,25 +699,25 @@ function HostViewer({
             {/* Tags Filter */}
             <div className="flex flex-wrap gap-1 mb-2 w-full">
                 {getAllTags(hosts).map(tag => (
-                    <Chip
+                    <div
                         key={tag}
-                        variant={selectedTags.has(tag) ? "solid" : "outlined"}
-                        color="neutral"
                         onClick={() => toggleTag(tag)}
-                        sx={{ 
+                        style={{ 
                             cursor: 'pointer',
-                            backgroundColor: selectedTags.has(tag) ? theme.palette.general.primary : '#2a2a2a',
-                            borderColor: theme.palette.general.primary,
-                            color: selectedTags.has(tag) ? '#fff' : theme.palette.general.primary,
-                            '&:hover': {
-                                backgroundColor: selectedTags.has(tag) 
-                                    ? theme.palette.general.dark 
-                                    : '#3d3d3d'
-                            }
+                            backgroundColor: selectedTags.has(tag) ? 'white' : '#2a2a2a',
+                            color: selectedTags.has(tag) ? 'black' : 'white',
+                            padding: '5px 10px',
+                            borderRadius: '4px',
+                            fontSize: '14px',
+                            fontWeight: 'normal',
+                            border: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            height: '28px'
                         }}
                     >
                         {tag}
-                    </Chip>
+                    </div>
                 ))}
             </div>
 
@@ -669,7 +763,11 @@ function HostViewer({
                                                         paddingLeft: '24px'
                                                     }}
                                                 >
-                                                    {noFolder.map((host) => renderHostItem(host))}
+                                                    {noFolder.map((host) => (
+                                                        <div key={host._id || host.id || `host-${Math.random()}`}>
+                                                            {renderHostItem(host)}
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
@@ -709,7 +807,11 @@ function HostViewer({
                                                         paddingLeft: '24px'
                                                     }}
                                                 >
-                                                    {grouped[folderName].map((host) => renderHostItem(host))}
+                                                    {grouped[folderName].map((host) => (
+                                                        <div key={host._id || host.id || `host-${Math.random()}`}>
+                                                            {renderHostItem(host)}
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
@@ -731,7 +833,7 @@ function HostViewer({
                     onClose={() => setIsMenuOpen(false)}
                     sx={{ backdropFilter: 'blur(30px)' }}
                 >
-                    {selectedHost.createdBy?._id === userRef.current?.getUser()?.id && (
+                    {selectedHost.isOwner && (
                         <MenuItem 
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -751,7 +853,7 @@ function HostViewer({
                     >
                         {selectedHost.isPinned ? 'Unpin' : 'Pin'}
                     </MenuItem>
-                    {selectedHost.createdBy?._id === userRef.current?.getUser()?.id && (
+                    {selectedHost.isOwner && (
                         <MenuItem 
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -764,22 +866,40 @@ function HostViewer({
                         </MenuItem>
                     )}
                     <MenuItem 
-                        onClick={(e) => handleDelete(e, selectedHost)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDelete(selectedHost);
+                        }}
                         sx={{ color: '#ef4444' }}
                     >
-                        {selectedHost.createdBy?._id === userRef.current?.getUser()?.id ? 'Delete' : 'Remove'}
+                        {selectedHost.isOwner ? 'Delete' : 'Remove'}
                     </MenuItem>
                 </Menu>
             )}
 
             {!isShareModalHidden && selectedHostForShare && (
                 <ShareHostModal
-                    hostId={selectedHostForShare._id}
-                    onClose={() => {
-                        setIsShareModalHidden(true);
-                        setSelectedHostForShare(null);
+                    isHidden={isShareModalHidden}
+                    setIsHidden={setIsShareModalHidden}
+                    handleShare={handleShare}
+                    hostConfig={selectedHostForShare}
+                />
+            )}
+
+            {!isConfirmDeleteHidden && hostToDelete && (
+                <ConfirmDeleteModal
+                    isHidden={isConfirmDeleteHidden}
+                    title={hostToDelete.isOwner ? 'Delete Host' : 'Remove Shared Host'}
+                    message={hostToDelete.isOwner ? 
+                        'Are you sure you want to delete this host?' : 
+                        'Are you sure you want to remove this shared host?'}
+                    itemName={hostToDelete.config?.name || hostToDelete.config?.ip}
+                    onConfirm={() => handleDelete(null, hostToDelete)}
+                    onCancel={() => {
+                        setIsConfirmDeleteHidden(true);
+                        setHostToDelete(null);
+                        onModalClose();
                     }}
-                    onShare={handleShare}
                 />
             )}
         </div>
@@ -799,6 +919,9 @@ HostViewer.propTypes = {
     userRef: PropTypes.object,
     isMenuOpen: PropTypes.bool.isRequired,
     setIsMenuOpen: PropTypes.func.isRequired,
+    isEditHostHidden: PropTypes.bool,
+    isConfirmDeleteHidden: PropTypes.bool,
+    setIsConfirmDeleteHidden: PropTypes.func,
 };
 
 export default HostViewer;

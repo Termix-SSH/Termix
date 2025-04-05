@@ -73,10 +73,12 @@ function App() {
     const [isLaunchpadOpen, setIsLaunchpadOpen] = useState(false);
     const [splitTabIds, setSplitTabIds] = useState([]);
     const [isEditHostHidden, setIsEditHostHidden] = useState(true);
+    const [isConfirmDeleteHidden, setIsConfirmDeleteHidden] = useState(true);
     const [currentHostConfig, setCurrentHostConfig] = useState(null);
     const [isLoggingIn, setIsLoggingIn] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [isHostViewerMenuOpen, setIsHostViewerMenuOpen] = useState(null);
+    const [isSnippetViewerMenuOpen, setIsSnippetViewerMenuOpen] = useState(null);
     const [hosts, setHosts] = useState([]);
 
     useEffect(() => {
@@ -506,13 +508,13 @@ function App() {
     const handleEditHost = async (oldConfig, newConfig = null) => {
         try {
             if (!oldConfig) {
-                return;
+                return false;
             }
 
             if (!newConfig) {
                 updateEditHostForm(oldConfig);
                 setIsEditHostHidden(false);
-                return;
+                return true;
             }
             
             // Make sure tags are included in newConfig
@@ -520,9 +522,17 @@ function App() {
                 newConfig.tags = oldConfig.tags;
             }
 
-            // The HostViewer should already have set the editing indicator
-            // Wait a bit to ensure the UI has updated before processing
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // If oldConfig._id isn't present but newConfig._id is, use that
+            if (!oldConfig._id && newConfig._id) {
+                oldConfig._id = newConfig._id;
+            }
+
+            // Wait a bit before processing - added delay
+            console.log("About to process edit for:", oldConfig.name || oldConfig.ip);
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Set internal editing state for UI feedback
+            setIsEditing(true);
 
             // Process the edit
             await userRef.current.editHost({
@@ -530,15 +540,30 @@ function App() {
                 newHostConfig: newConfig
             });
 
+            // The HostViewer will now be responsible for showing the editing indicator
+            // Short delay to ensure the database processes the edit
+            console.log("Edit request sent, waiting for processing...");
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             // Keep modal hidden after successful edit
             setIsEditHostHidden(true);
             
-            // Allow the "Updating..." indicator to be visible for at least 1 second
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Longer delay before clearing the editing state
+            // This is crucial for the host viewer to have time to refresh its data
+            console.log("Maintaining editing state for UI feedback...");
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Finally clear our editing state
+            setIsEditing(false);
+            
+            // Return success - HostViewer will handle the rest of the UI updates
+            return true;
         } catch (err) {
             console.error(err);
             setErrorMessage(err.toString());
             setIsErrorHidden(false);
+            setIsEditing(false);
+            return false;
         }
     };
 
@@ -760,17 +785,24 @@ function App() {
                                 <Launchpad
                                     onClose={() => setIsLaunchpadOpen(false)}
                                     getHosts={getHosts}
+                                    getSnippets={() => userRef.current?.getAllSnippets()}
                                     connectToHost={connectToHostWithConfig}
                                     isAddHostHidden={isAddHostHidden}
                                     setIsAddHostHidden={setIsAddHostHidden}
                                     isEditHostHidden={isEditHostHidden}
                                     isErrorHidden={isErrorHidden}
+                                    isConfirmDeleteHidden={isConfirmDeleteHidden}
+                                    setIsConfirmDeleteHidden={setIsConfirmDeleteHidden}
                                     deleteHost={deleteHost}
                                     editHost={handleEditHost}
                                     shareHost={(hostId, username) => userRef.current?.shareHost(hostId, username)}
                                     userRef={userRef}
                                     isHostViewerMenuOpen={isHostViewerMenuOpen}
                                     setIsHostViewerMenuOpen={setIsHostViewerMenuOpen}
+                                    isSnippetViewerMenuOpen={isSnippetViewerMenuOpen}
+                                    setIsSnippetViewerMenuOpen={setIsSnippetViewerMenuOpen}
+                                    terminals={terminals}
+                                    activeTab={activeTab}
                                 />
                             )}
                         </>

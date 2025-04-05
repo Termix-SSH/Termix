@@ -162,3 +162,4 @@ typings/
 /src/data/
 /docker/mongodb/
 /docker/docker-compose.yml
+/data/termix.db

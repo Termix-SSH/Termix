@@ -27,6 +27,7 @@ io.on("connection", (socket) => {
     logger.info("New socket connection established");
 
     let stream = null;
+    let conn = null;
 
     socket.on("connectToHost", (cols, rows, hostConfig) => {
         if (!hostConfig || !hostConfig.ip || !hostConfig.user || !hostConfig.port) {
@@ -48,14 +49,26 @@ io.on("connection", (socket) => {
             authType: hostConfig.password ? 'password' : 'key',
         };
 
-        logger.info("Connecting with config:", safeHostConfig);
+        // Only log this for monitoring purposes
+        logger.info("SSH connection request:", safeHostConfig);
         const { ip, port, user, password, sshKey, } = hostConfig;
 
-        const conn = new SSHClient();
+        // First close any existing connection
+        if (conn) {
+            try {
+                // Store reference and clear first
+                const currentConn = conn;
+                conn = null;
+                stream = null;
+                currentConn.end();
+            } catch (err) {
+                // Silent error handling
+            }
+        }
+
+        conn = new SSHClient();
         conn
             .on("ready", function () {
-                logger.info("SSH connection established");
-
                 conn.shell({ term: "xterm-256color", keepaliveInterval: 30000 }, function (err, newStream) {
                     if (err) {
                         logger.error("Shell error:", err.message);
@@ -71,12 +84,22 @@ io.on("connection", (socket) => {
                     });
 
                     stream.on("close", function () {
-                        logger.info("SSH stream closed");
-                        conn.end();
+                        const currentConn = conn;
+                        stream = null;
+                        
+                        if (currentConn) {
+                            try {
+                                currentConn.end();
+                            } catch (err) {
+                                // Silent error handling
+                            }
+                        }
                     });
 
                     socket.on("data", function (data) {
-                        stream.write(data);
+                        if (stream) {
+                            stream.write(data);
+                        }
                     });
 
                     socket.on("resize", ({ cols, rows }) => {
@@ -89,12 +112,28 @@ io.on("connection", (socket) => {
                 });
             })
             .on("close", function () {
-                logger.info("SSH connection closed");
                 socket.emit("error", "SSH connection closed");
+                conn = null;
+                stream = null;
             })
             .on("error", function (err) {
-                logger.error("Error:", err.message);
+                // Only log actual error message, nothing else
+                logger.error("SSH error:", err.message);
                 socket.emit("error", err.message);
+                
+                // Save references before nullifying
+                const currentConn = conn;
+                conn = null;
+                stream = null;
+                
+                // Attempt to close the connection on error
+                if (currentConn) {
+                    try {
+                        currentConn.end();
+                    } catch (closeErr) {
+                        // Silent error handling
+                    }
+                }
             })
             .on("ping", function () {
                 socket.emit("ping");
@@ -116,7 +155,33 @@ io.on("connection", (socket) => {
     });
 
     socket.on("disconnect", () => {
-        logger.info("Client disconnected");
+        // Clean up any existing SSH connection when the client disconnects
+        // Store references to avoid null reference issues
+        const currentStream = stream;
+        const currentConn = conn;
+        
+        // Immediately null the references to prevent double cleanup
+        stream = null;
+        conn = null;
+        
+        // Check if we have a valid stream
+        if (currentStream) {
+            try {
+                // Just write exit without logging
+                currentStream.write("exit\r");
+            } catch (err) {
+                // Silent error handling - no logging
+            }
+        }
+        
+        // Check if we have a valid connection
+        if (currentConn) {
+            try {
+                currentConn.end();
+            } catch (err) {
+                // Silent error handling - no logging
+            }
+        }
     });
 });
 

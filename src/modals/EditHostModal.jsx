@@ -50,8 +50,35 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
     const [newTag, setNewTag] = useState("");
 
     useEffect(() => {
+        if (isHidden) {
+            setTimeout(() => {
+                setForm({
+                    name: '',
+                    folder: '',
+                    ip: '',
+                    user: '',
+                    port: '',
+                    password: '',
+                    sshKey: '',
+                    keyType: '',
+                    authMethod: 'Select Auth', 
+                    storePassword: true,
+                    rememberHost: true,
+                    tags: [],
+                    isPinned: false
+                });
+                setShowError(false);
+                setErrorMessage('');
+                setActiveTab(0);
+            }, 300);
+        }
+    }, [isHidden]);
+
+    useEffect(() => {
         if (!isHidden && hostConfig) {
-            setForm({
+            console.log(`EditHostModal shown for host ${hostConfig.name || hostConfig.ip}`);
+            
+            const newFormState = {
                 name: hostConfig.name || '',
                 folder: hostConfig.folder || '',
                 ip: hostConfig.ip || '',
@@ -63,9 +90,18 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                 authMethod: hostConfig.password ? 'password' : hostConfig.sshKey ? 'sshKey' : 'Select Auth',
                 rememberHost: true,
                 storePassword: !!(hostConfig.password || hostConfig.sshKey),
-                tags: hostConfig.tags || [],
-                isPinned: hostConfig.isPinned || false
-            });
+                tags: Array.isArray(hostConfig.tags) ? [...hostConfig.tags] : [],
+                isPinned: !!hostConfig.isPinned
+            };
+            
+            setForm(newFormState);
+            
+            setShowError(false);
+            setErrorMessage('');
+            
+            console.log("Form initialized with:", newFormState);
+        } else if (isHidden && hostConfig) {
+            console.log(`EditHostModal hidden for host ${hostConfig.name || hostConfig.ip}`);
         }
     }, [isHidden, hostConfig]);
 
@@ -167,6 +203,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
             }
 
             const newConfig = {
+                _id: hostConfig._id,
                 name: form.name || form.ip,
                 folder: form.folder,
                 ip: form.ip,
@@ -185,7 +222,11 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                 }
             }
 
+            console.log(`Submitting edit for host: ${newConfig.name || newConfig.ip}`);
+            
             setIsEditHostHidden(true);
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
             
             await handleEditHost(hostConfig, newConfig);
             
@@ -363,37 +404,36 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                                                     key={tag}
                                                     variant="soft"
                                                     color="neutral"
-                                                    endDecorator={
-                                                        <DeleteIcon 
-                                                            fontSize="small" 
-                                                            sx={{ 
-                                                                color: 'red !important', 
-                                                                cursor: 'pointer',
-                                                                marginLeft: '4px'
-                                                            }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleRemoveTag(tag);
-                                                            }}
-                                                        />
-                                                    }
                                                     sx={{
                                                         backgroundColor: theme.palette.general.primary,
                                                         color: theme.palette.text.primary,
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        padding: '4px 8px',
-                                                        '& .MuiChip-endDecorator': {
-                                                            visibility: 'visible !important',
-                                                            display: 'flex !important',
-                                                            opacity: '1 !important',
-                                                            marginLeft: '4px',
-                                                            marginRight: '0px'
-                                                        }
+                                                        gap: '2px',
+                                                        padding: '4px 4px 4px 8px',
+                                                        position: 'relative'
                                                     }}
                                                 >
-                                                    {tag}
+                                                    <span>{tag}</span>
+                                                    <span
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveTag(tag);
+                                                        }}
+                                                        style={{
+                                                            marginLeft: '4px',
+                                                            color: 'red',
+                                                            padding: '0 8px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold',
+                                                            fontSize: '16px',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        ×
+                                                    </span>
                                                 </Chip>
                                             ))}
                                         </Box>

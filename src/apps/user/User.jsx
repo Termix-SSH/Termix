@@ -316,6 +316,150 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         }
     };
 
+    // Snippet management functions
+    const saveSnippet = async (snippet) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("saveSnippet", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    snippet
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to save snippet");
+            }
+            
+            return true;
+        } catch (error) {
+            onFailure(error.message);
+            return false;
+        }
+    };
+
+    const getAllSnippets = async () => {
+        if (!currentUser.current) return [];
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("getSnippets", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                }, resolve);
+            });
+
+            if (response?.success) {
+                return response.snippets.map(snippet => ({
+                    ...snippet,
+                    isPinned: snippet.isPinned || false,
+                    tags: snippet.tags || []
+                }));
+            } else {
+                throw new Error(response?.error || "Failed to fetch snippets");
+            }
+        } catch (error) {
+            onFailure(error.message);
+            return [];
+        }
+    };
+
+    const deleteSnippet = async ({ snippetId }) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("deleteSnippet", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    snippetId,
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to delete snippet");
+            }
+            
+            return true;
+        } catch (error) {
+            onFailure(error.message);
+            return false;
+        }
+    };
+
+    const editSnippet = async ({ oldSnippet, newSnippet }) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("editSnippet", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    oldSnippet,
+                    newSnippet,
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to edit snippet");
+            }
+            
+            return true;
+        } catch (error) {
+            onFailure(error.message);
+            return false;
+        }
+    };
+
+    const shareSnippet = async (snippetId, targetUsername) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("shareSnippet", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    snippetId,
+                    targetUsername,
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to share snippet");
+            }
+            
+            return true;
+        } catch (error) {
+            onFailure(error.message);
+            return false;
+        }
+    };
+
+    const removeSnippetShare = async (snippetId) => {
+        if (!currentUser.current) return onFailure("Not authenticated");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("removeSnippetShare", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    snippetId,
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to remove snippet share");
+            }
+            
+            return true;
+        } catch (error) {
+            onFailure(error.message);
+            return false;
+        }
+    };
+
     useImperativeHandle(ref, () => ({
         createUser,
         loginUser,
@@ -328,7 +472,14 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         shareHost,
         editHost,
         removeShare,
+        saveSnippet,
+        getAllSnippets,
+        deleteSnippet,
+        editSnippet,
+        shareSnippet,
+        removeSnippetShare,
         getUser: () => currentUser.current,
+        getSocketRef: () => socketRef.current,
     }));
 
     return null;

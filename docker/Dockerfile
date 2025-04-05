@@ -15,8 +15,8 @@ RUN npm ci --only=production --force && \
     npm cache clean --force
 COPY src/backend/ ./src/backend/
 
-# Stage 3: Build bcrypt for Ubuntu
-FROM ubuntu:focal AS bcrypt-builder
+# Stage 3: Build native modules for Ubuntu
+FROM ubuntu:focal AS native-builder
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_VERSION=18.x
 WORKDIR /app
@@ -34,7 +34,7 @@ RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/loc
     wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get update && \
     apt-get install -y nodejs && \
-    npm ci --only=production bcrypt --force && \
+    npm ci --only=production bcrypt better-sqlite3 --force && \
     npm cache clean --force && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/*
@@ -43,15 +43,11 @@ RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/loc
 FROM ubuntu:focal
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_VERSION=18.x \
-    MONGO_VERSION=4.4.24 \
-    MONGO_URL=mongodb://localhost:27017/termix \
-    MONGODB_DATA_DIR=/data/db \
-    MONGODB_LOG_DIR=/var/log/mongodb \
+    DATA_DIR=/app/data \
     PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Create users first
-RUN groupadd -r mongodb && useradd -r -g mongodb mongodb \
-    && groupadd -r node && useradd -r -g node -m node
+# Create node user
+RUN groupadd -r node && useradd -r -g node -m node
 
 # Install all dependencies in one layer
 RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* && \
@@ -60,29 +56,17 @@ RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/loc
     apt-get install -y --no-install-recommends \
         ca-certificates \
         gnupg \
-        gosu \
         nginx-light \
         wget && \
-    # Add MongoDB 4.4 repository
-    wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
-    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
-    # Add MongoDB 5.0 repository
-    wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - && \
-    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-5.0.list && \
     # Add NodeJS repository
     wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get update && \
-    # Install MongoDB 4.4 and 5.0 packages
     apt-get install -y --no-install-recommends \
-        nodejs \
-        mongodb-org-server=${MONGO_VERSION} \
-        mongodb-org-shell=${MONGO_VERSION} \
-        mongodb-org-server=5.0.21 && \
+        nodejs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* && \
-    mkdir -p /data/db /var/log/mongodb /var/run/mongodb && \
-    chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb && \
-    chmod 755 /data/db /var/log/mongodb /var/run/mongodb
+    mkdir -p /app/data && \
+    chown -R node:node /app/data
 
 # Setup nginx and frontend
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -95,12 +79,13 @@ COPY package*.json ./
 RUN npm ci --only=production --ignore-scripts --force && \
     npm cache clean --force && \
     rm -rf /tmp/*
-COPY --from=bcrypt-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
+COPY --from=native-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
+COPY --from=native-builder /app/node_modules/better-sqlite3 /app/node_modules/better-sqlite3
 COPY --from=backend-builder /app/src/backend ./src/backend
 RUN chown -R node:node /app
 
-VOLUME ["/data/db"]
-EXPOSE 8080 8081 8082 27017
+VOLUME ["/app/data"]
+EXPOSE 8080 8081 8082
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

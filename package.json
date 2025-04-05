@@ -23,6 +23,7 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.9.1",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dayjs": "^1.11.13",
