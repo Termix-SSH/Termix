@@ -24,8 +24,7 @@ if [ ! -d "/app/data" ]; then
     chown -R node:node /app/data
 fi
 
-su -s /bin/bash node -c "node src/backend/ssh.cjs" &
-su -s /bin/bash node -c "node src/backend/database.cjs" &
+su -s /bin/bash node -c "node src/backend/starter.cjs"
 
 echo "All services started"
 

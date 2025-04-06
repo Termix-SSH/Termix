@@ -4,9 +4,6 @@ import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import io from "socket.io-client";
 import PropTypes from "prop-types";
-import theme from "../../theme.js";
-import { loadFont, getFormattedFontFamily } from "../../utils/fontLoader.js";
-
 
 const terminalThemes = {
     dark: {
@@ -380,13 +377,6 @@ const fontFamilyMap = {
     menlo: 'Menlo, Monaco, "Courier New", monospace'
 };
 
-
-const getNerdFontFamily = (fontFamily) => {
-    const baseFontFamily = fontFamilyMap[fontFamily] || fontFamilyMap.monospace;
-
-    return baseFontFamily.replace(/^([^,]+)(.*)/, '$1 Nerd Font$2');
-};
-
 export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidden, setErrorMessage, setIsErrorHidden, title, showTitle }, ref) => {
     const terminalRef = useRef(null);
     const socketRef = useRef(null);
@@ -533,7 +523,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         const socket = io(
             window.location.hostname === "localhost"
-                ? "http://localhost:8081"
+                ? "http://localhost:8082"
                 : "/",
             {
                 path: "/ssh.io/socket.io",

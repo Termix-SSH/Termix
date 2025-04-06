@@ -1,8 +1,8 @@
 import PropTypes from "prop-types";
 import { useState, useEffect, useRef } from "react";
 import { Button, Input, Menu, MenuItem, IconButton, Chip } from "@mui/joy";
-import ShareHostModal from "../../modals/ShareHostModal";
-import ConfirmDeleteModal from "../../modals/ConfirmDeleteModal";
+import ShareHostModal from "../../modals/ShareHostModal.jsx";
+import ConfirmDeleteModal from "../../modals/ConfirmDeleteModal.jsx";
 import { useTheme } from "@mui/material";
 
 function HostViewer({
@@ -427,8 +427,13 @@ function HostViewer({
             setEditingHostId(editingId);
 
             if (!newConfig) {
-
-                openEditPanel(oldConfig);
+                const configWithConnectionType = {
+                    ...oldConfig,
+                    connectionType: oldConfig.connectionType || 'ssh'
+                };
+                console.log("openEditPanel called with config:", configWithConnectionType);
+                console.log("Connection type being passed to openEditPanel:", configWithConnectionType.connectionType);
+                openEditPanel(configWithConnectionType);
 
                 return;
             }
@@ -441,6 +446,10 @@ function HostViewer({
 
             if (!newConfig._id && oldConfig._id) {
                 newConfig._id = oldConfig._id;
+            }
+
+            if (!newConfig.connectionType && oldConfig.connectionType) {
+                newConfig.connectionType = oldConfig.connectionType;
             }
 
             const result = await editHost(oldConfig, newConfig);

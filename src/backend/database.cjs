@@ -8,10 +8,10 @@ const path = require('path');
 require('dotenv').config();
 
 const logger = {
-    info: (...args) => console.log(`🔧 [${new Date().toISOString()}] INFO:`, ...args),
-    error: (...args) => console.error(`❌ [${new Date().toISOString()}] ERROR:`, ...args),
-    warn: (...args) => console.warn(`⚠️ [${new Date().toISOString()}] WARN:`, ...args),
-    debug: (...args) => console.debug(`🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
+    info: (...args) => console.log(`📦 | 🔧 [${new Date().toISOString()}] INFO:`, ...args),
+    error: (...args) => console.error(`📦 | ❌ [${new Date().toISOString()}] ERROR:`, ...args),
+    warn: (...args) => console.warn(`📦 | ⚠️ [${new Date().toISOString()}] WARN:`, ...args),
+    debug: (...args) => console.debug(`📦 | 🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
 };
 
 
@@ -1390,6 +1390,6 @@ io.of('/database.io').on('connection', (socket) => {
     });
 });
 
-server.listen(8082, () => {
-    logger.info('Server running on port 8082');
+server.listen(8081, () => {
+    logger.info('Server running on port 8081');
 });

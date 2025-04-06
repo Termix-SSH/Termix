@@ -19,10 +19,10 @@ const io = socketIo(server, {
 });
 
 const logger = {
-    info: (...args) => console.log(`🔧 [${new Date().toISOString()}] INFO:`, ...args),
-    error: (...args) => console.error(`❌ [${new Date().toISOString()}] ERROR:`, ...args),
-    warn: (...args) => console.warn(`⚠️ [${new Date().toISOString()}] WARN:`, ...args),
-    debug: (...args) => console.debug(`🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
+    info: (...args) => console.log(`⌨️ | 🔧 [${new Date().toISOString()}] INFO:`, ...args),
+    error: (...args) => console.error(`⌨️ | ❌ [${new Date().toISOString()}] ERROR:`, ...args),
+    warn: (...args) => console.warn(`⌨️ | ⚠️ [${new Date().toISOString()}] WARN:`, ...args),
+    debug: (...args) => console.debug(`⌨️ | 🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
 };
 
 io.on("connection", (socket) => {
@@ -232,6 +232,6 @@ io.on("connection", (socket) => {
     });
 });
 
-server.listen(8081, '0.0.0.0', () => {
-    logger.info("Server is running on port 8081");
+server.listen(8082, '0.0.0.0', () => {
+    logger.info("Server is running on port 8082");
 });

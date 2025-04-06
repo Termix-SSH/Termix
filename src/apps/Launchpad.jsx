@@ -5,7 +5,7 @@ import { Button } from '@mui/joy';
 import HostViewerIcon from '../images/host_viewer_icon.png';
 import SnippetsIcon from '../images/snippets_icon.png';
 import theme from '../theme.js';
-import HostViewer from './ssh/HostViewer.jsx';
+import HostViewer from './hosts/HostViewer.jsx';
 import SnippetViewer from './snippets/SnippetViewer.jsx';
 
 function Launchpad({

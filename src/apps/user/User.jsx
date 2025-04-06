@@ -3,7 +3,7 @@ import io from "socket.io-client";
 import PropTypes from "prop-types";
 
 const SOCKET_URL = window.location.hostname === "localhost"
-    ? "http://localhost:8082/database.io"
+    ? "http://localhost:8081/database.io"
     : "/database.io";
 
 const socket = io(SOCKET_URL, {

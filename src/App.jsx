@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { NewTerminal } from "./apps/ssh/Terminal.jsx";
+import { NewTerminal } from "./apps/hosts/ssh/SSHTerminal.jsx";
 import { User } from "./apps/user/User.jsx";
 import AddHostModal from "./modals/AddHostModal.jsx";
 import AuthModal from "./modals/AuthModal.jsx";
