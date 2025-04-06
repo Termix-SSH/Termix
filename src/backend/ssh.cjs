@@ -11,9 +11,11 @@ const io = socketIo(server, {
         credentials: true
     },
     allowEIO3: true,
-    pingInterval: 2500,
-    pingTimeout: 5000,
+    pingInterval: 2000,         // Reduced ping interval
+    pingTimeout: 10000,         // Increased ping timeout
     maxHttpBufferSize: 1e7,
+    connectTimeout: 15000,      // Increased connection timeout
+    transports: ['websocket', 'polling'],
 });
 
 const logger = {
@@ -28,6 +30,35 @@ io.on("connection", (socket) => {
 
     let stream = null;
     let conn = null;
+    let pingTimer = null;
+
+    // Setup a more frequent ping interval to keep the socket alive
+    function setupPingInterval() {
+        // Clear any existing ping timer
+        if (pingTimer) {
+            clearInterval(pingTimer);
+        }
+        
+        // Set up a new ping interval that will keep both the socket and SSH connection alive
+        pingTimer = setInterval(() => {
+            if (socket && socket.connected) {
+                socket.emit("ping");
+                // If we have an SSH connection, send a keepalive
+                if (conn && conn.ping) {
+                    try {
+                        conn.ping();
+                    } catch (err) {
+                        // Silent error handling
+                    }
+                }
+            } else {
+                clearInterval(pingTimer);
+            }
+        }, 3000); // Send ping every 3 seconds
+    }
+
+    // Start ping immediately after connection
+    setupPingInterval();
 
     socket.on("connectToHost", (cols, rows, hostConfig) => {
         if (!hostConfig || !hostConfig.ip || !hostConfig.user || !hostConfig.port) {
@@ -47,11 +78,13 @@ io.on("connection", (socket) => {
             port: hostConfig.port,
             user: hostConfig.user,
             authType: hostConfig.password ? 'password' : 'key',
+            sshAlgorithm: hostConfig.terminalConfig?.sshAlgorithm || 'default'
         };
 
         // Only log this for monitoring purposes
         logger.info("SSH connection request:", safeHostConfig);
-        const { ip, port, user, password, sshKey, } = hostConfig;
+        const { ip, port, user, password, sshKey } = hostConfig;
+        const sshAlgorithm = hostConfig.terminalConfig?.sshAlgorithm || 'default';
 
         // First close any existing connection
         if (conn) {
@@ -144,21 +177,47 @@ io.on("connection", (socket) => {
                 username: user,
                 password: password || undefined,
                 privateKey: sshKey ? Buffer.from(sshKey) : undefined,
-                algorithms: {
-                    kex: ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'ecdh-sha2-nistp256'],
-                    serverHostKey: ['ssh-ed25519', 'ecdsa-sha2-nistp256']
-                },
-                keepaliveInterval: 10000,
-                keepaliveCountMax: 5,
-                readyTimeout: 5000,
+                algorithms: getAlgorithms(sshAlgorithm),
+                keepaliveInterval: 5000,      // Send keepalive every 5 seconds
+                keepaliveCountMax: 10,        // Allow up to 10 missed keepalives
+                readyTimeout: 10000,          // Longer timeout for connection
+                tcpKeepAlive: true,           // Enable TCP keepalive on socket
             });
     });
+
+    // Helper function to select SSH algorithms based on preference
+    function getAlgorithms(algorithmPreference) {
+        switch (algorithmPreference) {
+            case 'legacy':
+                return {
+                    kex: ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1'],
+                    serverHostKey: ['ssh-rsa', 'ssh-dss']
+                };
+            case 'secure':
+                return {
+                    kex: ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'diffie-hellman-group-exchange-sha256'],
+                    serverHostKey: ['ssh-ed25519', 'rsa-sha2-512', 'rsa-sha2-256']
+                };
+            case 'default':
+            default:
+                return {
+                    kex: ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'ecdh-sha2-nistp256'],
+                    serverHostKey: ['ssh-ed25519', 'ecdsa-sha2-nistp256']
+                };
+        }
+    }
 
     socket.on("disconnect", () => {
         // Clean up any existing SSH connection when the client disconnects
         // Store references to avoid null reference issues
         const currentStream = stream;
         const currentConn = conn;
+        
+        // Clean up ping timer
+        if (pingTimer) {
+            clearInterval(pingTimer);
+            pingTimer = null;
+        }
         
         // Immediately null the references to prevent double cleanup
         stream = null;

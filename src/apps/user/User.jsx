@@ -170,6 +170,25 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 }
             }
 
+            // Ensure terminal configuration is included
+            if (!hostConfig.hostConfig.terminalConfig) {
+                hostConfig.hostConfig.terminalConfig = {
+                    theme: 'dark',
+                    cursorStyle: 'block',
+                    fontFamily: 'ubuntuMono',
+                    fontSize: 14,
+                    fontWeight: 'normal',
+                    lineHeight: 1,
+                    letterSpacing: 0,
+                    cursorBlink: true,
+                    sshAlgorithm: 'default',
+                    useNerdFont: true
+                };
+            } else {
+                // Ensure useNerdFont is set to true
+                hostConfig.hostConfig.terminalConfig.useNerdFont = true;
+            }
+
             const response = await new Promise((resolve) => {
                 socketRef.current.emit("saveHostConfig", {
                     userId: currentUser.current.id,
@@ -210,7 +229,19 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                         sshKey: host.config.sshKey || '',
                         keyType: host.config.keyType || '',
                         isPinned: host.isPinned || false,
-                        tags: host.config.tags || host.tags || []
+                        tags: host.config.tags || host.tags || [],
+                        terminalConfig: host.config.terminalConfig || {
+                            theme: 'dark',
+                            cursorStyle: 'block',
+                            fontFamily: 'ubuntuMono',
+                            fontSize: 14,
+                            fontWeight: 'normal',
+                            lineHeight: 1,
+                            letterSpacing: 0,
+                            cursorBlink: true,
+                            sshAlgorithm: 'default',
+                            useNerdFont: true
+                        }
                     } : {}
                 })).filter(host => host.config && host.config.ip && host.config.user);
             } else {
@@ -256,6 +287,25 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
             
             if (duplicateNameHost) {
                 return onFailure("A host with this name already exists. Please choose a different name.");
+            }
+
+            // Ensure terminal configuration is included
+            if (!newHostConfig.terminalConfig) {
+                newHostConfig.terminalConfig = {
+                    theme: 'dark',
+                    cursorStyle: 'block',
+                    fontFamily: 'ubuntuMono',
+                    fontSize: 14,
+                    fontWeight: 'normal',
+                    lineHeight: 1,
+                    letterSpacing: 0,
+                    cursorBlink: true,
+                    sshAlgorithm: 'default',
+                    useNerdFont: true
+                };
+            } else {
+                // Ensure useNerdFont is set to true
+                newHostConfig.terminalConfig.useNerdFont = true;
             }
 
             const response = await new Promise((resolve) => {

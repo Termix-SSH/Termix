@@ -17,6 +17,7 @@ import ErrorModal from "./modals/ErrorModal.jsx";
 import EditHostModal from "./modals/EditHostModal.jsx";
 import NoAuthenticationModal from "./modals/NoAuthenticationModal.jsx";
 import eventBus from "./other/eventBus.jsx";
+import { preloadAllFonts } from './utils/fontLoader';
 
 function App() {
     const [isAddHostHidden, setIsAddHostHidden] = useState(true);
@@ -293,19 +294,50 @@ function App() {
     };
 
     const connectToHost = () => {
+        if (!addHostForm.ip || !addHostForm.user) {
+            return;
+        }
+
+        // Check for duplicate titles and number them accordingly
+        let baseTitle = addHostForm.name || addHostForm.ip;
+        let newTitle = baseTitle;
+        
+        // Count existing terminals with the same base title
+        const existingTitles = terminals.filter(terminal => 
+            terminal.title === baseTitle || terminal.title.startsWith(`${baseTitle} (`)
+        );
+        
+        // If there are existing terminals with the same name, append a number
+        if (existingTitles.length > 0) {
+            newTitle = `${baseTitle} (${existingTitles.length})`;
+        }
+
+        const nextId = Math.floor(Math.random() * 10000);
         const hostConfig = {
-            name: addHostForm.name || '',
-            folder: addHostForm.folder || '',
+            name: addHostForm.name,
+            folder: addHostForm.folder,
             ip: addHostForm.ip,
             user: addHostForm.user,
             port: String(addHostForm.port),
             password: addHostForm.rememberHost && addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
             sshKey: addHostForm.rememberHost && addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
+            terminalConfig: addHostForm.terminalConfig || {
+                theme: 'dark',
+                cursorStyle: 'block',
+                fontFamily: 'ubuntuMono',
+                fontSize: 14,
+                fontWeight: 'normal',
+                lineHeight: 1,
+                letterSpacing: 0,
+                cursorBlink: true,
+                sshAlgorithm: 'default',
+                useNerdFont: true
+            }
         };
 
         const newTerminal = {
             id: nextId,
-            title: hostConfig.name || hostConfig.ip,
+            title: newTitle,
             hostConfig,
             terminalRef: null,
         };
@@ -360,6 +392,20 @@ function App() {
             return;
         }
 
+        // Check for duplicate titles and number them accordingly
+        let baseTitle = hostConfig.name || hostConfig.ip;
+        let newTitle = baseTitle;
+        
+        // Count existing terminals with the same base title
+        const existingTitles = terminals.filter(terminal => 
+            terminal.title === baseTitle || terminal.title.startsWith(`${baseTitle} (`)
+        );
+        
+        // If there are existing terminals with the same name, append a number
+        if (existingTitles.length > 0) {
+            newTitle = `${baseTitle} (${existingTitles.length})`;
+        }
+
         const cleanHostConfig = {
             name: hostConfig.name || '',
             folder: hostConfig.folder || '',
@@ -368,11 +414,23 @@ function App() {
             port: hostConfig.port || '22',
             password: hostConfig.password?.trim(),
             sshKey: hostConfig.sshKey?.trim(),
+            terminalConfig: hostConfig.terminalConfig || {
+                theme: 'dark',
+                cursorStyle: 'block',
+                fontFamily: 'ubuntuMono',
+                fontSize: 14,
+                fontWeight: 'normal',
+                lineHeight: 1,
+                letterSpacing: 0,
+                cursorBlink: true,
+                sshAlgorithm: 'default',
+                useNerdFont: true
+            }
         };
 
         const newTerminal = {
             id: nextId,
-            title: cleanHostConfig.name || cleanHostConfig.ip,
+            title: newTitle,
             hostConfig: cleanHostConfig,
             terminalRef: null,
         };
@@ -395,7 +453,8 @@ function App() {
                     sshKey: addHostForm.storePassword ? addHostForm.sshKey : "",
                     keyType: addHostForm.keyType,
                     isPinned: addHostForm.isPinned,
-                    tags: addHostForm.tags || []
+                    tags: addHostForm.tags || [],
+                    terminalConfig: addHostForm.terminalConfig
                 }
             });
             setIsAddHostHidden(true);
@@ -601,6 +660,32 @@ function App() {
         return "flex flex-col h-full gap-4";
     };
 
+    const getTerminalBackgroundColor = (hostConfig) => {
+        // Get the terminal theme from hostConfig
+        const terminalThemeMap = {
+            'dark': '#1e1e1e',
+            'light': '#ffffff',
+            'red': '#550000',
+            'green': '#0B3B0B',
+            'blue': '#001B33',
+            'purple': '#2D1B4E',
+            'orange': '#421F04',
+            'cyan': '#003833',
+            'yellow': '#3B3B00',
+            'pink': '#3B001B'
+        };
+        
+        // Get the theme from hostConfig or use default
+        const themeName = hostConfig?.terminalConfig?.theme || 'dark';
+        
+        // Return the corresponding background color or default to dark theme
+        return terminalThemeMap[themeName] || terminalThemeMap.dark;
+    };
+
+    useEffect(() => {
+        preloadAllFonts();
+    }, []);
+
     return (
         <CssVarsProvider theme={theme}>
             <div className="flex h-screen bg-neutral-900 overflow-hidden">
@@ -711,18 +796,19 @@ function App() {
                     </div>
 
                     {/* Terminal Views */}
-                    <div className={`relative p-4 terminal-container ${getLayoutStyle()}`}>
-                        {userRef.current?.getUser() ? (
-                            terminals.map((terminal) => (
+                    {userRef.current?.getUser() ? (
+                        <div className={`relative p-4 terminal-container ${getLayoutStyle()}`}>
+                            {terminals.map((terminal) => (
                                 <div
                                     key={terminal.id}
-                                    className={`bg-neutral-800 rounded-lg overflow-hidden shadow-xl border-5 border-neutral-700 ${
+                                    className={`rounded-lg overflow-hidden shadow-xl ${
                                         splitTabIds.includes(terminal.id) || activeTab === terminal.id ? "block" : "hidden"
                                     } flex-1`}
                                     style={{
                                         order: splitTabIds.includes(terminal.id)
                                             ? splitTabIds.indexOf(terminal.id)
                                             : 0,
+                                        backgroundColor: getTerminalBackgroundColor(terminal.hostConfig)
                                     }}
                                 >
                                     <NewTerminal
@@ -732,28 +818,31 @@ function App() {
                                         setIsNoAuthHidden={setIsNoAuthHidden}
                                         setErrorMessage={setErrorMessage}
                                         setIsErrorHidden={setIsErrorHidden}
+                                        title={terminal.title}
+                                        showTitle={splitTabIds.length > 0}
                                         ref={(ref) => {
                                             terminal.terminalRef = ref;
                                         }}
                                     />
                                 </div>
-                            ))
-                        ) : (
-                            <div className="flex items-center justify-center h-full">
-                                <div className="text-center text-neutral-400">
-                                    <h2 className="text-2xl font-bold mb-4">Welcome to Termix</h2>
-                                    <p>{isLoggingIn ? "Checking login status..." : "Please login to start managing your SSH connections"}</p>
-                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-full w-full">
+                            <div className="text-center text-neutral-400">
+                                <h2 className="text-2xl font-bold mb-4">Welcome to Termix</h2>
+                                <p>{isLoggingIn ? "Checking login status..." : "Please login to start managing your SSH connections"}</p>
                             </div>
-                        )}
-                        <NoAuthenticationModal
-                            isHidden={isNoAuthHidden}
-                            form={noAuthenticationForm}
-                            setForm={setNoAuthenticationForm}
-                            setIsNoAuthHidden={setIsNoAuthHidden}
-                            handleAuthSubmit={handleAuthSubmit}
-                        />
-                    </div>
+                        </div>
+                    )}
+
+                    <NoAuthenticationModal
+                        isHidden={isNoAuthHidden}
+                        form={noAuthenticationForm}
+                        setForm={setNoAuthenticationForm}
+                        setIsNoAuthHidden={setIsNoAuthHidden}
+                        handleAuthSubmit={handleAuthSubmit}
+                    />
 
                     {/* Modals */}
                     {userRef.current?.getUser() && (

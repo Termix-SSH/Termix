@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+# Set default port if not provided
+export PORT=${PORT:-8080}
+echo "Configuring web UI to run on port: $PORT"
+
+# Replace PORT variable in nginx.conf
+envsubst '${PORT}' < /etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp
+mv /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+
 # Create required directories and set permissions
 mkdir -p /app/data
 chown -R node:node /app/data

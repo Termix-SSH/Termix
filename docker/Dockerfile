@@ -44,6 +44,7 @@ FROM ubuntu:focal
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_VERSION=18.x \
     DATA_DIR=/app/data \
+    PORT=8080 \
     PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # Create node user
@@ -57,7 +58,8 @@ RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/loc
         ca-certificates \
         gnupg \
         nginx-light \
-        wget && \
+        wget \
+        gettext-base && \
     # Add NodeJS repository
     wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get update && \
@@ -85,7 +87,8 @@ COPY --from=backend-builder /app/src/backend ./src/backend
 RUN chown -R node:node /app
 
 VOLUME ["/app/data"]
-EXPOSE 8080 8081 8082
+# Expose ports - web (dynamic port from ENV), ssh backend, db backend
+EXPOSE ${PORT} 8081 8082
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

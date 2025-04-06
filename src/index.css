@@ -11,10 +11,64 @@
 
 .terminal-container {
   min-height: 0;
+  overflow: hidden;
 }
 
 .terminal-container > div {
   min-height: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s ease-in-out;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Fix light theme border visibility issues */
+.terminal-container > div[style*="background-color: #ffffff"],
+.terminal-container > div[style*="background-color: rgb(255, 255, 255)"] {
+  border: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+/* Improve font rendering for terminal */
+.xterm-viewport {
+  font-smooth: never;
+  -webkit-font-smoothing: none;
+}
+
+/* Font-specific overrides for better appearance */
+[style*="font-family: 'Ubuntu Mono'"],
+[style*="font-family: Ubuntu Mono"],
+[style*="font-family: 'Ubuntu Mono Nerd Font'"],
+[style*="font-family: Ubuntu Mono Nerd Font"] {
+  letter-spacing: 0.03em !important;
+}
+
+[style*="font-family: 'Fira Code'"],
+[style*="font-family: Fira Code"],
+[style*="font-family: 'Fira Code Nerd Font'"],
+[style*="font-family: Fira Code Nerd Font"] {
+  letter-spacing: 0.02em !important;
+}
+
+[style*="font-family: 'JetBrains Mono'"],
+[style*="font-family: JetBrains Mono"],
+[style*="font-family: 'JetBrains Mono Nerd Font'"],
+[style*="font-family: JetBrains Mono Nerd Font"] {
+  letter-spacing: 0.02em !important;
+}
+
+[style*="font-family: 'Source Code Pro'"],
+[style*="font-family: Source Code Pro"],
+[style*="font-family: 'Source Code Pro Nerd Font'"],
+[style*="font-family: Source Code Pro Nerd Font"] {
+  letter-spacing: 0.01em !important;
+}
+
+[style*="font-family: 'Cascadia Code'"],
+[style*="font-family: Cascadia Code"],
+[style*="font-family: 'Cascadia Code Nerd Font'"],
+[style*="font-family: Cascadia Code Nerd Font"] {
+  letter-spacing: 0.01em !important;
 }
 
 .tablist::-webkit-scrollbar {

@@ -404,6 +404,18 @@ io.of('/database.io').on('connection', (socket) => {
                 password: hostConfig.password?.trim() || undefined,
                 sshKey: hostConfig.sshKey?.trim() || undefined,
                 tags: hostConfig.tags || [],
+                terminalConfig: hostConfig.terminalConfig || {
+                    theme: 'dark',
+                    cursorStyle: 'block',
+                    fontFamily: 'ubuntuMono',
+                    fontSize: 14,
+                    fontWeight: 'normal',
+                    lineHeight: 1,
+                    letterSpacing: 0,
+                    cursorBlink: true,
+                    sshAlgorithm: 'default',
+                    useNerdFont: true
+                }
             };
 
             const finalName = cleanConfig.name || cleanConfig.ip;
@@ -837,7 +849,19 @@ io.of('/database.io').on('connection', (socket) => {
                     password: newHostConfig.password?.trim() || undefined,
                     sshKey: newHostConfig.sshKey?.trim() || undefined,
                     tags: Array.isArray(newHostConfig.tags) ? newHostConfig.tags : [],
-                    isPinned: newHostConfig.isPinned || false
+                    isPinned: newHostConfig.isPinned || false,
+                    terminalConfig: newHostConfig.terminalConfig || {
+                        theme: 'dark',
+                        cursorStyle: 'block',
+                        fontFamily: 'ubuntuMono',
+                        fontSize: 14,
+                        fontWeight: 'normal',
+                        lineHeight: 1,
+                        letterSpacing: 0,
+                        cursorBlink: true,
+                        sshAlgorithm: 'default',
+                        useNerdFont: true
+                    }
                 };
 
                 const encryptedConfig = encryptData(cleanConfig, userId, sessionToken);
