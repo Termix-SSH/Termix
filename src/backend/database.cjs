@@ -14,7 +14,7 @@ const logger = {
     debug: (...args) => console.debug(`🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
 };
 
-// Ensure the data directory exists
+
 const dataDir = process.env.DATA_DIR || path.join(__dirname, '../../data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -25,16 +25,16 @@ const dbPath = path.join(dataDir, 'termix.db');
 const db = new Database(dbPath);
 logger.info(`Connected to SQLite database at: ${dbPath}`);
 
-// Initialize server
+
 const server = http.createServer();
 const io = socketIo(server, {
     path: '/database.io/socket.io',
     cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// Initialize database tables
+
 function initializeDatabase() {
-    // Create users table
+
     db.prepare(`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
@@ -44,7 +44,7 @@ function initializeDatabase() {
         )
     `).run();
     
-    // Create hosts table
+
     db.prepare(`
         CREATE TABLE IF NOT EXISTS hosts (
             id TEXT PRIMARY KEY,
@@ -57,7 +57,7 @@ function initializeDatabase() {
         )
     `).run();
     
-    // Create host_users (many-to-many relationship for sharing)
+
     db.prepare(`
         CREATE TABLE IF NOT EXISTS host_users (
             hostId TEXT NOT NULL,
@@ -68,7 +68,7 @@ function initializeDatabase() {
         )
     `).run();
     
-    // Create host_tags
+
     db.prepare(`
         CREATE TABLE IF NOT EXISTS host_tags (
             hostId TEXT NOT NULL,
@@ -78,7 +78,7 @@ function initializeDatabase() {
         )
     `).run();
     
-    // Create snippets table
+
     db.prepare(`
         CREATE TABLE IF NOT EXISTS snippets (
             id TEXT PRIMARY KEY,
@@ -91,7 +91,7 @@ function initializeDatabase() {
         )
     `).run();
     
-    // Create snippet_users (many-to-many relationship for sharing)
+
     db.prepare(`
         CREATE TABLE IF NOT EXISTS snippet_users (
             snippetId TEXT NOT NULL,
@@ -102,7 +102,7 @@ function initializeDatabase() {
         )
     `).run();
     
-    // Create snippet_tags
+
     db.prepare(`
         CREATE TABLE IF NOT EXISTS snippet_tags (
             snippetId TEXT NOT NULL,
@@ -115,10 +115,10 @@ function initializeDatabase() {
     logger.info('Database tables initialized');
 }
 
-// Run database initialization
+
 initializeDatabase();
 
-// Utility functions
+
 const getEncryptionKey = (userId, sessionToken) => {
     const salt = process.env.SALT || 'default_salt';
     return crypto.scryptSync(`${userId}-${sessionToken}`, salt, 32);
@@ -153,9 +153,9 @@ const decryptData = (encryptedData, userId, sessionToken) => {
     }
 };
 
-// Prepare statements for common database operations
+
 const statements = {
-    // User statements
+
     findUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
     findUserBySessionToken: db.prepare('SELECT * FROM users WHERE sessionToken = ?'),
     findUserById: db.prepare('SELECT * FROM users WHERE id = ?'),
@@ -163,7 +163,7 @@ const statements = {
     createUser: db.prepare('INSERT INTO users (id, username, password, sessionToken) VALUES (?, ?, ?, ?)'),
     deleteUser: db.prepare('DELETE FROM users WHERE id = ?'),
     
-    // Host statements
+
     createHost: db.prepare('INSERT INTO hosts (id, name, config, createdBy, folder, isPinned) VALUES (?, ?, ?, ?, ?, ?)'),
     addHostUser: db.prepare('INSERT INTO host_users (hostId, userId) VALUES (?, ?)'),
     addHostTag: db.prepare('INSERT INTO host_tags (hostId, tag) VALUES (?, ?)'),
@@ -181,7 +181,7 @@ const statements = {
     deleteHostTags: db.prepare('DELETE FROM host_tags WHERE hostId = ?'),
     removeHostUser: db.prepare('DELETE FROM host_users WHERE hostId = ? AND userId = ?'),
     
-    // Snippet statements
+
     createSnippet: db.prepare('INSERT INTO snippets (id, name, content, createdBy, folder, isPinned) VALUES (?, ?, ?, ?, ?, ?)'),
     addSnippetUser: db.prepare('INSERT INTO snippet_users (snippetId, userId) VALUES (?, ?)'),
     addSnippetTag: db.prepare('INSERT INTO snippet_tags (snippetId, tag) VALUES (?, ?)'),
@@ -201,7 +201,7 @@ const statements = {
     updateSnippetPinStatus: db.prepare('UPDATE snippets SET isPinned = ? WHERE id = ?')
 };
 
-// Helper functions for database operations
+
 function generateId() {
     return crypto.randomBytes(16).toString('hex');
 }
@@ -213,17 +213,17 @@ function getUserById(userId) {
 function getHostWithDetails(host, userId, sessionToken) {
     if (!host) return null;
     
-    // Get users associated with this host
+
     const userIds = statements.findHostUsers.all(host.id).map(row => row.userId);
     
-    // Get tags for this host
+
     const tags = statements.findHostTags.all(host.id).map(row => row.tag);
     
-    // Get owner user
+
     const createdBy = statements.findUserById.get(host.createdBy);
     if (!createdBy) return null;
     
-    // Decrypt the host config
+
     const decryptedConfig = decryptData(host.config, createdBy.id, createdBy.sessionToken);
     if (!decryptedConfig) return null;
     
@@ -240,38 +240,38 @@ function getHostWithDetails(host, userId, sessionToken) {
 function getSnippetWithDetails(snippet, userId, sessionToken) {
     if (!snippet) return null;
     
-    // Get users associated with this snippet
+
     const userIds = statements.findSnippetUsers.all(snippet.id).map(row => row.userId);
     
-    // Get tags for this snippet
+
     const tags = statements.findSnippetTags.all(snippet.id).map(row => row.tag);
     
-    // Get owner user
+
     const createdBy = statements.findUserById.get(snippet.createdBy);
     if (!createdBy) return null;
     
-    // Try to decrypt the snippet content
+
     let content = null;
     try {
         if (snippet.content) {
-            // Check if content looks like it's encrypted (contains colons for IV:Content:AuthTag)
+
             if (snippet.content.includes(':')) {
                 const decryptedContent = decryptData(snippet.content, createdBy.id, createdBy.sessionToken);
                 if (decryptedContent) {
                     content = decryptedContent;
                 } else {
                     logger.warn(`Failed to decrypt content for snippet: ${snippet.id}`);
-                    // If we can't decrypt, use the raw content as fallback (might be plain text)
+
                     content = snippet.content;
                 }
             } else {
-                // Content is not encrypted, use as is
+
                 content = snippet.content;
             }
         }
     } catch (error) {
         logger.warn(`Error handling snippet content for ${snippet.id}: ${error.message}`);
-        // If there was an error, fall back to the raw content
+
         content = snippet.content;
     }
     
@@ -285,7 +285,7 @@ function getSnippetWithDetails(snippet, userId, sessionToken) {
     };
 }
 
-// Replace mongoose.connect with our initialization
+
 logger.info('Database is ready');
 
 io.of('/database.io').on('connection', (socket) => {
@@ -293,7 +293,7 @@ io.of('/database.io').on('connection', (socket) => {
         try {
             logger.debug(`Creating user: ${username}`);
 
-            // Check if username already exists
+
             const existingUser = statements.findUserByUsername.get(username);
             if (existingUser) {
                 logger.warn(`Username already exists: ${username}`);
@@ -304,7 +304,7 @@ io.of('/database.io').on('connection', (socket) => {
             const userId = generateId();
             const hashedPassword = await bcrypt.hash(password, 10);
             
-            // Create the user
+
             statements.createUser.run(userId, username, hashedPassword, sessionToken);
 
             logger.info(`User created: ${username}`);
@@ -356,7 +356,7 @@ io.of('/database.io').on('connection', (socket) => {
             const userId = generateId();
             const hashedPassword = await bcrypt.hash(username, 10);
             
-            // Create the guest user
+
             statements.createUser.run(userId, username, hashedPassword, sessionToken);
 
             logger.info(`Guest user created: ${username}`);
@@ -388,7 +388,7 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'IP and User are required' });
             }
 
-            // Validate user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
@@ -420,16 +420,16 @@ io.of('/database.io').on('connection', (socket) => {
 
             const finalName = cleanConfig.name || cleanConfig.ip;
 
-            // Check for hosts with the same name (case insensitive) - use a transaction for consistency
+
             const db_transaction = db.transaction(() => {
-                // Check for hosts with the same name
+
                 const existingHostByName = statements.findHostsByName.get(userId, finalName);
                 if (existingHostByName) {
                     logger.warn(`Host with name ${finalName} already exists for user: ${userId}`);
                     throw new Error(`Host with name "${finalName}" already exists. Please choose a different name.`);
                 }
 
-                // Prevent duplicate IPs if using IP as name
+
                 if (!cleanConfig.name) {
                     const hostsWithSameIp = statements.findHostsByCreator.all(userId);
                     for (const host of hostsWithSameIp) {
@@ -447,7 +447,7 @@ io.of('/database.io').on('connection', (socket) => {
                     throw new Error('Configuration encryption failed');
                 }
 
-                // Create a new host
+
                 const hostId = generateId();
                 statements.createHost.run(
                     hostId,
@@ -458,10 +458,10 @@ io.of('/database.io').on('connection', (socket) => {
                     hostConfig.isPinned ? 1 : 0
                 );
 
-                // Add the creator as a user of the host
+
                 statements.addHostUser.run(hostId, userId);
 
-                // Add tags
+
                 if (Array.isArray(cleanConfig.tags)) {
                     cleanConfig.tags.forEach(tag => {
                         statements.addHostTag.run(hostId, tag);
@@ -487,46 +487,46 @@ io.of('/database.io').on('connection', (socket) => {
 
     socket.on('getHosts', async ({ userId, sessionToken }, callback) => {
         try {
-            // Validate user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Get hosts created by this user
+
             const createdHosts = statements.findHostsByCreator.all(userId);
             
-            // Get hosts shared with this user (but not created by them)
+
             const sharedHosts = statements.findSharedHostsWithUser.all(userId, userId);
             
-            // Combine both sets of hosts
+
             const hosts = [...createdHosts, ...sharedHosts];
             
-            // Process each host to include detailed information
+
             const detailedHosts = [];
             for (const host of hosts) {
                 try {
-                    // Find the creator user
+
                     const createdBy = statements.findUserById.get(host.createdBy);
                     if (!createdBy) {
                         logger.warn(`Owner not found for host: ${host.id}`);
                         continue;
                     }
 
-                    // Get users with access to this host
+
                     const userIds = statements.findHostUsers.all(host.id).map(row => row.userId);
                     
-                    // Get tags for this host
+
                     const tags = statements.findHostTags.all(host.id).map(row => row.tag);
                     
-                    // Decrypt the host configuration
+
                     let decryptedConfig;
                     if (host.createdBy === userId) {
-                        // If the user is the creator, use their session token
+
                         decryptedConfig = decryptData(host.config, userId, sessionToken);
                     } else {
-                        // For shared hosts, use the creator's session token
+
                         decryptedConfig = decryptData(host.config, createdBy.id, createdBy.sessionToken);
                     }
                     
@@ -565,7 +565,7 @@ io.of('/database.io').on('connection', (socket) => {
 
     socket.on('deleteHost', async ({ userId, sessionToken, hostId, _id }, callback) => {
         try {
-            // Use _id if provided (from frontend), fall back to hostId
+
             const targetHostId = _id || hostId;
             
             logger.debug(`Deleting host: ${targetHostId} for user: ${userId}`);
@@ -580,37 +580,37 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Invalid host ID' });
             }
 
-            // Validate user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Use a transaction to ensure atomicity
+
             const db_transaction = db.transaction(() => {
-                // First check if the host exists
+
                 const host = statements.findHostById.get(targetHostId);
                 if (!host) {
                     logger.warn(`Host not found: ${targetHostId}`);
                     throw new Error('Host not found');
                 }
 
-                // Check if user is the creator
+
                 if (host.createdBy === userId) {
-                    // User is the creator, delete the host completely
+
                     logger.info(`Deleting host ${targetHostId} as owner`);
                     
-                    // Delete host tags
+
                     statements.deleteHostTags.run(targetHostId);
                     
-                    // Delete host users relationship
+
                     statements.deleteHostUsers.run(targetHostId);
                     
-                    // Delete the host itself
+
                     statements.deleteHost.run(targetHostId, userId);
                 } else {
-                    // User is not the creator, just remove their access
+
                     logger.info(`Removing user ${userId} from host ${targetHostId}`);
                     statements.removeHostUser.run(targetHostId, userId);
                 }
@@ -633,40 +633,40 @@ io.of('/database.io').on('connection', (socket) => {
 
     socket.on('shareHost', async ({ userId, sessionToken, hostId, _id, targetUsername }, callback) => {
         try {
-            // Use _id if provided (from frontend), fall back to hostId
+
             const targetHostId = _id || hostId;
             
             logger.debug(`Sharing host ${targetHostId} with ${targetUsername}`);
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Find the target user by username
+
             const targetUser = statements.findUserByUsername.get(targetUsername);
             if (!targetUser) {
                 logger.warn(`Target user not found: ${targetUsername}`);
                 return callback({ error: 'User not found' });
             }
 
-            // Find the host and ensure the requesting user is the creator
+
             const host = statements.findHostByIdAndCreator.get(targetHostId, userId);
             if (!host) {
                 logger.warn(`Host not found or unauthorized: ${targetHostId}`);
                 return callback({ error: 'Host not found' });
             }
 
-            // Check if host is already shared with target user
+
             const hostUsers = statements.findHostUsers.all(targetHostId).map(row => row.userId);
             if (hostUsers.includes(targetUser.id)) {
                 logger.warn(`Host already shared with user: ${targetUsername}`);
                 return callback({ error: 'Already shared' });
             }
 
-            // Add the target user to the host_users table
+
             statements.addHostUser.run(targetHostId, targetUser.id);
 
             logger.info(`Host shared successfully: ${targetHostId} -> ${targetUsername}`);
@@ -679,26 +679,26 @@ io.of('/database.io').on('connection', (socket) => {
 
     socket.on('removeShare', async ({ userId, sessionToken, hostId, _id }, callback) => {
         try {
-            // Use _id if provided (from frontend), fall back to hostId
+
             const targetHostId = _id || hostId;
             
             logger.debug(`Removing share for host ${targetHostId} from user ${userId}`);
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Check if the host exists
+
             const host = statements.findHostById.get(targetHostId);
             if (!host) {
                 logger.warn(`Host not found: ${targetHostId}`);
                 return callback({ error: 'Host not found' });
             }
 
-            // Remove user from the host_users table
+
             statements.removeHostUser.run(targetHostId, userId);
 
             logger.info(`Share removed successfully: ${targetHostId} -> ${userId}`);
@@ -713,36 +713,36 @@ io.of('/database.io').on('connection', (socket) => {
         try {
             logger.debug(`Deleting user: ${userId}`);
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Use a transaction to delete all related data
+
             const db_transaction = db.transaction(() => {
-                // Get hosts created by this user
+
                 const hosts = statements.findHostsByCreator.all(userId);
                 
-                // Delete each host and its relationships
+
                 for (const host of hosts) {
                     statements.deleteHostTags.run(host.id);
                     statements.deleteHostUsers.run(host.id);
                     statements.deleteHost.run(host.id, userId);
                 }
                 
-                // Get snippets created by this user
+
                 const snippets = statements.findSnippetsByUser.all(userId);
                 
-                // Delete each snippet and its relationships
+
                 for (const snippet of snippets) {
                     statements.deleteSnippetTags.run(snippet.id);
                     statements.deleteSnippetUsers.run(snippet.id);
                     statements.deleteSnippet.run(snippet.id, userId);
                 }
                 
-                // Delete the user
+
                 statements.deleteUser.run(userId);
                 
                 return true;
@@ -766,7 +766,7 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Missing host configurations' });
             }
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
@@ -776,18 +776,18 @@ io.of('/database.io').on('connection', (socket) => {
             let hostId = null;
             let hostToEdit = null;
             
-            // First check if we already have a host ID from the frontend
+
             if (oldHostConfig._id) {
                 hostId = oldHostConfig._id;
                 hostToEdit = statements.findHostById.get(hostId);
                 
-                // Verify this host exists and belongs to the user
+
                 if (!hostToEdit || hostToEdit.createdBy !== userId) {
                     logger.warn(`Host not found or unauthorized by ID: ${hostId}`);
                     return callback({ error: 'Host not found' });
                 }
             } else {
-                // Fall back to searching by IP if no ID was provided
+
                 const hosts = statements.findHostsByCreator.all(userId);
                 
                 for (const host of hosts) {
@@ -805,7 +805,7 @@ io.of('/database.io').on('connection', (socket) => {
                 }
             }
             
-            // Verify we found a valid host
+
             if (!hostId) {
                 logger.warn('Could not identify host to edit');
                 return callback({ error: 'Host not found' });
@@ -813,9 +813,9 @@ io.of('/database.io').on('connection', (socket) => {
 
             const finalName = newHostConfig.name?.trim() || newHostConfig.ip.trim();
 
-            // Use a transaction for all checks and updates
+
             const db_transaction = db.transaction(() => {
-                // If the name is being changed, check for duplicates using case-insensitive comparison
+
                 if (finalName.toLowerCase() !== hostToEdit.name.toLowerCase()) {
                     const existingHostByName = statements.findHostsByName.get(userId, finalName);
                     if (existingHostByName && existingHostByName.id !== hostId) {
@@ -824,10 +824,10 @@ io.of('/database.io').on('connection', (socket) => {
                     }
                 }
 
-                // Get all hosts for IP comparison
+
                 const hosts = statements.findHostsByCreator.all(userId);
                 
-                // If IP is changed and no custom name provided, check for duplicate IP
+
                 if (newHostConfig.ip !== oldHostConfig.ip && !newHostConfig.name) {
                     for (const host of hosts) {
                         if (host.id === hostId) continue;
@@ -870,7 +870,7 @@ io.of('/database.io').on('connection', (socket) => {
                     throw new Error('Configuration encryption failed');
                 }
 
-                // Update the host record
+
                 statements.updateHost.run(
                     finalName,
                     encryptedConfig,
@@ -879,7 +879,7 @@ io.of('/database.io').on('connection', (socket) => {
                     hostId
                 );
 
-                // Update tags: remove old ones and add new ones
+
                 statements.deleteHostTags.run(hostId);
                 if (Array.isArray(cleanConfig.tags)) {
                     cleanConfig.tags.forEach(tag => {
@@ -893,7 +893,7 @@ io.of('/database.io').on('connection', (socket) => {
             try {
                 const updatedHostId = db_transaction();
                 
-                // Add a small delay to ensure database writes complete
+
                 await new Promise(resolve => setTimeout(resolve, 200));
                 
                 logger.info(`Host edited successfully: ${updatedHostId}`);
@@ -925,7 +925,7 @@ io.of('/database.io').on('connection', (socket) => {
         }
     });
 
-    // Snippet handlers
+
     socket.on('saveSnippet', async ({ userId, sessionToken, snippet }, callback) => {
         try {
             if (!userId || !sessionToken) {
@@ -943,7 +943,7 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Name and content are required' });
             }
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
@@ -958,32 +958,32 @@ io.of('/database.io').on('connection', (socket) => {
                 isPinned: snippet.isPinned || false
             };
 
-            // Use a transaction to save snippet and tags
+
             const db_transaction = db.transaction(() => {
-                // Generate a unique ID for the snippet
+
                 const snippetId = generateId();
                 
-                // Encrypt the content before storing
+
                 const encryptedContent = encryptData(cleanSnippet.content, userId, sessionToken);
                 if (!encryptedContent) {
                     logger.error('Encryption failed for snippet content');
                     throw new Error('Snippet encryption failed');
                 }
                 
-                // Insert the snippet first
+
                 statements.createSnippet.run(
                     snippetId,
                     cleanSnippet.name,
-                    encryptedContent,  // Store encrypted content
+                    encryptedContent,
                     userId,
                     cleanSnippet.folder,
                     cleanSnippet.isPinned ? 1 : 0
                 );
                 
-                // Add creator as a user of the snippet (for sharing)
+
                 statements.addSnippetUser.run(snippetId, userId);
                 
-                // Add tags separately
+
                 if (Array.isArray(cleanSnippet.tags)) {
                     cleanSnippet.tags.forEach(tag => {
                         statements.addSnippetTag.run(snippetId, tag);
@@ -994,10 +994,10 @@ io.of('/database.io').on('connection', (socket) => {
             });
             
             try {
-                // Execute the transaction
+
                 const snippetId = db_transaction();
                 
-                // Get the newly created snippet with all its details
+
                 const newSnippet = statements.findSnippetById.get(snippetId);
                 const tags = statements.findSnippetTags.all(snippetId).map(row => row.tag);
                 
@@ -1006,7 +1006,7 @@ io.of('/database.io').on('connection', (socket) => {
                     snippet: {
                         _id: snippetId,
                         name: newSnippet.name,
-                        content: cleanSnippet.content, // Return unencrypted content to client
+                        content: cleanSnippet.content,
                         folder: newSnippet.folder,
                         isPinned: !!newSnippet.isPinned,
                         tags: tags,
@@ -1027,7 +1027,7 @@ io.of('/database.io').on('connection', (socket) => {
         }
     });
 
-    // New handler for toggling snippet pin status
+
     socket.on('toggleSnippetPin', async ({ userId, sessionToken, snippetId, isPinned }, callback) => {
         try {
             if (!userId || !sessionToken) {
@@ -1040,21 +1040,21 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Snippet ID is required' });
             }
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Get the snippet
+
             const snippet = statements.findSnippetById.get(snippetId);
             if (!snippet) {
                 logger.warn(`Snippet not found: ${snippetId}`);
                 return callback({ error: 'Snippet not found' });
             }
 
-            // Check if the user owns this snippet or it's shared with them
+
             const isOwner = snippet.createdBy === user.id;
             if (!isOwner) {
                 const hasAccess = statements.findSnippetUsers.all(snippetId)
@@ -1065,7 +1065,7 @@ io.of('/database.io').on('connection', (socket) => {
                 }
             }
 
-            // Update the snippet's pin status
+
             const result = statements.updateSnippet.run(
                 snippet.name,
                 snippet.content,
@@ -1089,34 +1089,34 @@ io.of('/database.io').on('connection', (socket) => {
 
     socket.on('getSnippets', async ({ userId, sessionToken }, callback) => {
         try {
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Get all snippets accessible by this user
+
             const snippets = statements.findSnippetsByUser.all(userId);
             
-            // Process each snippet to include detailed information
+
             const detailedSnippets = [];
             for (const snippet of snippets) {
                 try {
-                    // Find the creator user
+
                     const createdBy = statements.findUserById.get(snippet.createdBy);
                     if (!createdBy) {
                         logger.warn(`Owner not found for snippet: ${snippet.id}`);
                         continue;
                     }
 
-                    // Get users with access to this snippet
+
                     const userIds = statements.findSnippetUsers.all(snippet.id).map(row => row.userId);
                     
-                    // Get tags for this snippet
+
                     const tags = statements.findSnippetTags.all(snippet.id).map(row => row.tag);
                     
-                    // Decrypt the snippet content
+
                     const decryptedContent = decryptData(snippet.content, createdBy.id, createdBy.sessionToken);
                     if (!decryptedContent) {
                         logger.warn(`Failed to decrypt content for snippet: ${snippet.id}`);
@@ -1157,7 +1157,7 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Missing snippet configurations' });
             }
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
@@ -1167,12 +1167,12 @@ io.of('/database.io').on('connection', (socket) => {
             let snippetId = null;
             let snippetToEdit = null;
             
-            // First check if we already have a snippet ID from the frontend
+
             if (oldSnippet._id || oldSnippet.id) {
                 snippetId = oldSnippet._id || oldSnippet.id;
                 snippetToEdit = statements.findSnippetById.get(snippetId);
                 
-                // Verify this snippet exists and belongs to the user
+
                 if (!snippetToEdit || snippetToEdit.createdBy !== userId) {
                     logger.warn(`Snippet not found or unauthorized by ID: ${snippetId}`);
                     return callback({ error: 'Snippet not found or you do not have permission to edit it' });
@@ -1182,7 +1182,7 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Snippet ID is required' });
             }
             
-            // Verify we found a valid snippet
+
             if (!snippetId) {
                 logger.warn('Could not identify snippet to edit');
                 return callback({ error: 'Snippet not found' });
@@ -1190,9 +1190,9 @@ io.of('/database.io').on('connection', (socket) => {
 
             const finalName = newSnippet.name?.trim() || snippetToEdit.name;
 
-            // Use a transaction for all checks and updates
+
             const db_transaction = db.transaction(() => {
-                // If the name is being changed, check for duplicates using case-insensitive comparison
+
                 if (finalName.toLowerCase() !== snippetToEdit.name.toLowerCase()) {
                     const existingSnippetByName = statements.findSnippetsByName.get(userId, finalName);
                     if (existingSnippetByName && existingSnippetByName.id !== snippetId) {
@@ -1215,7 +1215,7 @@ io.of('/database.io').on('connection', (socket) => {
                     throw new Error('Snippet encryption failed');
                 }
 
-                // Update the snippet record
+
                 statements.updateSnippet.run(
                     cleanSnippet.name,
                     encryptedContent,
@@ -1224,7 +1224,7 @@ io.of('/database.io').on('connection', (socket) => {
                     snippetId
                 );
 
-                // Update tags: remove old ones and add new ones
+
                 statements.deleteSnippetTags.run(snippetId);
                 if (Array.isArray(cleanSnippet.tags)) {
                     cleanSnippet.tags.forEach(tag => {
@@ -1238,7 +1238,7 @@ io.of('/database.io').on('connection', (socket) => {
             try {
                 const updatedSnippetId = db_transaction();
                 
-                // Add a small delay to ensure database writes complete
+
                 await new Promise(resolve => setTimeout(resolve, 200));
                 
                 logger.info(`Snippet edited successfully: ${updatedSnippetId}`);
@@ -1266,37 +1266,37 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Invalid snippet ID' });
             }
 
-            // Validate user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Use a transaction to ensure atomicity
+
             const db_transaction = db.transaction(() => {
-                // First check if the snippet exists
+
                 const snippet = statements.findSnippetById.get(snippetId);
                 if (!snippet) {
                     logger.warn(`Snippet not found: ${snippetId}`);
                     throw new Error('Snippet not found');
                 }
 
-                // Check if user is the creator
+
                 if (snippet.createdBy === userId) {
-                    // User is the creator, delete the snippet completely
+
                     logger.info(`Deleting snippet ${snippetId} as owner`);
                     
-                    // Delete snippet tags
+
                     statements.deleteSnippetTags.run(snippetId);
                     
-                    // Delete snippet users relationship
+
                     statements.deleteSnippetUsers.run(snippetId);
                     
-                    // Delete the snippet itself
+
                     statements.deleteSnippet.run(snippetId, userId);
                 } else {
-                    // User is not the creator, just remove their access
+
                     logger.info(`Removing user ${userId} from snippet ${snippetId}`);
                     statements.removeSnippetUser.run(snippetId, userId);
                 }
@@ -1321,35 +1321,35 @@ io.of('/database.io').on('connection', (socket) => {
         try {
             logger.debug(`Sharing snippet ${snippetId} with ${targetUsername}`);
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Find the target user by username
+
             const targetUser = statements.findUserByUsername.get(targetUsername);
             if (!targetUser) {
                 logger.warn(`Target user not found: ${targetUsername}`);
                 return callback({ error: 'User not found' });
             }
 
-            // Find the snippet and ensure the requesting user is the creator
+
             const snippet = statements.findSnippetByIdAndCreator.get(snippetId, userId);
             if (!snippet) {
                 logger.warn(`Snippet not found or unauthorized: ${snippetId}`);
                 return callback({ error: 'Snippet not found or you do not have permission to share it' });
             }
 
-            // Check if snippet is already shared with target user
+
             const snippetUsers = statements.findSnippetUsers.all(snippetId).map(row => row.userId);
             if (snippetUsers.includes(targetUser.id)) {
                 logger.warn(`Snippet already shared with user: ${targetUsername}`);
                 return callback({ error: 'Already shared' });
             }
 
-            // Add the target user to the snippet_users table
+
             statements.addSnippetUser.run(snippetId, targetUser.id);
 
             logger.info(`Snippet shared successfully: ${snippetId} -> ${targetUsername}`);
@@ -1364,21 +1364,21 @@ io.of('/database.io').on('connection', (socket) => {
         try {
             logger.debug(`Removing share for snippet ${snippetId} from user ${userId}`);
 
-            // Validate the user session
+
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
                 logger.warn(`Invalid session for user: ${userId}`);
                 return callback({ error: 'Invalid session' });
             }
 
-            // Check if the snippet exists
+
             const snippet = statements.findSnippetById.get(snippetId);
             if (!snippet) {
                 logger.warn(`Snippet not found: ${snippetId}`);
                 return callback({ error: 'Snippet not found' });
             }
 
-            // Remove user from the snippet_users table
+
             statements.removeSnippetUser.run(snippetId, userId);
 
             logger.info(`Share removed successfully: ${snippetId} -> ${userId}`);

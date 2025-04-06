@@ -7,7 +7,7 @@ import PropTypes from "prop-types";
 import theme from "../../theme.js";
 import { loadFont, getFormattedFontFamily } from "../../utils/fontLoader.js";
 
-// Terminal theme presets
+
 const terminalThemes = {
     dark: {
         background: '#262626',
@@ -368,7 +368,7 @@ const terminalThemes = {
     },
 };
 
-// Font family mapping with fallbacks and distinctive styling
+
 const fontFamilyMap = {
     monospace: 'monospace',
     consolas: 'Consolas, "Lucida Console", Monaco, monospace',
@@ -380,10 +380,10 @@ const fontFamilyMap = {
     menlo: 'Menlo, Monaco, "Courier New", monospace'
 };
 
-// Add Nerd Font variants
+
 const getNerdFontFamily = (fontFamily) => {
     const baseFontFamily = fontFamilyMap[fontFamily] || fontFamilyMap.monospace;
-    // Use a more reliable approach to add "Nerd Font" to the first font family only
+
     return baseFontFamily.replace(/^([^,]+)(.*)/, '$1 Nerd Font$2');
 };
 
@@ -423,41 +423,22 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
     useEffect(() => {
         if (!hostConfig || !terminalRef.current) return;
 
-        // Get terminal customization settings
+
         const terminalConfig = hostConfig.terminalConfig || {};
         const selectedTheme = terminalConfig.theme || 'dark';
         const themeColors = terminalThemes[selectedTheme] || terminalThemes.dark;
-        
-        // Get font settings
+
+
         const fontFamily = terminalConfig.fontFamily || 'ubuntuMono';
-        
-        // Always use Nerd Font support
-        const useNerdFont = false;
-        
-        // Apply other customizations
         const fontSize = terminalConfig.fontSize || 14;
         const fontWeight = terminalConfig.fontWeight || 'normal';
         const letterSpacing = terminalConfig.letterSpacing || 0;
         const lineHeight = terminalConfig.lineHeight || 1;
         const cursorStyle = terminalConfig.cursorStyle || 'block';
         const cursorBlink = terminalConfig.cursorBlink !== undefined ? terminalConfig.cursorBlink : true;
-        
-        // Load the selected font
-        loadFont(fontFamily, fontWeight, useNerdFont).catch(err => {
-            console.error('Error loading font:', err);
-        });
-        
-        // Also load the bold version for text highlighting
-        if (fontWeight !== 'bold') {
-            loadFont(fontFamily, 'bold', useNerdFont).catch(err => {
-                console.error('Error loading bold font:', err);
-            });
-        }
-        
-        // Get the proper font family string to use
         const finalFontFamily = getFontFamily(terminalConfig);
-        
-        // Create terminal with customized options
+
+
         terminalInstance.current = new Terminal({
             cursorBlink,
             cursorStyle,
@@ -473,26 +454,26 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             allowTransparency: true
         });
 
-        // Apply additional font-specific styling
+
         const terminalElement = terminalRef.current;
         if (terminalElement) {
-            // Reset previous font styling
+
             terminalElement.style.fontVariantLigatures = 'none';
             terminalElement.style.letterSpacing = `${letterSpacing}px`;
-            
-            // Clear any previous font classes
+
+
             terminalElement.classList.remove(
-                'font-ubuntuMono', 
-                'font-firaCode', 
-                'font-jetBrainsMono', 
-                'font-sourceCodePro', 
-                'font-cascadiaCode', 
-                'font-monospace', 
-                'font-consolas', 
+                'font-ubuntuMono',
+                'font-firaCode',
+                'font-jetBrainsMono',
+                'font-sourceCodePro',
+                'font-cascadiaCode',
+                'font-monospace',
+                'font-consolas',
                 'font-menlo'
             );
-            
-            // Apply font-specific styling
+
+
             switch (fontFamily) {
                 case 'ubuntuMono':
                     terminalElement.style.letterSpacing = `${letterSpacing + 0.5}px`;
@@ -520,28 +501,24 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                     terminalElement.style.letterSpacing = `${letterSpacing + 0.15}px`;
                     break;
             }
-            
-            // Add a distinct font class for further CSS targeting
+
             terminalElement.classList.add(`font-${fontFamily}`);
-            
-            console.log(`Applied specific styling for font: ${fontFamily}`);
+
         }
 
-        // Apply the theme background to both the terminal and its parent container
         if (terminalConfig.theme) {
-            // Update terminal element background
             if (terminalRef.current) {
                 terminalRef.current.style.backgroundColor = themeColors.background;
                 terminalRef.current.style.color = themeColors.foreground;
             }
-            
-            // Update parent containers with theme background
+
+
             const terminalWrapper = terminalRef.current.parentElement;
             if (terminalWrapper) {
                 terminalWrapper.style.backgroundColor = themeColors.background;
             }
-            
-            // Update the outer container if it exists
+
+
             const outerContainer = document.querySelector('.terminal-container');
             if (outerContainer) {
                 const terminalBoxes = outerContainer.querySelectorAll('.bg-neutral-800');
@@ -568,28 +545,26 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         );
         socketRef.current = socket;
-        
-        // Use the provided terminal ID or create a unique socket ID
+
+
         const terminalId = hostConfig.id || Date.now();
-        
-        // Set terminal-specific data on the socket for identification
+
+
         socket.terminalId = terminalId;
         socket.hostData = {
             ip: hostConfig.ip,
             user: hostConfig.user,
         };
-        
-        // Store socket reference in global map for snippet pasting
+
+
         if (!window.terminalSockets) {
             window.terminalSockets = {};
         }
-        
-        // Register this socket with the terminal ID
+
+
         window.terminalSockets[terminalId] = socket;
-        console.log(`Terminal socket registered with ID: ${terminalId}`);
-        console.log(`Socket connection properties: ${socket.connected ? 'connected' : 'disconnected'}`);
-        
-        // For debugging, show all available sockets
+
+
         console.log("Available terminal sockets:", Object.keys(window.terminalSockets).map(id => ({
             id,
             connected: window.terminalSockets[id].connected,
@@ -598,17 +573,14 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         socket.on("connect_error", (error) => {
             terminalInstance.current.write(`\r\n*** Socket connection error: ${error.message} ***\r\n`);
-            console.error("Socket connection error:", error);
-        });
+                    });
 
         socket.on("connect_timeout", () => {
             terminalInstance.current.write(`\r\n*** Socket connection timeout ***\r\n`);
-            console.error("Socket connection timeout");
-        });
+                    });
 
         socket.on("error", (err) => {
-            console.error("SSH connection error:", err);
-            const isAuthError = err.toLowerCase().includes("authentication") || err.toLowerCase().includes("auth");
+                        const isAuthError = err.toLowerCase().includes("authentication") || err.toLowerCase().includes("auth");
             if (isAuthError && !hostConfig.password?.trim() && !hostConfig.sshKey?.trim() && !authModalShown) {
                 authModalShown = true;
                 setIsNoAuthHidden(false);
@@ -717,42 +689,40 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         });
 
         socket.on("reconnect_error", (error) => {
-            console.error("Socket reconnect error:", error);
-            if (terminalInstance.current) {
+                        if (terminalInstance.current) {
                 terminalInstance.current.write(`\r\n*** Socket reconnect error: ${error.message} ***\r\n`);
             }
         });
 
-        // Create a more frequent and robust ping/pong mechanism
+
         let lastPongTime = Date.now();
         const pingInterval = setInterval(() => {
             if (socketRef.current && socketRef.current.connected) {
-                // Check if we haven't received a pong in too long (15 seconds)
+
                 const now = Date.now();
                 if (now - lastPongTime > 15000) {
-                    console.warn("No pong received for 15 seconds, reconnecting socket");
-                    if (terminalInstance.current) {
+                                        if (terminalInstance.current) {
                         terminalInstance.current.write(`\r\n*** Connection seems stale, attempting to refresh ***\r\n`);
                     }
-                    // Force reconnection attempt
+
                     if (socketRef.current) {
                         socketRef.current.disconnect();
                         socketRef.current.connect();
                     }
-                    lastPongTime = now; // Reset timer
+                    lastPongTime = now;
                 }
-                
-                // Send a ping regardless
+
+
                 socketRef.current.emit("ping");
             }
-        }, 3000); // Send ping every 3 seconds
+        }, 3000);
 
-        // When we receive a pong, update the timestamp
+
         socketRef.current.on("pong", () => {
             lastPongTime = Date.now();
         });
 
-        // When we receive a ping from the server, respond with a pong
+
         socketRef.current.on("ping", () => {
             lastPongTime = Date.now();
             if (socketRef.current && socketRef.current.connected) {
@@ -762,13 +732,12 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         return () => {
             clearInterval(pingInterval);
-            
-            // Remove from global registry when terminal is unmounted
+
+
             if (window.terminalSockets && window.terminalSockets[terminalId]) {
-                console.log(`Unregistering terminal socket: ${terminalId}`);
-                delete window.terminalSockets[terminalId];
+                                delete window.terminalSockets[terminalId];
             }
-            
+
             if (terminalInstance.current) {
                 terminalInstance.current.dispose();
                 terminalInstance.current = null;
@@ -801,7 +770,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         const handleWindowResize = () => {
             resizeTerminal();
         };
-        
+
         window.addEventListener('resize', handleWindowResize);
 
         return () => {
@@ -810,19 +779,19 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         };
     }, []);
 
-    // Set initial background color to match the theme
-    const initialBgColor = hostConfig?.terminalConfig?.theme 
+
+    const initialBgColor = hostConfig?.terminalConfig?.theme
         ? (terminalThemes[hostConfig.terminalConfig.theme]?.background || '#1e1e1e')
         : '#1e1e1e';
-        
+
     const textColor = hostConfig?.terminalConfig?.theme
         ? (terminalThemes[hostConfig.terminalConfig.theme]?.foreground || '#f7f7f7')
         : '#f7f7f7';
-        
+
     return (
         <div className="flex flex-col h-full w-full overflow-hidden">
             {showTitle && (
-                <div 
+                <div
                     className="terminal-title px-3 py-1 font-medium text-sm flex-shrink-0"
                     style={{
                         backgroundColor: initialBgColor,
@@ -843,27 +812,29 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                     onMouseLeave={() => setShowConnectionInfo(false)}
                     title={`${hostConfig.user}@${hostConfig.ip}:${hostConfig.port}`}
                 >
-                    <span style={{ 
-                        marginRight: '6px', 
+                    <span style={{
+                        marginRight: '6px',
                         opacity: 0.8,
                         fontSize: '14px',
                         display: 'inline-flex',
                         alignItems: 'center',
                         lineHeight: 1
                     }}>
-                        {/* Server icon - minimal unicode representation */}
+                        {}
                         ⬡
                     </span>
-                    <span style={{ 
-                        display: 'inline-block', 
+                    <span style={{
+                        display: 'inline-block',
                         maxWidth: '90%',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
                     }}>
-                        {showConnectionInfo 
+                        {showConnectionInfo
                             ? `${hostConfig.user}@${hostConfig.ip}:${hostConfig.port}`
                             : (title || hostConfig.name || hostConfig.ip)
                         }
+                        {}
+                        <span style={{ marginLeft: '5px' }}></span>
                     </span>
                 </div>
             )}
@@ -930,10 +901,8 @@ const getFontFamily = (terminalConfig) => {
     }
 
     const fontFamily = terminalConfig.fontFamily || 'ubuntuMono';
-    
-    // Get the proper font-family string from our map
+
     const fontString = fontFamilyMap[fontFamily] || fontFamilyMap.ubuntuMono;
-    
-    console.log(`Setting terminal font to: ${fontString} (requested: ${fontFamily})`);
+
     return fontString;
 };

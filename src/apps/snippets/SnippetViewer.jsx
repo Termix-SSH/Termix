@@ -54,19 +54,15 @@ function SnippetViewer({
     const [activeModalTab, setActiveModalTab] = useState(0);
     const [isAddSnippetLoading, setIsAddSnippetLoading] = useState(false);
 
-    // Add timeout refs similar to HostViewer
     const editingTimeoutId = useRef(null);
 
-    // Add timestamp tracking for operations
     const [lastPinningTime, setLastPinningTime] = useState(0);
     const [lastDeleteTime, setLastDeleteTime] = useState(0);
     const [lastEditTime, setLastEditTime] = useState(0);
     const [lastFetchTime, setLastFetchTime] = useState(0);
 
-    // Add a reference for pinning timeout
     const pinningTimeout = useRef(null);
 
-    // Handle outside clicks to close menu
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target) && anchorEl.current && !anchorEl.current.contains(event.target)) {
@@ -82,10 +78,9 @@ function SnippetViewer({
         };
     }, []);
 
-    // Force close menu on any click
     useEffect(() => {
         const forceCloseMenuOnClick = (event) => {
-            // Only close if clicked element is not part of menu
+
             if (isMenuOpen && !menuRef.current?.contains(event.target) && !anchorEl.current?.contains(event.target)) {
                 setIsMenuOpen(false);
                 setSelectedSnippet(null);
@@ -93,44 +88,37 @@ function SnippetViewer({
                 anchorEl.current = null;
             }
         };
-        
+
         window.addEventListener('click', forceCloseMenuOnClick);
         return () => window.removeEventListener('click', forceCloseMenuOnClick);
     }, [isMenuOpen]);
 
-    // Fetch snippets with less UI disruption
     const fetchSnippets = async () => {
         try {
-            // Set a flag to indicate a fetch is in progress
             const fetchStartTime = Date.now();
             setLastFetchTime(fetchStartTime);
-            
-            // Only set loading state on initial fetch when we have no snippets
+
             if (snippets.length === 0) {
                 setIsLoading(true);
             }
+
             
-            // Fetch snippets from server
-            console.log("Fetching snippets from server");
             const savedSnippets = await getSnippets();
-            
-            // If component unmounted during fetch, don't update state
+
             if (!isMounted.current) return;
-            
-            // If this is an older fetch than a more recent one, ignore it
+
             if (fetchStartTime < lastFetchTime && lastFetchTime !== fetchStartTime) {
-                console.log("Ignoring outdated fetch results");
+                
                 return;
             }
 
             if (savedSnippets && Array.isArray(savedSnippets)) {
-                // Process snippets in batches to avoid blocking the UI
                 const normalizedSnippets = savedSnippets.map(snippet => ({
                     ...snippet,
                     _id: snippet._id || snippet.id,
-                    createdBy: snippet.createdBy 
-                        ? (typeof snippet.createdBy === 'object' 
-                            ? snippet.createdBy 
+                    createdBy: snippet.createdBy
+                        ? (typeof snippet.createdBy === 'object'
+                            ? snippet.createdBy
                             : { _id: snippet.createdBy, username: "Unknown" })
                         : null,
                     name: snippet.name || '',
@@ -139,47 +127,38 @@ function SnippetViewer({
                     isPinned: snippet.isPinned || false,
                     tags: snippet.tags || []
                 }));
-                
-                // Preserve any active operations while updating (like pinning, editing, etc.)
+
                 const updatedSnippets = normalizedSnippets.map(newSnippet => {
-                    // Check if this snippet is currently being operated on
-                    if (newSnippet._id === lastPinnedSnippet || 
-                        newSnippet._id === editingSnippetId || 
+                    if (newSnippet._id === lastPinnedSnippet ||
+                        newSnippet._id === editingSnippetId ||
                         newSnippet._id === deletingSnippetId) {
-                        
-                        // Find the current version of this snippet in our state
+
                         const currentVersion = snippets.find(s => s._id === newSnippet._id);
                         if (currentVersion) {
-                            // Keep the UI state for this snippet (like isPinning, etc.)
                             return {
                                 ...newSnippet,
-                                // If we're pinning, use our current pin state
-                                isPinned: lastPinnedSnippet === newSnippet._id 
-                                    ? currentVersion.isPinned 
+                                isPinned: lastPinnedSnippet === newSnippet._id
+                                    ? currentVersion.isPinned
                                     : newSnippet.isPinned
                             };
                         }
                     }
                     return newSnippet;
                 });
-                
-                // Do a deep comparison to prevent unnecessary updates
+
                 const currentJson = JSON.stringify(snippets);
                 const newJson = JSON.stringify(updatedSnippets);
-                
+
                 if (currentJson !== newJson) {
                     setSnippets(updatedSnippets);
-                    
-                    // Only update filtered snippets if necessary
+
                     if (searchTerm || selectedTags.size > 0) {
                         let filtered = [...updatedSnippets];
-                        
-                        // Apply tag filtering
+
                         if (selectedTags.size > 0) {
                             filtered = filterSnippetsByTags(filtered);
                         }
-                        
-                        // Apply search term filtering
+
                         if (searchTerm) {
                             filtered = filtered.filter(snippet => {
                                 return snippet.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -187,41 +166,38 @@ function SnippetViewer({
                                     snippet.content?.toLowerCase().includes(searchTerm.toLowerCase());
                             });
                         }
-                        
+
                         setFilteredSnippets(filtered);
                     } else {
                         setFilteredSnippets(updatedSnippets);
                     }
                 }
             }
-            
-            // Clear loading state
+
             setIsLoading(false);
         } catch (error) {
-            console.error("Fetch error:", error);
+            
             if (isMounted.current) {
                 setIsLoading(false);
             }
         }
     };
 
-    // Initial load with reduced refresh interval
     useEffect(() => {
         isMounted.current = true;
         fetchSnippets();
 
-        // Use a longer interval for fetching to reduce UI jank
         const intervalId = setInterval(() => {
             fetchSnippets();
-        }, 2000); // Set to 2 seconds
-        
+        }, 2000);
+
         return () => {
             isMounted.current = false;
             clearInterval(intervalId);
         };
     }, []);
 
-    // Make all folders available globally
+
     useEffect(() => {
         if (snippets.length > 0) {
             const allFolders = snippets
@@ -231,7 +207,7 @@ function SnippetViewer({
         }
     }, [snippets]);
 
-    // Filter snippets based on search term
+
     useEffect(() => {
         const filtered = snippets.filter((snippet) => {
             return snippet.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -241,7 +217,7 @@ function SnippetViewer({
         setFilteredSnippets(filtered);
     }, [searchTerm, snippets]);
 
-    // Modal state tracking
+
     useEffect(() => {
         if (!isShareModalHidden || !isAddSnippetHidden || !isConfirmDeleteHidden) {
             onModalOpen();
@@ -250,49 +226,49 @@ function SnippetViewer({
         }
     }, [isShareModalHidden, isAddSnippetHidden, isConfirmDeleteHidden, onModalOpen, onModalClose]);
 
-    // Initialize selected terminals when terminals change
+
     useEffect(() => {
         if (terminals && terminals.length > 0) {
-            // Get currently selected terminal IDs
+
             const selectedIds = Object.entries(selectedTerminals)
                 .filter(([_, isSelected]) => isSelected)
                 .map(([id]) => parseInt(id));
-            
-            // Filter out any terminals that no longer exist
+
+
             const validSelectedIds = selectedIds.filter(
                 id => terminals.some(t => t.id === id)
             );
-            
-            // Only auto-select if there's no valid selection AND we haven't explicitly deselected terminals
-            const hasExplicitlyDeselected = Object.keys(selectedTerminals).length > 0 && 
+
+
+            const hasExplicitlyDeselected = Object.keys(selectedTerminals).length > 0 &&
                                            validSelectedIds.length === 0;
-            
+
             if (validSelectedIds.length === 0 && !hasExplicitlyDeselected) {
                 const newSelectedTerminals = {};
-                
-                // First try to select active tab if it exists
+
+
                 if (activeTab && terminals.some(t => t.id === activeTab)) {
                     newSelectedTerminals[activeTab] = true;
-                    console.log(`Selected active terminal ${activeTab}`);
+                    
                 }
-                // Otherwise select the first terminal
+
                 else if (terminals.length > 0) {
                     newSelectedTerminals[terminals[0].id] = true;
-                    console.log(`Selected first terminal ${terminals[0].id}`);
+                    
                 }
-                
+
                 setSelectedTerminals(newSelectedTerminals);
             }
         }
     }, [terminals, activeTab, selectedTerminals]);
 
-    // Cleanup function for unmounting
+
     useEffect(() => {
         isMounted.current = true;
-        
+
         return () => {
             isMounted.current = false;
-            // Reset all state on unmount
+
             setIsPinningInProgress(false);
             setLastPinnedSnippet(null);
             setDeletingSnippetId(null);
@@ -300,8 +276,8 @@ function SnippetViewer({
             setEditingSnippetId(null);
             setIsMenuOpen(false);
             setSelectedSnippet(null);
-            
-            // Clear all timeouts
+
+
             if (editingTimeoutId.current) {
                 clearTimeout(editingTimeoutId.current);
                 editingTimeoutId.current = null;
@@ -313,7 +289,7 @@ function SnippetViewer({
         };
     }, []);
 
-    // Toggle checkbox for all terminals 
+
     useEffect(() => {
         if (terminals.length > 0) {
             const allSelected = terminals.every(terminal => selectedTerminals[terminal.id]);
@@ -321,7 +297,7 @@ function SnippetViewer({
         }
     }, [selectedTerminals, terminals]);
 
-    // Handle toggling folders open/closed
+
     const toggleFolder = (folderName) => {
         setCollapsedFolders((prev) => {
             const newCollapsed = new Set(prev);
@@ -334,7 +310,7 @@ function SnippetViewer({
         });
     };
 
-    // Get a unique list of folders from snippets
+
     const getFolders = () => {
         return Array.from(
             new Set(
@@ -345,7 +321,7 @@ function SnippetViewer({
         ).sort();
     };
 
-    // Group snippets by folder
+
     const groupSnippetsByFolder = (snippets) => {
         const grouped = {};
         const noFolder = [];
@@ -376,7 +352,7 @@ function SnippetViewer({
         return { grouped, sortedFolders, noFolder };
     };
 
-    // Filter snippets by selected tags
+
     const filterSnippetsByTags = (snippets) => {
         if (selectedTags.size === 0) return snippets;
 
@@ -386,7 +362,7 @@ function SnippetViewer({
         });
     };
 
-    // Get all unique tags from snippets
+
     const getAllTags = (snippets) => {
         const tags = new Set();
         snippets.forEach(snippet => {
@@ -396,7 +372,7 @@ function SnippetViewer({
         return Array.from(tags).sort();
     };
 
-    // Toggle a tag selection
+
     const toggleTag = (tag) => {
         setSelectedTags(prev => {
             const newSet = new Set(prev);
@@ -409,7 +385,7 @@ function SnippetViewer({
         });
     };
 
-    // Drag and drop handlers
+
     const handleDragStart = (e, snippet) => {
         setDraggedSnippet(snippet);
         e.dataTransfer.setData('text/plain', '');
@@ -444,7 +420,7 @@ function SnippetViewer({
             });
             await fetchSnippets();
         } catch (error) {
-            console.error('Failed to update folder:', error);
+            
         }
 
         setDraggedSnippet(null);
@@ -469,99 +445,99 @@ function SnippetViewer({
             });
             await fetchSnippets();
         } catch (error) {
-            console.error('Failed to remove from folder:', error);
+            
         }
 
         setDraggedSnippet(null);
     };
 
-    // Confirm delete dialog
+
     const confirmDelete = async (snippet) => {
-        // Validate that snippet is defined and has a valid ID
+
         if (!snippet || !snippet._id) {
-            console.error("Cannot confirm delete: Invalid snippet or missing ID");
+            
             return;
         }
-        
+
         setSnippetToDelete(snippet);
         setIsConfirmDeleteHidden(false);
         setIsMenuOpen(false);
         onModalOpen();
     };
 
-    // Handle delete action with simplified state tracking
+
     const handleDelete = async (e, snippet) => {
         e?.stopPropagation();
-        
-        // Validate that snippet is defined and has a valid ID
+
+
         if (!snippet || !snippet._id) {
-            console.error("Cannot delete: Invalid snippet or missing ID");
-            return;
-        }
-        
-        // Don't do anything if already deleting this snippet
-        if (deletingSnippetId === snippet._id) {
-            console.log("Already deleting this snippet, ignoring duplicate request");
+            
             return;
         }
 
-        // Make a deep copy and store ID separately for safety
+
+        if (deletingSnippetId === snippet._id) {
+            
+            return;
+        }
+
+
         const snippetCopy = JSON.parse(JSON.stringify(snippet));
         const snippetId = snippetCopy._id;
         const isOwner = isSnippetOwner(snippetCopy);
+
         
-        console.log(`Deleting snippet: ${snippetId}, isOwner: ${isOwner}`);
-        
-        // Update UI state
+
+
         setDeletingSnippetId(snippetId);
         setLastDeleteTime(Date.now());
         setIsConfirmDeleteHidden(true);
         onModalClose();
-        
-        // Apply optimistic UI update immediately
-        setSnippets(prevSnippets => 
+
+
+        setSnippets(prevSnippets =>
             prevSnippets.filter(s => s._id !== snippetId)
         );
-        
+
         try {
-            // Delete from database
+
             let success = false;
             if (isOwner) {
                 success = await userRef.current.deleteSnippet({ snippetId });
                 if (success) {
-                    console.log(`Snippet ${snippetId} deleted successfully`);
+                    
                 } else {
                     throw new Error("Server returned failure for delete operation");
                 }
             } else {
                 success = await userRef.current.removeSnippetShare(snippetId);
                 if (success) {
-                    console.log(`Snippet share ${snippetId} removed successfully`);
+                    
                 } else {
                     throw new Error("Server returned failure for remove share operation");
                 }
             }
-            
-            // Refresh the snippets list
+
+
             await fetchSnippets();
-            
-            // Success - clear state after a short delay
+
+
             setTimeout(() => {
                 if (deletingSnippetId === snippetId && isMounted.current) {
                     setDeletingSnippetId(null);
                     setSnippetToDelete(null);
-                    console.log("Delete state cleared after timeout");
+                    
                 }
             }, 500);
         } catch (error) {
-            console.error("Delete error:", error);
             
-            // On error, add the snippet back
+
+
             if (isMounted.current) {
                 setSnippets(prevSnippets => [snippetCopy, ...prevSnippets]);
-                
-                // Sort snippets after adding back
-                setSnippets(prevSnippets => 
+
+
+                setSnippets(prevSnippets =>
                     [...prevSnippets].sort((a, b) => {
                         if (a.isPinned !== b.isPinned) {
                             return b.isPinned - a.isPinned;
@@ -570,8 +546,8 @@ function SnippetViewer({
                     })
                 );
             }
-            
-            // Clear state with delay
+
+
             setTimeout(() => {
                 if (isMounted.current) {
                     setDeletingSnippetId(null);
@@ -581,109 +557,109 @@ function SnippetViewer({
         }
     };
 
-    // Handle share
+
     const handleShare = async (snippetId, username) => {
         if (!snippetId || !username) {
-            console.error("Cannot share: Missing snippet ID or username");
+            
             return false;
         }
-        
+
         try {
-            console.log(`Sharing snippet ${snippetId} with user ${username}`);
+            
             await userRef.current.shareSnippet(snippetId, username);
-            console.log("Snippet shared successfully");
+            
             await fetchSnippets();
             return true;
         } catch (error) {
-            console.error('Failed to share snippet:', error);
+            
             return false;
         }
     };
 
-    // Paste snippet to terminal instances directly 
+
     const pasteSnippetToTerminals = (snippet) => {
         try {
-            console.log("Pasting snippet:", snippet.name);
             
-            // Check if we have any terminals to paste to
+
+
             if (!areTerminalsAvailable()) {
-                console.warn("No terminals available");
+                
                 return;
             }
-            
-            // Get terminals that are selected
+
+
             const selectedTerminalIds = Object.entries(selectedTerminals)
                 .filter(([_, isSelected]) => isSelected)
                 .map(([id]) => parseInt(id));
-            
-            // Only use selected terminals
+
+
             const terminalsToPasteTo = terminals.filter(t => selectedTerminalIds.includes(t.id));
-            
+
             if (terminalsToPasteTo.length === 0) {
-                console.warn("No terminals selected for pasting");
+                
                 return;
             }
+
             
-            console.log(`Pasting to ${terminalsToPasteTo.length} terminals`);
-            
-            // Process content for terminal
-            // First, handle line endings for the terminal
+
+
+
             let processedContent = snippet.content
                 .replace(/\r\n/g, "\n")
                 .replace(/\r/g, "\n");
-            
-            // Make sure each line ends with carriage return for proper terminal display
+
+
             if (!processedContent.endsWith("\n")) {
                 processedContent += "\n";
             }
-            
-            // Replace all newlines with carriage returns for terminal
+
+
             processedContent = processedContent.replace(/\n/g, "\r");
-            
-            // For each selected terminal, try to send the content
+
+
             terminalsToPasteTo.forEach(terminal => {
                 const terminalId = terminal.id;
-                
+
                 try {
-                    console.log(`Sending content to terminal ${terminalId}`);
                     
-                    // Try different methods to access the socket
-                    
-                    // Method 1: Direct terminalRef access (most reliable)
+
+
+
+
                     if (terminal.terminalRef?.socketRef?.current?.connected) {
-                        console.log(`Using terminal.terminalRef.socketRef for ${terminalId}`);
+                        
                         terminal.terminalRef.socketRef.current.emit("data", processedContent);
                         return;
                     }
-                    
-                    // Method 2: Global terminalSockets map
+
+
                     if (window.terminalSockets && window.terminalSockets[terminalId]?.connected) {
-                        console.log(`Using window.terminalSockets for ${terminalId}`);
+                        
                         window.terminalSockets[terminalId].emit("data", processedContent);
                         return;
                     }
-                    
-                    // Method 3: Try to find any active terminal socket if specific one not found
+
+
                     const availableSockets = Object.values(window.terminalSockets || {})
                         .filter(socket => socket && socket.connected);
-                    
+
                     if (availableSockets.length > 0) {
-                        console.log(`Using first available socket for ${terminalId}`);
+                        
                         availableSockets[0].emit("data", processedContent);
                         return;
                     }
+
                     
-                    console.warn(`No socket available for terminal ${terminalId}`);
                 } catch (error) {
-                    console.error(`Error pasting to terminal ${terminalId}:`, error);
+                    
                 }
             });
         } catch (error) {
-            console.error("Error in paste function:", error);
+            
         }
     };
 
-    // Render terminal selector
+
     const renderTerminalSelector = () => {
         if (!areTerminalsAvailable()) {
             return (
@@ -730,45 +706,45 @@ function SnippetViewer({
         );
     };
 
-    // Render individual snippet item
+
     const renderSnippetItem = (snippet) => {
-        // Use the helper function to determine ownership
+
         const isOwner = isSnippetOwner(snippet);
-        
+
         const isMenuActive = activeMenuButton === snippet._id;
-        
-        // Only mark this specific snippet as busy - ensure precise ID comparison
+
+
         const isPinningThisSnippet = isPinningInProgress && lastPinnedSnippet === snippet._id;
         const isEditingThisSnippet = editingSnippetId === snippet._id;
         const isDeletingThisSnippet = deletingSnippetId === snippet._id;
-        
-        // Combine all busy states for this specific snippet
+
+
         const isThisSnippetBusy = isPinningThisSnippet || isEditingThisSnippet || isDeletingThisSnippet;
-        
+
         const snippetTags = snippet.tags || [];
-        
-        // Determine if this is a shared snippet
+
+
         const isSharedSnippet = !isOwner && snippet.createdBy;
-        
-        // Get creator username for display
+
+
         const creatorUsername = (() => {
             if (!snippet.createdBy) return "Unknown";
             if (typeof snippet.createdBy === 'string') return "User";
             return snippet.createdBy.username || "Unknown User";
         })();
-        
-        // Get the right status message - make this really clear now
+
+
         const getStatusMessage = () => {
             if (isDeletingThisSnippet) return "Deleting...";
             if (isPinningThisSnippet) {
-                // If the optimistic update has already happened, we need to look at the opposite
-                // of the current state to determine what action is happening
+
+
                 return !snippet.isPinned ? "Unpinning..." : "Pinning...";
             }
             if (isEditingThisSnippet) return "Updating...";
             return "";
         };
-        
+
         return (
             <div
                 key={snippet._id}
@@ -776,10 +752,10 @@ function SnippetViewer({
                 draggable={isOwner}
                 onDragStart={(e) => isOwner && handleDragStart(e, snippet)}
                 onDragEnd={() => setDraggedSnippet(null)}
-                style={{ 
-                    width: '100%', 
-                    maxWidth: '100%', 
-                    overflow: 'hidden', 
+                style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
                     boxSizing: 'border-box'
                 }}
             >
@@ -792,7 +768,7 @@ function SnippetViewer({
                             </p>
                             {isThisSnippetBusy && (
                                 <span className="text-xs bg-neutral-600 text-neutral-300 px-2 py-1 rounded flex-shrink-0 animate-pulse"
-                                    style={{ 
+                                    style={{
                                         display: 'inline-block',
                                         padding: '4px 8px',
                                         height: '24px',
@@ -805,7 +781,7 @@ function SnippetViewer({
                             )}
                             {snippet.isPinned && !isThisSnippetBusy && (
                                 <span className="text-xs bg-neutral-700 text-neutral-300 px-2 py-1 rounded flex-shrink-0"
-                                    style={{ 
+                                    style={{
                                         display: 'inline-block',
                                         padding: '4px 8px',
                                         height: '24px',
@@ -818,7 +794,7 @@ function SnippetViewer({
                             )}
                             {isSharedSnippet && (
                                 <span className="text-xs bg-neutral-700 text-neutral-300 px-2 py-1 rounded flex-shrink-0"
-                                    style={{ 
+                                    style={{
                                         display: 'inline-block',
                                         padding: '4px 8px',
                                         height: '24px',
@@ -833,7 +809,7 @@ function SnippetViewer({
                                 <span
                                     key={tag}
                                     className="text-xs bg-neutral-700 text-neutral-300 px-2 py-0.5 rounded flex-shrink-0"
-                                    style={{ 
+                                    style={{
                                         display: 'inline-block',
                                         padding: '4px 8px',
                                         height: '24px',
@@ -883,9 +859,9 @@ function SnippetViewer({
                         className="text-white"
                         onClick={(e) => {
                             e.stopPropagation();
-                            // Validate snippet has a valid ID
+
                             if (!snippet || !snippet._id) {
-                                console.error("Cannot open menu: Invalid snippet or missing ID");
+                                
                                 return;
                             }
                             setIsMenuOpen(true);
@@ -913,9 +889,9 @@ function SnippetViewer({
         );
     };
 
-    // Render the snippet menu
+
     const renderSnippetMenu = () => {
-        // Check for null/undefined selectedSnippet and valid ID
+
         if (!isMenuOpen || !selectedSnippet || !selectedSnippet._id) {
             return null;
         }
@@ -929,7 +905,7 @@ function SnippetViewer({
                 sx={{ backdropFilter: 'blur(30px)' }}
             >
                 {isSnippetOwner(selectedSnippet) && (
-                    <MenuItem 
+                    <MenuItem
                         onClick={(e) => {
                             e.stopPropagation();
                             handleEditSnippet(selectedSnippet);
@@ -939,10 +915,10 @@ function SnippetViewer({
                         Edit
                     </MenuItem>
                 )}
-                <MenuItem 
+                <MenuItem
                     onClick={(e) => {
                         e.stopPropagation();
-                        // Create a deep copy to ensure we're working with a clean object
+
                         const snippetCopy = JSON.parse(JSON.stringify(selectedSnippet));
                         handlePinToggle(snippetCopy);
                         setIsMenuOpen(false);
@@ -951,7 +927,7 @@ function SnippetViewer({
                     {selectedSnippet.isPinned ? 'Unpin' : 'Pin'}
                 </MenuItem>
                 {isSnippetOwner(selectedSnippet) && (
-                    <MenuItem 
+                    <MenuItem
                         onClick={(e) => {
                             e.stopPropagation();
                             setSelectedSnippetForShare(selectedSnippet);
@@ -962,7 +938,7 @@ function SnippetViewer({
                         Share
                     </MenuItem>
                 )}
-                <MenuItem 
+                <MenuItem
                     onClick={(e) => {
                         e.stopPropagation();
                         confirmDelete(selectedSnippet);
@@ -975,13 +951,13 @@ function SnippetViewer({
         );
     };
 
-    // Render share modal for snippets
+
     const renderShareModal = () => {
         if (isShareModalHidden || !selectedSnippetForShare) return null;
 
         return (
-            <Modal 
-                open={!isShareModalHidden} 
+            <Modal
+                open={!isShareModalHidden}
                 onClose={() => {
                     setIsShareModalHidden(true);
                     setShareUsername('');
@@ -1066,85 +1042,85 @@ function SnippetViewer({
         );
     };
 
-    // Handle toggling the pin status of a snippet
+
     const handlePinToggle = async (snippet) => {
         if (!snippet || !snippet._id) {
-            console.error("Cannot toggle pin: Invalid snippet or missing ID");
+            
             return;
         }
 
         try {
-            // Clear any existing timeout
+
             if (pinningTimeout.current) {
                 clearTimeout(pinningTimeout.current);
                 pinningTimeout.current = null;
             }
 
-            // Track which snippet is being pinned
+
             setIsPinningInProgress(true);
             setLastPinnedSnippet(snippet._id);
             setLastPinningTime(Date.now());
 
-            // Create a deep copy to avoid reference issues
+
             const snippetCopy = JSON.parse(JSON.stringify(snippet));
-            
-            // Toggle the isPinned state
+
+
             snippetCopy.isPinned = !snippet.isPinned;
-            
-            // Apply optimistic UI update immediately
-            const updatedSnippets = snippets.map(s => 
+
+
+            const updatedSnippets = snippets.map(s =>
                 s._id === snippet._id ? {...s, isPinned: !s.isPinned} : s
             );
             setSnippets(updatedSnippets);
-            
-            // Also update filtered snippets
-            setFilteredSnippets(filtered => 
+
+
+            setFilteredSnippets(filtered =>
                 filtered.map(s => s._id === snippet._id ? {...s, isPinned: !s.isPinned} : s)
             );
-            
-            // Use the socket directly for toggling pin, which is more reliable
+
+
             const socket = userRef.current.getSocketRef();
-            
+
             socket.emit("toggleSnippetPin", {
                 userId: userRef.current.getUser().id,
                 sessionToken: userRef.current.getUser().sessionToken,
                 snippetId: snippet._id,
                 isPinned: snippetCopy.isPinned
             }, (response) => {
-                // Handle the response
+
                 if (response?.success) {
-                    console.log(`Snippet ${snippetCopy.isPinned ? 'pinned' : 'unpinned'} successfully`);
                     
-                    // Keep the indicator visible briefly so user can see the success
+
+
                     setTimeout(() => {
                         if (isMounted.current) {
-                            // Update was successful, keep our optimistic UI update
+
                             setIsPinningInProgress(false);
                             setLastPinnedSnippet(null);
                         }
                     }, 500);
                 } else {
-                    console.error("Pin toggle failed:", response?.error || "Unknown error");
                     
-                    // Revert the optimistic update on failure
-                    setSnippets(prevSnippets => 
-                        prevSnippets.map(s => 
+
+
+                    setSnippets(prevSnippets =>
+                        prevSnippets.map(s =>
                             s._id === snippet._id ? {...s, isPinned: snippet.isPinned} : s
                         )
                     );
-                    
-                    setFilteredSnippets(prevFiltered => 
-                        prevFiltered.map(s => 
+
+                    setFilteredSnippets(prevFiltered =>
+                        prevFiltered.map(s =>
                             s._id === snippet._id ? {...s, isPinned: snippet.isPinned} : s
                         )
                     );
-                    
+
                     setIsPinningInProgress(false);
                     setLastPinnedSnippet(null);
                 }
             });
-            
-            // Set a timeout to clear the pinning state in case the server never responds
+
+
             pinningTimeout.current = setTimeout(() => {
                 if (isMounted.current) {
                     setIsPinningInProgress(false);
@@ -1152,67 +1128,67 @@ function SnippetViewer({
                     pinningTimeout.current = null;
                 }
             }, 5000);
-            
+
         } catch (error) {
-            console.error("Error toggling pin:", error);
             
-            // Revert the optimistic update on error
-            setSnippets(prevSnippets => 
-                prevSnippets.map(s => 
+
+
+            setSnippets(prevSnippets =>
+                prevSnippets.map(s =>
                     s._id === snippet._id ? {...s, isPinned: snippet.isPinned} : s
                 )
             );
-            
-            setFilteredSnippets(prevFiltered => 
-                prevFiltered.map(s => 
+
+            setFilteredSnippets(prevFiltered =>
+                prevFiltered.map(s =>
                     s._id === snippet._id ? {...s, isPinned: snippet.isPinned} : s
                 )
             );
-            
+
             setIsPinningInProgress(false);
             setLastPinnedSnippet(null);
         }
     };
 
-    // Edit snippet with improved state handling - similar to HostViewer
+
     const handleEditSnippet = async (oldSnippet, newSnippet = null) => {
         try {
-            // Clear any existing timeout to prevent early state clearing
+
             if (editingTimeoutId.current) {
                 clearTimeout(editingTimeoutId.current);
                 editingTimeoutId.current = null;
             }
-            
+
             if (!oldSnippet || !oldSnippet._id) {
-                console.error("Missing snippet for edit");
+                
                 return;
             }
 
-            // If we have a selected snippet, use its ID directly
+
             let snippetToEdit = selectedSnippet;
-            
-            // If no selected snippet, try to find the snippet being edited
+
+
             if (!snippetToEdit || !snippetToEdit._id) {
                 snippetToEdit = snippets.find(s => s._id === oldSnippet._id);
             }
-            
-            // We need the snippet ID for setting the editing state
+
+
             if (!snippetToEdit || !snippetToEdit._id) {
-                console.error("Could not find snippet ID for editing");
+                
                 return;
             }
-            
-            // Track the snippet ID being edited
+
+
             const editingId = snippetToEdit._id;
-            console.log(`Starting edit for snippet: ${editingId}`);
             
-            // Set editing state for the UI
+
+
             setEditingSnippetId(editingId);
             setLastEditTime(Date.now());
-            
+
             if (!newSnippet) {
-                // Just opening the edit form - we'll keep the editing state active
-                console.log(`Opening edit form for snippet: ${editingId}`);
+
+                
                 setNewSnippet({
                     ...oldSnippet,
                     tags: oldSnippet.tags || []
@@ -1220,60 +1196,60 @@ function SnippetViewer({
                 setIsAddSnippetHidden(false);
                 return;
             }
-            
-            // Make sure tags are included in newSnippet
+
+
             if (!newSnippet.tags && oldSnippet.tags) {
                 newSnippet.tags = oldSnippet.tags;
             }
 
-            // Make sure _id is correctly passed if available
+
             if (!newSnippet._id && oldSnippet._id) {
                 newSnippet._id = oldSnippet._id;
             }
 
-            console.log(`Saving changes for snippet: ${editingId}`);
             
-            // Create complete deep copies to prevent reference issues
+
+
             const oldSnippetCopy = JSON.parse(JSON.stringify(oldSnippet));
             const newSnippetCopy = JSON.parse(JSON.stringify(newSnippet));
-            
-            // Apply optimistic UI update immediately
-            setSnippets(prevSnippets => 
-                prevSnippets.map(s => 
+
+
+            setSnippets(prevSnippets =>
+                prevSnippets.map(s =>
                     s._id === editingId ? { ...s, ...newSnippetCopy } : s
                 )
             );
-            
-            // Use the User component's editSnippet method directly
+
+
             const success = await userRef.current.editSnippet({
                 oldSnippet: oldSnippetCopy,
                 newSnippet: newSnippetCopy
             });
-            
+
             if (!success) {
                 throw new Error("Server returned failure for edit operation");
             }
+
             
-            console.log("Edit successful via user component");
-                
-            // Fetch fresh data after edit
+
+
             await fetchSnippets();
-            console.log("Snippet data refreshed after edit");
             
-            // Don't clear immediately, set a longer timeout
+
+
             editingTimeoutId.current = setTimeout(() => {
                 if (editingSnippetId === editingId && isMounted.current) {
                     setEditingSnippetId(null);
                     editingTimeoutId.current = null;
-                    console.log("Edit state cleared after timeout");
+                    
                 }
-            }, 1000); // longer timeout for smoother UI
-            
+            }, 1000);
+
             return true;
         } catch (err) {
-            console.error("Edit error:", err);
             
-            // Wait before clearing editing state on error
+
+
             setTimeout(() => {
                 if (isMounted.current) {
                     setEditingSnippetId(null);
@@ -1283,19 +1259,19 @@ function SnippetViewer({
                     }
                 }
             }, 500);
-            
-            throw err; // Re-throw to allow error handling in the modal
+
+            throw err;
         }
     };
 
-    // Add useEffect to reset editing state when modal is closed (like HostViewer)
+
     useEffect(() => {
-        // When the edit snippet modal is hidden/closed, don't immediately clear the editing state
+
         if (isAddSnippetHidden && editingSnippetId !== null) {
-            // If we already have a timeout running, let it complete naturally
-            // The editing state will be cleared by the existing timeout in handleEditSnippet
+
+
             if (!editingTimeoutId.current) {
-                // Only if we don't have an active timeout, set a new one
+
                 editingTimeoutId.current = setTimeout(() => {
                     setEditingSnippetId(null);
                     editingTimeoutId.current = null;
@@ -1304,7 +1280,7 @@ function SnippetViewer({
         }
     }, [isAddSnippetHidden, editingSnippetId]);
 
-    // Toggle terminal selection
+
     const toggleTerminalSelection = (terminalId) => {
         setSelectedTerminals(prev => ({
             ...prev,
@@ -1312,74 +1288,74 @@ function SnippetViewer({
         }));
     };
 
-    // Toggle all terminals
+
     const toggleAllTerminals = () => {
         const newValue = !allTerminalsSelected;
-        
+
         const newSelectedTerminals = {};
         terminals.forEach(terminal => {
             newSelectedTerminals[terminal.id] = newValue;
         });
-        
+
         setSelectedTerminals(newSelectedTerminals);
     };
 
-    // Get the active terminal
+
     const getActiveTerminal = () => {
         if (!activeTab || !terminals.length) return null;
         return terminals.find(t => t.id === activeTab);
     };
 
-    // Helper functions for checking paste status
+
     const areTerminalsAvailable = () => terminals && terminals.length > 0;
-    
+
     const areTerminalsSelected = () => Object.values(selectedTerminals).some(Boolean);
-    
+
     const canPasteToTerminals = () => areTerminalsAvailable() && areTerminalsSelected();
 
-    // Helper function to determine ownership
+
     const isSnippetOwner = (snippet) => {
         if (!snippet) return false;
-        
+
         const currentUserId = userRef.current?.getUser()?.id;
         if (!currentUserId) return false;
-        
-        // Handle different possible formats of createdBy after PostgreSQL migration
+
+
         if (!snippet.createdBy) return false;
-        
-        // If createdBy is a string (just the ID)
+
+
         if (typeof snippet.createdBy === 'string') {
             return snippet.createdBy === currentUserId;
         }
-        
-        // If createdBy is an object with _id
+
+
         if (snippet.createdBy._id) {
             return snippet.createdBy._id === currentUserId;
         }
-        
-        // If createdBy is an object with id
+
+
         if (snippet.createdBy.id) {
             return snippet.createdBy.id === currentUserId;
         }
-        
+
         return false;
     };
 
-    // Add Snippet function - make it reliable
+
     const handleAddSnippet = async () => {
         if (!newSnippet.name || !newSnippet.content) {
             return;
         }
 
         try {
-            // Set loading state
+
             setIsAddSnippetLoading(true);
-            
-            // Use the direct socket method like we did for pinning
+
+
             const socket = userRef.current.getSocketRef();
             const userId = userRef.current.getUser().id;
             const sessionToken = userRef.current.getUser().sessionToken;
-            
+
             socket.emit("saveSnippet", {
                 userId,
                 sessionToken,
@@ -1392,34 +1368,34 @@ function SnippetViewer({
                 }
             }, async (response) => {
                 if (response?.success) {
-                    console.log("Snippet added successfully");
                     
-                    // Reset the form
+
+
                     setNewSnippet({
                         name: "",
                         content: "",
                         folder: "",
                         tags: []
                     });
-                    
-                    // Close the modal
+
+
                     setIsAddSnippetHidden(true);
                     setActiveModalTab(0);
-                    
-                    // Refresh the snippets
+
+
                     await fetchSnippets();
-                } 
-                
-                // Always clear loading state
+                }
+
+
                 setIsAddSnippetLoading(false);
             });
         } catch (error) {
-            console.error("Error adding snippet:", error);
+            
             setIsAddSnippetLoading(false);
         }
     };
 
-    // Render the add/edit snippet modal
+
     const renderAddEditModal = () => {
         if (isAddSnippetHidden) return null;
         
@@ -1741,10 +1717,10 @@ function SnippetViewer({
                 </Button>
             </div>
             
-            {/* Terminal selector */}
+            {}
             {renderTerminalSelector()}
 
-            {/* Tags Filter */}
+            {}
             <div className="flex flex-wrap gap-1 mb-2 w-full">
                 {getAllTags(snippets).map(tag => (
                     <div
@@ -1777,7 +1753,7 @@ function SnippetViewer({
 
                             return (
                                 <>
-                                    {/* No folder container */}
+                                    {}
                                     {noFolder.length > 0 && (
                                         <div key="no-folder" className="w-full mb-2" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                                             <div
@@ -1815,10 +1791,10 @@ function SnippetViewer({
                                         </div>
                                     )}
 
-                                    {/* Folders */}
+                                    {}
                                     {sortedFolders.map((folderName) => (
                                         <div key={folderName} className="w-full mb-2" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-                                            {/* Folder header */}
+                                            {}
                                             <div
                                                 className={`
                                                     flex items-center gap-2 p-2 bg-neutral-600 rounded-lg cursor-pointer hover:bg-neutral-500 transition-colors w-full ${
@@ -1863,16 +1839,16 @@ function SnippetViewer({
                 )}
             </div>
 
-            {/* Context Menu for Snippets */}
+            {}
             {renderSnippetMenu()}
 
-            {/* Add/Edit Snippet Modal */}
+            {}
             {renderAddEditModal()}
 
-            {/* Share Modal */}
+            {}
             {renderShareModal()}
 
-            {/* Confirm Delete Modal */}
+            {}
             {!isConfirmDeleteHidden && snippetToDelete && (
                 <ConfirmDeleteModal
                     isHidden={isConfirmDeleteHidden}

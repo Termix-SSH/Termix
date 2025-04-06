@@ -61,7 +61,7 @@ function HostViewer({
     }, []);
 
     useEffect(() => {
-        // Force close menu on ANY click anywhere
+
         const forceCloseMenuOnClick = () => {
             if (isMenuOpen) {
                 setIsMenuOpen(false);
@@ -70,7 +70,7 @@ function HostViewer({
                 anchorEl.current = null;
             }
         };
-        
+
         window.addEventListener('click', forceCloseMenuOnClick);
         return () => window.removeEventListener('click', forceCloseMenuOnClick);
     }, [isMenuOpen]);
@@ -84,7 +84,6 @@ function HostViewer({
                 setIsLoading(false);
             }
         } catch (error) {
-            console.error("Host fetch failed:", error);
             if (isMounted.current) {
                 setHosts([]);
                 setFilteredHosts([]);
@@ -107,16 +106,16 @@ function HostViewer({
         };
     }, []);
 
-    // Make all folders available globally for modals
+
     useEffect(() => {
         if (hosts.length > 0) {
             const allFolders = hosts
                 .map(host => host.config?.folder)
                 .filter(Boolean);
             window.availableFolders = Array.from(new Set(allFolders));
-            
-            // Make sure all hosts have the tags property available 
-            // for filtering and display
+
+
+
             hosts.forEach(host => {
                 if (!host.tags && host.config?.tags) {
                     host.tags = host.config.tags;
@@ -247,7 +246,6 @@ function HostViewer({
             await editHost(draggedHost.config, newConfig);
             await fetchHosts();
         } catch (error) {
-            console.error('Failed to update folder:', error);
         }
 
         setDraggedHost(null);
@@ -269,7 +267,6 @@ function HostViewer({
             await editHost(draggedHost.config, newConfig);
             await fetchHosts();
         } catch (error) {
-            console.error('Failed to remove from folder:', error);
         }
 
         setDraggedHost(null);
@@ -298,7 +295,6 @@ function HostViewer({
             await new Promise(resolve => setTimeout(resolve, 500));
             await fetchHosts();
         } catch (error) {
-            console.error('Failed to delete/remove host:', error);
         } finally {
             setDeletingHostId(null);
             setHostToDelete(null);
@@ -310,48 +306,47 @@ function HostViewer({
             await shareHost(hostId, username);
             await fetchHosts();
         } catch (error) {
-            console.error('Failed to share host:', error);
         }
     };
 
     const handlePinToggle = async (hostData) => {
         try {
             setIsPinningInProgress(true);
-            
-            // Create a complete deep copy
+
+
             const hostToToggle = JSON.parse(JSON.stringify(hostData));
             const newIsPinned = !hostToToggle.isPinned;
-            
-            // Track which host is being pinned
+
+
             setLastPinnedHost(hostToToggle._id);
-            
-            // Apply optimistic UI update immediately
-            setHosts(prevHosts => 
-                prevHosts.map(host => 
-                    host._id === hostToToggle._id 
-                        ? {...host, isPinned: newIsPinned} 
+
+
+            setHosts(prevHosts =>
+                prevHosts.map(host =>
+                    host._id === hostToToggle._id
+                        ? {...host, isPinned: newIsPinned}
                         : host
                 )
             );
-            
-            // Create the new config
+
+
             const newConfig = {
                 ...hostToToggle.config,
                 isPinned: newIsPinned
             };
-            
-            // Directly call socket.io event via userRef to update the database
+
+
             if (userRef.current) {
                 await new Promise((resolve, reject) => {
                     const userId = userRef.current.getUser()?.id;
                     const sessionToken = userRef.current.getUser()?.sessionToken;
-                    
+
                     if (!userId || !sessionToken) {
                         reject(new Error("Not authenticated"));
                         return;
                     }
-                    
-                    // This directly calls the socket.io editHost event
+
+
                     const socketRef = userRef.current.getSocketRef?.() || window.socketRef;
                     if (socketRef) {
                         socketRef.emit("editHost", {
@@ -367,145 +362,117 @@ function HostViewer({
                             }
                         });
                     } else {
-                        // Fallback to regular editHost if direct socket access isn't available
+
                         editHost(hostToToggle.config, newConfig)
                             .then(resolve)
                             .catch(reject);
                     }
                 });
-                
-                // Refresh the host list
+
+
                 await fetchHosts();
-                
-                console.log(`Successfully ${newIsPinned ? 'pinned' : 'unpinned'} host`);
+
             }
         } catch (error) {
-            console.error('Failed to pin/unpin host:', error);
-            
-            // Revert the UI change on error
-            setHosts(prevHosts => 
-                prevHosts.map(host => 
-                    host._id === hostToToggle._id 
-                        ? {...host, isPinned: hostToToggle.isPinned} 
+
+
+            setHosts(prevHosts =>
+                prevHosts.map(host =>
+                    host._id === hostToToggle._id
+                        ? {...host, isPinned: hostToToggle.isPinned}
                         : host
                 )
             );
         } finally {
-            // Add a small delay before resetting states to ensure UI is updated smoothly
+
             setTimeout(() => {
                 setIsPinningInProgress(false);
                 setLastPinnedHost(null);
-            }, 500); // 500ms delay for a smoother transition
+            }, 500);
         }
     };
 
     const handleEditHost = async (oldConfig, newConfig = null) => {
         try {
-            // Clear any existing timeout to prevent early state clearing
+
             if (editingTimeoutId.current) {
                 clearTimeout(editingTimeoutId.current);
                 editingTimeoutId.current = null;
             }
-            
+
             if (!oldConfig) {
-                console.error("Missing host configuration for edit");
                 return;
             }
 
-            // If we have a selected host, use its ID directly
+
             let hostToEdit = selectedHost;
-            
-            // If no selected host, try to find the host being edited
+
+
             if (!hostToEdit || !hostToEdit._id) {
-                hostToEdit = hosts.find(host => 
-                    host.config && host.config.ip === oldConfig.ip && 
+                hostToEdit = hosts.find(host =>
+                    host.config && host.config.ip === oldConfig.ip &&
                     host.config.user === oldConfig.user
                 );
             }
-            
-            // We need the host ID for setting the editing state
+
+
             if (!hostToEdit || !hostToEdit._id) {
-                console.error("Could not find host ID for editing");
                 return;
             }
-            
-            // Track the host ID being edited
+
+
             const editingId = hostToEdit._id;
-            
-            // Set editing state for the UI
+
+
             setEditingHostId(editingId);
-            console.log(`Starting edit for host ${hostToEdit.name || hostToEdit.config?.ip} (${editingId})`);
-            
+
             if (!newConfig) {
-                // Just open the edit panel - we'll keep the editing state active
+
                 openEditPanel(oldConfig);
-                // We don't clear editingHostId here - it will be cleared when the edit is completed
+
                 return;
             }
-            
-            // Make sure tags are included in newConfig
+
+
             if (!newConfig.tags && oldConfig.tags) {
                 newConfig.tags = oldConfig.tags;
             }
 
-            // Make sure _id is correctly passed if available
+
             if (!newConfig._id && oldConfig._id) {
                 newConfig._id = oldConfig._id;
             }
 
-            // Apply the edit
-            console.log(`Sending edit request to server for host ${hostToEdit.name || hostToEdit.config?.ip}`);
-            
             const result = await editHost(oldConfig, newConfig);
-            
-            // First wait to ensure backend processing completes
-            console.log("Initial wait for backend processing...");
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Fetch fresh data after edit
-            console.log("Fetching updated host data...");
             await fetchHosts();
-            
-            // Short wait to allow rendering to complete
             await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // One final fetch to ensure we have the latest data
-            console.log("Final data refresh...");
             await fetchHosts();
-            
-            // Don't clear immediately, set a longer timeout
-            console.log(`Setting a timeout to clear editing state for host ${hostToEdit.name || hostToEdit.config?.ip}`);
-            
-            // Store the timeout ID so it can be cleared if needed
+
             editingTimeoutId.current = setTimeout(() => {
-                console.log(`Timeout expired, clearing editing state for host ${editingId}`);
                 setEditingHostId(null);
                 editingTimeoutId.current = null;
-            }, 3000); // longer timeout
-            
+            }, 3000);
+
             return result;
         } catch (err) {
-            console.error("Edit error:", err);
-            // Wait before clearing editing state on error
+
             await new Promise(resolve => setTimeout(resolve, 500));
             setEditingHostId(null);
-            throw err; // Re-throw to allow error handling in the modal
+            throw err;
         }
     };
 
-    // Add useEffect to reset editing state when modal is closed
+
     useEffect(() => {
-        // When the edit host modal is hidden/closed, don't immediately clear the editing state
+
         if (isEditHostHidden && editingHostId !== null) {
-            console.log(`Edit modal closed for host ${editingHostId}, but keeping editing state active...`);
-            
-            // If we already have a timeout running, let it complete naturally
-            // The editing state will be cleared by the existing timeout in handleEditHost
+
+
+
             if (!editingTimeoutId.current) {
-                // Only if we don't have an active timeout, set a new one
-                console.log("No active timeout found, setting a new one");
+
                 editingTimeoutId.current = setTimeout(() => {
-                    console.log(`Modal close timeout expired, clearing editing state for host ${editingHostId}`);
                     setEditingHostId(null);
                     editingTimeoutId.current = null;
                 }, 2000);
@@ -521,13 +488,8 @@ function HostViewer({
         const isEditingThisHost = editingHostId === hostWrapper._id;
         const isThisHostBusy = isPinningThisHost || isEditingThisHost || deletingHostId === hostWrapper._id;
 
-        // Debug info for editing status
-        if (isEditingThisHost) {
-            console.log(`Host ${hostWrapper._id} (${hostConfig.name || hostConfig.ip}) is being edited`);
-        }
-
         const hostTags = hostWrapper.tags || hostWrapper.config?.tags || [];
-        
+
         if (!hostConfig) {
             return null;
         }
@@ -539,10 +501,10 @@ function HostViewer({
                 draggable={isOwner}
                 onDragStart={(e) => isOwner && handleDragStart(e, hostWrapper)}
                 onDragEnd={() => setDraggedHost(null)}
-                style={{ 
-                    width: '100%', 
-                    maxWidth: '100%', 
-                    overflow: 'hidden', 
+                style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
                     boxSizing: 'border-box'
                 }}
             >
@@ -555,7 +517,7 @@ function HostViewer({
                             </p>
                             {isThisHostBusy && (
                                 <span className="text-xs bg-neutral-600 animate-pulse text-neutral-300 px-2 py-1 rounded flex-shrink-0"
-                                    style={{ 
+                                    style={{
                                         display: 'inline-block',
                                         padding: '4px 8px',
                                         height: '24px',
@@ -568,7 +530,7 @@ function HostViewer({
                             )}
                             {hostWrapper.isPinned && !isThisHostBusy && (
                                 <span className="text-xs bg-neutral-700 text-neutral-300 px-2 py-1 rounded flex-shrink-0"
-                                    style={{ 
+                                    style={{
                                         display: 'inline-block',
                                         padding: '4px 8px',
                                         height: '24px',
@@ -581,7 +543,7 @@ function HostViewer({
                             )}
                             {!isOwner && (
                                 <span className="text-xs bg-neutral-700 text-neutral-300 px-2 py-1 rounded flex-shrink-0"
-                                    style={{ 
+                                    style={{
                                         display: 'inline-block',
                                         padding: '4px 8px',
                                         height: '24px',
@@ -596,7 +558,7 @@ function HostViewer({
                                 <span
                                     key={tag}
                                     className="text-xs bg-neutral-700 text-neutral-300 px-2 py-0.5 rounded flex-shrink-0"
-                                    style={{ 
+                                    style={{
                                         display: 'inline-block',
                                         padding: '4px 8px',
                                         height: '24px',
@@ -696,13 +658,13 @@ function HostViewer({
                 </Button>
             </div>
 
-            {/* Tags Filter */}
+            {}
             <div className="flex flex-wrap gap-1 mb-2 w-full">
                 {getAllTags(hosts).map(tag => (
                     <div
                         key={tag}
                         onClick={() => toggleTag(tag)}
-                        style={{ 
+                        style={{
                             cursor: 'pointer',
                             backgroundColor: selectedTags.has(tag) ? 'white' : '#2a2a2a',
                             color: selectedTags.has(tag) ? 'black' : 'white',
@@ -731,7 +693,7 @@ function HostViewer({
 
                             return (
                                 <>
-                                    {/* No folder container styled the same as folders for consistency */}
+                                    {}
                                     {noFolder.length > 0 && (
                                         <div key="no-folder" className="w-full mb-2" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                                             <div
@@ -752,11 +714,11 @@ function HostViewer({
                                                     ({noFolder.length})
                                                 </span>
                                             </div>
-                                            
+
                                             {!collapsedFolders.has('no-folder') && (
-                                                <div 
-                                                    className="mt-2 flex flex-col gap-2 w-full" 
-                                                    style={{ 
+                                                <div
+                                                    className="mt-2 flex flex-col gap-2 w-full"
+                                                    style={{
                                                         width: '100%',
                                                         maxWidth: '100%',
                                                         boxSizing: 'border-box',
@@ -773,10 +735,10 @@ function HostViewer({
                                         </div>
                                     )}
 
-                                    {/* Folders */}
+                                    {}
                                     {sortedFolders.map((folderName) => (
                                         <div key={folderName} className="w-full mb-2" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-                                            {/* Folder header */}
+                                            {}
                                             <div
                                                 className={`
                                                     flex items-center gap-2 p-2 bg-neutral-600 rounded-lg cursor-pointer hover:bg-neutral-500 transition-colors w-full ${

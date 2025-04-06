@@ -112,9 +112,9 @@ const FolderTree = ({ folders, selectedFolder, onSelectFolder, onAddFolder, onDe
     );
 };
 
-// Terminal theme preview component
+
 const TerminalPreview = ({ config }) => {
-    // Get theme colors from Terminal.jsx terminalThemes
+
     const getThemeColors = (themeName) => {
         const themes = {
             dark: {
@@ -178,7 +178,7 @@ const TerminalPreview = ({ config }) => {
 
     const themeColors = getThemeColors(config?.theme || 'dark');
     
-    // Cursor style
+
     const getCursorStyle = () => {
         switch(config?.cursorStyle) {
             case 'bar':
@@ -194,11 +194,11 @@ const TerminalPreview = ({ config }) => {
     const cursorStyle = getCursorStyle();
     const blinkAnimation = config?.cursorBlink ? 'blink 1s step-end infinite' : 'none';
     
-    // Get proper font family display
+
     const getFontDisplay = () => {
         const fontFamily = config?.fontFamily || 'ubuntuMono';
         
-        // Map internal font names to display names with special styling
+
         const fontMap = {
             'monospace': {
                 family: 'monospace',
@@ -315,7 +315,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
     const [newTag, setNewTag] = useState("");
     const [availableFolders, setAvailableFolders] = useState([]);
     
-    // Default terminal customization values
+
     const defaultTerminalConfig = {
         theme: 'dark',
         cursorStyle: 'block',
@@ -326,10 +326,10 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
         letterSpacing: 0,
         cursorBlink: true,
         sshAlgorithm: 'default',
-        useNerdFont: true  // Default to true
+        useNerdFont: true
     };
 
-    // Initialize form with terminal configs if not present
+
     useEffect(() => {
         if (!form.terminalConfig) {
             setForm(prev => ({
@@ -432,10 +432,10 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
         }
         
         try {
-            // Ensure terminalConfig has useNerdFont set to true
+
             const terminalConfigWithNerdFont = {
                 ...(form.terminalConfig || defaultTerminalConfig),
-                useNerdFont: true // Always set to true
+                useNerdFont: true
             };
 
             const formWithDefaults = { 
@@ -443,7 +443,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                 terminalConfig: terminalConfigWithNerdFont
             };
             
-            // Call handleAddHost with the form including terminal config
+
             handleAddHost(formWithDefaults);
             setActiveTab(0);
         } catch (error) {
@@ -864,7 +864,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                             <TabPanel value={3}>
                                 <Typography level="title-md" sx={{ mb: 2, fontWeight: 'bold', color: theme.palette.primary.main }}>Terminal Appearance</Typography>
                                 
-                                {/* Terminal preview */}
+                                {}
                                 <TerminalPreview config={form.terminalConfig} />
                                 
                                 <Box sx={{ mb: 4 }}>
@@ -911,7 +911,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                         </Select>
                                     </FormControl>
                                     
-                                    {/* Reset Button */}
+                                    {}
                                     <Button 
                                         variant="outlined"
                                         onClick={() => setForm(prev => ({
