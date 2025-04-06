@@ -564,13 +564,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         window.terminalSockets[terminalId] = socket;
 
-
-        console.log("Available terminal sockets:", Object.keys(window.terminalSockets).map(id => ({
-            id,
-            connected: window.terminalSockets[id].connected,
-            ip: window.terminalSockets[id].hostData?.ip
-        })));
-
         socket.on("connect_error", (error) => {
             terminalInstance.current.write(`\r\n*** Socket connection error: ${error.message} ***\r\n`);
                     });
