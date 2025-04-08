@@ -1,9 +1,9 @@
 // Import all server modules
 const database = require('./database.cjs');
 const sshServer = require('./ssh.cjs');
-const rdpServer = require('./rdp.cjs');
-const vncServer = require('./vnc.cjs');
-const sftpServer = require('./sftp.cjs');
+//const rdpServer = require('./rdp.cjs');
+//const vncServer = require('./vnc.cjs');
+//const sftpServer = require('./sftp.cjs');
 
 // Create a logger
 const logger = {
