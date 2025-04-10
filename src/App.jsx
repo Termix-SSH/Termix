@@ -14,6 +14,7 @@ import RocketIcon from './images/launchpad_rocket.png';
 import ProfileIcon from './images/profile_icon.png';
 import ProfileModal from "./modals/ProfileModal.jsx";
 import ErrorModal from "./modals/ErrorModal.jsx";
+import InfoModal from "./modals/InfoModal.jsx";
 import EditHostModal from "./modals/EditHostModal.jsx";
 import NoAuthenticationModal from "./modals/NoAuthenticationModal.jsx";
 import eventBus from "./other/eventBus.jsx";
@@ -24,6 +25,9 @@ function App() {
     const [isAuthModalHidden, setIsAuthModalHidden] = useState(true);
     const [isProfileHidden, setIsProfileHidden] = useState(true);
     const [isErrorHidden, setIsErrorHidden] = useState(true);
+    const [isInfoHidden, setIsInfoHidden] = useState(true);
+    const [infoMessage, setInfoMessage] = useState('');
+    const [infoTitle, setInfoTitle] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [terminals, setTerminals] = useState([]);
     const userRef = useRef(null);
@@ -81,6 +85,7 @@ function App() {
     const [isHostViewerMenuOpen, setIsHostViewerMenuOpen] = useState(null);
     const [isSnippetViewerMenuOpen, setIsSnippetViewerMenuOpen] = useState(null);
     const [hosts, setHosts] = useState([]);
+    const [databaseChecked, setDatabaseChecked] = useState(false);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -136,6 +141,26 @@ function App() {
             }
         });
     }, [splitTabIds]);
+
+    useEffect(() => {
+        const checkDatabase = async () => {
+            if (!databaseChecked && userRef.current) {
+                try {
+                    const status = await userRef.current.checkAccountCreationStatus();
+
+                    if (status.isFirstUser) {
+                        setInfoTitle("Welcome to Termix");
+                        setInfoMessage("It appears you're using Termix for the first time or after a database update. Your data has been wiped, you will need to create a new user.");
+                        setIsInfoHidden(false);
+                    }
+                    
+                    setDatabaseChecked(true);
+                } catch (error) {}
+            }
+        };
+        
+        checkDatabase();
+    }, [databaseChecked, userRef.current]);
 
     useEffect(() => {
         const sessionToken = localStorage.getItem('sessionToken');
@@ -242,6 +267,63 @@ function App() {
         fetchHosts();
     }, [userRef.current?.getUser()]);
 
+    const handleAddAdmin = async (username) => {
+        if (!userRef.current?.isAdmin()) {
+            setErrorMessage("You do not have permission to perform this action.");
+            setIsErrorHidden(false);
+            return false;
+        }
+        
+        try {
+            const result = await userRef.current.addAdminUser(username);
+            if (!result) {
+                throw new Error("Failed to add admin user");
+            }
+            return true;
+        } catch (error) {
+            setErrorMessage(`Failed to add admin: ${error.message}`);
+            setIsErrorHidden(false);
+            return false;
+        }
+    };
+
+    const handleToggleAccountCreation = async (enabled) => {
+        if (!userRef.current?.isAdmin()) {
+            setErrorMessage("You do not have permission to perform this action.");
+            setIsErrorHidden(false);
+            return null;
+        }
+        
+        try {
+            const result = await userRef.current.toggleAccountCreation(enabled);
+            return result;
+        } catch (error) {
+            setErrorMessage(`Failed to toggle account creation: ${error.message}`);
+            setIsErrorHidden(false);
+            return null;
+        }
+    };
+
+    const checkAccountCreationStatus = async () => {
+        if (!userRef.current) return { allowed: true, isFirstUser: false };
+        
+        try {
+            return await userRef.current.checkAccountCreationStatus();
+        } catch (error) {
+            return { allowed: true, isFirstUser: false };
+        }
+    };
+
+    const getAllAdmins = async () => {
+        if (!userRef.current?.isAdmin()) return [];
+        
+        try {
+            return await userRef.current.getAllAdmins();
+        } catch (error) {
+            return [];
+        }
+    };
+
     const handleAddHost = () => {
         if (addHostForm.ip && addHostForm.port) {
             if (addHostForm.connectionType === 'ssh' && !addHostForm.user) {
@@ -298,16 +380,13 @@ function App() {
             return;
         }
 
-        // Check for duplicate titles and number them accordingly
         let baseTitle = addHostForm.name || addHostForm.ip;
         let newTitle = baseTitle;
-        
-        // Count existing terminals with the same base title
+
         const existingTitles = terminals.filter(terminal => 
             terminal.title === baseTitle || terminal.title.startsWith(`${baseTitle} (`)
         );
-        
-        // If there are existing terminals with the same name, append a number
+
         if (existingTitles.length > 0) {
             newTitle = `${baseTitle} (${existingTitles.length})`;
         }
@@ -330,8 +409,7 @@ function App() {
                 lineHeight: 1,
                 letterSpacing: 0,
                 cursorBlink: true,
-                sshAlgorithm: 'default',
-                useNerdFont: true
+                sshAlgorithm: 'default'
             }
         };
 
@@ -377,7 +455,6 @@ function App() {
                 });
             }, 100);
         } catch (error) {
-            console.error("Authentication error:", error);
             setErrorMessage("Failed to authenticate: " + (error.message || "Unknown error"));
             setIsErrorHidden(false);
         }
@@ -392,16 +469,13 @@ function App() {
             return;
         }
 
-        // Check for duplicate titles and number them accordingly
         let baseTitle = hostConfig.name || hostConfig.ip;
         let newTitle = baseTitle;
-        
-        // Count existing terminals with the same base title
+
         const existingTitles = terminals.filter(terminal => 
             terminal.title === baseTitle || terminal.title.startsWith(`${baseTitle} (`)
         );
-        
-        // If there are existing terminals with the same name, append a number
+
         if (existingTitles.length > 0) {
             newTitle = `${baseTitle} (${existingTitles.length})`;
         }
@@ -423,8 +497,7 @@ function App() {
                 lineHeight: 1,
                 letterSpacing: 0,
                 cursorBlink: true,
-                sshAlgorithm: 'default',
-                useNerdFont: true
+                sshAlgorithm: 'default'
             }
         };
 
@@ -560,7 +633,6 @@ function App() {
             setCurrentHostConfig(hostConfig);
             setIsEditHostHidden(false);
         } else {
-            console.error("hostConfig is null");
         }
     };
 
@@ -575,50 +647,34 @@ function App() {
                 setIsEditHostHidden(false);
                 return true;
             }
-            
-            // Make sure tags are included in newConfig
+
             if (!newConfig.tags && oldConfig.tags) {
                 newConfig.tags = oldConfig.tags;
             }
 
-            // If oldConfig._id isn't present but newConfig._id is, use that
             if (!oldConfig._id && newConfig._id) {
                 oldConfig._id = newConfig._id;
             }
 
-            // Wait a bit before processing - added delay
-            console.log("About to process edit for:", oldConfig.name || oldConfig.ip);
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            // Set internal editing state for UI feedback
             setIsEditing(true);
 
-            // Process the edit
             await userRef.current.editHost({
                 oldHostConfig: oldConfig,
                 newHostConfig: newConfig
             });
 
-            // The HostViewer will now be responsible for showing the editing indicator
-            // Short delay to ensure the database processes the edit
-            console.log("Edit request sent, waiting for processing...");
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // Keep modal hidden after successful edit
             setIsEditHostHidden(true);
-            
-            // Longer delay before clearing the editing state
-            // This is crucial for the host viewer to have time to refresh its data
-            console.log("Maintaining editing state for UI feedback...");
+
             await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Finally clear our editing state
+
             setIsEditing(false);
-            
-            // Return success - HostViewer will handle the rest of the UI updates
+
             return true;
         } catch (err) {
-            console.error(err);
             setErrorMessage(err.toString());
             setIsErrorHidden(false);
             setIsEditing(false);
@@ -661,7 +717,6 @@ function App() {
     };
 
     const getTerminalBackgroundColor = (hostConfig) => {
-        // Get the terminal theme from hostConfig
         const terminalThemeMap = {
             'dark': '#1e1e1e',
             'light': '#ffffff',
@@ -674,11 +729,9 @@ function App() {
             'yellow': '#3B3B00',
             'pink': '#3B001B'
         };
-        
-        // Get the theme from hostConfig or use default
+
         const themeName = hostConfig?.terminalConfig?.theme || 'dark';
-        
-        // Return the corresponding background color or default to dark theme
+
         return terminalThemeMap[themeName] || terminalThemeMap.dark;
     };
 
@@ -869,6 +922,10 @@ function App() {
                                 handleDeleteUser={handleDeleteUser}
                                 handleLogoutUser={handleLogoutUser}
                                 setIsProfileHidden={setIsProfileHidden}
+                                handleAddAdmin={handleAddAdmin}
+                                handleToggleAccountCreation={handleToggleAccountCreation}
+                                checkAccountCreationStatus={checkAccountCreationStatus}
+                                getAllAdmins={getAllAdmins}
                             />
                             {isLaunchpadOpen && (
                                 <Launchpad
@@ -903,6 +960,13 @@ function App() {
                         setIsErrorHidden={setIsErrorHidden}
                     />
 
+                    <InfoModal
+                        isHidden={isInfoHidden}
+                        infoMessage={infoMessage}
+                        title={infoTitle}
+                        setIsInfoHidden={setIsInfoHidden}
+                    />
+
                     <AuthModal
                         isHidden={isAuthModalHidden}
                         form={authForm}
@@ -911,6 +975,7 @@ function App() {
                         handleCreateUser={handleCreateUser}
                         handleGuestLogin={handleGuestLogin}
                         setIsAuthModalHidden={setIsAuthModalHidden}
+                        checkAccountCreationStatus={checkAccountCreationStatus}
                     />
 
                     {/* User component */}

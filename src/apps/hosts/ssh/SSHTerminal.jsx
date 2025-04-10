@@ -367,14 +367,14 @@ const terminalThemes = {
 
 
 const fontFamilyMap = {
-    monospace: 'monospace',
-    consolas: 'Consolas, "Lucida Console", Monaco, monospace',
-    firaCode: '"Fira Code", "DejaVu Sans Mono", Courier, monospace',
-    cascadiaCode: '"Cascadia Code", "Segoe UI Mono", "Lucida Console", monospace',
-    sourceCodePro: '"Source Code Pro", "Liberation Mono", "Courier New", monospace',
-    ubuntuMono: '"Ubuntu Mono", Consolas, monospace',
-    jetBrainsMono: '"JetBrains Mono", "Fira Mono", monospace',
-    menlo: 'Menlo, Monaco, "Courier New", monospace'
+    monospace: '"Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
+    consolas: '"Consolas Nerd Font", "Consolas", "Lucida Console", Monaco, "Ubuntu Mono Nerd Font", monospace',
+    firaCode: '"Fira Code Nerd Font", "FiraCode Nerd Font", "Fira Code", "Ubuntu Mono Nerd Font", "DejaVu Sans Mono", Courier, monospace',
+    cascadiaCode: '"Cascadia Code Nerd Font", "CascadiaCode Nerd Font", "Cascadia Code", "Ubuntu Mono Nerd Font", "Segoe UI Mono", "Lucida Console", monospace',
+    sourceCodePro: '"Source Code Pro Nerd Font", "SourceCodePro Nerd Font", "Source Code Pro", "Ubuntu Mono Nerd Font", "Liberation Mono", "Courier New", monospace',
+    ubuntuMono: '"Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", "Noto Color Emoji", monospace',
+    jetBrainsMono: '"JetBrains Mono Nerd Font", "JetBrainsMono Nerd Font", "JetBrains Mono", "Ubuntu Mono Nerd Font", "Fira Mono", monospace',
+    menlo: '"Menlo Nerd Font", "Menlo", "Ubuntu Mono Nerd Font", Monaco, "Courier New", monospace'
 };
 
 export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidden, setErrorMessage, setIsErrorHidden, title, showTitle }, ref) => {
@@ -803,8 +803,8 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                         alignItems: 'center',
                         lineHeight: 1
                     }}>
-                        {}
-                        ⬡
+                        {/* Terminal icon */}
+                        {'>'}
                     </span>
                     <span style={{
                         display: 'inline-block',
@@ -866,8 +866,7 @@ NewTerminal.propTypes = {
             lineHeight: PropTypes.number,
             letterSpacing: PropTypes.number,
             cursorBlink: PropTypes.bool,
-            sshAlgorithm: PropTypes.string,
-            useNerdFont: PropTypes.bool
+            sshAlgorithm: PropTypes.string
         })
     }).isRequired,
     isVisible: PropTypes.bool.isRequired,
@@ -880,11 +879,10 @@ NewTerminal.propTypes = {
 
 const getFontFamily = (terminalConfig) => {
     if (!terminalConfig) {
-        return "'Ubuntu Mono', 'Courier New', monospace";
+        return '"Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", "Noto Color Emoji", monospace';
     }
 
     const fontFamily = terminalConfig.fontFamily || 'ubuntuMono';
-
     const fontString = fontFamilyMap[fontFamily] || fontFamilyMap.ubuntuMono;
 
     return fontString;

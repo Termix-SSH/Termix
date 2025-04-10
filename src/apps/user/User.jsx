@@ -36,6 +36,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                         id: response.user.id,
                         username: response.user.username,
                         sessionToken: storedSession,
+                        isAdmin: response.user.isAdmin || false,
                     };
                     onLoginSuccess(response.user);
                 } else {
@@ -52,8 +53,14 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
 
     const createUser = async (userConfig) => {
         try {
+            const accountCreationStatus = await checkAccountCreationStatus();
+            if (!accountCreationStatus.allowed && !accountCreationStatus.isFirstUser) {
+                throw new Error("Account creation has been disabled by an administrator");
+            }
+
             const response = await new Promise((resolve) => {
-                socketRef.current.emit("createUser", userConfig, resolve);
+                const isFirstUser = accountCreationStatus.isFirstUser;
+                socketRef.current.emit("createUser", { ...userConfig, isAdmin: isFirstUser }, resolve);
             });
 
             if (response?.user?.sessionToken) {
@@ -61,6 +68,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                     id: response.user.id,
                     username: response.user.username,
                     sessionToken: response.user.sessionToken,
+                    isAdmin: response.user.isAdmin || false,
                 };
                 localStorage.setItem("sessionToken", response.user.sessionToken);
                 onCreateSuccess(response.user);
@@ -84,6 +92,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                     id: response.user.id,
                     username: response.user.username,
                     sessionToken: response.user.sessionToken,
+                    isAdmin: response.user.isAdmin || false,
                 };
                 localStorage.setItem("sessionToken", response.user.sessionToken);
                 onLoginSuccess(response.user);
@@ -106,6 +115,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                     id: response.user.id,
                     username: response.user.username,
                     sessionToken: response.user.sessionToken,
+                    isAdmin: false,
                 };
                 localStorage.setItem("sessionToken", response.user.sessionToken);
                 onLoginSuccess(response.user);
@@ -145,6 +155,89 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         }
     };
 
+    const checkAccountCreationStatus = async () => {
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("checkAccountCreationStatus", resolve);
+            });
+            
+            return {
+                allowed: response?.allowed !== false,
+                isFirstUser: response?.isFirstUser || false
+            };
+        } catch (error) {
+            return { allowed: true, isFirstUser: false };
+        }
+    };
+
+    const toggleAccountCreation = async (enabled) => {
+        if (!currentUser.current?.isAdmin) return onFailure("Not authorized");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("toggleAccountCreation", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    enabled
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to update account creation settings");
+            }
+            
+            return response.enabled;
+        } catch (error) {
+            onFailure(error.message);
+            return null;
+        }
+    };
+
+    const addAdminUser = async (username) => {
+        if (!currentUser.current?.isAdmin) return onFailure("Not authorized");
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("addAdminUser", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                    targetUsername: username
+                }, resolve);
+            });
+
+            if (!response?.success) {
+                throw new Error(response?.error || "Failed to add admin user");
+            }
+            
+            return true;
+        } catch (error) {
+            onFailure(error.message);
+            return false;
+        }
+    };
+
+    const getAllAdmins = async () => {
+        if (!currentUser.current?.isAdmin) return [];
+
+        try {
+            const response = await new Promise((resolve) => {
+                socketRef.current.emit("getAllAdmins", {
+                    userId: currentUser.current.id,
+                    sessionToken: currentUser.current.sessionToken,
+                }, resolve);
+            });
+
+            if (response?.success) {
+                return response.admins || [];
+            } else {
+                throw new Error(response?.error || "Failed to fetch admins");
+            }
+        } catch (error) {
+            onFailure(error.message);
+            return [];
+        }
+    };
+
     const saveHost = async (hostConfig) => {
         if (!currentUser.current) return onFailure("Not authenticated");
 
@@ -170,7 +263,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 }
             }
 
-            // Ensure terminal configuration is included
             if (!hostConfig.hostConfig.terminalConfig) {
                 hostConfig.hostConfig.terminalConfig = {
                     theme: 'dark',
@@ -181,12 +273,8 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                     lineHeight: 1,
                     letterSpacing: 0,
                     cursorBlink: true,
-                    sshAlgorithm: 'default',
-                    useNerdFont: true
+                    sshAlgorithm: 'default'
                 };
-            } else {
-                // Ensure useNerdFont is set to true
-                hostConfig.hostConfig.terminalConfig.useNerdFont = true;
             }
 
             const response = await new Promise((resolve) => {
@@ -239,8 +327,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                             lineHeight: 1,
                             letterSpacing: 0,
                             cursorBlink: true,
-                            sshAlgorithm: 'default',
-                            useNerdFont: true
+                            sshAlgorithm: 'default'
                         }
                     } : {}
                 })).filter(host => host.config && host.config.ip && host.config.user);
@@ -289,7 +376,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 return onFailure("A host with this name already exists. Please choose a different name.");
             }
 
-            // Ensure terminal configuration is included
             if (!newHostConfig.terminalConfig) {
                 newHostConfig.terminalConfig = {
                     theme: 'dark',
@@ -300,12 +386,8 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                     lineHeight: 1,
                     letterSpacing: 0,
                     cursorBlink: true,
-                    sshAlgorithm: 'default',
-                    useNerdFont: true
+                    sshAlgorithm: 'default'
                 };
-            } else {
-                // Ensure useNerdFont is set to true
-                newHostConfig.terminalConfig.useNerdFont = true;
             }
 
             const response = await new Promise((resolve) => {
@@ -366,7 +448,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         }
     };
 
-    // Snippet management functions
     const saveSnippet = async (snippet) => {
         if (!currentUser.current) return onFailure("Not authenticated");
 
@@ -530,6 +611,11 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         removeSnippetShare,
         getUser: () => currentUser.current,
         getSocketRef: () => socketRef.current,
+        checkAccountCreationStatus,
+        toggleAccountCreation,
+        addAdminUser,
+        getAllAdmins,
+        isAdmin: () => currentUser.current?.isAdmin || false,
     }));
 
     return null;

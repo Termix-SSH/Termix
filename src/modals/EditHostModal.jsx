@@ -244,8 +244,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
         lineHeight: 1,
         letterSpacing: 0,
         cursorBlink: true,
-        sshAlgorithm: 'default',
-        useNerdFont: true // Default to true
+        sshAlgorithm: 'default'
     };
     
     const [form, setForm] = useState({
@@ -299,8 +298,6 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
 
     useEffect(() => {
         if (!isHidden && hostConfig) {
-            console.log(`EditHostModal shown for host ${hostConfig.name || hostConfig.ip}`);
-            
             const newFormState = {
                 name: hostConfig.name || '',
                 folder: hostConfig.folder || '',
@@ -317,9 +314,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                 isPinned: !!hostConfig.isPinned,
                 terminalConfig: hostConfig.terminalConfig ? 
                     { 
-                        ...hostConfig.terminalConfig,
-                        // Ensure useNerdFont is true
-                        useNerdFont: true
+                        ...hostConfig.terminalConfig
                     } 
                     : { ...defaultTerminalConfig }
             };
@@ -328,10 +323,6 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
             
             setShowError(false);
             setErrorMessage('');
-            
-            console.log("Form initialized with:", newFormState);
-        } else if (isHidden && hostConfig) {
-            console.log(`EditHostModal hidden for host ${hostConfig.name || hostConfig.ip}`);
         }
     }, [isHidden, hostConfig]);
 
@@ -432,12 +423,6 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                 return;
             }
 
-            // Ensure terminalConfig is included and useNerdFont is true
-            const terminalConfigWithNerdFont = {
-                ...form.terminalConfig,
-                useNerdFont: true  // Always set to true
-            };
-
             const newConfig = {
                 _id: hostConfig._id,
                 name: form.name || form.ip,
@@ -447,7 +432,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                 port: String(form.port),
                 tags: form.tags,
                 isPinned: form.isPinned,
-                terminalConfig: terminalConfigWithNerdFont
+                terminalConfig: form.terminalConfig
             };
 
             if (form.storePassword) {
@@ -458,8 +443,6 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                     newConfig.keyType = form.keyType;
                 }
             }
-
-            console.log(`Submitting edit for host: ${newConfig.name || newConfig.ip}`);
             
             setIsEditHostHidden(true);
             
@@ -469,7 +452,6 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
             
             setActiveTab(0);
         } catch (error) {
-            console.error("Edit host error:", error);
             setErrorMessage(error.message || "Failed to edit host. The host name may already exist.");
             setShowError(true);
             setIsEditHostHidden(false);

@@ -29,46 +29,71 @@
   border: 3px solid rgba(0, 0, 0, 0.15);
 }
 
-/* Improve font rendering for terminal */
 .xterm-viewport {
   font-smooth: never;
   -webkit-font-smoothing: none;
 }
 
-/* Font-specific overrides for better appearance */
+.xterm-rows span {
+  font-feature-settings: "liga" 0, "calt" 0;
+  text-rendering: optimizeSpeed;
+}
+
+.xterm {
+  font-variant-ligatures: none !important;
+  font-feature-settings: normal !important;
+}
+
+.xterm-rows span[style*="font-family"] {
+  font-family: "Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace !important;
+}
+
 [style*="font-family: 'Ubuntu Mono'"],
 [style*="font-family: Ubuntu Mono"],
 [style*="font-family: 'Ubuntu Mono Nerd Font'"],
-[style*="font-family: Ubuntu Mono Nerd Font"] {
+[style*="font-family: Ubuntu Mono Nerd Font"],
+[style*="font-family: 'UbuntuMono Nerd Font'"] {
   letter-spacing: 0.03em !important;
+  font-family: "Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace !important;
 }
 
 [style*="font-family: 'Fira Code'"],
 [style*="font-family: Fira Code"],
 [style*="font-family: 'Fira Code Nerd Font'"],
-[style*="font-family: Fira Code Nerd Font"] {
+[style*="font-family: Fira Code Nerd Font"],
+[style*="font-family: 'FiraCode Nerd Font'"] {
   letter-spacing: 0.02em !important;
 }
 
 [style*="font-family: 'JetBrains Mono'"],
 [style*="font-family: JetBrains Mono"],
 [style*="font-family: 'JetBrains Mono Nerd Font'"],
-[style*="font-family: JetBrains Mono Nerd Font"] {
+[style*="font-family: JetBrains Mono Nerd Font"],
+[style*="font-family: 'JetBrainsMono Nerd Font'"] {
   letter-spacing: 0.02em !important;
 }
 
 [style*="font-family: 'Source Code Pro'"],
 [style*="font-family: Source Code Pro"],
 [style*="font-family: 'Source Code Pro Nerd Font'"],
-[style*="font-family: Source Code Pro Nerd Font"] {
+[style*="font-family: Source Code Pro Nerd Font"],
+[style*="font-family: 'SourceCodePro Nerd Font'"] {
   letter-spacing: 0.01em !important;
 }
 
 [style*="font-family: 'Cascadia Code'"],
 [style*="font-family: Cascadia Code"],
 [style*="font-family: 'Cascadia Code Nerd Font'"],
-[style*="font-family: Cascadia Code Nerd Font"] {
+[style*="font-family: Cascadia Code Nerd Font"],
+[style*="font-family: 'CascadiaCode Nerd Font'"] {
   letter-spacing: 0.01em !important;
+}
+
+/* Menlo Nerd Font specific adjustments */
+[style*="font-family: 'Menlo Nerd Font'"],
+[style*="font-family: Menlo Nerd Font"] {
+  letter-spacing: 0.025em !important;
+  -webkit-font-smoothing: antialiased !important;
 }
 
 .tablist::-webkit-scrollbar {

@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { Modal, Button } from "@mui/joy";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import AdminModal from "./AdminModal";
 import theme from "../theme";
 
 export default function ProfileModal({
@@ -12,9 +14,16 @@ export default function ProfileModal({
     handleDeleteUser,
     handleLogoutUser,
     setIsProfileHidden,
+    handleAddAdmin,
+    handleToggleAccountCreation,
+    checkAccountCreationStatus,
+    getAllAdmins
 }) {
     const [isConfirmDeleteHidden, setIsConfirmDeleteHidden] = useState(true);
-    const username = getUser()?.username;
+    const [isAdminModalHidden, setIsAdminModalHidden] = useState(true);
+    const user = getUser();
+    const username = user?.username;
+    const isAdmin = user?.isAdmin || false;
 
     return (
         <>
@@ -37,6 +46,25 @@ export default function ProfileModal({
                     overflow: "hidden",
                 }}>
                     <div className="p-4 flex flex-col gap-4">
+                        {isAdmin && (
+                            <Button
+                                fullWidth
+                                onClick={() => setIsAdminModalHidden(false)}
+                                startDecorator={<AdminPanelSettingsIcon />}
+                                sx={{
+                                    backgroundColor: theme.palette.general.tertiary,
+                                    color: "white",
+                                    "&:hover": {
+                                        backgroundColor: theme.palette.general.secondary,
+                                    },
+                                    height: "40px",
+                                    border: `1px solid ${theme.palette.general.secondary}`,
+                                }}
+                            >
+                                Admin Panel
+                            </Button>
+                        )}
+
                         <Button
                             fullWidth
                             onClick={handleLogoutUser}
@@ -73,7 +101,7 @@ export default function ProfileModal({
                         </Button>
 
                         <div className="text-center text-xs text-gray-400">
-                            v0.2.1
+                            v0.4
                         </div>
                     </div>
                 </div>
@@ -90,11 +118,21 @@ export default function ProfileModal({
                             setIsConfirmDeleteHidden(true);
                             setIsProfileHidden(true);
                         },
-                        onFailure: (error) => console.error(error),
                     });
                 }}
                 onCancel={() => setIsConfirmDeleteHidden(true)}
             />
+
+            {isAdmin && (
+                <AdminModal
+                    isHidden={isAdminModalHidden}
+                    setIsHidden={setIsAdminModalHidden}
+                    handleAddAdmin={handleAddAdmin}
+                    handleToggleAccountCreation={handleToggleAccountCreation}
+                    checkAccountCreationStatus={checkAccountCreationStatus}
+                    getAllAdmins={getAllAdmins}
+                />
+            )}
         </>
     );
 }
@@ -105,4 +143,8 @@ ProfileModal.propTypes = {
     handleDeleteUser: PropTypes.func.isRequired,
     handleLogoutUser: PropTypes.func.isRequired,
     setIsProfileHidden: PropTypes.func.isRequired,
+    handleAddAdmin: PropTypes.func,
+    handleToggleAccountCreation: PropTypes.func,
+    checkAccountCreationStatus: PropTypes.func,
+    getAllAdmins: PropTypes.func
 };

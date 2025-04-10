@@ -431,8 +431,6 @@ function HostViewer({
                     ...oldConfig,
                     connectionType: oldConfig.connectionType || 'ssh'
                 };
-                console.log("openEditPanel called with config:", configWithConnectionType);
-                console.log("Connection type being passed to openEditPanel:", configWithConnectionType.connectionType);
                 openEditPanel(configWithConnectionType);
 
                 return;

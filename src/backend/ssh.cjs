@@ -20,14 +20,12 @@ const io = socketIo(server, {
 
 const logger = {
     info: (...args) => console.log(`⌨️ | 🔧 [${new Date().toISOString()}] INFO:`, ...args),
-    error: (...args) => console.error(`⌨️ | ❌ [${new Date().toISOString()}] ERROR:`, ...args),
+    error: (...args) => console.error(`⌨️ | ❌  [${new Date().toISOString()}] ERROR:`, ...args),
     warn: (...args) => console.warn(`⌨️ | ⚠️ [${new Date().toISOString()}] WARN:`, ...args),
     debug: (...args) => console.debug(`⌨️ | 🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
 };
 
 io.on("connection", (socket) => {
-    logger.info("New socket connection established");
-
     let stream = null;
     let conn = null;
     let pingTimer = null;
@@ -62,7 +60,7 @@ io.on("connection", (socket) => {
 
     socket.on("connectToHost", (cols, rows, hostConfig) => {
         if (!hostConfig || !hostConfig.ip || !hostConfig.user || !hostConfig.port) {
-            logger.error("Invalid hostConfig received - missing required fields:", hostConfig);
+            logger.error("Invalid hostConfig received");
             socket.emit("error", "Missing required connection details (IP, user, or port)");
             return;
         }

@@ -8,35 +8,35 @@ import { loadCSSFromString } from './cssLoader';
 const systemFonts = {
     // Main system monospace fonts available on most platforms
     ubuntuMono: {
-        fontFamily: '"Ubuntu Mono", monospace',
+        fontFamily: '"Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", "Noto Color Emoji", monospace',
         fallback: 'monospace'
     },
     firaCode: {
-        fontFamily: '"Fira Code", monospace',
+        fontFamily: '"Fira Code Nerd Font", "FiraCode Nerd Font", "Fira Code", "Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
         fallback: 'monospace'
     },
     jetBrainsMono: {
-        fontFamily: '"JetBrains Mono", monospace',
+        fontFamily: '"JetBrains Mono Nerd Font", "JetBrainsMono Nerd Font", "JetBrains Mono", "Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
         fallback: 'monospace'
     },
     sourceCodePro: {
-        fontFamily: '"Source Code Pro", monospace',
+        fontFamily: '"Source Code Pro Nerd Font", "SourceCodePro Nerd Font", "Source Code Pro", "Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
         fallback: 'monospace'
     },
     cascadiaCode: {
-        fontFamily: '"Cascadia Code", monospace',
+        fontFamily: '"Cascadia Code Nerd Font", "CascadiaCode Nerd Font", "Cascadia Code", "Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
         fallback: 'monospace'
     },
     consolas: {
-        fontFamily: 'Consolas, monospace',
+        fontFamily: '"Consolas Nerd Font", "Consolas", "Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
         fallback: 'monospace'
     },
     menlo: {
-        fontFamily: 'Menlo, monospace',
+        fontFamily: '"Menlo Nerd Font", "Menlo", "Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
         fallback: 'monospace'
     },
     monospace: {
-        fontFamily: 'monospace',
+        fontFamily: '"Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
         fallback: 'monospace'
     }
 };
@@ -142,16 +142,14 @@ const fontCustomCSS = `
 try {
     loadCSSFromString(fontCustomCSS);
 } catch (err) {
-    console.error('Failed to load font custom CSS:', err);
 }
 
 /**
  * Get a formatted font family string for use in CSS
  * @param {string} fontName - The internal font name (e.g., 'ubuntuMono')
- * @param {boolean} isNerdFont - Whether to use Nerd Font variant (ignored for system fonts)
  * @returns {string} CSS-ready font-family string
  */
-export const getFormattedFontFamily = (fontName, isNerdFont = false) => {
+export const getFormattedFontFamily = (fontName) => {
     // Fallback to system monospace if the font isn't found
     if (!fontName || !systemFonts[fontName]) {
         return 'monospace';
@@ -166,7 +164,6 @@ export const getFormattedFontFamily = (fontName, isNerdFont = false) => {
  * No actual loading occurs - all fonts are system fonts
  * @param {string} fontFamily - The font family internal name
  * @param {string} weight - Font weight (ignored)
- * @param {boolean} isNerdFont - Whether to use Nerd Font variant (ignored)
  */
 export const loadFont = (fontFamily) => {
     // All fonts are treated as system fonts

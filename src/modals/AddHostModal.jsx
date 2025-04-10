@@ -325,8 +325,7 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
         lineHeight: 1,
         letterSpacing: 0,
         cursorBlink: true,
-        sshAlgorithm: 'default',
-        useNerdFont: true
+        sshAlgorithm: 'default'
     };
 
 
@@ -435,7 +434,6 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
 
             const terminalConfigWithNerdFont = {
                 ...(form.terminalConfig || defaultTerminalConfig),
-                useNerdFont: true
             };
 
             const formWithDefaults = { 
@@ -447,7 +445,6 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
             handleAddHost(formWithDefaults);
             setActiveTab(0);
         } catch (error) {
-            console.error("Add host error:", error);
             setErrorMessage(error.message || "Failed to add host. The host name or IP may already exist.");
             setShowError(true);
         }

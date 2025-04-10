@@ -9,7 +9,7 @@ require('dotenv').config();
 
 const logger = {
     info: (...args) => console.log(`📦 | 🔧 [${new Date().toISOString()}] INFO:`, ...args),
-    error: (...args) => console.error(`📦 | ❌ [${new Date().toISOString()}] ERROR:`, ...args),
+    error: (...args) => console.error(`📦 | ❌  [${new Date().toISOString()}] ERROR:`, ...args),
     warn: (...args) => console.warn(`📦 | ⚠️ [${new Date().toISOString()}] WARN:`, ...args),
     debug: (...args) => console.debug(`📦 | 🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
 };
@@ -18,12 +18,35 @@ const logger = {
 const dataDir = process.env.DATA_DIR || path.join(__dirname, '../../data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
-    logger.info(`Created data directory: ${dataDir}`);
 }
+
+const settingsFilePath = path.join(dataDir, 'settings.json');
+let appSettings = {
+    accountCreationEnabled: true
+};
+
+if (fs.existsSync(settingsFilePath)) {
+    try {
+        appSettings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf8'));
+    } catch (error) {
+        logger.error('Failed to parse settings file, using defaults', error);
+    }
+} else {
+    fs.writeFileSync(settingsFilePath, JSON.stringify(appSettings, null, 2));
+}
+
+
+const saveSettings = () => {
+    try {
+        fs.writeFileSync(settingsFilePath, JSON.stringify(appSettings, null, 2))
+    } catch (error) {
+        logger.error('Failed to save settings file', error);
+    }
+};
 
 const dbPath = path.join(dataDir, 'termix.db');
 const db = new Database(dbPath);
-logger.info(`Connected to SQLite database at: ${dbPath}`);
+logger.info(`Connected to SQLite database`);
 
 
 const server = http.createServer();
@@ -34,13 +57,13 @@ const io = socketIo(server, {
 
 
 function initializeDatabase() {
-
     db.prepare(`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            sessionToken TEXT NOT NULL
+            sessionToken TEXT NOT NULL,
+            isAdmin INTEGER DEFAULT 0
         )
     `).run();
     
@@ -111,6 +134,13 @@ function initializeDatabase() {
             FOREIGN KEY (snippetId) REFERENCES snippets(id)
         )
     `).run();
+
+    const userTableInfo = db.prepare(`PRAGMA table_info(users)`).all();
+    const hasIsAdminColumn = userTableInfo.some(column => column.name === 'isAdmin');
+    
+    if (!hasIsAdminColumn) {
+        db.prepare(`ALTER TABLE users ADD COLUMN isAdmin INTEGER DEFAULT 0`).run();
+    }
     
     logger.info('Database tables initialized');
 }
@@ -155,13 +185,16 @@ const decryptData = (encryptedData, userId, sessionToken) => {
 
 
 const statements = {
-
     findUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
     findUserBySessionToken: db.prepare('SELECT * FROM users WHERE sessionToken = ?'),
     findUserById: db.prepare('SELECT * FROM users WHERE id = ?'),
     findUserByIdAndSessionToken: db.prepare('SELECT * FROM users WHERE id = ? AND sessionToken = ?'),
-    createUser: db.prepare('INSERT INTO users (id, username, password, sessionToken) VALUES (?, ?, ?, ?)'),
+    createUser: db.prepare('INSERT INTO users (id, username, password, sessionToken, isAdmin) VALUES (?, ?, ?, ?, ?)'),
     deleteUser: db.prepare('DELETE FROM users WHERE id = ?'),
+    countAdminUsers: db.prepare('SELECT COUNT(*) as count FROM users WHERE isAdmin = 1'),
+    countAllUsers: db.prepare('SELECT COUNT(*) as count FROM users'),
+    findAllAdmins: db.prepare('SELECT id, username FROM users WHERE isAdmin = 1'),
+    updateUserAdmin: db.prepare('UPDATE users SET isAdmin = ? WHERE username = ?'),
     
 
     createHost: db.prepare('INSERT INTO hosts (id, name, config, createdBy, folder, isPinned) VALUES (?, ?, ?, ?, ?, ?)'),
@@ -260,7 +293,7 @@ function getSnippetWithDetails(snippet, userId, sessionToken) {
                 if (decryptedContent) {
                     content = decryptedContent;
                 } else {
-                    logger.warn(`Failed to decrypt content for snippet: ${snippet.id}`);
+                    logger.warn(`Failed to decrypt content for snippet`);
 
                     content = snippet.content;
                 }
@@ -270,7 +303,7 @@ function getSnippetWithDetails(snippet, userId, sessionToken) {
             }
         }
     } catch (error) {
-        logger.warn(`Error handling snippet content for ${snippet.id}: ${error.message}`);
+        logger.warn(`Error handling snippet content: ${error.message}`);
 
         content = snippet.content;
     }
@@ -285,14 +318,20 @@ function getSnippetWithDetails(snippet, userId, sessionToken) {
     };
 }
 
-
 logger.info('Database is ready');
 
 io.of('/database.io').on('connection', (socket) => {
-    socket.on('createUser', async ({ username, password }, callback) => {
+    socket.on('createUser', async ({ username, password, isAdmin }, callback) => {
         try {
             logger.debug(`Creating user: ${username}`);
 
+            if (!appSettings.accountCreationEnabled) {
+                const userCount = statements.countAllUsers.get().count;
+                if (userCount > 0) {
+                    logger.warn(`Account creation attempted while disabled`);
+                    return callback({ error: 'Account creation has been disabled by an administrator' });
+                }
+            }
 
             const existingUser = statements.findUserByUsername.get(username);
             if (existingUser) {
@@ -303,15 +342,18 @@ io.of('/database.io').on('connection', (socket) => {
             const sessionToken = crypto.randomBytes(64).toString('hex');
             const userId = generateId();
             const hashedPassword = await bcrypt.hash(password, 10);
-            
 
-            statements.createUser.run(userId, username, hashedPassword, sessionToken);
+            const adminCount = statements.countAdminUsers.get().count;
+            const makeAdmin = adminCount === 0 || isAdmin === true ? 1 : 0;
+
+            statements.createUser.run(userId, username, hashedPassword, sessionToken, makeAdmin);
 
             logger.info(`User created: ${username}`);
             callback({ success: true, user: {
                 id: userId,
                 username,
-                sessionToken
+                sessionToken,
+                isAdmin: makeAdmin === 1
             }});
         } catch (error) {
             logger.error('User creation error:', error);
@@ -333,7 +375,7 @@ io.of('/database.io').on('connection', (socket) => {
             }
 
             if (!user) {
-                logger.warn('Login failed - user not found');
+                logger.warn('Login failed: user not found');
                 return callback({ error: 'Invalid credentials' });
             }
 
@@ -341,7 +383,8 @@ io.of('/database.io').on('connection', (socket) => {
             callback({ success: true, user: {
                 id: user.id,
                 username: user.username,
-                sessionToken: user.sessionToken
+                sessionToken: user.sessionToken,
+                isAdmin: !!user.isAdmin
             }});
         } catch (error) {
             logger.error('Login error:', error);
@@ -355,19 +398,116 @@ io.of('/database.io').on('connection', (socket) => {
             const sessionToken = crypto.randomBytes(64).toString('hex');
             const userId = generateId();
             const hashedPassword = await bcrypt.hash(username, 10);
-            
 
-            statements.createUser.run(userId, username, hashedPassword, sessionToken);
+            const isAdmin = 0;
+
+            statements.createUser.run(userId, username, hashedPassword, sessionToken, isAdmin);
 
             logger.info(`Guest user created: ${username}`);
             callback({ success: true, user: {
                 id: userId,
                 username,
-                sessionToken
+                sessionToken,
+                isAdmin: false
             }});
         } catch (error) {
             logger.error('Guest login error:', error);
             callback({error: 'Guest login failed'});
+        }
+    });
+
+    socket.on('verifySession', async ({ sessionToken }, callback) => {
+        try {
+            const user = statements.findUserBySessionToken.get(sessionToken);
+            if (!user) {
+                logger.warn(`Invalid session token: ${sessionToken}`);
+                return callback({ error: 'Invalid session' });
+            }
+
+            callback({ success: true, user: {
+                id: user.id,
+                username: user.username,
+                isAdmin: !!user.isAdmin
+            }});
+        } catch (error) {
+            logger.error('Session verification error:', error);
+            callback({ error: 'Session verification failed' });
+        }
+    });
+
+    socket.on('checkAccountCreationStatus', async (callback) => {
+        try {
+            const userCount = statements.countAllUsers.get().count;
+            const isFirstUser = userCount === 0;
+            
+            callback({ 
+                allowed: isFirstUser || appSettings.accountCreationEnabled, 
+                isFirstUser: isFirstUser 
+            });
+        } catch (error) {
+            logger.error('Error checking account creation status:', error);
+            callback({ allowed: true, isFirstUser: false });
+        }
+    });
+
+    socket.on('toggleAccountCreation', async ({ userId, sessionToken, enabled }, callback) => {
+        try {
+            const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
+            if (!user || !user.isAdmin) {
+                logger.warn(`Unauthorized attempt to toggle account creation: ${userId}`);
+                return callback({ error: 'Not authorized' });
+            }
+
+            appSettings.accountCreationEnabled = !!enabled;
+            saveSettings();
+            
+            logger.info(`Account creation ${enabled ? 'enabled' : 'disabled'} by admin: ${user.username}`);
+            callback({ success: true, enabled: appSettings.accountCreationEnabled });
+        } catch (error) {
+            logger.error('Error toggling account creation:', error);
+            callback({ error: 'Failed to update account creation settings' });
+        }
+    });
+
+    socket.on('addAdminUser', async ({ userId, sessionToken, targetUsername }, callback) => {
+        try {
+            const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
+            if (!user || !user.isAdmin) {
+                logger.warn(`Unauthorized attempt to add admin: ${userId}`);
+                return callback({ error: 'Not authorized' });
+            }
+
+            const targetUser = statements.findUserByUsername.get(targetUsername);
+            if (!targetUser) {
+                logger.warn(`Target user not found: ${targetUsername}`);
+                return callback({ error: 'User not found' });
+            }
+
+            statements.updateUserAdmin.run(1, targetUsername);
+            
+            logger.info(`User ${targetUsername} promoted to admin by ${user.username}`);
+            callback({ success: true });
+        } catch (error) {
+            logger.error('Error adding admin user:', error);
+            callback({ error: 'Failed to add admin user' });
+        }
+    });
+
+    socket.on('getAllAdmins', async ({ userId, sessionToken }, callback) => {
+        try {
+            const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
+            if (!user || !user.isAdmin) {
+                logger.warn(`Unauthorized attempt to get admins: ${userId}`);
+                return callback({ error: 'Not authorized' });
+            }
+
+            const admins = statements.findAllAdmins.all();
+            
+            logger.info(`Admin list retrieved by ${user.username}`);
+            callback({ success: true, admins: admins });
+        } catch (error) {
+            logger.error('Error getting admin list:', error);
+            callback({ error: 'Failed to get admin list' });
         }
     });
 
@@ -384,10 +524,9 @@ io.of('/database.io').on('connection', (socket) => {
             }
 
             if (!hostConfig.ip || !hostConfig.user) {
-                logger.warn('Missing required fields:', hostConfig);
+                logger.warn('Invalid host config format');
                 return callback({ error: 'IP and User are required' });
             }
-
 
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
@@ -413,8 +552,7 @@ io.of('/database.io').on('connection', (socket) => {
                     lineHeight: 1,
                     letterSpacing: 0,
                     cursorBlink: true,
-                    sshAlgorithm: 'default',
-                    useNerdFont: true
+                    sshAlgorithm: 'default'
                 }
             };
 
@@ -435,7 +573,7 @@ io.of('/database.io').on('connection', (socket) => {
                     for (const host of hostsWithSameIp) {
                         const decryptedConfig = decryptData(host.config, userId, sessionToken);
                         if (decryptedConfig && decryptedConfig.ip.toLowerCase() === cleanConfig.ip.toLowerCase()) {
-                            logger.warn(`Host with IP ${cleanConfig.ip} already exists for user: ${userId}`);
+                            logger.warn(`Host with IP already exists for user: ${userId}`);
                             throw new Error(`Host with IP "${cleanConfig.ip}" already exists. Please provide a unique name.`);
                         }
                     }
@@ -701,7 +839,6 @@ io.of('/database.io').on('connection', (socket) => {
 
             statements.removeHostUser.run(targetHostId, userId);
 
-            logger.info(`Share removed successfully: ${targetHostId} -> ${userId}`);
             callback({ success: true });
         } catch (error) {
             logger.error('Share removal error:', error);
@@ -834,7 +971,7 @@ io.of('/database.io').on('connection', (socket) => {
                         
                         const decryptedConfig = decryptData(host.config, userId, sessionToken);
                         if (decryptedConfig && decryptedConfig.ip.toLowerCase() === newHostConfig.ip.toLowerCase()) {
-                            logger.warn(`Host with IP ${newHostConfig.ip} already exists for user: ${userId}`);
+                            logger.warn(`Host with IP already exists for user: ${userId}`);
                             throw new Error(`Host with IP "${newHostConfig.ip}" already exists. Please provide a unique name.`);
                         }
                     }
@@ -859,8 +996,7 @@ io.of('/database.io').on('connection', (socket) => {
                         lineHeight: 1,
                         letterSpacing: 0,
                         cursorBlink: true,
-                        sshAlgorithm: 'default',
-                        useNerdFont: true
+                        sshAlgorithm: 'default'
                     }
                 };
 
@@ -907,25 +1043,6 @@ io.of('/database.io').on('connection', (socket) => {
         }
     });
 
-    socket.on('verifySession', async ({ sessionToken }, callback) => {
-        try {
-            const user = statements.findUserBySessionToken.get(sessionToken);
-            if (!user) {
-                logger.warn(`Invalid session token: ${sessionToken}`);
-                return callback({ error: 'Invalid session' });
-            }
-
-            callback({ success: true, user: {
-                id: user.id,
-                username: user.username
-            }});
-        } catch (error) {
-            logger.error('Session verification error:', error);
-            callback({ error: 'Session verification failed' });
-        }
-    });
-
-
     socket.on('saveSnippet', async ({ userId, sessionToken, snippet }, callback) => {
         try {
             if (!userId || !sessionToken) {
@@ -939,7 +1056,7 @@ io.of('/database.io').on('connection', (socket) => {
             }
 
             if (!snippet.name || !snippet.content) {
-                logger.warn('Missing required fields for snippet');
+                logger.warn('Invalid host config format');
                 return callback({ error: 'Name and content are required' });
             }
 
@@ -1075,7 +1192,6 @@ io.of('/database.io').on('connection', (socket) => {
             );
 
             if (result && result.changes > 0) {
-                logger.info(`Pin status updated for snippet: ${snippetId}`);
                 return callback({ success: true });
             } else {
                 logger.error(`Failed to update pin status for snippet: ${snippetId}`);
@@ -1381,7 +1497,6 @@ io.of('/database.io').on('connection', (socket) => {
 
             statements.removeSnippetUser.run(snippetId, userId);
 
-            logger.info(`Share removed successfully: ${snippetId} -> ${userId}`);
             callback({ success: true });
         } catch (error) {
             logger.error('Share removal error:', error);
