@@ -1,11 +1,9 @@
-// Import all server modules
 const database = require('./database.cjs');
 const sshServer = require('./ssh.cjs');
 //const rdpServer = require('./rdp.cjs');
 //const vncServer = require('./vnc.cjs');
 //const sftpServer = require('./sftp.cjs');
 
-// Create a logger
 const logger = {
     info: (...args) => console.log(`🚀 |  🔧 [${new Date().toISOString()}] INFO:`, ...args),
     error: (...args) => console.error(`🚀 | ❌ [${new Date().toISOString()}] ERROR:`, ...args),
@@ -13,7 +11,6 @@ const logger = {
     debug: (...args) => console.debug(`🚀 | 🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
 };
 
-// Start all servers
 (async () => {
     try {
         logger.info("Starting all backend servers...");

@@ -37,9 +37,7 @@ import ColorLensIcon from '@mui/icons-material/ColorLens';
 import CloseIcon from '@mui/icons-material/Close';
 import FolderIcon from '@mui/icons-material/Folder';
 
-// Terminal theme preview component
 const TerminalPreview = ({ config }) => {
-    // Get theme colors from Terminal.jsx terminalThemes
     const getThemeColors = (themeName) => {
         const themes = {
             dark: {
@@ -102,8 +100,7 @@ const TerminalPreview = ({ config }) => {
     };
 
     const themeColors = getThemeColors(config?.theme || 'dark');
-    
-    // Cursor style
+
     const getCursorStyle = () => {
         switch(config?.cursorStyle) {
             case 'bar':
@@ -118,64 +115,14 @@ const TerminalPreview = ({ config }) => {
     
     const cursorStyle = getCursorStyle();
     const blinkAnimation = config?.cursorBlink ? 'blink 1s step-end infinite' : 'none';
-    
-    // Get proper font family display
+
     const getFontDisplay = () => {
-        const fontFamily = config?.fontFamily || 'ubuntuMono';
-        
-        // Map internal font names to display names with special styling
-        const fontMap = {
-            'monospace': {
-                family: 'monospace',
-                letterSpacing: '0px',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-mono'
-            },
-            'consolas': {
-                family: 'Consolas, "Lucida Console", Monaco, monospace',
-                letterSpacing: '0.02em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-consolas'
-            },
-            'firaCode': {
-                family: '"Fira Code", "DejaVu Sans Mono", Courier, monospace',
-                letterSpacing: '0.01em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-fira'
-            },
-            'cascadiaCode': {
-                family: '"Cascadia Code", "Segoe UI Mono", "Lucida Console", monospace',
-                letterSpacing: '0.01em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-cascadia'
-            },
-            'sourceCodePro': {
-                family: '"Source Code Pro", "Liberation Mono", "Courier New", monospace',
-                letterSpacing: '0.025em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-source'
-            },
-            'ubuntuMono': {
-                family: '"Ubuntu Mono", Consolas, monospace',
-                letterSpacing: '0.1em',
-                weight: config?.fontWeight === 'bold' ? 'bold' : '500',
-                className: 'font-ubuntu'
-            },
-            'jetBrainsMono': {
-                family: '"JetBrains Mono", "Fira Mono", monospace',
-                letterSpacing: '0.03em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-jetbrains'
-            },
-            'menlo': {
-                family: 'Menlo, Monaco, "Courier New", monospace',
-                letterSpacing: '0.03em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-menlo'
-            }
+        return {
+            family: '"Hack Nerd Font Mono", "Hack Nerd Font", "Symbols Nerd Font Mono", monospace',
+            weight: config?.fontWeight || 'normal',
+            className: 'font-nerd',
+            transform: 'none'
         };
-        
-        return fontMap[fontFamily] || fontMap.ubuntuMono;
     };
     
     const fontDisplay = getFontDisplay();
@@ -195,8 +142,7 @@ const TerminalPreview = ({ config }) => {
                 fontFamily: fontDisplay.family,
                 fontSize: `${config?.fontSize || 14}px`,
                 fontWeight: fontDisplay.weight,
-                letterSpacing: fontDisplay.letterSpacing || `${config?.letterSpacing || 0}px`,
-                lineHeight: config?.lineHeight || 1,
+                lineHeight: config?.lineHeight || 1.3,
                 padding: '10px',
                 boxSizing: 'border-box',
                 border: '1px solid',
@@ -234,17 +180,14 @@ TerminalPreview.propTypes = {
 };
 
 const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHost }) => {
-    // Default terminal customization values
     const defaultTerminalConfig = {
         theme: 'dark',
         cursorStyle: 'block',
-        fontFamily: 'ubuntuMono',
+        fontFamily: 'nerdFont',
         fontSize: 14,
         fontWeight: 'normal',
-        lineHeight: 1,
-        letterSpacing: 0,
-        cursorBlink: true,
-        sshAlgorithm: 'default'
+        lineHeight: 1.3,
+        cursorBlink: true
     };
     
     const [form, setForm] = useState({
@@ -325,6 +268,22 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
             setErrorMessage('');
         }
     }, [isHidden, hostConfig]);
+
+    useEffect(() => {
+        if (hostConfig && !isHidden) {
+            const config = { ...hostConfig };
+
+            if (config.terminalConfig) {
+                config.terminalConfig.fontFamily = 'nerdFont';
+            } else {
+                config.terminalConfig = {
+                    fontFamily: 'nerdFont'
+                };
+            }
+            
+            setForm(config);
+        }
+    }, [hostConfig, isHidden]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -425,6 +384,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
 
             const newConfig = {
                 _id: hostConfig._id,
+                id: hostConfig._id,
                 name: form.name || form.ip,
                 folder: form.folder,
                 ip: form.ip,
@@ -443,12 +403,18 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                     newConfig.keyType = form.keyType;
                 }
             }
-            
+
+            const oldConfigWithId = {
+                ...hostConfig,
+                _id: hostConfig._id,
+                id: hostConfig._id
+            };
+
             setIsEditHostHidden(true);
-            
+
             await new Promise(resolve => setTimeout(resolve, 300));
             
-            await handleEditHost(hostConfig, newConfig);
+            await handleEditHost(oldConfigWithId, newConfig);
             
             setActiveTab(0);
         } catch (error) {
@@ -944,35 +910,8 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                                             alignItems: 'center',
                                         }}
                                     >
-                                        <TextFormatIcon sx={{ mr: 1 }} /> Text
+                                        <FontDownloadIcon sx={{ mr: 1 }} /> Font
                                     </Typography>
-                                    
-                                    <FormControl sx={{ mb: 2 }}>
-                                        <FormLabel>Font Family</FormLabel>
-                                        <Select
-                                            value={form.terminalConfig?.fontFamily || 'ubuntuMono'}
-                                            onChange={(e, val) => setForm(prev => ({
-                                                ...prev,
-                                                terminalConfig: {
-                                                    ...prev.terminalConfig,
-                                                    fontFamily: val
-                                                }
-                                            }))}
-                                            sx={{
-                                                backgroundColor: theme.palette.general.primary,
-                                                color: theme.palette.text.primary,
-                                            }}
-                                        >
-                                            <Option value="monospace">Monospace</Option>
-                                            <Option value="consolas">Consolas</Option>
-                                            <Option value="firaCode">Fira Code</Option>
-                                            <Option value="cascadiaCode">Cascadia Code</Option>
-                                            <Option value="sourceCodePro">Source Code Pro</Option>
-                                            <Option value="ubuntuMono">Ubuntu Mono</Option>
-                                            <Option value="jetBrainsMono">JetBrains Mono</Option>
-                                            <Option value="menlo">Menlo</Option>
-                                        </Select>
-                                    </FormControl>
 
                                     <FormControl sx={{ mb: 2 }}>
                                         <FormLabel>Font Size: {form.terminalConfig?.fontSize || 14}px</FormLabel>
@@ -1016,9 +955,9 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                                     </FormControl>
 
                                     <FormControl sx={{ mb: 2 }}>
-                                        <FormLabel>Line Height: {form.terminalConfig?.lineHeight || 1}</FormLabel>
+                                        <FormLabel>Line Height: {form.terminalConfig?.lineHeight || 1.3}</FormLabel>
                                         <Slider
-                                            value={form.terminalConfig?.lineHeight || 1}
+                                            value={form.terminalConfig?.lineHeight || 1.3}
                                             min={0.8}
                                             max={2}
                                             step={0.1}
@@ -1027,26 +966,6 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                                                 terminalConfig: {
                                                     ...prev.terminalConfig,
                                                     lineHeight: val
-                                                }
-                                            }))}
-                                            sx={{
-                                                color: theme.palette.text.primary,
-                                            }}
-                                        />
-                                    </FormControl>
-
-                                    <FormControl sx={{ mb: 2 }}>
-                                        <FormLabel>Letter Spacing: {form.terminalConfig?.letterSpacing || 0}px</FormLabel>
-                                        <Slider
-                                            value={form.terminalConfig?.letterSpacing || 0}
-                                            min={-1}
-                                            max={3}
-                                            step={0.5}
-                                            onChange={(e, val) => setForm(prev => ({
-                                                ...prev,
-                                                terminalConfig: {
-                                                    ...prev.terminalConfig,
-                                                    letterSpacing: val
                                                 }
                                             }))}
                                             sx={{

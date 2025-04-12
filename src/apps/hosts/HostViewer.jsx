@@ -394,7 +394,6 @@ function HostViewer({
 
     const handleEditHost = async (oldConfig, newConfig = null) => {
         try {
-
             if (editingTimeoutId.current) {
                 clearTimeout(editingTimeoutId.current);
                 editingTimeoutId.current = null;
@@ -404,57 +403,63 @@ function HostViewer({
                 return;
             }
 
+            let hostId = oldConfig._id || oldConfig.id;
+            let hostToEdit = null;
 
-            let hostToEdit = selectedHost;
+            if (hostId) {
+                hostToEdit = hosts.find(host => host._id === hostId || host.id === hostId);
+            }
 
+            if (!hostToEdit) {
+                hostToEdit = selectedHost;
+            }
 
-            if (!hostToEdit || !hostToEdit._id) {
+            if (!hostToEdit || (!hostToEdit._id && !hostToEdit.id)) {
                 hostToEdit = hosts.find(host =>
                     host.config && host.config.ip === oldConfig.ip &&
                     host.config.user === oldConfig.user
                 );
             }
 
-
-            if (!hostToEdit || !hostToEdit._id) {
+            if (!hostToEdit || (!hostToEdit._id && !hostToEdit.id)) {
                 return;
             }
 
-
-            const editingId = hostToEdit._id;
-
-
+            const editingId = hostToEdit._id || hostToEdit.id;
             setEditingHostId(editingId);
 
             if (!newConfig) {
                 const configWithConnectionType = {
                     ...oldConfig,
+                    _id: editingId,
+                    id: editingId,
                     connectionType: oldConfig.connectionType || 'ssh'
                 };
                 openEditPanel(configWithConnectionType);
-
                 return;
             }
-
 
             if (!newConfig.tags && oldConfig.tags) {
                 newConfig.tags = oldConfig.tags;
             }
 
-
-            if (!newConfig._id && oldConfig._id) {
-                newConfig._id = oldConfig._id;
-            }
+            newConfig._id = editingId;
+            newConfig.id = editingId;
+            oldConfig._id = editingId;
+            oldConfig.id = editingId;
 
             if (!newConfig.connectionType && oldConfig.connectionType) {
                 newConfig.connectionType = oldConfig.connectionType;
             }
 
-            const result = await editHost(oldConfig, newConfig);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const result = await userRef.current.editHost({
+                oldHostConfig: oldConfig, 
+                newHostConfig: newConfig
+            });
+
             await fetchHosts();
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await fetchHosts();
+
+            setTimeout(() => fetchHosts(), 1000);
 
             editingTimeoutId.current = setTimeout(() => {
                 setEditingHostId(null);
@@ -463,7 +468,6 @@ function HostViewer({
 
             return result;
         } catch (err) {
-
             await new Promise(resolve => setTimeout(resolve, 500));
             setEditingHostId(null);
             throw err;

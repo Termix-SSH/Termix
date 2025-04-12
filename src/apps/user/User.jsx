@@ -206,7 +206,8 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
             });
 
             if (!response?.success) {
-                throw new Error(response?.error || "Failed to add admin user");
+                const errorMsg = response?.error || "Failed to add admin user";
+                throw new Error(errorMsg);
             }
             
             return true;
@@ -242,25 +243,29 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         if (!currentUser.current) return onFailure("Not authenticated");
 
         try {
+            if (!hostConfig || !hostConfig.hostConfig) {
+                return onFailure("Invalid host configuration");
+            }
+
+            if (!hostConfig.hostConfig.ip || !hostConfig.hostConfig.user) {
+                return onFailure("Host must have IP and username");
+            }
+
+            if (!hostConfig.hostConfig.name || hostConfig.hostConfig.name.trim() === '') {
+                hostConfig.hostConfig.name = hostConfig.hostConfig.ip;
+            }
+
             const existingHosts = await getAllHosts();
 
             const duplicateNameHost = existingHosts.find(host => 
-                host.config.name && 
+                host && host.config && host.config.name && 
+                typeof host.config.name === 'string' &&
+                typeof hostConfig.hostConfig.name === 'string' &&
                 host.config.name.toLowerCase() === hostConfig.hostConfig.name.toLowerCase()
             );
             
             if (duplicateNameHost) {
                 return onFailure("A host with this name already exists. Please choose a different name.");
-            }
-
-            if (!hostConfig.hostConfig.name) {
-                const duplicateIpHost = existingHosts.find(host => 
-                    host.config.ip.toLowerCase() === hostConfig.hostConfig.ip.toLowerCase()
-                );
-                
-                if (duplicateIpHost) {
-                    return onFailure("A host with this IP already exists. Please provide a unique name.");
-                }
             }
 
             if (!hostConfig.hostConfig.terminalConfig) {
@@ -281,7 +286,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 socketRef.current.emit("saveHostConfig", {
                     userId: currentUser.current.id,
                     sessionToken: currentUser.current.sessionToken,
-                    ...hostConfig
+                    hostConfig: hostConfig.hostConfig
                 }, resolve);
             });
 
@@ -304,35 +309,61 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 }, resolve);
             });
 
-            if (response?.success) {
-                return response.hosts.map(host => ({
-                    ...host,
-                    config: host.config ? {
-                        name: host.config.name || '',
-                        folder: host.config.folder || '',
-                        ip: host.config.ip || '',
-                        user: host.config.user || '',
-                        port: host.config.port || '22',
-                        password: host.config.password || '',
-                        sshKey: host.config.sshKey || '',
-                        keyType: host.config.keyType || '',
-                        isPinned: host.isPinned || false,
-                        tags: host.config.tags || host.tags || [],
-                        terminalConfig: host.config.terminalConfig || {
-                            theme: 'dark',
-                            cursorStyle: 'block',
-                            fontFamily: 'ubuntuMono',
-                            fontSize: 14,
-                            fontWeight: 'normal',
-                            lineHeight: 1,
-                            letterSpacing: 0,
-                            cursorBlink: true,
-                            sshAlgorithm: 'default'
+            if (response?.success && Array.isArray(response.hosts)) {
+                return response.hosts.map(host => {
+                    if (!host) return null;
+
+                    return {
+                        ...host,
+                        config: host.config ? {
+                            name: host.config.name || host.name || '',
+                            folder: host.config.folder || host.folder || '',
+                            ip: host.config.ip || host.ip || '',
+                            user: host.config.user || host.user || '',
+                            port: host.config.port || host.port || '22',
+                            password: host.config.password || host.password || '',
+                            sshKey: host.config.sshKey || host.sshKey || '',
+                            keyType: host.config.keyType || host.keyType || '',
+                            isPinned: host.isPinned || false,
+                            tags: host.config.tags || host.tags || [],
+                            terminalConfig: host.config.terminalConfig || {
+                                theme: 'dark',
+                                cursorStyle: 'block',
+                                fontFamily: 'ubuntuMono',
+                                fontSize: 14,
+                                fontWeight: 'normal',
+                                lineHeight: 1,
+                                letterSpacing: 0,
+                                cursorBlink: true,
+                                sshAlgorithm: 'default'
+                            }
+                        } : {
+                            name: host.name || '',
+                            folder: host.folder || '',
+                            ip: host.ip || '',
+                            user: host.user || '',
+                            port: host.port || '22',
+                            password: host.password || '',
+                            sshKey: host.sshKey || '',
+                            keyType: host.keyType || '',
+                            isPinned: host.isPinned || false,
+                            tags: host.tags || [],
+                            terminalConfig: host.terminalConfig || {
+                                theme: 'dark',
+                                cursorStyle: 'block',
+                                fontFamily: 'ubuntuMono',
+                                fontSize: 14,
+                                fontWeight: 'normal',
+                                lineHeight: 1,
+                                letterSpacing: 0,
+                                cursorBlink: true,
+                                sshAlgorithm: 'default'
+                            }
                         }
-                    } : {}
-                })).filter(host => host.config && host.config.ip && host.config.user);
+                    };
+                }).filter(host => host && host.config && host.config.ip && host.config.user);
             } else {
-                throw new Error(response?.error || "Failed to fetch hosts");
+                return [];
             }
         } catch (error) {
             onFailure(error.message);
@@ -364,16 +395,49 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         if (!currentUser.current) return onFailure("Not authenticated");
 
         try {
-            const existingHosts = await getAllHosts();
+            if (!oldHostConfig || !newHostConfig) {
+                return onFailure("Invalid host configuration");
+            }
 
-            const duplicateNameHost = existingHosts.find(host => 
-                host.config.name && 
-                host.config.name.toLowerCase() === newHostConfig.name.toLowerCase() &&
-                host.config.ip.toLowerCase() !== oldHostConfig.ip.toLowerCase()
-            );
-            
-            if (duplicateNameHost) {
-                return onFailure("A host with this name already exists. Please choose a different name.");
+            if (!newHostConfig.ip || !newHostConfig.user) {
+                return onFailure("Host must have IP and username");
+            }
+
+            if (!oldHostConfig._id && !oldHostConfig.id) {
+                return onFailure("Cannot identify host to edit: missing ID");
+            }
+
+            const hostId = oldHostConfig._id || oldHostConfig.id;
+            oldHostConfig._id = hostId;
+            oldHostConfig.id = hostId;
+            newHostConfig._id = hostId;
+            newHostConfig.id = hostId;
+
+            if (!newHostConfig.name || newHostConfig.name.trim() === '') {
+                newHostConfig.name = newHostConfig.ip;
+            }
+
+            const isNameUnchanged = 
+                oldHostConfig.name && 
+                newHostConfig.name && 
+                oldHostConfig.name.toLowerCase() === newHostConfig.name.toLowerCase();
+
+            if (!isNameUnchanged) {
+                const existingHosts = await getAllHosts();
+
+                const duplicateNameHost = existingHosts.find(host => 
+                    host && 
+                    host.config && 
+                    host.config.name && 
+                    typeof host.config.name === 'string' &&
+                    typeof newHostConfig.name === 'string' &&
+                    host.config.name.toLowerCase() === newHostConfig.name.toLowerCase() &&
+                    host._id !== hostId
+                );
+                
+                if (duplicateNameHost) {
+                    return onFailure(`Host with name "${newHostConfig.name}" already exists. Please choose a different name.`);
+                }
             }
 
             if (!newHostConfig.terminalConfig) {
@@ -402,8 +466,11 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
             if (!response?.success) {
                 throw new Error(response?.error || "Failed to edit host");
             }
+            
+            return response;
         } catch (error) {
             onFailure(error.message);
+            return { success: false, error: error.message };
         }
     };
 

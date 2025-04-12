@@ -17,7 +17,9 @@ export default function ProfileModal({
     handleAddAdmin,
     handleToggleAccountCreation,
     checkAccountCreationStatus,
-    getAllAdmins
+    getAllAdmins,
+    adminErrorMessage,
+    setAdminErrorMessage
 }) {
     const [isConfirmDeleteHidden, setIsConfirmDeleteHidden] = useState(true);
     const [isAdminModalHidden, setIsAdminModalHidden] = useState(true);
@@ -101,7 +103,7 @@ export default function ProfileModal({
                         </Button>
 
                         <div className="text-center text-xs text-gray-400">
-                            v0.4
+                            v0.3
                         </div>
                     </div>
                 </div>
@@ -131,6 +133,8 @@ export default function ProfileModal({
                     handleToggleAccountCreation={handleToggleAccountCreation}
                     checkAccountCreationStatus={checkAccountCreationStatus}
                     getAllAdmins={getAllAdmins}
+                    adminErrorMessage={adminErrorMessage}
+                    setAdminErrorMessage={setAdminErrorMessage}
                 />
             )}
         </>
@@ -146,5 +150,7 @@ ProfileModal.propTypes = {
     handleAddAdmin: PropTypes.func,
     handleToggleAccountCreation: PropTypes.func,
     checkAccountCreationStatus: PropTypes.func,
-    getAllAdmins: PropTypes.func
+    getAllAdmins: PropTypes.func,
+    adminErrorMessage: PropTypes.string,
+    setAdminErrorMessage: PropTypes.func
 };

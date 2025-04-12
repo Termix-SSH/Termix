@@ -232,13 +232,14 @@ function Launchpad({
                             <HostViewer
                                 getHosts={getHosts}
                                 connectToHost={(hostConfig) => {
-                                    if (!hostConfig || typeof hostConfig !== 'object') {
-                                        return;
+                                    try {
+                                        if (!hostConfig || !hostConfig.ip || !hostConfig.user) return;
+
+                                        connectToHost(hostConfig);
+
+                                        setTimeout(() => onClose(), 100);
+                                    } catch (error) {
                                     }
-                                    if (!hostConfig.ip || !hostConfig.user) {
-                                        return;
-                                    }
-                                    connectToHost(hostConfig);
                                 }}
                                 setIsAddHostHidden={setIsAddHostHidden}
                                 deleteHost={deleteHost}

@@ -24,7 +24,7 @@ const AdminModal = ({
     handleAddAdmin, 
     handleToggleAccountCreation,
     checkAccountCreationStatus,
-    getAllAdmins 
+    getAllAdmins,
 }) => {
     const [username, setUsername] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +39,7 @@ const AdminModal = ({
 
     const loadData = async () => {
         setIsLoading(true);
+        
         try {
             const status = await checkAccountCreationStatus();
             setAccountCreationEnabled(status.allowed);
@@ -55,12 +56,16 @@ const AdminModal = ({
         event.preventDefault();
         event.stopPropagation();
         if (isLoading || !username.trim()) return;
-        
+
         setIsLoading(true);
+        
         try {
-            await handleAddAdmin(username.trim());
-            setUsername('');
-            await loadData();
+            const result = await handleAddAdmin(username.trim());
+            if (result) {
+                setUsername('');
+                await loadData();
+            }
+        } catch (error) {
         } finally {
             setIsLoading(false);
         }
@@ -68,11 +73,13 @@ const AdminModal = ({
 
     const handleToggle = async () => {
         setIsLoading(true);
+        
         try {
             const result = await handleToggleAccountCreation(!accountCreationEnabled);
             if (result !== null) {
                 setAccountCreationEnabled(result);
             }
+        } catch (error) {
         } finally {
             setIsLoading(false);
         }
@@ -224,7 +231,9 @@ AdminModal.propTypes = {
     handleAddAdmin: PropTypes.func.isRequired,
     handleToggleAccountCreation: PropTypes.func.isRequired,
     checkAccountCreationStatus: PropTypes.func.isRequired,
-    getAllAdmins: PropTypes.func.isRequired
+    getAllAdmins: PropTypes.func.isRequired,
+    adminErrorMessage: PropTypes.string,
+    setAdminErrorMessage: PropTypes.func
 };
 
 export default AdminModal; 

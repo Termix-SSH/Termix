@@ -365,18 +365,6 @@ const terminalThemes = {
     },
 };
 
-
-const fontFamilyMap = {
-    monospace: '"Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", monospace',
-    consolas: '"Consolas Nerd Font", "Consolas", "Lucida Console", Monaco, "Ubuntu Mono Nerd Font", monospace',
-    firaCode: '"Fira Code Nerd Font", "FiraCode Nerd Font", "Fira Code", "Ubuntu Mono Nerd Font", "DejaVu Sans Mono", Courier, monospace',
-    cascadiaCode: '"Cascadia Code Nerd Font", "CascadiaCode Nerd Font", "Cascadia Code", "Ubuntu Mono Nerd Font", "Segoe UI Mono", "Lucida Console", monospace',
-    sourceCodePro: '"Source Code Pro Nerd Font", "SourceCodePro Nerd Font", "Source Code Pro", "Ubuntu Mono Nerd Font", "Liberation Mono", "Courier New", monospace',
-    ubuntuMono: '"Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", "Noto Color Emoji", monospace',
-    jetBrainsMono: '"JetBrains Mono Nerd Font", "JetBrainsMono Nerd Font", "JetBrains Mono", "Ubuntu Mono Nerd Font", "Fira Mono", monospace',
-    menlo: '"Menlo Nerd Font", "Menlo", "Ubuntu Mono Nerd Font", Monaco, "Courier New", monospace'
-};
-
 export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidden, setErrorMessage, setIsErrorHidden, title, showTitle }, ref) => {
     const terminalRef = useRef(null);
     const socketRef = useRef(null);
@@ -388,7 +376,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         const terminalContainer = terminalRef.current;
         const parentContainer = terminalContainer?.parentElement;
 
-        if (!parentContainer || parentContainer.clientWidth === 0) return;
+        if (!parentContainer || parentContainer.clientWidth === 0 || !terminalInstance.current) return;
 
         const parentWidth = parentContainer.clientWidth;
         const parentHeight = parentContainer.clientHeight;
@@ -396,130 +384,55 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         terminalContainer.style.width = `${parentWidth}px`;
         terminalContainer.style.height = `${parentHeight}px`;
 
-        requestAnimationFrame(() => {
-            fitAddon.current.fit();
-            if (socketRef.current && terminalInstance.current) {
-                const { cols, rows } = terminalInstance.current;
-                socketRef.current.emit("resize", { cols, rows });
-            }
-        });
+        fitAddon.current.fit();
+
+        const { cols, rows } = terminalInstance.current;
+
+        const finalCols = Math.max(cols, 10);
+        const finalRows = Math.max(rows, 5);
+
+        if (socketRef.current && socketRef.current.connected) {
+            socketRef.current.emit("resize", { cols: finalCols, rows: finalRows });
+        }
     };
 
     useImperativeHandle(ref, () => ({
         resizeTerminal: resizeTerminal,
-        socketRef: socketRef,
     }));
 
     useEffect(() => {
         if (!hostConfig || !terminalRef.current) return;
 
-
         const terminalConfig = hostConfig.terminalConfig || {};
         const selectedTheme = terminalConfig.theme || 'dark';
         const themeColors = terminalThemes[selectedTheme] || terminalThemes.dark;
 
-
-        const fontFamily = terminalConfig.fontFamily || 'ubuntuMono';
         const fontSize = terminalConfig.fontSize || 14;
         const fontWeight = terminalConfig.fontWeight || 'normal';
-        const letterSpacing = terminalConfig.letterSpacing || 0;
-        const lineHeight = terminalConfig.lineHeight || 1;
+        const letterSpacing = 0;
+        const lineHeight = terminalConfig.lineHeight || 1.3;
         const cursorStyle = terminalConfig.cursorStyle || 'block';
         const cursorBlink = terminalConfig.cursorBlink !== undefined ? terminalConfig.cursorBlink : true;
-        const finalFontFamily = getFontFamily(terminalConfig);
-
 
         terminalInstance.current = new Terminal({
-            cursorBlink,
-            cursorStyle,
+            cursorBlink: cursorBlink,
+            cursorStyle: cursorStyle,
             theme: themeColors,
-            fontFamily: finalFontFamily,
-            fontSize,
-            fontWeight,
-            letterSpacing,
-            lineHeight,
-            scrollback: 1000,
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            letterSpacing: letterSpacing,
+            lineHeight: lineHeight,
+            scrollback: 5000,
             ignoreBracketedPasteMode: true,
             padding: 2,
-            allowTransparency: true
+            rendererType: 'canvas',
+            allowProposedApi: true,
+            experimentalCharAtlas: 'dynamic',
+            windowsMode: true,
+            convertEol: true,
+            cols: 80,
+            rows: 24,
         });
-
-
-        const terminalElement = terminalRef.current;
-        if (terminalElement) {
-
-            terminalElement.style.fontVariantLigatures = 'none';
-            terminalElement.style.letterSpacing = `${letterSpacing}px`;
-
-
-            terminalElement.classList.remove(
-                'font-ubuntuMono',
-                'font-firaCode',
-                'font-jetBrainsMono',
-                'font-sourceCodePro',
-                'font-cascadiaCode',
-                'font-monospace',
-                'font-consolas',
-                'font-menlo'
-            );
-
-
-            switch (fontFamily) {
-                case 'ubuntuMono':
-                    terminalElement.style.letterSpacing = `${letterSpacing + 0.5}px`;
-                    terminalElement.style.fontWeight = fontWeight === 'bold' ? '700' : '500';
-                    break;
-                case 'firaCode':
-                    terminalElement.style.fontVariantLigatures = 'normal';
-                    terminalElement.style.letterSpacing = `${letterSpacing + 0.1}px`;
-                    break;
-                case 'jetBrainsMono':
-                    terminalElement.style.letterSpacing = `${letterSpacing + 0.15}px`;
-                    terminalElement.style.fontWeight = fontWeight === 'bold' ? '700' : '500';
-                    break;
-                case 'cascadiaCode':
-                    terminalElement.style.fontVariantLigatures = 'normal';
-                    terminalElement.style.letterSpacing = `${letterSpacing + 0.05}px`;
-                    break;
-                case 'sourceCodePro':
-                    terminalElement.style.letterSpacing = `${letterSpacing + 0.15}px`;
-                    break;
-                case 'consolas':
-                    terminalElement.style.letterSpacing = `${letterSpacing + 0.2}px`;
-                    break;
-                case 'menlo':
-                    terminalElement.style.letterSpacing = `${letterSpacing + 0.15}px`;
-                    break;
-            }
-
-            terminalElement.classList.add(`font-${fontFamily}`);
-
-        }
-
-        if (terminalConfig.theme) {
-            if (terminalRef.current) {
-                terminalRef.current.style.backgroundColor = themeColors.background;
-                terminalRef.current.style.color = themeColors.foreground;
-            }
-
-
-            const terminalWrapper = terminalRef.current.parentElement;
-            if (terminalWrapper) {
-                terminalWrapper.style.backgroundColor = themeColors.background;
-            }
-
-
-            const outerContainer = document.querySelector('.terminal-container');
-            if (outerContainer) {
-                const terminalBoxes = outerContainer.querySelectorAll('.bg-neutral-800');
-                terminalBoxes.forEach(box => {
-                    box.style.backgroundColor = themeColors.background;
-                });
-            }
-        }
-
-        terminalInstance.current.loadAddon(fitAddon.current);
-        terminalInstance.current.open(terminalRef.current);
 
         const socket = io(
             window.location.hostname === "localhost"
@@ -536,9 +449,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         );
         socketRef.current = socket;
 
-
-        const terminalId = hostConfig.id || Date.now();
-
+        const terminalId = `${hostConfig.ip}-${hostConfig.user}-${Date.now()}`;
 
         socket.terminalId = terminalId;
         socket.hostData = {
@@ -546,24 +457,32 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             user: hostConfig.user,
         };
 
-
         if (!window.terminalSockets) {
             window.terminalSockets = {};
         }
-
-
         window.terminalSockets[terminalId] = socket;
+
+        terminalInstance.current.loadAddon(fitAddon.current);
+        terminalInstance.current.open(terminalRef.current);
+
+        setTimeout(() => {
+            if (fitAddon.current && terminalInstance.current) {
+                resizeTerminal();
+
+                terminalInstance.current.focus();
+            }
+        }, 0);
 
         socket.on("connect_error", (error) => {
             terminalInstance.current.write(`\r\n*** Socket connection error: ${error.message} ***\r\n`);
-                    });
+        });
 
         socket.on("connect_timeout", () => {
             terminalInstance.current.write(`\r\n*** Socket connection timeout ***\r\n`);
-                    });
+        });
 
         socket.on("error", (err) => {
-                        const isAuthError = err.toLowerCase().includes("authentication") || err.toLowerCase().includes("auth");
+            const isAuthError = err.toLowerCase().includes("authentication") || err.toLowerCase().includes("auth");
             if (isAuthError && !hostConfig.password?.trim() && !hostConfig.sshKey?.trim() && !authModalShown) {
                 authModalShown = true;
                 setIsNoAuthHidden(false);
@@ -573,7 +492,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         socket.on("connect", () => {
             fitAddon.current.fit();
-            resizeTerminal();
             const { cols, rows } = terminalInstance.current;
 
             if (!hostConfig.password?.trim() && !hostConfig.sshKey?.trim()) {
@@ -591,20 +509,44 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 sshAlgorithm: hostConfig.terminalConfig?.sshAlgorithm || 'default'
             };
 
-            socket.emit("connectToHost", cols, rows, sshConfig);
+            socket.emit("connectToHost", Math.max(cols, 10), Math.max(rows, 5), sshConfig);
         });
 
         setTimeout(() => {
             if (terminalInstance.current) {
                 fitAddon.current.fit();
-                resizeTerminal();
                 terminalInstance.current.focus();
+
+                terminalInstance.current.options.wrap = true;
+                terminalInstance.current.options.wordBreak = false;
+
+                const { rows } = terminalInstance.current;
+                for (let i = 0; i < rows; i++) {
+                    terminalInstance.current.refresh(i, i);
+                }
+
+                terminalInstance.current.write('\x1b[?7h');
             }
-        }, 50);
+        }, 100);
 
         socket.on("data", (data) => {
             const decoder = new TextDecoder("utf-8");
-            terminalInstance.current.write(decoder.decode(new Uint8Array(data)));
+            const text = decoder.decode(new Uint8Array(data));
+
+            terminalInstance.current.write(text);
+
+            if (text.includes('\r') && !text.includes('\n') && text.length > 2) {
+                const lastRow = terminalInstance.current.buffer.active.cursorY;
+                if (lastRow >= 0) {
+                    terminalInstance.current.refresh(lastRow, lastRow);
+                }
+            }
+        });
+
+        socket.on("resize", function(data) {
+            if (data && data.cols && data.rows && terminalInstance.current) {
+                terminalInstance.current.resize(data.cols, data.rows);
+            }
         });
 
         let isPasting = false;
@@ -613,6 +555,20 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             terminalInstance.current.onData((data) => {
                 if (socketRef.current && socketRef.current.connected) {
                     socketRef.current.emit("data", data);
+
+                    const needsRefresh =
+                        data.includes('\r') ||
+                        data.includes('\n') ||
+                        data.includes('\u001b') ||
+                        data.length > 5;
+
+                    if (needsRefresh) {
+                        setTimeout(() => {
+                            if (terminalInstance.current) {
+                                terminalInstance.current.refresh(0, terminalInstance.current.rows - 1);
+                            }
+                        }, 50);
+                    }
                 }
             });
 
@@ -624,7 +580,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                     event.preventDefault();
                     navigator.clipboard.readText().then(text => {
                         if (text && socketRef.current?.connected) {
-                            const processedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r");
+                            const processedText = text.replace(/\r\n/g, "\r").replace(/\n/g, "\r");
                             socketRef.current.emit("data", processedText);
                         }
                     }).catch(() => {
@@ -659,35 +615,17 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         });
 
-        socket.on("disconnect", (reason) => {
-            if (terminalInstance.current) {
-                terminalInstance.current.write(`\r\n*** Socket disconnected: ${reason} ***\r\n`);
-            }
-        });
-
-        socket.on("reconnect", (attemptNumber) => {
-            if (terminalInstance.current) {
-                terminalInstance.current.write(`\r\n*** Socket reconnected after ${attemptNumber} attempts ***\r\n`);
-            }
-        });
-
         socket.on("reconnect_error", (error) => {
-                        if (terminalInstance.current) {
+            if (terminalInstance.current) {
                 terminalInstance.current.write(`\r\n*** Socket reconnect error: ${error.message} ***\r\n`);
             }
         });
 
-
         let lastPongTime = Date.now();
         const pingInterval = setInterval(() => {
             if (socketRef.current && socketRef.current.connected) {
-
                 const now = Date.now();
                 if (now - lastPongTime > 15000) {
-                                        if (terminalInstance.current) {
-                        terminalInstance.current.write(`\r\n*** Connection seems stale, attempting to refresh ***\r\n`);
-                    }
-
                     if (socketRef.current) {
                         socketRef.current.disconnect();
                         socketRef.current.connect();
@@ -695,16 +633,13 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                     lastPongTime = now;
                 }
 
-
                 socketRef.current.emit("ping");
             }
         }, 3000);
 
-
         socketRef.current.on("pong", () => {
             lastPongTime = Date.now();
         });
-
 
         socketRef.current.on("ping", () => {
             lastPongTime = Date.now();
@@ -713,12 +648,20 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             }
         });
 
+        terminalInstance.current.onLineFeed(() => {
+            if (terminalInstance.current) {
+                const { rows } = terminalInstance.current;
+                for (let i = Math.max(0, rows - 5); i < rows; i++) {
+                    terminalInstance.current.refresh(i, i);
+                }
+            }
+        });
+
         return () => {
             clearInterval(pingInterval);
 
-
             if (window.terminalSockets && window.terminalSockets[terminalId]) {
-                                delete window.terminalSockets[terminalId];
+                delete window.terminalSockets[terminalId];
             }
 
             if (terminalInstance.current) {
@@ -734,8 +677,39 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
     }, [hostConfig]);
 
     useEffect(() => {
-        resizeTerminal();
-    }, [isVisible]);
+        if (!socketRef.current) {
+            const socket = io(
+                window.location.hostname === "localhost"
+                    ? "http://localhost:8082"
+                    : "/",
+                {
+                    path: "/ssh.io/socket.io",
+                    transports: ["websocket", "polling"],
+                    reconnection: true,
+                    reconnectionAttempts: 5,
+                    reconnectionDelay: 1000,
+                    timeout: 20000,
+                }
+            );
+            socketRef.current = socket;
+
+            const terminalId = `${hostConfig.ip}-${hostConfig.user}-${Date.now()}`;
+
+            socket.terminalId = terminalId;
+            socket.hostData = {
+                ip: hostConfig.ip,
+                user: hostConfig.user,
+            };
+
+            if (!window.terminalSockets) {
+                window.terminalSockets = {};
+            }
+            window.terminalSockets[terminalId] = socket;
+        }
+
+        return () => {
+        };
+    }, [hostConfig]);
 
     useEffect(() => {
         const terminalContainer = terminalRef.current;
@@ -745,13 +719,17 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         if (!parentContainer) return;
 
         const resizeObserver = new ResizeObserver(() => {
-            resizeTerminal();
+            if (terminalInstance.current && fitAddon.current) {
+                resizeTerminal();
+            }
         });
 
         resizeObserver.observe(parentContainer);
 
         const handleWindowResize = () => {
-            resizeTerminal();
+            if (terminalInstance.current && fitAddon.current) {
+                resizeTerminal();
+            }
         };
 
         window.addEventListener('resize', handleWindowResize);
@@ -762,6 +740,63 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         };
     }, []);
 
+    useEffect(() => {
+        if (!terminalInstance.current || !hostConfig) return;
+
+        const terminalId = `terminal-${hostConfig.ip.replace(/\./g, '-')}`;
+        const terminalElement = terminalRef.current;
+
+        if (terminalElement) {
+            terminalElement.id = terminalId;
+
+            terminalElement.classList.add('terminal-nerd-font');
+
+            const styleElement = document.createElement('style');
+            styleElement.innerHTML = `
+                /* Use locally installed fonts instead of trying to download from GitHub */
+                @font-face {
+                    font-family: 'Hack Nerd Font';
+                    src: local('Hack Nerd Font'), local('Hack Nerd Font Mono');
+                    font-style: normal;
+                    font-weight: 400;
+                    font-display: swap;
+                }
+                
+                /* Fall back to standard monospace fonts if Nerd Font is not available */
+                #${terminalId} .xterm-rows span {
+                    font-family: 'Hack Nerd Font Mono', 'Hack Nerd Font', 'Consolas', 'DejaVu Sans Mono', 'Liberation Mono', 'Menlo', monospace !important;
+                    font-variant-ligatures: no-contextual !important;
+                    text-rendering: optimizeLegibility !important;
+                    font-feature-settings: "liga" 0, "calt" 0, "dlig" 0 !important;
+                    letter-spacing: 0 !important;
+                }
+            `;
+            document.head.appendChild(styleElement);
+
+            setTimeout(() => {
+                if (terminalInstance.current) {
+                    const currentSize = terminalInstance.current.options.fontSize;
+                    terminalInstance.current.options.fontSize = currentSize + 1;
+                    terminalInstance.current.options.fontSize = currentSize;
+                    fitAddon.current.fit();
+                }
+            }, 100);
+
+            return () => {
+                if (styleElement && document.head.contains(styleElement)) {
+                    document.head.removeChild(styleElement);
+                }
+            };
+        }
+    }, [hostConfig, terminalInstance.current, terminalRef.current]);
+
+    useEffect(() => {
+        if (isVisible && terminalInstance.current && fitAddon.current) {
+            setTimeout(() => {
+                resizeTerminal();
+            }, 50);
+        }
+    }, [isVisible]);
 
     const initialBgColor = hostConfig?.terminalConfig?.theme
         ? (terminalThemes[hostConfig.terminalConfig.theme]?.background || '#1e1e1e')
@@ -784,7 +819,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'flex-start',
-                        fontFamily: "'Ubuntu Mono', monospace",
+                        fontFamily: '"Hack Nerd Font", "Symbols Nerd Font", monospace',
                         overflow: 'hidden',
                         whiteSpace: 'nowrap',
                         textOverflow: 'ellipsis',
@@ -816,17 +851,16 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                             ? `${hostConfig.user}@${hostConfig.ip}:${hostConfig.port}`
                             : (title || hostConfig.name || hostConfig.ip)
                         }
-                        {}
                         <span style={{ marginLeft: '5px' }}></span>
                     </span>
                 </div>
             )}
             <div
-                className="flex-grow relative"
+                className="flex-grow"
                 style={{
                     backgroundColor: initialBgColor,
                     height: showTitle ? 'calc(100% - 26px)' : '100%',
-                    padding: '2px'
+                    position: 'relative'
                 }}
                 onClick={() => {
                     if (terminalInstance.current) {
@@ -836,10 +870,14 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             >
                 <div
                     ref={terminalRef}
-                    className="w-full h-full overflow-hidden text-left"
+                    className="terminal"
                     style={{
                         visibility: isVisible ? 'visible' : 'hidden',
                         backgroundColor: initialBgColor,
+                        position: 'absolute',
+                        width: '100%',
+                        height: '100%',
+                        transform: 'translateY(2px) translateX(3px)',
                     }}
                 />
             </div>
@@ -875,15 +913,4 @@ NewTerminal.propTypes = {
     setIsErrorHidden: PropTypes.func.isRequired,
     title: PropTypes.string,
     showTitle: PropTypes.bool
-};
-
-const getFontFamily = (terminalConfig) => {
-    if (!terminalConfig) {
-        return '"Ubuntu Mono Nerd Font", "UbuntuMono Nerd Font", "Ubuntu Mono", "Noto Color Emoji", monospace';
-    }
-
-    const fontFamily = terminalConfig.fontFamily || 'ubuntuMono';
-    const fontString = fontFamilyMap[fontFamily] || fontFamilyMap.ubuntuMono;
-
-    return fontString;
 };

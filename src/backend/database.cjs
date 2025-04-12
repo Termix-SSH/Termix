@@ -183,6 +183,14 @@ const decryptData = (encryptedData, userId, sessionToken) => {
     }
 };
 
+db.function('decrypt', (encryptedData, userId, sessionToken) => {
+    try {
+        return JSON.stringify(decryptData(encryptedData, userId, sessionToken));
+    } catch (error) {
+        logger.error('SQLite decrypt function failed:', error);
+        return null;
+    }
+});
 
 const statements = {
     findUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
@@ -231,7 +239,9 @@ const statements = {
     removeSnippetUser: db.prepare('DELETE FROM snippet_users WHERE snippetId = ? AND userId = ?'),
     insertSnippet: db.prepare('INSERT INTO snippets (name, content, createdBy, folder, isPinned) VALUES (?, ?, ?, ?, ?)'),
     checkSnippetShare: db.prepare('SELECT * FROM snippet_users WHERE snippetId = ? AND userId = ?'),
-    updateSnippetPinStatus: db.prepare('UPDATE snippets SET isPinned = ? WHERE id = ?')
+    updateSnippetPinStatus: db.prepare('UPDATE snippets SET isPinned = ? WHERE id = ?'),
+    checkHostSharing: db.prepare('SELECT * FROM host_users WHERE hostId = ? AND userId = ?'),
+    findHostByIpAndUser: db.prepare('SELECT h.* FROM hosts h JOIN users u ON h.createdBy = u.id WHERE h.createdBy = ? AND json_extract(decrypt(h.config, u.id, ?), \'$.ip\') = ? AND json_extract(decrypt(h.config, u.id, ?), \'$.user\') = ?')
 };
 
 
@@ -379,7 +389,6 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Invalid credentials' });
             }
 
-            logger.info(`User logged in: ${user.username}`);
             callback({ success: true, user: {
                 id: user.id,
                 username: user.username,
@@ -474,13 +483,18 @@ io.of('/database.io').on('connection', (socket) => {
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user || !user.isAdmin) {
                 logger.warn(`Unauthorized attempt to add admin: ${userId}`);
-                return callback({ error: 'Not authorized' });
+                return callback({ error: 'Not authorized. You must be an admin to perform this action.' });
             }
 
             const targetUser = statements.findUserByUsername.get(targetUsername);
             if (!targetUser) {
                 logger.warn(`Target user not found: ${targetUsername}`);
-                return callback({ error: 'User not found' });
+                return callback({ error: `User "${targetUsername}" does not exist.` });
+            }
+            
+            if (targetUser.isAdmin) {
+                logger.warn(`User ${targetUsername} is already an admin`);
+                return callback({ error: `User "${targetUsername}" is already an admin.` });
             }
 
             statements.updateUserAdmin.run(1, targetUsername);
@@ -489,7 +503,7 @@ io.of('/database.io').on('connection', (socket) => {
             callback({ success: true });
         } catch (error) {
             logger.error('Error adding admin user:', error);
-            callback({ error: 'Failed to add admin user' });
+            callback({ error: 'Failed to add admin user due to a server error. Please try again.' });
         }
     });
 
@@ -513,20 +527,14 @@ io.of('/database.io').on('connection', (socket) => {
 
     socket.on('saveHostConfig', async ({ userId, sessionToken, hostConfig }, callback) => {
         try {
-            if (!userId || !sessionToken) {
-                logger.warn('Missing authentication parameters');
-                return callback({ error: 'Authentication required' });
+            logger.debug(`Saving host config for user: ${userId}`);
+
+            if (!hostConfig) {
+                logger.warn('Missing host configuration');
+                return callback({ error: 'Missing host configuration' });
             }
 
-            if (!hostConfig || typeof hostConfig !== 'object') {
-                logger.warn('Invalid host config format');
-                return callback({ error: 'Invalid host configuration' });
-            }
-
-            if (!hostConfig.ip || !hostConfig.user) {
-                logger.warn('Invalid host config format');
-                return callback({ error: 'IP and User are required' });
-            }
+            const configData = hostConfig.hostConfig || hostConfig;
 
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
@@ -535,15 +543,17 @@ io.of('/database.io').on('connection', (socket) => {
             }
 
             const cleanConfig = {
-                name: hostConfig.name?.trim(),
-                folder: hostConfig.folder?.trim() || null,
-                ip: hostConfig.ip.trim(),
-                user: hostConfig.user.trim(),
-                port: hostConfig.port || 22,
-                password: hostConfig.password?.trim() || undefined,
-                sshKey: hostConfig.sshKey?.trim() || undefined,
-                tags: hostConfig.tags || [],
-                terminalConfig: hostConfig.terminalConfig || {
+                name: (configData?.name?.trim()) || '',
+                folder: (configData?.folder?.trim()) || null,
+                ip: (configData?.ip?.trim()) || '',
+                user: (configData?.user?.trim()) || '',
+                port: configData?.port || 22,
+                password: (configData?.password?.trim()) || undefined,
+                sshKey: (configData?.sshKey?.trim()) || undefined,
+                keyType: configData?.keyType || '',
+                tags: Array.isArray(configData?.tags) ? configData.tags : [],
+                isPinned: !!configData?.isPinned,
+                terminalConfig: configData?.terminalConfig || {
                     theme: 'dark',
                     cursorStyle: 'block',
                     fontFamily: 'ubuntuMono',
@@ -556,26 +566,26 @@ io.of('/database.io').on('connection', (socket) => {
                 }
             };
 
+            if (!cleanConfig.ip || !cleanConfig.user) {
+                logger.warn('Missing required host properties (IP or username)');
+                return callback({ error: 'IP address and username are required' });
+            }
+
             const finalName = cleanConfig.name || cleanConfig.ip;
 
-
             const db_transaction = db.transaction(() => {
-
-                const existingHostByName = statements.findHostsByName.get(userId, finalName);
-                if (existingHostByName) {
-                    logger.warn(`Host with name ${finalName} already exists for user: ${userId}`);
-                    throw new Error(`Host with name "${finalName}" already exists. Please choose a different name.`);
-                }
-
-
-                if (!cleanConfig.name) {
-                    const hostsWithSameIp = statements.findHostsByCreator.all(userId);
-                    for (const host of hostsWithSameIp) {
-                        const decryptedConfig = decryptData(host.config, userId, sessionToken);
-                        if (decryptedConfig && decryptedConfig.ip.toLowerCase() === cleanConfig.ip.toLowerCase()) {
-                            logger.warn(`Host with IP already exists for user: ${userId}`);
-                            throw new Error(`Host with IP "${cleanConfig.ip}" already exists. Please provide a unique name.`);
+                if (cleanConfig.name && cleanConfig.name.trim() !== '') {
+                    try {
+                        const existingHostByName = statements.findHostsByName.get(userId, finalName);
+                        if (existingHostByName) {
+                            logger.warn(`Host with name ${finalName} already exists for user: ${userId}`);
+                            throw new Error(`Host with name "${finalName}" already exists. Please choose a different name.`);
                         }
+                    } catch (error) {
+                        if (error.message.includes('already exists')) {
+                            throw error;
+                        }
+                        logger.error(`Error checking duplicate names: ${error.message}`);
                     }
                 }
 
@@ -585,7 +595,6 @@ io.of('/database.io').on('connection', (socket) => {
                     throw new Error('Configuration encryption failed');
                 }
 
-
                 const hostId = generateId();
                 statements.createHost.run(
                     hostId,
@@ -593,33 +602,23 @@ io.of('/database.io').on('connection', (socket) => {
                     encryptedConfig,
                     userId,
                     cleanConfig.folder,
-                    hostConfig.isPinned ? 1 : 0
+                    cleanConfig.isPinned ? 1 : 0
                 );
 
-
                 statements.addHostUser.run(hostId, userId);
-
 
                 if (Array.isArray(cleanConfig.tags)) {
                     cleanConfig.tags.forEach(tag => {
                         statements.addHostTag.run(hostId, tag);
                     });
                 }
-
-                return hostId;
             });
 
-            try {
-                const hostId = db_transaction();
-                logger.info(`Host created successfully: ${finalName}`);
-                callback({ success: true });
-            } catch (error) {
-                return callback({ error: error.message });
-            }
-            
-        } catch (error) {
-            logger.error('Host save error:', error);
-            callback({ error: `Host save failed: ${error.message}` });
+            db_transaction();
+            callback({ success: true });
+        } catch (err) {
+            logger.error('Error saving host config:', err);
+            callback({ error: err.message || 'Failed to save host' });
         }
     });
 
@@ -903,6 +902,8 @@ io.of('/database.io').on('connection', (socket) => {
                 return callback({ error: 'Missing host configurations' });
             }
 
+            const oldConfigData = oldHostConfig.hostConfig || oldHostConfig;
+            const newConfigData = newHostConfig.hostConfig || newHostConfig;
 
             const user = statements.findUserByIdAndSessionToken.get(userId, sessionToken);
             if (!user) {
@@ -912,134 +913,146 @@ io.of('/database.io').on('connection', (socket) => {
 
             let hostId = null;
             let hostToEdit = null;
-            
 
-            if (oldHostConfig._id) {
-                hostId = oldHostConfig._id;
+            if (oldConfigData._id || oldConfigData.id) {
+                hostId = oldConfigData._id || oldConfigData.id;
                 hostToEdit = statements.findHostById.get(hostId);
                 
-
-                if (!hostToEdit || hostToEdit.createdBy !== userId) {
-                    logger.warn(`Host not found or unauthorized by ID: ${hostId}`);
-                    return callback({ error: 'Host not found' });
-                }
-            } else {
-
-                const hosts = statements.findHostsByCreator.all(userId);
-                
-                for (const host of hosts) {
-                    const decryptedConfig = decryptData(host.config, userId, sessionToken);
-                    if (decryptedConfig && decryptedConfig.ip === oldHostConfig.ip) {
-                        hostToEdit = host;
-                        hostId = host.id;
-                        break;
+                if (hostToEdit) {
+                    if (hostToEdit.createdBy !== userId) {
+                        const isSharedWithUser = statements.checkHostSharing.get(hostId, userId);
+                        if (!isSharedWithUser) {
+                            logger.warn(`User ${userId} attempted to edit host ${hostId} without permissions`);
+                            return callback({ error: 'You do not have permission to edit this host' });
+                        }
                     }
+                    
+                    logger.debug(`Found host by ID: ${hostId}`);
                 }
+            } 
 
-                if (!hostToEdit) {
-                    logger.warn(`Host not found or unauthorized`);
-                    return callback({ error: 'Host not found' });
+            if (!hostToEdit && oldConfigData.name) {
+                hostToEdit = statements.findHostsByName.get(userId, oldConfigData.name);
+                if (hostToEdit) {
+                    hostId = hostToEdit.id;
+                    logger.debug(`Found host by name: ${oldConfigData.name}, ID: ${hostId}`);
                 }
             }
-            
 
-            if (!hostId) {
-                logger.warn('Could not identify host to edit');
+            if (!hostToEdit && oldConfigData.ip) {
+                const userHosts = statements.findHostsByCreator.all(userId);
+                for (const host of userHosts) {
+                    try {
+                        const config = decryptData(host.config, userId, sessionToken);
+                        if (config && config.ip === oldConfigData.ip) {
+                            hostToEdit = host;
+                            hostId = host.id;
+                            logger.debug(`Found host by IP: ${oldConfigData.ip}, ID: ${hostId}`);
+                            break;
+                        }
+                    } catch (err) {
+                        continue;
+                    }
+                }
+            }
+
+            if (!hostToEdit) {
+                logger.warn(`Host not found for editing by user: ${userId}`);
                 return callback({ error: 'Host not found' });
             }
 
-            const finalName = newHostConfig.name?.trim() || newHostConfig.ip.trim();
+            hostId = hostToEdit.id;
+            logger.debug(`Editing host ${hostId} for user: ${userId}`);
 
-
-            const db_transaction = db.transaction(() => {
-
-                if (finalName.toLowerCase() !== hostToEdit.name.toLowerCase()) {
-                    const existingHostByName = statements.findHostsByName.get(userId, finalName);
-                    if (existingHostByName && existingHostByName.id !== hostId) {
-                        logger.warn(`Host with name ${finalName} already exists for user: ${userId}`);
-                        throw new Error(`Host with name "${finalName}" already exists. Please choose a different name.`);
-                    }
+            const cleanConfig = {
+                name: newConfigData.name || oldConfigData.name || oldConfigData.ip || '',
+                folder: newConfigData.folder !== undefined ? newConfigData.folder : (oldConfigData.folder || ''),
+                ip: newConfigData.ip || oldConfigData.ip || '',
+                user: newConfigData.user || oldConfigData.user || '',
+                port: newConfigData.port || oldConfigData.port || '22',
+                password: newConfigData.password || oldConfigData.password || '',
+                sshKey: newConfigData.sshKey || oldConfigData.sshKey || '',
+                keyType: newConfigData.keyType || oldConfigData.keyType || '',
+                isPinned: newConfigData.isPinned !== undefined ? newConfigData.isPinned : (oldConfigData.isPinned || false),
+                tags: newConfigData.tags || oldConfigData.tags || [],
+                terminalConfig: newConfigData.terminalConfig || oldConfigData.terminalConfig || {
+                    theme: 'dark',
+                    cursorStyle: 'block',
+                    fontFamily: 'ubuntuMono',
+                    fontSize: 14,
+                    fontWeight: 'normal',
+                    lineHeight: 1,
+                    letterSpacing: 0,
+                    cursorBlink: true,
+                    sshAlgorithm: 'default'
                 }
+            };
 
-
-                const hosts = statements.findHostsByCreator.all(userId);
-                
-
-                if (newHostConfig.ip !== oldHostConfig.ip && !newHostConfig.name) {
-                    for (const host of hosts) {
-                        if (host.id === hostId) continue;
-                        
-                        const decryptedConfig = decryptData(host.config, userId, sessionToken);
-                        if (decryptedConfig && decryptedConfig.ip.toLowerCase() === newHostConfig.ip.toLowerCase()) {
-                            logger.warn(`Host with IP already exists for user: ${userId}`);
-                            throw new Error(`Host with IP "${newHostConfig.ip}" already exists. Please provide a unique name.`);
-                        }
-                    }
-                }
-
-                const cleanConfig = {
-                    name: newHostConfig.name?.trim(),
-                    folder: newHostConfig.folder?.trim() || null,
-                    ip: newHostConfig.ip.trim(),
-                    user: newHostConfig.user.trim(),
-                    port: newHostConfig.port || 22,
-                    password: newHostConfig.password?.trim() || undefined,
-                    sshKey: newHostConfig.sshKey?.trim() || undefined,
-                    tags: Array.isArray(newHostConfig.tags) ? newHostConfig.tags : [],
-                    isPinned: newHostConfig.isPinned || false,
-                    terminalConfig: newHostConfig.terminalConfig || {
-                        theme: 'dark',
-                        cursorStyle: 'block',
-                        fontFamily: 'ubuntuMono',
-                        fontSize: 14,
-                        fontWeight: 'normal',
-                        lineHeight: 1,
-                        letterSpacing: 0,
-                        cursorBlink: true,
-                        sshAlgorithm: 'default'
-                    }
-                };
-
-                const encryptedConfig = encryptData(cleanConfig, userId, sessionToken);
-                if (!encryptedConfig) {
-                    logger.error('Encryption failed for host config');
-                    throw new Error('Configuration encryption failed');
-                }
-
-
-                statements.updateHost.run(
-                    finalName,
-                    encryptedConfig,
-                    cleanConfig.folder,
-                    cleanConfig.isPinned ? 1 : 0,
-                    hostId
-                );
-
-
-                statements.deleteHostTags.run(hostId);
-                if (Array.isArray(cleanConfig.tags)) {
-                    cleanConfig.tags.forEach(tag => {
-                        statements.addHostTag.run(hostId, tag);
-                    });
-                }
-
-                return hostId;
-            });
+            const finalName = cleanConfig.name;
 
             try {
-                const updatedHostId = db_transaction();
-                
+                const updateTransaction = db.transaction(() => {
+                    if (finalName && finalName.trim() !== '' && 
+                        finalName.toLowerCase() !== hostToEdit.name?.toLowerCase()) {
+                        try {
+                            const existingHostByName = statements.findHostsByName.get(userId, finalName);
 
-                await new Promise(resolve => setTimeout(resolve, 200));
+                            if (existingHostByName && existingHostByName.id !== hostId) {
+                                logger.warn(`Host with name ${finalName} already exists for user: ${userId}`);
+                                throw new Error(`Host with name "${finalName}" already exists. Please choose a different name.`);
+                            }
+                        } catch (error) {
+                            if (error.message.includes('already exists')) {
+                                throw error;
+                            }
+                            logger.error(`Error checking duplicate names: ${error.message}`);
+                        }
+                    }
+
+                    const encryptedConfig = encryptData(cleanConfig, userId, sessionToken);
+                    if (!encryptedConfig) {
+                        logger.error('Encryption failed for host config');
+                        throw new Error('Configuration encryption failed');
+                    }
+
+                    const updateResult = db.prepare('UPDATE hosts SET name = ?, config = ?, folder = ?, isPinned = ? WHERE id = ?').run(
+                        cleanConfig.name,
+                        encryptedConfig,
+                        cleanConfig.folder || '',
+                        cleanConfig.isPinned ? 1 : 0,
+                        hostId
+                    );
+                    
+                    if (!updateResult || updateResult.changes === 0) {
+                        throw new Error(`Failed to update host: ${hostId}`);
+                    }
+
+                    statements.deleteHostTags.run(hostId);
+                    if (Array.isArray(cleanConfig.tags)) {
+                        cleanConfig.tags.forEach(tag => {
+                            statements.addHostTag.run(hostId, tag);
+                        });
+                    }
+
+                    return hostId;
+                });
+
+                const updatedHostId = updateTransaction();
+
+                const updatedHost = statements.findHostById.get(updatedHostId);
+                if (!updatedHost) {
+                    throw new Error('Host not found after update');
+                }
                 
-                logger.info(`Host edited successfully: ${updatedHostId}`);
+                logger.info(`Host ${hostId} updated successfully`);
                 callback({ success: true, hostId: updatedHostId });
             } catch (error) {
-                return callback({ error: error.message });
+                logger.error(`Error updating host: ${error.message}`);
+                callback({ error: error.message || 'Failed to update host' });
             }
         } catch (error) {
-            logger.error('Host edit error:', error);
-            callback({ error: `Failed to edit host: ${error.message}` });
+            logger.error(`Error in editHost: ${error.message}`);
+            callback({ error: error.message || 'Host editing failed due to an unexpected error' });
         }
     });
 

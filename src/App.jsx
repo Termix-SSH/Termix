@@ -86,6 +86,7 @@ function App() {
     const [isSnippetViewerMenuOpen, setIsSnippetViewerMenuOpen] = useState(null);
     const [hosts, setHosts] = useState([]);
     const [databaseChecked, setDatabaseChecked] = useState(false);
+    const [adminErrorMessage, setAdminErrorMessage] = useState("");
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -269,8 +270,7 @@ function App() {
 
     const handleAddAdmin = async (username) => {
         if (!userRef.current?.isAdmin()) {
-            setErrorMessage("You do not have permission to perform this action.");
-            setIsErrorHidden(false);
+            setAdminErrorMessage("You do not have permission to perform this action.");
             return false;
         }
         
@@ -281,16 +281,15 @@ function App() {
             }
             return true;
         } catch (error) {
-            setErrorMessage(`Failed to add admin: ${error.message}`);
-            setIsErrorHidden(false);
+            const errorMsg = error.message || "Failed to add admin user";
+            setAdminErrorMessage(errorMsg);
             return false;
         }
     };
 
     const handleToggleAccountCreation = async (enabled) => {
         if (!userRef.current?.isAdmin()) {
-            setErrorMessage("You do not have permission to perform this action.");
-            setIsErrorHidden(false);
+            setAdminErrorMessage("You do not have permission to perform this action.");
             return null;
         }
         
@@ -298,8 +297,7 @@ function App() {
             const result = await userRef.current.toggleAccountCreation(enabled);
             return result;
         } catch (error) {
-            setErrorMessage(`Failed to toggle account creation: ${error.message}`);
-            setIsErrorHidden(false);
+            setAdminErrorMessage(`Failed to toggle account creation: ${error.message}`);
             return null;
         }
     };
@@ -376,30 +374,16 @@ function App() {
     };
 
     const connectToHost = () => {
-        if (!addHostForm.ip || !addHostForm.user) {
-            return;
-        }
+        if (!addHostForm.ip || !addHostForm.user) return;
 
-        let baseTitle = addHostForm.name || addHostForm.ip;
-        let newTitle = baseTitle;
-
-        const existingTitles = terminals.filter(terminal => 
-            terminal.title === baseTitle || terminal.title.startsWith(`${baseTitle} (`)
-        );
-
-        if (existingTitles.length > 0) {
-            newTitle = `${baseTitle} (${existingTitles.length})`;
-        }
-
-        const nextId = Math.floor(Math.random() * 10000);
         const hostConfig = {
-            name: addHostForm.name,
-            folder: addHostForm.folder,
-            ip: addHostForm.ip,
-            user: addHostForm.user,
-            port: String(addHostForm.port),
-            password: addHostForm.rememberHost && addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
-            sshKey: addHostForm.rememberHost && addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
+            name: addHostForm.name || '',
+            folder: addHostForm.folder || '',
+            ip: addHostForm.ip?.trim() || '',
+            user: addHostForm.user?.trim() || '',
+            port: String(addHostForm.port || 22),
+            password: (addHostForm.rememberHost && addHostForm.authMethod === 'password') ? addHostForm.password?.trim() : undefined,
+            sshKey: (addHostForm.rememberHost && addHostForm.authMethod === 'sshKey') ? addHostForm.sshKey?.trim() : undefined,
             terminalConfig: addHostForm.terminalConfig || {
                 theme: 'dark',
                 cursorStyle: 'block',
@@ -413,18 +397,26 @@ function App() {
             }
         };
 
+        const newId = Date.now();
         const newTerminal = {
-            id: nextId,
-            title: newTitle,
-            hostConfig,
-            terminalRef: null,
+            id: newId,
+            title: addHostForm.name || addHostForm.ip,
+            hostConfig: hostConfig,
+            terminalRef: null
         };
-        setTerminals([...terminals, newTerminal]);
-        setActiveTab(nextId);
-        setNextId(nextId + 1);
+
+        setTerminals(prevTerminals => [...prevTerminals, newTerminal]);
+        setActiveTab(newId);
         setIsAddHostHidden(true);
-        setAddHostForm({ name: "", folder: "", ip: "", user: "", password: "", sshKey: "", port: 22, authMethod: "Select Auth", rememberHost: true, storePassword: true, connectionType: "ssh", rdpDomain: "", rdpWindowsAuthentication: true, rdpConsole: false, vncScaling: "100%", vncQuality: "High" });
-    }
+
+        setAddHostForm({ 
+            name: "", folder: "", ip: "", user: "", password: "", sshKey: "", 
+            port: 22, authMethod: "Select Auth", rememberHost: true, 
+            storePassword: true, connectionType: "ssh", rdpDomain: "", 
+            rdpWindowsAuthentication: true, rdpConsole: false, 
+            vncScaling: "100%", vncQuality: "High" 
+        });
+    };
 
     const handleAuthSubmit = (form) => {
         try {
@@ -461,30 +453,12 @@ function App() {
     };
 
     const connectToHostWithConfig = (hostConfig) => {
-        if (!hostConfig || typeof hostConfig !== 'object') {
-            return;
-        }
-
-        if (!hostConfig.ip || !hostConfig.user) {
-            return;
-        }
-
-        let baseTitle = hostConfig.name || hostConfig.ip;
-        let newTitle = baseTitle;
-
-        const existingTitles = terminals.filter(terminal => 
-            terminal.title === baseTitle || terminal.title.startsWith(`${baseTitle} (`)
-        );
-
-        if (existingTitles.length > 0) {
-            newTitle = `${baseTitle} (${existingTitles.length})`;
-        }
-
+        if (!hostConfig || !hostConfig.ip || !hostConfig.user) return;
+        
         const cleanHostConfig = {
-            name: hostConfig.name || '',
-            folder: hostConfig.folder || '',
-            ip: hostConfig.ip.trim(),
-            user: hostConfig.user.trim(),
+            ...hostConfig,
+            ip: hostConfig.ip?.trim() || '',
+            user: hostConfig.user?.trim() || '',
             port: hostConfig.port || '22',
             password: hostConfig.password?.trim(),
             sshKey: hostConfig.sshKey?.trim(),
@@ -501,33 +475,44 @@ function App() {
             }
         };
 
+        const newId = Date.now();
         const newTerminal = {
-            id: nextId,
-            title: newTitle,
+            id: newId,
+            title: hostConfig.name || hostConfig.ip,
             hostConfig: cleanHostConfig,
-            terminalRef: null,
+            terminalRef: null
         };
-        setTerminals([...terminals, newTerminal]);
-        setActiveTab(nextId);
-        setNextId(nextId + 1);
+
+        setTerminals(prevTerminals => [...prevTerminals, newTerminal]);
+        setActiveTab(newId);
         setIsLaunchpadOpen(false);
-    }
+    };
 
     const handleSaveHost = async () => {
         try {
             await userRef.current.saveHost({
                 hostConfig: {
-                    name: addHostForm.name,
-                    folder: addHostForm.folder,
-                    ip: addHostForm.ip,
-                    user: addHostForm.user,
-                    port: addHostForm.port,
-                    password: addHostForm.storePassword ? addHostForm.password : "",
-                    sshKey: addHostForm.storePassword ? addHostForm.sshKey : "",
-                    keyType: addHostForm.keyType,
-                    isPinned: addHostForm.isPinned,
+                    name: addHostForm.name || '',
+                    folder: addHostForm.folder || '',
+                    ip: addHostForm.ip?.trim() || '',
+                    user: addHostForm.user?.trim() || '',
+                    port: addHostForm.port || 22,
+                    password: addHostForm.storePassword ? addHostForm.password?.trim() || "" : "",
+                    sshKey: addHostForm.storePassword ? addHostForm.sshKey?.trim() || "" : "",
+                    keyType: addHostForm.keyType || '',
+                    isPinned: !!addHostForm.isPinned,
                     tags: addHostForm.tags || [],
-                    terminalConfig: addHostForm.terminalConfig
+                    terminalConfig: addHostForm.terminalConfig || {
+                        theme: 'dark',
+                        cursorStyle: 'block',
+                        fontFamily: 'ubuntuMono',
+                        fontSize: 14,
+                        fontWeight: 'normal',
+                        lineHeight: 1,
+                        letterSpacing: 0,
+                        cursorBlink: true,
+                        sshAlgorithm: 'default'
+                    }
                 }
             });
             setIsAddHostHidden(true);
@@ -692,15 +677,24 @@ function App() {
 
     const toggleSplit = (id) => {
         if (splitTabIds.includes(id)) {
-            setSplitTabIds((prev) => prev.filter((splitId) => splitId !== id));
+            setSplitTabIds(prev => prev.filter(splitId => splitId !== id));
+
+            if (activeTab !== id) {
+                setActiveTab(id);
+            }
             return;
         }
 
         if (splitTabIds.length >= 3) return;
 
-        setSplitTabIds((prev) =>
-            prev.includes(id) ? prev.filter((splitId) => splitId !== id) : [...prev, id]
-        );
+        setSplitTabIds(prev => [...prev, id]);
+
+        if (activeTab === id) {
+            const availableTabs = terminals.filter(t => !splitTabIds.includes(t.id) && t.id !== id);
+            if (availableTabs.length > 0) {
+                setActiveTab(availableTabs[0].id);
+            }
+        }
     };
 
     const handleSetActiveTab = (tabId) => {
@@ -708,12 +702,13 @@ function App() {
     };
 
     const getLayoutStyle = () => {
-        if (splitTabIds.length === 1) {
-            return "grid grid-cols-2 h-full gap-4";
-        } else if (splitTabIds.length > 1) {
-            return "grid grid-cols-2 grid-rows-2 gap-4 h-full overflow-hidden";
+        if (splitTabIds.length === 0) {
+            return "flex flex-col h-full w-full";
+        } else if (splitTabIds.length === 1) {
+            return "grid grid-cols-2 h-full w-full gap-4";
+        } else {
+            return "grid grid-cols-2 grid-rows-2 gap-4 h-full w-full overflow-hidden";
         }
-        return "flex flex-col h-full gap-4";
     };
 
     const getTerminalBackgroundColor = (hostConfig) => {
@@ -739,12 +734,66 @@ function App() {
         preloadAllFonts();
     }, []);
 
+    const renderTerminals = () => {
+        return (
+            <>
+                {terminals.map(terminal => {
+                    const isVisible = terminal.id === activeTab || splitTabIds.includes(terminal.id);
+                    const isSplit = splitTabIds.includes(terminal.id);
+                    
+                    return (
+                        <div
+                            key={terminal.id}
+                            className="rounded-lg overflow-hidden shadow-lg"
+                            style={{
+                                display: isVisible ? 'block' : 'none',
+                                order: isSplit ? splitTabIds.indexOf(terminal.id) : 0,
+                                backgroundColor: getTerminalBackgroundColor(terminal.hostConfig),
+                                flex: isSplit ? "1 1 0" : "1",
+                                height: '100%',
+                                width: isSplit ? undefined : '100%',
+                                border: '3px solid rgba(255, 255, 255, 0.15)',
+                                position: isVisible ? 'relative' : 'absolute',
+                                visibility: isVisible ? 'visible' : 'hidden',
+                                zIndex: isVisible ? 1 : -1
+                            }}
+                        >
+                            <NewTerminal
+                                key={terminal.id}
+                                hostConfig={terminal.hostConfig}
+                                isVisible={isVisible}
+                                setIsNoAuthHidden={setIsNoAuthHidden}
+                                setErrorMessage={setErrorMessage}
+                                setIsErrorHidden={setIsErrorHidden}
+                                title={terminal.title}
+                                showTitle={splitTabIds.length > 0} 
+                                ref={(ref) => {
+                                    terminal.terminalRef = ref;
+                                }}
+                            />
+                        </div>
+                    );
+                })}
+            </>
+        );
+    };
+
     return (
         <CssVarsProvider theme={theme}>
-            <div className="flex h-screen bg-neutral-900 overflow-hidden">
-                <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex h-screen bg-neutral-900 overflow-hidden" style={{ 
+                width: '100vw', 
+                maxWidth: '100vw',
+                boxSizing: 'border-box',
+                margin: 0,
+                padding: 0
+            }}>
+                <div className="flex-1 flex flex-col overflow-hidden" style={{ 
+                    width: '100%', 
+                    maxWidth: '100%',
+                    boxSizing: 'border-box' 
+                }}>
                     {/* Topbar */}
-                    <div className="bg-neutral-800 text-white p-4 flex items-center justify-between gap-4 min-h-[75px] max-h-[75px] shadow-xl border-b-5 border-neutral-700">
+                    <div className="bg-neutral-800 text-white p-4 flex items-center justify-between gap-4 min-h-[75px] max-h-[75px] shadow-xl border-b-5 border-neutral-700" style={{ width: '100%' }}>
                         <div className="bg-neutral-700 flex justify-center items-center gap-1 p-2 rounded-lg h-[52px]">
                             <img src={TermixIcon} alt="Termix Icon" className="w-[25px] h-[25px] object-contain" />
                             <h2 className="text-lg font-bold">Termix</h2>
@@ -850,35 +899,12 @@ function App() {
 
                     {/* Terminal Views */}
                     {userRef.current?.getUser() ? (
-                        <div className={`relative p-4 terminal-container ${getLayoutStyle()}`}>
-                            {terminals.map((terminal) => (
-                                <div
-                                    key={terminal.id}
-                                    className={`rounded-lg overflow-hidden shadow-xl ${
-                                        splitTabIds.includes(terminal.id) || activeTab === terminal.id ? "block" : "hidden"
-                                    } flex-1`}
-                                    style={{
-                                        order: splitTabIds.includes(terminal.id)
-                                            ? splitTabIds.indexOf(terminal.id)
-                                            : 0,
-                                        backgroundColor: getTerminalBackgroundColor(terminal.hostConfig)
-                                    }}
-                                >
-                                    <NewTerminal
-                                        key={terminal.id}
-                                        hostConfig={terminal.hostConfig}
-                                        isVisible={activeTab === terminal.id || splitTabIds.includes(terminal.id)}
-                                        setIsNoAuthHidden={setIsNoAuthHidden}
-                                        setErrorMessage={setErrorMessage}
-                                        setIsErrorHidden={setIsErrorHidden}
-                                        title={terminal.title}
-                                        showTitle={splitTabIds.length > 0}
-                                        ref={(ref) => {
-                                            terminal.terminalRef = ref;
-                                        }}
-                                    />
-                                </div>
-                            ))}
+                        <div className={`relative p-4 terminal-container w-full ${getLayoutStyle()}`} style={{ 
+                            backgroundColor: '#161616',
+                            gap: '8px',
+                            overflow: 'hidden'
+                        }}>
+                            {renderTerminals()}
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full w-full">
@@ -926,6 +952,8 @@ function App() {
                                 handleToggleAccountCreation={handleToggleAccountCreation}
                                 checkAccountCreationStatus={checkAccountCreationStatus}
                                 getAllAdmins={getAllAdmins}
+                                adminErrorMessage={adminErrorMessage}
+                                setAdminErrorMessage={setAdminErrorMessage}
                             />
                             {isLaunchpadOpen && (
                                 <Launchpad

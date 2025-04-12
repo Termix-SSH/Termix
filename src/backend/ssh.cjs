@@ -20,7 +20,7 @@ const io = socketIo(server, {
 
 const logger = {
     info: (...args) => console.log(`⌨️ | 🔧 [${new Date().toISOString()}] INFO:`, ...args),
-    error: (...args) => console.error(`⌨️ | ❌  [${new Date().toISOString()}] ERROR:`, ...args),
+    error: (...args) => console.error(`⌨️ | ❌ [${new Date().toISOString()}] ERROR:`, ...args),
     warn: (...args) => console.warn(`⌨️ | ⚠️ [${new Date().toISOString()}] WARN:`, ...args),
     debug: (...args) => console.debug(`⌨️ | 🔍 [${new Date().toISOString()}] DEBUG:`, ...args)
 };
@@ -30,14 +30,11 @@ io.on("connection", (socket) => {
     let conn = null;
     let pingTimer = null;
 
-
     function setupPingInterval() {
-
         if (pingTimer) {
             clearInterval(pingTimer);
         }
         
-
         pingTimer = setInterval(() => {
             if (socket && socket.connected) {
                 socket.emit("ping");
@@ -46,7 +43,6 @@ io.on("connection", (socket) => {
                     try {
                         conn.ping();
                     } catch (err) {
-
                     }
                 }
             } else {
@@ -54,7 +50,6 @@ io.on("connection", (socket) => {
             }
         }, 3000);
     }
-
 
     setupPingInterval();
 
@@ -72,25 +67,30 @@ io.on("connection", (socket) => {
         }
 
         const { ip, port, user, password, sshKey } = hostConfig;
-        const sshAlgorithm = hostConfig.terminalConfig?.sshAlgorithm || 'default';
-
+        const sshAlgorithm = hostConfig.sshAlgorithm || 'default';
 
         if (conn) {
             try {
-
                 const currentConn = conn;
                 conn = null;
                 stream = null;
                 currentConn.end();
             } catch (err) {
-
             }
         }
 
         conn = new SSHClient();
         conn
             .on("ready", function () {
-                conn.shell({ term: "xterm-256color", keepaliveInterval: 30000 }, function (err, newStream) {
+                conn.shell({ 
+                    term: "xterm-256color", 
+                    modes: {
+                        ECHO: 1,
+                        ECHOCTL: 0,
+                        ICANON: 1
+                    },
+                    keepaliveInterval: 30000 
+                }, function (err, newStream) {
                     if (err) {
                         logger.error("Shell error:", err.message);
                         socket.emit("error", err.message);
@@ -98,34 +98,44 @@ io.on("connection", (socket) => {
                     }
                     stream = newStream;
 
-                    stream.setWindow(rows, cols, rows * 100, cols * 100);
+                    const currentCols = cols;
+                    const currentRows = rows;
+
+                    stream.setWindow(currentRows, currentCols - 1, currentRows * 100, (currentCols - 1) * 100);
 
                     stream.on("data", function (data) {
                         socket.emit("data", data);
                     });
 
                     stream.on("close", function () {
-                        const currentConn = conn;
-                        stream = null;
-                        
-                        if (currentConn) {
+                        if (stream) {
                             try {
-                                currentConn.end();
+                                stream.end();
                             } catch (err) {
-
+                                logger.error("Error ending stream:", err.message);
                             }
                         }
+                        
+                        if (conn) {
+                            try {
+                                conn.end();
+                            } catch (err) {
+                                logger.error("Error ending connection:", err.message);
+                            }
+                            conn = null;
+                        }
+                        
+                        stream = null;
                     });
 
                     socket.on("data", function (data) {
-                        if (stream) {
-                            stream.write(data);
-                        }
+                        stream.write(data);
                     });
 
-                    socket.on("resize", ({ cols, rows }) => {
+                    socket.on("resize", function (data) {
                         if (stream && stream.setWindow) {
-                            stream.setWindow(rows, cols, rows * 100, cols * 100);
+                            stream.setWindow(data.rows, data.cols - 1, data.rows * 100, (data.cols - 1) * 100);
+                            socket.emit("resize", { cols: data.cols, rows: data.rows });
                         }
                     });
 
@@ -133,8 +143,13 @@ io.on("connection", (socket) => {
                 });
             })
             .on("close", function () {
-                socket.emit("error", "SSH connection closed");
-                logger.info("SSH connection closed");
+                if (stream) {
+                    try {
+                        stream.end();
+                    } catch (err) {
+                    }
+                }
+                
                 conn = null;
                 stream = null;
             })
@@ -143,14 +158,22 @@ io.on("connection", (socket) => {
                 socket.emit("error", err.message);
 
                 const currentConn = conn;
+                const currentStream = stream;
+
                 conn = null;
                 stream = null;
 
+                if (currentStream) {
+                    try {
+                        currentStream.end();
+                    } catch (closeErr) {
+                    }
+                }
+                
                 if (currentConn) {
                     try {
                         currentConn.end();
                     } catch (closeErr) {
-
                     }
                 }
             })
@@ -170,7 +193,6 @@ io.on("connection", (socket) => {
                 tcpKeepAlive: true,
             });
     });
-
 
     function getAlgorithms(algorithmPreference) {
         switch (algorithmPreference) {
@@ -194,37 +216,28 @@ io.on("connection", (socket) => {
     }
 
     socket.on("disconnect", () => {
-
-
         const currentStream = stream;
         const currentConn = conn;
         
-
         if (pingTimer) {
             clearInterval(pingTimer);
             pingTimer = null;
         }
         
-
         stream = null;
         conn = null;
         
-
         if (currentStream) {
             try {
-
                 currentStream.write("exit\r");
             } catch (err) {
-
             }
         }
         
-
         if (currentConn) {
             try {
                 currentConn.end();
             } catch (err) {
-
             }
         }
     });

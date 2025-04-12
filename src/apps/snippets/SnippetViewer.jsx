@@ -600,10 +600,6 @@ function SnippetViewer({
                 return;
             }
 
-            
-
-
-
             let processedContent = snippet.content
                 .replace(/\r\n/g, "\n")
                 .replace(/\r/g, "\n");
@@ -613,7 +609,6 @@ function SnippetViewer({
                 processedContent += "\n";
             }
 
-
             processedContent = processedContent.replace(/\n/g, "\r");
 
 
@@ -621,10 +616,6 @@ function SnippetViewer({
                 const terminalId = terminal.id;
 
                 try {
-                    
-
-
-
 
                     if (terminal.terminalRef?.socketRef?.current?.connected) {
                         

@@ -196,61 +196,11 @@ const TerminalPreview = ({ config }) => {
     
 
     const getFontDisplay = () => {
-        const fontFamily = config?.fontFamily || 'ubuntuMono';
-        
-
-        const fontMap = {
-            'monospace': {
-                family: 'monospace',
-                letterSpacing: '0px',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-mono'
-            },
-            'consolas': {
-                family: 'Consolas, "Lucida Console", Monaco, monospace',
-                letterSpacing: '0.02em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-consolas'
-            },
-            'firaCode': {
-                family: '"Fira Code", "DejaVu Sans Mono", Courier, monospace',
-                letterSpacing: '0.01em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-fira'
-            },
-            'cascadiaCode': {
-                family: '"Cascadia Code", "Segoe UI Mono", "Lucida Console", monospace',
-                letterSpacing: '0.01em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-cascadia'
-            },
-            'sourceCodePro': {
-                family: '"Source Code Pro", "Liberation Mono", "Courier New", monospace',
-                letterSpacing: '0.025em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-source'
-            },
-            'ubuntuMono': {
-                family: '"Ubuntu Mono", Consolas, monospace',
-                letterSpacing: '0.1em',
-                weight: config?.fontWeight === 'bold' ? 'bold' : '500',
-                className: 'font-ubuntu'
-            },
-            'jetBrainsMono': {
-                family: '"JetBrains Mono", "Fira Mono", monospace',
-                letterSpacing: '0.03em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-jetbrains'
-            },
-            'menlo': {
-                family: 'Menlo, Monaco, "Courier New", monospace',
-                letterSpacing: '0.03em',
-                weight: config?.fontWeight || 'normal',
-                className: 'font-menlo'
-            }
+        return {
+            family: '"Hack Nerd Font Mono", "Hack Nerd Font", "Symbols Nerd Font Mono", monospace',
+            weight: config?.fontWeight || 'normal',
+            className: 'font-nerd'
         };
-        
-        return fontMap[fontFamily] || fontMap.ubuntuMono;
     };
     
     const fontDisplay = getFontDisplay();
@@ -270,8 +220,7 @@ const TerminalPreview = ({ config }) => {
                 fontFamily: fontDisplay.family,
                 fontSize: `${config?.fontSize || 14}px`,
                 fontWeight: fontDisplay.weight,
-                letterSpacing: fontDisplay.letterSpacing || `${config?.letterSpacing || 0}px`,
-                lineHeight: config?.lineHeight || 1,
+                lineHeight: config?.lineHeight || 1.3,
                 padding: '10px',
                 boxSizing: 'border-box',
                 border: '1px solid',
@@ -319,11 +268,10 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
     const defaultTerminalConfig = {
         theme: 'dark',
         cursorStyle: 'block',
-        fontFamily: 'ubuntuMono',
+        fontFamily: 'nerdFont',
         fontSize: 14,
         fontWeight: 'normal',
-        lineHeight: 1,
-        letterSpacing: 0,
+        lineHeight: 1.3,
         cursorBlink: true,
         sshAlgorithm: 'default'
     };
@@ -945,35 +893,8 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                             alignItems: 'center',
                                         }}
                                     >
-                                        <TextFormatIcon sx={{ mr: 1 }} /> Text
+                                        <FontDownloadIcon sx={{ mr: 1 }} /> Font
                                     </Typography>
-                                    
-                                    <FormControl sx={{ mb: 2 }}>
-                                        <FormLabel>Font Family</FormLabel>
-                                        <Select
-                                            value={form.terminalConfig?.fontFamily || 'ubuntuMono'}
-                                            onChange={(e, val) => setForm(prev => ({
-                                                ...prev,
-                                                terminalConfig: {
-                                                    ...prev.terminalConfig || defaultTerminalConfig,
-                                                    fontFamily: val
-                                                }
-                                            }))}
-                                            sx={{
-                                                backgroundColor: theme.palette.general.primary,
-                                                color: theme.palette.text.primary,
-                                            }}
-                                        >
-                                            <Option value="monospace">Monospace</Option>
-                                            <Option value="consolas">Consolas</Option>
-                                            <Option value="firaCode">Fira Code</Option>
-                                            <Option value="cascadiaCode">Cascadia Code</Option>
-                                            <Option value="sourceCodePro">Source Code Pro</Option>
-                                            <Option value="ubuntuMono">Ubuntu Mono</Option>
-                                            <Option value="jetBrainsMono">JetBrains Mono</Option>
-                                            <Option value="menlo">Menlo</Option>
-                                        </Select>
-                                    </FormControl>
 
                                     <FormControl sx={{ mb: 2 }}>
                                         <FormLabel>Font Size: {form.terminalConfig?.fontSize || 14}px</FormLabel>
@@ -1017,9 +938,9 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                     </FormControl>
 
                                     <FormControl sx={{ mb: 2 }}>
-                                        <FormLabel>Line Height: {form.terminalConfig?.lineHeight || 1}</FormLabel>
+                                        <FormLabel>Line Height: {form.terminalConfig?.lineHeight || 1.3}</FormLabel>
                                         <Slider
-                                            value={form.terminalConfig?.lineHeight || 1}
+                                            value={form.terminalConfig?.lineHeight || 1.3}
                                             min={0.8}
                                             max={2}
                                             step={0.1}
@@ -1028,26 +949,6 @@ const AddHostModal = ({ isHidden, form, setForm, handleAddHost, setIsAddHostHidd
                                                 terminalConfig: {
                                                     ...prev.terminalConfig || defaultTerminalConfig,
                                                     lineHeight: val
-                                                }
-                                            }))}
-                                            sx={{
-                                                color: theme.palette.text.primary,
-                                            }}
-                                        />
-                                    </FormControl>
-
-                                    <FormControl sx={{ mb: 2 }}>
-                                        <FormLabel>Letter Spacing: {form.terminalConfig?.letterSpacing || 0}px</FormLabel>
-                                        <Slider
-                                            value={form.terminalConfig?.letterSpacing || 0}
-                                            min={-1}
-                                            max={3}
-                                            step={0.5}
-                                            onChange={(e, val) => setForm(prev => ({
-                                                ...prev,
-                                                terminalConfig: {
-                                                    ...prev.terminalConfig || defaultTerminalConfig,
-                                                    letterSpacing: val
                                                 }
                                             }))}
                                             sx={{
