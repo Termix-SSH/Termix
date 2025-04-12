@@ -440,6 +440,14 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 }
             }
 
+            // Handle authentication method and storage
+            if (!newHostConfig.storePassword) {
+                // If not storing password, clear credentials
+                newHostConfig.password = '';
+                newHostConfig.sshKey = '';
+                newHostConfig.keyType = '';
+            }
+
             if (!newHostConfig.terminalConfig) {
                 newHostConfig.terminalConfig = {
                     theme: 'dark',

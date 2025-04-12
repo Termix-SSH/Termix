@@ -579,74 +579,61 @@ function SnippetViewer({
 
     const pasteSnippetToTerminals = (snippet) => {
         try {
+            console.log("Pasting snippet to terminals:", snippet.name);
             
-
-
-            if (!areTerminalsAvailable()) {
-                
+            // 1. Check if terminals are available
+            if (!terminals || terminals.length === 0) {
+                console.log("No terminals available");
                 return;
             }
-
-
+            
+            // 2. Get selected terminals
             const selectedTerminalIds = Object.entries(selectedTerminals)
                 .filter(([_, isSelected]) => isSelected)
                 .map(([id]) => parseInt(id));
-
-
-            const terminalsToPasteTo = terminals.filter(t => selectedTerminalIds.includes(t.id));
-
-            if (terminalsToPasteTo.length === 0) {
                 
+            console.log("Selected terminal IDs:", selectedTerminalIds);
+            
+            if (selectedTerminalIds.length === 0) {
+                console.log("No terminals selected");
                 return;
             }
-
-            let processedContent = snippet.content
-                .replace(/\r\n/g, "\n")
-                .replace(/\r/g, "\n");
-
-
-            if (!processedContent.endsWith("\n")) {
-                processedContent += "\n";
+            
+            // 3. Prepare content
+            let content = snippet.content;
+            if (!content.endsWith("\n")) {
+                content += "\n";
             }
-
-            processedContent = processedContent.replace(/\n/g, "\r");
-
-
-            terminalsToPasteTo.forEach(terminal => {
-                const terminalId = terminal.id;
-
+            
+            // 4. Find each terminal and paste content
+            selectedTerminalIds.forEach(terminalId => {
+                const terminal = terminals.find(t => t.id === terminalId);
+                if (!terminal) {
+                    console.log("Terminal not found:", terminalId);
+                    return;
+                }
+                
+                console.log("Pasting to terminal:", terminal.title);
+                
                 try {
-
-                    if (terminal.terminalRef?.socketRef?.current?.connected) {
-                        
-                        terminal.terminalRef.socketRef.current.emit("data", processedContent);
-                        return;
+                    if (terminal.terminalRef && terminal.terminalRef.socketRef && 
+                        terminal.terminalRef.socketRef.current) {
+                        console.log("Using terminal ref socket");
+                        terminal.terminalRef.socketRef.current.emit("data", content);
+                    } 
+                    else if (window.terminalSockets && window.terminalSockets[terminalId]) {
+                        console.log("Using window terminal sockets");
+                        window.terminalSockets[terminalId].emit("data", content);
                     }
-
-
-                    if (window.terminalSockets && window.terminalSockets[terminalId]?.connected) {
-                        
-                        window.terminalSockets[terminalId].emit("data", processedContent);
-                        return;
+                    else {
+                        console.log("No socket found for terminal:", terminal.title);
                     }
-
-
-                    const availableSockets = Object.values(window.terminalSockets || {})
-                        .filter(socket => socket && socket.connected);
-
-                    if (availableSockets.length > 0) {
-                        
-                        availableSockets[0].emit("data", processedContent);
-                        return;
-                    }
-
-                    
-                } catch (error) {
-                    
+                } catch (err) {
+                    console.error("Error pasting to terminal:", err);
                 }
             });
         } catch (error) {
-            
+            console.error("Error in pasteSnippetToTerminals:", error);
         }
     };
 
