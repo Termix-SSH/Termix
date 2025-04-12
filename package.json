@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.5",
     "@mui/icons-material": "^6.4.7",
     "@mui/joy": "^5.0.0-beta.51",
     "@tailwindcss/vite": "^4.0.15",
