@@ -87,7 +87,8 @@ io.on("connection", (socket) => {
                     modes: {
                         ECHO: 1,
                         ECHOCTL: 0,
-                        ICANON: 1
+                        ICANON: 1,
+                        TTY_OP_OSWRAP: 1
                     },
                     keepaliveInterval: 30000 
                 }, function (err, newStream) {
@@ -101,10 +102,58 @@ io.on("connection", (socket) => {
                     const currentCols = cols;
                     const currentRows = rows;
 
-                    stream.setWindow(currentRows, currentCols - 1, currentRows * 100, (currentCols - 1) * 100);
+                    stream.setWindow(currentRows, currentCols, currentRows, currentCols);
+
+                    stream.once('ready', () => {
+                        conn.exec(`stty cols ${currentCols} rows ${currentRows} -icanon -echo && stty onlcr && stty -opost`, { pty: false }, (err, execStream) => {
+                            if (err) logger.error("Failed to set terminal properties:", err);
+                        });
+                    });
+
+                    let dataBuffer = [];
+                    let isProcessingBuffer = false;
+                    
+                    const processBuffer = () => {
+                        if (dataBuffer.length === 0 || isProcessingBuffer) return;
+                        
+                        isProcessingBuffer = true;
+
+                        const currentBuffer = [...dataBuffer];
+                        dataBuffer = [];
+
+                        let combinedData;
+                        if (currentBuffer.length > 1) {
+                            const totalLength = currentBuffer.reduce((acc, chunk) => acc + chunk.length, 0);
+                            combinedData = Buffer.alloc(totalLength);
+                            
+                            let offset = 0;
+                            for (const chunk of currentBuffer) {
+                                chunk.copy(combinedData, offset);
+                                offset += chunk.length;
+                            }
+                        } else {
+                            combinedData = currentBuffer[0];
+                        }
+
+                        socket.emit("data", combinedData);
+
+                        isProcessingBuffer = false;
+                        if (dataBuffer.length > 0) {
+                            setImmediate(processBuffer);
+                        }
+                    };
 
                     stream.on("data", function (data) {
-                        socket.emit("data", data);
+                        dataBuffer.push(data);
+
+                        if (!isProcessingBuffer) {
+                            setImmediate(processBuffer);
+                        }
+                    });
+
+                    stream.on("error", function(err) {
+                        logger.error("SSH stream error:", err.message);
+                        socket.emit("error", "SSH connection error: " + err.message);
                     });
 
                     stream.on("close", function () {
@@ -128,13 +177,42 @@ io.on("connection", (socket) => {
                         stream = null;
                     });
 
+                    let outgoingBuffer = [];
+                    let isProcessingOutgoing = false;
+                    
+                    const processOutgoingBuffer = () => {
+                        if (outgoingBuffer.length === 0 || isProcessingOutgoing || !stream) return;
+                        
+                        isProcessingOutgoing = true;
+
+                        const currentBuffer = outgoingBuffer.join('');
+                        outgoingBuffer = [];
+
+                        stream.write(currentBuffer);
+
+                        isProcessingOutgoing = false;
+                        if (outgoingBuffer.length > 0) {
+                            setImmediate(processOutgoingBuffer);
+                        }
+                    };
+
                     socket.on("data", function (data) {
-                        stream.write(data);
+                        outgoingBuffer.push(data);
+
+                        if (!isProcessingOutgoing) {
+                            setImmediate(processOutgoingBuffer);
+                        }
                     });
 
                     socket.on("resize", function (data) {
                         if (stream && stream.setWindow) {
-                            stream.setWindow(data.rows, data.cols - 1, data.rows * 100, (data.cols - 1) * 100);
+                            stream.setWindow(data.rows, data.cols, data.rows, data.cols);
+                            
+                            if (conn) {
+                                conn.exec(`stty cols ${data.cols} rows ${data.rows} -icanon -echo`, { pty: false }, (err, execStream) => {
+                                });
+                            }
+                            
                             socket.emit("resize", { cols: data.cols, rows: data.rows });
                         }
                     });

@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useEffect, useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useEffect, useRef, useState, useLayoutEffect } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -387,7 +387,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         fitAddon.current.fit();
 
         const { cols, rows } = terminalInstance.current;
-
+        
         const finalCols = Math.max(cols, 10);
         const finalRows = Math.max(rows, 5);
 
@@ -410,7 +410,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         const fontSize = terminalConfig.fontSize || 14;
         const fontWeight = terminalConfig.fontWeight || 'normal';
-        const letterSpacing = 0;
         const lineHeight = terminalConfig.lineHeight || 1.3;
         const cursorStyle = terminalConfig.cursorStyle || 'block';
         const cursorBlink = terminalConfig.cursorBlink !== undefined ? terminalConfig.cursorBlink : true;
@@ -421,7 +420,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             theme: themeColors,
             fontSize: fontSize,
             fontWeight: fontWeight,
-            letterSpacing: letterSpacing,
             lineHeight: lineHeight,
             scrollback: 5000,
             ignoreBracketedPasteMode: true,
@@ -433,6 +431,20 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             convertEol: true,
             cols: 80,
             rows: 24,
+            wraparoundMode: true,
+            windowOptions: {
+                setWinLines: true
+            },
+            fontFamily: "'Hack Nerd Font Mono', 'Hack Nerd Font', 'Consolas', monospace",
+            letterSpacing: 0,
+            drawBoldTextInBrightColors: false,
+            fastScrollModifier: 'alt',
+            fastScrollSensitivity: 5,
+            minimumContrastRatio: 1,
+            macOptionIsMeta: true,
+            disableStdin: false,
+            screenReaderMode: false,
+            smoothScrollDuration: 0,
         });
 
         const socket = io(
@@ -450,7 +462,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         );
         socketRef.current = socket;
 
-        // Create a consistent terminal ID format
         const uniqueTimestamp = Date.now();
         const terminalId = `terminal-${hostConfig.ip}-${hostConfig.user}-${uniqueTimestamp}`;
 
@@ -461,15 +472,12 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             id: uniqueTimestamp
         };
 
-        // Initialize window.terminalSockets if it doesn't exist
         if (!window.terminalSockets) {
             window.terminalSockets = {};
         }
-        
-        // Store the socket with the unique terminal ID
+
         window.terminalSockets[terminalId] = socket;
-        
-        // For backwards compatibility
+
         window.terminalSockets[uniqueTimestamp] = socket;
 
         terminalInstance.current.loadAddon(fitAddon.current);
@@ -527,6 +535,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 fitAddon.current.fit();
                 terminalInstance.current.focus();
 
+                terminalInstance.current.options.wraparoundMode = true;
                 terminalInstance.current.options.wrap = true;
                 terminalInstance.current.options.wordBreak = false;
 
@@ -534,22 +543,29 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 for (let i = 0; i < rows; i++) {
                     terminalInstance.current.refresh(i, i);
                 }
-
-                terminalInstance.current.write('\x1b[?7h');
             }
         }, 100);
 
         socket.on("data", (data) => {
             const decoder = new TextDecoder("utf-8");
             const text = decoder.decode(new Uint8Array(data));
-
-            terminalInstance.current.write(text);
-
-            if (text.includes('\r') && !text.includes('\n') && text.length > 2) {
-                const lastRow = terminalInstance.current.buffer.active.cursorY;
-                if (lastRow >= 0) {
-                    terminalInstance.current.refresh(lastRow, lastRow);
-                }
+            
+            if (terminalInstance.current) {
+                window.requestAnimationFrame(() => {
+                    terminalInstance.current.write(text);
+                    
+                    if (text.includes('\n') || text.includes('\r')) {
+                        setTimeout(() => {
+                            if (terminalInstance.current) {
+                                const lastRow = terminalInstance.current.buffer.active.cursorY;
+                                const displayRows = terminalInstance.current.rows;
+                                for (let i = Math.max(0, lastRow - 5); i <= Math.min(lastRow + 1, displayRows - 1); i++) {
+                                    terminalInstance.current.refresh(i, i);
+                                }
+                            }
+                        }, 0);
+                    }
+                });
             }
         });
 
@@ -670,12 +686,10 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         return () => {
             clearInterval(pingInterval);
 
-            // Properly clean up the socket reference from window.terminalSockets
             if (socketRef.current && socketRef.current.terminalId && 
                 window.terminalSockets && window.terminalSockets[socketRef.current.terminalId]) {
                 delete window.terminalSockets[socketRef.current.terminalId];
-                
-                // Also clean up the backwards compatibility reference
+
                 if (socketRef.current.hostData && socketRef.current.hostData.id &&
                     window.terminalSockets[socketRef.current.hostData.id]) {
                     delete window.terminalSockets[socketRef.current.hostData.id];
@@ -711,7 +725,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             );
             socketRef.current = socket;
 
-            // Create a consistent terminal ID format
             const uniqueTimestamp = Date.now();
             const terminalId = `terminal-${hostConfig.ip}-${hostConfig.user}-${uniqueTimestamp}`;
 
@@ -722,15 +735,12 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 id: uniqueTimestamp
             };
 
-            // Initialize window.terminalSockets if it doesn't exist
             if (!window.terminalSockets) {
                 window.terminalSockets = {};
             }
-            
-            // Store the socket with the unique terminal ID
+
             window.terminalSockets[terminalId] = socket;
-            
-            // For backwards compatibility
+
             window.terminalSockets[uniqueTimestamp] = socket;
         }
 
@@ -775,27 +785,71 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
         if (terminalElement) {
             terminalElement.id = terminalId;
-
             terminalElement.classList.add('terminal-nerd-font');
+
+            terminalElement.style.left = '2px';
+            terminalElement.style.top = '2px';
+            terminalElement.style.position = 'absolute';
 
             const styleElement = document.createElement('style');
             styleElement.innerHTML = `
-                /* Use locally installed fonts instead of trying to download from GitHub */
+                /* Font definition with specific metrics */
                 @font-face {
-                    font-family: 'Hack Nerd Font';
-                    src: local('Hack Nerd Font'), local('Hack Nerd Font Mono');
+                    font-family: 'Hack Nerd Font Mono';
+                    src: local('Hack Nerd Font Mono'), local('Hack Nerd Font');
+                    font-display: block;
                     font-style: normal;
-                    font-weight: 400;
-                    font-display: swap;
+                    font-weight: normal;
                 }
                 
-                /* Fall back to standard monospace fonts if Nerd Font is not available */
+                /* Fix Nerd Font character width - critical for column alignment */
                 #${terminalId} .xterm-rows span {
-                    font-family: 'Hack Nerd Font Mono', 'Hack Nerd Font', 'Consolas', 'DejaVu Sans Mono', 'Liberation Mono', 'Menlo', monospace !important;
-                    font-variant-ligatures: no-contextual !important;
-                    text-rendering: optimizeLegibility !important;
+                    font-family: 'Hack Nerd Font Mono', monospace !important;
+                    font-variant-ligatures: none !important;
                     font-feature-settings: "liga" 0, "calt" 0, "dlig" 0 !important;
                     letter-spacing: 0 !important;
+                    text-rendering: geometricPrecision !important;
+                    font-kerning: none !important;
+                    
+                    /* Force monospace behavior */
+                    -webkit-font-feature-settings: "tnum" on, "calt" 0, "liga" 0;
+                    font-feature-settings: "tnum" on, "calt" 0, "liga" 0;
+                    
+                    /* Ensure characters are pixel-aligned */
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                }
+                
+                /* Force terminal position */
+                #${terminalId} {
+                    position: absolute !important;
+                    left: 2px !important;
+                    top: 2px !important;
+                    box-sizing: content-box !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+                
+                /* Fix canvas and screen positioning */
+                #${terminalId} .xterm-screen {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    position: absolute !important;
+                    left: 0 !important;
+                }
+                
+                #${terminalId} .xterm-screen canvas {
+                    box-sizing: content-box !important;
+                    left: 0 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+                
+                /* Ensure container div is positioned properly */
+                .terminal {
+                    position: absolute !important;
+                    left: 2px !important;
+                    top: 2px !important;
                 }
             `;
             document.head.appendChild(styleElement);
@@ -804,8 +858,17 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                 if (terminalInstance.current) {
                     const currentSize = terminalInstance.current.options.fontSize;
                     terminalInstance.current.options.fontSize = currentSize + 1;
-                    terminalInstance.current.options.fontSize = currentSize;
-                    fitAddon.current.fit();
+                    setTimeout(() => {
+                        if (terminalInstance.current) {
+                            terminalInstance.current.options.fontSize = currentSize;
+                            fitAddon.current.fit();
+
+                            const { cols, rows } = terminalInstance.current;
+                            if (socketRef.current && socketRef.current.connected) {
+                                socketRef.current.emit("resize", { cols, rows });
+                            }
+                        }
+                    }, 50);
                 }
             }, 100);
 
@@ -816,6 +879,53 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             };
         }
     }, [hostConfig, terminalInstance.current, terminalRef.current]);
+
+    useEffect(() => {
+        if (!terminalInstance.current || !terminalInstance.current._core) return;
+
+        const originalCore = terminalInstance.current._core;
+
+        if (originalCore && originalCore._renderService && originalCore._renderService._renderer) {
+            const renderer = originalCore._renderService._renderer;
+
+            const originalGetFont = renderer.getFont;
+            const originalOnResize = originalCore._renderService.onResize;
+
+            if (originalGetFont) {
+                renderer.getFont = function() {
+                    const currentFontSize = terminalInstance.current.options.fontSize;
+                    const currentFontWeight = terminalInstance.current.options.fontWeight;
+                    return `${currentFontWeight} ${currentFontSize}px 'Hack Nerd Font Mono', monospace`;
+                };
+            }
+
+            if (originalOnResize) {
+                originalCore._renderService.onResize = function(cols, rows) {
+                    originalOnResize.call(this, cols, rows);
+
+                    if (this._renderer && this._renderer.dimensions) {
+                        const cellWidth = this._renderer.dimensions.actualCellWidth;
+                        if (cellWidth) {
+                            this._renderer.dimensions.actualCellWidth = Math.floor(cellWidth) + 0.01;
+                        }
+                    }
+                };
+            }
+        }
+
+        if (originalCore._charSizeService) {
+            const originalMeasure = originalCore._charSizeService.measure;
+            originalCore._charSizeService.measure = function(options, document) {
+                const result = originalMeasure.call(this, options, document);
+
+                if (result && result.width) {
+                    result.width = Math.floor(result.width) + 0.02;
+                }
+                
+                return result;
+            };
+        }
+    }, [terminalInstance.current]);
 
     useEffect(() => {
         if (isVisible && terminalInstance.current && fitAddon.current) {
@@ -832,6 +942,225 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
     const textColor = hostConfig?.terminalConfig?.theme
         ? (terminalThemes[hostConfig.terminalConfig.theme]?.foreground || '#f7f7f7')
         : '#f7f7f7';
+
+    useEffect(() => {
+        let originalFontSize = null;
+
+        const handleLaunchpadOpen = () => {
+            if (terminalInstance.current && originalFontSize === null) {
+                originalFontSize = terminalInstance.current.options.fontSize;
+            }
+        };
+
+        const handleLaunchpadClose = () => {
+            if (terminalInstance.current && originalFontSize !== null) {
+                terminalInstance.current.options.fontSize = originalFontSize;
+                fitAddon.current.fit();
+                originalFontSize = null;
+            }
+        };
+
+        window.addEventListener('launchpad:open', handleLaunchpadOpen);
+        window.addEventListener('launchpad:close', handleLaunchpadClose);
+
+        return () => {
+            window.removeEventListener('launchpad:open', handleLaunchpadOpen);
+            window.removeEventListener('launchpad:close', handleLaunchpadClose);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (isVisible && terminalInstance.current) {
+            const currentFontSize = terminalInstance.current.options.fontSize;
+
+            const lockFontSize = () => {
+                if (terminalInstance.current) {
+                    terminalInstance.current.options.fontSize = currentFontSize;
+                }
+            };
+
+            const fontStabilizer = setInterval(lockFontSize, 20);
+
+            setTimeout(() => clearInterval(fontStabilizer), 500);
+            
+            return () => clearInterval(fontStabilizer);
+        }
+    }, [isVisible]);
+
+    useEffect(() => {
+        if (terminalInstance.current) {
+            let lastRefreshTime = 0;
+            const REFRESH_INTERVAL = 16;
+            
+            const originalRefresh = terminalInstance.current.refresh;
+            terminalInstance.current.refresh = function(start, end, immediate) {
+                const now = Date.now();
+                if (immediate || now - lastRefreshTime >= REFRESH_INTERVAL) {
+                    lastRefreshTime = now;
+                    return originalRefresh.call(this, start, end);
+                }
+            };
+        }
+    }, [terminalInstance.current]);
+
+    useLayoutEffect(() => {
+        if (!terminalInstance.current) return;
+
+        const originalFontSize = terminalInstance.current.options.fontSize;
+        let resizeTimeout;
+        let isMounted = true;
+
+        const freezeFontSize = () => {
+            if (!isMounted || !terminalInstance.current) return;
+
+            clearTimeout(resizeTimeout);
+
+            terminalInstance.current.options.fontSize = originalFontSize;
+
+            resizeTimeout = setTimeout(() => {
+                if (isMounted && terminalInstance.current) {
+                    terminalInstance.current.options.fontSize = originalFontSize;
+                }
+            }, 50);
+        };
+
+        const bodyObserver = new MutationObserver(() => {
+            freezeFontSize();
+        });
+
+        bodyObserver.observe(document.body, { 
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
+
+        const handleResize = () => freezeFontSize();
+        window.addEventListener('resize', handleResize);
+
+        const handleModalEvents = () => freezeFontSize();
+        window.addEventListener('dialog:open', handleModalEvents);
+        window.addEventListener('modal:open', handleModalEvents);
+        window.addEventListener('overlay:open', handleModalEvents);
+        window.addEventListener('launchpad:open', handleModalEvents);
+
+        freezeFontSize();
+        
+        return () => {
+            isMounted = false;
+            clearTimeout(resizeTimeout);
+            bodyObserver.disconnect();
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('dialog:open', handleModalEvents);
+            window.removeEventListener('modal:open', handleModalEvents);
+            window.removeEventListener('overlay:open', handleModalEvents);
+            window.removeEventListener('launchpad:open', handleModalEvents);
+        };
+    }, [terminalInstance.current]);
+
+    useEffect(() => {
+        if (!terminalInstance.current || !fitAddon.current) return;
+
+        const originalFit = fitAddon.current.fit;
+
+        fitAddon.current.fit = function() {
+            const currentFontSize = terminalInstance.current.options.fontSize;
+
+            originalFit.apply(this);
+
+            terminalInstance.current.options.fontSize = currentFontSize;
+        };
+        
+        return () => {
+            if (fitAddon.current) {
+                fitAddon.current.fit = originalFit;
+            }
+        };
+    }, [terminalInstance.current, fitAddon.current]);
+
+    useEffect(() => {
+        if (!terminalInstance.current) return;
+
+        let originalFontSize = terminalInstance.current.options.fontSize;
+        let resizeTimer;
+
+        if (isVisible) {
+            const enforceFontSize = () => {
+                if (terminalInstance.current) {
+                    terminalInstance.current.options.fontSize = originalFontSize;
+                }
+            };
+
+            enforceFontSize();
+
+            for (let i = 0; i < 5; i++) {
+                setTimeout(enforceFontSize, i * 50);
+            }
+
+            clearTimeout(resizeTimer);
+        }
+        
+        return () => {
+            clearTimeout(resizeTimer);
+        };
+    }, [isVisible, terminalInstance.current]);
+
+    useEffect(() => {
+        if (!terminalInstance.current) return;
+
+        const originalSetOption = terminalInstance.current.setOption;
+
+        terminalInstance.current.setOption = function(key, value) {
+            if (key !== 'fontSize') {
+                return originalSetOption.call(this, key, value);
+            }
+
+            const stack = new Error().stack || '';
+            const isInternalCall = stack.includes('SSHTerminal') && 
+                                  (stack.includes('freezeFontSize') || 
+                                   stack.includes('enforceFontSize'));
+            
+            if (isInternalCall) {
+                return originalSetOption.call(this, key, value);
+            }
+        };
+        
+        return () => {
+            if (terminalInstance.current) {
+                terminalInstance.current.setOption = originalSetOption;
+            }
+        };
+    }, [terminalInstance.current]);
+
+    useEffect(() => {
+        if (!terminalInstance.current || !fitAddon.current) return;
+        
+        const fontSize = terminalInstance.current.options.fontSize;
+
+        const stabilizeFontSize = () => {
+            if (terminalInstance.current) {
+                terminalInstance.current.options.fontSize = fontSize;
+
+                if (terminalInstance.current._core) {
+                    terminalInstance.current._core.renderer.clear();
+                    terminalInstance.current.refresh(0, terminalInstance.current.rows - 1);
+                }
+            }
+        };
+
+        const stabilizationSchedule = [0, 10, 50, 100, 200, 500];
+        const timeouts = [];
+        
+        for (const delay of stabilizationSchedule) {
+            timeouts.push(setTimeout(stabilizeFontSize, delay));
+        }
+        
+        return () => {
+            for (const timeout of timeouts) {
+                clearTimeout(timeout);
+            }
+        };
+    }, [terminalInstance.current]);
 
     return (
         <div className="flex flex-col h-full w-full overflow-hidden">
@@ -865,7 +1194,6 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                         alignItems: 'center',
                         lineHeight: 1
                     }}>
-                        {/* Terminal icon */}
                         {'>'}
                     </span>
                     <span style={{
@@ -902,9 +1230,12 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
                         visibility: isVisible ? 'visible' : 'hidden',
                         backgroundColor: initialBgColor,
                         position: 'absolute',
-                        width: '100%',
-                        height: '100%',
-                        transform: 'translateY(2px) translateX(3px)',
+                        width: 'calc(100% - 2px)',
+                        height: 'calc(100% - 2px)',
+                        top: '2px',
+                        left: '2px',
+                        margin: '0 !important',
+                        padding: '0 !important',
                     }}
                 />
             </div>

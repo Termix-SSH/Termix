@@ -48,14 +48,18 @@ function Launchpad({
                 isConfirmDeleteHidden &&
                 !isAnyModalOpen
             ) {
+                window.dispatchEvent(new CustomEvent('launchpad:close'));
                 onClose();
             }
         };
+
+        window.dispatchEvent(new CustomEvent('launchpad:open'));
 
         document.addEventListener("mousedown", handleClickOutside);
 
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
+            window.dispatchEvent(new CustomEvent('launchpad:close'));
         };
     }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden, isHostViewerMenuOpen, isSnippetViewerMenuOpen, isConfirmDeleteHidden, isAnyModalOpen]);
 
