@@ -13,8 +13,7 @@ import {
     Tabs,
     TabList,
     Tab,
-    TabPanel,
-    Alert
+    TabPanel
 } from '@mui/joy';
 import theme from '/src/theme';
 import { useEffect, useState } from 'react';
@@ -29,35 +28,18 @@ const AuthModal = ({
                        handleLoginUser,
                        handleCreateUser,
                        handleGuestLogin,
-                       setIsAuthModalHidden,
-                       checkAccountCreationStatus
+                       setIsAuthModalHidden
                    }) => {
     const [activeTab, setActiveTab] = useState(0);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [isAccountCreationAllowed, setIsAccountCreationAllowed] = useState(true);
-    const [isFirstUser, setIsFirstUser] = useState(false);
 
     useEffect(() => {
         const loginErrorHandler = () => setIsLoading(false);
         eventBus.on('failedLoginUser', loginErrorHandler);
         return () => eventBus.off('failedLoginUser', loginErrorHandler);
     }, []);
-
-    useEffect(() => {
-        if (!isHidden && checkAccountCreationStatus) {
-            const checkStatus = async () => {
-                const status = await checkAccountCreationStatus();
-                setIsAccountCreationAllowed(status.allowed);
-                setIsFirstUser(status.isFirstUser);
-                if (!status.allowed && !status.isFirstUser && activeTab === 1) {
-                    setActiveTab(0);
-                }
-            };
-            checkStatus();
-        }
-    }, [isHidden, activeTab, checkAccountCreationStatus]);
 
     const resetForm = () => {
         setForm({ username: '', password: '' });
@@ -140,12 +122,7 @@ const AuthModal = ({
                 >
                     <Tabs
                         value={activeTab}
-                        onChange={(e, val) => {
-                            if (val === 1 && !isAccountCreationAllowed && !isFirstUser) {
-                                return;
-                            }
-                            setActiveTab(val);
-                        }}
+                        onChange={(e, val) => setActiveTab(val)}
                         sx={{
                             width: '100%',
                             backgroundColor: theme.palette.general.tertiary,
@@ -171,27 +148,14 @@ const AuthModal = ({
                                             bgcolor: theme.palette.general.tertiary,
                                         },
                                     },
-                                    '&.Mui-disabled': {
-                                        opacity: 0.5,
-                                        color: 'rgba(255, 255, 255, 0.3)',
-                                    },
                                 },
                             }}
                         >
                             <Tab sx={{ flex: 1 }}>Login</Tab>
-                            <Tab sx={{ flex: 1 }} disabled={!isAccountCreationAllowed && !isFirstUser}>Create</Tab>
+                            <Tab sx={{ flex: 1 }}>Create</Tab>
                         </TabList>
 
                         <DialogContent sx={{ padding: 3, backgroundColor: theme.palette.general.tertiary }}>
-                            {!isAccountCreationAllowed && !isFirstUser && activeTab === 0 && (
-                                <Alert 
-                                    color="warning" 
-                                    sx={{ mb: 2, backgroundColor: 'rgba(255, 193, 7, 0.2)', color: '#ffc107' }}
-                                >
-                                    Account creation has been disabled by an administrator.
-                                </Alert>
-                            )}
-                            
                             <TabPanel value={0} sx={{ p: 0 }}>
                                 <Stack spacing={2} component="form" onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
                                     <FormControl>
@@ -240,15 +204,6 @@ const AuthModal = ({
                             </TabPanel>
 
                             <TabPanel value={1} sx={{ p: 0 }}>
-                                {isFirstUser && (
-                                    <Alert 
-                                        color="info" 
-                                        sx={{ mb: 2, backgroundColor: 'rgba(3, 169, 244, 0.2)', color: '#03a9f4' }}
-                                    >
-                                        You will be the first user and will have administrator privileges.
-                                    </Alert>
-                                )}
-                                
                                 <Stack spacing={2} component="form" onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
                                     <FormControl>
                                         <FormLabel>Username</FormLabel>
@@ -346,7 +301,6 @@ AuthModal.propTypes = {
     handleCreateUser: PropTypes.func.isRequired,
     handleGuestLogin: PropTypes.func.isRequired,
     setIsAuthModalHidden: PropTypes.func.isRequired,
-    checkAccountCreationStatus: PropTypes.func
 };
 
 export default AuthModal;

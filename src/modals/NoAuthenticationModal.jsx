@@ -65,6 +65,7 @@ const NoAuthenticationModal = ({ isHidden, form, setForm, setIsNoAuthHidden, han
                 }));
             }
         } catch (error) {
+            console.error("Authentication form error:", error);
         }
     };
 

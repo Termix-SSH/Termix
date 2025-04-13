@@ -3,32 +3,23 @@ import { useEffect, useRef, useState } from 'react';
 import { CssVarsProvider } from '@mui/joy/styles';
 import { Button } from '@mui/joy';
 import HostViewerIcon from '../images/host_viewer_icon.png';
-import SnippetsIcon from '../images/snippets_icon.png';
 import theme from '../theme.js';
-import HostViewer from './hosts/HostViewer.jsx';
-import SnippetViewer from './snippets/SnippetViewer.jsx';
+import HostViewer from './ssh/HostViewer.jsx';
 
 function Launchpad({
     onClose,
     getHosts,
-    getSnippets,
     connectToHost,
     isAddHostHidden,
     setIsAddHostHidden,
     isEditHostHidden,
     isErrorHidden,
-    isConfirmDeleteHidden,
-    setIsConfirmDeleteHidden,
     deleteHost,
     editHost,
     shareHost,
     userRef,
     isHostViewerMenuOpen,
     setIsHostViewerMenuOpen,
-    isSnippetViewerMenuOpen,
-    setIsSnippetViewerMenuOpen,
-    terminals,
-    activeTab,
 }) {
     const launchpadRef = useRef(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -44,24 +35,18 @@ function Launchpad({
                 isEditHostHidden &&
                 isErrorHidden &&
                 !isHostViewerMenuOpen &&
-                !isSnippetViewerMenuOpen &&
-                isConfirmDeleteHidden &&
                 !isAnyModalOpen
             ) {
-                window.dispatchEvent(new CustomEvent('launchpad:close'));
                 onClose();
             }
         };
-
-        window.dispatchEvent(new CustomEvent('launchpad:open'));
 
         document.addEventListener("mousedown", handleClickOutside);
 
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
-            window.dispatchEvent(new CustomEvent('launchpad:close'));
         };
-    }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden, isHostViewerMenuOpen, isSnippetViewerMenuOpen, isConfirmDeleteHidden, isAnyModalOpen]);
+    }, [onClose, isAddHostHidden, isEditHostHidden, isErrorHidden, isHostViewerMenuOpen, isAnyModalOpen]);
 
     const handleModalOpen = () => {
         setIsAnyModalOpen(true);
@@ -164,7 +149,6 @@ function Launchpad({
                                 borderRadius: "8px",
                                 paddingLeft: sidebarOpen ? "15px" : "0",
                                 transition: "width 0.3s ease",
-                                marginBottom: "10px"
                             }}
                         >
                             {sidebarOpen ? (
@@ -185,49 +169,6 @@ function Launchpad({
                                 />
                             )}
                         </Button>
-
-                        {/* SnippetViewer Button */}
-                        <Button
-                            onClick={() => setActiveApp('snippetViewer')}
-                            sx={{
-                                backgroundColor: activeApp === 'snippetViewer'
-                                    ? theme.palette.general.tertiary
-                                    : theme.palette.general.primary,
-                                '&:hover': {
-                                    backgroundColor: activeApp === 'snippetViewer'
-                                        ? theme.palette.general.tertiary
-                                        : theme.palette.general.dark,
-                                },
-                            }}
-                            style={{
-                                width: sidebarOpen ? "175px" : "40px",
-                                height: "40px",
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                borderRadius: "8px",
-                                paddingLeft: sidebarOpen ? "15px" : "0",
-                                transition: "width 0.3s ease",
-                            }}
-                        >
-                            {sidebarOpen ? (
-                                "Snippets"
-                            ) : (
-                                <img
-                                    src={SnippetsIcon}
-                                    alt="Snippets"
-                                    width={24}
-                                    height={24}
-                                    style={{
-                                        objectFit: "contain",
-                                        position: "absolute",
-                                        left: "50%",
-                                        top: "50%",
-                                        transform: "translate(-50%, -50%)",
-                                    }}
-                                />
-                            )}
-                        </Button>
                     </div>
 
                     {/* Main Content */}
@@ -236,14 +177,13 @@ function Launchpad({
                             <HostViewer
                                 getHosts={getHosts}
                                 connectToHost={(hostConfig) => {
-                                    try {
-                                        if (!hostConfig || !hostConfig.ip || !hostConfig.user) return;
-
-                                        connectToHost(hostConfig);
-
-                                        setTimeout(() => onClose(), 100);
-                                    } catch (error) {
+                                    if (!hostConfig || typeof hostConfig !== 'object') {
+                                        return;
                                     }
+                                    if (!hostConfig.ip || !hostConfig.user) {
+                                        return;
+                                    }
+                                    connectToHost(hostConfig);
                                 }}
                                 setIsAddHostHidden={setIsAddHostHidden}
                                 deleteHost={deleteHost}
@@ -255,21 +195,6 @@ function Launchpad({
                                 userRef={userRef}
                                 isMenuOpen={isHostViewerMenuOpen || false}
                                 setIsMenuOpen={setIsHostViewerMenuOpen}
-                                isEditHostHidden={isEditHostHidden}
-                                isConfirmDeleteHidden={isConfirmDeleteHidden}
-                                setIsConfirmDeleteHidden={setIsConfirmDeleteHidden}
-                            />
-                        )}
-                        {activeApp === 'snippetViewer' && (
-                            <SnippetViewer
-                                getSnippets={getSnippets}
-                                userRef={userRef}
-                                onModalOpen={handleModalOpen}
-                                onModalClose={handleModalClose}
-                                isMenuOpen={isSnippetViewerMenuOpen || false}
-                                setIsMenuOpen={setIsSnippetViewerMenuOpen}
-                                terminals={terminals || []}
-                                activeTab={activeTab}
                             />
                         )}
                     </div>
@@ -282,24 +207,17 @@ function Launchpad({
 Launchpad.propTypes = {
     onClose: PropTypes.func.isRequired,
     getHosts: PropTypes.func.isRequired,
-    getSnippets: PropTypes.func.isRequired,
     connectToHost: PropTypes.func.isRequired,
     isAddHostHidden: PropTypes.bool.isRequired,
     setIsAddHostHidden: PropTypes.func.isRequired,
     isEditHostHidden: PropTypes.bool.isRequired,
     isErrorHidden: PropTypes.bool.isRequired,
-    isConfirmDeleteHidden: PropTypes.bool,
-    setIsConfirmDeleteHidden: PropTypes.func,
     deleteHost: PropTypes.func.isRequired,
     editHost: PropTypes.func.isRequired,
     shareHost: PropTypes.func.isRequired,
     userRef: PropTypes.object.isRequired,
     isHostViewerMenuOpen: PropTypes.bool,
     setIsHostViewerMenuOpen: PropTypes.func.isRequired,
-    isSnippetViewerMenuOpen: PropTypes.bool,
-    setIsSnippetViewerMenuOpen: PropTypes.func,
-    terminals: PropTypes.array,
-    activeTab: PropTypes.number,
 };
 
 export default Launchpad;

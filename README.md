@@ -34,7 +34,6 @@ Termix is an open-source forever free self-hosted SSH (other protocols planned, 
 - Split Screen (Up to 4) & Tab System
 - User Authentication
 - Save Hosts (and easily view, connect, and manage them)
-- Terminal Themes
 
 # Planned Features
 - VNC
@@ -42,6 +41,7 @@ Termix is an open-source forever free self-hosted SSH (other protocols planned, 
 - SFTP (build in file transfer)
 - ChatGPT/Ollama Integration (for commands)
 - Apps (like notes, AI, etc)
+- Terminal Themes
 - User Management (roles, permissions, etc.)
 - SSH Tunneling
 - More Authentication Methods

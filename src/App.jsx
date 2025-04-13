@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { NewTerminal } from "./apps/hosts/ssh/SSHTerminal.jsx";
+import { NewTerminal } from "./apps/ssh/Terminal.jsx";
 import { User } from "./apps/user/User.jsx";
 import AddHostModal from "./modals/AddHostModal.jsx";
 import AuthModal from "./modals/AuthModal.jsx";
@@ -14,20 +14,15 @@ import RocketIcon from './images/launchpad_rocket.png';
 import ProfileIcon from './images/profile_icon.png';
 import ProfileModal from "./modals/ProfileModal.jsx";
 import ErrorModal from "./modals/ErrorModal.jsx";
-import InfoModal from "./modals/InfoModal.jsx";
 import EditHostModal from "./modals/EditHostModal.jsx";
 import NoAuthenticationModal from "./modals/NoAuthenticationModal.jsx";
 import eventBus from "./other/eventBus.jsx";
-import { preloadAllFonts } from './utils/fontLoader';
 
 function App() {
     const [isAddHostHidden, setIsAddHostHidden] = useState(true);
     const [isAuthModalHidden, setIsAuthModalHidden] = useState(true);
     const [isProfileHidden, setIsProfileHidden] = useState(true);
     const [isErrorHidden, setIsErrorHidden] = useState(true);
-    const [isInfoHidden, setIsInfoHidden] = useState(true);
-    const [infoMessage, setInfoMessage] = useState('');
-    const [infoTitle, setInfoTitle] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [terminals, setTerminals] = useState([]);
     const userRef = useRef(null);
@@ -78,15 +73,10 @@ function App() {
     const [isLaunchpadOpen, setIsLaunchpadOpen] = useState(false);
     const [splitTabIds, setSplitTabIds] = useState([]);
     const [isEditHostHidden, setIsEditHostHidden] = useState(true);
-    const [isConfirmDeleteHidden, setIsConfirmDeleteHidden] = useState(true);
     const [currentHostConfig, setCurrentHostConfig] = useState(null);
     const [isLoggingIn, setIsLoggingIn] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [isHostViewerMenuOpen, setIsHostViewerMenuOpen] = useState(null);
-    const [isSnippetViewerMenuOpen, setIsSnippetViewerMenuOpen] = useState(null);
-    const [hosts, setHosts] = useState([]);
-    const [databaseChecked, setDatabaseChecked] = useState(false);
-    const [adminErrorMessage, setAdminErrorMessage] = useState("");
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -142,26 +132,6 @@ function App() {
             }
         });
     }, [splitTabIds]);
-
-    useEffect(() => {
-        const checkDatabase = async () => {
-            if (!databaseChecked && userRef.current) {
-                try {
-                    const status = await userRef.current.checkAccountCreationStatus();
-
-                    if (status.isFirstUser) {
-                        setInfoTitle("Welcome to Termix");
-                        setInfoMessage("It appears you're using Termix for the first time or after a database update. Your data has been wiped, you will need to create a new user.");
-                        setIsInfoHidden(false);
-                    }
-                    
-                    setDatabaseChecked(true);
-                } catch (error) {}
-            }
-        };
-        
-        checkDatabase();
-    }, [databaseChecked, userRef.current]);
 
     useEffect(() => {
         const sessionToken = localStorage.getItem('sessionToken');
@@ -258,70 +228,6 @@ function App() {
         };
     }, []);
 
-    useEffect(() => {
-        const fetchHosts = async () => {
-            if (userRef.current?.getUser()) {
-                const fetchedHosts = await userRef.current.getAllHosts();
-                setHosts(fetchedHosts);
-            }
-        };
-        fetchHosts();
-    }, [userRef.current?.getUser()]);
-
-    const handleAddAdmin = async (username) => {
-        if (!userRef.current?.isAdmin()) {
-            setAdminErrorMessage("You do not have permission to perform this action.");
-            return false;
-        }
-        
-        try {
-            const result = await userRef.current.addAdminUser(username);
-            if (!result) {
-                throw new Error("Failed to add admin user");
-            }
-            return true;
-        } catch (error) {
-            const errorMsg = error.message || "Failed to add admin user";
-            setAdminErrorMessage(errorMsg);
-            return false;
-        }
-    };
-
-    const handleToggleAccountCreation = async (enabled) => {
-        if (!userRef.current?.isAdmin()) {
-            setAdminErrorMessage("You do not have permission to perform this action.");
-            return null;
-        }
-        
-        try {
-            const result = await userRef.current.toggleAccountCreation(enabled);
-            return result;
-        } catch (error) {
-            setAdminErrorMessage(`Failed to toggle account creation: ${error.message}`);
-            return null;
-        }
-    };
-
-    const checkAccountCreationStatus = async () => {
-        if (!userRef.current) return { allowed: true, isFirstUser: false };
-        
-        try {
-            return await userRef.current.checkAccountCreationStatus();
-        } catch (error) {
-            return { allowed: true, isFirstUser: false };
-        }
-    };
-
-    const getAllAdmins = async () => {
-        if (!userRef.current?.isAdmin()) return [];
-        
-        try {
-            return await userRef.current.getAllAdmins();
-        } catch (error) {
-            return [];
-        }
-    };
-
     const handleAddHost = () => {
         if (addHostForm.ip && addHostForm.port) {
             if (addHostForm.connectionType === 'ssh' && !addHostForm.user) {
@@ -374,68 +280,28 @@ function App() {
     };
 
     const connectToHost = () => {
-        if (!addHostForm.ip || !addHostForm.user) return;
-
         const hostConfig = {
             name: addHostForm.name || '',
             folder: addHostForm.folder || '',
-            ip: addHostForm.ip?.trim() || '',
-            user: addHostForm.user?.trim() || '',
-            port: String(addHostForm.port || 22),
-            password: (addHostForm.rememberHost && addHostForm.authMethod === 'password') ? addHostForm.password?.trim() : undefined,
-            sshKey: (addHostForm.rememberHost && addHostForm.authMethod === 'sshKey') ? addHostForm.sshKey?.trim() : undefined,
-            terminalConfig: addHostForm.terminalConfig || {
-                theme: 'dark',
-                cursorStyle: 'block',
-                fontFamily: 'ubuntuMono',
-                fontSize: 14,
-                fontWeight: 'normal',
-                lineHeight: 1,
-                letterSpacing: 0,
-                cursorBlink: true,
-                sshAlgorithm: 'default'
-            }
+            ip: addHostForm.ip,
+            user: addHostForm.user,
+            port: String(addHostForm.port),
+            password: addHostForm.rememberHost && addHostForm.authMethod === 'password' ? addHostForm.password : undefined,
+            sshKey: addHostForm.rememberHost && addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
         };
 
-        const baseTitle = addHostForm.name || addHostForm.ip;
-        let title = baseTitle;
-
-        const existingTitles = terminals.map(t => t.title);
-        const duplicateTitles = existingTitles.filter(t => t.startsWith(baseTitle));
-        
-        if (duplicateTitles.length > 0) {
-            let highestNumber = 0;
-            duplicateTitles.forEach(t => {
-                const match = t.match(/\((\d+)\)$/);
-                if (match) {
-                    const num = parseInt(match[1], 10);
-                    if (num > highestNumber) highestNumber = num;
-                }
-            });
-            
-            title = `${baseTitle} (${highestNumber + 1})`;
-        }
-
-        const newId = Date.now();
         const newTerminal = {
-            id: newId,
-            title: title,
-            hostConfig: hostConfig,
-            terminalRef: null
+            id: nextId,
+            title: hostConfig.name || hostConfig.ip,
+            hostConfig,
+            terminalRef: null,
         };
-
-        setTerminals(prevTerminals => [...prevTerminals, newTerminal]);
-        setActiveTab(newId);
+        setTerminals([...terminals, newTerminal]);
+        setActiveTab(nextId);
+        setNextId(nextId + 1);
         setIsAddHostHidden(true);
-
-        setAddHostForm({ 
-            name: "", folder: "", ip: "", user: "", password: "", sshKey: "", 
-            port: 22, authMethod: "Select Auth", rememberHost: true, 
-            storePassword: true, connectionType: "ssh", rdpDomain: "", 
-            rdpWindowsAuthentication: true, rdpConsole: false, 
-            vncScaling: "100%", vncQuality: "High" 
-        });
-    };
+        setAddHostForm({ name: "", folder: "", ip: "", user: "", password: "", sshKey: "", port: 22, authMethod: "Select Auth", rememberHost: true, storePassword: true, connectionType: "ssh", rdpDomain: "", rdpWindowsAuthentication: true, rdpConsole: false, vncScaling: "100%", vncQuality: "High" });
+    }
 
     const handleAuthSubmit = (form) => {
         try {
@@ -466,101 +332,69 @@ function App() {
                 });
             }, 100);
         } catch (error) {
+            console.error("Authentication error:", error);
             setErrorMessage("Failed to authenticate: " + (error.message || "Unknown error"));
             setIsErrorHidden(false);
         }
     };
 
     const connectToHostWithConfig = (hostConfig) => {
-        if (!hostConfig || !hostConfig.ip || !hostConfig.user) return;
-        
+        if (!hostConfig || typeof hostConfig !== 'object') {
+            return;
+        }
+
+        if (!hostConfig.ip || !hostConfig.user) {
+            return;
+        }
+
         const cleanHostConfig = {
-            ...hostConfig,
-            ip: hostConfig.ip?.trim() || '',
-            user: hostConfig.user?.trim() || '',
+            name: hostConfig.name || '',
+            folder: hostConfig.folder || '',
+            ip: hostConfig.ip.trim(),
+            user: hostConfig.user.trim(),
             port: hostConfig.port || '22',
             password: hostConfig.password?.trim(),
             sshKey: hostConfig.sshKey?.trim(),
-            terminalConfig: hostConfig.terminalConfig || {
-                theme: 'dark',
-                cursorStyle: 'block',
-                fontFamily: 'ubuntuMono',
-                fontSize: 14,
-                fontWeight: 'normal',
-                lineHeight: 1,
-                letterSpacing: 0,
-                cursorBlink: true,
-                sshAlgorithm: 'default'
-            }
         };
 
-        const baseTitle = hostConfig.name || hostConfig.ip;
-        let title = baseTitle;
-
-        const existingTitles = terminals.map(t => t.title);
-        const duplicateTitles = existingTitles.filter(t => t.startsWith(baseTitle));
-        
-        if (duplicateTitles.length > 0) {
-            let highestNumber = 0;
-            duplicateTitles.forEach(t => {
-                const match = t.match(/\((\d+)\)$/);
-                if (match) {
-                    const num = parseInt(match[1], 10);
-                    if (num > highestNumber) highestNumber = num;
-                }
-            });
-            
-            title = `${baseTitle} (${highestNumber + 1})`;
-        }
-
-        const newId = Date.now();
         const newTerminal = {
-            id: newId,
-            title: title,
+            id: nextId,
+            title: cleanHostConfig.name || cleanHostConfig.ip,
             hostConfig: cleanHostConfig,
-            terminalRef: null
+            terminalRef: null,
         };
-
-        setTerminals(prevTerminals => [...prevTerminals, newTerminal]);
-        setActiveTab(newId);
+        setTerminals([...terminals, newTerminal]);
+        setActiveTab(nextId);
+        setNextId(nextId + 1);
         setIsLaunchpadOpen(false);
-    };
+    }
 
     const handleSaveHost = async () => {
         try {
-            await userRef.current.saveHost({
-                hostConfig: {
-                    name: addHostForm.name || '',
-                    folder: addHostForm.folder || '',
-                    ip: addHostForm.ip?.trim() || '',
-                    user: addHostForm.user?.trim() || '',
-                    port: addHostForm.port || 22,
-                    password: addHostForm.storePassword ? addHostForm.password?.trim() || "" : "",
-                    sshKey: addHostForm.storePassword ? addHostForm.sshKey?.trim() || "" : "",
-                    keyType: addHostForm.keyType || '',
-                    isPinned: !!addHostForm.isPinned,
-                    tags: addHostForm.tags || [],
-                    terminalConfig: addHostForm.terminalConfig || {
-                        theme: 'dark',
-                        cursorStyle: 'block',
-                        fontFamily: 'ubuntuMono',
-                        fontSize: 14,
-                        fontWeight: 'normal',
-                        lineHeight: 1,
-                        letterSpacing: 0,
-                        cursorBlink: true,
-                        sshAlgorithm: 'default'
-                    }
-                }
-            });
-            setIsAddHostHidden(true);
-            return true;
-        } catch (err) {
-            setErrorMessage(err.toString());
-            setIsErrorHidden(false);
-            return false;
+            let hostConfig = {
+                name: addHostForm.name || addHostForm.ip,
+                folder: addHostForm.folder,
+                ip: addHostForm.ip,
+                user: addHostForm.user,
+                password: (addHostForm.authMethod === 'password' || addHostForm.connectionType === 'vnc' || addHostForm.connectionType === 'rdp') ? addHostForm.password : undefined,
+                sshKey: addHostForm.connectionType === 'ssh' && addHostForm.authMethod === 'sshKey' ? addHostForm.sshKey : undefined,
+                port: String(addHostForm.port),
+                connectionType: addHostForm.connectionType,
+                rdpDomain: addHostForm.connectionType === 'rdp' ? addHostForm.rdpDomain : undefined,
+                rdpWindowsAuthentication: addHostForm.connectionType === 'rdp' ? addHostForm.rdpWindowsAuthentication : undefined,
+                rdpConsole: addHostForm.connectionType === 'rdp' ? addHostForm.rdpConsole : undefined,
+                vncScaling: addHostForm.connectionType === 'vnc' ? addHostForm.vncScaling : undefined,
+                vncQuality: addHostForm.connectionType === 'vnc' ? addHostForm.vncQuality : undefined
+            }
+            if (userRef.current) {
+                await userRef.current.saveHost({
+                    hostConfig,
+                });
+            }
+        } catch (error) {
+            throw error;
         }
-    };
+    }
 
     const handleLoginUser = ({ username, password, sessionToken, onSuccess, onFailure }) => {
         if (userRef.current) {
@@ -656,53 +490,38 @@ function App() {
             setCurrentHostConfig(hostConfig);
             setIsEditHostHidden(false);
         } else {
+            console.error("hostConfig is null");
         }
     };
 
     const handleEditHost = async (oldConfig, newConfig = null) => {
         try {
-            if (!oldConfig) {
-                return false;
+            if (newConfig) {
+                if (isEditing) return;
+                setIsEditing(true);
+
+                try {
+                    await userRef.current.editHost({
+                        oldHostConfig: oldConfig,
+                        newHostConfig: newConfig,
+                    });
+
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    setIsEditHostHidden(true);
+                } catch (error) {
+                    throw error;
+                } finally {
+                    setIsEditing(false);
+                }
+                return;
             }
 
-            if (!newConfig) {
-                updateEditHostForm(oldConfig);
-                setIsEditHostHidden(false);
-                return true;
-            }
-
-            if (!newConfig.tags && oldConfig.tags) {
-                newConfig.tags = oldConfig.tags;
-            }
-
-            if (!oldConfig._id && newConfig._id) {
-                oldConfig._id = newConfig._id;
-            }
-
-            if (newConfig.password === undefined) newConfig.password = '';
-            if (newConfig.sshKey === undefined) newConfig.sshKey = '';
-            if (newConfig.keyType === undefined) newConfig.keyType = '';
-
-            setIsEditing(true);
-
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            const response = await userRef.current.editHost({
-                oldHostConfig: oldConfig,
-                newHostConfig: newConfig
-            });
-
-            setIsEditHostHidden(true);
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setIsEditing(false);
-
-            return true;
-        } catch (err) {
-            setErrorMessage(err.toString());
+            updateEditHostForm(oldConfig);
+        } catch (error) {
+            console.error('Edit failed:', error);
+            setErrorMessage(`Edit failed: ${error.message || error}`);
             setIsErrorHidden(false);
             setIsEditing(false);
-            return false;
         }
     };
 
@@ -716,24 +535,15 @@ function App() {
 
     const toggleSplit = (id) => {
         if (splitTabIds.includes(id)) {
-            setSplitTabIds(prev => prev.filter(splitId => splitId !== id));
-
-            if (activeTab !== id) {
-                setActiveTab(id);
-            }
+            setSplitTabIds((prev) => prev.filter((splitId) => splitId !== id));
             return;
         }
 
         if (splitTabIds.length >= 3) return;
 
-        setSplitTabIds(prev => [...prev, id]);
-
-        if (activeTab === id) {
-            const availableTabs = terminals.filter(t => !splitTabIds.includes(t.id) && t.id !== id);
-            if (availableTabs.length > 0) {
-                setActiveTab(availableTabs[0].id);
-            }
-        }
+        setSplitTabIds((prev) =>
+            prev.includes(id) ? prev.filter((splitId) => splitId !== id) : [...prev, id]
+        );
     };
 
     const handleSetActiveTab = (tabId) => {
@@ -741,98 +551,20 @@ function App() {
     };
 
     const getLayoutStyle = () => {
-        if (splitTabIds.length === 0) {
-            return "flex flex-col h-full w-full";
-        } else if (splitTabIds.length === 1) {
-            return "grid grid-cols-2 h-full w-full gap-4";
-        } else {
-            return "grid grid-cols-2 grid-rows-2 gap-4 h-full w-full overflow-hidden";
+        if (splitTabIds.length === 1) {
+            return "grid grid-cols-2 h-full gap-4";
+        } else if (splitTabIds.length > 1) {
+            return "grid grid-cols-2 grid-rows-2 gap-4 h-full overflow-hidden";
         }
-    };
-
-    const getTerminalBackgroundColor = (hostConfig) => {
-        const terminalThemeMap = {
-            'dark': '#1e1e1e',
-            'light': '#ffffff',
-            'red': '#550000',
-            'green': '#0B3B0B',
-            'blue': '#001B33',
-            'purple': '#2D1B4E',
-            'orange': '#421F04',
-            'cyan': '#003833',
-            'yellow': '#3B3B00',
-            'pink': '#3B001B'
-        };
-
-        const themeName = hostConfig?.terminalConfig?.theme || 'dark';
-
-        return terminalThemeMap[themeName] || terminalThemeMap.dark;
-    };
-
-    useEffect(() => {
-        preloadAllFonts();
-    }, []);
-
-    const renderTerminals = () => {
-        return (
-            <>
-                {terminals.map(terminal => {
-                    const isVisible = terminal.id === activeTab || splitTabIds.includes(terminal.id);
-                    const isSplit = splitTabIds.includes(terminal.id);
-                    
-                    return (
-                        <div
-                            key={terminal.id}
-                            className="rounded-lg overflow-hidden shadow-lg"
-                            style={{
-                                display: isVisible ? 'block' : 'none',
-                                order: isSplit ? splitTabIds.indexOf(terminal.id) : 0,
-                                backgroundColor: getTerminalBackgroundColor(terminal.hostConfig),
-                                flex: isSplit ? "1 1 0" : "1",
-                                height: '100%',
-                                width: isSplit ? undefined : '100%',
-                                border: '3px solid rgba(255, 255, 255, 0.15)',
-                                position: isVisible ? 'relative' : 'absolute',
-                                visibility: isVisible ? 'visible' : 'hidden',
-                                zIndex: isVisible ? 1 : -1
-                            }}
-                        >
-                            <NewTerminal
-                                key={terminal.id}
-                                hostConfig={terminal.hostConfig}
-                                isVisible={isVisible}
-                                setIsNoAuthHidden={setIsNoAuthHidden}
-                                setErrorMessage={setErrorMessage}
-                                setIsErrorHidden={setIsErrorHidden}
-                                title={terminal.title}
-                                showTitle={splitTabIds.length > 0} 
-                                ref={(ref) => {
-                                    terminal.terminalRef = ref;
-                                }}
-                            />
-                        </div>
-                    );
-                })}
-            </>
-        );
+        return "flex flex-col h-full gap-4";
     };
 
     return (
         <CssVarsProvider theme={theme}>
-            <div className="flex h-screen bg-neutral-900 overflow-hidden" style={{ 
-                width: '100vw', 
-                maxWidth: '100vw',
-                boxSizing: 'border-box',
-                margin: 0,
-                padding: 0
-            }}>
-                <div className="flex-1 flex flex-col overflow-hidden" style={{ 
-                    width: '100%', 
-                    maxWidth: '100%',
-                    boxSizing: 'border-box' 
-                }}>
+            <div className="flex h-screen bg-neutral-900 overflow-hidden">
+                <div className="flex-1 flex flex-col overflow-hidden">
                     {/* Topbar */}
-                    <div className="bg-neutral-800 text-white p-4 flex items-center justify-between gap-4 min-h-[75px] max-h-[75px] shadow-xl border-b-5 border-neutral-700" style={{ width: '100%' }}>
+                    <div className="bg-neutral-800 text-white p-4 flex items-center justify-between gap-4 min-h-[75px] max-h-[75px] shadow-xl border-b-5 border-neutral-700">
                         <div className="bg-neutral-700 flex justify-center items-center gap-1 p-2 rounded-lg h-[52px]">
                             <img src={TermixIcon} alt="Termix Icon" className="w-[25px] h-[25px] object-contain" />
                             <h2 className="text-lg font-bold">Termix</h2>
@@ -937,30 +669,49 @@ function App() {
                     </div>
 
                     {/* Terminal Views */}
-                    {userRef.current?.getUser() ? (
-                        <div className={`relative p-4 terminal-container w-full ${getLayoutStyle()}`} style={{ 
-                            backgroundColor: '#161616',
-                            gap: '8px',
-                            overflow: 'hidden'
-                        }}>
-                            {renderTerminals()}
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-full w-full">
-                            <div className="text-center text-neutral-400">
-                                <h2 className="text-2xl font-bold mb-4">Welcome to Termix</h2>
-                                <p>{isLoggingIn ? "Checking login status..." : "Please login to start managing your SSH connections"}</p>
+                    <div className={`relative p-4 terminal-container ${getLayoutStyle()}`}>
+                        {userRef.current?.getUser() ? (
+                            terminals.map((terminal) => (
+                                <div
+                                    key={terminal.id}
+                                    className={`bg-neutral-800 rounded-lg overflow-hidden shadow-xl border-5 border-neutral-700 ${
+                                        splitTabIds.includes(terminal.id) || activeTab === terminal.id ? "block" : "hidden"
+                                    } flex-1`}
+                                    style={{
+                                        order: splitTabIds.includes(terminal.id)
+                                            ? splitTabIds.indexOf(terminal.id)
+                                            : 0,
+                                    }}
+                                >
+                                    <NewTerminal
+                                        key={terminal.id}
+                                        hostConfig={terminal.hostConfig}
+                                        isVisible={activeTab === terminal.id || splitTabIds.includes(terminal.id)}
+                                        setIsNoAuthHidden={setIsNoAuthHidden}
+                                        setErrorMessage={setErrorMessage}
+                                        setIsErrorHidden={setIsErrorHidden}
+                                        ref={(ref) => {
+                                            terminal.terminalRef = ref;
+                                        }}
+                                    />
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center text-neutral-400">
+                                    <h2 className="text-2xl font-bold mb-4">Welcome to Termix</h2>
+                                    <p>{isLoggingIn ? "Checking login status..." : "Please login to start managing your SSH connections"}</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
-
-                    <NoAuthenticationModal
-                        isHidden={isNoAuthHidden}
-                        form={noAuthenticationForm}
-                        setForm={setNoAuthenticationForm}
-                        setIsNoAuthHidden={setIsNoAuthHidden}
-                        handleAuthSubmit={handleAuthSubmit}
-                    />
+                        )}
+                        <NoAuthenticationModal
+                            isHidden={isNoAuthHidden}
+                            form={noAuthenticationForm}
+                            setForm={setNoAuthenticationForm}
+                            setIsNoAuthHidden={setIsNoAuthHidden}
+                            handleAuthSubmit={handleAuthSubmit}
+                        />
+                    </div>
 
                     {/* Modals */}
                     {userRef.current?.getUser() && (
@@ -971,7 +722,6 @@ function App() {
                                 setForm={setAddHostForm}
                                 handleAddHost={handleAddHost}
                                 setIsAddHostHidden={setIsAddHostHidden}
-                                hosts={hosts}
                             />
                             <EditHostModal
                                 isHidden={isEditHostHidden}
@@ -987,35 +737,22 @@ function App() {
                                 handleDeleteUser={handleDeleteUser}
                                 handleLogoutUser={handleLogoutUser}
                                 setIsProfileHidden={setIsProfileHidden}
-                                handleAddAdmin={handleAddAdmin}
-                                handleToggleAccountCreation={handleToggleAccountCreation}
-                                checkAccountCreationStatus={checkAccountCreationStatus}
-                                getAllAdmins={getAllAdmins}
-                                adminErrorMessage={adminErrorMessage}
-                                setAdminErrorMessage={setAdminErrorMessage}
                             />
                             {isLaunchpadOpen && (
                                 <Launchpad
                                     onClose={() => setIsLaunchpadOpen(false)}
                                     getHosts={getHosts}
-                                    getSnippets={() => userRef.current?.getAllSnippets()}
                                     connectToHost={connectToHostWithConfig}
                                     isAddHostHidden={isAddHostHidden}
                                     setIsAddHostHidden={setIsAddHostHidden}
                                     isEditHostHidden={isEditHostHidden}
                                     isErrorHidden={isErrorHidden}
-                                    isConfirmDeleteHidden={isConfirmDeleteHidden}
-                                    setIsConfirmDeleteHidden={setIsConfirmDeleteHidden}
                                     deleteHost={deleteHost}
                                     editHost={handleEditHost}
                                     shareHost={(hostId, username) => userRef.current?.shareHost(hostId, username)}
                                     userRef={userRef}
                                     isHostViewerMenuOpen={isHostViewerMenuOpen}
                                     setIsHostViewerMenuOpen={setIsHostViewerMenuOpen}
-                                    isSnippetViewerMenuOpen={isSnippetViewerMenuOpen}
-                                    setIsSnippetViewerMenuOpen={setIsSnippetViewerMenuOpen}
-                                    terminals={terminals}
-                                    activeTab={activeTab}
                                 />
                             )}
                         </>
@@ -1027,13 +764,6 @@ function App() {
                         setIsErrorHidden={setIsErrorHidden}
                     />
 
-                    <InfoModal
-                        isHidden={isInfoHidden}
-                        infoMessage={infoMessage}
-                        title={infoTitle}
-                        setIsInfoHidden={setIsInfoHidden}
-                    />
-
                     <AuthModal
                         isHidden={isAuthModalHidden}
                         form={authForm}
@@ -1042,7 +772,6 @@ function App() {
                         handleCreateUser={handleCreateUser}
                         handleGuestLogin={handleGuestLogin}
                         setIsAuthModalHidden={setIsAuthModalHidden}
-                        checkAccountCreationStatus={checkAccountCreationStatus}
                     />
 
                     {/* User component */}

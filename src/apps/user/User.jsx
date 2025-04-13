@@ -3,7 +3,7 @@ import io from "socket.io-client";
 import PropTypes from "prop-types";
 
 const SOCKET_URL = window.location.hostname === "localhost"
-    ? "http://localhost:8081/database.io"
+    ? "http://localhost:8082/database.io"
     : "/database.io";
 
 const socket = io(SOCKET_URL, {
@@ -36,7 +36,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                         id: response.user.id,
                         username: response.user.username,
                         sessionToken: storedSession,
-                        isAdmin: response.user.isAdmin || false,
                     };
                     onLoginSuccess(response.user);
                 } else {
@@ -53,14 +52,8 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
 
     const createUser = async (userConfig) => {
         try {
-            const accountCreationStatus = await checkAccountCreationStatus();
-            if (!accountCreationStatus.allowed && !accountCreationStatus.isFirstUser) {
-                throw new Error("Account creation has been disabled by an administrator");
-            }
-
             const response = await new Promise((resolve) => {
-                const isFirstUser = accountCreationStatus.isFirstUser;
-                socketRef.current.emit("createUser", { ...userConfig, isAdmin: isFirstUser }, resolve);
+                socketRef.current.emit("createUser", userConfig, resolve);
             });
 
             if (response?.user?.sessionToken) {
@@ -68,7 +61,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                     id: response.user.id,
                     username: response.user.username,
                     sessionToken: response.user.sessionToken,
-                    isAdmin: response.user.isAdmin || false,
                 };
                 localStorage.setItem("sessionToken", response.user.sessionToken);
                 onCreateSuccess(response.user);
@@ -92,7 +84,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                     id: response.user.id,
                     username: response.user.username,
                     sessionToken: response.user.sessionToken,
-                    isAdmin: response.user.isAdmin || false,
                 };
                 localStorage.setItem("sessionToken", response.user.sessionToken);
                 onLoginSuccess(response.user);
@@ -115,7 +106,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                     id: response.user.id,
                     username: response.user.username,
                     sessionToken: response.user.sessionToken,
-                    isAdmin: false,
                 };
                 localStorage.setItem("sessionToken", response.user.sessionToken);
                 onLoginSuccess(response.user);
@@ -155,112 +145,14 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         }
     };
 
-    const checkAccountCreationStatus = async () => {
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("checkAccountCreationStatus", resolve);
-            });
-            
-            return {
-                allowed: response?.allowed !== false,
-                isFirstUser: response?.isFirstUser || false
-            };
-        } catch (error) {
-            return { allowed: true, isFirstUser: false };
-        }
-    };
-
-    const toggleAccountCreation = async (enabled) => {
-        if (!currentUser.current?.isAdmin) return onFailure("Not authorized");
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("toggleAccountCreation", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                    enabled
-                }, resolve);
-            });
-
-            if (!response?.success) {
-                throw new Error(response?.error || "Failed to update account creation settings");
-            }
-            
-            return response.enabled;
-        } catch (error) {
-            onFailure(error.message);
-            return null;
-        }
-    };
-
-    const addAdminUser = async (username) => {
-        if (!currentUser.current?.isAdmin) return onFailure("Not authorized");
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("addAdminUser", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                    targetUsername: username
-                }, resolve);
-            });
-
-            if (!response?.success) {
-                const errorMsg = response?.error || "Failed to add admin user";
-                throw new Error(errorMsg);
-            }
-            
-            return true;
-        } catch (error) {
-            onFailure(error.message);
-            return false;
-        }
-    };
-
-    const getAllAdmins = async () => {
-        if (!currentUser.current?.isAdmin) return [];
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("getAllAdmins", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                }, resolve);
-            });
-
-            if (response?.success) {
-                return response.admins || [];
-            } else {
-                throw new Error(response?.error || "Failed to fetch admins");
-            }
-        } catch (error) {
-            onFailure(error.message);
-            return [];
-        }
-    };
-
     const saveHost = async (hostConfig) => {
         if (!currentUser.current) return onFailure("Not authenticated");
 
         try {
-            if (!hostConfig || !hostConfig.hostConfig) {
-                return onFailure("Invalid host configuration");
-            }
-
-            if (!hostConfig.hostConfig.ip || !hostConfig.hostConfig.user) {
-                return onFailure("Host must have IP and username");
-            }
-
-            if (!hostConfig.hostConfig.name || hostConfig.hostConfig.name.trim() === '') {
-                hostConfig.hostConfig.name = hostConfig.hostConfig.ip;
-            }
-
             const existingHosts = await getAllHosts();
 
             const duplicateNameHost = existingHosts.find(host => 
-                host && host.config && host.config.name && 
-                typeof host.config.name === 'string' &&
-                typeof hostConfig.hostConfig.name === 'string' &&
+                host.config.name && 
                 host.config.name.toLowerCase() === hostConfig.hostConfig.name.toLowerCase()
             );
             
@@ -268,25 +160,21 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 return onFailure("A host with this name already exists. Please choose a different name.");
             }
 
-            if (!hostConfig.hostConfig.terminalConfig) {
-                hostConfig.hostConfig.terminalConfig = {
-                    theme: 'dark',
-                    cursorStyle: 'block',
-                    fontFamily: 'ubuntuMono',
-                    fontSize: 14,
-                    fontWeight: 'normal',
-                    lineHeight: 1,
-                    letterSpacing: 0,
-                    cursorBlink: true,
-                    sshAlgorithm: 'default'
-                };
+            if (!hostConfig.hostConfig.name) {
+                const duplicateIpHost = existingHosts.find(host => 
+                    host.config.ip.toLowerCase() === hostConfig.hostConfig.ip.toLowerCase()
+                );
+                
+                if (duplicateIpHost) {
+                    return onFailure("A host with this IP already exists. Please provide a unique name.");
+                }
             }
 
             const response = await new Promise((resolve) => {
                 socketRef.current.emit("saveHostConfig", {
                     userId: currentUser.current.id,
                     sessionToken: currentUser.current.sessionToken,
-                    hostConfig: hostConfig.hostConfig
+                    ...hostConfig
                 }, resolve);
             });
 
@@ -309,61 +197,21 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 }, resolve);
             });
 
-            if (response?.success && Array.isArray(response.hosts)) {
-                return response.hosts.map(host => {
-                    if (!host) return null;
-
-                    return {
-                        ...host,
-                        config: host.config ? {
-                            name: host.config.name || host.name || '',
-                            folder: host.config.folder || host.folder || '',
-                            ip: host.config.ip || host.ip || '',
-                            user: host.config.user || host.user || '',
-                            port: host.config.port || host.port || '22',
-                            password: host.config.password || host.password || '',
-                            sshKey: host.config.sshKey || host.sshKey || '',
-                            keyType: host.config.keyType || host.keyType || '',
-                            isPinned: host.isPinned || false,
-                            tags: host.config.tags || host.tags || [],
-                            terminalConfig: host.config.terminalConfig || {
-                                theme: 'dark',
-                                cursorStyle: 'block',
-                                fontFamily: 'ubuntuMono',
-                                fontSize: 14,
-                                fontWeight: 'normal',
-                                lineHeight: 1,
-                                letterSpacing: 0,
-                                cursorBlink: true,
-                                sshAlgorithm: 'default'
-                            }
-                        } : {
-                            name: host.name || '',
-                            folder: host.folder || '',
-                            ip: host.ip || '',
-                            user: host.user || '',
-                            port: host.port || '22',
-                            password: host.password || '',
-                            sshKey: host.sshKey || '',
-                            keyType: host.keyType || '',
-                            isPinned: host.isPinned || false,
-                            tags: host.tags || [],
-                            terminalConfig: host.terminalConfig || {
-                                theme: 'dark',
-                                cursorStyle: 'block',
-                                fontFamily: 'ubuntuMono',
-                                fontSize: 14,
-                                fontWeight: 'normal',
-                                lineHeight: 1,
-                                letterSpacing: 0,
-                                cursorBlink: true,
-                                sshAlgorithm: 'default'
-                            }
-                        }
-                    };
-                }).filter(host => host && host.config && host.config.ip && host.config.user);
+            if (response?.success) {
+                return response.hosts.map(host => ({
+                    ...host,
+                    config: host.config ? {
+                        name: host.config.name || '',
+                        folder: host.config.folder || '',
+                        ip: host.config.ip || '',
+                        user: host.config.user || '',
+                        port: host.config.port || '22',
+                        password: host.config.password || '',
+                        sshKey: host.config.sshKey || '',
+                    } : {}
+                })).filter(host => host.config && host.config.ip && host.config.user);
             } else {
-                return [];
+                throw new Error(response?.error || "Failed to fetch hosts");
             }
         } catch (error) {
             onFailure(error.message);
@@ -395,64 +243,16 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         if (!currentUser.current) return onFailure("Not authenticated");
 
         try {
+            const existingHosts = await getAllHosts();
 
-            if (!oldHostConfig || !newHostConfig) {
-                return onFailure("Invalid host configuration");
-            }
-
-            if (!newHostConfig.ip || !newHostConfig.user) {
-                return onFailure("Host must have IP and username");
-            }
-
-            if (!oldHostConfig._id && !oldHostConfig.id) {
-                return onFailure("Cannot identify host to edit: missing ID");
-            }
-
-            const hostId = oldHostConfig._id || oldHostConfig.id;
-            oldHostConfig._id = hostId;
-            oldHostConfig.id = hostId;
-            newHostConfig._id = hostId;
-            newHostConfig.id = hostId;
-
-            if (!newHostConfig.name || newHostConfig.name.trim() === '') {
-                newHostConfig.name = newHostConfig.ip;
-            }
-
-            const isNameUnchanged = 
-                oldHostConfig.name && 
-                newHostConfig.name && 
-                oldHostConfig.name.toLowerCase() === newHostConfig.name.toLowerCase();
-
-            if (!isNameUnchanged) {
-                const existingHosts = await getAllHosts();
-
-                const duplicateNameHost = existingHosts.find(host => 
-                    host && 
-                    host.config && 
-                    host.config.name && 
-                    typeof host.config.name === 'string' &&
-                    typeof newHostConfig.name === 'string' &&
-                    host.config.name.toLowerCase() === newHostConfig.name.toLowerCase() &&
-                    host._id !== hostId
-                );
-                
-                if (duplicateNameHost) {
-                    return onFailure(`Host with name "${newHostConfig.name}" already exists. Please choose a different name.`);
-                }
-            }
-
-            if (!newHostConfig.terminalConfig) {
-                newHostConfig.terminalConfig = oldHostConfig.terminalConfig || {
-                    theme: 'dark',
-                    cursorStyle: 'block',
-                    fontFamily: 'ubuntuMono',
-                    fontSize: 14,
-                    fontWeight: 'normal',
-                    lineHeight: 1,
-                    letterSpacing: 0,
-                    cursorBlink: true,
-                    sshAlgorithm: 'default'
-                };
+            const duplicateNameHost = existingHosts.find(host => 
+                host.config.name && 
+                host.config.name.toLowerCase() === newHostConfig.name.toLowerCase() &&
+                host.config.ip.toLowerCase() !== oldHostConfig.ip.toLowerCase()
+            );
+            
+            if (duplicateNameHost) {
+                return onFailure("A host with this name already exists. Please choose a different name.");
             }
 
             const response = await new Promise((resolve) => {
@@ -467,11 +267,8 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
             if (!response?.success) {
                 throw new Error(response?.error || "Failed to edit host");
             }
-            
-            return response;
         } catch (error) {
             onFailure(error.message);
-            return { success: false, error: error.message };
         }
     };
 
@@ -516,149 +313,6 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         }
     };
 
-    const saveSnippet = async (snippet) => {
-        if (!currentUser.current) return onFailure("Not authenticated");
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("saveSnippet", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                    snippet
-                }, resolve);
-            });
-
-            if (!response?.success) {
-                throw new Error(response?.error || "Failed to save snippet");
-            }
-            
-            return true;
-        } catch (error) {
-            onFailure(error.message);
-            return false;
-        }
-    };
-
-    const getAllSnippets = async () => {
-        if (!currentUser.current) return [];
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("getSnippets", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                }, resolve);
-            });
-
-            if (response?.success) {
-                return response.snippets.map(snippet => ({
-                    ...snippet,
-                    isPinned: snippet.isPinned || false,
-                    tags: snippet.tags || []
-                }));
-            } else {
-                throw new Error(response?.error || "Failed to fetch snippets");
-            }
-        } catch (error) {
-            onFailure(error.message);
-            return [];
-        }
-    };
-
-    const deleteSnippet = async ({ snippetId }) => {
-        if (!currentUser.current) return onFailure("Not authenticated");
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("deleteSnippet", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                    snippetId,
-                }, resolve);
-            });
-
-            if (!response?.success) {
-                throw new Error(response?.error || "Failed to delete snippet");
-            }
-            
-            return true;
-        } catch (error) {
-            onFailure(error.message);
-            return false;
-        }
-    };
-
-    const editSnippet = async ({ oldSnippet, newSnippet }) => {
-        if (!currentUser.current) return onFailure("Not authenticated");
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("editSnippet", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                    oldSnippet,
-                    newSnippet,
-                }, resolve);
-            });
-
-            if (!response?.success) {
-                throw new Error(response?.error || "Failed to edit snippet");
-            }
-            
-            return true;
-        } catch (error) {
-            onFailure(error.message);
-            return false;
-        }
-    };
-
-    const shareSnippet = async (snippetId, targetUsername) => {
-        if (!currentUser.current) return onFailure("Not authenticated");
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("shareSnippet", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                    snippetId,
-                    targetUsername,
-                }, resolve);
-            });
-
-            if (!response?.success) {
-                throw new Error(response?.error || "Failed to share snippet");
-            }
-            
-            return true;
-        } catch (error) {
-            onFailure(error.message);
-            return false;
-        }
-    };
-
-    const removeSnippetShare = async (snippetId) => {
-        if (!currentUser.current) return onFailure("Not authenticated");
-
-        try {
-            const response = await new Promise((resolve) => {
-                socketRef.current.emit("removeSnippetShare", {
-                    userId: currentUser.current.id,
-                    sessionToken: currentUser.current.sessionToken,
-                    snippetId,
-                }, resolve);
-            });
-
-            if (!response?.success) {
-                throw new Error(response?.error || "Failed to remove snippet share");
-            }
-            
-            return true;
-        } catch (error) {
-            onFailure(error.message);
-            return false;
-        }
-    };
-
     useImperativeHandle(ref, () => ({
         createUser,
         loginUser,
@@ -671,19 +325,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         shareHost,
         editHost,
         removeShare,
-        saveSnippet,
-        getAllSnippets,
-        deleteSnippet,
-        editSnippet,
-        shareSnippet,
-        removeSnippetShare,
         getUser: () => currentUser.current,
-        getSocketRef: () => socketRef.current,
-        checkAccountCreationStatus,
-        toggleAccountCreation,
-        addAdminUser,
-        getAllAdmins,
-        isAdmin: () => currentUser.current?.isAdmin || false,
     }));
 
     return null;

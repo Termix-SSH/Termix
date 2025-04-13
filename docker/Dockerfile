@@ -1,80 +1,106 @@
-# Stage 1: Install dependencies and build frontend
-FROM node:18-alpine AS deps
+# Stage 1: Build frontend
+FROM node:18-alpine AS frontend-builder
 WORKDIR /app
-
-# Copy dependency files
 COPY package*.json ./
-
-# Install dependencies with caching
 RUN npm ci --force && \
     npm cache clean --force
-
-# Stage 2: Build frontend
-FROM deps AS frontend-builder
-WORKDIR /app
-
-# Copy source files
 COPY . .
-
-# Build frontend
 RUN npm run build
 
-# Stage 3: Production dependencies
-FROM node:18-alpine AS production-deps
+# Stage 2: Build backend
+FROM node:18-alpine AS backend-builder
 WORKDIR /app
-
-# Copy only production dependency files
 COPY package*.json ./
-
-# Install only production dependencies
-RUN npm ci --only=production --ignore-scripts --force && \
+RUN npm ci --only=production --force && \
     npm cache clean --force
+COPY src/backend/ ./src/backend/
 
-# Stage 4: Build native modules
-FROM node:18-alpine AS native-builder
+# Stage 3: Build bcrypt for Ubuntu
+FROM ubuntu:focal AS bcrypt-builder
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_VERSION=18.x
 WORKDIR /app
-
-# Install build dependencies
-RUN apk add --no-cache python3 make g++ 
-
-# Copy dependency files
 COPY package*.json ./
+RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* && \
+    apt-get clean && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        make \
+        g++ \
+        wget \
+        ca-certificates \
+        gnupg && \
+    wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    apt-get update && \
+    apt-get install -y nodejs && \
+    npm ci --only=production bcrypt --force && \
+    npm cache clean --force && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/*
 
-# Install only the native modules we need
-RUN npm ci --only=production bcrypt better-sqlite3 --force && \
-    npm cache clean --force
+# Final stage
+FROM ubuntu:focal
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_VERSION=18.x \
+    MONGO_VERSION=4.4.24 \
+    MONGO_URL=mongodb://localhost:27017/termix \
+    MONGODB_DATA_DIR=/data/db \
+    MONGODB_LOG_DIR=/var/log/mongodb \
+    PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Stage 5: Final image
-FROM node:18-alpine
-ENV DATA_DIR=/app/data \
-    PORT=8080
+# Create users first
+RUN groupadd -r mongodb && useradd -r -g mongodb mongodb \
+    && groupadd -r node && useradd -r -g node -m node
 
-# Install dependencies in a single layer
-RUN apk add --no-cache nginx gettext su-exec && \
-    mkdir -p /app/data && \
-    chown -R node:node /app/data
+# Install all dependencies in one layer
+RUN rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* && \
+    apt-get clean && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        gnupg \
+        gosu \
+        nginx-light \
+        wget && \
+    # Add MongoDB 4.4 repository
+    wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - && \
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list && \
+    # Add MongoDB 5.0 repository
+    wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - && \
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-5.0.list && \
+    # Add NodeJS repository
+    wget -qO- https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    apt-get update && \
+    # Install MongoDB 4.4 and 5.0 packages
+    apt-get install -y --no-install-recommends \
+        nodejs \
+        mongodb-org-server=${MONGO_VERSION} \
+        mongodb-org-shell=${MONGO_VERSION} \
+        mongodb-org-server=5.0.21 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* && \
+    mkdir -p /data/db /var/log/mongodb /var/run/mongodb && \
+    chown -R mongodb:mongodb /data/db /var/log/mongodb /var/run/mongodb && \
+    chmod 755 /data/db /var/log/mongodb /var/run/mongodb
 
 # Setup nginx and frontend
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
-RUN chown -R nginx:nginx /usr/share/nginx/html
+RUN chown -R www-data:www-data /usr/share/nginx/html
 
 # Setup backend
 WORKDIR /app
 COPY package*.json ./
-
-# Copy production dependencies and native modules
-COPY --from=production-deps /app/node_modules /app/node_modules
-COPY --from=native-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
-COPY --from=native-builder /app/node_modules/better-sqlite3 /app/node_modules/better-sqlite3
-
-# Copy backend source
-COPY src/backend/ ./src/backend/
+RUN npm ci --only=production --ignore-scripts --force && \
+    npm cache clean --force && \
+    rm -rf /tmp/*
+COPY --from=bcrypt-builder /app/node_modules/bcrypt /app/node_modules/bcrypt
+COPY --from=backend-builder /app/src/backend ./src/backend
 RUN chown -R node:node /app
 
-VOLUME ["/app/data"]
-# Expose ports
-EXPOSE ${PORT} 8081 8082 8083 8084 8085
+VOLUME ["/data/db"]
+EXPOSE 8080 8081 8082 27017
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
