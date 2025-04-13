@@ -595,7 +595,10 @@ function HostViewer({
                             if (!hostWrapper.config || !hostWrapper.config.ip || !hostWrapper.config.user) {
                                 return;
                             }
-                            connectToHost(hostWrapper.config);
+                            try {
+                                connectToHost(hostWrapper.config);
+                            } catch (err) {
+                            }
                         }}
                         disabled={isThisHostBusy}
                         sx={{

@@ -398,6 +398,7 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
 
     useImperativeHandle(ref, () => ({
         resizeTerminal: resizeTerminal,
+        socketRef: socketRef
     }));
 
     useEffect(() => {
@@ -449,18 +450,27 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         );
         socketRef.current = socket;
 
-        const terminalId = `${hostConfig.ip}-${hostConfig.user}-${Date.now()}`;
+        // Create a consistent terminal ID format
+        const uniqueTimestamp = Date.now();
+        const terminalId = `terminal-${hostConfig.ip}-${hostConfig.user}-${uniqueTimestamp}`;
 
         socket.terminalId = terminalId;
         socket.hostData = {
             ip: hostConfig.ip,
             user: hostConfig.user,
+            id: uniqueTimestamp
         };
 
+        // Initialize window.terminalSockets if it doesn't exist
         if (!window.terminalSockets) {
             window.terminalSockets = {};
         }
+        
+        // Store the socket with the unique terminal ID
         window.terminalSockets[terminalId] = socket;
+        
+        // For backwards compatibility
+        window.terminalSockets[uniqueTimestamp] = socket;
 
         terminalInstance.current.loadAddon(fitAddon.current);
         terminalInstance.current.open(terminalRef.current);
@@ -660,8 +670,16 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
         return () => {
             clearInterval(pingInterval);
 
-            if (window.terminalSockets && window.terminalSockets[terminalId]) {
-                delete window.terminalSockets[terminalId];
+            // Properly clean up the socket reference from window.terminalSockets
+            if (socketRef.current && socketRef.current.terminalId && 
+                window.terminalSockets && window.terminalSockets[socketRef.current.terminalId]) {
+                delete window.terminalSockets[socketRef.current.terminalId];
+                
+                // Also clean up the backwards compatibility reference
+                if (socketRef.current.hostData && socketRef.current.hostData.id &&
+                    window.terminalSockets[socketRef.current.hostData.id]) {
+                    delete window.terminalSockets[socketRef.current.hostData.id];
+                }
             }
 
             if (terminalInstance.current) {
@@ -693,18 +711,27 @@ export const NewTerminal = forwardRef(({ hostConfig, isVisible, setIsNoAuthHidde
             );
             socketRef.current = socket;
 
-            const terminalId = `${hostConfig.ip}-${hostConfig.user}-${Date.now()}`;
+            // Create a consistent terminal ID format
+            const uniqueTimestamp = Date.now();
+            const terminalId = `terminal-${hostConfig.ip}-${hostConfig.user}-${uniqueTimestamp}`;
 
             socket.terminalId = terminalId;
             socket.hostData = {
                 ip: hostConfig.ip,
                 user: hostConfig.user,
+                id: uniqueTimestamp
             };
 
+            // Initialize window.terminalSockets if it doesn't exist
             if (!window.terminalSockets) {
                 window.terminalSockets = {};
             }
+            
+            // Store the socket with the unique terminal ID
             window.terminalSockets[terminalId] = socket;
+            
+            // For backwards compatibility
+            window.terminalSockets[uniqueTimestamp] = socket;
         }
 
         return () => {

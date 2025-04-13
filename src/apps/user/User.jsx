@@ -395,6 +395,7 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
         if (!currentUser.current) return onFailure("Not authenticated");
 
         try {
+
             if (!oldHostConfig || !newHostConfig) {
                 return onFailure("Invalid host configuration");
             }
@@ -440,16 +441,8 @@ export const User = forwardRef(({ onLoginSuccess, onCreateSuccess, onDeleteSucce
                 }
             }
 
-            // Handle authentication method and storage
-            if (!newHostConfig.storePassword) {
-                // If not storing password, clear credentials
-                newHostConfig.password = '';
-                newHostConfig.sshKey = '';
-                newHostConfig.keyType = '';
-            }
-
             if (!newHostConfig.terminalConfig) {
-                newHostConfig.terminalConfig = {
+                newHostConfig.terminalConfig = oldHostConfig.terminalConfig || {
                     theme: 'dark',
                     cursorStyle: 'block',
                     fontFamily: 'ubuntuMono',

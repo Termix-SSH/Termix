@@ -895,8 +895,6 @@ io.of('/database.io').on('connection', (socket) => {
 
     socket.on("editHost", async ({ userId, sessionToken, oldHostConfig, newHostConfig }, callback) => {
         try {
-            logger.debug(`Editing host for user: ${userId}`);
-
             if (!oldHostConfig || !newHostConfig) {
                 logger.warn('Missing host configurations');
                 return callback({ error: 'Missing host configurations' });
@@ -926,8 +924,6 @@ io.of('/database.io').on('connection', (socket) => {
                             return callback({ error: 'You do not have permission to edit this host' });
                         }
                     }
-                    
-                    logger.debug(`Found host by ID: ${hostId}`);
                 }
             } 
 
@@ -935,7 +931,6 @@ io.of('/database.io').on('connection', (socket) => {
                 hostToEdit = statements.findHostsByName.get(userId, oldConfigData.name);
                 if (hostToEdit) {
                     hostId = hostToEdit.id;
-                    logger.debug(`Found host by name: ${oldConfigData.name}, ID: ${hostId}`);
                 }
             }
 
@@ -947,7 +942,6 @@ io.of('/database.io').on('connection', (socket) => {
                         if (config && config.ip === oldConfigData.ip) {
                             hostToEdit = host;
                             hostId = host.id;
-                            logger.debug(`Found host by IP: ${oldConfigData.ip}, ID: ${hostId}`);
                             break;
                         }
                     } catch (err) {
@@ -962,7 +956,6 @@ io.of('/database.io').on('connection', (socket) => {
             }
 
             hostId = hostToEdit.id;
-            logger.debug(`Editing host ${hostId} for user: ${userId}`);
 
             const cleanConfig = {
                 name: newConfigData.name || oldConfigData.name || oldConfigData.ip || '',
@@ -970,9 +963,11 @@ io.of('/database.io').on('connection', (socket) => {
                 ip: newConfigData.ip || oldConfigData.ip || '',
                 user: newConfigData.user || oldConfigData.user || '',
                 port: newConfigData.port || oldConfigData.port || '22',
-                password: newConfigData.password || oldConfigData.password || '',
-                sshKey: newConfigData.sshKey || oldConfigData.sshKey || '',
-                keyType: newConfigData.keyType || oldConfigData.keyType || '',
+
+                password: newConfigData.password !== undefined ? newConfigData.password : oldConfigData.password || '',
+                sshKey: newConfigData.sshKey !== undefined ? newConfigData.sshKey : oldConfigData.sshKey || '',
+                keyType: newConfigData.keyType !== undefined ? newConfigData.keyType : oldConfigData.keyType || '',
+                
                 isPinned: newConfigData.isPinned !== undefined ? newConfigData.isPinned : (oldConfigData.isPinned || false),
                 tags: newConfigData.tags || oldConfigData.tags || [],
                 terminalConfig: newConfigData.terminalConfig || oldConfigData.terminalConfig || {
@@ -1279,8 +1274,6 @@ io.of('/database.io').on('connection', (socket) => {
 
     socket.on('editSnippet', async ({ userId, sessionToken, oldSnippet, newSnippet }, callback) => {
         try {
-            logger.debug(`Editing snippet for user: ${userId}`);
-
             if (!oldSnippet || !newSnippet) {
                 logger.warn('Missing snippet configurations');
                 return callback({ error: 'Missing snippet configurations' });

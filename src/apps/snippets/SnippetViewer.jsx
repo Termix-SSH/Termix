@@ -579,61 +579,79 @@ function SnippetViewer({
 
     const pasteSnippetToTerminals = (snippet) => {
         try {
-            console.log("Pasting snippet to terminals:", snippet.name);
-            
-            // 1. Check if terminals are available
             if (!terminals || terminals.length === 0) {
-                console.log("No terminals available");
                 return;
             }
             
-            // 2. Get selected terminals
             const selectedTerminalIds = Object.entries(selectedTerminals)
                 .filter(([_, isSelected]) => isSelected)
                 .map(([id]) => parseInt(id));
-                
-            console.log("Selected terminal IDs:", selectedTerminalIds);
             
             if (selectedTerminalIds.length === 0) {
-                console.log("No terminals selected");
                 return;
             }
             
-            // 3. Prepare content
             let content = snippet.content;
             if (!content.endsWith("\n")) {
                 content += "\n";
             }
             
-            // 4. Find each terminal and paste content
             selectedTerminalIds.forEach(terminalId => {
                 const terminal = terminals.find(t => t.id === terminalId);
                 if (!terminal) {
-                    console.log("Terminal not found:", terminalId);
                     return;
                 }
                 
-                console.log("Pasting to terminal:", terminal.title);
-                
                 try {
-                    if (terminal.terminalRef && terminal.terminalRef.socketRef && 
-                        terminal.terminalRef.socketRef.current) {
-                        console.log("Using terminal ref socket");
+                    if (terminal.terminalRef?.socketRef?.current && terminal.terminalRef.socketRef.current.connected) {
                         terminal.terminalRef.socketRef.current.emit("data", content);
+                        return;
                     } 
-                    else if (window.terminalSockets && window.terminalSockets[terminalId]) {
-                        console.log("Using window terminal sockets");
-                        window.terminalSockets[terminalId].emit("data", content);
+                    
+                    let socketFound = false;
+                    
+                    if (window.terminalSockets) {
+                        const socketKeys = Object.keys(window.terminalSockets);
+                        for (const key of socketKeys) {
+                            const socket = window.terminalSockets[key];
+                            
+                            if (socket && socket.connected) {
+                                socket.emit("data", content);
+                                socketFound = true;
+                                break;
+                            }
+                        }
                     }
-                    else {
-                        console.log("No socket found for terminal:", terminal.title);
+                    
+                    if (socketFound) return;
+                    
+                    if (window.terminalSockets && window.terminalSockets[terminalId] && 
+                        window.terminalSockets[terminalId].connected) {
+                        window.terminalSockets[terminalId].emit("data", content);
+                        return;
+                    }
+                    
+                    if (io) {
+                        const socket = io(
+                            window.location.hostname === "localhost"
+                                ? "http://localhost:8082"
+                                : "/",
+                            {
+                                path: "/ssh.io/socket.io",
+                                transports: ["websocket", "polling"],
+                            }
+                        );
+                        
+                        if (socket && socket.connected) {
+                            socket.emit("data", content);
+                            socket.disconnect();
+                            return;
+                        }
                     }
                 } catch (err) {
-                    console.error("Error pasting to terminal:", err);
                 }
             });
         } catch (error) {
-            console.error("Error in pasteSnippetToTerminals:", error);
         }
     };
 

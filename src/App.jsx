@@ -397,16 +397,13 @@ function App() {
             }
         };
 
-        // Generate unique title with number suffix for duplicate names
         const baseTitle = addHostForm.name || addHostForm.ip;
         let title = baseTitle;
-        
-        // Check if title already exists
+
         const existingTitles = terminals.map(t => t.title);
         const duplicateTitles = existingTitles.filter(t => t.startsWith(baseTitle));
         
         if (duplicateTitles.length > 0) {
-            // Find the highest number used and increment it
             let highestNumber = 0;
             duplicateTitles.forEach(t => {
                 const match = t.match(/\((\d+)\)$/);
@@ -497,16 +494,13 @@ function App() {
             }
         };
 
-        // Generate unique title with number suffix for duplicate names
         const baseTitle = hostConfig.name || hostConfig.ip;
         let title = baseTitle;
-        
-        // Check if title already exists
+
         const existingTitles = terminals.map(t => t.title);
         const duplicateTitles = existingTitles.filter(t => t.startsWith(baseTitle));
         
         if (duplicateTitles.length > 0) {
-            // Find the highest number used and increment it
             let highestNumber = 0;
             duplicateTitles.forEach(t => {
                 const match = t.match(/\((\d+)\)$/);
@@ -684,65 +678,27 @@ function App() {
             if (!oldConfig._id && newConfig._id) {
                 oldConfig._id = newConfig._id;
             }
-            
-            // Handle authentication properly
-            console.log("Edit host - original oldConfig:", JSON.stringify(oldConfig));
-            console.log("Edit host - original newConfig:", JSON.stringify(newConfig));
-            
-            // Fix potential credential loss issues
-            if (newConfig.storePassword) {
-                // If storing credentials but none provided, keep the old ones
-                if (newConfig.authMethod === 'password') {
-                    // Clear SSH key when password auth is selected
-                    newConfig.sshKey = '';
-                    newConfig.keyType = '';
-                    
-                    // If no password is provided but there was one before, keep it
-                    if (!newConfig.password && oldConfig.password) {
-                        newConfig.password = oldConfig.password;
-                    }
-                } 
-                else if (newConfig.authMethod === 'sshKey') {
-                    // Clear password when SSH key auth is selected
-                    newConfig.password = '';
-                    
-                    // If no SSH key is provided but there was one before, keep it
-                    if (!newConfig.sshKey && oldConfig.sshKey) {
-                        newConfig.sshKey = oldConfig.sshKey;
-                        newConfig.keyType = oldConfig.keyType || '';
-                    }
-                }
-            } else {
-                // If not storing credentials, clear them
-                newConfig.password = '';
-                newConfig.sshKey = '';
-                newConfig.keyType = '';
-            }
-            
-            console.log("Edit host - modified newConfig:", JSON.stringify(newConfig));
 
-            await new Promise(resolve => setTimeout(resolve, 300));
+            if (newConfig.password === undefined) newConfig.password = '';
+            if (newConfig.sshKey === undefined) newConfig.sshKey = '';
+            if (newConfig.keyType === undefined) newConfig.keyType = '';
 
             setIsEditing(true);
+
+            await new Promise(resolve => setTimeout(resolve, 300));
 
             const response = await userRef.current.editHost({
                 oldHostConfig: oldConfig,
                 newHostConfig: newConfig
             });
-            
-            console.log("Edit host response:", JSON.stringify(response));
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
 
             setIsEditHostHidden(true);
 
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
+            await new Promise(resolve => setTimeout(resolve, 1000));
             setIsEditing(false);
 
             return true;
         } catch (err) {
-            console.error("Edit host error:", err);
             setErrorMessage(err.toString());
             setIsErrorHidden(false);
             setIsEditing(false);

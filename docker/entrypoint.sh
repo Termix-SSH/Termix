@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 export PORT=${PORT:-8080}
@@ -19,13 +19,12 @@ echo "Starting backend services..."
 cd /app
 export NODE_ENV=production
 
-if [ ! -d "/app/data" ]; then
-    mkdir -p /app/data
-    chown -R node:node /app/data
+if command -v su-exec > /dev/null 2>&1; then
+  su-exec node node src/backend/starter.cjs
+else
+  su -s /bin/sh node -c "node src/backend/starter.cjs"
 fi
-
-su -s /bin/bash node -c "node src/backend/starter.cjs"
 
 echo "All services started"
 
-tail -f /var/log/nginx/access.log
+tail -f /dev/null

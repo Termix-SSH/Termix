@@ -214,6 +214,37 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
     const [newTag, setNewTag] = useState("");
 
     useEffect(() => {
+        if (!isHidden && hostConfig) {
+            const hasPassword = !!hostConfig.password;
+            const hasSshKey = !!hostConfig.sshKey;
+            const authMethod = hasPassword ? 'password' : hasSshKey ? 'sshKey' : 'Select Auth';
+            const storePassword = hasPassword || hasSshKey;
+
+            setForm({
+                name: hostConfig.name || '',
+                folder: hostConfig.folder || '',
+                ip: hostConfig.ip || '',
+                user: hostConfig.user || '',
+                password: hostConfig.password || '',
+                sshKey: hostConfig.sshKey || '',
+                keyType: hostConfig.keyType || '',
+                port: hostConfig.port || 22,
+                authMethod: authMethod,
+                rememberHost: true,
+                storePassword: storePassword,
+                tags: Array.isArray(hostConfig.tags) ? [...hostConfig.tags] : [],
+                isPinned: !!hostConfig.isPinned,
+                terminalConfig: hostConfig.terminalConfig ? 
+                    { ...hostConfig.terminalConfig } 
+                    : { ...defaultTerminalConfig }
+            });
+            
+            setShowError(false);
+            setErrorMessage('');
+        }
+    }, [isHidden, hostConfig]);
+
+    useEffect(() => {
         if (isHidden) {
             setTimeout(() => {
                 setForm({
@@ -239,54 +270,6 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
         }
     }, [isHidden]);
 
-    useEffect(() => {
-        if (!isHidden && hostConfig) {
-            const newFormState = {
-                name: hostConfig.name || '',
-                folder: hostConfig.folder || '',
-                ip: hostConfig.ip || '',
-                user: hostConfig.user || '',
-                password: hostConfig.password || '',
-                sshKey: hostConfig.sshKey || '',
-                keyType: hostConfig.keyType || '',
-                port: hostConfig.port || 22,
-                // Auto-select auth method based on credentials
-                authMethod: hostConfig.password ? 'password' : hostConfig.sshKey ? 'sshKey' : 'Select Auth',
-                rememberHost: true,
-                // Auto-set storePassword if credentials exist
-                storePassword: !!(hostConfig.password || hostConfig.sshKey),
-                tags: Array.isArray(hostConfig.tags) ? [...hostConfig.tags] : [],
-                isPinned: !!hostConfig.isPinned,
-                terminalConfig: hostConfig.terminalConfig ? 
-                    { 
-                        ...hostConfig.terminalConfig
-                    } 
-                    : { ...defaultTerminalConfig }
-            };
-            
-            setForm(newFormState);
-            
-            setShowError(false);
-            setErrorMessage('');
-        }
-    }, [isHidden, hostConfig]);
-
-    useEffect(() => {
-        if (hostConfig && !isHidden) {
-            const config = { ...hostConfig };
-
-            if (config.terminalConfig) {
-                config.terminalConfig.fontFamily = 'nerdFont';
-            } else {
-                config.terminalConfig = {
-                    fontFamily: 'nerdFont'
-                };
-            }
-            
-            setForm(config);
-        }
-    }, [hostConfig, isHidden]);
-
     const handleFileChange = (e) => {
         if (!e.target.files || e.target.files.length === 0) return;
         
@@ -295,7 +278,6 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
         
         reader.onload = (event) => {
             const sshKey = event.target.result;
-            // Detect key type
             let keyType = '';
             if (sshKey.includes('BEGIN OPENSSH PRIVATE KEY')) {
                 keyType = 'OpenSSH';
@@ -314,7 +296,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                 sshKey,
                 keyType,
                 authMethod: 'sshKey',
-                storePassword: true // Set store password to true when adding SSH key
+                storePassword: true
             });
         };
         
@@ -322,14 +304,22 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
     };
 
     const handleAuthChange = (newMethod) => {
-        setForm((prev) => ({
-            ...prev,
-            authMethod: newMethod,
-            // Clear the credentials when changing auth method
-            password: newMethod === 'password' ? prev.password : '',
-            sshKey: newMethod === 'sshKey' ? prev.sshKey : '',
-            keyType: newMethod === 'sshKey' ? prev.keyType : '',
-        }));
+        setForm((prev) => {
+            const newForm = {
+                ...prev,
+                authMethod: newMethod,
+                storePassword: true
+            };
+
+            if (newMethod === 'password') {
+                newForm.sshKey = '';
+                newForm.keyType = '';
+            } else if (newMethod === 'sshKey') {
+                newForm.password = '';
+            }
+            
+            return newForm;
+        });
     };
 
     const isFormValid = () => {
@@ -353,67 +343,58 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (isLoading) return;
-
-        setIsLoading(true);
+        
+        if (!isFormValid()) {
+            setShowError(true);
+            setErrorMessage('Please fill out all required fields correctly');
+            return;
+        }
+        
         try {
-            setErrorMessage("");
-            setShowError(false);
-
-            if (!form.ip?.trim()) {
-                setErrorMessage("Please provide an IP address.");
-                setShowError(true);
-                setIsLoading(false);
-                return;
-            }
-            
-            if (!form.user?.trim()) {
-                setErrorMessage("Please provide a username.");
-                setShowError(true);
-                setIsLoading(false);
-                return;
-            }
-
             const newConfig = {
-                _id: hostConfig._id,
-                id: hostConfig._id,
+                ...hostConfig,
+                _id: hostConfig._id || hostConfig.id,
+                id: hostConfig._id || hostConfig.id,
                 name: form.name || form.ip,
                 folder: form.folder,
                 ip: form.ip,
                 user: form.user,
-                port: String(form.port),
-                tags: form.tags,
+                port: form.port,
                 isPinned: form.isPinned,
+                tags: form.tags,
                 terminalConfig: form.terminalConfig
             };
 
             if (form.storePassword) {
                 if (form.authMethod === 'password') {
                     newConfig.password = form.password;
+                    newConfig.sshKey = '';
+                    newConfig.keyType = '';
                 } else if (form.authMethod === 'sshKey') {
+                    newConfig.password = '';
                     newConfig.sshKey = form.sshKey;
                     newConfig.keyType = form.keyType;
                 }
+            } else {
+                newConfig.password = '';
+                newConfig.sshKey = '';
+                newConfig.keyType = '';
             }
+            
+            setIsLoading(true);
 
-            const oldConfigWithId = {
+            const oldHostConfig = {
                 ...hostConfig,
-                _id: hostConfig._id,
-                id: hostConfig._id
+                _id: hostConfig._id || hostConfig.id,
+                id: hostConfig._id || hostConfig.id
             };
-
+            
+            await handleEditHost(oldHostConfig, newConfig);
+            setIsLoading(false);
             setIsEditHostHidden(true);
-
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            await handleEditHost(oldConfigWithId, newConfig);
-            
-            setActiveTab(0);
         } catch (error) {
-            setErrorMessage(error.message || "Failed to edit host. The host name may already exist.");
             setShowError(true);
-            setIsEditHostHidden(false);
-        } finally {
+            setErrorMessage(error.toString());
             setIsLoading(false);
         }
     };
@@ -707,8 +688,8 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
 
                             <TabPanel value={2}>
                                 <Stack spacing={2}>
-                                    <FormControl error={!form.authMethod || form.authMethod === 'Select Auth'}>
-                                        <FormLabel>Authentication Method</FormLabel>
+                                    <FormControl error={form.storePassword && form.authMethod === 'Select Auth'}>
+                                        <FormLabel>Authentication Method {form.storePassword ? '*' : ''}</FormLabel>
                                         <Select 
                                             value={form.authMethod} 
                                             onChange={(e, val) => handleAuthChange(val)}
@@ -717,7 +698,7 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                                                 color: theme.palette.text.primary,
                                             }}
                                         >
-                                            <Option value="Select Auth" disabled>Select Auth</Option>
+                                            <Option value="Select Auth" disabled={form.storePassword}>Select Auth</Option>
                                             <Option value="password">Password</Option>
                                             <Option value="sshKey">SSH Key</Option>
                                         </Select>
@@ -795,13 +776,18 @@ const EditHostModal = ({ isHidden, hostConfig, setIsEditHostHidden, handleEditHo
                                         <FormLabel>Store Password</FormLabel>
                                         <Checkbox
                                             checked={Boolean(form.storePassword)}
-                                            onChange={(e) => setForm({
-                                                ...form,
-                                                storePassword: e.target.checked,
-                                                password: e.target.checked ? form.password : '',
-                                                sshKey: e.target.checked ? form.sshKey : '',
-                                                authMethod: e.target.checked ? form.authMethod : 'Select Auth'
-                                            })}
+                                            onChange={(e) => {
+                                                const newValue = e.target.checked;
+
+                                                setForm({
+                                                    ...form,
+                                                    storePassword: newValue,
+                                                    password: newValue ? form.password : '',
+                                                    sshKey: newValue ? form.sshKey : '',
+                                                    keyType: newValue ? form.keyType : '',
+                                                    authMethod: newValue ? form.authMethod : 'Select Auth'
+                                                });
+                                            }}
                                             sx={{
                                                 color: theme.palette.text.primary,
                                                 '&.Mui-checked': {

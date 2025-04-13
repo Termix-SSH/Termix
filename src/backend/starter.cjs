@@ -16,8 +16,7 @@ const logger = {
         logger.info("Starting all backend servers...");
         
         logger.info("All servers started successfully");
-        
-        // Keep the process alive
+
         process.on('SIGINT', () => {
             logger.info("Shutting down servers...");
             process.exit(0);
