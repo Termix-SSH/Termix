@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies and build frontend
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++ 
@@ -26,7 +26,7 @@ COPY . .
 RUN npm run build:backend
 
 # Stage 4: Production dependencies
-FROM node:22-alpine AS production-deps
+FROM node:24-alpine AS production-deps
 WORKDIR /app
 
 COPY package*.json ./
@@ -35,7 +35,7 @@ RUN npm ci --only=production --ignore-scripts --force && \
     npm cache clean --force
 
 # Stage 5: Build native modules
-FROM node:22-alpine AS native-builder
+FROM node:24-alpine AS native-builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++ 
@@ -46,7 +46,7 @@ RUN npm ci --only=production bcryptjs better-sqlite3 --force && \
     npm cache clean --force
 
 # Stage 6: Final image
-FROM node:22-alpine
+FROM node:24-alpine
 ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
