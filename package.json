@@ -55,7 +55,7 @@
     "dotenv": "^17.2.0",
     "drizzle-orm": "^0.44.3",
     "express": "^5.1.0",
-    "jose": "^5.2.3",
+    "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.525.0",
     "multer": "^2.0.2",
