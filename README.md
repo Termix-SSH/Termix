@@ -48,7 +48,7 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 - **Mobile Support** - Support a mobile app or version of the Termix website to manage servers from your phone
 
 # Installation
-Visit the Termix [Docs](https://docs.termix.site/docs) for more information on how to install Termix. Otherwise, view a sample docker-compose file here:
+Visit the Termix [Docs](https://docs.termix.site/install) for more information on how to install Termix. Otherwise, view a sample docker-compose file here:
 ```yaml
 services:
   termix:
