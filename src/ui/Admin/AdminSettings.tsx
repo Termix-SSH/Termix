@@ -303,7 +303,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                placeholder="openid email profile" required/>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="userinfo_url">Overide User Info URL (not required)</Label>
+                                        <Label htmlFor="userinfo_url">Override User Info URL (not required)</Label>
                                         <Input id="userinfo_url" value={oidcConfig.userinfo_url}
                                                onChange={(e) => handleOIDCConfigChange('userinfo_url', e.target.value)}
                                                placeholder="https://your-provider.com/application/o/userinfo/"/>
