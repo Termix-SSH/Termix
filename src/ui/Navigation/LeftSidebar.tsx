@@ -1,5 +1,4 @@
 import React, {useState} from 'react';
-import {useTranslation} from 'react-i18next';
 import {
     Computer,
     Server,
@@ -113,7 +112,6 @@ export function LeftSidebar({
                                 username,
                                 children,
                             }: SidebarProps): React.ReactElement {
-    const {t} = useTranslation();
     const [adminSheetOpen, setAdminSheetOpen] = React.useState(false);
 
     const [deleteAccountOpen, setDeleteAccountOpen] = React.useState(false);
@@ -142,7 +140,7 @@ export function LeftSidebar({
     const sshManagerTab = tabList.find((t) => t.type === 'ssh_manager');
     const openSshManagerTab = () => {
         if (sshManagerTab || isSplitScreenActive) return;
-        const id = addTab({type: 'ssh_manager', title: t('hosts.title')} as any);
+        const id = addTab({type: 'ssh_manager', title: 'SSH Manager'} as any);
         setCurrentTab(id);
     };
     const adminTab = tabList.find((t) => t.type === 'admin');
@@ -152,7 +150,7 @@ export function LeftSidebar({
             setCurrentTab(adminTab.id);
             return;
         }
-        const id = addTab({type: 'admin', title: t('nav.admin')} as any);
+        const id = addTab({type: 'admin', title: 'Admin'} as any);
         setCurrentTab(id);
     };
 
@@ -234,7 +232,7 @@ export function LeftSidebar({
                 }, 50);
             }
         } catch (err: any) {
-            setHostsError(t('leftSidebar.failedToLoadHosts'));
+            setHostsError('Failed to load hosts');
         }
     }, []);
 
@@ -277,7 +275,7 @@ export function LeftSidebar({
     const hostsByFolder = React.useMemo(() => {
         const map: Record<string, SSHHost[]> = {};
         filteredHosts.forEach(h => {
-            const folder = h.folder && h.folder.trim() ? h.folder : t('leftSidebar.noFolder');
+            const folder = h.folder && h.folder.trim() ? h.folder : 'No Folder';
             if (!map[folder]) map[folder] = [];
             map[folder].push(h);
         });
@@ -287,8 +285,8 @@ export function LeftSidebar({
     const sortedFolders = React.useMemo(() => {
         const folders = Object.keys(hostsByFolder);
         folders.sort((a, b) => {
-            if (a === t('leftSidebar.noFolder')) return -1;
-            if (b === t('leftSidebar.noFolder')) return 1;
+            if (a === 'No Folder') return -1;
+            if (b === 'No Folder') return 1;
             return a.localeCompare(b);
         });
         return folders;
@@ -306,7 +304,7 @@ export function LeftSidebar({
         setDeleteError(null);
 
         if (!deletePassword.trim()) {
-            setDeleteError(t('leftSidebar.passwordRequired'));
+            setDeleteError("Password is required");
             setDeleteLoading(false);
             return;
         }
@@ -317,7 +315,7 @@ export function LeftSidebar({
 
             handleLogout();
         } catch (err: any) {
-            setDeleteError(err?.response?.data?.error || t('leftSidebar.failedToDeleteAccount'));
+            setDeleteError(err?.response?.data?.error || "Failed to delete account");
             setDeleteLoading(false);
         }
     };
@@ -372,18 +370,18 @@ export function LeftSidebar({
         const jwt = getCookie("jwt");
         try {
             await makeUserAdmin(newAdminUsername.trim());
-            setMakeAdminSuccess(t('leftSidebar.userIsNowAdmin', {username: newAdminUsername}));
+            setMakeAdminSuccess(`User ${newAdminUsername} is now an admin`);
             setNewAdminUsername("");
             fetchUsers();
         } catch (err: any) {
-            setMakeAdminError(err?.response?.data?.error || t('leftSidebar.failedToMakeUserAdmin'));
+            setMakeAdminError(err?.response?.data?.error || "Failed to make user admin");
         } finally {
             setMakeAdminLoading(false);
         }
     };
 
     const removeAdminStatus = async (username: string) => {
-        if (!confirm(t('leftSidebar.removeAdminConfirm', {username}))) return;
+        if (!confirm(`Are you sure you want to remove admin status from ${username}?`)) return;
 
         if (!isAdmin) {
             return;
@@ -398,7 +396,7 @@ export function LeftSidebar({
     };
 
     const deleteUser = async (username: string) => {
-        if (!confirm(t('leftSidebar.deleteUserConfirm', {username}))) return;
+        if (!confirm(`Are you sure you want to delete user ${username}? This action cannot be undone.`)) return;
 
         if (!isAdmin) {
             return;
@@ -433,9 +431,9 @@ export function LeftSidebar({
                         <SidebarGroup className="!m-0 !p-0 !-mb-2">
                             <Button className="m-2 flex flex-row font-semibold border-2 !border-[#303032]" variant="outline"
                                     onClick={openSshManagerTab} disabled={!!sshManagerTab || isSplitScreenActive}
-                                    title={sshManagerTab ? t('interface.sshManagerAlreadyOpen') : isSplitScreenActive ? t('interface.disabledDuringSplitScreen') : undefined}>
+                                    title={sshManagerTab ? 'SSH Manager already open' : isSplitScreenActive ? 'Disabled during split screen' : undefined}>
                                 <HardDrive strokeWidth="2.5"/>
-                                {t('nav.hostManager')}
+                                Host Manager
                             </Button>
                         </SidebarGroup>
                         <Separator className="p-0.25"/>
@@ -444,7 +442,7 @@ export function LeftSidebar({
                                 <Input
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
-                                    placeholder={t('placeholders.searchHostsAny')}
+                                    placeholder="Search hosts by any info..."
                                     className="w-full h-8 text-sm border-2 !bg-[#222225] border-[#303032] rounded-md"
                                     autoComplete="off"
                                 />
@@ -462,7 +460,7 @@ export function LeftSidebar({
                             {hostsLoading && (
                                 <div className="px-4 pb-2">
                                     <div className="text-xs text-muted-foreground text-center">
-                                        {t('common.loading')}
+                                        Loading hosts...
                                     </div>
                                 </div>
                             )}
@@ -489,7 +487,7 @@ export function LeftSidebar({
                                             style={{width: '100%'}}
                                             disabled={disabled}
                                         >
-                                            <User2/> {username ? username : t('common.logout')}
+                                            <User2/> {username ? username : 'Signed out'}
                                             <ChevronUp className="ml-auto"/>
                                         </SidebarMenuButton>
                                     </DropdownMenuTrigger>
@@ -508,10 +506,10 @@ export function LeftSidebar({
                                                     setCurrentTab(profileTab.id);
                                                     return;
                                                 }
-                                                const id = addTab({type: 'profile', title: t('common.profile')} as any);
+                                                const id = addTab({type: 'profile', title: 'Profile'} as any);
                                                 setCurrentTab(id);
                                             }}>
-                                            <span>{t('common.profile')}</span>
+                                            <span>Profile & Security</span>
                                         </DropdownMenuItem>
                                         {isAdmin && (
                                             <DropdownMenuItem
@@ -519,13 +517,13 @@ export function LeftSidebar({
                                                 onClick={() => {
                                                     if (isAdmin) openAdminTab();
                                                 }}>
-                                                <span>{t('admin.title')}</span>
+                                                <span>Admin Settings</span>
                                             </DropdownMenuItem>
                                         )}
                                         <DropdownMenuItem
                                             className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
                                             onClick={handleLogout}>
-                                            <span>{t('common.logout')}</span>
+                                            <span>Sign out</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
@@ -534,7 +532,7 @@ export function LeftSidebar({
                                         >
                                             <span
                                                 className={isAdmin && adminCount <= 1 ? "text-muted-foreground" : "text-red-400"}>
-                                                {t('admin.deleteUser')}
+                                                Delete Account
                                                 {isAdmin && adminCount <= 1 && " (Last Admin)"}
                                             </span>
                                         </DropdownMenuItem>
@@ -588,7 +586,7 @@ export function LeftSidebar({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between p-4 border-b border-[#303032]">
-                            <h2 className="text-lg font-semibold text-white">{t('leftSidebar.deleteAccount')}</h2>
+                            <h2 className="text-lg font-semibold text-white">Delete Account</h2>
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -598,7 +596,7 @@ export function LeftSidebar({
                                     setDeleteError(null);
                                 }}
                                 className="h-8 w-8 p-0 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center"
-                                title={t('leftSidebar.closeDeleteAccount')}
+                                title="Close Delete Account"
                             >
                                 <span className="text-lg font-bold leading-none">×</span>
                             </Button>
@@ -607,19 +605,22 @@ export function LeftSidebar({
                         <div className="flex-1 overflow-y-auto p-4">
                             <div className="space-y-4">
                                 <div className="text-sm text-gray-300">
-                                    {t('leftSidebar.deleteAccountWarning')}
+                                    This action cannot be undone. This will permanently delete your account and all
+                                    associated data.
                                 </div>
 
                                 <Alert variant="destructive">
-                                    <AlertTitle>{t('common.warning')}</AlertTitle>
+                                    <AlertTitle>Warning</AlertTitle>
                                     <AlertDescription>
-                                        {t('leftSidebar.deleteAccountWarningDetails')}
+                                        Deleting your account will remove all your data including SSH hosts,
+                                        configurations, and settings.
+                                        This action is irreversible.
                                     </AlertDescription>
                                 </Alert>
 
                                 {deleteError && (
                                     <Alert variant="destructive">
-                                        <AlertTitle>{t('common.error')}</AlertTitle>
+                                        <AlertTitle>Error</AlertTitle>
                                         <AlertDescription>{deleteError}</AlertDescription>
                                     </Alert>
                                 )}
@@ -627,21 +628,23 @@ export function LeftSidebar({
                                 <form onSubmit={handleDeleteAccount} className="space-y-4">
                                     {isAdmin && adminCount <= 1 && (
                                         <Alert variant="destructive">
-                                            <AlertTitle>{t('leftSidebar.cannotDeleteAccount')}</AlertTitle>
+                                            <AlertTitle>Cannot Delete Account</AlertTitle>
                                             <AlertDescription>
-                                                {t('leftSidebar.lastAdminWarning')}
+                                                You are the last admin user. You cannot delete your account as this
+                                                would leave the system without any administrators.
+                                                Please make another user an admin first, or contact system support.
                                             </AlertDescription>
                                         </Alert>
                                     )}
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="delete-password">{t('leftSidebar.confirmPassword')}</Label>
+                                        <Label htmlFor="delete-password">Confirm Password</Label>
                                         <Input
                                             id="delete-password"
                                             type="password"
                                             value={deletePassword}
                                             onChange={(e) => setDeletePassword(e.target.value)}
-                                            placeholder={t('placeholders.confirmPassword')}
+                                            placeholder="Enter your password to confirm"
                                             required
                                             disabled={isAdmin && adminCount <= 1}
                                         />
@@ -654,7 +657,7 @@ export function LeftSidebar({
                                             className="flex-1"
                                             disabled={deleteLoading || !deletePassword.trim() || (isAdmin && adminCount <= 1)}
                                         >
-                                            {deleteLoading ? t('leftSidebar.deleting') : t('leftSidebar.deleteAccount')}
+                                            {deleteLoading ? "Deleting..." : "Delete Account"}
                                         </Button>
                                         <Button
                                             type="button"
@@ -665,7 +668,7 @@ export function LeftSidebar({
                                                 setDeleteError(null);
                                             }}
                                         >
-                                            {t('leftSidebar.cancel')}
+                                            Cancel
                                         </Button>
                                     </div>
                                 </form>
