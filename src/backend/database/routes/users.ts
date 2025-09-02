@@ -12,19 +12,9 @@ import type {Request, Response, NextFunction} from 'express';
 
 async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: string): Promise<any> {
     try {
-        const normalizedIssuerUrl = issuerUrl.endsWith('/') ? issuerUrl.slice(0, -1) : issuerUrl;
-        const possibleIssuers = [
-            issuerUrl,
-            normalizedIssuerUrl,
-            issuerUrl.replace(/\/application\/o\/[^\/]+$/, ''),
-            normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '')
-        ];
+        let jwksUrl: string | null = null;
 
-        const jwksUrls = [
-            `${normalizedIssuerUrl}/.well-known/jwks.json`,
-            `${normalizedIssuerUrl}/jwks/`,
-            `${normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '')}/.well-known/jwks.json`
-        ];
+        const normalizedIssuerUrl = issuerUrl.endsWith('/') ? issuerUrl.slice(0, -1) : issuerUrl;
 
         try {
             const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
@@ -32,58 +22,71 @@ async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: str
             if (discoveryResponse.ok) {
                 const discovery = await discoveryResponse.json() as any;
                 if (discovery.jwks_uri) {
-                    jwksUrls.unshift(discovery.jwks_uri);
+                    jwksUrl = discovery.jwks_uri;
+                } else {
+                    logger.warn('OIDC discovery document does not contain jwks_uri');
                 }
+            } else {
+                logger.warn(`OIDC discovery failed with status: ${discoveryResponse.status}`);
             }
         } catch (discoveryError) {
-            logger.error(`OIDC discovery failed: ${discoveryError}`);
+            logger.warn(`OIDC discovery failed: ${discoveryError}`);
         }
 
-        let jwks: any = null;
-        let jwksUrl: string | null = null;
+        if (!jwksUrl) {
+            jwksUrl = `${normalizedIssuerUrl}/.well-known/jwks.json`;
+        }
 
-        for (const url of jwksUrls) {
+        if (!jwksUrl) {
+            const authentikJwksUrl = `${normalizedIssuerUrl}/jwks/`;
             try {
-                const response = await fetch(url);
-                if (response.ok) {
-                    const jwksData = await response.json() as any;
-                    if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
-                        jwks = jwksData;
-                        jwksUrl = url;
-                        break;
-                    } else {
-                        logger.error(`Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`);
-                    }
-                } else {
-                    logger.error(`JWKS fetch failed from ${url}: ${response.status} ${response.statusText}`);
+                const jwksTestResponse = await fetch(authentikJwksUrl);
+                if (jwksTestResponse.ok) {
+                    jwksUrl = authentikJwksUrl;
                 }
             } catch (error) {
-                logger.error(`JWKS fetch error from ${url}:`, error);
-                continue;
+                logger.warn(`Authentik JWKS URL also failed: ${error}`);
             }
         }
 
-        if (!jwks) {
-            throw new Error('Failed to fetch JWKS from any URL');
+        if (!jwksUrl) {
+            const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '');
+            const rootJwksUrl = `${baseUrl}/.well-known/jwks.json`;
+            try {
+                const jwksTestResponse = await fetch(rootJwksUrl);
+                if (jwksTestResponse.ok) {
+                    jwksUrl = rootJwksUrl;
+                }
+            } catch (error) {
+                logger.warn(`Authentik root JWKS URL also failed: ${error}`);
+            }
         }
 
-        if (!jwks.keys || !Array.isArray(jwks.keys)) {
-            throw new Error(`Invalid JWKS response structure. Expected 'keys' array, got: ${JSON.stringify(jwks)}`);
+        const jwksResponse = await fetch(jwksUrl);
+        if (!jwksResponse.ok) {
+            throw new Error(`Failed to fetch JWKS from ${jwksUrl}: ${jwksResponse.status}`);
         }
+
+        const jwks = await jwksResponse.json() as any;
 
         const header = JSON.parse(Buffer.from(idToken.split('.')[0], 'base64').toString());
         const keyId = header.kid;
 
         const publicKey = jwks.keys.find((key: any) => key.kid === keyId);
         if (!publicKey) {
-            throw new Error(`No matching public key found for key ID: ${keyId}. Available keys: ${jwks.keys.map((k: any) => k.kid).join(', ')}`);
+            throw new Error(`No matching public key found for key ID: ${keyId}`);
         }
 
         const {importJWK, jwtVerify} = await import('jose');
         const key = await importJWK(publicKey);
 
         const {payload} = await jwtVerify(idToken, key, {
-            issuer: possibleIssuers,
+            issuer: [
+                issuerUrl, 
+                normalizedIssuerUrl, 
+                issuerUrl.replace(/\/application\/o\/[^\/]+$/, ''),
+                normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '')
+            ],
             audience: clientId,
         });
 
@@ -234,7 +237,6 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             issuer_url,
             authorization_url,
             token_url,
-            userinfo_url,
             identifier_path,
             name_path,
             scopes
@@ -253,7 +255,6 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             issuer_url,
             authorization_url,
             token_url,
-            userinfo_url: userinfo_url || '',
             identifier_path,
             name_path,
             scopes: scopes || 'openid email profile'
@@ -375,106 +376,54 @@ router.get('/oidc/callback', async (req, res) => {
 
         const tokenData = await tokenResponse.json() as any;
 
-        let userInfo: any = null;
-        let userInfoUrls: string[] = [];
-        
-        const normalizedIssuerUrl = config.issuer_url.endsWith('/') ? config.issuer_url.slice(0, -1) : config.issuer_url;
-        const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '');
-        
-        try {
-            const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
-            const discoveryResponse = await fetch(discoveryUrl);
-            if (discoveryResponse.ok) {
-                const discovery = await discoveryResponse.json() as any;
-                if (discovery.userinfo_endpoint) {
-                    userInfoUrls.push(discovery.userinfo_endpoint);
-                }
-            }
-        } catch (discoveryError) {
-            logger.error(`OIDC discovery failed: ${discoveryError}`);
-        }
-
-        if (config.userinfo_url) {
-            userInfoUrls.unshift(config.userinfo_url);
-        }
-
-        userInfoUrls.push(
-            `${baseUrl}/userinfo/`,
-            `${baseUrl}/userinfo`,
-            `${normalizedIssuerUrl}/userinfo/`,
-            `${normalizedIssuerUrl}/userinfo`,
-            `${baseUrl}/oauth2/userinfo/`,
-            `${baseUrl}/oauth2/userinfo`,
-            `${normalizedIssuerUrl}/oauth2/userinfo/`,
-            `${normalizedIssuerUrl}/oauth2/userinfo`
-        );
-
+        let userInfo;
         if (tokenData.id_token) {
             try {
                 userInfo = await verifyOIDCToken(tokenData.id_token, config.issuer_url, config.client_id);
-                logger.info('Successfully verified ID token and extracted user info');
             } catch (error) {
-                logger.error('OIDC token verification failed, trying userinfo endpoints', error);
-                try {
-                    const parts = tokenData.id_token.split('.');
-                    if (parts.length === 3) {
-                        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-                        userInfo = payload;
-                        logger.info('Successfully decoded ID token payload without verification');
-                    }
-                } catch (decodeError) {
-                    logger.error('Failed to decode ID token payload:', decodeError);
-                }
-            }
-        }
+                logger.error('OIDC token verification failed, falling back to userinfo endpoint', error);
+                if (tokenData.access_token) {
+                    const normalizedIssuerUrl = config.issuer_url.endsWith('/') ? config.issuer_url.slice(0, -1) : config.issuer_url;
+                    const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '');
+                    const userInfoUrl = `${baseUrl}/userinfo/`;
 
-        if (!userInfo && tokenData.access_token) {
-            for (const userInfoUrl of userInfoUrls) {
-                try {
                     const userInfoResponse = await fetch(userInfoUrl, {
                         headers: {
                             'Authorization': `Bearer ${tokenData.access_token}`,
-                        }
+                        },
                     });
 
                     if (userInfoResponse.ok) {
                         userInfo = await userInfoResponse.json();
-                        break;
                     } else {
-                        logger.error(`Userinfo endpoint ${userInfoUrl} failed with status: ${userInfoResponse.status}`);
+                        logger.error(`Userinfo endpoint failed with status: ${userInfoResponse.status}`);
                     }
-                } catch (error) {
-                    logger.error(`Userinfo endpoint ${userInfoUrl} failed:`, error);
-                    continue;
                 }
+            }
+        } else if (tokenData.access_token) {
+            const normalizedIssuerUrl = config.issuer_url.endsWith('/') ? config.issuer_url.slice(0, -1) : config.issuer_url;
+            const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '');
+            const userInfoUrl = `${baseUrl}/userinfo/`;
+
+            const userInfoResponse = await fetch(userInfoUrl, {
+                headers: {
+                    'Authorization': `Bearer ${tokenData.access_token}`,
+                },
+            });
+
+            if (userInfoResponse.ok) {
+                userInfo = await userInfoResponse.json();
+            } else {
+                logger.error(`Userinfo endpoint failed with status: ${userInfoResponse.status}`);
             }
         }
 
         if (!userInfo) {
-            logger.error('Failed to get user information from all sources');
-            logger.error(`Tried userinfo URLs: ${userInfoUrls.join(', ')}`);
-            logger.error(`Token data keys: ${Object.keys(tokenData).join(', ')}`);
-            logger.error(`Has id_token: ${!!tokenData.id_token}`);
-            logger.error(`Has access_token: ${!!tokenData.access_token}`);
             return res.status(400).json({error: 'Failed to get user information'});
         }
 
-        const getNestedValue = (obj: any, path: string): any => {
-            if (!path || !obj) return null;
-            return path.split('.').reduce((current, key) => current?.[key], obj);
-        };
-
-        const identifier = getNestedValue(userInfo, config.identifier_path) || 
-                          userInfo[config.identifier_path] || 
-                          userInfo.sub || 
-                          userInfo.email || 
-                          userInfo.preferred_username;
-        
-        const name = getNestedValue(userInfo, config.name_path) || 
-                    userInfo[config.name_path] || 
-                    userInfo.name || 
-                    userInfo.given_name || 
-                    identifier;
+        const identifier = userInfo[config.identifier_path];
+        const name = userInfo[config.name_path] || identifier;
 
         if (!identifier) {
             logger.error(`Identifier not found at path: ${config.identifier_path}`);
