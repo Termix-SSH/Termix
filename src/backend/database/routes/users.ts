@@ -222,6 +222,7 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             issuer_url,
             authorization_url,
             token_url,
+            userinfo_url,
             identifier_path,
             name_path,
             scopes
@@ -240,6 +241,7 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             issuer_url,
             authorization_url,
             token_url,
+            userinfo_url: userinfo_url || '',
             identifier_path,
             name_path,
             scopes: scopes || 'openid email profile'
@@ -362,14 +364,38 @@ router.get('/oidc/callback', async (req, res) => {
         const tokenData = await tokenResponse.json() as any;
 
         let userInfo: any = null;
-        const userInfoUrls = [];
+        let userInfoUrls: string[] = [];
         
         const normalizedIssuerUrl = config.issuer_url.endsWith('/') ? config.issuer_url.slice(0, -1) : config.issuer_url;
         const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '');
         
-        userInfoUrls.push(`${baseUrl}/userinfo/`);
-        userInfoUrls.push(`${normalizedIssuerUrl}/userinfo/`);
-        userInfoUrls.push(`${normalizedIssuerUrl}/userinfo`);
+        try {
+            const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
+            const discoveryResponse = await fetch(discoveryUrl);
+            if (discoveryResponse.ok) {
+                const discovery = await discoveryResponse.json() as any;
+                if (discovery.userinfo_endpoint) {
+                    userInfoUrls.push(discovery.userinfo_endpoint);
+                }
+            }
+        } catch (discoveryError) {
+            logger.error(`OIDC discovery failed: ${discoveryError}`);
+        }
+
+        if (config.userinfo_url) {
+            userInfoUrls.unshift(config.userinfo_url);
+        }
+
+        userInfoUrls.push(
+            `${baseUrl}/userinfo/`,
+            `${baseUrl}/userinfo`,
+            `${normalizedIssuerUrl}/userinfo/`,
+            `${normalizedIssuerUrl}/userinfo`,
+            `${baseUrl}/oauth2/userinfo/`,
+            `${baseUrl}/oauth2/userinfo`,
+            `${normalizedIssuerUrl}/oauth2/userinfo/`,
+            `${normalizedIssuerUrl}/oauth2/userinfo`
+        );
 
         if (tokenData.id_token) {
             try {
@@ -391,15 +417,34 @@ router.get('/oidc/callback', async (req, res) => {
                     if (userInfoResponse.ok) {
                         userInfo = await userInfoResponse.json();
                         break;
+                    } else {
+                        logger.error(`Userinfo endpoint ${userInfoUrl} failed with status: ${userInfoResponse.status}`);
                     }
                 } catch (error) {
+                    logger.error(`Userinfo endpoint ${userInfoUrl} failed:`, error);
                     continue;
                 }
             }
         }
 
+        if (!userInfo && tokenData.id_token) {
+            try {
+                const parts = tokenData.id_token.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+                    userInfo = payload;
+                }
+            } catch (error) {
+                logger.error('Failed to decode ID token payload:', error);
+            }
+        }
+
         if (!userInfo) {
             logger.error('Failed to get user information from all sources');
+            logger.error(`Tried userinfo URLs: ${userInfoUrls.join(', ')}`);
+            logger.error(`Token data keys: ${Object.keys(tokenData).join(', ')}`);
+            logger.error(`Has id_token: ${!!tokenData.id_token}`);
+            logger.error(`Has access_token: ${!!tokenData.access_token}`);
             return res.status(400).json({error: 'Failed to get user information'});
         }
 
