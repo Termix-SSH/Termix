@@ -143,6 +143,7 @@ interface UserInfo {
     id: string;
     username: string;
     is_admin: boolean;
+    is_oidc: boolean;
 }
 
 interface UserCount {
@@ -897,7 +898,7 @@ export async function setupTOTP(): Promise<{ secret: string; qr_code: string }> 
         const response = await authApi.post('/users/totp/setup');
         return response.data;
     } catch (error) {
-        handleApiError(error as AxiosError);
+        handleApiError(error as AxiosError, 'setup TOTP');
         throw error;
     }
 }
@@ -907,7 +908,7 @@ export async function enableTOTP(totp_code: string): Promise<{ message: string; 
         const response = await authApi.post('/users/totp/enable', { totp_code });
         return response.data;
     } catch (error) {
-        handleApiError(error as AxiosError);
+        handleApiError(error as AxiosError, 'enable TOTP');
         throw error;
     }
 }
@@ -917,7 +918,7 @@ export async function disableTOTP(password?: string, totp_code?: string): Promis
         const response = await authApi.post('/users/totp/disable', { password, totp_code });
         return response.data;
     } catch (error) {
-        handleApiError(error as AxiosError);
+        handleApiError(error as AxiosError, 'disable TOTP');
         throw error;
     }
 }
@@ -927,7 +928,7 @@ export async function verifyTOTPLogin(temp_token: string, totp_code: string): Pr
         const response = await authApi.post('/users/totp/verify-login', { temp_token, totp_code });
         return response.data;
     } catch (error) {
-        handleApiError(error as AxiosError);
+        handleApiError(error as AxiosError, 'verify TOTP login');
         throw error;
     }
 }
@@ -937,7 +938,7 @@ export async function generateBackupCodes(password?: string, totp_code?: string)
         const response = await authApi.post('/users/totp/backup-codes', { password, totp_code });
         return response.data;
     } catch (error) {
-        handleApiError(error as AxiosError);
+        handleApiError(error as AxiosError, 'generate backup codes');
         throw error;
     }
 }

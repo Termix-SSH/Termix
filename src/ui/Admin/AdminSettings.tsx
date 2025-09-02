@@ -52,7 +52,8 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         token_url: '',
         identifier_path: 'sub',
         name_path: 'name',
-        scopes: 'openid email profile'
+        scopes: 'openid email profile',
+        userinfo_url: ''
     });
     const [oidcLoading, setOidcLoading] = React.useState(false);
     const [oidcError, setOidcError] = React.useState<string | null>(null);
@@ -145,7 +146,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         setOidcConfig(prev => ({...prev, [field]: value}));
     };
 
-    const makeUserAdmin = async (e: React.FormEvent) => {
+    const handleMakeUserAdmin = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newAdminUsername.trim()) return;
         setMakeAdminLoading(true);
@@ -164,23 +165,25 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         }
     };
 
-    const removeAdminStatus = async (username: string) => {
+    const handleRemoveAdminStatus = async (username: string) => {
         if (!confirm(`Remove admin status from ${username}?`)) return;
         const jwt = getCookie("jwt");
         try {
             await removeAdminStatus(username);
             fetchUsers();
-        } catch {
+        } catch (err: any) {
+            console.error('Failed to remove admin status:', err);
         }
     };
 
-    const deleteUser = async (username: string) => {
+    const handleDeleteUser = async (username: string) => {
         if (!confirm(`Delete user ${username}? This cannot be undone.`)) return;
         const jwt = getCookie("jwt");
         try {
             await deleteUser(username);
             fetchUsers();
-        } catch {
+        } catch (err: any) {
+            console.error('Failed to delete user:', err);
         }
     };
 
@@ -296,8 +299,14 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                     <div className="space-y-2">
                                         <Label htmlFor="scopes">Scopes</Label>
                                         <Input id="scopes" value={oidcConfig.scopes}
-                                               onChange={(e) => handleOIDCConfigChange('scopes', (e.target as HTMLInputElement).value)}
+                                               onChange={(e) => handleOIDCConfigChange('scopes', e.target.value)}
                                                placeholder="openid email profile" required/>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="userinfo_url">Overide User Info URL (not required)</Label>
+                                        <Input id="userinfo_url" value={oidcConfig.userinfo_url}
+                                               onChange={(e) => handleOIDCConfigChange('userinfo_url', e.target.value)}
+                                               placeholder="https://your-provider.com/application/o/userinfo/"/>
                                     </div>
                                     <div className="flex gap-2 pt-2">
                                         <Button type="submit" className="flex-1"
@@ -310,7 +319,8 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                             token_url: '',
                                             identifier_path: 'sub',
                                             name_path: 'name',
-                                            scopes: 'openid email profile'
+                                            scopes: 'openid email profile',
+                                            userinfo_url: ''
                                         })}>Reset</Button>
                                     </div>
 
@@ -357,7 +367,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                             className="px-4">{user.is_oidc ? "External" : "Local"}</TableCell>
                                                         <TableCell className="px-4">
                                                             <Button variant="ghost" size="sm"
-                                                                    onClick={() => deleteUser(user.username)}
+                                                                    onClick={() => handleDeleteUser(user.username)}
                                                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                                     disabled={user.is_admin}>
                                                                 <Trash2 className="h-4 w-4"/>
@@ -377,7 +387,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                 <h3 className="text-lg font-semibold">Admin Management</h3>
                                 <div className="space-y-4 p-6 border rounded-md bg-muted/50">
                                     <h4 className="font-medium">Make User Admin</h4>
-                                    <form onSubmit={makeUserAdmin} className="space-y-4">
+                                    <form onSubmit={handleMakeUserAdmin} className="space-y-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="new-admin-username">Username</Label>
                                             <div className="flex gap-2">
@@ -426,7 +436,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                             className="px-4">{admin.is_oidc ? "External" : "Local"}</TableCell>
                                                         <TableCell className="px-4">
                                                             <Button variant="ghost" size="sm"
-                                                                    onClick={() => removeAdminStatus(admin.username)}
+                                                                    onClick={() => handleRemoveAdminStatus(admin.username)}
                                                                     className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
                                                                 <Shield className="h-4 w-4"/>
                                                                 Remove Admin
