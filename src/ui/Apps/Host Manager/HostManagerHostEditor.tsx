@@ -1,7 +1,6 @@
 import {zodResolver} from "@hookform/resolvers/zod"
 import {Controller, useForm} from "react-hook-form"
 import {z} from "zod"
-import {useTranslation} from "react-i18next"
 
 import {Button} from "@/components/ui/button.tsx"
 import {
@@ -51,7 +50,6 @@ interface SSHManagerHostEditorProps {
 }
 
 export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHostEditorProps) {
-    const {t} = useTranslation();
     const [hosts, setHosts] = useState<SSHHost[]>([]);
     const [folders, setFolders] = useState<string[]>([]);
     const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
@@ -129,7 +127,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
             if (!data.password || data.password.trim() === '') {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: t('hosts.passwordRequired'),
+                    message: "Password is required when using password authentication",
                     path: ['password']
                 });
             }
@@ -137,14 +135,14 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
             if (!data.key) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: t('hosts.sshKeyRequired'),
+                    message: "SSH Private Key is required when using key authentication",
                     path: ['key']
                 });
             }
             if (!data.keyType) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: t('hosts.keyTypeRequired'),
+                    message: "Key Type is required when using key authentication",
                     path: ['keyType']
                 });
             }
@@ -256,7 +254,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
 
             window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
         } catch (error) {
-            alert(t('errors.saveError'));
+            alert('Failed to save host. Please try again.');
         }
     };
 
@@ -301,7 +299,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
     }, [folderDropdownOpen]);
 
     const keyTypeOptions = [
-        {value: 'auto', label: t('common.autoDetect')},
+        {value: 'auto', label: 'Auto-detect'},
         {value: 'ssh-rsa', label: 'RSA'},
         {value: 'ssh-ed25519', label: 'ED25519'},
         {value: 'ecdsa-sha2-nistp256', label: 'ECDSA NIST P-256'},
@@ -395,20 +393,20 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                     <ScrollArea className="flex-1 min-h-0 w-full my-1 pb-2">
                         <Tabs defaultValue="general" className="w-full">
                             <TabsList>
-                                <TabsTrigger value="general">{t('common.settings')}</TabsTrigger>
-                                <TabsTrigger value="terminal">{t('nav.terminal')}</TabsTrigger>
-                                <TabsTrigger value="tunnel">{t('nav.tunnels')}</TabsTrigger>
-                                <TabsTrigger value="file_manager">{t('nav.fileManager')}</TabsTrigger>
+                                <TabsTrigger value="general">General</TabsTrigger>
+                                <TabsTrigger value="terminal">Terminal</TabsTrigger>
+                                <TabsTrigger value="tunnel">Tunnel</TabsTrigger>
+                                <TabsTrigger value="file_manager">File Manager</TabsTrigger>
                             </TabsList>
                             <TabsContent value="general" className="pt-2">
-                                <FormLabel className="mb-3 font-bold">{t('hosts.connectionDetails')}</FormLabel>
+                                <FormLabel className="mb-3 font-bold">Connection Details</FormLabel>
                                 <div className="grid grid-cols-12 gap-4">
                                     <FormField
                                         control={form.control}
                                         name="ip"
                                         render={({field}) => (
                                             <FormItem className="col-span-5">
-                                                <FormLabel>{t('hosts.ipAddress')}</FormLabel>
+                                                <FormLabel>IP</FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="127.0.0.1" {...field} />
                                                 </FormControl>
@@ -421,7 +419,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                         name="port"
                                         render={({field}) => (
                                             <FormItem className="col-span-1">
-                                                <FormLabel>{t('hosts.port')}</FormLabel>
+                                                <FormLabel>Port</FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="22" {...field} />
                                                 </FormControl>
@@ -434,24 +432,24 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                         name="username"
                                         render={({field}) => (
                                             <FormItem className="col-span-6">
-                                                <FormLabel>{t('common.username')}</FormLabel>
+                                                <FormLabel>Username</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder={t('placeholders.username')} {...field} />
+                                                    <Input placeholder="username" {...field} />
                                                 </FormControl>
                                             </FormItem>
                                         )}
                                     />
                                 </div>
-                                <FormLabel className="mb-3 mt-3 font-bold">{t('hosts.organization')}</FormLabel>
+                                <FormLabel className="mb-3 mt-3 font-bold">Organization</FormLabel>
                                 <div className="grid grid-cols-26 gap-4">
                                     <FormField
                                         control={form.control}
                                         name="name"
                                         render={({field}) => (
                                             <FormItem className="col-span-10">
-                                                <FormLabel>{t('hosts.hostName')}</FormLabel>
+                                                <FormLabel>Name</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder={t('placeholders.hostname')} {...field} />
+                                                    <Input placeholder="host name" {...field} />
                                                 </FormControl>
                                             </FormItem>
                                         )}
@@ -462,11 +460,11 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                         name="folder"
                                         render={({field}) => (
                                             <FormItem className="col-span-10 relative">
-                                                <FormLabel>{t('hosts.folder')}</FormLabel>
+                                                <FormLabel>Folder</FormLabel>
                                                 <FormControl>
                                                     <Input
                                                         ref={folderInputRef}
-                                                        placeholder={t('placeholders.folder')}
+                                                        placeholder="folder"
                                                         className="min-h-[40px]"
                                                         autoComplete="off"
                                                         value={field.value}
@@ -507,7 +505,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                         name="tags"
                                         render={({field}) => (
                                             <FormItem className="col-span-10 overflow-visible">
-                                                <FormLabel>{t('hosts.tags')}</FormLabel>
+                                                <FormLabel>Tags</FormLabel>
                                                 <FormControl>
                                                     <div
                                                         className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-[#222225] focus-within:ring-2 ring-ring min-h-[40px]">
@@ -543,7 +541,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                     field.onChange(field.value.slice(0, -1));
                                                                 }
                                                             }}
-                                                            placeholder={t('hosts.addTags')}
+                                                            placeholder="add tags (space to add)"
                                                         />
                                                     </div>
                                                 </FormControl>
@@ -567,7 +565,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                         )}
                                     />
                                 </div>
-                                <FormLabel className="mb-3 mt-3 font-bold">{t('hosts.authentication')}</FormLabel>
+                                <FormLabel className="mb-3 mt-3 font-bold">Authentication</FormLabel>
                                 <Tabs
                                     value={authTab}
                                     onValueChange={(value) => {
@@ -577,8 +575,8 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                     className="flex-1 flex flex-col h-full min-h-0"
                                 >
                                     <TabsList>
-                                        <TabsTrigger value="password">{t('hosts.password')}</TabsTrigger>
-                                        <TabsTrigger value="key">{t('hosts.key')}</TabsTrigger>
+                                        <TabsTrigger value="password">Password</TabsTrigger>
+                                        <TabsTrigger value="key">Key</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="password">
                                         <FormField
@@ -586,9 +584,9 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                             name="password"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>{t('hosts.password')}</FormLabel>
+                                                    <FormLabel>Password</FormLabel>
                                                     <FormControl>
-                                                        <Input type="password" placeholder={t('placeholders.password')} {...field} />
+                                                        <Input type="password" placeholder="password" {...field} />
                                                     </FormControl>
                                                 </FormItem>
                                             )}
@@ -601,7 +599,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                 name="key"
                                                 render={({field}) => (
                                                     <FormItem className="col-span-4 overflow-hidden min-w-0">
-                                                        <FormLabel>{t('hosts.sshPrivateKey')}</FormLabel>
+                                                        <FormLabel>SSH Private Key</FormLabel>
                                                         <FormControl>
                                                             <div className="relative min-w-0">
                                                                 <input
@@ -621,7 +619,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                 >
                                                                     <span className="block w-full truncate"
                                                                           title={field.value?.name || 'Upload'}>
-                                                                        {field.value ? (editingHost ? t('hosts.updateKey') : field.value.name) : t('hosts.upload')}
+                                                                        {field.value ? (editingHost ? 'Update Key' : field.value.name) : 'Upload'}
                                                                     </span>
                                                                 </Button>
                                                             </div>
@@ -634,10 +632,10 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                 name="keyPassword"
                                                 render={({field}) => (
                                                     <FormItem className="col-span-8">
-                                                        <FormLabel>{t('hosts.keyPassword')}</FormLabel>
+                                                        <FormLabel>Key Password</FormLabel>
                                                         <FormControl>
                                                             <Input
-                                                                placeholder={t('placeholders.keyPassword')}
+                                                                placeholder="key password"
                                                                 type="password"
                                                                 {...field}
                                                             />
@@ -650,7 +648,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                 name="keyType"
                                                 render={({field}) => (
                                                     <FormItem className="relative col-span-3">
-                                                        <FormLabel>{t('hosts.keyType')}</FormLabel>
+                                                        <FormLabel>Key Type</FormLabel>
                                                         <FormControl>
                                                             <div className="relative">
                                                                 <Button
@@ -701,7 +699,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                     name="enableTerminal"
                                     render={({field}) => (
                                         <FormItem>
-                                            <FormLabel>{t('hosts.enableTerminal')}</FormLabel>
+                                            <FormLabel>Enable Terminal</FormLabel>
                                             <FormControl>
                                                 <Switch
                                                     checked={field.value}
@@ -709,7 +707,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                 />
                                             </FormControl>
                                             <FormDescription>
-                                                {t('hosts.enableTerminalDesc')}
+                                                Enable/disable host visibility in Terminal tab.
                                             </FormDescription>
                                         </FormItem>
                                     )}
@@ -721,7 +719,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                     name="enableTunnel"
                                     render={({field}) => (
                                         <FormItem>
-                                            <FormLabel>{t('hosts.enableTunnel')}</FormLabel>
+                                            <FormLabel>Enable Tunnel</FormLabel>
                                             <FormControl>
                                                 <Switch
                                                     checked={field.value}
@@ -729,7 +727,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                 />
                                             </FormControl>
                                             <FormDescription>
-                                                {t('hosts.enableTunnelDesc')}
+                                                Enable/disable host visibility in Tunnel tab.
                                             </FormDescription>
                                         </FormItem>
                                     )}
@@ -739,27 +737,44 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                     <>
                                         <Alert className="mt-4">
                                             <AlertDescription>
-                                                <strong>{t('hosts.sshpassRequired')}</strong>
+                                                <strong>Sshpass Required For Password Authentication</strong>
                                                 <div>
-                                                    {t('hosts.sshpassInstallCommand')}
+                                                    For password-based SSH authentication, sshpass must be installed on
+                                                    both the local and remote servers. Install with: <code
+                                                    className="bg-muted px-1 rounded inline">sudo apt install
+                                                    sshpass</code> (Debian/Ubuntu) or the equivalent for your OS.
                                                 </div>
                                                 <div className="mt-2">
-                                                    <strong>{t('hosts.otherInstallMethods')}</strong>
-                                                    <div>• {t('hosts.sshpassOSInstructions.centos')}</div>
-                                                    <div>• {t('hosts.sshpassOSInstructions.macos')}</div>
-                                                    <div>• {t('hosts.sshpassOSInstructions.windows')}</div>
+                                                    <strong>Other installation methods:</strong>
+                                                    <div>• CentOS/RHEL/Fedora: <code
+                                                        className="bg-muted px-1 rounded inline">sudo yum install
+                                                        sshpass</code> or <code
+                                                        className="bg-muted px-1 rounded inline">sudo dnf install
+                                                        sshpass</code></div>
+                                                    <div>• macOS: <code className="bg-muted px-1 rounded inline">brew
+                                                        install hudochenkov/sshpass/sshpass</code></div>
+                                                    <div>• Windows: Use WSL or consider SSH key authentication</div>
                                                 </div>
                                             </AlertDescription>
                                         </Alert>
 
                                         <Alert className="mt-4">
                                             <AlertDescription>
-                                                <strong>{t('hosts.sshServerConfig')}</strong>
-                                                <div>{t('hosts.sshServerConfigReverse')}</div>
-                                                <div>• <code className="bg-muted px-1 rounded inline">{t('hosts.gatewayPorts')}</code></div>
-                                                <div>• <code className="bg-muted px-1 rounded inline">{t('hosts.allowTcpForwarding')}</code></div>
-                                                <div>• <code className="bg-muted px-1 rounded inline">{t('hosts.permitRootLogin')}</code></div>
-                                                <div className="mt-2">{t('hosts.editSshConfig')}</div>
+                                                <strong>SSH Server Configuration Required</strong>
+                                                <div>For reverse SSH tunnels, the endpoint SSH server must allow:</div>
+                                                <div>• <code className="bg-muted px-1 rounded inline">GatewayPorts
+                                                    yes</code> (bind remote ports)
+                                                </div>
+                                                <div>• <code className="bg-muted px-1 rounded inline">AllowTcpForwarding
+                                                    yes</code> (port forwarding)
+                                                </div>
+                                                <div>• <code className="bg-muted px-1 rounded inline">PermitRootLogin
+                                                    yes</code> (if using root)
+                                                </div>
+                                                <div className="mt-2">Edit <code
+                                                    className="bg-muted px-1 rounded inline">/etc/ssh/sshd_config</code> and
+                                                    restart SSH: <code className="bg-muted px-1 rounded inline">sudo
+                                                        systemctl restart sshd</code></div>
                                             </AlertDescription>
                                         </Alert>
 
@@ -768,7 +783,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                             name="tunnelConnections"
                                             render={({field}) => (
                                                 <FormItem className="mt-4">
-                                                    <FormLabel>{t('hosts.tunnelConnections')}</FormLabel>
+                                                    <FormLabel>Tunnel Connections</FormLabel>
                                                     <FormControl>
                                                         <div className="space-y-4">
                                                             {field.value.map((connection, index) => (
@@ -776,7 +791,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                      className="p-4 border rounded-lg bg-muted/50">
                                                                     <div
                                                                         className="flex items-center justify-between mb-3">
-                                                                        <h4 className="text-sm font-bold">{t('hosts.connection')} {index + 1}</h4>
+                                                                        <h4 className="text-sm font-bold">Connection {index + 1}</h4>
                                                                         <Button
                                                                             type="button"
                                                                             variant="ghost"
@@ -786,7 +801,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                                 field.onChange(newConnections);
                                                                             }}
                                                                         >
-                                                                            {t('hosts.remove')}
+                                                                            Remove
                                                                         </Button>
                                                                     </div>
                                                                     <div className="grid grid-cols-12 gap-4">
@@ -795,8 +810,10 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                             name={`tunnelConnections.${index}.sourcePort`}
                                                                             render={({field: sourcePortField}) => (
                                                                                 <FormItem className="col-span-4">
-                                                                                    <FormLabel>{t('hosts.sourcePort')}
-                                                                                        {t('hosts.sourcePortDescription')}</FormLabel>
+                                                                                    <FormLabel>Source Port
+                                                                                        (Source refers to the Current
+                                                                                        Connection Details in the
+                                                                                        General tab)</FormLabel>
                                                                                     <FormControl>
                                                                                         <Input
                                                                                             placeholder="22" {...sourcePortField} />
@@ -809,7 +826,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                             name={`tunnelConnections.${index}.endpointPort`}
                                                                             render={({field: endpointPortField}) => (
                                                                                 <FormItem className="col-span-4">
-                                                                                    <FormLabel>{t('hosts.endpointPort')}
+                                                                                    <FormLabel>Endpoint Port
                                                                                         (Remote)</FormLabel>
                                                                                     <FormControl>
                                                                                         <Input
@@ -824,13 +841,14 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                             render={({field: endpointHostField}) => (
                                                                                 <FormItem
                                                                                     className="col-span-4 relative">
-                                                                                    <FormLabel>{t('hosts.endpointSshConfiguration')}</FormLabel>
+                                                                                    <FormLabel>Endpoint SSH
+                                                                                        Configuration</FormLabel>
                                                                                     <FormControl>
                                                                                         <Input
                                                                                             ref={(el) => {
                                                                                                 sshConfigInputRefs.current[index] = el;
                                                                                             }}
-                                                                                            placeholder={t('placeholders.sshConfig')}
+                                                                                            placeholder="endpoint ssh configuration"
                                                                                             className="min-h-[40px]"
                                                                                             autoComplete="off"
                                                                                             value={endpointHostField.value}
@@ -877,10 +895,12 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                     </div>
 
                                                                     <p className="text-sm text-muted-foreground mt-2">
-                                                                        {t('hosts.tunnelForwardDescription', {
-                                                                            sourcePort: form.watch(`tunnelConnections.${index}.sourcePort`) || '22',
-                                                                            endpointPort: form.watch(`tunnelConnections.${index}.endpointPort`) || '224'
-                                                                        })}
+                                                                        This tunnel will forward traffic from
+                                                                        port {form.watch(`tunnelConnections.${index}.sourcePort`) || '22'} on
+                                                                        the source machine (current connection details
+                                                                        in general tab) to
+                                                                        port {form.watch(`tunnelConnections.${index}.endpointPort`) || '224'} on
+                                                                        the endpoint machine.
                                                                     </p>
 
                                                                     <div className="grid grid-cols-12 gap-4 mt-4">
@@ -889,13 +909,14 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                             name={`tunnelConnections.${index}.maxRetries`}
                                                                             render={({field: maxRetriesField}) => (
                                                                                 <FormItem className="col-span-4">
-                                                                                    <FormLabel>{t('hosts.maxRetries', 'Max Retries')}</FormLabel>
+                                                                                    <FormLabel>Max Retries</FormLabel>
                                                                                     <FormControl>
                                                                                         <Input
                                                                                             placeholder="3" {...maxRetriesField} />
                                                                                     </FormControl>
                                                                                     <FormDescription>
-                                                                                        {t('hosts.maxRetriesDescription')}
+                                                                                        Maximum number of retry attempts
+                                                                                        for tunnel connection.
                                                                                     </FormDescription>
                                                                                 </FormItem>
                                                                             )}
@@ -905,13 +926,15 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                             name={`tunnelConnections.${index}.retryInterval`}
                                                                             render={({field: retryIntervalField}) => (
                                                                                 <FormItem className="col-span-4">
-                                                                                    <FormLabel>{t('hosts.retryInterval')}</FormLabel>
+                                                                                    <FormLabel>Retry Interval
+                                                                                        (seconds)</FormLabel>
                                                                                     <FormControl>
                                                                                         <Input
                                                                                             placeholder="10" {...retryIntervalField} />
                                                                                     </FormControl>
                                                                                     <FormDescription>
-                                                                                        {t('hosts.retryIntervalDescription')}
+                                                                                        Time to wait between retry
+                                                                                        attempts.
                                                                                     </FormDescription>
                                                                                 </FormItem>
                                                                             )}
@@ -921,7 +944,8 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                             name={`tunnelConnections.${index}.autoStart`}
                                                                             render={({field}) => (
                                                                                 <FormItem className="col-span-4">
-                                                                                    <FormLabel>{t('hosts.autoStartContainer')}</FormLabel>
+                                                                                    <FormLabel>Auto Start on Container
+                                                                                        Launch</FormLabel>
                                                                                     <FormControl>
                                                                                         <Switch
                                                                                             checked={field.value}
@@ -929,7 +953,8 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                                         />
                                                                                     </FormControl>
                                                                                     <FormDescription>
-                                                                                        {t('hosts.autoStartDesc')}
+                                                                                        Automatically start this tunnel
+                                                                                        when the container launches.
                                                                                     </FormDescription>
                                                                                 </FormItem>
                                                                             )}
@@ -951,7 +976,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                                     }]);
                                                                 }}
                                                             >
-                                                                {t('hosts.addConnection')}
+                                                                Add Tunnel Connection
                                                             </Button>
                                                         </div>
                                                     </FormControl>
@@ -969,7 +994,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                     name="enableFileManager"
                                     render={({field}) => (
                                         <FormItem>
-                                            <FormLabel>{t('hosts.enableFileManager')}</FormLabel>
+                                            <FormLabel>Enable File Manager</FormLabel>
                                             <FormControl>
                                                 <Switch
                                                     checked={field.value}
@@ -977,7 +1002,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                 />
                                             </FormControl>
                                             <FormDescription>
-                                                {t('hosts.enableFileManagerDesc')}
+                                                Enable/disable host visibility in File Manager tab.
                                             </FormDescription>
                                         </FormItem>
                                     )}
@@ -990,11 +1015,12 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                             name="defaultPath"
                                             render={({field}) => (
                                                 <FormItem>
-                                                    <FormLabel>{t('hosts.defaultPath')}</FormLabel>
+                                                    <FormLabel>Default Path</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder={t('placeholders.homePath')} {...field} />
+                                                        <Input placeholder="/home" {...field} />
                                                     </FormControl>
-                                                    <FormDescription>{t('hosts.defaultPathDesc')}</FormDescription>
+                                                    <FormDescription>Set default directory shown when connected via
+                                                        File Manager</FormDescription>
                                                 </FormItem>
                                             )}
                                         />
@@ -1013,7 +1039,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                 transform: 'translateY(8px)'
                             }}
                         >
-                            {editingHost ? t('hosts.updateHost') : t('hosts.addHost')}
+                            {editingHost ? "Update Host" : "Add Host"}
                         </Button>
                     </footer>
                 </form>

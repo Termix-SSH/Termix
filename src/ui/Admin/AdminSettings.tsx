@@ -16,6 +16,7 @@ import {
     TableRow,
 } from "@/components/ui/table.tsx";
 import {Shield, Trash2, Users} from "lucide-react";
+import {toast} from "sonner";
 import { 
     getOIDCConfig, 
     getRegistrationAllowed, 
@@ -57,7 +58,6 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
     });
     const [oidcLoading, setOidcLoading] = React.useState(false);
     const [oidcError, setOidcError] = React.useState<string | null>(null);
-    const [oidcSuccess, setOidcSuccess] = React.useState<string | null>(null);
 
     const [users, setUsers] = React.useState<Array<{
         id: string;
@@ -69,7 +69,6 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
     const [newAdminUsername, setNewAdminUsername] = React.useState("");
     const [makeAdminLoading, setMakeAdminLoading] = React.useState(false);
     const [makeAdminError, setMakeAdminError] = React.useState<string | null>(null);
-    const [makeAdminSuccess, setMakeAdminSuccess] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         const jwt = getCookie("jwt");
@@ -121,7 +120,6 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         e.preventDefault();
         setOidcLoading(true);
         setOidcError(null);
-        setOidcSuccess(null);
 
         const required = ['client_id', 'client_secret', 'issuer_url', 'authorization_url', 'token_url'];
         const missing = required.filter(f => !oidcConfig[f as keyof typeof oidcConfig]);
@@ -134,7 +132,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         const jwt = getCookie("jwt");
         try {
             await updateOIDCConfig(oidcConfig);
-            setOidcSuccess("OIDC configuration updated successfully!");
+            toast.success("OIDC configuration updated successfully!");
         } catch (err: any) {
             setOidcError(err?.response?.data?.error || "Failed to update OIDC configuration");
         } finally {
@@ -151,11 +149,10 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         if (!newAdminUsername.trim()) return;
         setMakeAdminLoading(true);
         setMakeAdminError(null);
-        setMakeAdminSuccess(null);
         const jwt = getCookie("jwt");
         try {
             await makeUserAdmin(newAdminUsername.trim());
-            setMakeAdminSuccess(`User ${newAdminUsername} is now an admin`);
+            toast.success(`User ${newAdminUsername} is now an admin`);
             setNewAdminUsername("");
             fetchUsers();
         } catch (err: any) {
@@ -170,9 +167,11 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         const jwt = getCookie("jwt");
         try {
             await removeAdminStatus(username);
+            toast.success(`Admin status removed from ${username}`);
             fetchUsers();
         } catch (err: any) {
             console.error('Failed to remove admin status:', err);
+            toast.error('Failed to remove admin status');
         }
     };
 
@@ -181,9 +180,11 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         const jwt = getCookie("jwt");
         try {
             await deleteUser(username);
+            toast.success(`User ${username} deleted successfully`);
             fetchUsers();
         } catch (err: any) {
             console.error('Failed to delete user:', err);
+            toast.error('Failed to delete user');
         }
     };
 
@@ -323,13 +324,6 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                             userinfo_url: ''
                                         })}>Reset</Button>
                                     </div>
-
-                                    {oidcSuccess && (
-                                        <Alert>
-                                            <AlertTitle>Success</AlertTitle>
-                                            <AlertDescription>{oidcSuccess}</AlertDescription>
-                                        </Alert>
-                                    )}
                                 </form>
                             </div>
                         </TabsContent>
@@ -404,12 +398,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                 <AlertDescription>{makeAdminError}</AlertDescription>
                                             </Alert>
                                         )}
-                                        {makeAdminSuccess && (
-                                            <Alert>
-                                                <AlertTitle>Success</AlertTitle>
-                                                <AlertDescription>{makeAdminSuccess}</AlertDescription>
-                                            </Alert>
-                                        )}
+
                                     </form>
                                 </div>
 
