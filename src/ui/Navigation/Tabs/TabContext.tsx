@@ -1,4 +1,5 @@
 import React, {createContext, useContext, useState, useRef, type ReactNode} from 'react';
+import {useTranslation} from 'react-i18next';
 
 export interface Tab {
     id: number;
@@ -34,15 +35,16 @@ interface TabProviderProps {
 }
 
 export function TabProvider({children}: TabProviderProps) {
+    const {t} = useTranslation();
     const [tabs, setTabs] = useState<Tab[]>([
-        {id: 1, type: 'home', title: 'Home'}
+        {id: 1, type: 'home', title: t('nav.home')}
     ]);
     const [currentTab, setCurrentTab] = useState<number>(1);
     const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
     const nextTabId = useRef(2);
 
     function computeUniqueTitle(tabType: Tab['type'], desiredTitle: string | undefined): string {
-        const defaultTitle = tabType === 'server' ? 'Server' : (tabType === 'file_manager' ? 'File Manager' : 'Terminal');
+        const defaultTitle = tabType === 'server' ? t('nav.serverStats') : (tabType === 'file_manager' ? t('nav.fileManager') : t('nav.terminal'));
         const baseTitle = (desiredTitle || defaultTitle).trim();
         const match = baseTitle.match(/^(.*) \((\d+)\)$/);
         const root = match ? match[1] : baseTitle;

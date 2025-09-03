@@ -14,7 +14,9 @@
   },
   "homepage": {
     "loggedInTitle": "Logged in!",
-    "loggedInMessage": "You are logged in! Use the sidebar to access all available tools. To get started, create an SSH Host in the SSH Manager tab. Once created, you can connect to that host using the other apps in the sidebar."
+    "loggedInMessage": "You are logged in! Use the sidebar to access all available tools. To get started, create an SSH Host in the SSH Manager tab. Once created, you can connect to that host using the other apps in the sidebar.",
+    "failedToLoadAlerts": "Failed to load alerts",
+    "failedToDismissAlert": "Failed to dismiss alert"
   },
   "common": {
     "close": "Close",
@@ -34,7 +36,14 @@
     "sidebar": "Sidebar",
     "home": "Home",
     "expired": "Expired",
+    "expiresToday": "Expires today",
+    "expiresTomorrow": "Expires tomorrow",
+    "expiresInDays": "Expires in {{days}} days",
     "updateAvailable": "Update Available",
+    "sshPath": "SSH Path",
+    "localPath": "Local Path",
+    "loading": "Loading...",
+    "noAuthCredentials": "No authentication credentials available for this SSH host",
     "noReleases": "No Releases",
     "updatesAndReleases": "Updates & Releases",
     "newVersionAvailable": "A new version ({{version}}) is available.",
@@ -402,7 +411,15 @@
     "enterFolderPath": "Enter folder path",
     "noShortcuts": "No shortcuts.",
     "searchFilesAndFolders": "Search files and folders...",
-    "noFilesOrFoldersFound": "No files or folders found."
+    "noFilesOrFoldersFound": "No files or folders found.",
+    "failedToConnectSSH": "Failed to connect to SSH",
+    "failedToReconnectSSH": "Failed to reconnect SSH session",
+    "failedToListFiles": "Failed to list files",
+    "fetchHomeDataTimeout": "Fetch home data timed out",
+    "sshStatusCheckTimeout": "SSH status check timed out",
+    "sshReconnectionTimeout": "SSH reconnection timed out",
+    "saveOperationTimeout": "Save operation timed out",
+    "cannotSaveFile": "Cannot save file"
   },
   "tunnels": {
     "title": "SSH Tunnels",
@@ -457,7 +474,8 @@
     "portMapping": "Port {{sourcePort}} → {{endpointHost}}:{{endpointPort}}",
     "disconnect": "Disconnect",
     "connect": "Connect",
-    "canceling": "Canceling..."
+    "canceling": "Canceling...",
+    "endpointHostNotFound": "Endpoint host not found"
   },
   "serverStats": {
     "title": "Server Statistics",
@@ -509,7 +527,7 @@
     "passwordReset": "Password reset link sent",
     "twoFactorAuth": "Two-Factor Authentication",
     "enterCode": "Enter verification code",
-    "backupCode": "Use backup code",
+    "backupCode": "Or use backup code",
     "verifyCode": "Verify Code",
     "enableTwoFactor": "Enable Two-Factor Authentication",
     "disableTwoFactor": "Disable Two-Factor Authentication",

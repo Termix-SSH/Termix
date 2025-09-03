@@ -2,6 +2,7 @@ import React, {useEffect, useState} from "react";
 import {HomepageAlertCard} from "./HomepageAlertCard.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import { getUserAlerts, dismissAlert } from "@/ui/main-axios.ts";
+import {useTranslation} from "react-i18next";
 
 interface TermixAlert {
     id: string;
@@ -20,6 +21,7 @@ interface AlertManagerProps {
 }
 
 export function HomepageAlertManager({userId, loggedIn}: AlertManagerProps): React.ReactElement {
+    const {t} = useTranslation();
     const [alerts, setAlerts] = useState<TermixAlert[]>([]);
     const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -57,7 +59,7 @@ export function HomepageAlertManager({userId, loggedIn}: AlertManagerProps): Rea
             setAlerts(sortedAlerts);
             setCurrentAlertIndex(0);
         } catch (err) {
-            setError('Failed to load alerts');
+            setError(t('homepage.failedToLoadAlerts'));
         } finally {
             setLoading(false);
         }
@@ -81,7 +83,7 @@ export function HomepageAlertManager({userId, loggedIn}: AlertManagerProps): Rea
                 return prevIndex;
             });
         } catch (err) {
-            setError('Failed to dismiss alert');
+            setError(t('homepage.failedToDismissAlert'));
         }
     };
 

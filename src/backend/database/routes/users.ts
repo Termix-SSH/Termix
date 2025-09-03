@@ -1311,17 +1311,26 @@ router.delete('/delete-user', authenticateJWT, async (req, res) => {
         const targetUserId = targetUser[0].id;
 
         try {
+            // Delete from tables that have foreign keys to both users and ssh_data first
+            // These must be deleted before ssh_data because they reference host_id
+            await db.delete(fileManagerRecent).where(eq(fileManagerRecent.userId, targetUserId));
+            await db.delete(fileManagerPinned).where(eq(fileManagerPinned.userId, targetUserId));
+            await db.delete(fileManagerShortcuts).where(eq(fileManagerShortcuts.userId, targetUserId));
+            
+            // Delete from tables that only reference users
+            await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, targetUserId));
+            
+            // Delete from ssh_data (which references users)
+            await db.delete(sshData).where(eq(sshData.userId, targetUserId));
+            
+            // Delete from any additional tables that might exist
             db.$client.prepare('DELETE FROM config_editor_recent WHERE user_id = ?').run(targetUserId);
             db.$client.prepare('DELETE FROM config_editor_pinned WHERE user_id = ?').run(targetUserId);
             db.$client.prepare('DELETE FROM config_editor_shortcuts WHERE user_id = ?').run(targetUserId);
             db.$client.prepare('DELETE FROM shared_hosts WHERE original_user_id = ? OR shared_with_user_id = ?').run(targetUserId, targetUserId);
-            await db.delete(fileManagerRecent).where(eq(fileManagerRecent.userId, targetUserId));
-            await db.delete(fileManagerPinned).where(eq(fileManagerPinned.userId, targetUserId));
-            await db.delete(fileManagerShortcuts).where(eq(fileManagerShortcuts.userId, targetUserId));
-            await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, targetUserId));
-            await db.delete(sshData).where(eq(sshData.userId, targetUserId));
         } catch (cleanupError) {
             logger.error(`Cleanup failed for user ${username}:`, cleanupError);
+            throw cleanupError; // Re-throw to prevent user deletion if cleanup fails
         }
 
         await db.delete(users).where(eq(users.id, targetUserId));

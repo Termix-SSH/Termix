@@ -3,6 +3,7 @@ import {Button} from '@/components/ui/button.tsx';
 import {Card} from '@/components/ui/card.tsx';
 import {Separator} from '@/components/ui/separator.tsx';
 import {Plus, Folder, File, Star, Trash2, Edit, Link2, Server, Pin} from 'lucide-react';
+import {useTranslation} from 'react-i18next';
 
 interface SSHConnection {
     id: string;
@@ -61,16 +62,18 @@ export function FileManagerLeftSidebarFileViewer({
                                                      onSwitchToSSH,
                                                      currentSSH,
                                                  }: FileManagerLeftSidebarVileViewerProps) {
+    const {t} = useTranslation();
+    
     return (
         <div className="flex flex-col h-full">
             <div className="flex-1 bg-[#09090b] p-2 overflow-y-auto">
                 <div className="mb-2 flex items-center gap-2">
                     <span
-                        className="text-xs text-muted-foreground font-semibold">{isSSHMode ? 'SSH Path' : 'Local Path'}</span>
+                        className="text-xs text-muted-foreground font-semibold">{isSSHMode ? t('common.sshPath') : t('common.localPath')}</span>
                     <span className="text-xs text-white truncate">{currentPath}</span>
                 </div>
                 {isLoading ? (
-                    <div className="text-xs text-muted-foreground">Loading...</div>
+                    <div className="text-xs text-muted-foreground">{t('common.loading')}</div>
                 ) : error ? (
                     <div className="text-xs text-red-500">{error}</div>
                 ) : (

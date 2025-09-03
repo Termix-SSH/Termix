@@ -136,7 +136,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
             ]);
 
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Fetch home data timed out')), 15000)
+                setTimeout(() => reject(new Error(t('fileManager.fetchHomeDataTimeout'))), 15000)
             );
 
             const [recentRes, pinnedRes, shortcutsRes] = await Promise.race([homeDataPromise, timeoutPromise]) as [any, any, any];
@@ -371,7 +371,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
             try {
                 const statusPromise = getSSHStatus(tab.sshSessionId);
                 const statusTimeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('SSH status check timed out')), 10000)
+                    setTimeout(() => reject(new Error(t('fileManager.sshStatusCheckTimeout'))), 10000)
                 );
 
                 const status = await Promise.race([statusPromise, statusTimeoutPromise]) as { connected: boolean };
@@ -386,7 +386,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                         keyPassword: currentHost.keyPassword
                     });
                     const connectTimeoutPromise = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('SSH reconnection timed out')), 15000)
+                        setTimeout(() => reject(new Error(t('fileManager.sshReconnectionTimeout'))), 15000)
                     );
 
                     await Promise.race([connectPromise, connectTimeoutPromise]);
@@ -397,7 +397,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
             const savePromise = writeSSHFile(tab.sshSessionId, tab.filePath, tab.content);
             const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => {
-                    reject(new Error('Save operation timed out'));
+                    reject(new Error(t('fileManager.saveOperationTimeout')));
                 }, 30000)
             );
 
@@ -432,7 +432,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
             });
 
         } catch (err) {
-            let errorMessage = formatErrorMessage(err, 'Cannot save file');
+            let errorMessage = formatErrorMessage(err, t('fileManager.cannotSaveFile'));
 
             if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
                 errorMessage = t('fileManager.saveTimeout');

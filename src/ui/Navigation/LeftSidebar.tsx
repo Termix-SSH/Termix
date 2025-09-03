@@ -120,7 +120,7 @@ export function LeftSidebar({
     const sshManagerTab = tabList.find((t) => t.type === 'ssh_manager');
     const openSshManagerTab = () => {
         if (sshManagerTab || isSplitScreenActive) return;
-        const id = addTab({type: 'ssh_manager', title: 'SSH Manager'} as any);
+        const id = addTab({type: 'ssh_manager'} as any);
         setCurrentTab(id);
     };
     const adminTab = tabList.find((t) => t.type === 'admin');
@@ -130,7 +130,7 @@ export function LeftSidebar({
             setCurrentTab(adminTab.id);
             return;
         }
-        const id = addTab({type: 'admin', title: 'Admin'} as any);
+        const id = addTab({type: 'admin'} as any);
         setCurrentTab(id);
     };
 
@@ -186,7 +186,7 @@ export function LeftSidebar({
                 }, 50);
             }
         } catch (err: any) {
-            setHostsError('Failed to load hosts');
+            setHostsError(t('leftSidebar.failedToLoadHosts'));
         }
     }, []);
 
@@ -229,7 +229,7 @@ export function LeftSidebar({
     const hostsByFolder = React.useMemo(() => {
         const map: Record<string, SSHHost[]> = {};
         filteredHosts.forEach(h => {
-            const folder = h.folder && h.folder.trim() ? h.folder : 'No Folder';
+            const folder = h.folder && h.folder.trim() ? h.folder : t('leftSidebar.noFolder');
             if (!map[folder]) map[folder] = [];
             map[folder].push(h);
         });
@@ -239,8 +239,8 @@ export function LeftSidebar({
     const sortedFolders = React.useMemo(() => {
         const folders = Object.keys(hostsByFolder);
         folders.sort((a, b) => {
-            if (a === 'No Folder') return -1;
-            if (b === 'No Folder') return 1;
+            if (a === t('leftSidebar.noFolder')) return -1;
+            if (b === t('leftSidebar.noFolder')) return 1;
             return a.localeCompare(b);
         });
         return folders;

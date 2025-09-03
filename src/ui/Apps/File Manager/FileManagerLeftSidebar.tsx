@@ -128,7 +128,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
 
         try {
             if (!server.password && !server.key) {
-                toast.error('No authentication credentials available for this SSH host');
+                toast.error(t('common.noAuthCredentials'));
                 return null;
             }
 
@@ -152,7 +152,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
 
             return sessionId;
         } catch (err: any) {
-            toast.error(err?.response?.data?.error || 'Failed to connect to SSH');
+            toast.error(err?.response?.data?.error || t('fileManager.failedToConnectSSH'));
             setSshSessionId(null);
             return null;
         } finally {
@@ -189,7 +189,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                             setSshSessionId(newSessionId);
                             res = await listSSHFiles(newSessionId, currentPath);
                         } else {
-                            throw new Error('Failed to reconnect SSH session');
+                            throw new Error(t('fileManager.failedToReconnectSSH'));
                         }
                     } else {
                         res = await listSSHFiles(sshSessionId, currentPath);
@@ -220,7 +220,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
             }
         } catch (err: any) {
             setFiles([]);
-            toast.error(err?.response?.data?.error || err?.message || 'Failed to list files');
+            toast.error(err?.response?.data?.error || err?.message || t('fileManager.failedToListFiles'));
         } finally {
             setFilesLoading(false);
             setFetchingFiles(false);
@@ -334,7 +334,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                 fetchFiles();
             }
         } catch (error: any) {
-            toast.error(error?.response?.data?.error || 'Failed to rename item');
+            toast.error(error?.response?.data?.error || t('fileManager.failedToRenameItem'));
         }
     };
 
@@ -350,7 +350,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                 fetchFiles();
             }
         } catch (error: any) {
-            toast.error(error?.response?.data?.error || 'Failed to delete item');
+            toast.error(error?.response?.data?.error || t('fileManager.failedToDeleteItem'));
         }
     };
 

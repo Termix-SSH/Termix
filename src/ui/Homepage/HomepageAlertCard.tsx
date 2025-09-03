@@ -3,6 +3,7 @@ import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components
 import {Button} from "@/components/ui/button.tsx";
 import {Badge} from "@/components/ui/badge.tsx";
 import {X, ExternalLink, AlertTriangle, Info, CheckCircle, AlertCircle} from "lucide-react";
+import {useTranslation} from "react-i18next";
 
 interface TermixAlert {
     id: string;
@@ -64,6 +65,8 @@ const getTypeBadgeVariant = (type?: string) => {
 };
 
 export function HomepageAlertCard({alert, onDismiss, onClose}: AlertCardProps): React.ReactElement {
+    const {t} = useTranslation();
+    
     if (!alert) {
         return null;
     }
@@ -79,10 +82,10 @@ export function HomepageAlertCard({alert, onDismiss, onClose}: AlertCardProps): 
         const diffTime = expiryDate.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays < 0) return 'Expired';
-        if (diffDays === 0) return 'Expires today';
-        if (diffDays === 1) return 'Expires tomorrow';
-        return `Expires in ${diffDays} days`;
+        if (diffDays < 0) return t('common.expired');
+        if (diffDays === 0) return t('common.expiresToday');
+        if (diffDays === 1) return t('common.expiresTomorrow');
+        return t('common.expiresInDays', {days: diffDays});
     };
 
     return (

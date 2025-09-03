@@ -14,7 +14,9 @@
   },
   "homepage": {
     "loggedInTitle": "登录成功！",
-    "loggedInMessage": "您已登录！使用侧边栏访问所有可用工具。要开始使用，请在 SSH 管理器选项卡中创建 SSH 主机。创建后，您可以使用侧边栏中的其他应用程序连接到该主机。"
+    "loggedInMessage": "您已登录！使用侧边栏访问所有可用工具。要开始使用，请在 SSH 管理器选项卡中创建 SSH 主机。创建后，您可以使用侧边栏中的其他应用程序连接到该主机。",
+    "failedToLoadAlerts": "加载警报失败",
+    "failedToDismissAlert": "关闭警报失败"
   },
   "common": {
     "close": "关闭",
@@ -34,7 +36,14 @@
     "sidebar": "侧边栏",
     "home": "首页",
     "expired": "已过期",
+    "expiresToday": "今天过期",
+    "expiresTomorrow": "明天过期",
+    "expiresInDays": "{{days}} 天后过期",
     "updateAvailable": "有可用更新",
+    "sshPath": "SSH 路径",
+    "localPath": "本地路径",
+    "loading": "加载中...",
+    "noAuthCredentials": "此 SSH 主机没有可用的身份验证凭据",
     "noReleases": "没有发布版本",
     "updatesAndReleases": "更新与发布",
     "newVersionAvailable": "有新版本 ({{version}}) 可用。",
@@ -439,7 +448,15 @@
     "enterFolderPath": "输入文件夹路径",
     "noShortcuts": "没有快捷方式。",
     "searchFilesAndFolders": "搜索文件和文件夹...",
-    "noFilesOrFoldersFound": "没有找到文件或文件夹。"
+    "noFilesOrFoldersFound": "没有找到文件或文件夹。",
+    "failedToConnectSSH": "连接 SSH 失败",
+    "failedToReconnectSSH": "重新连接 SSH 会话失败",
+    "failedToListFiles": "列出文件失败",
+    "fetchHomeDataTimeout": "获取主页数据超时",
+    "sshStatusCheckTimeout": "SSH 状态检查超时",
+    "sshReconnectionTimeout": "SSH 重新连接超时",
+    "saveOperationTimeout": "保存操作超时",
+    "cannotSaveFile": "无法保存文件"
   },
   "tunnels": {
     "title": "SSH 隧道",
@@ -494,7 +511,8 @@
     "portMapping": "端口 {{sourcePort}} → {{endpointHost}}:{{endpointPort}}",
     "disconnect": "断开连接",
     "connect": "连接",
-    "canceling": "取消中..."
+    "canceling": "取消中...",
+    "endpointHostNotFound": "未找到端点主机"
   },
   "serverStats": {
     "title": "服务器统计",
