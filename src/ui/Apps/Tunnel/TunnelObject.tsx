@@ -236,7 +236,7 @@ export function TunnelObject({
                                                                 className="h-7 px-2 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-400/30 hover:bg-green-500/10 dark:hover:bg-green-400/10 hover:border-green-500/50 dark:hover:border-green-400/50 text-xs"
                                                             >
                                                                 <Play className="h-3 w-3 mr-1"/>
-                                                                Connect
+                                                                {t('tunnels.connect')}
                                                             </Button>
                                                         )}
                                                     </div>
@@ -299,7 +299,7 @@ export function TunnelObject({
                     ) : (
                         <div className="text-center py-4 text-muted-foreground">
                             <Network className="h-8 w-8 mx-auto mb-2 opacity-50"/>
-                            <p className="text-sm">No tunnel connections configured</p>
+                            <p className="text-sm">{t('tunnels.noTunnelConnections')}</p>
                         </div>
                     )}
                 </div>
@@ -348,7 +348,7 @@ export function TunnelObject({
                     {!compact && (
                         <h4 className="text-sm font-medium text-card-foreground flex items-center gap-2">
                             <Network className="h-4 w-4"/>
-                            Tunnel Connections ({host.tunnelConnections.length})
+                            {t('tunnels.tunnelConnections')} ({host.tunnelConnections.length})
                         </h4>
                     )}
                     {host.tunnelConnections && host.tunnelConnections.length > 0 ? (
@@ -416,7 +416,7 @@ export function TunnelObject({
                                                                 className="h-7 px-2 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-400/30 hover:bg-green-500/10 dark:hover:bg-green-400/10 hover:border-green-500/50 dark:hover:border-green-400/50 text-xs"
                                                             >
                                                                 <Play className="h-3 w-3 mr-1"/>
-                                                                Connect
+                                                                {t('tunnels.connect')}
                                                             </Button>
                                                         )}
                                                     </div>
@@ -480,7 +480,7 @@ export function TunnelObject({
                     ) : (
                         <div className="text-center py-4 text-muted-foreground">
                             <Network className="h-8 w-8 mx-auto mb-2 opacity-50"/>
-                            <p className="text-sm">No tunnel connections configured</p>
+                            <p className="text-sm">{t('tunnels.noTunnelConnections')}</p>
                         </div>
                     )}
                 </div>

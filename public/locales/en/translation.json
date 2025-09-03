@@ -406,6 +406,8 @@
   },
   "tunnels": {
     "title": "SSH Tunnels",
+    "noSshTunnels": "No SSH Tunnels",
+    "createFirstTunnelMessage": "You haven't created any SSH tunnels yet. Configure tunnel connections in the Host Manager to get started.",
     "connected": "Connected",
     "disconnected": "Disconnected",
     "connecting": "Connecting...",
@@ -425,6 +427,8 @@
     "attempt": "Attempt {{current}} of {{max}}",
     "nextRetryIn": "Next retry in {{seconds}} seconds",
     "checkDockerLogs": "Check your Docker logs for the error reason, join the",
+    "noTunnelConnections": "No tunnel connections configured",
+    "tunnelConnections": "Tunnel Connections",
     "addTunnel": "Add Tunnel",
     "editTunnel": "Edit Tunnel",
     "deleteTunnel": "Delete Tunnel",

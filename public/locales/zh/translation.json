@@ -443,6 +443,8 @@
   },
   "tunnels": {
     "title": "SSH 隧道",
+    "noSshTunnels": "没有 SSH 隧道",
+    "createFirstTunnelMessage": "您还没有创建任何 SSH 隧道。在主机管理器中配置隧道连接以开始使用。",
     "connected": "已连接",
     "disconnected": "已断开",
     "connecting": "连接中...",
@@ -462,6 +464,8 @@
     "attempt": "第 {{current}} 次尝试，共 {{max}} 次",
     "nextRetryIn": "{{seconds}} 秒后重试",
     "checkDockerLogs": "查看 Docker 日志以了解错误原因，加入",
+    "noTunnelConnections": "未配置隧道连接",
+    "tunnelConnections": "隧道连接",
     "addTunnel": "添加隧道",
     "editTunnel": "编辑隧道",
     "deleteTunnel": "删除隧道",
