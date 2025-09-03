@@ -16,7 +16,6 @@ import {
     TableRow,
 } from "@/components/ui/table.tsx";
 import {Shield, Trash2, Users} from "lucide-react";
-import {toast} from "sonner";
 import { 
     getOIDCConfig, 
     getRegistrationAllowed, 
@@ -53,11 +52,11 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         token_url: '',
         identifier_path: 'sub',
         name_path: 'name',
-        scopes: 'openid email profile',
-        userinfo_url: ''
+        scopes: 'openid email profile'
     });
     const [oidcLoading, setOidcLoading] = React.useState(false);
     const [oidcError, setOidcError] = React.useState<string | null>(null);
+    const [oidcSuccess, setOidcSuccess] = React.useState<string | null>(null);
 
     const [users, setUsers] = React.useState<Array<{
         id: string;
@@ -69,6 +68,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
     const [newAdminUsername, setNewAdminUsername] = React.useState("");
     const [makeAdminLoading, setMakeAdminLoading] = React.useState(false);
     const [makeAdminError, setMakeAdminError] = React.useState<string | null>(null);
+    const [makeAdminSuccess, setMakeAdminSuccess] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         const jwt = getCookie("jwt");
@@ -120,6 +120,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         e.preventDefault();
         setOidcLoading(true);
         setOidcError(null);
+        setOidcSuccess(null);
 
         const required = ['client_id', 'client_secret', 'issuer_url', 'authorization_url', 'token_url'];
         const missing = required.filter(f => !oidcConfig[f as keyof typeof oidcConfig]);
@@ -132,7 +133,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         const jwt = getCookie("jwt");
         try {
             await updateOIDCConfig(oidcConfig);
-            toast.success("OIDC configuration updated successfully!");
+            setOidcSuccess("OIDC configuration updated successfully!");
         } catch (err: any) {
             setOidcError(err?.response?.data?.error || "Failed to update OIDC configuration");
         } finally {
@@ -144,15 +145,16 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         setOidcConfig(prev => ({...prev, [field]: value}));
     };
 
-    const handleMakeUserAdmin = async (e: React.FormEvent) => {
+    const makeUserAdmin = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newAdminUsername.trim()) return;
         setMakeAdminLoading(true);
         setMakeAdminError(null);
+        setMakeAdminSuccess(null);
         const jwt = getCookie("jwt");
         try {
             await makeUserAdmin(newAdminUsername.trim());
-            toast.success(`User ${newAdminUsername} is now an admin`);
+            setMakeAdminSuccess(`User ${newAdminUsername} is now an admin`);
             setNewAdminUsername("");
             fetchUsers();
         } catch (err: any) {
@@ -162,29 +164,23 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         }
     };
 
-    const handleRemoveAdminStatus = async (username: string) => {
+    const removeAdminStatus = async (username: string) => {
         if (!confirm(`Remove admin status from ${username}?`)) return;
         const jwt = getCookie("jwt");
         try {
             await removeAdminStatus(username);
-            toast.success(`Admin status removed from ${username}`);
             fetchUsers();
-        } catch (err: any) {
-            console.error('Failed to remove admin status:', err);
-            toast.error('Failed to remove admin status');
+        } catch {
         }
     };
 
-    const handleDeleteUser = async (username: string) => {
+    const deleteUser = async (username: string) => {
         if (!confirm(`Delete user ${username}? This cannot be undone.`)) return;
         const jwt = getCookie("jwt");
         try {
             await deleteUser(username);
-            toast.success(`User ${username} deleted successfully`);
             fetchUsers();
-        } catch (err: any) {
-            console.error('Failed to delete user:', err);
-            toast.error('Failed to delete user');
+        } catch {
         }
     };
 
@@ -300,14 +296,8 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                     <div className="space-y-2">
                                         <Label htmlFor="scopes">Scopes</Label>
                                         <Input id="scopes" value={oidcConfig.scopes}
-                                               onChange={(e) => handleOIDCConfigChange('scopes', e.target.value)}
+                                               onChange={(e) => handleOIDCConfigChange('scopes', (e.target as HTMLInputElement).value)}
                                                placeholder="openid email profile" required/>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="userinfo_url">Overide User Info URL (not required)</Label>
-                                        <Input id="userinfo_url" value={oidcConfig.userinfo_url}
-                                               onChange={(e) => handleOIDCConfigChange('userinfo_url', e.target.value)}
-                                               placeholder="https://your-provider.com/application/o/userinfo/"/>
                                     </div>
                                     <div className="flex gap-2 pt-2">
                                         <Button type="submit" className="flex-1"
@@ -320,10 +310,16 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                             token_url: '',
                                             identifier_path: 'sub',
                                             name_path: 'name',
-                                            scopes: 'openid email profile',
-                                            userinfo_url: ''
+                                            scopes: 'openid email profile'
                                         })}>Reset</Button>
                                     </div>
+
+                                    {oidcSuccess && (
+                                        <Alert>
+                                            <AlertTitle>Success</AlertTitle>
+                                            <AlertDescription>{oidcSuccess}</AlertDescription>
+                                        </Alert>
+                                    )}
                                 </form>
                             </div>
                         </TabsContent>
@@ -361,7 +357,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                             className="px-4">{user.is_oidc ? "External" : "Local"}</TableCell>
                                                         <TableCell className="px-4">
                                                             <Button variant="ghost" size="sm"
-                                                                    onClick={() => handleDeleteUser(user.username)}
+                                                                    onClick={() => deleteUser(user.username)}
                                                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                                     disabled={user.is_admin}>
                                                                 <Trash2 className="h-4 w-4"/>
@@ -381,7 +377,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                 <h3 className="text-lg font-semibold">Admin Management</h3>
                                 <div className="space-y-4 p-6 border rounded-md bg-muted/50">
                                     <h4 className="font-medium">Make User Admin</h4>
-                                    <form onSubmit={handleMakeUserAdmin} className="space-y-4">
+                                    <form onSubmit={makeUserAdmin} className="space-y-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="new-admin-username">Username</Label>
                                             <div className="flex gap-2">
@@ -398,7 +394,12 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                 <AlertDescription>{makeAdminError}</AlertDescription>
                                             </Alert>
                                         )}
-
+                                        {makeAdminSuccess && (
+                                            <Alert>
+                                                <AlertTitle>Success</AlertTitle>
+                                                <AlertDescription>{makeAdminSuccess}</AlertDescription>
+                                            </Alert>
+                                        )}
                                     </form>
                                 </div>
 
@@ -425,7 +426,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                             className="px-4">{admin.is_oidc ? "External" : "Local"}</TableCell>
                                                         <TableCell className="px-4">
                                                             <Button variant="ghost" size="sm"
-                                                                    onClick={() => handleRemoveAdminStatus(admin.username)}
+                                                                    onClick={() => removeAdminStatus(admin.username)}
                                                                     className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
                                                                 <Shield className="h-4 w-4"/>
                                                                 Remove Admin

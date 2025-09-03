@@ -6,6 +6,7 @@ import {Label} from "@/components/ui/label.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
+import {toast} from "sonner";
 
 interface PasswordResetProps {
     userInfo: {
@@ -25,7 +26,6 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [tempToken, setTempToken] = useState("");
     const [resetLoading, setResetLoading] = useState(false);
-    const [resetSuccess, setResetSuccess] = useState(false);
 
     async function handleInitiatePasswordReset() {
         setError(null);
@@ -48,7 +48,6 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
         setConfirmPassword("");
         setTempToken("");
         setError(null);
-        setResetSuccess(false);
     }
 
     async function handleVerifyResetCode() {
@@ -85,14 +84,8 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
         try {
             await completePasswordReset(userInfo.username, tempToken, newPassword);
 
-            setResetStep("initiate");
-            setResetCode("");
-            setNewPassword("");
-            setConfirmPassword("");
-            setTempToken("");
-            setError(null);
-
-            setResetSuccess(true);
+            toast.success("Password reset successfully! You can now log in with your new password.");
+            resetPasswordState();
         } catch (err: any) {
             setError(err?.response?.data?.error || "Failed to complete password reset");
         } finally {
@@ -120,7 +113,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
             </CardHeader>
             <CardContent>
                 <>
-                    {resetStep === "initiate" && !resetSuccess && (
+                    {resetStep === "initiate" && (
                         <>
                             <div className="flex flex-col gap-4">
                                 <Button
@@ -180,19 +173,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                         </>
                     )}
 
-                    {resetSuccess && (
-                        <>
-                            <Alert className="">
-                                <AlertTitle>Success!</AlertTitle>
-                                <AlertDescription>
-                                    Your password has been successfully reset! You can now log in
-                                    with your new password.
-                                </AlertDescription>
-                            </Alert>
-                        </>
-                    )}
-
-                    {resetStep === "newPassword" && !resetSuccess && (
+                    {resetStep === "newPassword" && (
                         <>
                             <div className="text-center text-muted-foreground mb-4">
                                 <p>Enter your new password for

@@ -355,7 +355,7 @@ export function LeftSidebar({
         }
     };
 
-    const makeUserAdmin = async (e: React.FormEvent) => {
+    const handleMakeUserAdmin = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newAdminUsername.trim()) return;
 
@@ -380,7 +380,7 @@ export function LeftSidebar({
         }
     };
 
-    const removeAdminStatus = async (username: string) => {
+    const handleRemoveAdminStatus = async (username: string) => {
         if (!confirm(`Are you sure you want to remove admin status from ${username}?`)) return;
 
         if (!isAdmin) {
@@ -392,10 +392,11 @@ export function LeftSidebar({
             await removeAdminStatus(username);
             fetchUsers();
         } catch (err: any) {
+            console.error('Failed to remove admin status:', err);
         }
     };
 
-    const deleteUser = async (username: string) => {
+    const handleDeleteUser = async (username: string) => {
         if (!confirm(`Are you sure you want to delete user ${username}? This action cannot be undone.`)) return;
 
         if (!isAdmin) {
@@ -407,6 +408,7 @@ export function LeftSidebar({
             await deleteUser(username);
             fetchUsers();
         } catch (err: any) {
+            console.error('Failed to delete user:', err);
         }
     };
 
