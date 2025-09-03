@@ -10,12 +10,15 @@ import {TOTPSetup} from "@/ui/User/TOTPSetup.tsx";
 import {getUserInfo} from "@/ui/main-axios.ts";
 import {toast} from "sonner";
 import {PasswordReset} from "@/ui/User/PasswordReset.tsx";
+import {useTranslation} from "react-i18next";
+import {LanguageSwitcher} from "@/components/LanguageSwitcher";
 
 interface UserProfileProps {
     isTopbarOpen?: boolean;
 }
 
 export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
+    const {t} = useTranslation();
     const [userInfo, setUserInfo] = useState<{
         username: string;
         is_admin: boolean;
@@ -41,7 +44,7 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
                 totp_enabled: info.totp_enabled || false
             });
         } catch (err: any) {
-            setError(err?.response?.data?.error || "Failed to load user information");
+            setError(err?.response?.data?.error || t('errors.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -58,7 +61,7 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
             <div className="container max-w-4xl mx-auto p-6">
                 <Card>
                     <CardContent className="p-12 text-center">
-                        <div className="animate-pulse">Loading user profile...</div>
+                        <div className="animate-pulse">{t('common.loading')}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -70,8 +73,8 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
             <div className="container max-w-4xl mx-auto p-6">
                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4"/>
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error || "Failed to load user profile"}</AlertDescription>
+                    <AlertTitle>{t('common.error')}</AlertTitle>
+                    <AlertDescription>{error || t('errors.loadFailed')}</AlertDescription>
                 </Alert>
             </div>
         );
@@ -84,20 +87,20 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
             maxHeight: 'calc(100vh - 60px)'
         }}>
             <div className="mb-6">
-                <h1 className="text-3xl font-bold">User Profile</h1>
-                <p className="text-muted-foreground mt-2">Manage your account settings and security</p>
+                <h1 className="text-3xl font-bold">{t('common.profile')}</h1>
+                <p className="text-muted-foreground mt-2">{t('profile.description')}</p>
             </div>
 
             <Tabs defaultValue="profile" className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="profile" className="flex items-center gap-2">
                         <User className="w-4 h-4"/>
-                        Profile
+                        {t('common.profile')}
                     </TabsTrigger>
                     {!userInfo.is_oidc && (
                         <TabsTrigger value="security" className="flex items-center gap-2">
                             <Shield className="w-4 h-4"/>
-                            Security
+                            {t('profile.security')}
                         </TabsTrigger>
                     )}
                 </TabsList>
@@ -105,43 +108,53 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
                 <TabsContent value="profile" className="space-y-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Account Information</CardTitle>
-                            <CardDescription>Your account details and settings</CardDescription>
+                            <CardTitle>{t('profile.accountInfo')}</CardTitle>
+                            <CardDescription>{t('profile.description')}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label>Username</Label>
+                                    <Label>{t('common.username')}</Label>
                                     <p className="text-lg font-medium mt-1">{userInfo.username}</p>
                                 </div>
                                 <div>
-                                    <Label>Account Type</Label>
+                                    <Label>{t('profile.role')}</Label>
                                     <p className="text-lg font-medium mt-1">
-                                        {userInfo.is_admin ? "Administrator" : "User"}
+                                        {userInfo.is_admin ? t('interface.administrator') : t('interface.user')}
                                     </p>
                                 </div>
                                 <div>
-                                    <Label>Authentication Method</Label>
+                                    <Label>{t('profile.authMethod')}</Label>
                                     <p className="text-lg font-medium mt-1">
-                                        {userInfo.is_oidc ? "External (OIDC)" : "Local"}
+                                        {userInfo.is_oidc ? t('profile.external') : t('profile.local')}
                                     </p>
                                 </div>
                                 <div>
-                                    <Label>Two-Factor Authentication</Label>
+                                    <Label>{t('profile.twoFactorAuth')}</Label>
                                     <p className="text-lg font-medium mt-1">
                                         {userInfo.is_oidc ? (
-                                            <span className="text-muted-foreground">Locked (OIDC Auth)</span>
+                                            <span className="text-muted-foreground">{t('auth.lockedOidcAuth')}</span>
                                         ) : (
                                             userInfo.totp_enabled ? (
                                                 <span className="text-green-600 flex items-center gap-1">
                                                     <Shield className="w-4 h-4"/>
-                                                    Enabled
+                                                    {t('common.enabled')}
                                                 </span>
                                             ) : (
-                                                <span className="text-muted-foreground">Disabled</span>
+                                                <span className="text-muted-foreground">{t('common.disabled')}</span>
                                             )
                                         )}
                                     </p>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-6 pt-6 border-t">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label>{t('common.language')}</Label>
+                                        <p className="text-sm text-muted-foreground mt-1">{t('profile.selectPreferredLanguage')}</p>
+                                    </div>
+                                    <LanguageSwitcher />
                                 </div>
                             </div>
                         </CardContent>

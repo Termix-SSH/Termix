@@ -1,6 +1,7 @@
 import type { ComponentProps, HTMLAttributes } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export type StatusProps = ComponentProps<typeof Badge> & {
   status: 'online' | 'offline' | 'maintenance' | 'degraded';
@@ -48,15 +49,18 @@ export const StatusLabel = ({
   className,
   children,
   ...props
-}: StatusLabelProps) => (
-  <span className={cn('text-muted-foreground', className)} {...props}>
-    {children ?? (
-      <>
-        <span className="hidden group-[.online]:block">Online</span>
-        <span className="hidden group-[.offline]:block">Offline</span>
-        <span className="hidden group-[.maintenance]:block">Maintenance</span>
-        <span className="hidden group-[.degraded]:block">Degraded</span>
-      </>
-    )}
-  </span>
-);
+}: StatusLabelProps) => {
+  const { t } = useTranslation();
+  return (
+    <span className={cn('text-muted-foreground', className)} {...props}>
+      {children ?? (
+        <>
+          <span className="hidden group-[.online]:block">{t('common.online')}</span>
+          <span className="hidden group-[.offline]:block">{t('common.offline')}</span>
+          <span className="hidden group-[.maintenance]:block">{t('common.maintenance')}</span>
+          <span className="hidden group-[.degraded]:block">{t('common.degraded')}</span>
+        </>
+      )}
+    </span>
+  );
+};

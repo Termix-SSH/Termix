@@ -2,6 +2,7 @@ import React from "react";
 import {Button} from "@/components/ui/button.tsx";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
+import {useTranslation} from 'react-i18next';
 import {
     Loader2,
     Pin,
@@ -87,6 +88,7 @@ export function TunnelObject({
                                  compact = false,
                                  bare = false
                              }: SSHTunnelObjectProps): React.ReactElement {
+    const {t} = useTranslation();
 
     const getTunnelStatus = (tunnelIndex: number): TunnelStatus | undefined => {
         const tunnel = host.tunnelConnections[tunnelIndex];
@@ -97,7 +99,7 @@ export function TunnelObject({
     const getTunnelStatusDisplay = (status: TunnelStatus | undefined) => {
         if (!status) return {
             icon: <WifiOff className="h-4 w-4"/>,
-            text: 'Unknown',
+            text: t('tunnels.unknown'),
             color: 'text-muted-foreground',
             bgColor: 'bg-muted/50',
             borderColor: 'border-border'
@@ -109,7 +111,7 @@ export function TunnelObject({
             case 'CONNECTED':
                 return {
                     icon: <Wifi className="h-4 w-4"/>,
-                    text: 'Connected',
+                    text: t('tunnels.connected'),
                     color: 'text-green-600 dark:text-green-400',
                     bgColor: 'bg-green-500/10 dark:bg-green-400/10',
                     borderColor: 'border-green-500/20 dark:border-green-400/20'
@@ -117,7 +119,7 @@ export function TunnelObject({
             case 'CONNECTING':
                 return {
                     icon: <Loader2 className="h-4 w-4 animate-spin"/>,
-                    text: 'Connecting...',
+                    text: t('tunnels.connecting'),
                     color: 'text-blue-600 dark:text-blue-400',
                     bgColor: 'bg-blue-500/10 dark:bg-blue-400/10',
                     borderColor: 'border-blue-500/20 dark:border-blue-400/20'
@@ -125,7 +127,7 @@ export function TunnelObject({
             case 'DISCONNECTING':
                 return {
                     icon: <Loader2 className="h-4 w-4 animate-spin"/>,
-                    text: 'Disconnecting...',
+                    text: t('tunnels.disconnecting'),
                     color: 'text-orange-600 dark:text-orange-400',
                     bgColor: 'bg-orange-500/10 dark:bg-orange-400/10',
                     borderColor: 'border-orange-500/20 dark:border-orange-400/20'
@@ -133,7 +135,7 @@ export function TunnelObject({
             case 'DISCONNECTED':
                 return {
                     icon: <WifiOff className="h-4 w-4"/>,
-                    text: 'Disconnected',
+                    text: t('tunnels.disconnected'),
                     color: 'text-muted-foreground',
                     bgColor: 'bg-muted/30',
                     borderColor: 'border-border'
@@ -149,7 +151,7 @@ export function TunnelObject({
             case 'FAILED':
                 return {
                     icon: <AlertCircle className="h-4 w-4"/>,
-                    text: status.reason || 'Error',
+                    text: status.reason || t('tunnels.error'),
                     color: 'text-red-600 dark:text-red-400',
                     bgColor: 'bg-red-500/10 dark:bg-red-400/10',
                     borderColor: 'border-red-500/20 dark:border-red-400/20'
@@ -193,7 +195,7 @@ export function TunnelObject({
                                                 </span>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-sm font-medium break-words">
-                                                        Port {tunnel.sourcePort} → {tunnel.endpointHost}:{tunnel.endpointPort}
+                                                        {t('tunnels.port')} {tunnel.sourcePort} → {tunnel.endpointHost}:{tunnel.endpointPort}
                                                     </div>
                                                     <div className={`text-xs ${statusDisplay.color} font-medium`}>
                                                         {statusDisplay.text}
@@ -212,7 +214,7 @@ export function TunnelObject({
                                                                     className="h-7 px-2 text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50 text-xs"
                                                                 >
                                                                     <Square className="h-3 w-3 mr-1"/>
-                                                                    Disconnect
+                                                                    {t('tunnels.disconnect')}
                                                                 </Button>
                                                             </>
                                                         ) : isRetrying || isWaiting ? (
@@ -223,7 +225,7 @@ export function TunnelObject({
                                                                 className="h-7 px-2 text-orange-600 dark:text-orange-400 border-orange-500/30 dark:border-orange-400/30 hover:bg-orange-500/10 dark:hover:bg-orange-400/10 hover:border-orange-500/50 dark:hover:border-orange-400/50 text-xs"
                                                             >
                                                                 <X className="h-3 w-3 mr-1"/>
-                                                                Cancel
+                                                                {t('tunnels.cancel')}
                                                             </Button>
                                                         ) : (
                                                             <Button
@@ -246,7 +248,7 @@ export function TunnelObject({
                                                         className="h-7 px-2 text-muted-foreground border-border text-xs"
                                                     >
                                                         <Loader2 className="h-3 w-3 mr-1 animate-spin"/>
-                                                        {isConnected ? 'Disconnecting...' : isRetrying || isWaiting ? 'Canceling...' : 'Connecting...'}
+                                                        {isConnected ? t('tunnels.disconnecting') : isRetrying || isWaiting ? t('tunnels.canceling') : t('tunnels.connecting')}
                                                     </Button>
                                                 )}
                                             </div>
@@ -255,13 +257,13 @@ export function TunnelObject({
                                         {(statusValue === 'ERROR' || statusValue === 'FAILED') && status?.reason && (
                                             <div
                                                 className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-500/10 dark:bg-red-400/10 rounded px-3 py-2 border border-red-500/20 dark:border-red-400/20">
-                                                <div className="font-medium mb-1">Error:</div>
+                                                <div className="font-medium mb-1">{t('tunnels.error')}:</div>
                                                 {status.reason}
                                                 {status.reason && status.reason.includes('Max retries exhausted') && (
                                                     <>
                                                         <div
                                                             className="mt-2 pt-2 border-t border-red-500/20 dark:border-red-400/20">
-                                                            Check your Docker logs for the error reason, join the <a
+                                                            {t('tunnels.checkDockerLogs')} <a
                                                             href="https://discord.com/invite/jVQGdvHDrf" target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="underline text-blue-600 dark:text-blue-400">Discord</a> or
@@ -280,12 +282,12 @@ export function TunnelObject({
                                             <div
                                                 className="mt-2 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-500/10 dark:bg-yellow-400/10 rounded px-3 py-2 border border-yellow-500/20 dark:border-yellow-400/20">
                                                 <div className="font-medium mb-1">
-                                                    {statusValue === 'WAITING' ? 'Waiting for retry' : 'Retrying connection'}
+                                                    {statusValue === 'WAITING' ? t('tunnels.waitingForRetry') : t('tunnels.retryingConnection')}
                                                 </div>
                                                 <div>
-                                                    Attempt {status.retryCount} of {status.maxRetries}
+                                                    {t('tunnels.attempt', { current: status.retryCount, max: status.maxRetries })}
                                                     {status.nextRetryIn && (
-                                                        <span> • Next retry in {status.nextRetryIn} seconds</span>
+                                                        <span> • {t('tunnels.nextRetryIn', { seconds: status.nextRetryIn })}</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -373,7 +375,7 @@ export function TunnelObject({
                                                 </span>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-sm font-medium break-words">
-                                                        Port {tunnel.sourcePort} → {tunnel.endpointHost}:{tunnel.endpointPort}
+                                                        {t('tunnels.port')} {tunnel.sourcePort} → {tunnel.endpointHost}:{tunnel.endpointPort}
                                                     </div>
                                                     <div className={`text-xs ${statusDisplay.color} font-medium`}>
                                                         {statusDisplay.text}
@@ -392,7 +394,7 @@ export function TunnelObject({
                                                                     className="h-7 px-2 text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50 text-xs"
                                                                 >
                                                                     <Square className="h-3 w-3 mr-1"/>
-                                                                    Disconnect
+                                                                    {t('tunnels.disconnect')}
                                                                 </Button>
                                                             </>
                                                         ) : isRetrying || isWaiting ? (
@@ -403,7 +405,7 @@ export function TunnelObject({
                                                                 className="h-7 px-2 text-orange-600 dark:text-orange-400 border-orange-500/30 dark:border-orange-400/30 hover:bg-orange-500/10 dark:hover:bg-orange-400/10 hover:border-orange-500/50 dark:hover:border-orange-400/50 text-xs"
                                                             >
                                                                 <X className="h-3 w-3 mr-1"/>
-                                                                Cancel
+                                                                {t('tunnels.cancel')}
                                                             </Button>
                                                         ) : (
                                                             <Button
@@ -427,7 +429,7 @@ export function TunnelObject({
                                                         className="h-7 px-2 text-muted-foreground border-border text-xs"
                                                     >
                                                         <Loader2 className="h-3 w-3 mr-1 animate-spin"/>
-                                                        {isConnected ? 'Disconnecting...' : isRetrying || isWaiting ? 'Canceling...' : 'Connecting...'}
+                                                        {isConnected ? t('tunnels.disconnecting') : isRetrying || isWaiting ? t('tunnels.canceling') : t('tunnels.connecting')}
                                                     </Button>
                                                 )}
                                             </div>
@@ -436,13 +438,13 @@ export function TunnelObject({
                                         {(statusValue === 'ERROR' || statusValue === 'FAILED') && status?.reason && (
                                             <div
                                                 className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-500/10 dark:bg-red-400/10 rounded px-3 py-2 border border-red-500/20 dark:border-red-400/20">
-                                                <div className="font-medium mb-1">Error:</div>
+                                                <div className="font-medium mb-1">{t('tunnels.error')}:</div>
                                                 {status.reason}
                                                 {status.reason && status.reason.includes('Max retries exhausted') && (
                                                     <>
                                                         <div
                                                             className="mt-2 pt-2 border-t border-red-500/20 dark:border-red-400/20">
-                                                            Check your Docker logs for the error reason, join the <a
+                                                            {t('tunnels.checkDockerLogs')} <a
                                                             href="https://discord.com/invite/jVQGdvHDrf" target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="underline text-blue-600 dark:text-blue-400">Discord</a> or
@@ -461,12 +463,12 @@ export function TunnelObject({
                                             <div
                                                 className="mt-2 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-500/10 dark:bg-yellow-400/10 rounded px-3 py-2 border border-yellow-500/20 dark:border-yellow-400/20">
                                                 <div className="font-medium mb-1">
-                                                    {statusValue === 'WAITING' ? 'Waiting for retry' : 'Retrying connection'}
+                                                    {statusValue === 'WAITING' ? t('tunnels.waitingForRetry') : t('tunnels.retryingConnection')}
                                                 </div>
                                                 <div>
-                                                    Attempt {status.retryCount} of {status.maxRetries}
+                                                    {t('tunnels.attempt', { current: status.retryCount, max: status.maxRetries })}
                                                     {status.nextRetryIn && (
-                                                        <span> • Next retry in {status.nextRetryIn} seconds</span>
+                                                        <span> • {t('tunnels.nextRetryIn', { seconds: status.nextRetryIn })}</span>
                                                     )}
                                                 </div>
                                             </div>

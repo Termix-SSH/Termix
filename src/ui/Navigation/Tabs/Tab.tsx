@@ -1,6 +1,7 @@
 import React from "react";
 import {ButtonGroup} from "@/components/ui/button-group.tsx";
 import {Button} from "@/components/ui/button.tsx";
+import {useTranslation} from 'react-i18next';
 import {
     Home,
     SeparatorVertical,
@@ -37,6 +38,7 @@ export function Tab({
                         disableSplit = false,
                         disableClose = false
                     }: TabProps): React.ReactElement {
+    const {t} = useTranslation();
     if (tabType === "home") {
         return (
             <Button
@@ -63,7 +65,7 @@ export function Tab({
                 >
                     {isServer ? <ServerIcon className="mr-1 h-4 w-4"/> : isFileManager ?
                         <FolderIcon className="mr-1 h-4 w-4"/> : <TerminalIcon className="mr-1 h-4 w-4"/>}
-                    {title || (isServer ? 'Server' : isFileManager ? 'file_manager' : 'Terminal')}
+                    {title || (isServer ? t('nav.serverStats') : isFileManager ? t('nav.fileManager') : t('nav.terminal'))}
                 </Button>
                 {canSplit && (
                     <Button
@@ -71,7 +73,7 @@ export function Tab({
                         className="!px-2 border-1 border-[#303032]"
                         onClick={onSplit}
                         disabled={disableSplit}
-                        title={disableSplit ? 'Cannot split this tab' : 'Split'}
+                        title={disableSplit ? t('nav.cannotSplitTab') : t('nav.splitScreen')}
                     >
                         <SeparatorVertical className="w-[28px] h-[28px]"/>
                     </Button>
@@ -99,7 +101,7 @@ export function Tab({
                     onClick={onActivate}
                     disabled={disableActivate}
                 >
-                    {title || "SSH Manager"}
+                    {title || t('nav.sshManager')}
                 </Button>
                 <Button
                     variant="outline"
@@ -122,7 +124,7 @@ export function Tab({
                     onClick={onActivate}
                     disabled={disableActivate}
                 >
-                    {title || "Admin"}
+                    {title || t('nav.admin')}
                 </Button>
                 <Button
                     variant="outline"

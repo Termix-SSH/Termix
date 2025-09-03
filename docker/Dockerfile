@@ -57,6 +57,7 @@ RUN apk add --no-cache nginx gettext su-exec && \
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+COPY --from=frontend-builder /app/public/locales /usr/share/nginx/html/locales
 RUN chown -R nginx:nginx /usr/share/nginx/html
 
 WORKDIR /app

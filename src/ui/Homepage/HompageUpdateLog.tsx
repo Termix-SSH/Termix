@@ -3,6 +3,7 @@ import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import { getReleasesRSS, getVersionInfo } from "@/ui/main-axios.ts";
+import {useTranslation} from "react-i18next";
 
 interface HomepageUpdateLogProps extends React.ComponentProps<"div"> {
     loggedIn: boolean;
@@ -51,6 +52,7 @@ interface VersionResponse {
 }
 
 export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
+    const {t} = useTranslation();
     const [releases, setReleases] = useState<RSSResponse | null>(null);
     const [versionInfo, setVersionInfo] = useState<VersionResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -90,7 +92,7 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
     return (
         <div className="w-[400px] h-[600px] flex flex-col border-2 border-[#303032] rounded-lg bg-[#18181b] p-4 shadow-lg">
             <div>
-                <h3 className="text-lg font-bold mb-3 text-white">Updates & Releases</h3>
+                <h3 className="text-lg font-bold mb-3 text-white">{t('common.updatesAndReleases')}</h3>
 
                 <Separator className="p-0.25 mt-3 mb-3 bg-[#303032]"/>
 

@@ -1,5 +1,6 @@
 import React from "react";
 import {TunnelObject} from "./TunnelObject.tsx";
+import {useTranslation} from 'react-i18next';
 
 interface TunnelConnection {
     sourcePort: number;
@@ -52,15 +53,15 @@ export function TunnelViewer({
                                  tunnelActions = {},
                                  onTunnelAction
                              }: SSHTunnelViewerProps): React.ReactElement {
+    const {t} = useTranslation();
     const activeHost: SSHHost | undefined = Array.isArray(hosts) && hosts.length > 0 ? hosts[0] : undefined;
 
     if (!activeHost || !activeHost.tunnelConnections || activeHost.tunnelConnections.length === 0) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center text-center p-3">
-                <h3 className="text-lg font-semibold text-foreground mb-2">No SSH Tunnels</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t('tunnels.noSshTunnels')}</h3>
                 <p className="text-muted-foreground max-w-md">
-                    Create your first SSH tunnel to get started. Use the SSH Manager to add hosts with tunnel
-                    connections.
+                    {t('tunnels.createFirstTunnelMessage')}
                 </p>
             </div>
         );
@@ -69,7 +70,7 @@ export function TunnelViewer({
     return (
         <div className="w-full h-full flex flex-col overflow-hidden p-3 min-h-0">
             <div className="w-full flex-shrink-0 mb-2">
-                <h1 className="text-xl font-semibold text-foreground">SSH Tunnels</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('tunnels.title')}</h1>
             </div>
             <div className="min-h-0 flex-1 overflow-auto pr-1">
                 <div
