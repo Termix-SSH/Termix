@@ -7,6 +7,7 @@ import {Input} from "@/components/ui/input";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {getSSHHosts, deleteSSHHost, bulkImportSSHHosts} from "@/ui/main-axios.ts";
+import {toast} from "sonner";
 import {
     Edit,
     Trash2,
@@ -74,10 +75,11 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
         if (window.confirm(`Are you sure you want to delete "${hostName}"?`)) {
             try {
                 await deleteSSHHost(hostId);
+                toast.success(`Host "${hostName}" deleted successfully!`);
                 await fetchHosts();
                 window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
             } catch (err) {
-                alert('Failed to delete host');
+                toast.error('Failed to delete host');
             }
         }
     };
@@ -114,16 +116,19 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             const result = await bulkImportSSHHosts(hostsArray);
 
             if (result.success > 0) {
-                alert(`Import completed: ${result.success} successful, ${result.failed} failed${result.errors.length > 0 ? '\n\nErrors:\n' + result.errors.join('\n') : ''}`);
+                toast.success(`Import completed: ${result.success} hosts imported successfully${result.failed > 0 ? `, ${result.failed} failed` : ''}`);
+                if (result.errors.length > 0) {
+                    toast.error(`Import errors: ${result.errors.join(', ')}`);
+                }
                 await fetchHosts();
                 window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
             } else {
-                alert(`Import failed: ${result.errors.join('\n')}`);
+                toast.error(`Import failed: ${result.errors.join(', ')}`);
             }
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to import JSON file';
-            alert(`Import error: ${errorMessage}`);
+            toast.error(`Import error: ${errorMessage}`);
         } finally {
             setImporting(false);
             event.target.value = '';

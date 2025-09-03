@@ -19,6 +19,7 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx
 import React, {useEffect, useRef, useState} from "react";
 import {Switch} from "@/components/ui/switch.tsx";
 import {Alert, AlertDescription} from "@/components/ui/alert.tsx";
+import {toast} from "sonner";
 import {createSSHHost, updateSSHHost, getSSHHosts} from '@/ui/main-axios.ts';
 
 interface SSHHost {
@@ -244,8 +245,10 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
 
             if (editingHost) {
                 await updateSSHHost(editingHost.id, formData);
+                toast.success(`Host "${formData.name}" updated successfully!`);
             } else {
                 await createSSHHost(formData);
+                toast.success(`Host "${formData.name}" added successfully!`);
             }
 
             if (onFormSubmit) {
@@ -254,7 +257,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
 
             window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
         } catch (error) {
-            alert('Failed to save host. Please try again.');
+            toast.error('Failed to save host. Please try again.');
         }
     };
 
