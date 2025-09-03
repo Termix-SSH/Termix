@@ -17,7 +17,7 @@ export const users = sqliteTable('users', {
     identifier_path: text('identifier_path'),
     name_path: text('name_path'),
     scopes: text().default("openid email profile"),
-    
+
     totp_secret: text('totp_secret'),
     totp_enabled: integer('totp_enabled', {mode: 'boolean'}).notNull().default(false),
     totp_backup_codes: text('totp_backup_codes'),
