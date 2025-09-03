@@ -8,6 +8,7 @@ import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/co
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {getSSHHosts, deleteSSHHost, bulkImportSSHHosts} from "@/ui/main-axios.ts";
 import {toast} from "sonner";
+import {useTranslation} from "react-i18next";
 import {
     Edit,
     Trash2,
@@ -48,6 +49,7 @@ interface SSHManagerHostViewerProps {
 }
 
 export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
+    const {t} = useTranslation();
     const [hosts, setHosts] = useState<SSHHost[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -65,21 +67,21 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             setHosts(data);
             setError(null);
         } catch (err) {
-            setError('Failed to load hosts');
+            setError(t('hosts.failedToLoadHosts'));
         } finally {
             setLoading(false);
         }
     };
 
     const handleDelete = async (hostId: number, hostName: string) => {
-        if (window.confirm(`Are you sure you want to delete "${hostName}"?`)) {
+        if (window.confirm(t('hosts.confirmDelete', { name: hostName }))) {
             try {
                 await deleteSSHHost(hostId);
-                toast.success(`Host "${hostName}" deleted successfully!`);
+                toast.success(t('hosts.hostDeletedSuccessfully', { name: hostName }));
                 await fetchHosts();
                 window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
             } catch (err) {
-                toast.error('Failed to delete host');
+                toast.error(t('hosts.failedToDeleteHost'));
             }
         }
     };
@@ -100,35 +102,35 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             const data = JSON.parse(text);
 
             if (!Array.isArray(data.hosts) && !Array.isArray(data)) {
-                throw new Error('JSON must contain a "hosts" array or be an array of hosts');
+                throw new Error(t('hosts.jsonMustContainHosts'));
             }
 
             const hostsArray = Array.isArray(data.hosts) ? data.hosts : data;
 
             if (hostsArray.length === 0) {
-                throw new Error('No hosts found in JSON file');
+                throw new Error(t('hosts.noHostsInJson'));
             }
 
             if (hostsArray.length > 100) {
-                throw new Error('Maximum 100 hosts allowed per import');
+                throw new Error(t('hosts.maxHostsAllowed'));
             }
 
             const result = await bulkImportSSHHosts(hostsArray);
 
             if (result.success > 0) {
-                toast.success(`Import completed: ${result.success} hosts imported successfully${result.failed > 0 ? `, ${result.failed} failed` : ''}`);
+                toast.success(t('hosts.importCompleted', { success: result.success, failed: result.failed }));
                 if (result.errors.length > 0) {
                     toast.error(`Import errors: ${result.errors.join(', ')}`);
                 }
                 await fetchHosts();
                 window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
             } else {
-                toast.error(`Import failed: ${result.errors.join(', ')}`);
+                toast.error(t('hosts.importFailed') + `: ${result.errors.join(', ')}`);
             }
 
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to import JSON file';
-            toast.error(`Import error: ${errorMessage}`);
+            const errorMessage = err instanceof Error ? err.message : t('hosts.failedToImportJson');
+            toast.error(t('hosts.importError') + `: ${errorMessage}`);
         } finally {
             setImporting(false);
             event.target.value = '';
@@ -168,7 +170,7 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
         const grouped: { [key: string]: SSHHost[] } = {};
 
         filteredAndSortedHosts.forEach(host => {
-            const folder = host.folder || 'Uncategorized';
+            const folder = host.folder || t('hosts.uncategorized');
             if (!grouped[folder]) {
                 grouped[folder] = [];
             }
@@ -176,8 +178,8 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
         });
 
         const sortedFolders = Object.keys(grouped).sort((a, b) => {
-            if (a === 'Uncategorized') return -1;
-            if (b === 'Uncategorized') return 1;
+            if (a === t('hosts.uncategorized')) return -1;
+            if (b === t('hosts.uncategorized')) return 1;
             return a.localeCompare(b);
         });
 
@@ -194,7 +196,7 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                    <p className="text-muted-foreground">Loading hosts...</p>
+                    <p className="text-muted-foreground">{t('hosts.loadingHosts')}</p>
                 </div>
             </div>
         );
@@ -206,7 +208,7 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                 <div className="text-center">
                     <p className="text-red-500 mb-4">{error}</p>
                     <Button onClick={fetchHosts} variant="outline">
-                        Retry
+                        {t('hosts.retry')}
                     </Button>
                 </div>
             </div>
@@ -218,9 +220,9 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                     <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4"/>
-                    <h3 className="text-lg font-semibold mb-2">No SSH Hosts</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t('hosts.noHosts')}</h3>
                     <p className="text-muted-foreground mb-4">
-                        You haven't added any SSH hosts yet. Click "Add Host" to get started.
+                        {t('hosts.noHostsMessage')}
                     </p>
                 </div>
             </div>
@@ -231,9 +233,9 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
         <div className="flex flex-col h-full min-h-0">
             <div className="flex items-center justify-between mb-2">
                 <div>
-                    <h2 className="text-xl font-semibold">SSH Hosts</h2>
+                    <h2 className="text-xl font-semibold">{t('hosts.sshHosts')}</h2>
                     <p className="text-muted-foreground">
-                        {filteredAndSortedHosts.length} hosts
+                        {t('hosts.hostsCount', { count: filteredAndSortedHosts.length })}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -247,15 +249,15 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                                     onClick={() => document.getElementById('json-import-input')?.click()}
                                     disabled={importing}
                                 >
-                                    {importing ? 'Importing...' : 'Import JSON'}
+                                    {importing ? t('hosts.importing') : t('hosts.importJson')}
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom"
                                             className="max-w-sm bg-popover text-popover-foreground border border-border shadow-lg">
                                 <div className="space-y-2">
-                                    <p className="font-semibold text-sm">Import SSH Hosts from JSON</p>
+                                    <p className="font-semibold text-sm">{t('hosts.importJsonTitle')}</p>
                                     <p className="text-xs text-muted-foreground">
-                                        Upload a JSON file to bulk import multiple SSH hosts (max 100).
+                                        {t('hosts.importJsonDesc')}
                                     </p>
                                 </div>
                             </TooltipContent>
@@ -323,7 +325,7 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                             URL.revokeObjectURL(url);
                         }}
                     >
-                        Download Sample
+                        {t('hosts.downloadSample')}
                     </Button>
 
                     <Button
@@ -333,13 +335,13 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                             window.open('https://docs.termix.site/json-import', '_blank');
                         }}
                     >
-                        Format Guide
+                        {t('hosts.formatGuide')}
                     </Button>
 
                     <div className="w-px h-6 bg-border mx-2"/>
 
                     <Button onClick={fetchHosts} variant="outline" size="sm">
-                        Refresh
+                        {t('hosts.refresh')}
                     </Button>
                 </div>
             </div>
@@ -355,7 +357,7 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
                 <Input
-                    placeholder="Search hosts by name, username, IP, folder, tags..."
+                    placeholder={t('placeholders.searchHosts')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -451,13 +453,13 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                             {host.enableTerminal && (
                                                                 <Badge variant="outline" className="text-xs px-1 py-0">
                                                                     <Terminal className="h-2 w-2 mr-0.5"/>
-                                                                    Terminal
+                                                                    {t('hosts.terminalBadge')}
                                                                 </Badge>
                                                             )}
                                                             {host.enableTunnel && (
                                                                 <Badge variant="outline" className="text-xs px-1 py-0">
                                                                     <Network className="h-2 w-2 mr-0.5"/>
-                                                                    Tunnel
+                                                                    {t('hosts.tunnelBadge')}
                                                                     {host.tunnelConnections && host.tunnelConnections.length > 0 && (
                                                                         <span
                                                                             className="ml-0.5">({host.tunnelConnections.length})</span>
@@ -467,7 +469,7 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                             {host.enableFileManager && (
                                                                 <Badge variant="outline" className="text-xs px-1 py-0">
                                                                     <FileEdit className="h-2 w-2 mr-0.5"/>
-                                                                    File Manager
+                                                                    {t('hosts.fileManagerBadge')}
                                                                 </Badge>
                                                             )}
                                                         </div>

@@ -1,6 +1,6 @@
 import express from 'express';
 import {db} from '../db/index.js';
-import {users, settings} from '../db/schema.js';
+import {users, settings, sshData, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts} from '../db/schema.js';
 import {eq, and} from 'drizzle-orm';
 import chalk from 'chalk';
 import bcrypt from 'bcryptjs';
@@ -377,10 +377,10 @@ router.get('/oidc/callback', async (req, res) => {
 
         let userInfo: any = null;
         let userInfoUrls: string[] = [];
-        
+
         const normalizedIssuerUrl = config.issuer_url.endsWith('/') ? config.issuer_url.slice(0, -1) : config.issuer_url;
         const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, '');
-        
+
         try {
             const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
             const discoveryResponse = await fetch(discoveryUrl);
@@ -464,17 +464,17 @@ router.get('/oidc/callback', async (req, res) => {
             return path.split('.').reduce((current, key) => current?.[key], obj);
         };
 
-        const identifier = getNestedValue(userInfo, config.identifier_path) || 
-                          userInfo[config.identifier_path] || 
-                          userInfo.sub || 
-                          userInfo.email || 
-                          userInfo.preferred_username;
-        
-        const name = getNestedValue(userInfo, config.name_path) || 
-                    userInfo[config.name_path] || 
-                    userInfo.name || 
-                    userInfo.given_name || 
-                    identifier;
+        const identifier = getNestedValue(userInfo, config.identifier_path) ||
+            userInfo[config.identifier_path] ||
+            userInfo.sub ||
+            userInfo.email ||
+            userInfo.preferred_username;
+
+        const name = getNestedValue(userInfo, config.name_path) ||
+            userInfo[config.name_path] ||
+            userInfo.name ||
+            userInfo.given_name ||
+            identifier;
 
         if (!identifier) {
             logger.error(`Identifier not found at path: ${config.identifier_path}`);
@@ -1007,7 +1007,7 @@ router.post('/totp/verify-login', async (req, res) => {
     }
 
     const jwtSecret = process.env.JWT_SECRET || 'secret';
-    
+
     try {
         const decoded = jwt.verify(temp_token, jwtSecret) as any;
         if (!decoded.pending_totp) {
@@ -1020,7 +1020,7 @@ router.post('/totp/verify-login', async (req, res) => {
         }
 
         const userRecord = user[0];
-        
+
         if (!userRecord.totp_enabled || !userRecord.totp_secret) {
             return res.status(400).json({error: 'TOTP not enabled for this user'});
         }
@@ -1035,11 +1035,11 @@ router.post('/totp/verify-login', async (req, res) => {
         if (!verified) {
             const backupCodes = userRecord.totp_backup_codes ? JSON.parse(userRecord.totp_backup_codes) : [];
             const backupIndex = backupCodes.indexOf(totp_code);
-            
+
             if (backupIndex === -1) {
                 return res.status(401).json({error: 'Invalid TOTP code'});
             }
-            
+
             backupCodes.splice(backupIndex, 1);
             await db.update(users)
                 .set({totp_backup_codes: JSON.stringify(backupCodes)})
@@ -1066,7 +1066,7 @@ router.post('/totp/verify-login', async (req, res) => {
 // POST /users/totp/setup
 router.post('/totp/setup', authenticateJWT, async (req, res) => {
     const userId = (req as any).userId;
-    
+
     try {
         const user = await db.select().from(users).where(eq(users.id, userId));
         if (!user || user.length === 0) {
@@ -1074,7 +1074,7 @@ router.post('/totp/setup', authenticateJWT, async (req, res) => {
         }
 
         const userRecord = user[0];
-        
+
         if (userRecord.totp_enabled) {
             return res.status(400).json({error: 'TOTP is already enabled'});
         }
@@ -1118,7 +1118,7 @@ router.post('/totp/enable', authenticateJWT, async (req, res) => {
         }
 
         const userRecord = user[0];
-        
+
         if (userRecord.totp_enabled) {
             return res.status(400).json({error: 'TOTP is already enabled'});
         }
@@ -1138,7 +1138,7 @@ router.post('/totp/enable', authenticateJWT, async (req, res) => {
             return res.status(401).json({error: 'Invalid TOTP code'});
         }
 
-        const backupCodes = Array.from({length: 8}, () => 
+        const backupCodes = Array.from({length: 8}, () =>
             Math.random().toString(36).substring(2, 10).toUpperCase()
         );
 
@@ -1177,7 +1177,7 @@ router.post('/totp/disable', authenticateJWT, async (req, res) => {
         }
 
         const userRecord = user[0];
-        
+
         if (!userRecord.totp_enabled) {
             return res.status(400).json({error: 'TOTP is not enabled'});
         }
@@ -1235,7 +1235,7 @@ router.post('/totp/backup-codes', authenticateJWT, async (req, res) => {
         }
 
         const userRecord = user[0];
-        
+
         if (!userRecord.totp_enabled) {
             return res.status(400).json({error: 'TOTP is not enabled'});
         }
@@ -1260,7 +1260,7 @@ router.post('/totp/backup-codes', authenticateJWT, async (req, res) => {
             return res.status(400).json({error: 'Authentication required'});
         }
 
-        const backupCodes = Array.from({length: 8}, () => 
+        const backupCodes = Array.from({length: 8}, () =>
             Math.random().toString(36).substring(2, 10).toUpperCase()
         );
 
@@ -1311,10 +1311,15 @@ router.delete('/delete-user', authenticateJWT, async (req, res) => {
         const targetUserId = targetUser[0].id;
 
         try {
-            db.$client.prepare('DELETE FROM file_manager_recent WHERE user_id = ?').run(targetUserId);
-            db.$client.prepare('DELETE FROM file_manager_pinned WHERE user_id = ?').run(targetUserId);
-            db.$client.prepare('DELETE FROM file_manager_shortcuts WHERE user_id = ?').run(targetUserId);
-            db.$client.prepare('DELETE FROM ssh_data WHERE user_id = ?').run(targetUserId);
+            db.$client.prepare('DELETE FROM config_editor_recent WHERE user_id = ?').run(targetUserId);
+            db.$client.prepare('DELETE FROM config_editor_pinned WHERE user_id = ?').run(targetUserId);
+            db.$client.prepare('DELETE FROM config_editor_shortcuts WHERE user_id = ?').run(targetUserId);
+            db.$client.prepare('DELETE FROM shared_hosts WHERE original_user_id = ? OR shared_with_user_id = ?').run(targetUserId, targetUserId);
+            await db.delete(fileManagerRecent).where(eq(fileManagerRecent.userId, targetUserId));
+            await db.delete(fileManagerPinned).where(eq(fileManagerPinned.userId, targetUserId));
+            await db.delete(fileManagerShortcuts).where(eq(fileManagerShortcuts.userId, targetUserId));
+            await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, targetUserId));
+            await db.delete(sshData).where(eq(sshData.userId, targetUserId));
         } catch (cleanupError) {
             logger.error(`Cleanup failed for user ${username}:`, cleanupError);
         }

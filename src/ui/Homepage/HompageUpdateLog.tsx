@@ -69,7 +69,7 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
                     setError(null);
                 })
                 .catch(err => {
-                    setError('Failed to fetch update information');
+                    setError(t('common.failedToFetchUpdateInfo'));
                 })
                 .finally(() => setLoading(false));
         }
@@ -96,9 +96,9 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
 
                 {versionInfo && versionInfo.status === 'requires_update' && (
                     <Alert className="bg-[#0e0e10] border-[#303032] text-white">
-                        <AlertTitle className="text-white">Update Available</AlertTitle>
+                        <AlertTitle className="text-white">{t('common.updateAvailable')}</AlertTitle>
                         <AlertDescription className="text-gray-300">
-                            A new version ({versionInfo.version}) is available.
+                            {t('common.newVersionAvailable', { version: versionInfo.version })}
                         </AlertDescription>
                     </Alert>
                 )}
@@ -117,7 +117,7 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
 
                 {error && (
                     <Alert variant="destructive" className="bg-red-900/20 border-red-500 text-red-300">
-                        <AlertTitle className="text-red-300">Error</AlertTitle>
+                        <AlertTitle className="text-red-300">{t('common.error')}</AlertTitle>
                         <AlertDescription className="text-red-300">{error}</AlertDescription>
                     </Alert>
                 )}
@@ -135,7 +135,7 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
                             {release.isPrerelease && (
                                 <span
                                     className="text-xs bg-yellow-600 text-yellow-100 px-2 py-1 rounded ml-2 flex-shrink-0 font-medium">
-                                    Pre-release
+                                    {t('common.preRelease')}
                                 </span>
                             )}
                         </div>
@@ -158,9 +158,9 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
 
                 {releases && releases.items.length === 0 && !loading && (
                     <Alert className="bg-[#0e0e10] border-[#303032] text-gray-300">
-                        <AlertTitle className="text-gray-300">No Releases</AlertTitle>
+                        <AlertTitle className="text-gray-300">{t('common.noReleases')}</AlertTitle>
                         <AlertDescription className="text-gray-400">
-                            No releases found.
+                            {t('common.noReleasesFound')}
                         </AlertDescription>
                     </Alert>
                 )}

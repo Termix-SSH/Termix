@@ -39,6 +39,7 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 - **Server Stats** - View CPU, memory, and HDD usage on any SSH server
 - **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support
 - **Modern UI** - Clean interface built with React, Tailwind CSS, and Shadcn
+- **Languages** - Built-in support for English and Chinese
 
 # Planned Features
 - **Improved Admin Control** - Give more fine-grained control over user and admin permissions, share hosts, etc

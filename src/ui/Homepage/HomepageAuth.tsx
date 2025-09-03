@@ -4,6 +4,8 @@ import {Button} from "../../components/ui/button.tsx";
 import {Input} from "../../components/ui/input.tsx";
 import {Label} from "../../components/ui/label.tsx";
 import {Alert, AlertTitle, AlertDescription} from "../../components/ui/alert.tsx";
+import {useTranslation} from "react-i18next";
+import {LanguageSwitcher} from "../../components/LanguageSwitcher";
 import {
     registerUser,
     loginUser,
@@ -55,6 +57,7 @@ export function HomepageAuth({
                                  onAuthSuccess,
                                  ...props
                              }: HomepageAuthProps) {
+    const {t} = useTranslation();
     const [tab, setTab] = useState<"login" | "signup" | "external" | "reset">("login");
     const [localUsername, setLocalUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -116,7 +119,7 @@ export function HomepageAuth({
             }
             setDbError(null);
         }).catch(() => {
-            setDbError("Could not connect to the database. Please try again later.");
+            setDbError(t('errors.databaseConnection'));
         });
     }, [setDbError]);
 
@@ -126,7 +129,7 @@ export function HomepageAuth({
         setLoading(true);
 
         if (!localUsername.trim()) {
-            setError("Username is required");
+            setError(t('errors.requiredField'));
             setLoading(false);
             return;
         }
@@ -137,12 +140,12 @@ export function HomepageAuth({
                 res = await loginUser(localUsername, password);
             } else {
                 if (password !== signupConfirmPassword) {
-                    setError("Passwords do not match");
+                    setError(t('errors.passwordMismatch'));
                     setLoading(false);
                     return;
                 }
                 if (password.length < 6) {
-                    setError("Password must be at least 6 characters long");
+                    setError(t('errors.minLength', {min: 6}));
                     setLoading(false);
                     return;
                 }
@@ -159,7 +162,7 @@ export function HomepageAuth({
             }
             
             if (!res || !res.token) {
-                throw new Error('No token received from login');
+                throw new Error(t('errors.noTokenReceived'));
             }
             
             setCookie("jwt", res.token);
@@ -186,7 +189,7 @@ export function HomepageAuth({
             setTotpCode("");
             setTotpTempToken("");
         } catch (err: any) {
-            setError(err?.response?.data?.error || err?.message || "Unknown error");
+            setError(err?.response?.data?.error || err?.message || t('errors.unknownError'));
             setInternalLoggedIn(false);
             setLoggedIn(false);
             setIsAdmin(false);
@@ -194,7 +197,7 @@ export function HomepageAuth({
             setUserId(null);
             setCookie("jwt", "", -1);
             if (err?.response?.data?.error?.includes("Database")) {
-                setDbError("Could not connect to the database. Please try again later.");
+                setDbError(t('errors.databaseConnection'));
             } else {
                 setDbError(null);
             }
@@ -211,7 +214,7 @@ export function HomepageAuth({
             setResetStep("verify");
             setError(null);
         } catch (err: any) {
-            setError(err?.response?.data?.error || err?.message || "Failed to initiate password reset");
+            setError(err?.response?.data?.error || err?.message || t('errors.failedPasswordReset'));
         } finally {
             setResetLoading(false);
         }
@@ -226,7 +229,7 @@ export function HomepageAuth({
             setResetStep("newPassword");
             setError(null);
         } catch (err: any) {
-            setError(err?.response?.data?.error || "Failed to verify reset code");
+            setError(err?.response?.data?.error || t('errors.failedVerifyCode'));
         } finally {
             setResetLoading(false);
         }
@@ -237,13 +240,13 @@ export function HomepageAuth({
         setResetLoading(true);
 
         if (newPassword !== confirmPassword) {
-            setError("Passwords do not match");
+            setError(t('errors.passwordMismatch'));
             setResetLoading(false);
             return;
         }
 
         if (newPassword.length < 6) {
-            setError("Password must be at least 6 characters long");
+            setError(t('errors.minLength', {min: 6}));
             setResetLoading(false);
             return;
         }
@@ -260,7 +263,7 @@ export function HomepageAuth({
 
             setResetSuccess(true);
         } catch (err: any) {
-            setError(err?.response?.data?.error || "Failed to complete password reset");
+            setError(err?.response?.data?.error || t('errors.failedCompleteReset'));
         } finally {
             setResetLoading(false);
         }
@@ -285,7 +288,7 @@ export function HomepageAuth({
 
     async function handleTOTPVerification() {
         if (totpCode.length !== 6) {
-            setError("Please enter a 6-digit code");
+            setError(t('auth.enterCode'));
             return;
         }
 
@@ -296,7 +299,7 @@ export function HomepageAuth({
             const res = await verifyTOTPLogin(totpTempToken, totpCode);
             
             if (!res || !res.token) {
-                throw new Error('No token received from TOTP verification');
+                throw new Error(t('errors.noTokenReceived'));
             }
             
             setCookie("jwt", res.token);
@@ -318,7 +321,7 @@ export function HomepageAuth({
             setTotpCode("");
             setTotpTempToken("");
         } catch (err: any) {
-            setError(err?.response?.data?.error || err?.message || "Invalid TOTP code");
+            setError(err?.response?.data?.error || err?.message || t('errors.invalidTotpCode'));
         } finally {
             setTotpLoading(false);
         }
@@ -332,12 +335,12 @@ export function HomepageAuth({
             const {auth_url: authUrl} = authResponse;
 
             if (!authUrl || authUrl === 'undefined') {
-                throw new Error('Invalid authorization URL received from backend');
+                throw new Error(t('errors.invalidAuthUrl'));
             }
 
             window.location.replace(authUrl);
         } catch (err: any) {
-            setError(err?.response?.data?.error || err?.message || "Failed to start OIDC login");
+            setError(err?.response?.data?.error || err?.message || t('errors.failedOidcLogin'));
             setOidcLoading(false);
         }
     }
@@ -349,7 +352,7 @@ export function HomepageAuth({
         const error = urlParams.get('error');
 
         if (error) {
-            setError(`OIDC authentication failed: ${error}`);
+            setError(`${t('errors.oidcAuthFailed')}: ${error}`);
             setOidcLoading(false);
             window.history.replaceState({}, document.title, window.location.pathname);
             return;
@@ -377,7 +380,7 @@ export function HomepageAuth({
                     window.history.replaceState({}, document.title, window.location.pathname);
                 })
                 .catch(err => {
-                    setError("Failed to get user info after OIDC login");
+                    setError(t('errors.failedUserInfo'));
                     setInternalLoggedIn(false);
                     setLoggedIn(false);
                     setIsAdmin(false);
@@ -412,39 +415,37 @@ export function HomepageAuth({
             )}
             {firstUser && !dbError && !internalLoggedIn && (
                 <Alert variant="default" className="mb-4">
-                    <AlertTitle>First User</AlertTitle>
+                    <AlertTitle>{t('auth.firstUser')}</AlertTitle>
                     <AlertDescription className="inline">
-                        You are the first user and will be made an admin. You can view admin settings in the sidebar
-                        user dropdown. If you think this is a mistake, check the docker logs, or create a{" "}
+                        {t('auth.firstUserMessage')}{" "}
                         <a
                             href="https://github.com/LukeGus/Termix/issues/new"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 underline hover:text-blue-800 inline"
                         >
-                            GitHub issue
+                            GitHub Issue
                         </a>.
                     </AlertDescription>
                 </Alert>
             )}
             {!registrationAllowed && !internalLoggedIn && (
                 <Alert variant="destructive" className="mb-4">
-                    <AlertTitle>Registration Disabled</AlertTitle>
+                    <AlertTitle>{t('auth.registerTitle')}</AlertTitle>
                     <AlertDescription>
-                        New account registration is currently disabled by an admin. Please log in or contact an
-                        administrator.
+                        {t('messages.registrationDisabled')}
                     </AlertDescription>
                 </Alert>
             )}
             {totpRequired && (
                 <div className="flex flex-col gap-5">
                     <div className="mb-6 text-center">
-                        <h2 className="text-xl font-bold mb-1">Two-Factor Authentication</h2>
-                        <p className="text-muted-foreground">Enter the 6-digit code from your authenticator app</p>
+                        <h2 className="text-xl font-bold mb-1">{t('auth.twoFactorAuth')}</h2>
+                        <p className="text-muted-foreground">{t('auth.enterCode')}</p>
                     </div>
                     
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="totp-code">Authentication Code</Label>
+                        <Label htmlFor="totp-code">{t('auth.verifyCode')}</Label>
                         <Input
                             id="totp-code"
                             type="text"
@@ -457,7 +458,7 @@ export function HomepageAuth({
                             autoComplete="one-time-code"
                         />
                         <p className="text-xs text-muted-foreground text-center">
-                            Or enter a backup code if you don't have access to your authenticator
+                            {t('auth.backupCode')}
                         </p>
                     </div>
                     
@@ -467,7 +468,7 @@ export function HomepageAuth({
                         disabled={totpLoading || totpCode.length < 6}
                         onClick={handleTOTPVerification}
                     >
-                        {totpLoading ? Spinner : "Verify"}
+                        {totpLoading ? Spinner : t('auth.verifyCode')}
                     </Button>
                     
                     <Button
@@ -482,7 +483,7 @@ export function HomepageAuth({
                             setError(null);
                         }}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                 </div>
             )}
@@ -506,7 +507,7 @@ export function HomepageAuth({
                             aria-selected={tab === "login"}
                             disabled={loading || firstUser}
                         >
-                            Login
+                            {t('common.login')}
                         </button>
                         <button
                             type="button"
@@ -524,7 +525,7 @@ export function HomepageAuth({
                             aria-selected={tab === "signup"}
                             disabled={loading || !registrationAllowed}
                         >
-                            Sign Up
+                            {t('common.register')}
                         </button>
                         {oidcConfigured && (
                             <button
@@ -543,16 +544,16 @@ export function HomepageAuth({
                                 aria-selected={tab === "external"}
                                 disabled={oidcLoading}
                             >
-                                External
+                                {t('auth.external')}
                             </button>
                         )}
                     </div>
                     <div className="mb-6 text-center">
                         <h2 className="text-xl font-bold mb-1">
-                            {tab === "login" ? "Login to your account" :
-                                tab === "signup" ? "Create a new account" :
-                                    tab === "external" ? "Login with external provider" :
-                                        "Reset your password"}
+                            {tab === "login" ? t('auth.loginTitle') :
+                                tab === "signup" ? t('auth.registerTitle') :
+                                    tab === "external" ? t('auth.loginWithExternal') :
+                                        t('auth.forgotPassword')}
                         </h2>
                     </div>
 
@@ -561,7 +562,7 @@ export function HomepageAuth({
                             {tab === "external" && (
                                 <>
                                     <div className="text-center text-muted-foreground mb-4">
-                                        <p>Login using your configured external identity provider</p>
+                                        <p>{t('auth.loginWithExternalDesc')}</p>
                                     </div>
                                     <Button
                                         type="button"
@@ -569,7 +570,7 @@ export function HomepageAuth({
                                         disabled={oidcLoading}
                                         onClick={handleOIDCLogin}
                                     >
-                                        {oidcLoading ? Spinner : "Login with External Provider"}
+                                        {oidcLoading ? Spinner : t('auth.loginWithExternal')}
                                     </Button>
                                 </>
                             )}
@@ -578,12 +579,11 @@ export function HomepageAuth({
                                     {resetStep === "initiate" && (
                                         <>
                                             <div className="text-center text-muted-foreground mb-4">
-                                                <p>Enter your username to receive a password reset code. The code
-                                                    will be logged in the docker container logs.</p>
+                                                <p>{t('auth.resetCodeDesc')}</p>
                                             </div>
                                             <div className="flex flex-col gap-4">
                                                 <div className="flex flex-col gap-2">
-                                                    <Label htmlFor="reset-username">Username</Label>
+                                                    <Label htmlFor="reset-username">{t('common.username')}</Label>
                                                     <Input
                                                         id="reset-username"
                                                         type="text"
@@ -600,7 +600,7 @@ export function HomepageAuth({
                                                     disabled={resetLoading || !localUsername.trim()}
                                                     onClick={handleInitiatePasswordReset}
                                                 >
-                                                    {resetLoading ? Spinner : "Send Reset Code"}
+                                                    {resetLoading ? Spinner : t('auth.sendResetCode')}
                                                 </Button>
                                             </div>
                                         </>
@@ -609,12 +609,11 @@ export function HomepageAuth({
                                     {resetStep === "verify" && (
                                         <>o
                                             <div className="text-center text-muted-foreground mb-4">
-                                                <p>Enter the 6-digit code from the docker container logs for
-                                                    user: <strong>{localUsername}</strong></p>
+                                                <p>{t('auth.enterResetCode')} <strong>{localUsername}</strong></p>
                                             </div>
                                             <div className="flex flex-col gap-4">
                                                 <div className="flex flex-col gap-2">
-                                                    <Label htmlFor="reset-code">Reset Code</Label>
+                                                    <Label htmlFor="reset-code">{t('auth.resetCode')}</Label>
                                                     <Input
                                                         id="reset-code"
                                                         type="text"
@@ -633,7 +632,7 @@ export function HomepageAuth({
                                                     disabled={resetLoading || resetCode.length !== 6}
                                                     onClick={handleVerifyResetCode}
                                                 >
-                                                    {resetLoading ? Spinner : "Verify Code"}
+                                                    {resetLoading ? Spinner : t('auth.verifyCodeButton')}
                                                 </Button>
                                                 <Button
                                                     type="button"
@@ -645,7 +644,7 @@ export function HomepageAuth({
                                                         setResetCode("");
                                                     }}
                                                 >
-                                                    Back
+                                                    {t('common.back')}
                                                 </Button>
                                             </div>
                                         </>
@@ -654,10 +653,9 @@ export function HomepageAuth({
                                     {resetSuccess && (
                                         <>
                                             <Alert className="mb-4">
-                                                <AlertTitle>Success!</AlertTitle>
+                                                <AlertTitle>{t('auth.passwordResetSuccess')}</AlertTitle>
                                                 <AlertDescription>
-                                                    Your password has been successfully reset! You can now log in
-                                                    with your new password.
+                                                    {t('auth.passwordResetSuccessDesc')}
                                                 </AlertDescription>
                                             </Alert>
                                             <Button
@@ -668,7 +666,7 @@ export function HomepageAuth({
                                                     resetPasswordState();
                                                 }}
                                             >
-                                                Go to Login
+                                                {t('auth.goToLogin')}
                                             </Button>
                                         </>
                                     )}
@@ -676,12 +674,11 @@ export function HomepageAuth({
                                     {resetStep === "newPassword" && !resetSuccess && (
                                         <>
                                             <div className="text-center text-muted-foreground mb-4">
-                                                <p>Enter your new password for
-                                                    user: <strong>{localUsername}</strong></p>
+                                                <p>{t('auth.enterNewPassword')} <strong>{localUsername}</strong></p>
                                             </div>
                                             <div className="flex flex-col gap-5">
                                                 <div className="flex flex-col gap-2">
-                                                    <Label htmlFor="new-password">New Password</Label>
+                                                    <Label htmlFor="new-password">{t('auth.newPassword')}</Label>
                                                     <Input
                                                         id="new-password"
                                                         type="password"
@@ -694,7 +691,7 @@ export function HomepageAuth({
                                                     />
                                                 </div>
                                                 <div className="flex flex-col gap-2">
-                                                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                                                    <Label htmlFor="confirm-password">{t('auth.confirmNewPassword')}</Label>
                                                     <Input
                                                         id="confirm-password"
                                                         type="password"
@@ -712,7 +709,7 @@ export function HomepageAuth({
                                                     disabled={resetLoading || !newPassword || !confirmPassword}
                                                     onClick={handleCompletePasswordReset}
                                                 >
-                                                    {resetLoading ? Spinner : "Reset Password"}
+                                                    {resetLoading ? Spinner : t('auth.resetPasswordButton')}
                                                 </Button>
                                                 <Button
                                                     type="button"
@@ -725,7 +722,7 @@ export function HomepageAuth({
                                                         setConfirmPassword("");
                                                     }}
                                                 >
-                                                    Back
+                                                    {t('common.back')}
                                                 </Button>
                                             </div>
                                         </>
@@ -736,7 +733,7 @@ export function HomepageAuth({
                     ) : (
                         <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
                             <div className="flex flex-col gap-2">
-                                <Label htmlFor="username">Username</Label>
+                                <Label htmlFor="username">{t('common.username')}</Label>
                                 <Input
                                     id="username"
                                     type="text"
@@ -748,14 +745,14 @@ export function HomepageAuth({
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <Label htmlFor="password">Password</Label>
+                                <Label htmlFor="password">{t('common.password')}</Label>
                                 <Input id="password" type="password" required className="h-11 text-base"
                                        value={password} onChange={e => setPassword(e.target.value)}
                                        disabled={loading || internalLoggedIn}/>
                             </div>
                             {tab === "signup" && (
                                 <div className="flex flex-col gap-2">
-                                    <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                                    <Label htmlFor="signup-confirm-password">{t('common.confirmPassword')}</Label>
                                     <Input id="signup-confirm-password" type="password" required
                                            className="h-11 text-base"
                                            value={signupConfirmPassword}
@@ -765,7 +762,7 @@ export function HomepageAuth({
                             )}
                             <Button type="submit" className="w-full h-11 mt-2 text-base font-semibold"
                                     disabled={loading || internalLoggedIn}>
-                                {loading ? Spinner : (tab === "login" ? "Login" : "Sign Up")}
+                                {loading ? Spinner : (tab === "login" ? t('common.login') : t('auth.signUp'))}
                             </Button>
                             {tab === "login" && (
                                 <Button type="button" variant="outline"
@@ -777,11 +774,20 @@ export function HomepageAuth({
                                             clearFormFields();
                                         }}
                                 >
-                                    Reset Password
+                                    {t('auth.resetPasswordButton')}
                                 </Button>
                             )}
                         </form>
                     )}
+                    
+                    <div className="mt-6 pt-4 border-t border-[#303032]">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label className="text-sm text-muted-foreground">{t('common.language')}</Label>
+                            </div>
+                            <LanguageSwitcher />
+                        </div>
+                    </div>
                 </>
             )}
             {error && (
