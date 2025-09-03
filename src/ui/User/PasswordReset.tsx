@@ -6,7 +6,6 @@ import {Label} from "@/components/ui/label.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
-import {useTranslation} from "react-i18next";
 
 interface PasswordResetProps {
     userInfo: {
@@ -18,7 +17,6 @@ interface PasswordResetProps {
 }
 
 export function PasswordReset({userInfo}: PasswordResetProps) {
-    const {t} = useTranslation();
     const [error, setError] = useState<string | null>(null);
 
     const [resetStep, setResetStep] = useState<"initiate" | "verify" | "newPassword">("initiate");
@@ -37,7 +35,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
             setResetStep("verify");
             setError(null);
         } catch (err: any) {
-            setError(err?.response?.data?.error || err?.message || t('errors.failedPasswordReset'));
+            setError(err?.response?.data?.error || err?.message || "Failed to initiate password reset");
         } finally {
             setResetLoading(false);
         }
@@ -62,7 +60,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
             setResetStep("newPassword");
             setError(null);
         } catch (err: any) {
-            setError(err?.response?.data?.error || t('errors.failedVerifyCode'));
+            setError(err?.response?.data?.error || "Failed to verify reset code");
         } finally {
             setResetLoading(false);
         }
@@ -73,13 +71,13 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
         setResetLoading(true);
 
         if (newPassword !== confirmPassword) {
-            setError(t('errors.passwordMismatch'));
+            setError("Passwords do not match");
             setResetLoading(false);
             return;
         }
 
         if (newPassword.length < 6) {
-            setError(t('errors.weakPassword'));
+            setError("Password must be at least 6 characters long");
             setResetLoading(false);
             return;
         }
@@ -96,7 +94,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
 
             setResetSuccess(true);
         } catch (err: any) {
-            setError(err?.response?.data?.error || t('errors.failedCompleteReset'));
+            setError(err?.response?.data?.error || "Failed to complete password reset");
         } finally {
             setResetLoading(false);
         }
@@ -117,7 +115,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                     Password
                 </CardTitle>
                 <CardDescription>
-                    {t('profile.changePassword')}
+                    Change your account password
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -131,7 +129,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                     disabled={resetLoading || !userInfo.username.trim()}
                                     onClick={handleInitiatePasswordReset}
                                 >
-                                    {resetLoading ? Spinner : t('auth.sendResetCode')}
+                                    {resetLoading ? Spinner : "Send Reset Code"}
                                 </Button>
                             </div>
                         </>
@@ -140,11 +138,12 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                     {resetStep === "verify" && (
                         <>
                             <div className="text-center text-muted-foreground mb-4">
-                                <p>{t('auth.enterResetCode')}: <strong>{userInfo.username}</strong></p>
+                                <p>Enter the 6-digit code from the docker container logs for
+                                    user: <strong>{userInfo.username}</strong></p>
                             </div>
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                    <Label htmlFor="reset-code">{t('auth.resetCode')}</Label>
+                                    <Label htmlFor="reset-code">Reset Code</Label>
                                     <Input
                                         id="reset-code"
                                         type="text"
@@ -163,7 +162,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                     disabled={resetLoading || resetCode.length !== 6}
                                     onClick={handleVerifyResetCode}
                                 >
-                                    {resetLoading ? Spinner : t('auth.verifyCode')}
+                                    {resetLoading ? Spinner : "Verify Code"}
                                 </Button>
                                 <Button
                                     type="button"
@@ -175,7 +174,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                         setResetCode("");
                                     }}
                                 >
-                                    {t('common.back')}
+                                    Back
                                 </Button>
                             </div>
                         </>
@@ -184,9 +183,10 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                     {resetSuccess && (
                         <>
                             <Alert className="">
-                                <AlertTitle>{t('auth.passwordResetSuccess')}</AlertTitle>
+                                <AlertTitle>Success!</AlertTitle>
                                 <AlertDescription>
-                                    {t('auth.passwordResetSuccessDesc')}
+                                    Your password has been successfully reset! You can now log in
+                                    with your new password.
                                 </AlertDescription>
                             </Alert>
                         </>
@@ -195,11 +195,12 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                     {resetStep === "newPassword" && !resetSuccess && (
                         <>
                             <div className="text-center text-muted-foreground mb-4">
-                                <p>{t('auth.enterNewPassword')}: <strong>{userInfo.username}</strong></p>
+                                <p>Enter your new password for
+                                    user: <strong>{userInfo.username}</strong></p>
                             </div>
                             <div className="flex flex-col gap-5">
                                 <div className="flex flex-col gap-2">
-                                    <Label htmlFor="new-password">{t('auth.newPassword')}</Label>
+                                    <Label htmlFor="new-password">New Password</Label>
                                     <Input
                                         id="new-password"
                                         type="password"
@@ -212,7 +213,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                     />
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <Label htmlFor="confirm-password">{t('auth.confirmNewPassword')}</Label>
+                                    <Label htmlFor="confirm-password">Confirm Password</Label>
                                     <Input
                                         id="confirm-password"
                                         type="password"
@@ -230,7 +231,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                     disabled={resetLoading || !newPassword || !confirmPassword}
                                     onClick={handleCompletePasswordReset}
                                 >
-                                    {resetLoading ? Spinner : t('auth.resetPassword')}
+                                    {resetLoading ? Spinner : "Reset Password"}
                                 </Button>
                                 <Button
                                     type="button"
@@ -243,14 +244,14 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                         setConfirmPassword("");
                                     }}
                                 >
-                                    {t('common.back')}
+                                    Back
                                 </Button>
                             </div>
                         </>
                     )}
                     {error && (
                         <Alert variant="destructive" className="mt-4">
-                            <AlertTitle>{t('common.error')}</AlertTitle>
+                            <AlertTitle>Error</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}

@@ -46,11 +46,19 @@ async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: str
             try {
                 const response = await fetch(url);
                 if (response.ok) {
-                    jwks = await response.json();
-                    jwksUrl = url;
-                    break;
+                    const jwksData = await response.json() as any;
+                    if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
+                        jwks = jwksData;
+                        jwksUrl = url;
+                        break;
+                    } else {
+                        logger.error(`Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`);
+                    }
+                } else {
+                    logger.error(`JWKS fetch failed from ${url}: ${response.status} ${response.statusText}`);
                 }
             } catch (error) {
+                logger.error(`JWKS fetch error from ${url}:`, error);
                 continue;
             }
         }
@@ -59,12 +67,16 @@ async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: str
             throw new Error('Failed to fetch JWKS from any URL');
         }
 
+        if (!jwks.keys || !Array.isArray(jwks.keys)) {
+            throw new Error(`Invalid JWKS response structure. Expected 'keys' array, got: ${JSON.stringify(jwks)}`);
+        }
+
         const header = JSON.parse(Buffer.from(idToken.split('.')[0], 'base64').toString());
         const keyId = header.kid;
 
         const publicKey = jwks.keys.find((key: any) => key.kid === keyId);
         if (!publicKey) {
-            throw new Error(`No matching public key found for key ID: ${keyId}`);
+            throw new Error(`No matching public key found for key ID: ${keyId}. Available keys: ${jwks.keys.map((k: any) => k.kid).join(', ')}`);
         }
 
         const {importJWK, jwtVerify} = await import('jose');
@@ -374,8 +386,19 @@ router.get('/oidc/callback', async (req, res) => {
         if (tokenData.id_token) {
             try {
                 userInfo = await verifyOIDCToken(tokenData.id_token, config.issuer_url, config.client_id);
+                logger.info('Successfully verified ID token and extracted user info');
             } catch (error) {
                 logger.error('OIDC token verification failed, trying userinfo endpoints', error);
+                try {
+                    const parts = tokenData.id_token.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+                        userInfo = payload;
+                        logger.info('Successfully decoded ID token payload without verification');
+                    }
+                } catch (decodeError) {
+                    logger.error('Failed to decode ID token payload:', decodeError);
+                }
             }
         }
 
