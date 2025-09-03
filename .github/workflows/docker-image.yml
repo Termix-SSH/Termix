@@ -73,7 +73,7 @@ jobs:
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
             IMAGE_TAG="development-latest"
           else
-            IMAGE_TAG="${{ github.ref_name }}-development-latest"
+            IMAGE_TAG="${{ github.ref_name }}"
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
