@@ -8,7 +8,6 @@ import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/co
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {getSSHHosts, deleteSSHHost, bulkImportSSHHosts} from "@/ui/main-axios.ts";
 import {useTranslation} from "react-i18next";
-import {toast} from "sonner";
 import {
     Edit,
     Trash2,
@@ -79,9 +78,8 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                 await deleteSSHHost(hostId);
                 await fetchHosts();
                 window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
-                toast.success(t('hosts.hostDeleted'));
             } catch (err) {
-                toast.error(t('hosts.failedToDeleteHost'));
+                alert(t('hosts.failedToDeleteHost'));
             }
         }
     };
@@ -118,19 +116,16 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             const result = await bulkImportSSHHosts(hostsArray);
 
             if (result.success > 0) {
-                toast.success(t('hosts.importCompleted', { success: result.success, failed: result.failed }));
-                if (result.errors.length > 0) {
-                    toast.error(`Errors: ${result.errors.join(', ')}`);
-                }
+                alert(t('hosts.importCompleted', { success: result.success, failed: result.failed }) + (result.errors.length > 0 ? '\n\nErrors:\n' + result.errors.join('\n') : ''));
                 await fetchHosts();
                 window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
             } else {
-                toast.error(`${t('hosts.importFailed')}: ${result.errors.join(', ')}`);
+                alert(`${t('hosts.importFailed')}: ${result.errors.join('\n')}`);
             }
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : t('hosts.failedToImportJson');
-            toast.error(`${t('hosts.importError')}: ${errorMessage}`);
+            alert(`${t('hosts.importError')}: ${errorMessage}`);
         } finally {
             setImporting(false);
             event.target.value = '';

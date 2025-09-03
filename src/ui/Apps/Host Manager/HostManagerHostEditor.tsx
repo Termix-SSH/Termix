@@ -21,7 +21,6 @@ import React, {useEffect, useRef, useState} from "react";
 import {Switch} from "@/components/ui/switch.tsx";
 import {Alert, AlertDescription} from "@/components/ui/alert.tsx";
 import {createSSHHost, updateSSHHost, getSSHHosts} from '@/ui/main-axios.ts';
-import {toast} from "sonner";
 
 interface SSHHost {
     id: number;
@@ -256,9 +255,8 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
             }
 
             window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
-            toast.success(editingHost ? t('hosts.hostUpdated') : t('hosts.hostAdded'));
         } catch (error) {
-            toast.error(t('errors.saveError'));
+            alert(t('errors.saveError'));
         }
     };
 

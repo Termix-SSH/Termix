@@ -7,7 +7,6 @@ import {Input} from "@/components/ui/input.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
 import {useTranslation} from "react-i18next";
-import {toast} from "sonner";
 
 interface PasswordResetProps {
     userInfo: {
@@ -37,11 +36,8 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
             const result = await initiatePasswordReset(userInfo.username);
             setResetStep("verify");
             setError(null);
-            toast.success(t('auth.resetCodeSent'));
         } catch (err: any) {
-            const errorMessage = err?.response?.data?.error || err?.message || t('errors.failedPasswordReset');
-            setError(errorMessage);
-            toast.error(errorMessage);
+            setError(err?.response?.data?.error || err?.message || t('errors.failedPasswordReset'));
         } finally {
             setResetLoading(false);
         }
@@ -65,11 +61,8 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
             setTempToken(response.tempToken);
             setResetStep("newPassword");
             setError(null);
-            toast.success(t('auth.codeVerified'));
         } catch (err: any) {
-            const errorMessage = err?.response?.data?.error || t('errors.failedVerifyCode');
-            setError(errorMessage);
-            toast.error(errorMessage);
+            setError(err?.response?.data?.error || t('errors.failedVerifyCode'));
         } finally {
             setResetLoading(false);
         }
@@ -80,17 +73,13 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
         setResetLoading(true);
 
         if (newPassword !== confirmPassword) {
-            const errorMessage = t('errors.passwordMismatch');
-            setError(errorMessage);
-            toast.error(errorMessage);
+            setError(t('errors.passwordMismatch'));
             setResetLoading(false);
             return;
         }
 
         if (newPassword.length < 6) {
-            const errorMessage = t('errors.weakPassword');
-            setError(errorMessage);
-            toast.error(errorMessage);
+            setError(t('errors.weakPassword'));
             setResetLoading(false);
             return;
         }
@@ -106,11 +95,8 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
             setError(null);
 
             setResetSuccess(true);
-            toast.success(t('auth.passwordResetSuccess'));
         } catch (err: any) {
-            const errorMessage = err?.response?.data?.error || t('errors.failedCompleteReset');
-            setError(errorMessage);
-            toast.error(errorMessage);
+            setError(err?.response?.data?.error || t('errors.failedCompleteReset'));
         } finally {
             setResetLoading(false);
         }
