@@ -6,6 +6,7 @@ import {cn} from '@/lib/utils.ts';
 import {Input} from '@/components/ui/input.tsx';
 import {Button} from '@/components/ui/button.tsx';
 import {toast} from 'sonner';
+import {useTranslation} from 'react-i18next';
 import {
     listSSHFiles,
     renameSSHItem,
@@ -56,6 +57,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
     },
     ref
 ) {
+    const {t} = useTranslation();
     const [currentPath, setCurrentPath] = useState('/');
     const [files, setFiles] = useState<any[]>([]);
     const pathInputRef = useRef<HTMLInputElement>(null);
@@ -324,7 +326,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
 
         try {
             await renameSSHItem(sshSessionId, item.path, newName.trim());
-            toast.success(`${item.type === 'directory' ? 'Folder' : 'File'} renamed successfully`);
+            toast.success(`${item.type === 'directory' ? t('common.folder') : t('common.file')} ${t('common.renamedSuccessfully')}`);
             setRenamingItem(null);
             if (onOperationComplete) {
                 onOperationComplete();
@@ -341,7 +343,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
 
         try {
             await deleteSSHItem(sshSessionId, item.path, item.type === 'directory');
-            toast.success(`${item.type === 'directory' ? 'Folder' : 'File'} deleted successfully`);
+            toast.success(`${item.type === 'directory' ? t('common.folder') : t('common.file')} ${t('common.deletedSuccessfully')}`);
             if (onOperationComplete) {
                 onOperationComplete();
             } else {
@@ -408,7 +410,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                             </div>
                             <div className="px-2 py-2 border-b-1 border-[#303032] bg-[#18181b]">
                                 <Input
-                                    placeholder="Search files and folders..."
+                                    placeholder={t('fileManager.searchFilesAndFolders')}
                                     className="w-full h-7 text-sm bg-[#23232a] border-2 border-[#434345] text-white placeholder:text-muted-foreground rounded-md"
                                     autoComplete="off"
                                     value={fileSearch}
@@ -419,9 +421,9 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                 <ScrollArea className="h-full w-full bg-[#09090b]">
                                     <div className="p-2 pb-0">
                                         {connectingSSH || filesLoading ? (
-                                            <div className="text-xs text-muted-foreground">Loading...</div>
+                                            <div className="text-xs text-muted-foreground">{t('common.loading')}</div>
                                         ) : filteredFiles.length === 0 ? (
-                                            <div className="text-xs text-muted-foreground">No files or folders found.</div>
+                                            <div className="text-xs text-muted-foreground">{t('fileManager.noFilesOrFoldersFound')}</div>
                                         ) : (
                                             <div className="flex flex-col gap-1">
                                                 {filteredFiles.map((item: any) => {

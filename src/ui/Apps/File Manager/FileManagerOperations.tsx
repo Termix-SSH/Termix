@@ -16,6 +16,7 @@ import {
     Folder
 } from 'lucide-react';
 import {cn} from '@/lib/utils.ts';
+import {useTranslation} from 'react-i18next';
 
 interface FileManagerOperationsProps {
     currentPath: string;
@@ -32,6 +33,7 @@ export function FileManagerOperations({
                                           onError,
                                           onSuccess
                                       }: FileManagerOperationsProps) {
+    const {t} = useTranslation();
     const [showUpload, setShowUpload] = useState(false);
     const [showCreateFile, setShowCreateFile] = useState(false);
     const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -81,12 +83,12 @@ export function FileManagerOperations({
             const {uploadSSHFile} = await import('@/ui/main-axios.ts');
 
             await uploadSSHFile(sshSessionId, currentPath, uploadFile.name, content);
-            onSuccess(`File "${uploadFile.name}" uploaded successfully`);
+            onSuccess(t('fileManager.fileUploadedSuccessfully', { name: uploadFile.name }));
             setShowUpload(false);
             setUploadFile(null);
             onOperationComplete();
         } catch (error: any) {
-            onError(error?.response?.data?.error || 'Failed to upload file');
+            onError(error?.response?.data?.error || t('fileManager.failedToUploadFile'));
         } finally {
             setIsLoading(false);
         }
@@ -100,12 +102,12 @@ export function FileManagerOperations({
             const {createSSHFile} = await import('@/ui/main-axios.ts');
 
             await createSSHFile(sshSessionId, currentPath, newFileName.trim());
-            onSuccess(`File "${newFileName.trim()}" created successfully`);
+            onSuccess(t('fileManager.fileCreatedSuccessfully', { name: newFileName.trim() }));
             setShowCreateFile(false);
             setNewFileName('');
             onOperationComplete();
         } catch (error: any) {
-            onError(error?.response?.data?.error || 'Failed to create file');
+            onError(error?.response?.data?.error || t('fileManager.failedToCreateFile'));
         } finally {
             setIsLoading(false);
         }
@@ -119,12 +121,12 @@ export function FileManagerOperations({
             const {createSSHFolder} = await import('@/ui/main-axios.ts');
 
             await createSSHFolder(sshSessionId, currentPath, newFolderName.trim());
-            onSuccess(`Folder "${newFolderName.trim()}" created successfully`);
+            onSuccess(t('fileManager.folderCreatedSuccessfully', { name: newFolderName.trim() }));
             setShowCreateFolder(false);
             setNewFolderName('');
             onOperationComplete();
         } catch (error: any) {
-            onError(error?.response?.data?.error || 'Failed to create folder');
+            onError(error?.response?.data?.error || t('fileManager.failedToCreateFolder'));
         } finally {
             setIsLoading(false);
         }
@@ -138,13 +140,13 @@ export function FileManagerOperations({
             const {deleteSSHItem} = await import('@/ui/main-axios.ts');
 
             await deleteSSHItem(sshSessionId, deletePath, deleteIsDirectory);
-            onSuccess(`${deleteIsDirectory ? 'Folder' : 'File'} deleted successfully`);
+            onSuccess(t('fileManager.itemDeletedSuccessfully', { type: deleteIsDirectory ? t('fileManager.folder') : t('fileManager.file') }));
             setShowDelete(false);
             setDeletePath('');
             setDeleteIsDirectory(false);
             onOperationComplete();
         } catch (error: any) {
-            onError(error?.response?.data?.error || 'Failed to delete item');
+            onError(error?.response?.data?.error || t('fileManager.failedToDeleteItem'));
         } finally {
             setIsLoading(false);
         }
@@ -158,14 +160,14 @@ export function FileManagerOperations({
             const {renameSSHItem} = await import('@/ui/main-axios.ts');
 
             await renameSSHItem(sshSessionId, renamePath, newName.trim());
-            onSuccess(`${renameIsDirectory ? 'Folder' : 'File'} renamed successfully`);
+            onSuccess(t('fileManager.itemRenamedSuccessfully', { type: renameIsDirectory ? t('fileManager.folder') : t('fileManager.file') }));
             setShowRename(false);
             setRenamePath('');
             setRenameIsDirectory(false);
             setNewName('');
             onOperationComplete();
         } catch (error: any) {
-            onError(error?.response?.data?.error || 'Failed to rename item');
+            onError(error?.response?.data?.error || t('fileManager.failedToRenameItem'));
         } finally {
             setIsLoading(false);
         }
@@ -202,7 +204,7 @@ export function FileManagerOperations({
         return (
             <div className="p-4 text-center">
                 <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2"/>
-                <p className="text-sm text-muted-foreground">Connect to SSH to use file operations</p>
+                <p className="text-sm text-muted-foreground">{t('fileManager.connectToSsh')}</p>
             </div>
         );
     }
@@ -215,50 +217,50 @@ export function FileManagerOperations({
                     size="sm"
                     onClick={() => setShowUpload(true)}
                     className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30]"
-                    title="Upload File"
+                    title={t('fileManager.uploadFile')}
                 >
                     <Upload className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
-                    {showTextLabels && <span className="truncate">Upload File</span>}
+                    {showTextLabels && <span className="truncate">{t('fileManager.uploadFile')}</span>}
                 </Button>
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowCreateFile(true)}
                     className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30]"
-                    title="New File"
+                    title={t('fileManager.newFile')}
                 >
                     <FilePlus className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
-                    {showTextLabels && <span className="truncate">New File</span>}
+                    {showTextLabels && <span className="truncate">{t('fileManager.newFile')}</span>}
                 </Button>
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowCreateFolder(true)}
                     className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30]"
-                    title="New Folder"
+                    title={t('fileManager.newFolder')}
                 >
                     <FolderPlus className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
-                    {showTextLabels && <span className="truncate">New Folder</span>}
+                    {showTextLabels && <span className="truncate">{t('fileManager.newFolder')}</span>}
                 </Button>
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowRename(true)}
                     className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30]"
-                    title="Rename"
+                    title={t('fileManager.rename')}
                 >
                     <Edit3 className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
-                    {showTextLabels && <span className="truncate">Rename</span>}
+                    {showTextLabels && <span className="truncate">{t('fileManager.rename')}</span>}
                 </Button>
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowDelete(true)}
                     className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30] col-span-2"
-                    title="Delete Item"
+                    title={t('fileManager.deleteItem')}
                 >
                     <Trash2 className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
-                    {showTextLabels && <span className="truncate">Delete Item</span>}
+                    {showTextLabels && <span className="truncate">{t('fileManager.deleteItem')}</span>}
                 </Button>
             </div>
 
@@ -266,7 +268,7 @@ export function FileManagerOperations({
                 <div className="flex items-start gap-2 text-sm">
                     <Folder className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5"/>
                     <div className="flex-1 min-w-0">
-                        <span className="text-muted-foreground block mb-1">Current Path:</span>
+                        <span className="text-muted-foreground block mb-1">{t('fileManager.currentPath')}:</span>
                         <span className="text-white font-mono text-xs break-all leading-relaxed">{currentPath}</span>
                     </div>
                 </div>
@@ -280,10 +282,10 @@ export function FileManagerOperations({
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2 mb-1">
                                 <Upload className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"/>
-                                <span className="break-words">Upload File</span>
+                                <span className="break-words">{t('fileManager.uploadFileTitle')}</span>
                             </h3>
                             <p className="text-xs text-muted-foreground break-words">
-                                Max: 100MB (JSON) / 200MB (Binary)
+                                {t('fileManager.maxFileSize')}
                             </p>
                         </div>
                         <Button
@@ -311,20 +313,20 @@ export function FileManagerOperations({
                                         onClick={() => setUploadFile(null)}
                                         className="w-full text-sm h-8"
                                     >
-                                        Remove File
+                                        {t('fileManager.removeFile')}
                                     </Button>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     <Upload className="w-12 h-12 text-muted-foreground mx-auto"/>
-                                    <p className="text-white text-sm break-words px-2">Click to select a file</p>
+                                    <p className="text-white text-sm break-words px-2">{t('fileManager.clickToSelectFile')}</p>
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={openFileDialog}
                                         className="w-full text-sm h-8"
                                     >
-                                        Choose File
+                                        {t('fileManager.chooseFile')}
                                     </Button>
                                 </div>
                             )}
@@ -344,7 +346,7 @@ export function FileManagerOperations({
                                 disabled={!uploadFile || isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                {isLoading ? 'Uploading...' : 'Upload File'}
+                                {isLoading ? t('fileManager.uploading') : t('fileManager.uploadFile')}
                             </Button>
                             <Button
                                 variant="outline"
@@ -352,7 +354,7 @@ export function FileManagerOperations({
                                 disabled={isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </Button>
                         </div>
                     </div>
@@ -365,7 +367,7 @@ export function FileManagerOperations({
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
                                 <FilePlus className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"/>
-                                <span className="break-words">Create New File</span>
+                                <span className="break-words">{t('fileManager.createNewFile')}</span>
                             </h3>
                         </div>
                         <Button
@@ -381,12 +383,12 @@ export function FileManagerOperations({
                     <div className="space-y-3">
                         <div>
                             <label className="text-sm font-medium text-white mb-2 block">
-                                File Name
+                                {t('fileManager.fileName')}
                             </label>
                             <Input
                                 value={newFileName}
                                 onChange={(e) => setNewFileName(e.target.value)}
-                                placeholder="Enter file name (e.g., example.txt)"
+                                placeholder={t('placeholders.fileName')}
                                 className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreateFile()}
                             />
@@ -398,7 +400,7 @@ export function FileManagerOperations({
                                 disabled={!newFileName.trim() || isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                {isLoading ? 'Creating...' : 'Create File'}
+                                {isLoading ? t('fileManager.creating') : t('fileManager.createFile')}
                             </Button>
                             <Button
                                 variant="outline"
@@ -406,7 +408,7 @@ export function FileManagerOperations({
                                 disabled={isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </Button>
                         </div>
                     </div>
@@ -419,7 +421,7 @@ export function FileManagerOperations({
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base font-semibold text-white flex items-center gap-2">
                                 <FolderPlus className="w-6 h-6 flex-shrink-0"/>
-                                <span className="break-words">Create New Folder</span>
+                                <span className="break-words">{t('fileManager.createNewFolder')}</span>
                             </h3>
                         </div>
                         <Button
@@ -435,12 +437,12 @@ export function FileManagerOperations({
                     <div className="space-y-3">
                         <div>
                             <label className="text-sm font-medium text-white mb-2 block">
-                                Folder Name
+                                {t('fileManager.folderName')}
                             </label>
                             <Input
                                 value={newFolderName}
                                 onChange={(e) => setNewFolderName(e.target.value)}
-                                placeholder="Enter folder name"
+                                placeholder={t('placeholders.folderName')}
                                 className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
                             />
@@ -452,7 +454,7 @@ export function FileManagerOperations({
                                 disabled={!newFolderName.trim() || isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                {isLoading ? 'Creating...' : 'Create Folder'}
+                                {isLoading ? t('fileManager.creating') : t('fileManager.createFolder')}
                             </Button>
                             <Button
                                 variant="outline"
@@ -460,7 +462,7 @@ export function FileManagerOperations({
                                 disabled={isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </Button>
                         </div>
                     </div>
@@ -473,7 +475,7 @@ export function FileManagerOperations({
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base font-semibold text-white flex items-center gap-2">
                                 <Trash2 className="w-6 h-6 text-red-400 flex-shrink-0"/>
-                                <span className="break-words">Delete Item</span>
+                                <span className="break-words">{t('fileManager.deleteItem')}</span>
                             </h3>
                         </div>
                         <Button
@@ -490,18 +492,18 @@ export function FileManagerOperations({
                         <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
                             <div className="flex items-start gap-2 text-red-300">
                                 <AlertCircle className="w-5 h-5 flex-shrink-0"/>
-                                <span className="text-sm font-medium break-words">Warning: This action cannot be undone</span>
+                                <span className="text-sm font-medium break-words">{t('fileManager.warningCannotUndo')}</span>
                             </div>
                         </div>
 
                         <div>
                             <label className="text-sm font-medium text-white mb-2 block">
-                                Item Path
+                                {t('fileManager.itemPath')}
                             </label>
                             <Input
                                 value={deletePath}
                                 onChange={(e) => setDeletePath(e.target.value)}
-                                placeholder="Enter full path to item"
+                                placeholder={t('placeholders.fullPath')}
                                 className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
                             />
                         </div>
@@ -515,7 +517,7 @@ export function FileManagerOperations({
                                 className="rounded border-[#434345] bg-[#23232a] mt-0.5 flex-shrink-0"
                             />
                             <label htmlFor="deleteIsDirectory" className="text-sm text-white break-words">
-                                This is a directory (will delete recursively)
+                                {t('fileManager.thisIsDirectory')}
                             </label>
                         </div>
 
@@ -526,7 +528,7 @@ export function FileManagerOperations({
                                 variant="destructive"
                                 className="w-full text-sm h-9"
                             >
-                                {isLoading ? 'Deleting...' : 'Delete Item'}
+                                {isLoading ? t('fileManager.deleting') : t('fileManager.deleteItem')}
                             </Button>
                             <Button
                                 variant="outline"
@@ -534,7 +536,7 @@ export function FileManagerOperations({
                                 disabled={isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </Button>
                         </div>
                     </div>
@@ -547,7 +549,7 @@ export function FileManagerOperations({
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base font-semibold text-white flex items-center gap-2">
                                 <Edit3 className="w-6 h-6 flex-shrink-0"/>
-                                <span className="break-words">Rename Item</span>
+                                <span className="break-words">{t('fileManager.renameItem')}</span>
                             </h3>
                         </div>
                         <Button
@@ -563,24 +565,24 @@ export function FileManagerOperations({
                     <div className="space-y-3">
                         <div>
                             <label className="text-sm font-medium text-white mb-2 block">
-                                Current Path
+                                {t('fileManager.currentPathLabel')}
                             </label>
                             <Input
                                 value={renamePath}
                                 onChange={(e) => setRenamePath(e.target.value)}
-                                placeholder="Enter current path to item"
+                                placeholder={t('placeholders.currentPath')}
                                 className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
                             />
                         </div>
 
                         <div>
                             <label className="text-sm font-medium text-white mb-2 block">
-                                New Name
+                                {t('fileManager.newName')}
                             </label>
                             <Input
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
-                                placeholder="Enter new name"
+                                placeholder={t('placeholders.newName')}
                                 className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
                                 onKeyDown={(e) => e.key === 'Enter' && handleRename()}
                             />
@@ -595,7 +597,7 @@ export function FileManagerOperations({
                                 className="rounded border-[#434345] bg-[#23232a] mt-0.5 flex-shrink-0"
                             />
                             <label htmlFor="renameIsDirectory" className="text-sm text-white break-words">
-                                This is a directory
+                                {t('fileManager.thisIsDirectoryRename')}
                             </label>
                         </div>
 
@@ -605,7 +607,7 @@ export function FileManagerOperations({
                                 disabled={!renamePath || !newName.trim() || isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                {isLoading ? 'Renaming...' : 'Rename Item'}
+                                {isLoading ? t('fileManager.renaming') : t('fileManager.renameItem')}
                             </Button>
                             <Button
                                 variant="outline"
@@ -613,7 +615,7 @@ export function FileManagerOperations({
                                 disabled={isLoading}
                                 className="w-full text-sm h-9"
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </Button>
                         </div>
                     </div>

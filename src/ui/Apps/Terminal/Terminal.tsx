@@ -4,6 +4,7 @@ import {FitAddon} from '@xterm/addon-fit';
 import {ClipboardAddon} from '@xterm/addon-clipboard';
 import {Unicode11Addon} from '@xterm/addon-unicode11';
 import {WebLinksAddon} from '@xterm/addon-web-links';
+import {useTranslation} from 'react-i18next';
 
 interface SSHTerminalProps {
     hostConfig: any;
@@ -17,6 +18,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     {hostConfig, isVisible, splitScreen = false},
     ref
 ) {
+    const {t} = useTranslation();
     const {instance: terminal, ref: xtermRef} = useXTerm();
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
@@ -139,11 +141,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             try {
                 const msg = JSON.parse(event.data);
                 if (msg.type === 'data') terminal.write(msg.data);
-                else if (msg.type === 'error') terminal.writeln(`\r\n[ERROR] ${msg.message}`);
+                else if (msg.type === 'error') terminal.writeln(`\r\n[${t('terminal.error')}] ${msg.message}`);
                 else if (msg.type === 'connected') {
                 } else if (msg.type === 'disconnected') {
                     wasDisconnectedBySSH.current = true;
-                    terminal.writeln(`\r\n[${msg.message || 'Disconnected'}]`);
+                    terminal.writeln(`\r\n[${msg.message || t('terminal.disconnected')}]`);
                 }
             } catch (error) {
             }
@@ -151,12 +153,12 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
         ws.addEventListener('close', () => {
             if (!wasDisconnectedBySSH.current) {
-                terminal.writeln('\r\n[Connection closed]');
+                terminal.writeln(`\r\n[${t('terminal.connectionClosed')}]`);
             }
         });
         
         ws.addEventListener('error', () => {
-            terminal.writeln('\r\n[Connection error]');
+            terminal.writeln(`\r\n[${t('terminal.connectionError')}]`);
         });
     }
 

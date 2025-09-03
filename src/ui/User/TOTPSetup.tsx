@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.t
 import { Shield, Copy, Download, AlertCircle, CheckCircle2 } from "lucide-react";
 import { setupTOTP, enableTOTP, disableTOTP, generateBackupCodes } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
+import { useTranslation } from 'react-i18next';
 
 interface TOTPSetupProps {
     isEnabled: boolean;
@@ -15,6 +16,7 @@ interface TOTPSetupProps {
 }
 
 export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSetupProps) {
+    const {t} = useTranslation();
     const [isEnabled, setIsEnabled] = useState(initialEnabled);
     const [isSettingUp, setIsSettingUp] = useState(false);
     const [setupStep, setSetupStep] = useState<"init" | "qr" | "verify" | "backup">("init");
@@ -55,7 +57,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
             const response = await enableTOTP(verificationCode);
             setBackupCodes(response.backup_codes);
             setSetupStep("backup");
-            toast.success("Two-factor authentication enabled successfully!");
+            toast.success(t('auth.twoFactorEnabledSuccess'));
         } catch (err: any) {
             setError(err?.response?.data?.error || "Invalid verification code");
         } finally {
@@ -74,7 +76,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
             setPassword("");
             setDisableCode("");
             onStatusChange?.(false);
-            toast.success("Two-factor authentication disabled");
+            toast.success(t('auth.twoFactorDisabled'));
         } catch (err: any) {
             setError(err?.response?.data?.error || "Failed to disable TOTP");
         } finally {
@@ -88,7 +90,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
         try {
             const response = await generateBackupCodes(password || undefined, disableCode || undefined);
             setBackupCodes(response.backup_codes);
-            toast.success("New backup codes generated");
+            toast.success(t('auth.newBackupCodesGenerated'));
         } catch (err: any) {
             setError(err?.response?.data?.error || "Failed to generate backup codes");
         } finally {
@@ -98,7 +100,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
 
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
-        toast.success(`${label} copied to clipboard`);
+        toast.success(t('messages.copiedToClipboard', {item: label}));
     };
 
     const downloadBackupCodes = () => {
@@ -114,7 +116,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
         a.download = 'termix-backup-codes.txt';
         a.click();
         URL.revokeObjectURL(url);
-        toast.success("Backup codes downloaded");
+        toast.success(t('auth.backupCodesDownloaded'));
     };
 
     const handleComplete = () => {
@@ -131,50 +133,50 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Shield className="w-5 h-5" />
-                        Two-Factor Authentication
+                        {t('auth.twoFactorTitle')}
                     </CardTitle>
                     <CardDescription>
-                        Your account is protected with two-factor authentication
+                        {t('auth.twoFactorProtected')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <Alert>
                         <CheckCircle2 className="h-4 w-4" />
-                        <AlertTitle>Enabled</AlertTitle>
+                        <AlertTitle>{t('common.enabled')}</AlertTitle>
                         <AlertDescription>
-                            Two-factor authentication is currently active on your account
+                            {t('auth.twoFactorActive')}
                         </AlertDescription>
                     </Alert>
 
                     <Tabs defaultValue="disable" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="disable">Disable 2FA</TabsTrigger>
-                            <TabsTrigger value="backup">Backup Codes</TabsTrigger>
+                            <TabsTrigger value="disable">{t('auth.disable2FA')}</TabsTrigger>
+                            <TabsTrigger value="backup">{t('auth.backupCodes')}</TabsTrigger>
                         </TabsList>
                         
                         <TabsContent value="disable" className="space-y-4">
                             <Alert variant="destructive">
                                 <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>Warning</AlertTitle>
+                                <AlertTitle>{t('common.warning')}</AlertTitle>
                                 <AlertDescription>
-                                    Disabling two-factor authentication will make your account less secure
+                                    {t('auth.disableTwoFactorWarning')}
                                 </AlertDescription>
                             </Alert>
                             
                             <div className="space-y-2">
-                                <Label htmlFor="disable-password">Password or TOTP Code</Label>
+                                <Label htmlFor="disable-password">{t('auth.passwordOrTotpCode')}</Label>
                                 <Input
                                     id="disable-password"
                                     type="password"
-                                    placeholder="Enter your password"
+                                    placeholder={t('placeholders.enterPassword')}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
-                                <p className="text-sm text-muted-foreground">Or</p>
+                                <p className="text-sm text-muted-foreground">{t('auth.or')}</p>
                                 <Input
                                     id="disable-code"
                                     type="text"
-                                    placeholder="6-digit TOTP code"
+                                    placeholder={t('placeholders.totpCode')}
                                     maxLength={6}
                                     value={disableCode}
                                     onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ''))}
@@ -186,29 +188,29 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                                 onClick={handleDisable}
                                 disabled={loading || (!password && !disableCode)}
                             >
-                                Disable Two-Factor Authentication
+                                {t('auth.disableTwoFactor')}
                             </Button>
                         </TabsContent>
                         
                         <TabsContent value="backup" className="space-y-4">
                             <p className="text-sm text-muted-foreground">
-                                Generate new backup codes if you've lost your existing ones
+                                {t('auth.generateNewBackupCodesText')}
                             </p>
                             
                             <div className="space-y-2">
-                                <Label htmlFor="backup-password">Password or TOTP Code</Label>
+                                <Label htmlFor="backup-password">{t('auth.passwordOrTotpCode')}</Label>
                                 <Input
                                     id="backup-password"
                                     type="password"
-                                    placeholder="Enter your password"
+                                    placeholder={t('placeholders.enterPassword')}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
-                                <p className="text-sm text-muted-foreground">Or</p>
+                                <p className="text-sm text-muted-foreground">{t('auth.or')}</p>
                                 <Input
                                     id="backup-code"
                                     type="text"
-                                    placeholder="6-digit TOTP code"
+                                    placeholder={t('placeholders.totpCode')}
                                     maxLength={6}
                                     value={disableCode}
                                     onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ''))}
@@ -219,20 +221,20 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                                 onClick={handleGenerateNewBackupCodes}
                                 disabled={loading || (!password && !disableCode)}
                             >
-                                Generate New Backup Codes
+                                {t('auth.generateNewBackupCodes')}
                             </Button>
                             
                             {backupCodes.length > 0 && (
                                 <div className="space-y-2 mt-4">
                                     <div className="flex justify-between items-center">
-                                        <Label>Your Backup Codes</Label>
+                                        <Label>{t('auth.yourBackupCodes')}</Label>
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={downloadBackupCodes}
                                         >
                                             <Download className="w-4 h-4 mr-2" />
-                                            Download
+                                            {t('auth.download')}
                                         </Button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 p-4 bg-muted rounded-lg font-mono text-sm">
@@ -248,7 +250,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                     {error && (
                         <Alert variant="destructive">
                             <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Error</AlertTitle>
+                            <AlertTitle>{t('common.error')}</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
@@ -261,9 +263,9 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Set Up Two-Factor Authentication</CardTitle>
+                    <CardTitle>{t('auth.setupTwoFactorTitle')}</CardTitle>
                     <CardDescription>
-                        Step 1: Scan the QR code with your authenticator app
+                        {t('auth.step1ScanQR')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -272,7 +274,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                     </div>
                     
                     <div className="space-y-2">
-                        <Label>Manual Entry Code</Label>
+                        <Label>{t('auth.manualEntryCode')}</Label>
                         <div className="flex gap-2">
                             <Input
                                 value={secret}
@@ -288,12 +290,12 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                             </Button>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            If you can't scan the QR code, enter this code manually in your authenticator app
+                            {t('auth.cannotScanQRText')}
                         </p>
                     </div>
                     
                     <Button onClick={() => setSetupStep("verify")} className="w-full">
-                        Next: Verify Code
+                        {t('auth.nextVerifyCode')}
                     </Button>
                 </CardContent>
             </Card>
@@ -304,14 +306,14 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Verify Your Authenticator</CardTitle>
+                    <CardTitle>{t('auth.verifyAuthenticator')}</CardTitle>
                     <CardDescription>
-                        Step 2: Enter the 6-digit code from your authenticator app
+                        {t('auth.step2EnterCode')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="verify-code">Verification Code</Label>
+                        <Label htmlFor="verify-code">{t('auth.verificationCode')}</Label>
                         <Input
                             id="verify-code"
                             type="text"
@@ -326,7 +328,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                     {error && (
                         <Alert variant="destructive">
                             <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Error</AlertTitle>
+                            <AlertTitle>{t('common.error')}</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
@@ -337,14 +339,14 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                             onClick={() => setSetupStep("qr")}
                             disabled={loading}
                         >
-                            Back
+                            {t('auth.back')}
                         </Button>
                         <Button
                             onClick={handleVerifyCode}
                             disabled={loading || verificationCode.length !== 6}
                             className="flex-1"
                         >
-                            {loading ? "Verifying..." : "Verify and Enable"}
+                            {loading ? t('interface.verifying') : t('auth.verifyAndEnable')}
                         </Button>
                     </div>
                 </CardContent>
@@ -356,17 +358,17 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Save Your Backup Codes</CardTitle>
+                    <CardTitle>{t('auth.saveBackupCodesTitle')}</CardTitle>
                     <CardDescription>
-                        Step 3: Store these codes in a safe place
+                        {t('auth.step3StoreCodesSecurely')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <Alert>
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Important</AlertTitle>
+                        <AlertTitle>{t('common.important')}</AlertTitle>
                         <AlertDescription>
-                            Save these backup codes in a secure location. You can use them to access your account if you lose your authenticator device.
+                            {t('auth.importantBackupCodesText')}
                         </AlertDescription>
                     </Alert>
                     
@@ -393,7 +395,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                     </div>
                     
                     <Button onClick={handleComplete} className="w-full">
-                        Complete Setup
+                        {t('auth.completeSetup')}
                     </Button>
                 </CardContent>
             </Card>
@@ -405,23 +407,23 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Shield className="w-5 h-5" />
-                    Two-Factor Authentication
+                    {t('auth.twoFactorTitle')}
                 </CardTitle>
                 <CardDescription>
-                    Add an extra layer of security to your account
+                    {t('auth.addExtraSecurityLayer')}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <Alert>
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Not Enabled</AlertTitle>
+                    <AlertTitle>{t('common.notEnabled')}</AlertTitle>
                     <AlertDescription>
-                        Two-factor authentication adds an extra layer of security by requiring a code from your authenticator app when signing in.
+                        {t('auth.notEnabledText')}
                     </AlertDescription>
                 </Alert>
                 
                 <Button onClick={handleSetupStart} disabled={loading} className="w-full">
-                    {loading ? "Setting up..." : "Enable Two-Factor Authentication"}
+                    {loading ? t('common.settingUp') : t('auth.enableTwoFactorButton')}
                 </Button>
                 
                 {error && (

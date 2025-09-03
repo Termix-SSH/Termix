@@ -8,6 +8,7 @@ import {Cpu, HardDrive, MemoryStick} from "lucide-react";
 import {Tunnel} from "@/ui/Apps/Tunnel/Tunnel.tsx";
 import {getServerStatusById, getServerMetricsById, type ServerMetrics} from "@/ui/main-axios.ts";
 import {useTabs} from "@/ui/Navigation/Tabs/TabContext.tsx";
+import {useTranslation} from 'react-i18next';
 
 interface ServerProps {
     hostConfig?: any;
@@ -24,6 +25,7 @@ export function Server({
                            isTopbarOpen = true,
                            embedded = false
                        }: ServerProps): React.ReactElement {
+    const {t} = useTranslation();
     const {state: sidebarState} = useSidebar();
     const {addTab, tabs} = useTabs() as any;
     const [serverStatus, setServerStatus] = React.useState<'online' | 'offline'>('offline');
@@ -168,16 +170,16 @@ export function Server({
                                     }
                                 }
                             }}
-                            title="Refresh status and metrics"
+                            title={t('serverStats.refreshStatusAndMetrics')}
                         >
-                            Refresh Status
+                            {t('serverStats.refreshStatus')}
                         </Button>
                         {currentHostConfig?.enableFileManager && (
                             <Button
                                 variant="outline"
                                 className="font-semibold"
                                 disabled={isFileManagerAlreadyOpen}
-                                title={isFileManagerAlreadyOpen ? "File Manager already open for this host" : "Open File Manager"}
+                                title={isFileManagerAlreadyOpen ? t('serverStats.fileManagerAlreadyOpen') : t('serverStats.openFileManager')}
                                 onClick={() => {
                                     if (!currentHostConfig || isFileManagerAlreadyOpen) return;
                                     const titleBase = currentHostConfig?.name && currentHostConfig.name.trim() !== ''
@@ -190,7 +192,7 @@ export function Server({
                                     });
                                 }}
                             >
-                                File Manager
+                                {t('nav.fileManager')}
                             </Button>
                         )}
                     </div>
@@ -208,11 +210,11 @@ export function Server({
                                 const cores = metrics?.cpu?.cores;
                                 const la = metrics?.cpu?.load;
                                 const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
-                                const coresText = (typeof cores === 'number') ? `${cores} CPU(s)` : 'N/A CPU(s)';
+                                const coresText = (typeof cores === 'number') ? t('serverStats.cpuCores', {count: cores}) : t('serverStats.naCpus');
                                 const laText = (la && la.length === 3)
-                                    ? `Avg: ${la[0].toFixed(2)}, ${la[1].toFixed(2)}, ${la[2].toFixed(2)}`
-                                    : 'Avg: N/A';
-                                return `CPU Usage - ${pctText} of ${coresText} (${laText})`;
+                                    ? t('serverStats.loadAverage', {avg1: la[0].toFixed(2), avg5: la[1].toFixed(2), avg15: la[2].toFixed(2)})
+                                    : t('serverStats.loadAverageNA');
+                                return `${t('serverStats.cpuUsage')} - ${pctText} ${t('serverStats.of')} ${coresText} (${laText})`;
                             })()}
                         </h1>
 
@@ -232,7 +234,7 @@ export function Server({
                                 const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
                                 const usedText = (typeof used === 'number') ? `${used} GiB` : 'N/A';
                                 const totalText = (typeof total === 'number') ? `${total} GiB` : 'N/A';
-                                return `Memory Usage - ${pctText} (${usedText} of ${totalText})`;
+                                return `${t('serverStats.memoryUsage')} - ${pctText} (${usedText} ${t('serverStats.of')} ${totalText})`;
                             })()}
                         </h1>
 
@@ -252,7 +254,7 @@ export function Server({
                                 const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
                                 const usedText = used ?? 'N/A';
                                 const totalText = total ?? 'N/A';
-                                return `Root Storage Space - ${pctText} (${usedText} of ${totalText})`;
+                                return `${t('serverStats.rootStorageSpace')} - ${pctText} (${usedText} ${t('serverStats.of')} ${totalText})`;
                             })()}
                         </h1>
 
@@ -270,7 +272,7 @@ export function Server({
                 )}
 
                 <p className="px-4 pt-2 pb-2 text-sm text-gray-500">
-                    Have ideas for what should come next for server management? Share them on{" "}
+                    {t('serverStats.feedbackMessage')}{" "}
                     <a
                         href="https://github.com/LukeGus/Termix/issues/new"
                         target="_blank"

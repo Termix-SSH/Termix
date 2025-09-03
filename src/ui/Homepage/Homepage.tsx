@@ -4,6 +4,7 @@ import {HomepageUpdateLog} from "@/ui/Homepage/HompageUpdateLog.tsx";
 import {HomepageAlertManager} from "@/ui/Homepage/HomepageAlertManager.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import { getUserInfo, getDatabaseHealth } from "@/ui/main-axios.ts";
+import {useTranslation} from "react-i18next";
 
 interface HomepageProps {
     onSelectView: (view: string) => void;
@@ -32,6 +33,7 @@ export function Homepage({
                              onAuthSuccess,
                              isTopbarOpen = true
                          }: HomepageProps): React.ReactElement {
+    const {t} = useTranslation();
     const [loggedIn, setLoggedIn] = useState(isAuthenticated);
     const [isAdmin, setIsAdmin] = useState(false);
     const [username, setUsername] = useState<string | null>(null);
@@ -107,11 +109,9 @@ export function Homepage({
                         <div className="flex flex-col items-center gap-6 w-[400px]">
                             <div
                                 className="text-center bg-[#18181b] border-2 border-[#303032] rounded-lg p-6 w-full shadow-lg">
-                                <h3 className="text-xl font-bold mb-3 text-white">Logged in!</h3>
+                                <h3 className="text-xl font-bold mb-3 text-white">{t('homepage.loggedInTitle')}</h3>
                                 <p className="text-gray-300 leading-relaxed">
-                                    You are logged in! Use the sidebar to access all available tools. To get started,
-                                    create an SSH Host in the SSH Manager tab. Once created, you can connect to that
-                                    host using the other apps in the sidebar.
+                                    {t('homepage.loggedInMessage')}
                                 </p>
                             </div>
 

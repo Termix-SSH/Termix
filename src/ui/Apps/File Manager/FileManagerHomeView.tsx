@@ -4,6 +4,7 @@ import {Trash2, Folder, File, Plus, Pin} from 'lucide-react';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs.tsx';
 import {Input} from '@/components/ui/input.tsx';
 import {useState} from 'react';
+import {useTranslation} from 'react-i18next';
 
 interface FileItem {
     name: string;
@@ -43,6 +44,7 @@ export function FileManagerHomeView({
                                         onRemoveShortcut,
                                         onAddShortcut
                                     }: FileManagerHomeViewProps) {
+    const {t} = useTranslation();
     const [tab, setTab] = useState<'recent' | 'pinned' | 'shortcuts'>('recent');
     const [newShortcut, setNewShortcut] = useState('');
 
@@ -121,10 +123,9 @@ export function FileManagerHomeView({
         <div className="p-4 flex flex-col gap-4 h-full bg-[#09090b]">
             <Tabs value={tab} onValueChange={v => setTab(v as 'recent' | 'pinned' | 'shortcuts')} className="w-full">
                 <TabsList className="mb-4 bg-[#18181b] border-2 border-[#303032]">
-                    <TabsTrigger value="recent" className="data-[state=active]:bg-[#23232a]">Recent</TabsTrigger>
-                    <TabsTrigger value="pinned" className="data-[state=active]:bg-[#23232a]">Pinned</TabsTrigger>
-                    <TabsTrigger value="shortcuts" className="data-[state=active]:bg-[#23232a]">Folder
-                        Shortcuts</TabsTrigger>
+                    <TabsTrigger value="recent" className="data-[state=active]:bg-[#23232a]">{t('fileManager.recent')}</TabsTrigger>
+                    <TabsTrigger value="pinned" className="data-[state=active]:bg-[#23232a]">{t('fileManager.pinned')}</TabsTrigger>
+                    <TabsTrigger value="shortcuts" className="data-[state=active]:bg-[#23232a]">{t('fileManager.folderShortcuts')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="recent" className="mt-0">
@@ -132,7 +133,7 @@ export function FileManagerHomeView({
                         className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 auto-rows-min content-start w-full">
                         {recent.length === 0 ? (
                             <div className="flex items-center justify-center py-8 col-span-full">
-                                <span className="text-sm text-muted-foreground">No recent files.</span>
+                                <span className="text-sm text-muted-foreground">{t('fileManager.noRecentFiles')}</span>
                             </div>
                         ) : recent.map((file) =>
                             renderFileCard(
@@ -150,7 +151,7 @@ export function FileManagerHomeView({
                         className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 auto-rows-min content-start w-full">
                         {pinned.length === 0 ? (
                             <div className="flex items-center justify-center py-8 col-span-full">
-                                <span className="text-sm text-muted-foreground">No pinned files.</span>
+                                <span className="text-sm text-muted-foreground">{t('fileManager.noPinnedFiles')}</span>
                             </div>
                         ) : pinned.map((file) =>
                             renderFileCard(
@@ -166,7 +167,7 @@ export function FileManagerHomeView({
                 <TabsContent value="shortcuts" className="mt-0">
                     <div className="flex items-center gap-3 mb-4 p-3 bg-[#18181b] border-2 border-[#303032] rounded-lg">
                         <Input
-                            placeholder="Enter folder path"
+                            placeholder={t('fileManager.enterFolderPath')}
                             value={newShortcut}
                             onChange={e => setNewShortcut(e.target.value)}
                             className="flex-1 bg-[#23232a] border-2 border-[#303032] text-white placeholder:text-muted-foreground"
@@ -189,14 +190,14 @@ export function FileManagerHomeView({
                             }}
                         >
                             <Plus className="w-3.5 h-3.5 mr-1"/>
-                            Add
+                            {t('common.add')}
                         </Button>
                     </div>
                     <div
                         className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 auto-rows-min content-start w-full">
                         {shortcuts.length === 0 ? (
                             <div className="flex items-center justify-center py-4 col-span-full">
-                                <span className="text-sm text-muted-foreground">No shortcuts.</span>
+                                <span className="text-sm text-muted-foreground">{t('fileManager.noShortcuts')}</span>
                             </div>
                         ) : shortcuts.map((shortcut) =>
                             renderShortcutCard(shortcut)

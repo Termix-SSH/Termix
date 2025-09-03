@@ -10,6 +10,7 @@ import {cn} from '@/lib/utils.ts';
 import {Save, RefreshCw, Settings, Trash2} from 'lucide-react';
 import {Separator} from '@/components/ui/separator.tsx';
 import {toast} from 'sonner';
+import {useTranslation} from 'react-i18next';
 import {
     getFileManagerRecent,
     getFileManagerPinned,
@@ -66,6 +67,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
     embedded?: boolean,
     initialHost?: SSHHost | null
 }): React.ReactElement {
+    const {t} = useTranslation();
     const [tabs, setTabs] = useState<Tab[]>([]);
     const [activeTab, setActiveTab] = useState<string | number>('home');
     const [recent, setRecent] = useState<any[]>([]);
@@ -166,20 +168,20 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
         if (typeof err === 'object' && err !== null && 'response' in err) {
             const axiosErr = err as any;
             if (axiosErr.response?.status === 403) {
-                return `Permission denied. ${defaultMessage}. Check the Docker logs for detailed error information.`;
+                return `${t('fileManager.permissionDenied')}. ${defaultMessage}. ${t('fileManager.checkDockerLogs')}.`;
             } else if (axiosErr.response?.status === 500) {
-                const backendError = axiosErr.response?.data?.error || 'Internal server error occurred';
-                return `Server Error (500): ${backendError}. Check the Docker logs for detailed error information.`;
+                const backendError = axiosErr.response?.data?.error || t('fileManager.internalServerError');
+                return `${t('fileManager.serverError')} (500): ${backendError}. ${t('fileManager.checkDockerLogs')}.`;
             } else if (axiosErr.response?.data?.error) {
                 const backendError = axiosErr.response.data.error;
-                return `${axiosErr.response?.status ? `Error ${axiosErr.response.status}: ` : ''}${backendError}. Check the Docker logs for detailed error information.`;
+                return `${axiosErr.response?.status ? `${t('fileManager.error')} ${axiosErr.response.status}: ` : ''}${backendError}. ${t('fileManager.checkDockerLogs')}.`;
             } else {
-                return `Request failed with status code ${axiosErr.response?.status || 'unknown'}. Check the Docker logs for detailed error information.`;
+                return `${t('fileManager.requestFailed')} ${axiosErr.response?.status || t('fileManager.unknown')}. ${t('fileManager.checkDockerLogs')}.`;
             }
         } else if (err instanceof Error) {
-            return `${err.message}. Check the Docker logs for detailed error information.`;
+            return `${err.message}. ${t('fileManager.checkDockerLogs')}.`;
         } else {
-            return `${defaultMessage}. Check the Docker logs for detailed error information.`;
+            return `${defaultMessage}. ${t('fileManager.checkDockerLogs')}.`;
         }
     };
 
@@ -216,7 +218,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                 });
                 fetchHomeData();
             } catch (err: any) {
-                const errorMessage = formatErrorMessage(err, 'Cannot read file');
+                const errorMessage = formatErrorMessage(err, t('fileManager.cannotReadFile'));
                 toast.error(errorMessage);
                 setTabs(tabs => tabs.map(t => t.id === tabId ? {...t, loading: false} : t));
             }
@@ -355,15 +357,15 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
 
         try {
             if (!tab.sshSessionId) {
-                throw new Error('No SSH session ID available');
+                throw new Error(t('fileManager.noSshSessionId'));
             }
 
             if (!tab.filePath) {
-                throw new Error('No file path available');
+                throw new Error(t('fileManager.noFilePath'));
             }
 
             if (!currentHost?.id) {
-                throw new Error('No current host available');
+                throw new Error(t('fileManager.noCurrentHost'));
             }
 
             try {
@@ -405,7 +407,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                 loading: false
             } : t));
 
-            toast.success('File saved successfully');
+            toast.success(t('fileManager.fileSavedSuccessfully'));
 
             Promise.allSettled([
                 (async () => {
@@ -433,10 +435,10 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
             let errorMessage = formatErrorMessage(err, 'Cannot save file');
 
             if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
-                errorMessage = `Save operation timed out. The file may have been saved successfully, but the operation took too long to complete. Check the Docker logs for confirmation.`;
+                errorMessage = t('fileManager.saveTimeout');
             }
 
-            toast.error(`Failed to save file: ${errorMessage}`);
+            toast.error(`${t('fileManager.failedToSaveFile')}: ${errorMessage}`);
             setTabs(tabs => tabs.map(t => t.id === tab.id ? {
                 ...t,
                 loading: false
@@ -480,11 +482,11 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
         try {
             const {deleteSSHItem} = await import('@/ui/main-axios.ts');
             await deleteSSHItem(currentHost.id.toString(), item.path, item.type === 'directory');
-            toast.success(`${item.type === 'directory' ? 'Folder' : 'File'} deleted successfully`);
+            toast.success(`${item.type === 'directory' ? t('fileManager.folder') : t('fileManager.file')} ${t('fileManager.deletedSuccessfully')}`);
             setDeletingItem(null);
             handleOperationComplete();
         } catch (error: any) {
-            handleError(error?.response?.data?.error || 'Failed to delete item');
+            handleError(error?.response?.data?.error || t('fileManager.failedToDeleteItem'));
         }
     };
 
@@ -517,8 +519,8 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                     background: '#09090b'
                 }}>
                     <div className="text-center">
-                        <h2 className="text-xl font-semibold text-white mb-2">Connect to a Server</h2>
-                        <p className="text-muted-foreground">Select a server from the sidebar to start editing files</p>
+                        <h2 className="text-xl font-semibold text-white mb-2">{t('fileManager.connectToServer')}</h2>
+                        <p className="text-muted-foreground">{t('fileManager.selectServerToEdit')}</p>
                     </div>
                 </div>
             </div>
@@ -567,7 +569,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                                 'w-[30px] h-[30px]',
                                 showOperations ? 'bg-[#2d2d30] border-[#434345]' : ''
                             )}
-                            title="File Operations"
+                            title={t('fileManager.fileOperations')}
                         >
                             <Settings className="h-4 w-4"/>
                         </Button>
@@ -656,14 +658,14 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                         <div className="bg-[#18181b] border-2 border-[#303032] rounded-lg p-6 max-w-md mx-4 shadow-2xl">
                             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                                 <Trash2 className="w-5 h-5 text-red-400"/>
-                                Confirm Delete
+                                {t('fileManager.confirmDelete')}
                             </h3>
                             <p className="text-white mb-4">
-                                Are you sure you want to delete <strong>{deletingItem.name}</strong>?
-                                {deletingItem.type === 'directory' && ' This will delete the folder and all its contents.'}
+                                {t('fileManager.confirmDeleteMessage', { name: deletingItem.name })}
+                                {deletingItem.type === 'directory' && ` ${t('fileManager.deleteDirectoryWarning')}`}
                             </p>
                             <p className="text-red-400 text-sm mb-6">
-                                This action cannot be undone.
+                                {t('fileManager.actionCannotBeUndone')}
                             </p>
                             <div className="flex gap-3">
                                 <Button
@@ -671,14 +673,14 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                                     onClick={() => performDelete(deletingItem)}
                                     className="flex-1"
                                 >
-                                    Delete
+                                    {t('common.delete')}
                                 </Button>
                                 <Button
                                     variant="outline"
                                     onClick={() => setDeletingItem(null)}
                                     className="flex-1"
                                 >
-                                    Cancel
+                                    {t('common.cancel')}
                                 </Button>
                             </div>
                         </div>
