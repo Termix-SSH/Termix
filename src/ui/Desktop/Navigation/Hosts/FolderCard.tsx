@@ -2,7 +2,7 @@ import React, {useState} from "react";
 import {CardTitle} from "@/components/ui/card.tsx";
 import {ChevronDown, Folder} from "lucide-react";
 import {Button} from "@/components/ui/button.tsx";
-import {Host} from "@/ui/Navigation/Hosts/Host.tsx";
+import {Host} from "@/ui/Desktop/Navigation/Hosts/Host.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 
 interface SSHHost {

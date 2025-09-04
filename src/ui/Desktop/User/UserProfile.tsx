@@ -6,12 +6,12 @@ import {Label} from "@/components/ui/label.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import {User, Shield, Key, AlertCircle} from "lucide-react";
-import {TOTPSetup} from "@/ui/User/TOTPSetup.tsx";
+import {TOTPSetup} from "@/ui/Desktop/User/TOTPSetup.tsx";
 import {getUserInfo} from "@/ui/main-axios.ts";
 import {toast} from "sonner";
-import {PasswordReset} from "@/ui/User/PasswordReset.tsx";
+import {PasswordReset} from "@/ui/Desktop/User/PasswordReset.tsx";
 import {useTranslation} from "react-i18next";
-import {LanguageSwitcher} from "@/components/LanguageSwitcher";
+import {LanguageSwitcher} from "@/components/LanguageSwitcher.tsx";
 
 interface UserProfileProps {
     isTopbarOpen?: boolean;

@@ -1,9 +1,9 @@
 import React, {useState} from "react";
-import {useSidebar} from "@/components/ui/sidebar";
+import {useSidebar} from "@/components/ui/sidebar.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {ChevronDown, ChevronUpIcon, Hammer} from "lucide-react";
-import {Tab} from "@/ui/Navigation/Tabs/Tab.tsx";
-import {useTabs} from "@/ui/Navigation/Tabs/TabContext.tsx";
+import {Tab} from "@/ui/Desktop/Navigation/Tabs/Tab.tsx";
+import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import {
     Accordion,
     AccordionContent,

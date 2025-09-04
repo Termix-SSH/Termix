@@ -1,5 +1,5 @@
 import React from "react";
-import {useSidebar} from "@/components/ui/sidebar";
+import {useSidebar} from "@/components/ui/sidebar.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";

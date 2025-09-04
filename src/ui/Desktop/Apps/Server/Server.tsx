@@ -1,13 +1,13 @@
 import React from "react";
-import {useSidebar} from "@/components/ui/sidebar";
+import {useSidebar} from "@/components/ui/sidebar.tsx";
 import {Status, StatusIndicator} from "@/components/ui/shadcn-io/status";
 import {Separator} from "@/components/ui/separator.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {Progress} from "@/components/ui/progress"
+import {Progress} from "@/components/ui/progress.tsx"
 import {Cpu, HardDrive, MemoryStick} from "lucide-react";
-import {Tunnel} from "@/ui/Apps/Tunnel/Tunnel.tsx";
+import {Tunnel} from "@/ui/Desktop/Apps/Tunnel/Tunnel.tsx";
 import {getServerStatusById, getServerMetricsById, type ServerMetrics} from "@/ui/main-axios.ts";
-import {useTabs} from "@/ui/Navigation/Tabs/TabContext.tsx";
+import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import {useTranslation} from 'react-i18next';
 
 interface ServerProps {

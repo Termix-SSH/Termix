@@ -3,7 +3,7 @@ import {Status, StatusIndicator} from "@/components/ui/shadcn-io/status";
 import {Button} from "@/components/ui/button.tsx";
 import {ButtonGroup} from "@/components/ui/button-group.tsx";
 import {Server, Terminal} from "lucide-react";
-import {useTabs} from "@/ui/Navigation/Tabs/TabContext.tsx";
+import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import {getServerStatusById} from "@/ui/main-axios.ts";
 
 interface SSHHost {

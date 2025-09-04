@@ -1,13 +1,13 @@
 import React, {useState, useEffect} from "react"
-import {LeftSidebar} from "@/ui/Navigation/LeftSidebar.tsx"
+import {LeftSidebar} from "@/ui/Desktop/Navigation/LeftSidebar.tsx"
 import {Homepage} from "@/ui/Homepage/Homepage.tsx"
-import {AppView} from "@/ui/Navigation/AppView.tsx"
-import {HostManager} from "@/ui/Apps/Host Manager/HostManager.tsx"
-import {TabProvider, useTabs} from "@/ui/Navigation/Tabs/TabContext.tsx"
-import {TopNavbar} from "@/ui/Navigation/TopNavbar.tsx";
-import { AdminSettings } from "@/ui/Admin/AdminSettings";
-import { UserProfile } from "@/ui/User/UserProfile.tsx";
-import { Toaster } from "@/components/ui/sonner";
+import {AppView} from "@/ui/Desktop/Navigation/AppView.tsx"
+import {HostManager} from "@/ui/Desktop/Apps/Host Manager/HostManager.tsx"
+import {TabProvider, useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx"
+import {TopNavbar} from "@/ui/Desktop/Navigation/TopNavbar.tsx";
+import { AdminSettings } from "@/ui/Desktop/Admin/AdminSettings.tsx";
+import { UserProfile } from "@/ui/Desktop/User/UserProfile.tsx";
+import { Toaster } from "@/components/ui/sonner.tsx";
 import { getUserInfo } from "@/ui/main-axios.ts";
 
 function getCookie(name: string) {
@@ -217,7 +217,7 @@ function AppContent() {
     )
 }
 
-function App() {
+function DesktopApp() {
     return (
         <TabProvider>
             <AppContent />
@@ -225,4 +225,4 @@ function App() {
     );
 }
 
-export default App
+export default DesktopApp

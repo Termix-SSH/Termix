@@ -1,11 +1,11 @@
 import React, {useState, useEffect, useMemo} from "react";
-import {Card, CardContent} from "@/components/ui/card";
-import {Button} from "@/components/ui/button";
-import {Badge} from "@/components/ui/badge";
-import {ScrollArea} from "@/components/ui/scroll-area";
-import {Input} from "@/components/ui/input";
-import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import {Card, CardContent} from "@/components/ui/card.tsx";
+import {Button} from "@/components/ui/button.tsx";
+import {Badge} from "@/components/ui/badge.tsx";
+import {ScrollArea} from "@/components/ui/scroll-area.tsx";
+import {Input} from "@/components/ui/input.tsx";
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion.tsx";
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
 import {getSSHHosts, deleteSSHHost, bulkImportSSHHosts} from "@/ui/main-axios.ts";
 import {toast} from "sonner";
 import {useTranslation} from "react-i18next";

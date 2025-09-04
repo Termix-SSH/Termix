@@ -31,7 +31,7 @@ import {
     SheetTitle,
     SheetTrigger,
     SheetClose
-} from "@/components/ui/sheet";
+} from "@/components/ui/sheet.tsx";
 import {Checkbox} from "@/components/ui/checkbox.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {Label} from "@/components/ui/label.tsx";
@@ -47,9 +47,9 @@ import {
     TableRow,
 } from "@/components/ui/table.tsx";
 import {Card} from "@/components/ui/card.tsx";
-import {FolderCard} from "@/ui/Navigation/Hosts/FolderCard.tsx";
+import {FolderCard} from "@/ui/Desktop/Navigation/Hosts/FolderCard.tsx";
 import {getSSHHosts} from "@/ui/main-axios.ts";
-import {useTabs} from "@/ui/Navigation/Tabs/TabContext.tsx";
+import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import { deleteAccount } from "@/ui/main-axios.ts";
 
 interface SSHHost {

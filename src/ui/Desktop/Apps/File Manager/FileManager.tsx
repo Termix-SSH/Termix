@@ -1,11 +1,11 @@
 import React, {useState, useEffect, useRef} from "react";
-import {FileManagerLeftSidebar} from "@/ui/Apps/File Manager/FileManagerLeftSidebar.tsx";
-import {FileManagerTabList} from "@/ui/Apps/File Manager/FileManagerTabList.tsx";
-import {FileManagerHomeView} from "@/ui/Apps/File Manager/FileManagerHomeView.tsx";
-import {FileManagerFileEditor} from "@/ui/Apps/File Manager/FileManagerFileEditor.tsx";
-import {FileManagerOperations} from "@/ui/Apps/File Manager/FileManagerOperations.tsx";
+import {FileManagerLeftSidebar} from "@/ui/Desktop/Apps/File Manager/FileManagerLeftSidebar.tsx";
+import {FileManagerTabList} from "@/ui/Desktop/Apps/File Manager/FileManagerTabList.tsx";
+import {FileManagerHomeView} from "@/ui/Desktop/Apps/File Manager/FileManagerHomeView.tsx";
+import {FileManagerFileEditor} from "@/ui/Desktop/Apps/File Manager/FileManagerFileEditor.tsx";
+import {FileManagerOperations} from "@/ui/Desktop/Apps/File Manager/FileManagerOperations.tsx";
 import {Button} from '@/components/ui/button.tsx';
-import {FIleManagerTopNavbar} from "@/ui/Apps/File Manager/FIleManagerTopNavbar.tsx";
+import {FIleManagerTopNavbar} from "@/ui/Desktop/Apps/File Manager/FIleManagerTopNavbar.tsx";
 import {cn} from '@/lib/utils.ts';
 import {Save, RefreshCw, Settings, Trash2} from 'lucide-react';
 import {Separator} from '@/components/ui/separator.tsx';

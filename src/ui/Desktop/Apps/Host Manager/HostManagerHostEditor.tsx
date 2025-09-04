@@ -13,7 +13,7 @@ import {
     FormMessage,
 } from "@/components/ui/form.tsx";
 import {Input} from "@/components/ui/input.tsx";
-import {ScrollArea} from "@/components/ui/scroll-area"
+import {ScrollArea} from "@/components/ui/scroll-area.tsx"
 import {Separator} from "@/components/ui/separator.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import React, {useEffect, useRef, useState} from "react";
