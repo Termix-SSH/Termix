@@ -1,11 +1,51 @@
 const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
 const path = require('path');
+const { spawn } = require('child_process');
 
 // 全局变量
 let mainWindow = null;
+let backendProcess = null;
 
 // 开发环境检测
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+// 启动后端服务
+function startBackendServer() {
+    if (backendProcess) {
+        console.log('Backend server already running');
+        return;
+    }
+
+    const backendPath = path.join(__dirname, '../dist/backend/starter.js');
+    console.log('Starting backend server from:', backendPath);
+
+    backendProcess = spawn('node', [backendPath], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: false
+    });
+
+    backendProcess.stdout.on('data', (data) => {
+        console.log('Backend:', data.toString());
+    });
+
+    backendProcess.stderr.on('data', (data) => {
+        console.error('Backend Error:', data.toString());
+    });
+
+    backendProcess.on('close', (code) => {
+        console.log(`Backend process exited with code ${code}`);
+        backendProcess = null;
+    });
+}
+
+// 停止后端服务
+function stopBackendServer() {
+    if (backendProcess) {
+        console.log('Stopping backend server...');
+        backendProcess.kill();
+        backendProcess = null;
+    }
+}
 
 // 防止多开
 const gotTheLock = app.requestSingleInstanceLock();
@@ -105,10 +145,15 @@ ipcMain.handle('get-platform', () => {
 
 // 应用事件处理
 app.whenReady().then(() => {
+    // 在生产环境启动后端服务
+    if (!isDev) {
+        startBackendServer();
+    }
     createWindow();
 });
 
 app.on('window-all-closed', () => {
+    stopBackendServer();
     if (process.platform !== 'darwin') {
         app.quit();
     }

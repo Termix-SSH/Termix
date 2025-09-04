@@ -14,4 +14,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 });
 
 // 添加一个标识，让渲染进程知道这是 Electron 环境
-window.IS_ELECTRON = true;
+// 在上下文隔离环境中，使用 contextBridge 暴露
+contextBridge.exposeInMainWorld('IS_ELECTRON', true);

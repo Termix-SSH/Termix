@@ -158,15 +158,42 @@ interface OIDCAuthorize {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function setCookie(name: string, value: string, days = 7): void {
-    const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+export function setCookie(name: string, value: string, days = 7): void {
+    const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+    console.log('setCookie - isElectron:', isElectron, 'storing:', name, 'value length:', value?.length);
+    
+    if (isElectron) {
+        // In Electron, use localStorage instead of cookies
+        localStorage.setItem(name, value);
+        console.log('setCookie - stored in localStorage');
+        // Verify it was stored
+        const stored = localStorage.getItem(name);
+        console.log('setCookie - verification:', stored ? 'Successfully stored' : 'Failed to store');
+    } else {
+        // In browser, use cookies
+        const expires = new Date(Date.now() + days * 864e5).toUTCString();
+        document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+        console.log('setCookie - stored in cookies');
+    }
 }
 
 function getCookie(name: string): string | undefined {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift();
+    const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+    console.log('getCookie - isElectron:', isElectron);
+    
+    if (isElectron) {
+        // In Electron, get from localStorage
+        const token = localStorage.getItem(name) || undefined;
+        console.log('getCookie - localStorage result:', token ? 'Found' : 'Not found');
+        return token;
+    } else {
+        // In browser, get from cookies
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        const token = parts.length === 2 ? parts.pop()?.split(';').shift() : undefined;
+        console.log('getCookie - cookie result:', token ? 'Found' : 'Not found');
+        return token;
+    }
 }
 
 function createApiInstance(baseURL: string): AxiosInstance {
@@ -178,8 +205,12 @@ function createApiInstance(baseURL: string): AxiosInstance {
 
     instance.interceptors.request.use((config) => {
         const token = getCookie('jwt');
+        console.log('Token from getCookie:', token ? 'Found' : 'Not found');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+            console.log('Authorization header set');
+        } else {
+            console.log('No token found, Authorization header not set');
         }
         return config;
     });
@@ -202,7 +233,7 @@ function createApiInstance(baseURL: string): AxiosInstance {
 // ============================================================================
 
 // Check if running in Electron
-const isElectron = window.IS_ELECTRON === true;
+const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
 const isDev = process.env.NODE_ENV === 'development' && 
               (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
@@ -1008,9 +1039,7 @@ export async function dismissAlert(userId: string, alertId: string): Promise<any
 
 export async function getReleasesRSS(perPage: number = 100): Promise<any> {
     try {
-        // Use the general API instance since releases endpoint is at root level
-        const apiInstance = createApiInstance(isDev ? `http://${apiHost}:8081` : '');
-        const response = await apiInstance.get(`/releases/rss?per_page=${perPage}`);
+        const response = await authApi.get(`/releases/rss?per_page=${perPage}`);
         return response.data;
     } catch (error) {
         handleApiError(error, 'fetch releases RSS');
@@ -1019,9 +1048,7 @@ export async function getReleasesRSS(perPage: number = 100): Promise<any> {
 
 export async function getVersionInfo(): Promise<any> {
     try {
-        // Use the general API instance since version endpoint is at root level
-        const apiInstance = createApiInstance(isDev ? `http://${apiHost}:8081` : '');
-        const response = await apiInstance.get('/version/');
+        const response = await authApi.get('/version/');
         return response.data;
     } catch (error) {
         handleApiError(error, 'fetch version info');

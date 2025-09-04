@@ -279,9 +279,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
                 const isDev = process.env.NODE_ENV === 'development' &&
                     (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
+                
+                const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
                 const wsUrl = isDev
                     ? 'ws://localhost:8082'
+                    : isElectron
+                    ? 'ws://127.0.0.1:8082'
                     : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
 
                 const ws = new WebSocket(wsUrl);
@@ -357,7 +361,7 @@ style.innerHTML = `
 /* Load NerdFonts locally */
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('/fonts/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
+  src: url('./fonts/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -365,7 +369,7 @@ style.innerHTML = `
 
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('/fonts/JetBrainsMonoNerdFont-Bold.ttf') format('truetype');
+  src: url('./fonts/JetBrainsMonoNerdFont-Bold.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
   font-display: swap;
@@ -373,7 +377,7 @@ style.innerHTML = `
 
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('/fonts/JetBrainsMonoNerdFont-Italic.ttf') format('truetype');
+  src: url('./fonts/JetBrainsMonoNerdFont-Italic.ttf') format('truetype');
   font-weight: normal;
   font-style: italic;
   font-display: swap;

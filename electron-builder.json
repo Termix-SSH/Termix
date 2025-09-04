@@ -2,17 +2,15 @@
   "appId": "com.termix.app",
   "productName": "Termix",
   "directories": {
-    "output": "release",
-    "buildResources": "build"
+    "output": "release"
   },
   "files": [
     "dist/**/*",
-    "electron/main-simple.cjs",
-    "electron/preload-simple.cjs",
-    "public/icon.*",
-    "package.json"
+    "electron/**/*"
   ],
-  "asar": true,
+  "extraMetadata": {
+    "main": "electron/main-simple.cjs"
+  },
   "mac": {
     "category": "public.app-category.developer-tools",
     "icon": "public/icon.icns",
@@ -32,17 +30,13 @@
     ]
   },
   "win": {
-    "icon": "public/icon.ico",
-    "target": [
-      {
-        "target": "nsis",
-        "arch": ["x64", "ia32"]
-      },
-      {
-        "target": "portable",
-        "arch": ["x64"]
-      }
-    ]
+    "target": "nsis",
+    "icon": "public/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "artifactName": "${productName}-Setup-${version}.${ext}"
   },
   "linux": {
     "category": "Development",
@@ -52,33 +46,5 @@
         "arch": ["x64"]
       }
     ]
-  },
-  "nsis": {
-    "oneClick": false,
-    "perMachine": false,
-    "allowToChangeInstallationDirectory": true,
-    "deleteAppDataOnUninstall": false,
-    "createDesktopShortcut": true,
-    "createStartMenuShortcut": true
-  },
-  "dmg": {
-    "contents": [
-      {
-        "x": 410,
-        "y": 150,
-        "type": "link",
-        "path": "/Applications"
-      },
-      {
-        "x": 130,
-        "y": 150,
-        "type": "file"
-      }
-    ]
-  },
-  "publish": {
-    "provider": "github",
-    "owner": "LukeGus",
-    "repo": "Termix"
   }
 }
