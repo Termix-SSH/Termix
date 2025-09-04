@@ -1,25 +1,68 @@
-import {StrictMode} from 'react'
+import {StrictMode, useEffect, useState, useRef} from 'react'
 import {createRoot} from 'react-dom/client'
-import { useMediaQuery } from "react-responsive";
 import './index.css'
 import DesktopApp from './ui/Desktop/DesktopApp.tsx'
-import MobileApp from './ui/Mobile/MobileApp.tsx'
+import { MobileApp } from './ui/Mobile/MobileApp.tsx'
 import {ThemeProvider} from "@/components/theme-provider"
 import './i18n/i18n'
 
+function useWindowWidth() {
+    const [width, setWidth] = useState(window.innerWidth);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const lastSwitchTime = useRef(0);
+    const isCurrentlyMobile = useRef(window.innerWidth < 768);
+    const hasSwitchedOnce = useRef(false);
 
-function RootApp() {
-    const isMobile = useMediaQuery({ maxWidth: 767 });
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+        const handleResize = () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                const newWidth = window.innerWidth;
+                const newIsMobile = newWidth < 768;
+                const now = Date.now();
+                
+                // If we've already switched once, don't switch again for a very long time
+                if (hasSwitchedOnce.current && (now - lastSwitchTime.current) < 10000) {
+                    setWidth(newWidth);
+                    return;
+                }
+                
+                // Only switch if we're actually crossing the threshold AND enough time has passed
+                if (newIsMobile !== isCurrentlyMobile.current && (now - lastSwitchTime.current) > 5000) {
+                    lastSwitchTime.current = now;
+                    isCurrentlyMobile.current = newIsMobile;
+                    hasSwitchedOnce.current = true;
+                    setWidth(newWidth);
+                    setIsMobile(newIsMobile);
+                } else {
+                    setWidth(newWidth);
+                }
+            }, 2000); // Even longer debounce
+        };
+        window.addEventListener("resize", handleResize);
 
-    return (
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-            {isMobile ? <MobileApp /> : <DesktopApp />}
-        </ThemeProvider>
-    );
+        return () => {
+            clearTimeout(timeoutId);
+            window.removeEventListener("resize", handleResize);
+        };
+    }, []);
+
+    return width;
 }
 
-createRoot(document.getElementById("root")!).render(
+function RootApp() {
+    const width = useWindowWidth();
+    const isMobile = width < 768;
+    
+    // Use a stable key to prevent unnecessary remounting
+    return isMobile ? <MobileApp key="mobile" /> : <DesktopApp key="desktop" />;
+}
+
+createRoot(document.getElementById('root')!).render(
     <StrictMode>
-        <RootApp />
-    </StrictMode>
-);
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+            <RootApp/>
+        </ThemeProvider>
+    </StrictMode>,
+)

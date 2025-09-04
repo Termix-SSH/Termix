@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
-import {HomepageAuth} from "@/ui/Homepage/HomepageAuth.tsx";
-import {HomepageUpdateLog} from "@/ui/Homepage/HompageUpdateLog.tsx";
-import {HomepageAlertManager} from "@/ui/Homepage/HomepageAlertManager.tsx";
+import {HomepageAuth} from "@/ui/Desktop/Homepage/HomepageAuth.tsx";
+import {HomepageUpdateLog} from "@/ui/Desktop/Homepage/HompageUpdateLog.tsx";
+import {HomepageAlertManager} from "@/ui/Desktop/Homepage/HomepageAlertManager.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import { getUserInfo, getDatabaseHealth } from "@/ui/main-axios.ts";
 import {useTranslation} from "react-i18next";

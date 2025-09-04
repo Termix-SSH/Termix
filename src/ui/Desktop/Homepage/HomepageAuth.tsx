@@ -1,11 +1,11 @@
 import React, {useState, useEffect} from "react";
-import {cn} from "../../lib/utils.ts";
-import {Button} from "../../components/ui/button.tsx";
-import {Input} from "../../components/ui/input.tsx";
-import {Label} from "../../components/ui/label.tsx";
-import {Alert, AlertTitle, AlertDescription} from "../../components/ui/alert.tsx";
+import {cn} from "@/lib/utils.ts";
+import {Button} from "@/components/ui/button.tsx";
+import {Input} from "@/components/ui/input.tsx";
+import {Label} from "@/components/ui/label.tsx";
+import {Alert, AlertTitle, AlertDescription} from "@/components/ui/alert.tsx";
 import {useTranslation} from "react-i18next";
-import {LanguageSwitcher} from "../../components/LanguageSwitcher";
+import {LanguageSwitcher} from "@/components/LanguageSwitcher.tsx";
 import {
     registerUser,
     loginUser,
@@ -18,7 +18,7 @@ import {
     completePasswordReset,
     getOIDCAuthorizeUrl,
     verifyTOTPLogin
-} from "../main-axios.ts";
+} from "../../main-axios.ts";
 
 function setCookie(name: string, value: string, days = 7) {
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
