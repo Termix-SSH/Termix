@@ -1,14 +1,25 @@
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
+import { useMediaQuery } from "react-responsive";
 import './index.css'
 import DesktopApp from './ui/Desktop/DesktopApp.tsx'
+import MobileApp from './ui/Mobile/MobileApp.tsx'
 import {ThemeProvider} from "@/components/theme-provider"
-import './i18n/i18n' // Initialize i18n
+import './i18n/i18n'
 
-createRoot(document.getElementById('root')!).render(
-    <StrictMode>
+
+function RootApp() {
+    const isMobile = useMediaQuery({ maxWidth: 767 });
+
+    return (
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-            <DesktopApp/>
+            {isMobile ? <MobileApp /> : <DesktopApp />}
         </ThemeProvider>
-    </StrictMode>,
-)
+    );
+}
+
+createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+        <RootApp />
+    </StrictMode>
+);
