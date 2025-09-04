@@ -1,15 +1,29 @@
 {
   "name": "termix",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.6.0",
+  "description": "Open-source server management platform with SSH terminal access, tunnel management, and file editing",
+  "author": {
+    "name": "LukeGus",
+    "email": "support@termix.site"
+  },
   "type": "module",
+  "main": "electron/main-simple.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:backend": "tsc -p tsconfig.node.json",
     "dev:backend": "tsc -p tsconfig.node.json && node ./dist/backend/starter.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "electron .",
+    "electron:dev": "npm run build:backend && NODE_ENV=development electron .",
+    "electron:build": "npm run build && npm run build:backend && electron-builder",
+    "dist": "npm run build && npm run build:backend && electron-builder --publish=never",
+    "dist:win": "npm run dist -- --win",
+    "dist:mac": "npm run dist -- --mac",
+    "dist:linux": "npm run dist -- --linux",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -85,6 +99,7 @@
     "zod": "^4.0.5"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "@eslint/js": "^9.34.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
@@ -97,6 +112,8 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react-swc": "^3.10.2",
     "autoprefixer": "^10.4.21",
+    "electron": "^31.7.0",
+    "electron-builder": "^24.13.3",
     "eslint": "^9.34.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",

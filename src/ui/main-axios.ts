@@ -201,33 +201,71 @@ function createApiInstance(baseURL: string): AxiosInstance {
 // API INSTANCES
 // ============================================================================
 
+// Check if running in Electron
+const isElectron = window.IS_ELECTRON === true;
+
 const isDev = process.env.NODE_ENV === 'development' && 
               (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
 
+// Get API host and port configuration
+let apiHost = import.meta.env.VITE_API_HOST || 'localhost';
+let apiPort = 8081;
+
+// In Electron, use fixed port since backend runs independently
+if (isElectron) {
+    // Backend runs independently, use default port
+    apiPort = 8081;
+}
+
+// Function to get the correct API URL
+function getApiUrl(path: string, defaultPort: number): string {
+    if (isElectron) {
+        // In Electron, always use localhost with dynamic port
+        return `http://127.0.0.1:${apiPort}${path}`;
+    } else if (isDev) {
+        // In dev mode, use configured host
+        return `http://${apiHost}:${defaultPort}${path}`;
+    } else {
+        // In production web mode, use relative paths
+        return path;
+    }
+}
+
+// Multi-port backend architecture (original design)
 // SSH Host Management API (port 8081)
-export const sshHostApi = createApiInstance(
-    isDev ? 'http://localhost:8081/ssh' : '/ssh'
+export let sshHostApi = createApiInstance(
+    getApiUrl('/ssh', 8081)
 );
 
 // Tunnel Management API (port 8083)
-export const tunnelApi = createApiInstance(
-    isDev ? 'http://localhost:8083/ssh' : '/ssh'
+export let tunnelApi = createApiInstance(
+    getApiUrl('/ssh', 8083)
 );
 
 // File Manager Operations API (port 8084) - SSH file operations
-export const fileManagerApi = createApiInstance(
-    isDev ? 'http://localhost:8084/ssh/file_manager' : '/ssh/file_manager'
+export let fileManagerApi = createApiInstance(
+    getApiUrl('/ssh/file_manager', 8084)
 );
 
 // Server Statistics API (port 8085)
-export const statsApi = createApiInstance(
-    isDev ? 'http://localhost:8085' : ''
+export let statsApi = createApiInstance(
+    getApiUrl('', 8085)
 );
 
 // Authentication API (port 8081) - includes users, alerts, version, releases
-export const authApi = createApiInstance(
-    isDev ? 'http://localhost:8081' : ''
+export let authApi = createApiInstance(
+    getApiUrl('', 8081)
 );
+
+// Function to update API instances with new port (for Electron)
+function updateApiPorts(port: number) {
+    apiPort = port;
+    sshHostApi = createApiInstance(`http://127.0.0.1:${port}/ssh`);
+    tunnelApi = createApiInstance(`http://127.0.0.1:${port}/ssh`);
+    fileManagerApi = createApiInstance(`http://127.0.0.1:${port}/ssh/file_manager`);
+    statsApi = createApiInstance(`http://127.0.0.1:${port}`);
+    authApi = createApiInstance(`http://127.0.0.1:${port}`);
+}
 
 // ============================================================================
 // ERROR HANDLING
@@ -945,7 +983,7 @@ export async function generateBackupCodes(password?: string, totp_code?: string)
 
 export async function getUserAlerts(userId: string): Promise<{ alerts: any[] }> {
     try {
-        const apiInstance = createApiInstance(isDev ? 'http://localhost:8081' : '');
+        const apiInstance = createApiInstance(isDev ? `http://${apiHost}:8081` : '');
         const response = await apiInstance.get(`/alerts/user/${userId}`);
         return response.data;
     } catch (error) {
@@ -956,7 +994,7 @@ export async function getUserAlerts(userId: string): Promise<{ alerts: any[] }> 
 export async function dismissAlert(userId: string, alertId: string): Promise<any> {
     try {
         // Use the general API instance since alerts endpoint is at root level
-        const apiInstance = createApiInstance(isDev ? 'http://localhost:8081' : '');
+        const apiInstance = createApiInstance(isDev ? `http://${apiHost}:8081` : '');
         const response = await apiInstance.post('/alerts/dismiss', { userId, alertId });
         return response.data;
     } catch (error) {
@@ -971,7 +1009,7 @@ export async function dismissAlert(userId: string, alertId: string): Promise<any
 export async function getReleasesRSS(perPage: number = 100): Promise<any> {
     try {
         // Use the general API instance since releases endpoint is at root level
-        const apiInstance = createApiInstance(isDev ? 'http://localhost:8081' : '');
+        const apiInstance = createApiInstance(isDev ? `http://${apiHost}:8081` : '');
         const response = await apiInstance.get(`/releases/rss?per_page=${perPage}`);
         return response.data;
     } catch (error) {
@@ -982,7 +1020,7 @@ export async function getReleasesRSS(perPage: number = 100): Promise<any> {
 export async function getVersionInfo(): Promise<any> {
     try {
         // Use the general API instance since version endpoint is at root level
-        const apiInstance = createApiInstance(isDev ? 'http://localhost:8081' : '');
+        const apiInstance = createApiInstance(isDev ? `http://${apiHost}:8081` : '');
         const response = await apiInstance.get('/version/');
         return response.data;
     } catch (error) {

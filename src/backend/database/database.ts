@@ -235,6 +235,16 @@ app.get('/releases/rss', async (req, res) => {
     }
 });
 
+// Health check endpoint for Electron backend manager
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        service: 'database-api',
+        port: PORT
+    });
+});
+
 app.use('/users', userRoutes);
 app.use('/ssh', sshRoutes);
 app.use('/alerts', alertRoutes);
