@@ -21,14 +21,12 @@ function useWindowWidth() {
                 const newWidth = window.innerWidth;
                 const newIsMobile = newWidth < 768;
                 const now = Date.now();
-                
-                // If we've already switched once, don't switch again for a very long time
+
                 if (hasSwitchedOnce.current && (now - lastSwitchTime.current) < 10000) {
                     setWidth(newWidth);
                     return;
                 }
-                
-                // Only switch if we're actually crossing the threshold AND enough time has passed
+
                 if (newIsMobile !== isCurrentlyMobile.current && (now - lastSwitchTime.current) > 5000) {
                     lastSwitchTime.current = now;
                     isCurrentlyMobile.current = newIsMobile;
@@ -38,7 +36,7 @@ function useWindowWidth() {
                 } else {
                     setWidth(newWidth);
                 }
-            }, 2000); // Even longer debounce
+            }, 2000);
         };
         window.addEventListener("resize", handleResize);
 
@@ -54,8 +52,12 @@ function useWindowWidth() {
 function RootApp() {
     const width = useWindowWidth();
     const isMobile = width < 768;
-    
-    // Use a stable key to prevent unnecessary remounting
+    const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+
+    if (isElectron) {
+        return <DesktopApp />;
+    }
+
     return isMobile ? <MobileApp key="mobile" /> : <DesktopApp key="desktop" />;
 }
 
