@@ -1,116 +1,82 @@
-name: Build and Push Docker Image
+name: Docker Image CI
 
 on:
   push:
-    branches:
-      - development
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: "Custom tag name for the Docker image"
-        required: false
-        default: ""
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
+
   build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      
+  docker:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
-
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          platforms: linux/amd64,linux/arm64
-          driver-opts: |
-            image=moby/buildkit:master
-            network=host
-
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-            */*/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.ref_name }}-${{ hashFiles('docker/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ github.ref_name }}-
-            ${{ runner.os }}-buildx-
-
-      - name: Login to Docker Registry
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Determine Docker image tag
-        run: |
-          echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-          if [ "${{ github.event.inputs.tag_name }}" != "" ]; then
-            IMAGE_TAG="${{ github.event.inputs.tag_name }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            IMAGE_TAG="latest"
-          elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
-            IMAGE_TAG="development-latest"
-          else
-            IMAGE_TAG="${{ github.ref_name }}"
-          fi
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-
-      - name: Build and Push Multi-Arch Docker Image
-        uses: docker/build-push-action@v6
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/Dockerfile
-          push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/${{ env.REPO_OWNER }}/termix:${{ env.IMAGE_TAG }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-            BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
-          outputs: type=registry,compression=zstd,compression-level=19
+          push: true
+          tags: lukegus/termix:latest
+          
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-      - name: Delete all untagged image versions
-        if: success()
-        uses: quartx-analytics/ghcr-cleaner@v1
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          owner-type: user
-          token: ${{ secrets.GHCR_TOKEN }}
-          repository-owner: ${{ github.repository_owner }}
-          delete-untagged: true
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Cleanup Docker Images Locally
-        if: always()
+      - name: Install sshpass
+        run: sudo apt-get install sshpass
+
+      - name: Copy docker-compose.yml to droplet
+        run: sshpass -v -p ${{ secrets.DROPLET_PASSWORD }} scp -o StrictHostKeyChecking=no docker-compose.yml root@${{ vars.DROPLET_IP }}:~
+
+      - name: Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ vars.DROPLET_IP }}
+          username: root
+          password: ${{ secrets.DROPLET_PASSWORD }}
+          script: |
+            cd ~
+            export CR_PAT=${{ secrets.CR_PAT }}
+            echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u ${{ vars.GITHUB_USERNAME }} --password-stdin
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d
+            
+      - name: Verify deployment
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
-          docker image prune -af
-          docker system prune -af --volumes
+          echo "Deployment completed for repository: $GITHUB_REPOSITORY"
+          echo "Deployed commit SHA: $GITHUB_SHA"
+          echo "Application should be accessible at: http://${{ vars.DROPLET_IP }}:3000"
