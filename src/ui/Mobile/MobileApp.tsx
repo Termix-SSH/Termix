@@ -1,8 +1,8 @@
-import {useRef} from "react";
+import {useRef, FC} from "react";
 import {Terminal} from "@/ui/Mobile/Apps/Terminal/Terminal.tsx";
 import {TerminalKeyboard} from "@/ui/Mobile/Apps/Terminal/TerminalKeyboard.tsx";
 
-export function MobileApp() {
+export const MobileApp: FC = () => {
     const terminalRef = useRef<any>(null);
 
     function handleKeyboardInput(input: string) {
@@ -34,16 +34,18 @@ export function MobileApp() {
 
     return (
         <div className="h-screen w-screen flex flex-col bg-[#09090b] overflow-y-hidden overflow-x-hidden">
-            <Terminal
-                ref={terminalRef}
-                hostConfig={{
-                    ip: "192.210.197.55",
-                    port: 22,
-                    username: "bugattiguy527",
-                    password: "bugatti$123"
-                }}
-                isVisible={true}
-            />
+            <div className="flex-1 min-h-0">
+                <Terminal
+                    ref={terminalRef}
+                    hostConfig={{
+                        ip: "192.210.197.55",
+                        port: 22,
+                        username: "bugattiguy527",
+                        password: "bugatti$123"
+                    }}
+                    isVisible={true}
+                />
+            </div>
             <TerminalKeyboard
                 onSendInput={handleKeyboardInput}
             />

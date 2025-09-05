@@ -405,7 +405,7 @@ style.innerHTML = `
   font-feature-settings: "liga" 1, "calt" 1;
 }
 
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE"] {
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE000"] {
   font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
 }
 `;
