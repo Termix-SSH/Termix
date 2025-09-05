@@ -38,10 +38,10 @@ export const MobileApp: FC = () => {
                 <Terminal
                     ref={terminalRef}
                     hostConfig={{
-                        ip: "192.210.197.55",
+                        ip: "n/a",
                         port: 22,
-                        username: "bugattiguy527",
-                        password: "bugatti$123"
+                        username: "n/a",
+                        password: "n/a"
                     }}
                     isVisible={true}
                 />
