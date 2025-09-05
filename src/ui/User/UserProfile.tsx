@@ -8,10 +8,12 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx
 import {User, Shield, Key, AlertCircle} from "lucide-react";
 import {TOTPSetup} from "@/ui/User/TOTPSetup.tsx";
 import {getUserInfo} from "@/ui/main-axios.ts";
+import { getVersionInfo } from "@/ui/main-axios.ts";
 import {toast} from "sonner";
 import {PasswordReset} from "@/ui/User/PasswordReset.tsx";
 import {useTranslation} from "react-i18next";
 import {LanguageSwitcher} from "@/components/LanguageSwitcher";
+
 
 interface UserProfileProps {
     isTopbarOpen?: boolean;
@@ -27,10 +29,22 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
     } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [versionInfo, setVersionInfo] = useState<{ version: string } | null>(null);
+
 
     useEffect(() => {
         fetchUserInfo();
+        fetchVersion();
     }, []);
+
+    const fetchVersion = async () => {
+            try {
+                const info = await getVersionInfo();
+                setVersionInfo({ version: info.version });
+            } catch (err) {
+                console.error("Failed to load version info", err);
+                          }
+    };
 
     const fetchUserInfo = async () => {
         setLoading(true);
@@ -146,6 +160,13 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
                                         )}
                                     </p>
                                 </div>
+                               <div>
+                                <Label>{t('common.version')}</Label>
+                                <p className="text-lg font-medium mt-1">
+                                    {versionInfo?.version || t('common.loading')}
+                                </p>
+                                </div>
+
                             </div>
                             
                             <div className="mt-6 pt-6 border-t">
