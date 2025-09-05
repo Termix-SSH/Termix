@@ -146,7 +146,7 @@ app.get('/version', async (req, res) => {
     const localVersion = process.env.VERSION;
 
     if (!localVersion) {
-        return res.status(401).send('Local Version Not Set');
+        return res.status(404).send('Local Version Not Set');
     }
 
     try {
@@ -233,6 +233,16 @@ app.get('/releases/rss', async (req, res) => {
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
+});
+
+// Health check endpoint for Electron backend manager
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        service: 'database-api',
+        port: PORT
+    });
 });
 
 app.use('/users', userRoutes);

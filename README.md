@@ -1,4 +1,10 @@
 # Repo Stats
+<p align="center">
+  <img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English | 
+  <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a>
+</p>
+
+
 ![GitHub Repo stars](https://img.shields.io/github/stars/LukeGus/Termix?style=flat&label=Stars)
 ![GitHub forks](https://img.shields.io/github/forks/LukeGus/Termix?style=flat&label=Forks)
 ![GitHub Release](https://img.shields.io/github/v/release/LukeGus/Termix?style=flat&label=Release)
@@ -39,6 +45,7 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 - **Server Stats** - View CPU, memory, and HDD usage on any SSH server
 - **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support
 - **Modern UI** - Clean interface built with React, Tailwind CSS, and Shadcn
+- **Languages** - Built-in support for English and Chinese
 
 # Planned Features
 - **Improved Admin Control** - Give more fine-grained control over user and admin permissions, share hosts, etc

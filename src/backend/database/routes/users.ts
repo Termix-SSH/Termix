@@ -1318,7 +1318,6 @@ router.delete('/delete-user', authenticateJWT, async (req, res) => {
             await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, targetUserId));
 
             await db.delete(sshData).where(eq(sshData.userId, targetUserId));
-
             // Note: All user-related data has been deleted above
             // The tables config_editor_* and shared_hosts don't exist in the current schema
         } catch (cleanupError) {
