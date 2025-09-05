@@ -146,7 +146,7 @@ app.get('/version', async (req, res) => {
     const localVersion = process.env.VERSION;
 
     if (!localVersion) {
-        return res.status(401).send('Local Version Not Set');
+        return res.status(404).send('Local Version Not Set');
     }
 
     try {

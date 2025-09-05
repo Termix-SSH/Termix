@@ -160,38 +160,24 @@ interface OIDCAuthorize {
 
 export function setCookie(name: string, value: string, days = 7): void {
     const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-    console.log('setCookie - isElectron:', isElectron, 'storing:', name, 'value length:', value?.length);
     
     if (isElectron) {
-        // In Electron, use localStorage instead of cookies
         localStorage.setItem(name, value);
-        console.log('setCookie - stored in localStorage');
-        // Verify it was stored
-        const stored = localStorage.getItem(name);
-        console.log('setCookie - verification:', stored ? 'Successfully stored' : 'Failed to store');
     } else {
-        // In browser, use cookies
         const expires = new Date(Date.now() + days * 864e5).toUTCString();
         document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
-        console.log('setCookie - stored in cookies');
     }
 }
 
 function getCookie(name: string): string | undefined {
     const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-    console.log('getCookie - isElectron:', isElectron);
-    
     if (isElectron) {
-        // In Electron, get from localStorage
         const token = localStorage.getItem(name) || undefined;
-        console.log('getCookie - localStorage result:', token ? 'Found' : 'Not found');
         return token;
     } else {
-        // In browser, get from cookies
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
         const token = parts.length === 2 ? parts.pop()?.split(';').shift() : undefined;
-        console.log('getCookie - cookie result:', token ? 'Found' : 'Not found');
         return token;
     }
 }
@@ -205,10 +191,8 @@ function createApiInstance(baseURL: string): AxiosInstance {
 
     instance.interceptors.request.use((config) => {
         const token = getCookie('jwt');
-        console.log('Token from getCookie:', token ? 'Found' : 'Not found');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log('Authorization header set');
         } else {
             console.log('No token found, Authorization header not set');
         }
@@ -232,32 +216,24 @@ function createApiInstance(baseURL: string): AxiosInstance {
 // API INSTANCES
 // ============================================================================
 
-// Check if running in Electron
 const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
 const isDev = process.env.NODE_ENV === 'development' && 
               (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
 
-// Get API host and port configuration
 let apiHost = import.meta.env.VITE_API_HOST || 'localhost';
 let apiPort = 8081;
 
-// In Electron, use fixed port since backend runs independently
 if (isElectron) {
-    // Backend runs independently, use default port
     apiPort = 8081;
 }
 
-// Function to get the correct API URL
 function getApiUrl(path: string, defaultPort: number): string {
     if (isElectron) {
-        // In Electron, always use localhost with dynamic port
-        return `http://127.0.0.1:${apiPort}${path}`;
+        return `http://127.0.0.1:${defaultPort}${path}`;
     } else if (isDev) {
-        // In dev mode, use configured host
         return `http://${apiHost}:${defaultPort}${path}`;
     } else {
-        // In production web mode, use relative paths
         return path;
     }
 }
