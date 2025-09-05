@@ -19,17 +19,11 @@
     "preview": "vite preview",
     "electron": "electron .",
     "electron:dev": "npm run build:backend && NODE_ENV=development electron .",
-    "electron:build": "npm run build && electron-builder",
     "electron:package": "npm run build && electron-packager . Termix --platform=win32 --arch=x64 --out=release --overwrite --ignore=\"^/src|^/public|^/node_modules|^/repo-images\" --prune=true --icon=public/favicon.ico",
     "electron:package:win": "npm run build && electron-packager . Termix --platform=win32 --arch=x64 --out=release --overwrite --ignore=\"^/src|^/public|^/node_modules|^/repo-images\" --prune=true --icon=public/favicon.ico",
     "electron:package:mac": "npm run build && electron-packager . Termix --platform=darwin --arch=universal --out=release --overwrite --ignore=\"^/src|^/public|^/node_modules|^/repo-images\" --prune=true --icon=public/icon.png",
     "electron:package:linux": "npm run build && electron-packager . Termix --platform=linux --arch=x64 --out=release --overwrite --ignore=\"^/src|^/public|^/node_modules|^/repo-images\" --prune=true --icon=public/icon.png",
-    "electron:package:all": "npm run build && npm run electron:package:win && npm run electron:package:mac && npm run electron:package:linux",
-    "dist": "npm run build && electron-builder --publish=never",
-    "dist:win": "npm run dist -- --win",
-    "dist:mac": "npm run dist -- --mac",
-    "dist:linux": "npm run dist -- --linux",
-    "postinstall": "electron-builder install-app-deps"
+    "electron:package:all": "npm run build && npm run electron:package:win && npm run electron:package:mac && npm run electron:package:linux"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -100,7 +94,6 @@
     "zod": "^4.0.5"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.1",
     "@eslint/js": "^9.34.0",
     "@tailwindcss/vite": "^4.1.12",
     "@types/bcryptjs": "^2.4.6",
@@ -119,7 +112,6 @@
     "@vitejs/plugin-react-swc": "^3.10.2",
     "autoprefixer": "^10.4.21",
     "electron": "^31.7.0",
-    "electron-builder": "^26.0.12",
     "electron-packager": "^17.1.2",
     "eslint": "^9.34.0",
     "eslint-plugin-react-hooks": "^5.2.0",

@@ -124,7 +124,6 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                     disabled={resetLoading || !userInfo.username.trim()}
                                     onClick={handleInitiatePasswordReset}
                                 >
-<<<<<<< HEAD:src/ui/User/PasswordReset.tsx
                                     {resetLoading ? Spinner : t('common.sendResetCode')}
                                 </Button>
                             </div>
@@ -157,7 +156,6 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                     disabled={resetLoading || resetCode.length !== 6}
                                     onClick={handleVerifyResetCode}
                                 >
-<<<<<<< HEAD:src/ui/User/PasswordReset.tsx
                                     {resetLoading ? Spinner : t('common.verifyCode')}
                                 </Button>
                                 <Button
@@ -214,7 +212,6 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                     disabled={resetLoading || !newPassword || !confirmPassword}
                                     onClick={handleCompletePasswordReset}
                                 >
-<<<<<<< HEAD:src/ui/User/PasswordReset.tsx
                                     {resetLoading ? Spinner : t('common.resetPassword')}
                                 </Button>
                                 <Button

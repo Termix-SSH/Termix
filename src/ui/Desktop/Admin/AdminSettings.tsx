@@ -395,7 +395,6 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                             <div className="flex gap-2">
                                                 <Input id="new-admin-username" value={newAdminUsername}
                                                        onChange={(e) => setNewAdminUsername(e.target.value)}
-<<<<<<< HEAD:src/ui/Admin/AdminSettings.tsx
                                                        placeholder={t('admin.enterUsernameToMakeAdmin')} required/>
                                                 <Button type="submit"
                                                         disabled={makeAdminLoading || !newAdminUsername.trim()}>{makeAdminLoading ? "Adding..." : "Make Admin"}</Button>
