@@ -25,7 +25,7 @@ i18n
     
     // Backend options
     backend: {
-      loadPath: '/locales/{{lng}}/translation.json',
+      loadPath: './locales/{{lng}}/translation.json',
     },
     
     interpolation: {

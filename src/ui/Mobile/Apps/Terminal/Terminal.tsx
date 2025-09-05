@@ -108,6 +108,17 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         return () => window.removeEventListener('resize', handleWindowResize);
     }, []);
 
+    useEffect(() => {
+        if (!terminal) return;
+
+        const textarea = (terminal as any)._core?._textarea as HTMLTextAreaElement | undefined;
+        if (textarea) {
+            textarea.setAttribute("readonly", "true");
+            textarea.setAttribute("inputmode", "none");
+            textarea.style.caretColor = "transparent";
+        }
+    }, [terminal]);
+
     function handleWindowResize() {
         if (!isVisibleRef.current) return;
         fitAddonRef.current?.fit();
@@ -168,7 +179,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 scrollback: 10000,
                 fontSize: 14,
                 fontFamily: '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
-                theme: {background: '#18181b', foreground: '#f7f7f7'},
+                theme: {background: '#09090b', foreground: '#f7f7f7'},
                 allowTransparency: true,
                 convertEol: true,
                 windowsMode: false,
@@ -209,7 +220,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 if (terminal) scheduleNotify(terminal.cols, terminal.rows);
                 hardRefresh();
                 setVisible(true);
-                terminal.focus();
             }, 100);
 
             return () => {
@@ -229,7 +239,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             scrollback: 10000,
             fontSize: 14,
             fontFamily: '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
-            theme: {background: '#18181b', foreground: '#f7f7f7'},
+            theme: {background: '#09090b', foreground: '#f7f7f7'},
             allowTransparency: true,
             convertEol: true,
             windowsMode: false,
@@ -274,7 +284,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     if (terminal) scheduleNotify(terminal.cols, terminal.rows);
                     hardRefresh();
                     setVisible(true);
-                    terminal.focus();
                 }, 0);
 
                 const cols = terminal.cols;
@@ -282,9 +291,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
                 const isDev = process.env.NODE_ENV === 'development' &&
                     (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
+                
+                const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
                 const wsUrl = isDev
                     ? 'ws://localhost:8082'
+                    : isElectron
+                    ? 'ws://127.0.0.1:8082'
                     : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
 
                 const ws = new WebSocket(wsUrl);
@@ -309,7 +322,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 fitAddonRef.current?.fit();
                 if (terminal) scheduleNotify(terminal.cols, terminal.rows);
                 hardRefresh();
-                terminal.focus();
             }, 0);
         }
     }, [isVisible, terminal]);
@@ -320,9 +332,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             fitAddonRef.current?.fit();
             if (terminal) scheduleNotify(terminal.cols, terminal.rows);
             hardRefresh();
-            if (terminal && isVisible) {
-                terminal.focus();
-            }
         }, 0);
     }, [isVisible, terminal]);
 
@@ -331,9 +340,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             ref={xtermRef}
             className="h-full w-full m-1"
             style={{opacity: visible && isVisible ? 1 : 0, overflow: 'hidden'}}
-            onClick={() => {
-                terminal.focus();
-            }}
         />
     );
 });
@@ -345,7 +351,7 @@ style.innerHTML = `
 /* Load NerdFonts locally */
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('/fonts/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
+  src: url('./fonts/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -353,7 +359,7 @@ style.innerHTML = `
 
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('/fonts/JetBrainsMonoNerdFont-Bold.ttf') format('truetype');
+  src: url('./fonts/JetBrainsMonoNerdFont-Bold.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
   font-display: swap;
@@ -361,7 +367,7 @@ style.innerHTML = `
 
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('/fonts/JetBrainsMonoNerdFont-Italic.ttf') format('truetype');
+  src: url('./fonts/JetBrainsMonoNerdFont-Italic.ttf') format('truetype');
   font-weight: normal;
   font-style: italic;
   font-display: swap;
@@ -399,7 +405,7 @@ style.innerHTML = `
   font-feature-settings: "liga" 1, "calt" 1;
 }
 
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE"] {
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE000"] {
   font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
 }
 `;

@@ -19,7 +19,6 @@ interface PasswordResetProps {
 }
 
 export function PasswordReset({userInfo}: PasswordResetProps) {
-    const {t} = useTranslation();
     const [error, setError] = useState<string | null>(null);
 
     const [resetStep, setResetStep] = useState<"initiate" | "verify" | "newPassword">("initiate");
@@ -28,6 +27,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [tempToken, setTempToken] = useState("");
     const [resetLoading, setResetLoading] = useState(false);
+    const {t} = useTranslation();
 
     async function handleInitiatePasswordReset() {
         setError(null);
@@ -168,7 +168,7 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                         setResetCode("");
                                     }}
                                 >
-                                    {t('common.back')}
+                                    Back
                                 </Button>
                             </div>
                         </>
@@ -225,14 +225,14 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                         setConfirmPassword("");
                                     }}
                                 >
-                                    {t('common.back')}
+                                    Back
                                 </Button>
                             </div>
                         </>
                     )}
                     {error && (
                         <Alert variant="destructive" className="mt-4">
-                            <AlertTitle>{t('common.error')}</AlertTitle>
+                            <AlertTitle>Error</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
