@@ -223,6 +223,7 @@
     "port": "端口",
     "name": "名称",
     "username": "用户名",
+    "hostName": "主机名",
     "folder": "文件夹",
     "tags": "标签",
     "passwordRequired": "使用密码认证时需要密码",
