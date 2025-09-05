@@ -108,6 +108,17 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         return () => window.removeEventListener('resize', handleWindowResize);
     }, []);
 
+    useEffect(() => {
+        if (!terminal) return;
+
+        const textarea = (terminal as any)._core?._textarea as HTMLTextAreaElement | undefined;
+        if (textarea) {
+            textarea.setAttribute("readonly", "true");
+            textarea.setAttribute("inputmode", "none");
+            textarea.style.caretColor = "transparent";
+        }
+    }, [terminal]);
+
     function handleWindowResize() {
         if (!isVisibleRef.current) return;
         fitAddonRef.current?.fit();
@@ -168,7 +179,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 scrollback: 10000,
                 fontSize: 14,
                 fontFamily: '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
-                theme: {background: '#18181b', foreground: '#f7f7f7'},
+                theme: {background: '#09090b', foreground: '#f7f7f7'},
                 allowTransparency: true,
                 convertEol: true,
                 windowsMode: false,
@@ -209,7 +220,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 if (terminal) scheduleNotify(terminal.cols, terminal.rows);
                 hardRefresh();
                 setVisible(true);
-                terminal.focus();
             }, 100);
 
             return () => {
@@ -229,7 +239,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             scrollback: 10000,
             fontSize: 14,
             fontFamily: '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
-            theme: {background: '#18181b', foreground: '#f7f7f7'},
+            theme: {background: '#09090b', foreground: '#f7f7f7'},
             allowTransparency: true,
             convertEol: true,
             windowsMode: false,
@@ -274,7 +284,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     if (terminal) scheduleNotify(terminal.cols, terminal.rows);
                     hardRefresh();
                     setVisible(true);
-                    terminal.focus();
                 }, 0);
 
                 const cols = terminal.cols;
@@ -313,7 +322,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 fitAddonRef.current?.fit();
                 if (terminal) scheduleNotify(terminal.cols, terminal.rows);
                 hardRefresh();
-                terminal.focus();
             }, 0);
         }
     }, [isVisible, terminal]);
@@ -324,9 +332,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             fitAddonRef.current?.fit();
             if (terminal) scheduleNotify(terminal.cols, terminal.rows);
             hardRefresh();
-            if (terminal && isVisible) {
-                terminal.focus();
-            }
         }, 0);
     }, [isVisible, terminal]);
 
@@ -335,9 +340,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             ref={xtermRef}
             className="h-full w-full m-1"
             style={{opacity: visible && isVisible ? 1 : 0, overflow: 'hidden'}}
-            onClick={() => {
-                terminal.focus();
-            }}
         />
     );
 });

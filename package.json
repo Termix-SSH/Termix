@@ -85,6 +85,7 @@
     "react-i18next": "^15.7.3",
     "react-resizable-panels": "^3.0.3",
     "react-responsive": "^10.0.1",
+    "react-simple-keyboard": "^3.8.120",
     "react-xtermjs": "^1.0.10",
     "sonner": "^2.0.7",
     "speakeasy": "^2.0.0",
