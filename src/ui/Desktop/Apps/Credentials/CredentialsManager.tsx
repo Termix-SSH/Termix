@@ -495,7 +495,6 @@ const CredentialsManager: React.FC = () => {
                                         <Key className="h-16 w-16 mx-auto text-zinc-300 dark:text-zinc-600" />
                                         <div className="space-y-2">
                                             <p className="text-lg font-medium">{t('credentials.noCredentialsYet')}</p>
-                                            <p className="text-sm text-zinc-400">开始创建你的第一个SSH凭据</p>
                                         </div>
                                         <Button size="lg" onClick={handleCreateCredential}>
                                             <Plus className="h-5 w-5 mr-2" />

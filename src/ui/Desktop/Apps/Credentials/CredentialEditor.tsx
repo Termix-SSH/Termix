@@ -211,15 +211,15 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
 
     return (
         <Sheet open={true} onOpenChange={onCancel}>
-            <SheetContent className="w-[800px] max-w-[90vw] overflow-y-auto">
-                <SheetHeader>
-                    <SheetTitle className="flex items-center space-x-2">
-                        <Key className="h-5 w-5 text-blue-600" />
-                        <span>
+            <SheetContent className="w-[600px] max-w-[50vw] overflow-y-auto">
+                <SheetHeader className="space-y-4 pb-8">
+                    <SheetTitle className="flex items-center space-x-3">
+                        <Key className="h-6 w-6 text-zinc-600 dark:text-zinc-400" />
+                        <span className="text-xl font-semibold">
                             {credential ? t('credentials.editCredential') : t('credentials.createCredential')}
                         </span>
                     </SheetTitle>
-                    <SheetDescription>
+                    <SheetDescription className="text-base text-zinc-600 dark:text-zinc-400">
                         {credential 
                             ? t('credentials.editCredentialDescription') 
                             : t('credentials.createCredentialDescription')
@@ -227,26 +227,26 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                     </SheetDescription>
                 </SheetHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-10 px-2">
                     <Tabs defaultValue="basic" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 bg-[#18181b] border-2 border-[#303032]">
+                        <TabsList className="grid w-full grid-cols-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                             <TabsTrigger value="basic">{t('credentials.basicInfo')}</TabsTrigger>
                             <TabsTrigger value="auth">{t('credentials.authentication')}</TabsTrigger>
                             <TabsTrigger value="organization">{t('credentials.organization')}</TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="basic" className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">{t('credentials.basicInformation')}</CardTitle>
-                                    <CardDescription>
+                        <TabsContent value="basic" className="space-y-8 mt-8">
+                            <Card className="border-zinc-200 dark:border-zinc-700">
+                                <CardHeader className="pb-8">
+                                    <CardTitle className="text-lg font-semibold">{t('credentials.basicInformation')}</CardTitle>
+                                    <CardDescription className="text-zinc-600 dark:text-zinc-400">
                                         {t('credentials.basicInformationDescription')}
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="name" className="flex items-center space-x-1">
-                                            <User className="h-4 w-4" />
+                                <CardContent className="space-y-8">
+                                    <div className="space-y-4">
+                                        <Label htmlFor="name" className="flex items-center space-x-2 text-sm font-medium">
+                                            <User className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
                                             <span>{t('credentials.credentialName')}</span>
                                             <span className="text-red-500">*</span>
                                         </Label>
@@ -265,7 +265,7 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                         )}
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-4">
                                         <Label htmlFor="description">{t('credentials.credentialDescription')}</Label>
                                         <Textarea
                                             id="description"
@@ -276,7 +276,7 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                         />
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-4">
                                         <Label htmlFor="username" className="flex items-center space-x-1">
                                             <User className="h-4 w-4" />
                                             <span>{t('common.username')}</span>
@@ -300,56 +300,56 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                             </Card>
                         </TabsContent>
 
-                        <TabsContent value="auth" className="space-y-4">
+                        <TabsContent value="auth" className="space-y-6 mt-8">
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center space-x-2">
-                                        <Shield className="h-5 w-5 text-green-600" />
+                                        <Shield className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
                                         <span>{t('credentials.authenticationMethod')}</span>
                                     </CardTitle>
                                     <CardDescription>
                                         {t('credentials.authenticationMethodDescription')}
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-3">
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-4">
                                         <Label>{t('credentials.authenticationType')}</Label>
-                                        <div className="flex space-x-4">
+                                        <div className="flex space-x-6">
                                             <div 
-                                                className={`flex-1 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                                                className={`flex-1 p-6 rounded-lg border-2 cursor-pointer transition-colors ${
                                                     formData.authType === 'password' 
-                                                        ? 'border-blue-500 bg-blue-900/20 dark:bg-blue-900/20' 
-                                                        : 'border-gray-600 hover:border-gray-500 dark:border-gray-600 dark:hover:border-gray-500'
+                                                        ? 'border-zinc-500 bg-zinc-900/20 dark:bg-zinc-900/20' 
+                                                        : 'border-zinc-600 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-500'
                                                 }`}
                                                 onClick={() => setFormData(prev => ({ ...prev, authType: 'password' }))}
                                             >
-                                                <div className="flex items-center space-x-3">
-                                                    <Lock className="h-5 w-5 text-orange-500" />
+                                                <div className="flex items-center space-x-4">
+                                                    <Lock className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
                                                     <div>
                                                         <div className="font-medium">{t('common.password')}</div>
-                                                        <div className="text-sm text-gray-500">{t('credentials.passwordAuthDescription')}</div>
+                                                        <div className="text-sm text-zinc-500 dark:text-zinc-400">{t('credentials.passwordAuthDescription')}</div>
                                                     </div>
                                                     {formData.authType === 'password' && (
-                                                        <Check className="h-5 w-5 text-blue-500" />
+                                                        <Check className="h-5 w-5 text-zinc-500" />
                                                     )}
                                                 </div>
                                             </div>
                                             <div 
-                                                className={`flex-1 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                                                className={`flex-1 p-6 rounded-lg border-2 cursor-pointer transition-colors ${
                                                     formData.authType === 'key' 
-                                                        ? 'border-green-500 bg-green-900/20 dark:bg-green-900/20' 
-                                                        : 'border-gray-600 hover:border-gray-500 dark:border-gray-600 dark:hover:border-gray-500'
+                                                        ? 'border-zinc-500 bg-zinc-900/20 dark:bg-zinc-900/20' 
+                                                        : 'border-zinc-600 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-500'
                                                 }`}
                                                 onClick={() => setFormData(prev => ({ ...prev, authType: 'key' }))}
                                             >
-                                                <div className="flex items-center space-x-3">
-                                                    <Key className="h-5 w-5 text-green-500" />
+                                                <div className="flex items-center space-x-4">
+                                                    <Key className="h-5 w-5 text-zinc-500 dark:text-zinc-400" />
                                                     <div>
                                                         <div className="font-medium">{t('credentials.sshKey')}</div>
-                                                        <div className="text-sm text-gray-500">{t('credentials.sshKeyAuthDescription')}</div>
+                                                        <div className="text-sm text-zinc-500 dark:text-zinc-400">{t('credentials.sshKeyAuthDescription')}</div>
                                                     </div>
                                                     {formData.authType === 'key' && (
-                                                        <Check className="h-5 w-5 text-green-500" />
+                                                        <Check className="h-5 w-5 text-zinc-500 dark:text-zinc-400" />
                                                     )}
                                                 </div>
                                             </div>
@@ -359,7 +359,7 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                     <Separator />
 
                                     {formData.authType === 'password' && (
-                                        <div className="space-y-2">
+                                        <div className="space-y-4">
                                             <Label htmlFor="password" className="flex items-center space-x-1">
                                                 <Lock className="h-4 w-4" />
                                                 <span>{t('common.password')}</span>
@@ -394,8 +394,8 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                     )}
 
                                     {formData.authType === 'key' && (
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
+                                        <div className="space-y-6">
+                                            <div className="space-y-4">
                                                 <Label className="flex items-center space-x-1">
                                                     <Key className="h-4 w-4" />
                                                     <span>{t('credentials.sshKeyType')}</span>
@@ -412,7 +412,7 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                                 </Select>
                                             </div>
 
-                                            <div className="space-y-2">
+                                            <div className="space-y-4">
                                                 <Label htmlFor="key" className="flex items-center space-x-1">
                                                     <Key className="h-4 w-4" />
                                                     <span>{t('credentials.privateKey')}</span>
@@ -432,7 +432,7 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                                         <span>{errors.key}</span>
                                                     </p>
                                                 )}
-                                                <div className="flex space-x-2">
+                                                <div className="flex space-x-3">
                                                     <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('key-file')?.click()}>
                                                         <Upload className="h-4 w-4 mr-1" />
                                                         {t('credentials.uploadKeyFile')}
@@ -451,7 +451,7 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                                 />
                                             </div>
 
-                                            <div className="space-y-2">
+                                            <div className="space-y-4">
                                                 <Label htmlFor="keyPassword">{t('credentials.keyPassphrase')}</Label>
                                                 <div className="relative">
                                                     <Input
@@ -472,7 +472,7 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                                         {showKeyPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                                     </Button>
                                                 </div>
-                                                <p className="text-xs text-gray-500">{t('credentials.keyPassphraseOptional')}</p>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('credentials.keyPassphraseOptional')}</p>
                                             </div>
                                         </div>
                                     )}
@@ -480,29 +480,29 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                             </Card>
                         </TabsContent>
 
-                        <TabsContent value="organization" className="space-y-4">
+                        <TabsContent value="organization" className="space-y-6 mt-8">
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center space-x-2">
-                                        <Folder className="h-5 w-5 text-amber-500" />
+                                        <Folder className="h-5 w-5 text-zinc-500 dark:text-zinc-400" />
                                         <span>{t('credentials.organization')}</span>
                                     </CardTitle>
                                     <CardDescription>
                                         {t('credentials.organizationDescription')}
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-4">
                                         <Label htmlFor="folder" className="flex items-center space-x-1">
                                             <Folder className="h-4 w-4" />
                                             <span>{t('common.folder')}</span>
                                         </Label>
-                                        <Select value={formData.folder} onValueChange={(value) => setFormData(prev => ({ ...prev, folder: value }))}>
+                                        <Select value={formData.folder || "__none__"} onValueChange={(value) => setFormData(prev => ({ ...prev, folder: value === "__none__" ? "" : value }))}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder={t('credentials.selectOrCreateFolder')} />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="">{t('credentials.noFolder')}</SelectItem>
+                                                <SelectItem value="__none__">{t('credentials.noFolder')}</SelectItem>
                                                 {existingFolders.map(folder => (
                                                     <SelectItem key={folder} value={folder}>{folder}</SelectItem>
                                                 ))}
@@ -515,12 +515,12 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                         />
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-4">
                                         <Label className="flex items-center space-x-1">
                                             <Tag className="h-4 w-4" />
                                             <span>{t('hosts.tags')}</span>
                                         </Label>
-                                        <div className="flex flex-wrap gap-2 mb-2">
+                                        <div className="flex flex-wrap gap-3 mb-4">
                                             {formData.tags.map((tag, index) => (
                                                 <Badge key={index} variant="secondary" className="pr-1">
                                                     {tag}
@@ -536,7 +536,7 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                                                 </Badge>
                                             ))}
                                         </div>
-                                        <div className="flex space-x-2">
+                                        <div className="flex space-x-3">
                                             <Input
                                                 placeholder={t('credentials.addTag')}
                                                 value={newTag}
@@ -558,17 +558,12 @@ const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave,
                         </TabsContent>
                     </Tabs>
 
-                    <SheetFooter className="flex justify-between">
-                        <div className="flex space-x-2">
-                            <Button type="button" variant="outline" onClick={testConnection}>
-                                {t('credentials.testConnection')}
-                            </Button>
-                        </div>
-                        <div className="flex space-x-2">
-                            <Button type="button" variant="outline" onClick={onCancel}>
+                    <SheetFooter className="flex justify-end items-center pt-8 border-t border-zinc-200 dark:border-zinc-700">
+                        <div className="flex space-x-4">
+                            <Button type="button" variant="outline" size="lg" onClick={onCancel} className="border-zinc-300 dark:border-zinc-600">
                                 {t('common.cancel')}
                             </Button>
-                            <Button type="submit" disabled={saving}>
+                            <Button type="submit" size="lg" disabled={saving}>
                                 {saving ? t('credentials.saving') : credential ? t('credentials.updateCredential') : t('credentials.createCredential')}
                             </Button>
                         </div>

@@ -274,7 +274,7 @@ router.get('/oidc-config', async (req, res) => {
     try {
         const row = db.$client.prepare("SELECT value FROM settings WHERE key = 'oidc_config'").get();
         if (!row) {
-            return res.status(404).json({error: 'OIDC not configured'});
+            return res.json(null);
         }
         res.json(JSON.parse((row as any).value));
     } catch (err) {

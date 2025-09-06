@@ -12,11 +12,12 @@ interface SSHHostData {
     folder?: string;
     tags?: string[];
     pin?: boolean;
-    authType: 'password' | 'key';
+    authType: 'password' | 'key' | 'credential';
     password?: string;
     key?: File | null;
     keyPassword?: string;
     keyType?: string;
+    credentialId?: number | null;
     enableTerminal?: boolean;
     enableTunnel?: boolean;
     enableFileManager?: boolean;
@@ -38,6 +39,7 @@ interface SSHHost {
     key?: string;
     keyPassword?: string;
     keyType?: string;
+    credentialId?: number;
     enableTerminal: boolean;
     enableTunnel: boolean;
     enableFileManager: boolean;
@@ -342,6 +344,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
             key: hostData.authType === 'key' ? hostData.key : null,
             keyPassword: hostData.authType === 'key' ? hostData.keyPassword : '',
             keyType: hostData.authType === 'key' ? hostData.keyType : '',
+            credentialId: hostData.authType === 'credential' ? hostData.credentialId : null,
             enableTerminal: hostData.enableTerminal !== false,
             enableTunnel: hostData.enableTunnel !== false,
             enableFileManager: hostData.enableFileManager !== false,
@@ -393,6 +396,7 @@ export async function updateSSHHost(hostId: number, hostData: SSHHostData): Prom
             key: hostData.authType === 'key' ? hostData.key : null,
             keyPassword: hostData.authType === 'key' ? hostData.keyPassword : '',
             keyType: hostData.authType === 'key' ? hostData.keyType : '',
+            credentialId: hostData.authType === 'credential' ? hostData.credentialId : null,
             enableTerminal: hostData.enableTerminal !== false,
             enableTunnel: hostData.enableTunnel !== false,
             enableFileManager: hostData.enableFileManager !== false,
@@ -817,8 +821,9 @@ export async function getOIDCConfig(): Promise<any> {
     try {
         const response = await authApi.get('/users/oidc-config');
         return response.data;
-    } catch (error) {
-        handleApiError(error, 'fetch OIDC config');
+    } catch (error: any) {
+        console.warn('Failed to fetch OIDC config:', error.response?.data?.error || error.message);
+        return null;
     }
 }
 

@@ -3,6 +3,7 @@ import {HostManagerHostViewer} from "@/ui/Desktop/Apps/Host Manager/HostManagerH
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {HostManagerHostEditor} from "@/ui/Desktop/Apps/Host Manager/HostManagerHostEditor.tsx";
+import CredentialsManager from "@/ui/Desktop/Apps/Credentials/CredentialsManager.tsx";
 import {useSidebar} from "@/components/ui/sidebar.tsx";
 import {useTranslation} from "react-i18next";
 
@@ -81,6 +82,7 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
                             <TabsTrigger value="add_host">
                                 {editingHost ? t('hosts.editHost') : t('hosts.addHost')}
                             </TabsTrigger>
+                            <TabsTrigger value="credentials">{t('credentials.credentialsManager')}</TabsTrigger>
                         </TabsList>
                         <TabsContent value="host_viewer" className="flex-1 flex flex-col h-full min-h-0">
                             <Separator className="p-0.25 -mt-0.5 mb-1"/>
@@ -93,6 +95,12 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
                                     editingHost={editingHost}
                                     onFormSubmit={handleFormSubmit}
                                 />
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="credentials" className="flex-1 flex flex-col h-full min-h-0">
+                            <Separator className="p-0.25 -mt-0.5 mb-1"/>
+                            <div className="flex flex-col h-full min-h-0 overflow-auto">
+                                <CredentialsManager />
                             </div>
                         </TabsContent>
                     </Tabs>

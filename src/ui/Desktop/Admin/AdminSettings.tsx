@@ -79,7 +79,9 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
             .then(res => {
                 if (res) setOidcConfig(res);
             })
-            .catch(() => {
+            .catch(error => {
+                // Silently ignore OIDC config fetch errors - this is expected when OIDC is not configured
+                console.debug('OIDC config not available:', error.message);
             });
         fetchUsers();
     }, []);
@@ -370,7 +372,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                         <TableCell className="px-4">
                                                             <Button variant="ghost" size="sm"
                                                                     onClick={() => handleDeleteUser(user.username)}
-                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-900/20 dark:hover:bg-red-900/30"
                                                                     disabled={user.is_admin}>
                                                                 <Trash2 className="h-4 w-4"/>
                                                             </Button>
@@ -434,7 +436,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                                         <TableCell className="px-4">
                                                             <Button variant="ghost" size="sm"
                                                                     onClick={() => handleRemoveAdminStatus(admin.username)}
-                                                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                                                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-900/20 dark:hover:bg-orange-900/30">
                                                                 <Shield className="h-4 w-4"/>
                                                                 Remove Admin
                                                             </Button>
