@@ -6,6 +6,7 @@ import {LeftSidebar} from "@/ui/Mobile/Navigation/LeftSidebar.tsx";
 import {TabProvider, useTabs} from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 import {getUserInfo} from "@/ui/main-axios.ts";
 import {HomepageAuth} from "@/ui/Mobile/Homepage/HomepageAuth.tsx";
+import {useTranslation} from "react-i18next";
 
 function getCookie(name: string) {
     return document.cookie.split('; ').reduce((r, v) => {
@@ -15,6 +16,7 @@ function getCookie(name: string) {
 }
 
 const AppContent: FC = () => {
+    const {t} = useTranslation();
     const {tabs, currentTab, getTab} = useTabs();
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
     const [ready, setReady] = React.useState(true);
@@ -103,7 +105,7 @@ const AppContent: FC = () => {
     if (authLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-[#09090b]">
-                <p className="text-white">Loading...</p>
+                <p className="text-white">{t('common.loading')}</p>
             </div>
         )
     }
@@ -150,10 +152,10 @@ const AppContent: FC = () => {
                 {tabs.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-white gap-3 px-4 text-center">
                         <h1 className="text-lg font-semibold">
-                            Select a host to start your terminal session
+                            {t('mobile.selectHostToStart')}
                         </h1>
                         <p className="text-sm text-gray-300 max-w-xs">
-                            Mobile support is currently limited. A dedicated mobile app is coming soon to enhance your experience.
+                            {t('mobile.limitedSupportMessage')}
                         </p>
                     </div>
                 )}
