@@ -116,7 +116,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
         },
         {
             class: "hg-space-small",
-            buttons: "{hide} {less} {more}",
+            buttons: "{hide} {unhide} {less} {more}",
         }
     ];
 
@@ -149,7 +149,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
                         "{esc} {tab} {ctrl} {alt} {end} {home} {pgUp} {pgDn}",
                         "1 2 3 4 5 6 7 8 9 0",
                         "! @ # $ % ^ & * ( ) _ +",
-                        "[ ] { } | \ \ ; : ' \" , . / < >",
+                        "[ ] { } | \\ ; : ' \" , . / < >",
                         "F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12",
                         "{arrowLeft} {arrowRight} {arrowUp} {arrowDown} {paste} {backspace}",
                         "{hide} {less} {space} {enter}",

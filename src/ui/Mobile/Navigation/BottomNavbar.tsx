@@ -1,6 +1,6 @@
-import {Button} from "@/components/ui/button";
+import {Button} from "@/components/ui/button.tsx";
 import {Menu, X, Terminal as TerminalIcon} from "lucide-react";
-import {useTabs} from "@/ui/Mobile/Apps/Navigation/Tabs/TabContext.tsx";
+import {useTabs} from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 import {cn} from "@/lib/utils.ts";
 
 interface MenuProps {
@@ -11,8 +11,8 @@ export function BottomNavbar({onSidebarOpenClick}: MenuProps) {
     const {tabs, currentTab, setCurrentTab, removeTab} = useTabs();
 
     return (
-        <div className="w-full h-[60px] bg-[#18181B] items-center p-2">
-            <div className="flex gap-2 mb-1">
+        <div className="w-full h-[50px] bg-[#18181B] items-center p-1">
+            <div className="flex gap-2 !mb-0.5">
                 <Button className="w-[40px] h-[40px] flex-shrink-0" variant="outline" onClick={onSidebarOpenClick}>
                     <Menu/>
                 </Button>

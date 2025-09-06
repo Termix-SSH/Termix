@@ -10,7 +10,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {ChevronUp, Menu, User2} from "lucide-react";
 import React, {useState, useEffect, useMemo, useCallback} from "react";
 import {Separator} from "@/components/ui/separator.tsx";
-import {FolderCard} from "@/ui/Mobile/Apps/Navigation/Hosts/FolderCard.tsx";
+import {FolderCard} from "@/ui/Mobile/Navigation/Hosts/FolderCard.tsx";
 import {getSSHHosts} from "@/ui/main-axios.ts";
 import {useTranslation} from "react-i18next";
 import {Input} from "@/components/ui/input.tsx";

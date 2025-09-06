@@ -3,7 +3,7 @@ import {CardTitle} from "@/components/ui/card.tsx";
 import {ChevronDown, Folder} from "lucide-react";
 import {Button} from "@/components/ui/button.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
-import {Host} from "@/ui/Mobile/Apps/Navigation/Hosts/Host.tsx";
+import {Host} from "@/ui/Mobile/Navigation/Hosts/Host.tsx";
 
 interface SSHHost {
     id: number;

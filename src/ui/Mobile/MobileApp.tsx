@@ -1,9 +1,9 @@
 import React, {useRef, FC, useState, useEffect} from "react";
 import {Terminal} from "@/ui/Mobile/Apps/Terminal/Terminal.tsx";
 import {TerminalKeyboard} from "@/ui/Mobile/Apps/Terminal/TerminalKeyboard.tsx";
-import {BottomNavbar} from "@/ui/Mobile/Apps/Navigation/BottomNavbar.tsx";
-import {LeftSidebar} from "@/ui/Mobile/Apps/Navigation/LeftSidebar.tsx";
-import {TabProvider, useTabs} from "@/ui/Mobile/Apps/Navigation/Tabs/TabContext.tsx";
+import {BottomNavbar} from "@/ui/Mobile/Navigation/BottomNavbar.tsx";
+import {LeftSidebar} from "@/ui/Mobile/Navigation/LeftSidebar.tsx";
+import {TabProvider, useTabs} from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 import {getUserInfo} from "@/ui/main-axios.ts";
 import {HomepageAuth} from "@/ui/Mobile/Homepage/HomepageAuth.tsx";
 
@@ -57,6 +57,14 @@ const AppContent: FC = () => {
 
         return () => window.removeEventListener('storage', handleStorageChange)
     }, [])
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fitCurrentTerminal()
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     const handleAuthSuccess = (authData: { isAdmin: boolean; username: string | null; userId: string | null }) => {
         setIsAuthenticated(true)
@@ -145,8 +153,11 @@ const AppContent: FC = () => {
                     </div>
                 )}
             </div>
-            {currentTab && <TerminalKeyboard onSendInput={handleKeyboardInput}/>}
-
+            {currentTab &&
+                <div className="mb-1">
+                    <TerminalKeyboard onSendInput={handleKeyboardInput}/>
+                </div>
+            }
             <BottomNavbar
                 onSidebarOpenClick={() => setIsSidebarOpen(true)}
             />
