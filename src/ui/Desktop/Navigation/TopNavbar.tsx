@@ -59,13 +59,9 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
         setSelectedTabIds([]);
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    };
-
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (selectedTabIds.length === 0) return;
 
-        const value = e.currentTarget.value;
         let commandToSend = '';
 
         if (e.ctrlKey || e.metaKey) {
