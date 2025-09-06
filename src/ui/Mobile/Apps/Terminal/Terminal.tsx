@@ -178,10 +178,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         terminal.loadAddon(webLinksAddon);
         terminal.open(xtermRef.current);
 
-        const textarea = xtermRef.current.querySelector('.xterm-helper-textarea');
+        const textarea = xtermRef.current.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement | null;
         if (textarea) {
-            textarea.setAttribute('readonly', 'true');
+            textarea.readOnly = true;
+            textarea.blur();
         }
+
+        terminal.focus = () => {};
 
         const resizeObserver = new ResizeObserver(() => {
             if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
