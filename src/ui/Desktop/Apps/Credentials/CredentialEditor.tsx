@@ -1,34 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { 
-    X, 
-    Plus, 
-    Eye, 
-    EyeOff, 
-    Upload, 
-    Download, 
-    Key, 
-    Shield, 
-    AlertTriangle,
-    Check,
-    Tag,
-    Folder,
-    User,
-    Lock
-} from 'lucide-react';
-import { createCredential, updateCredential, getCredentialFolders } from '@/ui/main-axios';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Controller, useForm } from "react-hook-form"
+import { z } from "zod"
+
+import { Button } from "@/components/ui/button"
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import React, { useEffect, useRef, useState } from "react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { toast } from "sonner"
+import { createCredential, updateCredential, getCredentials } from '@/ui/main-axios'
+import { useTranslation } from "react-i18next"
 
 interface Credential {
     id: number;
@@ -45,533 +37,526 @@ interface Credential {
     updatedAt: string;
 }
 
-interface CredentialInput {
-    name: string;
-    description?: string;
-    folder?: string;
-    tags: string[];
-    authType: 'password' | 'key';
-    username: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-}
-
 interface CredentialEditorProps {
-    credential?: Credential | null;
-    onSave: () => void;
-    onCancel: () => void;
+    editingCredential?: Credential | null;
+    onFormSubmit?: () => void;
 }
 
-const CredentialEditor: React.FC<CredentialEditorProps> = ({ credential, onSave, onCancel }) => {
+export function CredentialEditor({ editingCredential, onFormSubmit }: CredentialEditorProps) {
     const { t } = useTranslation();
-    const [formData, setFormData] = useState<CredentialInput>({
-        name: '',
-        description: '',
-        folder: '',
-        tags: [],
-        authType: 'password',
-        username: '',
-        password: '',
-        key: '',
-        keyPassword: '',
-        keyType: 'rsa'
-    });
-    const [saving, setSaving] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showKeyPassword, setShowKeyPassword] = useState(false);
-    const [newTag, setNewTag] = useState('');
-    const [existingFolders, setExistingFolders] = useState<string[]>([]);
-    const [keyFile, setKeyFile] = useState<File | null>(null);
-    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [credentials, setCredentials] = useState<Credential[]>([]);
+    const [folders, setFolders] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const [authTab, setAuthTab] = useState<'password' | 'key'>('password');
 
     useEffect(() => {
-        if (credential) {
-            setFormData({
-                name: credential.name,
-                description: credential.description || '',
-                folder: credential.folder || '',
-                tags: [...credential.tags],
-                authType: credential.authType,
-                username: credential.username,
-                password: '',
-                key: '',
-                keyPassword: '',
-                keyType: credential.keyType || 'rsa'
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const credentialsData = await getCredentials();
+                setCredentials(credentialsData);
+
+                const uniqueFolders = [...new Set(
+                    credentialsData
+                        .filter(credential => credential.folder && credential.folder.trim() !== '')
+                        .map(credential => credential.folder)
+                )].sort();
+
+                setFolders(uniqueFolders);
+            } catch (error) {
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    const formSchema = z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        folder: z.string().optional(),
+        tags: z.array(z.string().min(1)).default([]),
+        authType: z.enum(['password', 'key']),
+        username: z.string().min(1),
+        password: z.string().optional(),
+        key: z.instanceof(File).optional().nullable(),
+        keyPassword: z.string().optional(),
+        keyType: z.enum([
+            'rsa',
+            'ecdsa',
+            'ed25519'
+        ]).optional(),
+    }).superRefine((data, ctx) => {
+        if (data.authType === 'password') {
+            if (!data.password || data.password.trim() === '') {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: t('credentials.passwordRequired'),
+                    path: ['password']
+                });
+            }
+        } else if (data.authType === 'key') {
+            if (!data.key && !editingCredential) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: t('credentials.sshKeyRequired'),
+                    path: ['key']
+                });
+            }
+        }
+    });
+
+    type FormData = z.infer<typeof formSchema>;
+
+    const form = useForm<FormData>({
+        resolver: zodResolver(formSchema) as any,
+        defaultValues: {
+            name: editingCredential?.name || "",
+            description: editingCredential?.description || "",
+            folder: editingCredential?.folder || "",
+            tags: editingCredential?.tags || [],
+            authType: editingCredential?.authType || "password",
+            username: editingCredential?.username || "",
+            password: "",
+            key: null,
+            keyPassword: "",
+            keyType: "rsa",
+        }
+    });
+
+    useEffect(() => {
+        if (editingCredential) {
+            const defaultAuthType = editingCredential.key ? 'key' : 'password';
+
+            setAuthTab(defaultAuthType);
+
+            form.reset({
+                name: editingCredential.name || "",
+                description: editingCredential.description || "",
+                folder: editingCredential.folder || "",
+                tags: editingCredential.tags || [],
+                authType: defaultAuthType as 'password' | 'key',
+                username: editingCredential.username || "",
+                password: "",
+                key: null,
+                keyPassword: "",
+                keyType: (editingCredential.keyType as any) || "rsa",
+            });
+        } else {
+            setAuthTab('password');
+
+            form.reset({
+                name: "",
+                description: "",
+                folder: "",
+                tags: [],
+                authType: "password",
+                username: "",
+                password: "",
+                key: null,
+                keyPassword: "",
+                keyType: "rsa",
             });
         }
-        fetchExistingFolders();
-    }, [credential]);
+    }, [editingCredential, form]);
 
-    const fetchExistingFolders = async () => {
+    const onSubmit = async (data: any) => {
         try {
-            const response = await getCredentialFolders();
-            setExistingFolders(response);
-        } catch (error) {
-            console.error('Failed to fetch folders:', error);
-        }
-    };
+            const formData = data as FormData;
 
-    const validateForm = (): boolean => {
-        const newErrors: Record<string, string> = {};
-
-        if (!formData.name.trim()) {
-            newErrors.name = t('credentials.nameIsRequired');
-        }
-
-        if (!formData.username.trim()) {
-            newErrors.username = t('credentials.usernameIsRequired');
-        }
-
-        if (formData.authType === 'password' && !formData.password && !credential) {
-            newErrors.password = t('credentials.passwordIsRequired');
-        }
-
-        if (formData.authType === 'key' && !formData.key && !credential) {
-            newErrors.key = t('credentials.sshKeyIsRequired');
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (!validateForm()) {
-            return;
-        }
-
-        setSaving(true);
-        try {
-            const payload = { ...formData };
-            
-            // Don't send empty passwords/keys when editing unless they were changed
-            if (credential) {
-                if (!payload.password) delete payload.password;
-                if (!payload.key) delete payload.key;
-                if (!payload.keyPassword) delete payload.keyPassword;
+            if (!formData.name || formData.name.trim() === '') {
+                formData.name = formData.username;
             }
 
-            if (credential && credential.id) {
-                await updateCredential(credential.id, payload);
-                toast.success(t('credentials.credentialUpdatedSuccessfully'));
+            if (editingCredential) {
+                await updateCredential(editingCredential.id, formData);
+                toast.success(t('credentials.credentialUpdatedSuccessfully', { name: formData.name }));
             } else {
-                await createCredential(payload);
-                toast.success(t('credentials.credentialCreatedSuccessfully'));
+                await createCredential(formData);
+                toast.success(t('credentials.credentialAddedSuccessfully', { name: formData.name }));
             }
 
-            onSave();
-        } catch (error: any) {
-            console.error('Failed to save credential:', error);
-            toast.error(error.response?.data?.error || t('credentials.failedToSaveCredential'));
-        } finally {
-            setSaving(false);
+            if (onFormSubmit) {
+                onFormSubmit();
+            }
+
+            window.dispatchEvent(new CustomEvent('credentials:changed'));
+        } catch (error) {
+            toast.error(t('credentials.failedToSaveCredential'));
         }
     };
 
-    const handleAddTag = () => {
-        if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-            setFormData(prev => ({
-                ...prev,
-                tags: [...prev.tags, newTag.trim()]
-            }));
-            setNewTag('');
+    const [tagInput, setTagInput] = useState("");
+
+    const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
+    const folderInputRef = useRef<HTMLInputElement>(null);
+    const folderDropdownRef = useRef<HTMLDivElement>(null);
+
+    const folderValue = form.watch('folder');
+    const filteredFolders = React.useMemo(() => {
+        if (!folderValue) return folders;
+        return folders.filter(f => f.toLowerCase().includes(folderValue.toLowerCase()));
+    }, [folderValue, folders]);
+
+    const handleFolderClick = (folder: string) => {
+        form.setValue('folder', folder);
+        setFolderDropdownOpen(false);
+    };
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (
+                folderDropdownRef.current &&
+                !folderDropdownRef.current.contains(event.target as Node) &&
+                folderInputRef.current &&
+                !folderInputRef.current.contains(event.target as Node)
+            ) {
+                setFolderDropdownOpen(false);
+            }
         }
-    };
 
-    const handleRemoveTag = (tagToRemove: string) => {
-        setFormData(prev => ({
-            ...prev,
-            tags: prev.tags.filter(tag => tag !== tagToRemove)
-        }));
-    };
-
-    const handleKeyFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setKeyFile(file);
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const content = event.target?.result as string;
-                setFormData(prev => ({ ...prev, key: content }));
-            };
-            reader.readAsText(file);
+        if (folderDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
         }
-    };
 
-    const generateSSHKeyPair = () => {
-        toast.info(t('credentials.sshKeyGenerationNotImplemented'));
-    };
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [folderDropdownOpen]);
 
-    const testConnection = () => {
-        toast.info(t('credentials.connectionTestingNotImplemented'));
-    };
+    const keyTypeOptions = [
+        { value: 'rsa', label: t('credentials.keyTypeRSA') },
+        { value: 'ecdsa', label: t('credentials.keyTypeECDSA') },
+        { value: 'ed25519', label: t('credentials.keyTypeEd25519') },
+    ];
+
+    const [keyTypeDropdownOpen, setKeyTypeDropdownOpen] = useState(false);
+    const keyTypeButtonRef = useRef<HTMLButtonElement>(null);
+    const keyTypeDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function onClickOutside(event: MouseEvent) {
+            if (
+                keyTypeDropdownOpen &&
+                keyTypeDropdownRef.current &&
+                !keyTypeDropdownRef.current.contains(event.target as Node) &&
+                keyTypeButtonRef.current &&
+                !keyTypeButtonRef.current.contains(event.target as Node)
+            ) {
+                setKeyTypeDropdownOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", onClickOutside);
+        return () => document.removeEventListener("mousedown", onClickOutside);
+    }, [keyTypeDropdownOpen]);
 
     return (
-        <Sheet open={true} onOpenChange={onCancel}>
-            <SheetContent className="w-[600px] max-w-[50vw] overflow-y-auto">
-                <SheetHeader className="space-y-4 pb-8">
-                    <SheetTitle className="flex items-center space-x-3">
-                        <Key className="h-6 w-6 text-zinc-600 dark:text-zinc-400" />
-                        <span className="text-xl font-semibold">
-                            {credential ? t('credentials.editCredential') : t('credentials.createCredential')}
-                        </span>
-                    </SheetTitle>
-                    <SheetDescription className="text-base text-zinc-600 dark:text-zinc-400">
-                        {credential 
-                            ? t('credentials.editCredentialDescription') 
-                            : t('credentials.createCredentialDescription')
-                        }
-                    </SheetDescription>
-                </SheetHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-10 px-2">
-                    <Tabs defaultValue="basic" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                            <TabsTrigger value="basic">{t('credentials.basicInfo')}</TabsTrigger>
-                            <TabsTrigger value="auth">{t('credentials.authentication')}</TabsTrigger>
-                            <TabsTrigger value="organization">{t('credentials.organization')}</TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="basic" className="space-y-8 mt-8">
-                            <Card className="border-zinc-200 dark:border-zinc-700">
-                                <CardHeader className="pb-8">
-                                    <CardTitle className="text-lg font-semibold">{t('credentials.basicInformation')}</CardTitle>
-                                    <CardDescription className="text-zinc-600 dark:text-zinc-400">
-                                        {t('credentials.basicInformationDescription')}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-8">
-                                    <div className="space-y-4">
-                                        <Label htmlFor="name" className="flex items-center space-x-2 text-sm font-medium">
-                                            <User className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
-                                            <span>{t('credentials.credentialName')}</span>
-                                            <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                            id="name"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                            placeholder={t('credentials.enterCredentialName')}
-                                            className={errors.name ? 'border-red-500' : ''}
-                                        />
-                                        {errors.name && (
-                                            <p className="text-sm text-red-500 flex items-center space-x-1">
-                                                <AlertTriangle className="h-3 w-3" />
-                                                <span>{errors.name}</span>
-                                            </p>
+        <div className="flex-1 flex flex-col h-full min-h-0 w-full">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 h-full">
+                    <ScrollArea className="flex-1 min-h-0 w-full my-1 pb-2">
+                        <Tabs defaultValue="general" className="w-full">
+                            <TabsList>
+                                <TabsTrigger value="general">{t('credentials.general')}</TabsTrigger>
+                                <TabsTrigger value="authentication">{t('credentials.authentication')}</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="general" className="pt-2">
+                                <FormLabel className="mb-3 font-bold">{t('credentials.basicInformation')}</FormLabel>
+                                <div className="grid grid-cols-12 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-6">
+                                                <FormLabel>{t('credentials.credentialName')}</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder={t('placeholders.credentialName')} {...field} />
+                                                </FormControl>
+                                            </FormItem>
                                         )}
-                                    </div>
+                                    />
 
-                                    <div className="space-y-4">
-                                        <Label htmlFor="description">{t('credentials.credentialDescription')}</Label>
-                                        <Textarea
-                                            id="description"
-                                            value={formData.description}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                                            placeholder={t('credentials.enterCredentialDescription')}
-                                            rows={3}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <Label htmlFor="username" className="flex items-center space-x-1">
-                                            <User className="h-4 w-4" />
-                                            <span>{t('common.username')}</span>
-                                            <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                            id="username"
-                                            value={formData.username}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                                            placeholder={t('credentials.enterUsername')}
-                                            className={errors.username ? 'border-red-500' : ''}
-                                        />
-                                        {errors.username && (
-                                            <p className="text-sm text-red-500 flex items-center space-x-1">
-                                                <AlertTriangle className="h-3 w-3" />
-                                                <span>{errors.username}</span>
-                                            </p>
+                                    <FormField
+                                        control={form.control}
+                                        name="username"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-6">
+                                                <FormLabel>{t('credentials.username')}</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder={t('placeholders.username')} {...field} />
+                                                </FormControl>
+                                            </FormItem>
                                         )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
+                                    />
+                                </div>
+                                <FormLabel className="mb-3 mt-3 font-bold">{t('credentials.organization')}</FormLabel>
+                                <div className="grid grid-cols-26 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-10">
+                                                <FormLabel>{t('credentials.description')}</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder={t('placeholders.description')} {...field} />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
 
-                        <TabsContent value="auth" className="space-y-6 mt-8">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg flex items-center space-x-2">
-                                        <Shield className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
-                                        <span>{t('credentials.authenticationMethod')}</span>
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {t('credentials.authenticationMethodDescription')}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="space-y-4">
-                                        <Label>{t('credentials.authenticationType')}</Label>
-                                        <div className="flex space-x-6">
-                                            <div 
-                                                className={`flex-1 p-6 rounded-lg border-2 cursor-pointer transition-colors ${
-                                                    formData.authType === 'password' 
-                                                        ? 'border-zinc-500 bg-zinc-900/20 dark:bg-zinc-900/20' 
-                                                        : 'border-zinc-600 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-500'
-                                                }`}
-                                                onClick={() => setFormData(prev => ({ ...prev, authType: 'password' }))}
-                                            >
-                                                <div className="flex items-center space-x-4">
-                                                    <Lock className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
-                                                    <div>
-                                                        <div className="font-medium">{t('common.password')}</div>
-                                                        <div className="text-sm text-zinc-500 dark:text-zinc-400">{t('credentials.passwordAuthDescription')}</div>
-                                                    </div>
-                                                    {formData.authType === 'password' && (
-                                                        <Check className="h-5 w-5 text-zinc-500" />
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div 
-                                                className={`flex-1 p-6 rounded-lg border-2 cursor-pointer transition-colors ${
-                                                    formData.authType === 'key' 
-                                                        ? 'border-zinc-500 bg-zinc-900/20 dark:bg-zinc-900/20' 
-                                                        : 'border-zinc-600 hover:border-zinc-500 dark:border-zinc-600 dark:hover:border-zinc-500'
-                                                }`}
-                                                onClick={() => setFormData(prev => ({ ...prev, authType: 'key' }))}
-                                            >
-                                                <div className="flex items-center space-x-4">
-                                                    <Key className="h-5 w-5 text-zinc-500 dark:text-zinc-400" />
-                                                    <div>
-                                                        <div className="font-medium">{t('credentials.sshKey')}</div>
-                                                        <div className="text-sm text-zinc-500 dark:text-zinc-400">{t('credentials.sshKeyAuthDescription')}</div>
-                                                    </div>
-                                                    {formData.authType === 'key' && (
-                                                        <Check className="h-5 w-5 text-zinc-500 dark:text-zinc-400" />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <Separator />
-
-                                    {formData.authType === 'password' && (
-                                        <div className="space-y-4">
-                                            <Label htmlFor="password" className="flex items-center space-x-1">
-                                                <Lock className="h-4 w-4" />
-                                                <span>{t('common.password')}</span>
-                                                {!credential && <span className="text-red-500">*</span>}
-                                            </Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="password"
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    value={formData.password}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                                                    placeholder={credential ? t('credentials.leaveEmptyToKeepCurrent') : t('credentials.enterPassword')}
-                                                    className={`pr-10 ${errors.password ? 'border-red-500' : ''}`}
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                >
-                                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                            {errors.password && (
-                                                <p className="text-sm text-red-500 flex items-center space-x-1">
-                                                    <AlertTriangle className="h-3 w-3" />
-                                                    <span>{errors.password}</span>
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {formData.authType === 'key' && (
-                                        <div className="space-y-6">
-                                            <div className="space-y-4">
-                                                <Label className="flex items-center space-x-1">
-                                                    <Key className="h-4 w-4" />
-                                                    <span>{t('credentials.sshKeyType')}</span>
-                                                </Label>
-                                                <Select value={formData.keyType} onValueChange={(value) => setFormData(prev => ({ ...prev, keyType: value }))}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="rsa">RSA</SelectItem>
-                                                        <SelectItem value="ecdsa">ECDSA</SelectItem>
-                                                        <SelectItem value="ed25519">Ed25519</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <Label htmlFor="key" className="flex items-center space-x-1">
-                                                    <Key className="h-4 w-4" />
-                                                    <span>{t('credentials.privateKey')}</span>
-                                                    {!credential && <span className="text-red-500">*</span>}
-                                                </Label>
-                                                <Textarea
-                                                    id="key"
-                                                    value={formData.key}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, key: e.target.value }))}
-                                                    placeholder={credential ? t('credentials.leaveEmptyToKeepCurrent') : t('credentials.enterPrivateKey')}
-                                                    rows={8}
-                                                    className={`font-mono text-xs ${errors.key ? 'border-red-500' : ''}`}
-                                                />
-                                                {errors.key && (
-                                                    <p className="text-sm text-red-500 flex items-center space-x-1">
-                                                        <AlertTriangle className="h-3 w-3" />
-                                                        <span>{errors.key}</span>
-                                                    </p>
-                                                )}
-                                                <div className="flex space-x-3">
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('key-file')?.click()}>
-                                                        <Upload className="h-4 w-4 mr-1" />
-                                                        {t('credentials.uploadKeyFile')}
-                                                    </Button>
-                                                    <Button type="button" variant="outline" size="sm" onClick={generateSSHKeyPair}>
-                                                        <Key className="h-4 w-4 mr-1" />
-                                                        {t('credentials.generateKeyPair')}
-                                                    </Button>
-                                                </div>
-                                                <input
-                                                    id="key-file"
-                                                    type="file"
-                                                    accept=".pem,.key,.pub"
-                                                    className="hidden"
-                                                    onChange={handleKeyFileUpload}
-                                                />
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <Label htmlFor="keyPassword">{t('credentials.keyPassphrase')}</Label>
-                                                <div className="relative">
+                                    <FormField
+                                        control={form.control}
+                                        name="folder"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-10 relative">
+                                                <FormLabel>{t('credentials.folder')}</FormLabel>
+                                                <FormControl>
                                                     <Input
-                                                        id="keyPassword"
-                                                        type={showKeyPassword ? 'text' : 'password'}
-                                                        value={formData.keyPassword}
-                                                        onChange={(e) => setFormData(prev => ({ ...prev, keyPassword: e.target.value }))}
-                                                        placeholder={credential ? t('credentials.leaveEmptyToKeepCurrent') : t('credentials.enterKeyPassphrase')}
-                                                        className="pr-10"
+                                                        ref={folderInputRef}
+                                                        placeholder={t('placeholders.folder')}
+                                                        className="min-h-[40px]"
+                                                        autoComplete="off"
+                                                        value={field.value}
+                                                        onFocus={() => setFolderDropdownOpen(true)}
+                                                        onChange={e => {
+                                                            field.onChange(e);
+                                                            setFolderDropdownOpen(true);
+                                                        }}
                                                     />
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                                                        onClick={() => setShowKeyPassword(!showKeyPassword)}
+                                                </FormControl>
+                                                {folderDropdownOpen && filteredFolders.length > 0 && (
+                                                    <div
+                                                        ref={folderDropdownRef}
+                                                        className="absolute top-full left-0 z-50 mt-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                     >
-                                                        {showKeyPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                    </Button>
-                                                </div>
-                                                <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('credentials.keyPassphraseOptional')}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
+                                                        <div className="grid grid-cols-1 gap-1 p-0">
+                                                            {filteredFolders.map((folder) => (
+                                                                <Button
+                                                                    key={folder}
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                                                    onClick={() => handleFolderClick(folder)}
+                                                                >
+                                                                    {folder}
+                                                                </Button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </FormItem>
+                                        )}
+                                    />
 
-                        <TabsContent value="organization" className="space-y-6 mt-8">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg flex items-center space-x-2">
-                                        <Folder className="h-5 w-5 text-zinc-500 dark:text-zinc-400" />
-                                        <span>{t('credentials.organization')}</span>
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {t('credentials.organizationDescription')}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="space-y-4">
-                                        <Label htmlFor="folder" className="flex items-center space-x-1">
-                                            <Folder className="h-4 w-4" />
-                                            <span>{t('common.folder')}</span>
-                                        </Label>
-                                        <Select value={formData.folder || "__none__"} onValueChange={(value) => setFormData(prev => ({ ...prev, folder: value === "__none__" ? "" : value }))}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder={t('credentials.selectOrCreateFolder')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="__none__">{t('credentials.noFolder')}</SelectItem>
-                                                {existingFolders.map(folder => (
-                                                    <SelectItem key={folder} value={folder}>{folder}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <Input
-                                            placeholder={t('credentials.orCreateNewFolder')}
-                                            value={formData.folder}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, folder: e.target.value }))}
+                                    <FormField
+                                        control={form.control}
+                                        name="tags"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-10 overflow-visible">
+                                                <FormLabel>{t('credentials.tags')}</FormLabel>
+                                                <FormControl>
+                                                    <div
+                                                        className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-[#222225] focus-within:ring-2 ring-ring min-h-[40px]">
+                                                        {field.value.map((tag: string, idx: number) => (
+                                                            <span key={tag + idx}
+                                                                  className="flex items-center bg-gray-200 text-gray-800 rounded-full px-2 py-0.5 text-xs">
+                                                                {tag}
+                                                                <button
+                                                                    type="button"
+                                                                    className="ml-1 text-gray-500 hover:text-red-500 focus:outline-none"
+                                                                    onClick={() => {
+                                                                        const newTags = field.value.filter((_: string, i: number) => i !== idx);
+                                                                        field.onChange(newTags);
+                                                                    }}
+                                                                >
+                                                                    ×
+                                                                </button>
+                                                            </span>
+                                                        ))}
+                                                        <input
+                                                            type="text"
+                                                            className="flex-1 min-w-[60px] border-none outline-none bg-transparent p-0 h-6"
+                                                            value={tagInput}
+                                                            onChange={e => setTagInput(e.target.value)}
+                                                            onKeyDown={e => {
+                                                                if (e.key === " " && tagInput.trim() !== "") {
+                                                                    e.preventDefault();
+                                                                    if (!field.value.includes(tagInput.trim())) {
+                                                                        field.onChange([...field.value, tagInput.trim()]);
+                                                                    }
+                                                                    setTagInput("");
+                                                                } else if (e.key === "Backspace" && tagInput === "" && field.value.length > 0) {
+                                                                    field.onChange(field.value.slice(0, -1));
+                                                                }
+                                                            }}
+                                                            placeholder={t('credentials.addTagsSpaceToAdd')}
+                                                        />
+                                                    </div>
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="authentication">
+                                <FormLabel className="mb-3 font-bold">{t('credentials.authentication')}</FormLabel>
+                                <Tabs
+                                    value={authTab}
+                                    onValueChange={(value) => {
+                                        setAuthTab(value as 'password' | 'key');
+                                        form.setValue('authType', value as 'password' | 'key');
+                                        // Clear other auth fields when switching
+                                        if (value === 'password') {
+                                            form.setValue('key', null);
+                                            form.setValue('keyPassword', '');
+                                        } else if (value === 'key') {
+                                            form.setValue('password', '');
+                                        }
+                                    }}
+                                    className="flex-1 flex flex-col h-full min-h-0"
+                                >
+                                    <TabsList>
+                                        <TabsTrigger value="password">{t('credentials.password')}</TabsTrigger>
+                                        <TabsTrigger value="key">{t('credentials.key')}</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="password">
+                                        <FormField
+                                            control={form.control}
+                                            name="password"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('credentials.password')}</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="password" placeholder={t('placeholders.password')} {...field} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
                                         />
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <Label className="flex items-center space-x-1">
-                                            <Tag className="h-4 w-4" />
-                                            <span>{t('hosts.tags')}</span>
-                                        </Label>
-                                        <div className="flex flex-wrap gap-3 mb-4">
-                                            {formData.tags.map((tag, index) => (
-                                                <Badge key={index} variant="secondary" className="pr-1">
-                                                    {tag}
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-4 w-4 p-0 ml-1 hover:bg-red-900/20 dark:hover:bg-red-900/30"
-                                                        onClick={() => handleRemoveTag(tag)}
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </Button>
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                        <div className="flex space-x-3">
-                                            <Input
-                                                placeholder={t('credentials.addTag')}
-                                                value={newTag}
-                                                onChange={(e) => setNewTag(e.target.value)}
-                                                onKeyPress={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleAddTag();
-                                                    }
-                                                }}
+                                    </TabsContent>
+                                    <TabsContent value="key">
+                                        <div className="grid grid-cols-15 gap-4">
+                                            <Controller
+                                                control={form.control}
+                                                name="key"
+                                                render={({ field }) => (
+                                                    <FormItem className="col-span-4 overflow-hidden min-w-0">
+                                                        <FormLabel>{t('credentials.sshPrivateKey')}</FormLabel>
+                                                        <FormControl>
+                                                            <div className="relative min-w-0">
+                                                                <input
+                                                                    id="key-upload"
+                                                                    type="file"
+                                                                    accept=".pem,.key,.txt,.ppk"
+                                                                    onChange={(e) => {
+                                                                        const file = e.target.files?.[0];
+                                                                        field.onChange(file || null);
+                                                                    }}
+                                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                />
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    className="w-full min-w-0 overflow-hidden px-3 py-2 text-left"
+                                                                >
+                                                                    <span className="block w-full truncate"
+                                                                          title={field.value?.name || t('credentials.upload')}>
+                                                                        {field.value ? (editingCredential ? t('credentials.updateKey') : field.value.name) : t('credentials.upload')}
+                                                                    </span>
+                                                                </Button>
+                                                            </div>
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
                                             />
-                                            <Button type="button" variant="outline" size="sm" onClick={handleAddTag}>
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
+                                            <FormField
+                                                control={form.control}
+                                                name="keyPassword"
+                                                render={({ field }) => (
+                                                    <FormItem className="col-span-8">
+                                                        <FormLabel>{t('credentials.keyPassword')}</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder={t('placeholders.keyPassword')}
+                                                                type="password"
+                                                                {...field}
+                                                            />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="keyType"
+                                                render={({ field }) => (
+                                                    <FormItem className="relative col-span-3">
+                                                        <FormLabel>{t('credentials.keyType')}</FormLabel>
+                                                        <FormControl>
+                                                            <div className="relative">
+                                                                <Button
+                                                                    ref={keyTypeButtonRef}
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    className="w-full justify-start text-left rounded-md px-2 py-2 bg-[#18181b] border border-input text-foreground"
+                                                                    onClick={() => setKeyTypeDropdownOpen((open) => !open)}
+                                                                >
+                                                                    {keyTypeOptions.find((opt) => opt.value === field.value)?.label || t('credentials.keyTypeRSA')}
+                                                                </Button>
+                                                                {keyTypeDropdownOpen && (
+                                                                    <div
+                                                                        ref={keyTypeDropdownRef}
+                                                                        className="absolute bottom-full left-0 z-50 mb-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                                    >
+                                                                        <div className="grid grid-cols-1 gap-1 p-0">
+                                                                            {keyTypeOptions.map((opt) => (
+                                                                                <Button
+                                                                                    key={opt.value}
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-[#18181b] text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                                                                    onClick={() => {
+                                                                                        field.onChange(opt.value);
+                                                                                        setKeyTypeDropdownOpen(false);
+                                                                                    }}
+                                                                                >
+                                                                                    {opt.label}
+                                                                                </Button>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
-
-                    <SheetFooter className="flex justify-end items-center pt-8 border-t border-zinc-200 dark:border-zinc-700">
-                        <div className="flex space-x-4">
-                            <Button type="button" variant="outline" size="lg" onClick={onCancel} className="border-zinc-300 dark:border-zinc-600">
-                                {t('common.cancel')}
-                            </Button>
-                            <Button type="submit" size="lg" disabled={saving}>
-                                {saving ? t('credentials.saving') : credential ? t('credentials.updateCredential') : t('credentials.createCredential')}
-                            </Button>
-                        </div>
-                    </SheetFooter>
+                                    </TabsContent>
+                                </Tabs>
+                            </TabsContent>
+                        </Tabs>
+                    </ScrollArea>
+                    <footer className="shrink-0 w-full pb-0">
+                        <Separator className="p-0.25"/>
+                        <Button
+                            className=""
+                            type="submit"
+                            variant="outline"
+                            style={{
+                                transform: 'translateY(8px)'
+                            }}
+                        >
+                            {editingCredential ? t('credentials.updateCredential') : t('credentials.addCredential')}
+                        </Button>
+                    </footer>
                 </form>
-            </SheetContent>
-        </Sheet>
+            </Form>
+        </div>
     );
-};
-
-export default CredentialEditor;
+}

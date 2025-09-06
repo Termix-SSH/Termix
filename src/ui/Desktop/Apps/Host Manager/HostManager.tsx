@@ -3,7 +3,8 @@ import {HostManagerHostViewer} from "@/ui/Desktop/Apps/Host Manager/HostManagerH
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {HostManagerHostEditor} from "@/ui/Desktop/Apps/Host Manager/HostManagerHostEditor.tsx";
-import CredentialsManager from "@/ui/Desktop/Apps/Credentials/CredentialsManager.tsx";
+import {CredentialsManager} from "@/ui/Desktop/Apps/Credentials/CredentialsManager.tsx";
+import {CredentialEditor} from "@/ui/Desktop/Apps/Credentials/CredentialEditor.tsx";
 import {useSidebar} from "@/components/ui/sidebar.tsx";
 import {useTranslation} from "react-i18next";
 
@@ -39,6 +40,7 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
     const {t} = useTranslation();
     const [activeTab, setActiveTab] = useState("host_viewer");
     const [editingHost, setEditingHost] = useState<SSHHost | null>(null);
+    const [editingCredential, setEditingCredential] = useState<any | null>(null);
     const {state: sidebarState} = useSidebar();
 
     const handleEditHost = (host: SSHHost) => {
@@ -51,10 +53,23 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
         setActiveTab("host_viewer");
     };
 
+    const handleEditCredential = (credential: any) => {
+        setEditingCredential(credential);
+        setActiveTab("add_credential");
+    };
+
+    const handleCredentialFormSubmit = () => {
+        setEditingCredential(null);
+        setActiveTab("credentials");
+    };
+
     const handleTabChange = (value: string) => {
         setActiveTab(value);
         if (value === "host_viewer") {
             setEditingHost(null);
+        }
+        if (value === "credentials") {
+            setEditingCredential(null);
         }
     };
 
@@ -83,6 +98,9 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
                                 {editingHost ? t('hosts.editHost') : t('hosts.addHost')}
                             </TabsTrigger>
                             <TabsTrigger value="credentials">{t('credentials.credentialsManager')}</TabsTrigger>
+                            <TabsTrigger value="add_credential">
+                                {editingCredential ? t('credentials.editCredential') : t('credentials.addCredential')}
+                            </TabsTrigger>
                         </TabsList>
                         <TabsContent value="host_viewer" className="flex-1 flex flex-col h-full min-h-0">
                             <Separator className="p-0.25 -mt-0.5 mb-1"/>
@@ -100,7 +118,16 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
                         <TabsContent value="credentials" className="flex-1 flex flex-col h-full min-h-0">
                             <Separator className="p-0.25 -mt-0.5 mb-1"/>
                             <div className="flex flex-col h-full min-h-0 overflow-auto">
-                                <CredentialsManager />
+                                <CredentialsManager onEditCredential={handleEditCredential} />
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="add_credential" className="flex-1 flex flex-col h-full min-h-0">
+                            <Separator className="p-0.25 -mt-0.5 mb-1"/>
+                            <div className="flex flex-col h-full min-h-0">
+                                <CredentialEditor
+                                    editingCredential={editingCredential}
+                                    onFormSubmit={handleCredentialFormSubmit}
+                                />
                             </div>
                         </TabsContent>
                     </Tabs>

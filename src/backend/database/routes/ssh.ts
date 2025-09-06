@@ -144,6 +144,8 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         username,
         password,
         authMethod,
+        authType,
+        credentialId,
         key,
         keyPassword,
         keyType,
@@ -160,6 +162,7 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         return res.status(400).json({error: 'Invalid SSH data'});
     }
 
+    const effectiveAuthType = authType || authMethod;
     const sshDataObj: any = {
         userId: userId,
         name,
@@ -168,7 +171,8 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         ip,
         port,
         username,
-        authType: authMethod,
+        authType: effectiveAuthType,
+        credentialId: credentialId || null,
         pin: !!pin ? 1 : 0,
         enableTerminal: !!enableTerminal ? 1 : 0,
         enableTunnel: !!enableTunnel ? 1 : 0,
@@ -177,12 +181,12 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         defaultPath: defaultPath || null,
     };
 
-    if (authMethod === 'password') {
+    if (effectiveAuthType === 'password') {
         sshDataObj.password = password;
         sshDataObj.key = null;
         sshDataObj.keyPassword = null;
         sshDataObj.keyType = null;
-    } else if (authMethod === 'key') {
+    } else if (effectiveAuthType === 'key') {
         sshDataObj.key = key;
         sshDataObj.keyPassword = keyPassword;
         sshDataObj.keyType = keyType;
@@ -232,6 +236,8 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         username,
         password,
         authMethod,
+        authType,
+        credentialId,
         key,
         keyPassword,
         keyType,
@@ -249,6 +255,7 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         return res.status(400).json({error: 'Invalid SSH data'});
     }
 
+    const effectiveAuthType = authType || authMethod;
     const sshDataObj: any = {
         name,
         folder,
@@ -256,7 +263,8 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         ip,
         port,
         username,
-        authType: authMethod,
+        authType: effectiveAuthType,
+        credentialId: credentialId || null,
         pin: !!pin ? 1 : 0,
         enableTerminal: !!enableTerminal ? 1 : 0,
         enableTunnel: !!enableTunnel ? 1 : 0,
@@ -265,15 +273,23 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         defaultPath: defaultPath || null,
     };
 
-    if (authMethod === 'password') {
-        sshDataObj.password = password;
+    if (effectiveAuthType === 'password') {
+        if (password) {
+            sshDataObj.password = password;
+        }
         sshDataObj.key = null;
         sshDataObj.keyPassword = null;
         sshDataObj.keyType = null;
-    } else if (authMethod === 'key') {
-        sshDataObj.key = key;
-        sshDataObj.keyPassword = keyPassword;
-        sshDataObj.keyType = keyType;
+    } else if (effectiveAuthType === 'key') {
+        if (key) {
+            sshDataObj.key = key;
+        }
+        if (keyPassword !== undefined) {
+            sshDataObj.keyPassword = keyPassword;
+        }
+        if (keyType) {
+            sshDataObj.keyType = keyType;
+        }
         sshDataObj.password = null;
     }
 

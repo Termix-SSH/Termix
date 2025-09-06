@@ -34,7 +34,9 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
             try {
                 setLoading(true);
                 const data = await getCredentials();
-                setCredentials(data.credentials || []);
+                // Handle both possible response formats: direct array or nested object
+                const credentialsArray = Array.isArray(data) ? data : (data.credentials || data.data || []);
+                setCredentials(credentialsArray);
             } catch (error) {
                 console.error('Failed to fetch credentials:', error);
                 setCredentials([]);
@@ -102,7 +104,7 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                         ref={buttonRef}
                         type="button"
                         variant="outline"
-                        className="w-full justify-between text-left rounded-md px-3 py-2 bg-[#18181b] border border-input text-foreground"
+                        className="w-full justify-between text-left rounded-lg px-3 py-2 bg-muted/50 focus:bg-background focus:ring-1 focus:ring-ring border border-border text-foreground transition-all duration-200"
                         onClick={() => setDropdownOpen(!dropdownOpen)}
                     >
                         {loading ? (
@@ -127,9 +129,9 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                     {dropdownOpen && (
                         <div
                             ref={dropdownRef}
-                            className="absolute top-full left-0 z-50 mt-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-80 overflow-hidden"
+                            className="absolute top-full left-0 z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-80 overflow-hidden backdrop-blur-sm"
                         >
-                            <div className="p-2 border-b border-input">
+                            <div className="p-2 border-b border-border">
                                 <Input
                                     placeholder={t('credentials.searchCredentials')}
                                     value={searchQuery}
@@ -154,7 +156,7 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="w-full justify-start text-left rounded-md px-2 py-2 text-red-400 hover:bg-red-500/20"
+                                                className="w-full justify-start text-left rounded-lg px-2 py-2 text-destructive hover:bg-destructive/10 transition-colors duration-200"
                                                 onClick={handleClear}
                                             >
                                                 {t('common.clear')}
@@ -166,8 +168,8 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className={`w-full justify-start text-left rounded-md px-2 py-2 hover:bg-white/15 focus:bg-white/20 focus:outline-none ${
-                                                    credential.id === value ? 'bg-white/20' : ''
+                                                className={`w-full justify-start text-left rounded-lg px-2 py-2 hover:bg-muted focus:bg-muted focus:outline-none transition-colors duration-200 ${
+                                                    credential.id === value ? 'bg-muted' : ''
                                                 }`}
                                                 onClick={() => handleCredentialSelect(credential)}
                                             >
