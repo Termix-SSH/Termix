@@ -16,7 +16,7 @@ function getCookie(name: string) {
 
 const AppContent: FC = () => {
     const {tabs, currentTab, getTab} = useTabs();
-    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
     const [ready, setReady] = React.useState(true);
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
