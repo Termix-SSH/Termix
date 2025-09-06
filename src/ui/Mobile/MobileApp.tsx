@@ -134,7 +134,7 @@ const AppContent: FC = () => {
                 {tabs.map(tab => (
                     <div
                         key={tab.id}
-                        className="absolute inset-0"
+                        className="absolute inset-0 mb-2"
                         style={{
                             visibility: tab.id === currentTab ? 'visible' : 'hidden',
                             opacity: ready ? 1 : 0,
@@ -148,13 +148,18 @@ const AppContent: FC = () => {
                     </div>
                 ))}
                 {tabs.length === 0 && (
-                    <div className="flex items-center justify-center h-full text-white">
-                        Select a host to start a terminal session.
+                    <div className="flex flex-col items-center justify-center h-full text-white gap-3 px-4 text-center">
+                        <h1 className="text-lg font-semibold">
+                            Select a host to start your terminal session
+                        </h1>
+                        <p className="text-sm text-gray-300 max-w-xs">
+                            Mobile support is currently limited. A dedicated mobile app is coming soon to enhance your experience.
+                        </p>
                     </div>
                 )}
             </div>
             {currentTab &&
-                <div className="mb-1">
+                <div className="mb-1 z-10">
                     <TerminalKeyboard onSendInput={handleKeyboardInput}/>
                 </div>
             }

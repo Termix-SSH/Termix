@@ -98,49 +98,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         return () => window.removeEventListener('resize', handleWindowResize);
     }, []);
 
-    useEffect(() => {
-        if (!terminal) return;
-
-        const textarea = (terminal as any)._core?._textarea as HTMLTextAreaElement | undefined;
-        if (textarea) {
-            textarea.setAttribute("readonly", "true");
-            textarea.setAttribute("inputmode", "none");
-            textarea.style.caretColor = "transparent";
-
-            const preventKeyboard = () => {
-                textarea.blur();
-            };
-
-            textarea.addEventListener('focus', preventKeyboard);
-            textarea.blur();
-
-            return () => {
-                textarea.removeEventListener('focus', preventKeyboard);
-            };
-        }
-    }, [terminal]);
-
-    function syncOverlay() {
-        if (!terminal || !overlayTextareaRef.current) return;
-        const buffer = terminal.buffer.active;
-        let text = "";
-        for (let i = 0; i < buffer.length; i++) {
-            text += buffer.getLine(i)?.translateToString() + "\n";
-        }
-        overlayTextareaRef.current.value = text;
-    }
-
-    useEffect(() => {
-        if (!terminal) return;
-        syncOverlay();
-
-        const disposeRender = terminal.onRender(() => syncOverlay());
-
-        return () => {
-            disposeRender.dispose();
-        };
-    }, [terminal]);
-
     function handleWindowResize() {
         if (!isVisibleRef.current) return;
         fitAddonRef.current?.fit();
@@ -300,26 +257,10 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
     return (
         <div
-            className="h-full w-full m-1 relative"
-            style={{ opacity: visible && isVisible ? 1 : 0 }}
-        >
-            <div ref={xtermRef} className="h-full w-full" />
-
-            <textarea
-                ref={overlayTextareaRef}
-                readOnly
-                className="absolute top-0 left-0 w-full h-full"
-                style={{
-                    opacity: 0.01,
-                    cursor: "text",
-                    background: "none",
-                    border: "none",
-                    resize: "none",
-                    userSelect: "text",
-                    WebkitUserSelect: "text",
-                }}
-            />
-        </div>
+            ref={xtermRef}
+            className="h-full w-full m-1"
+            style={{opacity: visible && isVisible ? 1 : 0, overflow: 'hidden'}}
+        />
     );
 });
 

@@ -12,19 +12,6 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
     const [isCtrl, setIsCtrl] = useState(false);
     const [isAlt, setIsAlt] = useState(false);
 
-    const handlePaste = useCallback(async () => {
-        if (navigator.clipboard?.readText) {
-            try {
-                const text = await navigator.clipboard.readText();
-                if (text) {
-                    onSendInput(text);
-                }
-            } catch (err) {
-                console.error("Paste failed:", err);
-            }
-        }
-    }, [onSendInput]);
-
     const onKeyPress = useCallback((button: string) => {
         if (button === "{shift}") {
             setLayoutName("shift");
@@ -57,11 +44,6 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
         }
         if (button === "{alt}") {
             setIsAlt(prev => !prev);
-            return;
-        }
-
-        if (button === "{paste}") {
-            handlePaste();
             return;
         }
 
@@ -103,7 +85,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
         }
 
         onSendInput(input);
-    }, [onSendInput, handlePaste, isCtrl, isAlt]);
+    }, [onSendInput, isCtrl, isAlt]);
 
     const buttonTheme = [
         {
@@ -151,7 +133,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
                         "! @ # $ % ^ & * ( ) _ +",
                         "[ ] { } | \\ ; : ' \" , . / < >",
                         "F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12",
-                        "{arrowLeft} {arrowRight} {arrowUp} {arrowDown} {paste} {backspace}",
+                        "{arrowLeft} {arrowRight} {arrowUp} {arrowDown} {backspace}",
                         "{hide} {less} {space} {enter}",
                     ],
                     hide: [
@@ -178,7 +160,6 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
                     "{tab}": "tab",
                     "{ctrl}": "ctrl",
                     "{alt}": "alt",
-                    "{paste}": "paste",
                     "{end}": "end",
                     "{home}": "home",
                     "{pgUp}": "pgUp",
