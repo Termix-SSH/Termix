@@ -29,7 +29,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const overlayTextareaRef = useRef<HTMLTextAreaElement | null>(null);
     const DEBOUNCE_MS = 140;
 
     useEffect(() => {
@@ -178,6 +177,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         terminal.loadAddon(unicode11Addon);
         terminal.loadAddon(webLinksAddon);
         terminal.open(xtermRef.current);
+
+        const textarea = xtermRef.current.querySelector('.xterm-helper-textarea');
+        if (textarea) {
+            textarea.setAttribute('readonly', 'true');
+        }
 
         const resizeObserver = new ResizeObserver(() => {
             if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
