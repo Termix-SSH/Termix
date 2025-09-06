@@ -691,6 +691,109 @@ router.delete('/file_manager/shortcuts', authenticateJWT, async (req: Request, r
     }
 });
 
+// Route: Get SSH host by ID with resolved credentials (requires JWT)
+// GET /ssh/host/:id/with-credentials
+router.get('/db/host/:id/with-credentials', authenticateJWT, async (req: Request, res: Response) => {
+    const {id} = req.params;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !id) {
+        logger.warn('Invalid request for SSH host with credentials fetch');
+        return res.status(400).json({error: 'Invalid request'});
+    }
+
+    try {
+        const {sshHostService} = await import('../../services/ssh-host.js');
+        const host = await sshHostService.getHostWithCredentials(userId, parseInt(id));
+
+        if (!host) {
+            return res.status(404).json({error: 'SSH host not found'});
+        }
+
+        res.json(host);
+    } catch (err) {
+        logger.error('Failed to fetch SSH host with credentials', err);
+        res.status(500).json({error: 'Failed to fetch SSH host with credentials'});
+    }
+});
+
+// Route: Apply credential to SSH host (requires JWT)
+// POST /ssh/host/:id/apply-credential
+router.post('/db/host/:id/apply-credential', authenticateJWT, async (req: Request, res: Response) => {
+    const {id: hostId} = req.params;
+    const {credentialId} = req.body;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !hostId || !credentialId) {
+        logger.warn('Invalid request for applying credential to host');
+        return res.status(400).json({error: 'Host ID and credential ID are required'});
+    }
+
+    try {
+        const {sshHostService} = await import('../../services/ssh-host.js');
+        await sshHostService.applyCredentialToHost(userId, parseInt(hostId), parseInt(credentialId));
+
+        res.json({message: 'Credential applied to host successfully'});
+    } catch (err) {
+        logger.error('Failed to apply credential to host', err);
+        res.status(500).json({
+            error: err instanceof Error ? err.message : 'Failed to apply credential to host'
+        });
+    }
+});
+
+// Route: Remove credential from SSH host (requires JWT)
+// DELETE /ssh/host/:id/credential
+router.delete('/db/host/:id/credential', authenticateJWT, async (req: Request, res: Response) => {
+    const {id: hostId} = req.params;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !hostId) {
+        logger.warn('Invalid request for removing credential from host');
+        return res.status(400).json({error: 'Invalid request'});
+    }
+
+    try {
+        const {sshHostService} = await import('../../services/ssh-host.js');
+        await sshHostService.removeCredentialFromHost(userId, parseInt(hostId));
+
+        res.json({message: 'Credential removed from host successfully'});
+    } catch (err) {
+        logger.error('Failed to remove credential from host', err);
+        res.status(500).json({
+            error: err instanceof Error ? err.message : 'Failed to remove credential from host'
+        });
+    }
+});
+
+// Route: Migrate host to managed credential (requires JWT)
+// POST /ssh/host/:id/migrate-to-credential
+router.post('/db/host/:id/migrate-to-credential', authenticateJWT, async (req: Request, res: Response) => {
+    const {id: hostId} = req.params;
+    const {credentialName} = req.body;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !hostId || !credentialName) {
+        logger.warn('Invalid request for migrating host to credential');
+        return res.status(400).json({error: 'Host ID and credential name are required'});
+    }
+
+    try {
+        const {sshHostService} = await import('../../services/ssh-host.js');
+        const credentialId = await sshHostService.migrateHostToCredential(userId, parseInt(hostId), credentialName);
+
+        res.json({
+            message: 'Host migrated to managed credential successfully',
+            credentialId
+        });
+    } catch (err) {
+        logger.error('Failed to migrate host to credential', err);
+        res.status(500).json({
+            error: err instanceof Error ? err.message : 'Failed to migrate host to credential'
+        });
+    }
+});
+
 // Route: Bulk import SSH hosts from JSON (requires JWT)
 // POST /ssh/bulk-import
 router.post('/bulk-import', authenticateJWT, async (req: Request, res: Response) => {

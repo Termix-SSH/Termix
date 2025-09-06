@@ -1024,7 +1024,7 @@ export async function getReleasesRSS(perPage: number = 100): Promise<any> {
 
 export async function getVersionInfo(): Promise<any> {
     try {
-        const response = await authApi.get('/version/');
+        const response = await authApi.get('/version');
         return response.data;
     } catch (error) {
         handleApiError(error, 'fetch version info');
@@ -1041,5 +1041,81 @@ export async function getDatabaseHealth(): Promise<any> {
         return response.data;
     } catch (error) {
         handleApiError(error, 'check database health');
+    }
+}
+
+// ============================================================================
+// SSH CREDENTIALS MANAGEMENT
+// ============================================================================
+
+export async function getCredentials(): Promise<any> {
+    try {
+        const response = await authApi.get('/credentials');
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetch credentials');
+    }
+}
+
+export async function getCredentialDetails(credentialId: number): Promise<any> {
+    try {
+        const response = await authApi.get(`/credentials/${credentialId}`);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetch credential details');
+    }
+}
+
+export async function createCredential(credentialData: any): Promise<any> {
+    try {
+        const response = await authApi.post('/credentials', credentialData);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'create credential');
+    }
+}
+
+export async function updateCredential(credentialId: number, credentialData: any): Promise<any> {
+    try {
+        const response = await authApi.put(`/credentials/${credentialId}`, credentialData);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'update credential');
+    }
+}
+
+export async function deleteCredential(credentialId: number): Promise<any> {
+    try {
+        const response = await authApi.delete(`/credentials/${credentialId}`);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'delete credential');
+    }
+}
+
+export async function getCredentialHosts(credentialId: number): Promise<any> {
+    try {
+        const response = await authApi.get(`/credentials/${credentialId}/hosts`);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetch credential hosts');
+    }
+}
+
+export async function getCredentialFolders(): Promise<any> {
+    try {
+        const response = await authApi.get('/credentials/folders');
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetch credential folders');
+    }
+}
+
+export async function applyCredentialToHost(credentialId: number, hostId: number): Promise<any> {
+    try {
+        const response = await authApi.post(`/credentials/${credentialId}/apply-to-host/${hostId}`);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'apply credential to host');
     }
 }

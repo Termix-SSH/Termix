@@ -39,10 +39,13 @@ export const sshData = sqliteTable('ssh_data', {
     tags: text('tags'),
     pin: integer('pin', {mode: 'boolean'}).notNull().default(false),
     authType: text('auth_type').notNull(),
+    // Legacy credential fields - kept for backward compatibility
     password: text('password'),
     key: text('key', {length: 8192}),
     keyPassword: text('key_password'),
     keyType: text('key_type'),
+    // New credential management
+    credentialId: integer('credential_id').references(() => sshCredentials.id),
     enableTerminal: integer('enable_terminal', {mode: 'boolean'}).notNull().default(true),
     enableTunnel: integer('enable_tunnel', {mode: 'boolean'}).notNull().default(true),
     tunnelConnections: text('tunnel_connections'),
@@ -84,4 +87,32 @@ export const dismissedAlerts = sqliteTable('dismissed_alerts', {
     userId: text('user_id').notNull().references(() => users.id),
     alertId: text('alert_id').notNull(),
     dismissedAt: text('dismissed_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+// SSH Credentials Management Tables
+export const sshCredentials = sqliteTable('ssh_credentials', {
+    id: integer('id').primaryKey({autoIncrement: true}),
+    userId: text('user_id').notNull().references(() => users.id),
+    name: text('name').notNull(),
+    description: text('description'),
+    folder: text('folder'),
+    tags: text('tags'),
+    authType: text('auth_type').notNull(), // 'password' | 'key'
+    username: text('username').notNull(),
+    encryptedPassword: text('encrypted_password'), // AES encrypted
+    encryptedKey: text('encrypted_key', {length: 16384}), // AES encrypted SSH key
+    encryptedKeyPassword: text('encrypted_key_password'), // AES encrypted key passphrase
+    keyType: text('key_type'), // 'rsa' | 'ecdsa' | 'ed25519'
+    usageCount: integer('usage_count').notNull().default(0),
+    lastUsed: text('last_used'),
+    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const sshCredentialUsage = sqliteTable('ssh_credential_usage', {
+    id: integer('id').primaryKey({autoIncrement: true}),
+    credentialId: integer('credential_id').notNull().references(() => sshCredentials.id),
+    hostId: integer('host_id').notNull().references(() => sshData.id),
+    userId: text('user_id').notNull().references(() => users.id),
+    usedAt: text('used_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 });
