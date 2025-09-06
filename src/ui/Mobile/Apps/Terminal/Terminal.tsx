@@ -6,14 +6,6 @@ import {Unicode11Addon} from '@xterm/addon-unicode11';
 import {WebLinksAddon} from '@xterm/addon-web-links';
 import {useTranslation} from 'react-i18next';
 
-declare global {
-    interface Window {
-        mobileTerminalInitialized?: boolean;
-        mobileTerminalWebSocket?: WebSocket | null;
-        mobileTerminalPingInterval?: NodeJS.Timeout | null;
-    }
-}
-
 interface SSHTerminalProps {
     hostConfig: any;
     isVisible: boolean;
@@ -33,9 +25,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [visible, setVisible] = useState(false);
     const isVisibleRef = useRef<boolean>(false);
-    const lastHostConfigRef = useRef<any>(null);
-    const isInitializedRef = useRef<boolean>(false);
-    const terminalInstanceRef = useRef<any>(null);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -132,13 +121,12 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             terminal.onData((data) => {
                 ws.send(JSON.stringify({type: 'input', data}));
             });
-            
+
             pingIntervalRef.current = setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({type: 'ping'}));
                 }
             }, 30000);
-            window.mobileTerminalPingInterval = pingIntervalRef.current;
         });
 
         ws.addEventListener('message', (event) => {
@@ -160,7 +148,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 terminal.writeln(`\r\n[${t('terminal.connectionClosed')}]`);
             }
         });
-        
+
         ws.addEventListener('error', () => {
             terminal.writeln(`\r\n[${t('terminal.connectionError')}]`);
         });
@@ -168,70 +156,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
     useEffect(() => {
         if (!terminal || !xtermRef.current || !hostConfig) return;
-
-        if (window.mobileTerminalInitialized) {
-            webSocketRef.current = window.mobileTerminalWebSocket || null;
-            pingIntervalRef.current = window.mobileTerminalPingInterval || null;
-
-            terminal.options = {
-                cursorBlink: true,
-                cursorStyle: 'bar',
-                scrollback: 10000,
-                fontSize: 14,
-                fontFamily: '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
-                theme: {background: '#09090b', foreground: '#f7f7f7'},
-                allowTransparency: true,
-                convertEol: true,
-                windowsMode: false,
-                macOptionIsMeta: false,
-                macOptionClickForcesSelection: false,
-                rightClickSelectsWord: false,
-                fastScrollModifier: 'alt',
-                fastScrollSensitivity: 5,
-                allowProposedApi: true,
-            };
-
-            const fitAddon = new FitAddon();
-            const clipboardAddon = new ClipboardAddon();
-            const unicode11Addon = new Unicode11Addon();
-            const webLinksAddon = new WebLinksAddon();
-
-            fitAddonRef.current = fitAddon;
-            terminal.loadAddon(fitAddon);
-            terminal.loadAddon(clipboardAddon);
-            terminal.loadAddon(unicode11Addon);
-            terminal.loadAddon(webLinksAddon);
-            terminal.open(xtermRef.current);
-
-            const resizeObserver = new ResizeObserver(() => {
-                if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-                resizeTimeout.current = setTimeout(() => {
-                    if (!isVisibleRef.current) return;
-                    fitAddonRef.current?.fit();
-                    if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-                    hardRefresh();
-                }, 100);
-            });
-
-            resizeObserver.observe(xtermRef.current);
-
-            setTimeout(() => {
-                fitAddon.fit();
-                if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-                hardRefresh();
-                setVisible(true);
-            }, 100);
-
-            return () => {
-                resizeObserver.disconnect();
-                if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-            };
-        }
-        
-        window.mobileTerminalInitialized = true;
-        isInitializedRef.current = true;
-        terminalInstanceRef.current = terminal;
-        lastHostConfigRef.current = hostConfig;
 
         terminal.options = {
             cursorBlink: true,
@@ -291,18 +215,17 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
                 const isDev = process.env.NODE_ENV === 'development' &&
                     (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
-                
+
                 const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
                 const wsUrl = isDev
                     ? 'ws://localhost:8082'
                     : isElectron
-                    ? 'ws://127.0.0.1:8082'
-                    : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
+                        ? 'ws://127.0.0.1:8082'
+                        : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
 
                 const ws = new WebSocket(wsUrl);
                 webSocketRef.current = ws;
-                window.mobileTerminalWebSocket = ws;
                 wasDisconnectedBySSH.current = false;
 
                 setupWebSocketListeners(ws, cols, rows);
@@ -313,6 +236,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             resizeObserver.disconnect();
             if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
             if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
+            if (pingIntervalRef.current) {
+                clearInterval(pingIntervalRef.current);
+                pingIntervalRef.current = null;
+            }
+            webSocketRef.current?.close();
         };
     }, [xtermRef, terminal, hostConfig]);
 

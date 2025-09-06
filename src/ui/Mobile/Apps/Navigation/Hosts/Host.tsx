@@ -4,6 +4,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {ButtonGroup} from "@/components/ui/button-group.tsx";
 import {Server, Terminal} from "lucide-react";
 import {getServerStatusById} from "@/ui/main-axios.ts";
+import {useTabs} from "@/ui/Mobile/Apps/Navigation/Tabs/TabContext.tsx";
 
 interface SSHHost {
     id: number;
@@ -30,9 +31,11 @@ interface SSHHost {
 
 interface HostProps {
     host: SSHHost;
+    onHostConnect: () => void;
 }
 
-export function Host({host}: HostProps): React.ReactElement {
+export function Host({host, onHostConnect}: HostProps): React.ReactElement {
+    const {addTab} = useTabs();
     const [serverStatus, setServerStatus] = useState<'online' | 'offline' | 'degraded'>('degraded');
     const tags = Array.isArray(host.tags) ? host.tags : [];
     const hasTags = tags.length > 0;
@@ -65,11 +68,8 @@ export function Host({host}: HostProps): React.ReactElement {
     }, [host.id]);
 
     const handleTerminalClick = () => {
-
-    };
-
-    const handleServerClick = () => {
-
+        addTab({type: 'terminal', title, hostConfig: host});
+        onHostConnect();
     };
 
     return (

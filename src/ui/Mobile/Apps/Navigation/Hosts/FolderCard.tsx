@@ -29,11 +29,12 @@ interface SSHHost {
 }
 
 interface FolderCardProps {
-    folderName: string,
-    hosts: SSHHost[],
+    folderName: string;
+    hosts: SSHHost[];
+    onHostConnect: () => void;
 }
 
-export function FolderCard({folderName, hosts}: FolderCardProps): React.ReactElement {
+export function FolderCard({folderName, hosts, onHostConnect}: FolderCardProps): React.ReactElement {
     const [isExpanded, setIsExpanded] = useState(true);
 
     const toggleExpanded = () => {
@@ -64,7 +65,7 @@ export function FolderCard({folderName, hosts}: FolderCardProps): React.ReactEle
                 <div className="flex flex-col p-2 gap-y-3">
                     {hosts.map((host, index) => (
                         <React.Fragment key={`${folderName}-host-${host.id}-${host.name || host.ip}`}>
-                            <Host host={host}/>
+                            <Host host={host} onHostConnect={onHostConnect}/>
 
                             {index < hosts.length - 1 && (
                                 <div className="relative -mx-2">
