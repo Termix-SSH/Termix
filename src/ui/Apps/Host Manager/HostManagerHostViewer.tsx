@@ -21,7 +21,8 @@ import {
     FileEdit,
     Search,
     Upload,
-    Info
+    Info,
+    Bold
 } from "lucide-react";
 import {Separator} from "@/components/ui/separator.tsx";
 
@@ -85,7 +86,34 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             }
         }
     };
+ const handleExport = (host :SSHHost) =>{
+    const exportData = {
+    name: host.name,
+        ip: host.ip,
+        port: host.port,
+        username: host.username,
+        authType: host.authType,
+        folder: host.folder,
+        tags: host.tags,
+        pin: host.pin,
+        enableTerminal: host.enableTerminal,
+        enableTunnel: host.enableTunnel,
+        enableFileManager: host.enableFileManager,
+        defaultPath: host.defaultPath,
+        tunnelConnections: host.tunnelConnections,
+    };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${host.name || host.username + '@' + host.ip}-credentials.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
+        toast.success(`Exported credentials for ${host.name || host.username}@${host.ip}`);
+    } ;
     const handleEdit = (host: SSHHost) => {
         if (onEditHost) {
             onEditHost(host);
@@ -427,6 +455,18 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                             >
                                                                 <Trash2 className="h-3 w-3"/>
                                                             </Button>
+                                                            <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleExport(host);
+                                                            }}
+                                                            className="h-5 w-5 p-0 text-blue-500 hover:text-blue-700"
+                                                        >
+                                                            <Upload className="h-3 w-3"/>
+                                                        </Button>
+
                                                         </div>
                                                     </div>
 
