@@ -146,6 +146,7 @@ const AppContent: FC = () => {
                 )}
             </div>
             {currentTab && <TerminalKeyboard onSendInput={handleKeyboardInput}/>}
+
             <BottomNavbar
                 onSidebarOpenClick={() => setIsSidebarOpen(true)}
             />

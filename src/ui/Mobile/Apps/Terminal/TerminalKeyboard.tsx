@@ -128,7 +128,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
     }
 
     return (
-        <div className="">
+        <div className="z-10">
             <Keyboard
                 layout={{
                     default: [
