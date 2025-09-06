@@ -95,6 +95,10 @@ const AppContent: FC = () => {
 
     const closeSidebar = () => setIsSidebarOpen(false);
 
+    const handleKeyboardLayoutChange = () => {
+        fitCurrentTerminal();
+    }
+
     function handleKeyboardInput(input: string) {
         const currentTerminalTab = getTab(currentTab as number);
         if (currentTerminalTab && currentTerminalTab.terminalRef?.current?.sendInput) {
@@ -162,7 +166,7 @@ const AppContent: FC = () => {
             </div>
             {currentTab &&
                 <div className="mb-1 z-10">
-                    <TerminalKeyboard onSendInput={handleKeyboardInput}/>
+                    <TerminalKeyboard onSendInput={handleKeyboardInput} onLayoutChange={handleKeyboardLayoutChange}/>
                 </div>
             }
             <BottomNavbar

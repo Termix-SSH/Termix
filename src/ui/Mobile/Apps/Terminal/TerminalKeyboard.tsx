@@ -1,16 +1,24 @@
-import React, {useState, useCallback} from "react";
+import React, {useState, useCallback, useEffect} from "react";
 import Keyboard from "react-simple-keyboard";
 import "react-simple-keyboard/build/css/index.css";
 import "./kb-dark-theme.css";
 
 interface TerminalKeyboardProps {
     onSendInput: (input: string) => void;
+    onLayoutChange: () => void;
 }
 
-export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
+export function TerminalKeyboard({onSendInput, onLayoutChange}: TerminalKeyboardProps) {
     const [layoutName, setLayoutName] = useState("default");
     const [isCtrl, setIsCtrl] = useState(false);
     const [isAlt, setIsAlt] = useState(false);
+
+    useEffect(() => {
+        if (onLayoutChange) {
+            const timeoutId = setTimeout(() => onLayoutChange(), 100);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [layoutName, onLayoutChange]);
 
     const onKeyPress = useCallback((button: string) => {
         if (button === "{shift}") {
