@@ -90,6 +90,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
             input = `\x1b${input}`;
         }
 
+        navigator.vibrate(20)
         onSendInput(input);
     };
 
