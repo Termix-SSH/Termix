@@ -20,27 +20,34 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
                     onSendInput(text);
                 }
             } catch (err) {
-                console.error("Failed to read clipboard:", err);
+                console.error("Paste failed:", err);
             }
         }
     }, [onSendInput]);
 
     const onKeyPress = useCallback((button: string) => {
-        const layoutMap: { [key: string]: string } = {
-            "{shift}": "shift",
-            "{unshift}": "default",
-            "{symbols}": "symbols",
-            "{fn}": "fn",
-            "{abc}": "default",
-        };
-
-        if (layoutMap[button]) {
-            setLayoutName(layoutMap[button]);
+        if (button === "{shift}") {
+            setLayoutName("shift");
             return;
         }
-
-        if (button === "{paste}") {
-            handlePaste();
+        if (button === "{unshift}") {
+            setLayoutName("default");
+            return;
+        }
+        if (button === "{more}") {
+            setLayoutName("more");
+            return;
+        }
+        if (button === "{less}") {
+            setLayoutName("default");
+            return;
+        }
+        if (button === "{hide}") {
+            setLayoutName("hide");
+            return;
+        }
+        if (button === "{unhide}") {
+            setLayoutName("default");
             return;
         }
 
@@ -48,9 +55,13 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
             setIsCtrl(prev => !prev);
             return;
         }
-
         if (button === "{alt}") {
             setIsAlt(prev => !prev);
+            return;
+        }
+
+        if (button === "{paste}") {
+            handlePaste();
             return;
         }
 
@@ -73,7 +84,6 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
         if (isCtrl) {
             if (input.length === 1) {
                 const charCode = input.toUpperCase().charCodeAt(0);
-                // @, A-Z, [, \, ], ^, _
                 if (charCode >= 64 && charCode <= 95) {
                     input = String.fromCharCode(charCode - 64);
                 }
@@ -84,9 +94,16 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
             input = `\x1b${input}`;
         }
 
-        navigator.vibrate(20);
+        try {
+            if (navigator.vibrate) {
+                navigator.vibrate(20);
+            }
+        } catch (e) {
+            console.error("Vibration failed:", e);
+        }
+
         onSendInput(input);
-    }, [isCtrl, isAlt, onSendInput, handlePaste]);
+    }, [onSendInput, handlePaste, isCtrl, isAlt]);
 
     const buttonTheme = [
         {
@@ -96,6 +113,10 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
         {
             class: "hg-space-medium",
             buttons: "{enter} {backspace}",
+        },
+        {
+            class: "hg-space-small",
+            buttons: "{hide} {less} {more}",
         }
     ];
 
@@ -106,66 +127,63 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
         buttonTheme.push({class: "key-active", buttons: "{alt}"});
     }
 
-    const layout = {
-        default: [
-            "q w e r t y u i o p",
-            "a s d f g h j k l",
-            "{shift} z x c v b n m {backspace}",
-            "{symbols} {ctrl} {alt} {space} {enter}",
-        ],
-        shift: [
-            "Q W E R T Y U I O P",
-            "A S D F G H J K L",
-            "{unshift} Z X C V B N M {backspace}",
-            "{symbols} {ctrl} {alt} {space} {enter}",
-        ],
-        symbols: [
-            "1 2 3 4 5 6 7 8 9 0",
-            "! @ # $ % ^ & * ( )",
-            "- _ = + [ ] { } \\ |",
-            "~ ` ' \" ; : , . / < > ?",
-            "{abc} {fn} {space} {backspace}",
-        ],
-        fn: [
-            "F1 F2 F3 F4 F5 F6",
-            "F7 F8 F9 F10 F11 F12",
-            "{esc} {tab} {home} {end}",
-            "{pgUp} {pgDn} {arrowUp} {arrowDown}",
-            "{abc} {arrowLeft} {arrowRight} {paste} {backspace}",
-        ]
-    };
-
-    const display = {
-        "{shift}": "⇧",
-        "{unshift}": "⇧",
-        "{backspace}": "⌫",
-        "{symbols}": "?123",
-        "{abc}": "abc",
-        "{fn}": "Fn",
-        "{space}": "space",
-        "{enter}": "enter",
-        "{arrowLeft}": "←",
-        "{arrowRight}": "→",
-        "{arrowUp}": "↑",
-        "{arrowDown}": "↓",
-        "{esc}": "esc",
-        "{tab}": "tab",
-        "{ctrl}": "ctrl",
-        "{alt}": "alt",
-        "{paste}": "paste",
-        "{end}": "end",
-        "{home}": "home",
-        "{pgUp}": "pgUp",
-        "{pgDn}": "pgDn",
-    };
-
     return (
         <div className="">
             <Keyboard
-                layout={layout}
+                layout={{
+                    default: [
+                        "{esc} {tab} {ctrl} {alt} {arrowLeft} {arrowRight} {arrowUp} {arrowDown}",
+                        "q w e r t y u i o p",
+                        "a s d f g h j k l",
+                        "{shift} z x c v b n m {backspace}",
+                        "{hide} {more} {space} {enter}",
+                    ],
+                    shift: [
+                        "{esc} {tab} {ctrl} {alt} {arrowLeft} {arrowRight} {arrowUp} {arrowDown}",
+                        "Q W E R T Y U I O P",
+                        "A S D F G H J K L",
+                        "{unshift} Z X C V B N M {backspace}",
+                        "{hide} {more} {space} {enter}",
+                    ],
+                    more: [
+                        "{esc} {tab} {ctrl} {alt} {end} {home} {pgUp} {pgDn}",
+                        "1 2 3 4 5 6 7 8 9 0",
+                        "! @ # $ % ^ & * ( ) _ +",
+                        "[ ] { } | \ \ ; : ' \" , . / < >",
+                        "F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12",
+                        "{arrowLeft} {arrowRight} {arrowUp} {arrowDown} {paste} {backspace}",
+                        "{hide} {less} {space} {enter}",
+                    ],
+                    hide: [
+                        "{unhide}"
+                    ]
+                }}
                 layoutName={layoutName}
                 onKeyPress={onKeyPress}
-                display={display}
+                display={{
+                    "{shift}": "up",
+                    "{unshift}": "dn",
+                    "{backspace}": "back",
+                    "{more}": "more",
+                    "{less}": "less",
+                    "{space}": "space",
+                    "{enter}": "enter",
+                    "{arrowLeft}": "←",
+                    "{arrowRight}": "→",
+                    "{arrowUp}": "↑",
+                    "{arrowDown}": "↓",
+                    "{hide}": "hide",
+                    "{unhide}": "unhide",
+                    "{esc}": "esc",
+                    "{tab}": "tab",
+                    "{ctrl}": "ctrl",
+                    "{alt}": "alt",
+                    "{paste}": "paste",
+                    "{end}": "end",
+                    "{home}": "home",
+                    "{pgUp}": "pgUp",
+                    "{pgDn}": "pgDn",
+                }}
                 theme={"hg-theme-default dark-theme"}
                 useTouchEvents={true}
                 disableButtonHold={true}
