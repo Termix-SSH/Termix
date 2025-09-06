@@ -105,6 +105,17 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             textarea.setAttribute("readonly", "true");
             textarea.setAttribute("inputmode", "none");
             textarea.style.caretColor = "transparent";
+
+            const preventKeyboard = () => {
+                textarea.blur();
+            };
+
+            textarea.addEventListener('focus', preventKeyboard);
+            textarea.blur(); // Initial blur
+
+            return () => {
+                textarea.removeEventListener('focus', preventKeyboard);
+            };
         }
     }, [terminal]);
 
