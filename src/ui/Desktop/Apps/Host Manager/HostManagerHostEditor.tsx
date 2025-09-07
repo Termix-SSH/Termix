@@ -61,6 +61,9 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
     const [loading, setLoading] = useState(true);
 
     const [authTab, setAuthTab] = useState<'password' | 'key' | 'credential'>('password');
+    
+    // Ref for the IP address input to manage focus
+    const ipInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -251,6 +254,18 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
         }
     }, [editingHost, form]);
 
+    // Focus the IP address field when the component mounts or when editingHost changes
+    useEffect(() => {
+        // Use setTimeout to ensure the input is rendered before focusing
+        const focusTimer = setTimeout(() => {
+            if (ipInputRef.current) {
+                ipInputRef.current.focus();
+            }
+        }, 100);
+
+        return () => clearTimeout(focusTimer);
+    }, [editingHost]);
+
     const onSubmit = async (data: any) => {
         try {
             const formData = data as FormData;
@@ -427,7 +442,11 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                             <FormItem className="col-span-5">
                                                 <FormLabel>{t('hosts.ipAddress')}</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder={t('placeholders.ipAddress')} {...field} />
+                                                    <Input 
+                                                        ref={ipInputRef}
+                                                        placeholder={t('placeholders.ipAddress')} 
+                                                        {...field} 
+                                                    />
                                                 </FormControl>
                                             </FormItem>
                                         )}
