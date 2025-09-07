@@ -256,13 +256,22 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
 
     // Focus the IP address field when the component mounts or when editingHost changes
     useEffect(() => {
-        // Use setTimeout to ensure the input is rendered before focusing
         const focusTimer = setTimeout(() => {
             if (ipInputRef.current) {
                 ipInputRef.current.focus();
             }
-        }, 100);
+        }, 300);
 
+        return () => clearTimeout(focusTimer);
+    }, []); // Focus on mount
+
+    // Also focus when editingHost changes (for tab switching)
+    useEffect(() => {
+        const focusTimer = setTimeout(() => {
+            if (ipInputRef.current) {
+                ipInputRef.current.focus();
+            }
+        }, 300);
         return () => clearTimeout(focusTimer);
     }, [editingHost]);
 
@@ -443,9 +452,12 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                 <FormLabel>{t('hosts.ipAddress')}</FormLabel>
                                                 <FormControl>
                                                     <Input 
-                                                        ref={ipInputRef}
                                                         placeholder={t('placeholders.ipAddress')} 
-                                                        {...field} 
+                                                        {...field}
+                                                        ref={(e) => {
+                                                            field.ref(e);
+                                                            ipInputRef.current = e;
+                                                        }}
                                                     />
                                                 </FormControl>
                                             </FormItem>
