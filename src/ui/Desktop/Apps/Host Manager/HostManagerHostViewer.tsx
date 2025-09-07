@@ -217,13 +217,141 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
 
     if (hosts.length === 0) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                    <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4"/>
-                    <h3 className="text-lg font-semibold mb-2">{t('hosts.noHosts')}</h3>
-                    <p className="text-muted-foreground mb-4">
-                        {t('hosts.noHostsMessage')}
-                    </p>
+            <div className="flex flex-col h-full min-h-0">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-xl font-semibold">{t('hosts.sshHosts')}</h2>
+                        <p className="text-muted-foreground">
+                            {t('hosts.hostsCount', { count: 0 })}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="relative"
+                                        onClick={() => document.getElementById('json-import-input')?.click()}
+                                        disabled={importing}
+                                    >
+                                        {importing ? t('hosts.importing') : t('hosts.importJson')}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom"
+                                                className="max-w-sm bg-popover text-popover-foreground border border-border shadow-lg">
+                                    <div className="space-y-2">
+                                        <p className="font-semibold text-sm">{t('hosts.importJsonTitle')}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {t('hosts.importJsonDesc')}
+                                        </p>
+                                    </div>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                const sampleData = {
+                                    hosts: [
+                                        {
+                                            name: "Web Server - Production",
+                                            ip: "192.168.1.100",
+                                            port: 22,
+                                            username: "admin",
+                                            authType: "password",
+                                            password: "your_secure_password_here",
+                                            folder: "Production",
+                                            tags: ["web", "production", "nginx"],
+                                            pin: true,
+                                            enableTerminal: true,
+                                            enableTunnel: false,
+                                            enableFileManager: true,
+                                            defaultPath: "/var/www"
+                                        },
+                                        {
+                                            name: "Database Server",
+                                            ip: "192.168.1.101",
+                                            port: 22,
+                                            username: "dbadmin",
+                                            authType: "key",
+                                            key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
+                                            keyPassword: "optional_key_passphrase",
+                                            keyType: "ssh-ed25519",
+                                            folder: "Production",
+                                            tags: ["database", "production", "postgresql"],
+                                            pin: false,
+                                            enableTerminal: true,
+                                            enableTunnel: true,
+                                            enableFileManager: false,
+                                            tunnelConnections: [
+                                                {
+                                                    sourcePort: 5432,
+                                                    endpointPort: 5432,
+                                                    endpointHost: "Web Server - Production",
+                                                    maxRetries: 3,
+                                                    retryInterval: 10,
+                                                    autoStart: true
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                };
+
+                                const blob = new Blob([JSON.stringify(sampleData, null, 2)], {type: 'application/json'});
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'sample-ssh-hosts.json';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                            }}
+                        >
+                            {t('hosts.downloadSample')}
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                window.open('https://docs.termix.site/json-import', '_blank');
+                            }}
+                        >
+                            {t('hosts.formatGuide')}
+                        </Button>
+
+                        <div className="w-px h-6 bg-border mx-2"/>
+
+                        <Button onClick={fetchHosts} variant="outline" size="sm">
+                            {t('hosts.refresh')}
+                        </Button>
+                    </div>
+                </div>
+
+                <input
+                    id="json-import-input"
+                    type="file"
+                    accept=".json"
+                    onChange={handleJsonImport}
+                    style={{display: 'none'}}
+                />
+
+                <div className="flex items-center justify-center flex-1">
+                    <div className="text-center">
+                        <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4"/>
+                        <h3 className="text-lg font-semibold mb-2">{t('hosts.noHosts')}</h3>
+                        <p className="text-muted-foreground mb-4">
+                            {t('hosts.noHostsMessage')}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {t('hosts.getStartedMessage', { defaultValue: 'Use the Import JSON button above to add hosts from a JSON file.' })}
+                        </p>
+                    </div>
                 </div>
             </div>
         );
