@@ -14,6 +14,7 @@ import {Input} from "@/components/ui/input.tsx";
 import {Checkbox} from "@/components/ui/checkbox.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {useTranslation} from "react-i18next";
+import {TabDropdown} from "@/ui/Desktop/Navigation/Tabs/TabDropdown.tsx";
 
 interface TopNavbarProps {
     isTopbarOpen: boolean;
@@ -262,6 +263,8 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
                 </div>
 
                 <div className="flex items-center justify-center gap-2 flex-1 px-2">
+                    <TabDropdown />
+                    
                     <Button
                         variant="outline"
                         className="w-[30px] h-[30px]"

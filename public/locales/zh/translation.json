@@ -259,7 +259,8 @@
     "closeTab": "关闭标签页",
     "sshManager": "SSH 管理器",
     "hostManager": "主机管理器",
-    "cannotSplitTab": "无法分割此标签页"
+    "cannotSplitTab": "无法分割此标签页",
+    "tabNavigation": "标签导航"
   },
   "admin": {
     "title": "管理员设置",

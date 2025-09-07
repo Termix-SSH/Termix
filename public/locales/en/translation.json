@@ -259,7 +259,8 @@
     "closeTab": "Close Tab",
     "sshManager": "SSH Manager",
     "hostManager": "Host Manager",
-    "cannotSplitTab": "Cannot split this tab"
+    "cannotSplitTab": "Cannot split this tab",
+    "tabNavigation": "Tab Navigation"
   },
   "admin": {
     "title": "Admin Settings",
