@@ -402,6 +402,112 @@ router.get('/db/folders', authenticateJWT, async (req: Request, res: Response) =
     }
 });
 
+// Route: Get all folders with usage statistics for the authenticated user (requires JWT)
+// GET /ssh/folders/with-stats
+router.get('/db/folders/with-stats', authenticateJWT, async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    if (!isNonEmptyString(userId)) {
+        logger.warn('Invalid userId for SSH folder stats fetch');
+        return res.status(400).json({error: 'Invalid userId'});
+    }
+    try {
+        const data = await db
+            .select({
+                folder: sshData.folder,
+                hostId: sshData.id,
+                hostName: sshData.name,
+                hostIp: sshData.ip
+            })
+            .from(sshData)
+            .where(eq(sshData.userId, userId));
+
+        const folderStats: Record<string, {
+            name: string;
+            hostCount: number;
+            hosts: Array<{id: number; name?: string; ip: string}>;
+        }> = {};
+
+        data.forEach(d => {
+            if (d.folder && d.folder.trim() !== '') {
+                if (!folderStats[d.folder]) {
+                    folderStats[d.folder] = {
+                        name: d.folder,
+                        hostCount: 0,
+                        hosts: []
+                    };
+                }
+                folderStats[d.folder].hostCount++;
+                folderStats[d.folder].hosts.push({
+                    id: d.hostId,
+                    name: d.hostName || undefined,
+                    ip: d.hostIp
+                });
+            }
+        });
+
+        const result = Object.values(folderStats).sort((a, b) => a.name.localeCompare(b.name));
+
+        res.json(result);
+    } catch (err) {
+        logger.error('Failed to fetch SSH folder statistics', err);
+        res.status(500).json({error: 'Failed to fetch SSH folder statistics'});
+    }
+});
+
+// Route: Rename folder across all hosts for the authenticated user (requires JWT)
+// PUT /ssh/folders/rename
+router.put('/db/folders/rename', authenticateJWT, async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const {oldName, newName} = req.body;
+    
+    if (!isNonEmptyString(userId) || !isNonEmptyString(oldName) || !isNonEmptyString(newName)) {
+        logger.warn('Invalid parameters for folder rename');
+        return res.status(400).json({error: 'userId, oldName, and newName are required'});
+    }
+
+    if (oldName === newName) {
+        logger.warn('Attempt to rename folder to the same name');
+        return res.status(400).json({error: 'New folder name must be different from old name'});
+    }
+
+    try {
+        // Check if the old folder exists
+        const existingHosts = await db
+            .select({id: sshData.id})
+            .from(sshData)
+            .where(and(
+                eq(sshData.userId, userId),
+                eq(sshData.folder, oldName)
+            ));
+
+        if (existingHosts.length === 0) {
+            logger.warn(`Attempt to rename non-existent folder: ${oldName}`);
+            return res.status(404).json({error: 'Folder not found'});
+        }
+
+        // Update all hosts using this folder name
+        const result = await db
+            .update(sshData)
+            .set({folder: newName})
+            .where(and(
+                eq(sshData.userId, userId),
+                eq(sshData.folder, oldName)
+            ));
+
+        logger.success(`Renamed folder "${oldName}" to "${newName}" for ${existingHosts.length} hosts`);
+        
+        res.json({
+            message: `Folder renamed successfully`,
+            oldName,
+            newName,
+            affectedHostsCount: existingHosts.length
+        });
+    } catch (err) {
+        logger.error('Failed to rename SSH folder', err);
+        res.status(500).json({error: 'Failed to rename SSH folder'});
+    }
+});
+
 // Route: Delete SSH host by id (requires JWT)
 // DELETE /ssh/host/:id
 router.delete('/db/host/:id', authenticateJWT, async (req: Request, res: Response) => {

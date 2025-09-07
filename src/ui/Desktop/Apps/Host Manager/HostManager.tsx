@@ -63,6 +63,7 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
         setActiveTab("credentials");
     };
 
+
     const handleTabChange = (value: string) => {
         setActiveTab(value);
         if (value === "host_viewer") {

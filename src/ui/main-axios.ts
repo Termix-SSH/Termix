@@ -1126,3 +1126,28 @@ export async function applyCredentialToHost(credentialId: number, hostId: number
         handleApiError(error, 'apply credential to host');
     }
 }
+
+// ============================================================================
+// SSH FOLDER MANAGEMENT
+// ============================================================================
+
+export async function getFoldersWithStats(): Promise<any> {
+    try {
+        const response = await authApi.get('/ssh/db/folders/with-stats');
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetch folders with statistics');
+    }
+}
+
+export async function renameFolder(oldName: string, newName: string): Promise<any> {
+    try {
+        const response = await authApi.put('/ssh/db/folders/rename', {
+            oldName,
+            newName
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'rename folder');
+    }
+}

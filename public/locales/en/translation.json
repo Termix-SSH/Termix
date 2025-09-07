@@ -431,7 +431,14 @@
     "terminal": "Terminal",
     "tunnel": "Tunnel",
     "fileManager": "File Manager",
-    "hostViewer": "Host Viewer"
+    "hostViewer": "Host Viewer",
+    "confirmRemoveFromFolder": "Are you sure you want to remove \"{{name}}\" from folder \"{{folder}}\"? The host will be moved to \"No Folder\".",
+    "removedFromFolder": "Host \"{{name}}\" removed from folder successfully",
+    "failedToRemoveFromFolder": "Failed to remove host from folder",
+    "folderRenamed": "Folder \"{{oldName}}\" renamed to \"{{newName}}\" successfully",
+    "failedToRenameFolder": "Failed to rename folder",
+    "movedToFolder": "Host \"{{name}}\" moved to \"{{folder}}\" successfully",
+    "failedToMoveToFolder": "Failed to move host to folder"
   },
   "terminal": {
     "title": "Terminal",

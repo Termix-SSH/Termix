@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from "react";
+import React, {useState, useEffect, useMemo, useRef} from "react";
 import {Card, CardContent} from "@/components/ui/card.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Badge} from "@/components/ui/badge.tsx";
@@ -6,7 +6,7 @@ import {ScrollArea} from "@/components/ui/scroll-area.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion.tsx";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
-import {getSSHHosts, deleteSSHHost, bulkImportSSHHosts} from "@/ui/main-axios.ts";
+import {getSSHHosts, deleteSSHHost, bulkImportSSHHosts, updateSSHHost, renameFolder} from "@/ui/main-axios.ts";
 import {toast} from "sonner";
 import {useTranslation} from "react-i18next";
 import {
@@ -21,7 +21,10 @@ import {
     FileEdit,
     Search,
     Upload,
-    Info
+    Info,
+    X,
+    Check,
+    Pencil
 } from "lucide-react";
 import {Separator} from "@/components/ui/separator.tsx";
 
@@ -55,9 +58,30 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [importing, setImporting] = useState(false);
+    const [draggedHost, setDraggedHost] = useState<SSHHost | null>(null);
+    const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+    const [editingFolder, setEditingFolder] = useState<string | null>(null);
+    const [editingFolderName, setEditingFolderName] = useState("");
+    const [operationLoading, setOperationLoading] = useState(false);
+    const dragCounter = useRef(0);
 
     useEffect(() => {
         fetchHosts();
+        
+        // Listen for refresh events from other components
+        const handleHostsRefresh = () => {
+            fetchHosts();
+        };
+        
+        window.addEventListener('hosts:refresh', handleHostsRefresh);
+        window.addEventListener('ssh-hosts:changed', handleHostsRefresh);
+        window.addEventListener('folders:changed', handleHostsRefresh);
+        
+        return () => {
+            window.removeEventListener('hosts:refresh', handleHostsRefresh);
+            window.removeEventListener('ssh-hosts:changed', handleHostsRefresh);
+            window.removeEventListener('folders:changed', handleHostsRefresh);
+        };
     }, []);
 
     const fetchHosts = async () => {
@@ -89,6 +113,118 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
     const handleEdit = (host: SSHHost) => {
         if (onEditHost) {
             onEditHost(host);
+        }
+    };
+
+    const handleRemoveFromFolder = async (host: SSHHost) => {
+        if (window.confirm(t('hosts.confirmRemoveFromFolder', { name: host.name || `${host.username}@${host.ip}`, folder: host.folder }))) {
+            try {
+                setOperationLoading(true);
+                const updatedHost = { ...host, folder: '' };
+                await updateSSHHost(host.id, updatedHost);
+                toast.success(t('hosts.removedFromFolder', { name: host.name || `${host.username}@${host.ip}` }));
+                await fetchHosts();
+                window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
+            } catch (err) {
+                toast.error(t('hosts.failedToRemoveFromFolder'));
+            } finally {
+                setOperationLoading(false);
+            }
+        }
+    };
+
+    const handleFolderRename = async (oldName: string) => {
+        if (!editingFolderName.trim() || editingFolderName === oldName) {
+            setEditingFolder(null);
+            setEditingFolderName('');
+            return;
+        }
+
+        try {
+            setOperationLoading(true);
+            await renameFolder(oldName, editingFolderName.trim());
+            toast.success(t('hosts.folderRenamed', { oldName, newName: editingFolderName.trim() }));
+            await fetchHosts();
+            window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
+            setEditingFolder(null);
+            setEditingFolderName('');
+        } catch (err) {
+            toast.error(t('hosts.failedToRenameFolder'));
+        } finally {
+            setOperationLoading(false);
+        }
+    };
+
+    const startFolderEdit = (folderName: string) => {
+        setEditingFolder(folderName);
+        setEditingFolderName(folderName);
+    };
+
+    const cancelFolderEdit = () => {
+        setEditingFolder(null);
+        setEditingFolderName('');
+    };
+
+    // Drag and drop handlers
+    const handleDragStart = (e: React.DragEvent, host: SSHHost) => {
+        setDraggedHost(host);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+    };
+
+    const handleDragEnd = () => {
+        setDraggedHost(null);
+        setDragOverFolder(null);
+        dragCounter.current = 0;
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDragEnter = (e: React.DragEvent, folderName: string) => {
+        e.preventDefault();
+        dragCounter.current++;
+        setDragOverFolder(folderName);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        dragCounter.current--;
+        if (dragCounter.current === 0) {
+            setDragOverFolder(null);
+        }
+    };
+
+    const handleDrop = async (e: React.DragEvent, targetFolder: string) => {
+        e.preventDefault();
+        dragCounter.current = 0;
+        setDragOverFolder(null);
+
+        if (!draggedHost) return;
+
+        const newFolder = targetFolder === t('hosts.uncategorized') ? '' : targetFolder;
+        
+        if (draggedHost.folder === newFolder) {
+            setDraggedHost(null);
+            return;
+        }
+
+        try {
+            setOperationLoading(true);
+            const updatedHost = { ...draggedHost, folder: newFolder };
+            await updateSSHHost(draggedHost.id, updatedHost);
+            toast.success(t('hosts.movedToFolder', { 
+                name: draggedHost.name || `${draggedHost.username}@${draggedHost.ip}`,
+                folder: targetFolder 
+            }));
+            await fetchHosts();
+            window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
+        } catch (err) {
+            toast.error(t('hosts.failedToMoveToFolder'));
+        } finally {
+            setOperationLoading(false);
+            setDraggedHost(null);
         }
     };
 
@@ -495,14 +631,90 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
             <ScrollArea className="flex-1 min-h-0">
                 <div className="space-y-2 pb-20">
                     {Object.entries(hostsByFolder).map(([folder, folderHosts]) => (
-                        <div key={folder} className="border rounded-md">
+                        <div 
+                            key={folder} 
+                            className={`border rounded-md transition-all duration-200 ${
+                                dragOverFolder === folder ? 'border-blue-500 bg-blue-500/10' : ''
+                            }`}
+                            onDragOver={handleDragOver}
+                            onDragEnter={(e) => handleDragEnter(e, folder)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, folder)}
+                        >
                             <Accordion type="multiple" defaultValue={Object.keys(hostsByFolder)}>
                                 <AccordionItem value={folder} className="border-none">
                                     <AccordionTrigger
                                         className="px-2 py-1 bg-muted/20 border-b hover:no-underline rounded-t-md">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-1">
                                             <Folder className="h-4 w-4"/>
-                                            <span className="font-medium">{folder}</span>
+                                            {editingFolder === folder ? (
+                                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                    <Input
+                                                        value={editingFolderName}
+                                                        onChange={(e) => setEditingFolderName(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') handleFolderRename(folder);
+                                                            if (e.key === 'Escape') cancelFolderEdit();
+                                                        }}
+                                                        className="h-6 text-sm px-2 flex-1"
+                                                        autoFocus
+                                                        disabled={operationLoading}
+                                                    />
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleFolderRename(folder);
+                                                        }}
+                                                        className="h-6 w-6 p-0"
+                                                        disabled={operationLoading}
+                                                    >
+                                                        <Check className="h-3 w-3"/>
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            cancelFolderEdit();
+                                                        }}
+                                                        className="h-6 w-6 p-0"
+                                                        disabled={operationLoading}
+                                                    >
+                                                        <X className="h-3 w-3"/>
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <span 
+                                                        className="font-medium cursor-pointer hover:text-blue-400 transition-colors" 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (folder !== t('hosts.uncategorized')) {
+                                                                startFolderEdit(folder);
+                                                            }
+                                                        }}
+                                                        title={folder !== t('hosts.uncategorized') ? 'Click to rename folder' : ''}
+                                                    >
+                                                        {folder}
+                                                    </span>
+                                                    {folder !== t('hosts.uncategorized') && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                startFolderEdit(folder);
+                                                            }}
+                                                            className="h-4 w-4 p-0 opacity-50 hover:opacity-100 transition-opacity"
+                                                            title="Rename folder"
+                                                        >
+                                                            <Pencil className="h-3 w-3"/>
+                                                        </Button>
+                                                    )}
+                                                </>
+                                            )}
                                             <Badge variant="secondary" className="text-xs">
                                                 {folderHosts.length}
                                             </Badge>
@@ -513,7 +725,12 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                                             {folderHosts.map((host) => (
                                                 <div
                                                     key={host.id}
-                                                    className="bg-[#222225] border border-input rounded cursor-pointer hover:shadow-md transition-shadow p-2"
+                                                    draggable
+                                                    onDragStart={(e) => handleDragStart(e, host)}
+                                                    onDragEnd={handleDragEnd}
+                                                    className={`bg-[#222225] border border-input rounded cursor-move hover:shadow-md transition-all p-2 ${
+                                                        draggedHost?.id === host.id ? 'opacity-50 scale-95' : ''
+                                                    }`}
                                                     onClick={() => handleEdit(host)}
                                                 >
                                                     <div className="flex items-start justify-between">
@@ -533,6 +750,21 @@ export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                             </p>
                                                         </div>
                                                         <div className="flex gap-1 flex-shrink-0 ml-1">
+                                                            {host.folder && host.folder !== '' && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleRemoveFromFolder(host);
+                                                                    }}
+                                                                    className="h-5 w-5 p-0 text-orange-500 hover:text-orange-700"
+                                                                    title={`Remove from folder "${host.folder}"`}
+                                                                    disabled={operationLoading}
+                                                                >
+                                                                    <X className="h-3 w-3"/>
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
