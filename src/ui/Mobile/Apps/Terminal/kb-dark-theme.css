@@ -1,0 +1,40 @@
+.simple-keyboard.dark-theme {
+    background-color: rgb(24, 24, 27);
+    border-radius: 0;
+}
+
+.simple-keyboard.dark-theme .hg-button {
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: #bfbfbf;
+    border-bottom-color: rgb(122, 122, 122);
+}
+
+.simple-keyboard.dark-theme .hg-button:active {
+    background: rgba(83, 83, 83, 0.5);
+    color: #bfbfbf;
+}
+
+#root .simple-keyboard.dark-theme + .simple-keyboard-preview {
+    background: rgba(83, 83, 83, 0.5);
+}
+
+.dark-theme .hg-button.key-active {
+    background: rgba(126, 126, 126, 0.5);
+    color: white;
+}
+
+.hg-space-big {
+    width: 100px;
+}
+
+.hg-space-medium {
+    width: 70px;
+}
+
+.hg-space-small {
+    width: 1px;
+}

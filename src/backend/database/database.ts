@@ -3,9 +3,12 @@ import bodyParser from 'body-parser';
 import userRoutes from './routes/users.js';
 import sshRoutes from './routes/ssh.js';
 import alertRoutes from './routes/alerts.js';
+import credentialsRoutes from './routes/credentials.js';
 import chalk from 'chalk';
 import cors from 'cors';
 import fetch from 'node-fetch';
+import fs from 'fs';
+import path from 'path';
 import 'dotenv/config';
 
 const app = express();
@@ -143,10 +146,21 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/version', async (req, res) => {
-    const localVersion = process.env.VERSION;
+    let localVersion = process.env.VERSION;
 
     if (!localVersion) {
-        return res.status(401).send('Local Version Not Set');
+        try {
+            const packagePath = path.resolve(process.cwd(), 'package.json');
+            const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+            localVersion = packageJson.version;
+        } catch (error) {
+            logger.error('Failed to read version from package.json:', error);
+        }
+    }
+
+    if (!localVersion) {
+        logger.error('No version information available');
+        return res.status(404).send('Local Version Not Set');
     }
 
     try {
@@ -166,6 +180,7 @@ app.get('/version', async (req, res) => {
 
         const response = {
             status: localVersion === remoteVersion ? 'up_to_date' : 'requires_update',
+            localVersion: localVersion,
             version: remoteVersion,
             latest_release: {
                 tag_name: releaseData.data.tag_name,
@@ -235,9 +250,11 @@ app.get('/releases/rss', async (req, res) => {
     }
 });
 
+
 app.use('/users', userRoutes);
 app.use('/ssh', sshRoutes);
 app.use('/alerts', alertRoutes);
+app.use('/credentials', credentialsRoutes);
 
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
     logger.error('Unhandled error:', err);
