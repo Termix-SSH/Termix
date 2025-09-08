@@ -1,6 +1,6 @@
 import { Children, ReactElement, cloneElement, isValidElement } from 'react';
 
-import { ButtonProps } from '@/components/ui/button';
+import { type ButtonProps } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface ButtonGroupProps {

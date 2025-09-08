@@ -274,7 +274,7 @@ router.get('/oidc-config', async (req, res) => {
     try {
         const row = db.$client.prepare("SELECT value FROM settings WHERE key = 'oidc_config'").get();
         if (!row) {
-            return res.status(404).json({error: 'OIDC not configured'});
+            return res.json(null);
         }
         res.json(JSON.parse((row as any).value));
     } catch (err) {
@@ -1314,11 +1314,10 @@ router.delete('/delete-user', authenticateJWT, async (req, res) => {
             await db.delete(fileManagerRecent).where(eq(fileManagerRecent.userId, targetUserId));
             await db.delete(fileManagerPinned).where(eq(fileManagerPinned.userId, targetUserId));
             await db.delete(fileManagerShortcuts).where(eq(fileManagerShortcuts.userId, targetUserId));
-            
+
             await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, targetUserId));
-            
+
             await db.delete(sshData).where(eq(sshData.userId, targetUserId));
-            
             // Note: All user-related data has been deleted above
             // The tables config_editor_* and shared_hosts don't exist in the current schema
         } catch (cleanupError) {

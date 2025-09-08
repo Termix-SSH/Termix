@@ -4,18 +4,10 @@ import fetch from 'node-fetch';
 import net from 'net';
 import cors from 'cors';
 import {Client, type ConnectConfig} from 'ssh2';
+import {sshHostService} from '../services/ssh-host.js';
+import type {SSHHostWithCredentials} from '../services/ssh-host.js';
 
-type HostRecord = {
-    id: number;
-    ip: string;
-    port: number;
-    username?: string;
-    authType?: 'password' | 'key' | string;
-    password?: string | null;
-    key?: string | null;
-    keyPassword?: string | null;
-    keyType?: string | null;
-};
+// Removed HostRecord - using SSHHostWithCredentials from ssh-host service instead
 
 type HostStatus = 'online' | 'offline';
 
@@ -69,7 +61,7 @@ const logger = {
 
 const hostStatuses: Map<number, StatusEntry> = new Map();
 
-async function fetchAllHosts(): Promise<HostRecord[]> {
+async function fetchAllHosts(): Promise<SSHHostWithCredentials[]> {
     const url = 'http://localhost:8081/ssh/db/host/internal';
     try {
         const resp = await fetch(url, {
@@ -79,30 +71,55 @@ async function fetchAllHosts(): Promise<HostRecord[]> {
             throw new Error(`DB service error: ${resp.status} ${resp.statusText}`);
         }
         const data = await resp.json();
-        const hosts: HostRecord[] = (Array.isArray(data) ? data : []).map((h: any) => ({
-            id: Number(h.id),
-            ip: String(h.ip),
-            port: Number(h.port) || 22,
-            username: h.username,
-            authType: h.authType,
-            password: h.password ?? null,
-            key: h.key ?? null,
-            keyPassword: h.keyPassword ?? null,
-            keyType: h.keyType ?? null,
-        })).filter(h => !!h.id && !!h.ip && !!h.port);
-        return hosts;
+        const rawHosts = Array.isArray(data) ? data : [];
+        
+        // Resolve credentials for each host using the same logic as main SSH connections
+        const hostsWithCredentials: SSHHostWithCredentials[] = [];
+        for (const rawHost of rawHosts) {
+            try {
+                // Use the ssh-host service to properly resolve credentials
+                const host = await sshHostService.getHostWithCredentials(rawHost.userId, rawHost.id);
+                if (host) {
+                    hostsWithCredentials.push(host);
+                }
+            } catch (err) {
+                logger.warn(`Failed to resolve credentials for host ${rawHost.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            }
+        }
+        
+        return hostsWithCredentials.filter(h => !!h.id && !!h.ip && !!h.port);
     } catch (err) {
         logger.error('Failed to fetch hosts from database service', err);
         return [];
     }
 }
 
-async function fetchHostById(id: number): Promise<HostRecord | undefined> {
-    const all = await fetchAllHosts();
-    return all.find(h => h.id === id);
+async function fetchHostById(id: number): Promise<SSHHostWithCredentials | undefined> {
+    try {
+        // Get all users that might own this host
+        const url = 'http://localhost:8081/ssh/db/host/internal';
+        const resp = await fetch(url, {
+            headers: {'x-internal-request': '1'}
+        });
+        if (!resp.ok) {
+            throw new Error(`DB service error: ${resp.status} ${resp.statusText}`);
+        }
+        const data = await resp.json();
+        const rawHost = (Array.isArray(data) ? data : []).find((h: any) => h.id === id);
+        
+        if (!rawHost) {
+            return undefined;
+        }
+        
+        // Use ssh-host service to properly resolve credentials
+        return await sshHostService.getHostWithCredentials(rawHost.userId, id);
+    } catch (err) {
+        logger.error(`Failed to fetch host ${id}`, err);
+        return undefined;
+    }
 }
 
-function buildSshConfig(host: HostRecord): ConnectConfig {
+function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     const base: ConnectConfig = {
         host: host.ip,
         port: host.port || 22,
@@ -111,37 +128,41 @@ function buildSshConfig(host: HostRecord): ConnectConfig {
         algorithms: {}
     } as ConnectConfig;
 
+    // Use the same authentication logic as main SSH connections
     if (host.authType === 'password') {
-        (base as any).password = host.password || '';
-    } else if (host.authType === 'key') {
-        if (host.key) {
-            try {
-                if (!host.key.includes('-----BEGIN') || !host.key.includes('-----END')) {
-                    throw new Error('Invalid private key format');
-                }
-                
-                const cleanKey = host.key.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-                
-                (base as any).privateKey = Buffer.from(cleanKey, 'utf8');
-                
-                if (host.keyPassword) {
-                    (base as any).passphrase = host.keyPassword;
-                }
-
-            } catch (keyError) {
-                logger.error(`SSH key format error for host ${host.ip}: ${keyError.message}`);
-                if (host.password) {
-                    (base as any).password = host.password;
-                } else {
-                    throw new Error(`Invalid SSH key format for host ${host.ip}`);
-                }
-            }
+        if (!host.password) {
+            throw new Error(`No password available for host ${host.ip}`);
         }
+        (base as any).password = host.password;
+    } else if (host.authType === 'key') {
+        if (!host.key) {
+            throw new Error(`No SSH key available for host ${host.ip}`);
+        }
+        
+        try {
+            if (!host.key.includes('-----BEGIN') || !host.key.includes('-----END')) {
+                throw new Error('Invalid private key format');
+            }
+            
+            const cleanKey = host.key.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            
+            (base as any).privateKey = Buffer.from(cleanKey, 'utf8');
+            
+            if (host.keyPassword) {
+                (base as any).passphrase = host.keyPassword;
+            }
+        } catch (keyError) {
+            logger.error(`SSH key format error for host ${host.ip}: ${keyError instanceof Error ? keyError.message : 'Unknown error'}`);
+            throw new Error(`Invalid SSH key format for host ${host.ip}`);
+        }
+    } else {
+        throw new Error(`Unsupported authentication type '${host.authType}' for host ${host.ip}`);
     }
+    
     return base;
 }
 
-async function withSshConnection<T>(host: HostRecord, fn: (client: Client) => Promise<T>): Promise<T> {
+async function withSshConnection<T>(host: SSHHostWithCredentials, fn: (client: Client) => Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
         const client = new Client();
         let settled = false;
@@ -225,7 +246,7 @@ function kibToGiB(kib: number): number {
     return kib / (1024 * 1024);
 }
 
-async function collectMetrics(host: HostRecord): Promise<{
+async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     cpu: { percent: number | null; cores: number | null; load: [number, number, number] | null };
     memory: { percent: number | null; usedGiB: number | null; totalGiB: number | null };
     disk: { percent: number | null; usedHuman: string | null; totalHuman: string | null };
