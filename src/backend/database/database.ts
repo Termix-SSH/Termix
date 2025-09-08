@@ -147,22 +147,16 @@ app.get('/health', (req, res) => {
 
 app.get('/version', async (req, res) => {
     let localVersion = process.env.VERSION;
-    
-    // Fallback to package.json version if env variable not set
+
     if (!localVersion) {
         try {
             const packagePath = path.resolve(process.cwd(), 'package.json');
             const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
             localVersion = packageJson.version;
-            logger.info(`Using version from package.json: ${localVersion}`);
         } catch (error) {
             logger.error('Failed to read version from package.json:', error);
         }
     }
-    
-    // Debug logging
-    logger.debug(`Final version: ${localVersion}`);
-    logger.debug(`Working directory: ${process.cwd()}`);
 
     if (!localVersion) {
         logger.error('No version information available');
@@ -186,6 +180,7 @@ app.get('/version', async (req, res) => {
 
         const response = {
             status: localVersion === remoteVersion ? 'up_to_date' : 'requires_update',
+            localVersion: localVersion,
             version: remoteVersion,
             latest_release: {
                 tag_name: releaseData.data.tag_name,

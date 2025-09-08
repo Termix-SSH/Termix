@@ -142,6 +142,7 @@ interface AuthResponse {
 }
 
 interface UserInfo {
+    totp_enabled: boolean;
     id: string;
     username: string;
     is_admin: boolean;

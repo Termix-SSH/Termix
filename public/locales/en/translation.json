@@ -199,6 +199,7 @@
     "register": "Register",
     "username": "Username",
     "password": "Password",
+    "version" : "Version",
     "confirmPassword": "Confirm Password",
     "back": "Back",
     "email": "Email",
