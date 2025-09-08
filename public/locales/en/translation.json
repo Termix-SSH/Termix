@@ -208,7 +208,7 @@
     "downloadSample": "Download Sample",
     "formatGuide": "Format Guide",
     "uncategorized": "Uncategorized",
-    "confirmDelete": "Are you sure you want to delete \"{{name}}\"?",
+    "confirmDelete": "Are you sure you want to delete \"{{name}}\" ?",
     "failedToDeleteHost": "Failed to delete host",
     "jsonMustContainHosts": "JSON must contain a \"hosts\" array or be an array of hosts",
     "noHostsInJson": "No hosts found in JSON file",
@@ -810,5 +810,9 @@
     "invalidVerificationCode": "Invalid verification code",
     "failedToDisableTotp": "Failed to disable TOTP",
     "failedToGenerateBackupCodes": "Failed to generate backup codes"
+  },
+  "mobile": {
+    "selectHostToStart": "Select a host to start your terminal session",
+    "limitedSupportMessage": "Mobile support is currently limited. A dedicated mobile app is coming soon to enhance your experience."
   }
 }

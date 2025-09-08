@@ -10,7 +10,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {ChevronUp, Menu, User2} from "lucide-react";
 import React, {useState, useEffect, useMemo, useCallback} from "react";
 import {Separator} from "@/components/ui/separator.tsx";
-import {FolderCard} from "@/ui/Mobile/Apps/Navigation/Hosts/FolderCard.tsx";
+import {FolderCard} from "@/ui/Mobile/Navigation/Hosts/FolderCard.tsx";
 import {getSSHHosts} from "@/ui/main-axios.ts";
 import {useTranslation} from "react-i18next";
 import {Input} from "@/components/ui/input.tsx";
@@ -153,7 +153,7 @@ export function LeftSidebar({isSidebarOpen, setIsSidebarOpen, onHostConnect, dis
                     </SidebarHeader>
                     <Separator/>
                     <SidebarContent className="px-2 py-2">
-                        <div className="!bg-[#222225] rounded-lg mb-2">
+                        <div className="!bg-[#222225] rounded-lg">
                             <Input
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}

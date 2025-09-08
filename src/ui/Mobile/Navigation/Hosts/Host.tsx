@@ -4,7 +4,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {ButtonGroup} from "@/components/ui/button-group.tsx";
 import {Server, Terminal} from "lucide-react";
 import {getServerStatusById} from "@/ui/main-axios.ts";
-import {useTabs} from "@/ui/Mobile/Apps/Navigation/Tabs/TabContext.tsx";
+import {useTabs} from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 
 interface SSHHost {
     id: number;

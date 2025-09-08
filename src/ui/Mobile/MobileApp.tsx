@@ -1,11 +1,12 @@
 import React, {useRef, FC, useState, useEffect} from "react";
 import {Terminal} from "@/ui/Mobile/Apps/Terminal/Terminal.tsx";
 import {TerminalKeyboard} from "@/ui/Mobile/Apps/Terminal/TerminalKeyboard.tsx";
-import {BottomNavbar} from "@/ui/Mobile/Apps/Navigation/BottomNavbar.tsx";
-import {LeftSidebar} from "@/ui/Mobile/Apps/Navigation/LeftSidebar.tsx";
-import {TabProvider, useTabs} from "@/ui/Mobile/Apps/Navigation/Tabs/TabContext.tsx";
+import {BottomNavbar} from "@/ui/Mobile/Navigation/BottomNavbar.tsx";
+import {LeftSidebar} from "@/ui/Mobile/Navigation/LeftSidebar.tsx";
+import {TabProvider, useTabs} from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 import {getUserInfo} from "@/ui/main-axios.ts";
 import {HomepageAuth} from "@/ui/Mobile/Homepage/HomepageAuth.tsx";
+import {useTranslation} from "react-i18next";
 
 function getCookie(name: string) {
     return document.cookie.split('; ').reduce((r, v) => {
@@ -15,6 +16,7 @@ function getCookie(name: string) {
 }
 
 const AppContent: FC = () => {
+    const {t} = useTranslation();
     const {tabs, currentTab, getTab} = useTabs();
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
     const [ready, setReady] = React.useState(true);
@@ -58,6 +60,14 @@ const AppContent: FC = () => {
         return () => window.removeEventListener('storage', handleStorageChange)
     }, [])
 
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fitCurrentTerminal()
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, []);
+
     const handleAuthSuccess = (authData: { isAdmin: boolean; username: string | null; userId: string | null }) => {
         setIsAuthenticated(true)
         setIsAdmin(authData.isAdmin)
@@ -85,6 +95,10 @@ const AppContent: FC = () => {
 
     const closeSidebar = () => setIsSidebarOpen(false);
 
+    const handleKeyboardLayoutChange = () => {
+        fitCurrentTerminal();
+    }
+
     function handleKeyboardInput(input: string) {
         const currentTerminalTab = getTab(currentTab as number);
         if (currentTerminalTab && currentTerminalTab.terminalRef?.current?.sendInput) {
@@ -95,7 +109,7 @@ const AppContent: FC = () => {
     if (authLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-[#09090b]">
-                <p className="text-white">Loading...</p>
+                <p className="text-white">{t('common.loading')}</p>
             </div>
         )
     }
@@ -126,7 +140,7 @@ const AppContent: FC = () => {
                 {tabs.map(tab => (
                     <div
                         key={tab.id}
-                        className="absolute inset-0"
+                        className="absolute inset-0 mb-2"
                         style={{
                             visibility: tab.id === currentTab ? 'visible' : 'hidden',
                             opacity: ready ? 1 : 0,
@@ -140,12 +154,21 @@ const AppContent: FC = () => {
                     </div>
                 ))}
                 {tabs.length === 0 && (
-                    <div className="flex items-center justify-center h-full text-white">
-                        Select a host to start a terminal session.
+                    <div className="flex flex-col items-center justify-center h-full text-white gap-3 px-4 text-center">
+                        <h1 className="text-lg font-semibold">
+                            {t('mobile.selectHostToStart')}
+                        </h1>
+                        <p className="text-sm text-gray-300 max-w-xs">
+                            {t('mobile.limitedSupportMessage')}
+                        </p>
                     </div>
                 )}
             </div>
-            {currentTab && <TerminalKeyboard onSendInput={handleKeyboardInput}/>}
+            {currentTab &&
+                <div className="mb-1 z-10">
+                    <TerminalKeyboard onSendInput={handleKeyboardInput} onLayoutChange={handleKeyboardLayoutChange}/>
+                </div>
+            }
             <BottomNavbar
                 onSidebarOpenClick={() => setIsSidebarOpen(true)}
             />

@@ -1,18 +1,26 @@
-import React, {useState} from "react";
+import React, {useState, useCallback, useEffect} from "react";
 import Keyboard from "react-simple-keyboard";
 import "react-simple-keyboard/build/css/index.css";
 import "./kb-dark-theme.css";
 
 interface TerminalKeyboardProps {
     onSendInput: (input: string) => void;
+    onLayoutChange: () => void;
 }
 
-export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
+export function TerminalKeyboard({onSendInput, onLayoutChange}: TerminalKeyboardProps) {
     const [layoutName, setLayoutName] = useState("default");
     const [isCtrl, setIsCtrl] = useState(false);
     const [isAlt, setIsAlt] = useState(false);
 
-    const onKeyPress = async (button: string) => {
+    useEffect(() => {
+        if (onLayoutChange) {
+            const timeoutId = setTimeout(() => onLayoutChange(), 100);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [layoutName, onLayoutChange]);
+
+    const onKeyPress = useCallback((button: string) => {
         if (button === "{shift}") {
             setLayoutName("shift");
             return;
@@ -47,20 +55,6 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
             return;
         }
 
-        if (button === "{paste}") {
-            if (navigator.clipboard?.readText) {
-                try {
-                    const text = await navigator.clipboard.readText();
-                    if (text) {
-                        onSendInput(text);
-                    }
-                } catch (err) {
-
-                }
-            }
-            return;
-        }
-
         let input = button;
 
         const specialKeyMap: { [key: string]: string } = {
@@ -90,8 +84,16 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
             input = `\x1b${input}`;
         }
 
+        try {
+            if (navigator.vibrate) {
+                navigator.vibrate(20);
+            }
+        } catch (e) {
+            console.error("Vibration failed:", e);
+        }
+
         onSendInput(input);
-    };
+    }, [onSendInput, isCtrl, isAlt]);
 
     const buttonTheme = [
         {
@@ -104,7 +106,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
         },
         {
             class: "hg-space-small",
-            buttons: "{hide} {less} {more}",
+            buttons: "{hide} {unhide} {less} {more}",
         }
     ];
 
@@ -116,7 +118,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
     }
 
     return (
-        <div className="">
+        <div className="z-10">
             <Keyboard
                 layout={{
                     default: [
@@ -139,7 +141,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
                         "! @ # $ % ^ & * ( ) _ +",
                         "[ ] { } | \\ ; : ' \" , . / < >",
                         "F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12",
-                        "{arrowLeft} {arrowRight} {arrowUp} {arrowDown} {paste} {backspace}",
+                        "{arrowLeft} {arrowRight} {arrowUp} {arrowDown} {backspace}",
                         "{hide} {less} {space} {enter}",
                     ],
                     hide: [
@@ -166,7 +168,6 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
                     "{tab}": "tab",
                     "{ctrl}": "ctrl",
                     "{alt}": "alt",
-                    "{paste}": "paste",
                     "{end}": "end",
                     "{home}": "home",
                     "{pgUp}": "pgUp",
@@ -174,6 +175,7 @@ export function TerminalKeyboard({onSendInput}: TerminalKeyboardProps) {
                 }}
                 theme={"hg-theme-default dark-theme"}
                 useTouchEvents={true}
+                disableButtonHold={true}
                 buttonTheme={buttonTheme}
             />
         </div>

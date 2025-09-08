@@ -97,17 +97,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         return () => window.removeEventListener('resize', handleWindowResize);
     }, []);
 
-    useEffect(() => {
-        if (!terminal) return;
-
-        const textarea = (terminal as any)._core?._textarea as HTMLTextAreaElement | undefined;
-        if (textarea) {
-            textarea.setAttribute("readonly", "true");
-            textarea.setAttribute("inputmode", "none");
-            textarea.style.caretColor = "transparent";
-        }
-    }, [terminal]);
-
     function handleWindowResize() {
         if (!isVisibleRef.current) return;
         fitAddonRef.current?.fit();
@@ -158,7 +147,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         if (!terminal || !xtermRef.current || !hostConfig) return;
 
         terminal.options = {
-            cursorBlink: true,
+            cursorBlink: false,
             cursorStyle: 'bar',
             scrollback: 10000,
             fontSize: 14,
@@ -173,6 +162,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             fastScrollModifier: 'alt',
             fastScrollSensitivity: 5,
             allowProposedApi: true,
+            disableStdin: true,
+            cursorInactiveStyle: "bar",
         };
 
         const fitAddon = new FitAddon();
@@ -186,6 +177,14 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         terminal.loadAddon(unicode11Addon);
         terminal.loadAddon(webLinksAddon);
         terminal.open(xtermRef.current);
+
+        const textarea = xtermRef.current.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement | null;
+        if (textarea) {
+            textarea.readOnly = true;
+            textarea.blur();
+        }
+
+        terminal.focus = () => {};
 
         const resizeObserver = new ResizeObserver(() => {
             if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
