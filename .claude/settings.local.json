@@ -12,7 +12,12 @@
       "Bash(npm run build:*)",
       "Bash(npm install)",
       "Bash(npm run electron:build:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(npm run dev:backend:*)",
+      "Bash(taskkill:*)",
+      "Bash(node:*)",
+      "WebFetch(domain:ui.shadcn.com)"
     ],
     "deny": [],
     "ask": []

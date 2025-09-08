@@ -21,7 +21,8 @@ function startBackendServer() {
 
     backendProcess = spawn('node', [backendPath], {
         stdio: ['ignore', 'pipe', 'pipe'],
-        detached: false
+        detached: false,
+        cwd: path.join(__dirname, '..')  // Set working directory to app root
     });
 
     backendProcess.stdout.on('data', (data) => {

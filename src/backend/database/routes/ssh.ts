@@ -144,6 +144,8 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         username,
         password,
         authMethod,
+        authType,
+        credentialId,
         key,
         keyPassword,
         keyType,
@@ -160,6 +162,7 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         return res.status(400).json({error: 'Invalid SSH data'});
     }
 
+    const effectiveAuthType = authType || authMethod;
     const sshDataObj: any = {
         userId: userId,
         name,
@@ -168,7 +171,8 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         ip,
         port,
         username,
-        authType: authMethod,
+        authType: effectiveAuthType,
+        credentialId: credentialId || null,
         pin: !!pin ? 1 : 0,
         enableTerminal: !!enableTerminal ? 1 : 0,
         enableTunnel: !!enableTunnel ? 1 : 0,
@@ -177,12 +181,12 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         defaultPath: defaultPath || null,
     };
 
-    if (authMethod === 'password') {
+    if (effectiveAuthType === 'password') {
         sshDataObj.password = password;
         sshDataObj.key = null;
         sshDataObj.keyPassword = null;
         sshDataObj.keyType = null;
-    } else if (authMethod === 'key') {
+    } else if (effectiveAuthType === 'key') {
         sshDataObj.key = key;
         sshDataObj.keyPassword = keyPassword;
         sshDataObj.keyType = keyType;
@@ -232,6 +236,8 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         username,
         password,
         authMethod,
+        authType,
+        credentialId,
         key,
         keyPassword,
         keyType,
@@ -249,6 +255,7 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         return res.status(400).json({error: 'Invalid SSH data'});
     }
 
+    const effectiveAuthType = authType || authMethod;
     const sshDataObj: any = {
         name,
         folder,
@@ -256,7 +263,8 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         ip,
         port,
         username,
-        authType: authMethod,
+        authType: effectiveAuthType,
+        credentialId: credentialId || null,
         pin: !!pin ? 1 : 0,
         enableTerminal: !!enableTerminal ? 1 : 0,
         enableTunnel: !!enableTunnel ? 1 : 0,
@@ -265,15 +273,23 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         defaultPath: defaultPath || null,
     };
 
-    if (authMethod === 'password') {
-        sshDataObj.password = password;
+    if (effectiveAuthType === 'password') {
+        if (password) {
+            sshDataObj.password = password;
+        }
         sshDataObj.key = null;
         sshDataObj.keyPassword = null;
         sshDataObj.keyType = null;
-    } else if (authMethod === 'key') {
-        sshDataObj.key = key;
-        sshDataObj.keyPassword = keyPassword;
-        sshDataObj.keyType = keyType;
+    } else if (effectiveAuthType === 'key') {
+        if (key) {
+            sshDataObj.key = key;
+        }
+        if (keyPassword !== undefined) {
+            sshDataObj.keyPassword = keyPassword;
+        }
+        if (keyType) {
+            sshDataObj.keyType = keyType;
+        }
         sshDataObj.password = null;
     }
 
@@ -383,6 +399,112 @@ router.get('/db/folders', authenticateJWT, async (req: Request, res: Response) =
     } catch (err) {
         logger.error('Failed to fetch SSH folders', err);
         res.status(500).json({error: 'Failed to fetch SSH folders'});
+    }
+});
+
+// Route: Get all folders with usage statistics for the authenticated user (requires JWT)
+// GET /ssh/folders/with-stats
+router.get('/db/folders/with-stats', authenticateJWT, async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    if (!isNonEmptyString(userId)) {
+        logger.warn('Invalid userId for SSH folder stats fetch');
+        return res.status(400).json({error: 'Invalid userId'});
+    }
+    try {
+        const data = await db
+            .select({
+                folder: sshData.folder,
+                hostId: sshData.id,
+                hostName: sshData.name,
+                hostIp: sshData.ip
+            })
+            .from(sshData)
+            .where(eq(sshData.userId, userId));
+
+        const folderStats: Record<string, {
+            name: string;
+            hostCount: number;
+            hosts: Array<{id: number; name?: string; ip: string}>;
+        }> = {};
+
+        data.forEach(d => {
+            if (d.folder && d.folder.trim() !== '') {
+                if (!folderStats[d.folder]) {
+                    folderStats[d.folder] = {
+                        name: d.folder,
+                        hostCount: 0,
+                        hosts: []
+                    };
+                }
+                folderStats[d.folder].hostCount++;
+                folderStats[d.folder].hosts.push({
+                    id: d.hostId,
+                    name: d.hostName || undefined,
+                    ip: d.hostIp
+                });
+            }
+        });
+
+        const result = Object.values(folderStats).sort((a, b) => a.name.localeCompare(b.name));
+
+        res.json(result);
+    } catch (err) {
+        logger.error('Failed to fetch SSH folder statistics', err);
+        res.status(500).json({error: 'Failed to fetch SSH folder statistics'});
+    }
+});
+
+// Route: Rename folder across all hosts for the authenticated user (requires JWT)
+// PUT /ssh/folders/rename
+router.put('/db/folders/rename', authenticateJWT, async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const {oldName, newName} = req.body;
+    
+    if (!isNonEmptyString(userId) || !isNonEmptyString(oldName) || !isNonEmptyString(newName)) {
+        logger.warn('Invalid parameters for folder rename');
+        return res.status(400).json({error: 'userId, oldName, and newName are required'});
+    }
+
+    if (oldName === newName) {
+        logger.warn('Attempt to rename folder to the same name');
+        return res.status(400).json({error: 'New folder name must be different from old name'});
+    }
+
+    try {
+        // Check if the old folder exists
+        const existingHosts = await db
+            .select({id: sshData.id})
+            .from(sshData)
+            .where(and(
+                eq(sshData.userId, userId),
+                eq(sshData.folder, oldName)
+            ));
+
+        if (existingHosts.length === 0) {
+            logger.warn(`Attempt to rename non-existent folder: ${oldName}`);
+            return res.status(404).json({error: 'Folder not found'});
+        }
+
+        // Update all hosts using this folder name
+        const result = await db
+            .update(sshData)
+            .set({folder: newName})
+            .where(and(
+                eq(sshData.userId, userId),
+                eq(sshData.folder, oldName)
+            ));
+
+        logger.success(`Renamed folder "${oldName}" to "${newName}" for ${existingHosts.length} hosts`);
+        
+        res.json({
+            message: `Folder renamed successfully`,
+            oldName,
+            newName,
+            affectedHostsCount: existingHosts.length
+        });
+    } catch (err) {
+        logger.error('Failed to rename SSH folder', err);
+        res.status(500).json({error: 'Failed to rename SSH folder'});
     }
 });
 
@@ -688,6 +810,109 @@ router.delete('/file_manager/shortcuts', authenticateJWT, async (req: Request, r
     } catch (err) {
         logger.error('Failed to remove shortcut', err);
         res.status(500).json({error: 'Failed to remove shortcut'});
+    }
+});
+
+// Route: Get SSH host by ID with resolved credentials (requires JWT)
+// GET /ssh/host/:id/with-credentials
+router.get('/db/host/:id/with-credentials', authenticateJWT, async (req: Request, res: Response) => {
+    const {id} = req.params;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !id) {
+        logger.warn('Invalid request for SSH host with credentials fetch');
+        return res.status(400).json({error: 'Invalid request'});
+    }
+
+    try {
+        const {sshHostService} = await import('../../services/ssh-host.js');
+        const host = await sshHostService.getHostWithCredentials(userId, parseInt(id));
+
+        if (!host) {
+            return res.status(404).json({error: 'SSH host not found'});
+        }
+
+        res.json(host);
+    } catch (err) {
+        logger.error('Failed to fetch SSH host with credentials', err);
+        res.status(500).json({error: 'Failed to fetch SSH host with credentials'});
+    }
+});
+
+// Route: Apply credential to SSH host (requires JWT)
+// POST /ssh/host/:id/apply-credential
+router.post('/db/host/:id/apply-credential', authenticateJWT, async (req: Request, res: Response) => {
+    const {id: hostId} = req.params;
+    const {credentialId} = req.body;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !hostId || !credentialId) {
+        logger.warn('Invalid request for applying credential to host');
+        return res.status(400).json({error: 'Host ID and credential ID are required'});
+    }
+
+    try {
+        const {sshHostService} = await import('../../services/ssh-host.js');
+        await sshHostService.applyCredentialToHost(userId, parseInt(hostId), parseInt(credentialId));
+
+        res.json({message: 'Credential applied to host successfully'});
+    } catch (err) {
+        logger.error('Failed to apply credential to host', err);
+        res.status(500).json({
+            error: err instanceof Error ? err.message : 'Failed to apply credential to host'
+        });
+    }
+});
+
+// Route: Remove credential from SSH host (requires JWT)
+// DELETE /ssh/host/:id/credential
+router.delete('/db/host/:id/credential', authenticateJWT, async (req: Request, res: Response) => {
+    const {id: hostId} = req.params;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !hostId) {
+        logger.warn('Invalid request for removing credential from host');
+        return res.status(400).json({error: 'Invalid request'});
+    }
+
+    try {
+        const {sshHostService} = await import('../../services/ssh-host.js');
+        await sshHostService.removeCredentialFromHost(userId, parseInt(hostId));
+
+        res.json({message: 'Credential removed from host successfully'});
+    } catch (err) {
+        logger.error('Failed to remove credential from host', err);
+        res.status(500).json({
+            error: err instanceof Error ? err.message : 'Failed to remove credential from host'
+        });
+    }
+});
+
+// Route: Migrate host to managed credential (requires JWT)
+// POST /ssh/host/:id/migrate-to-credential
+router.post('/db/host/:id/migrate-to-credential', authenticateJWT, async (req: Request, res: Response) => {
+    const {id: hostId} = req.params;
+    const {credentialName} = req.body;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !hostId || !credentialName) {
+        logger.warn('Invalid request for migrating host to credential');
+        return res.status(400).json({error: 'Host ID and credential name are required'});
+    }
+
+    try {
+        const {sshHostService} = await import('../../services/ssh-host.js');
+        const credentialId = await sshHostService.migrateHostToCredential(userId, parseInt(hostId), credentialName);
+
+        res.json({
+            message: 'Host migrated to managed credential successfully',
+            credentialId
+        });
+    } catch (err) {
+        logger.error('Failed to migrate host to credential', err);
+        res.status(500).json({
+            error: err instanceof Error ? err.message : 'Failed to migrate host to credential'
+        });
     }
 });
 

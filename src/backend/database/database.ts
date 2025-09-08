@@ -3,9 +3,12 @@ import bodyParser from 'body-parser';
 import userRoutes from './routes/users.js';
 import sshRoutes from './routes/ssh.js';
 import alertRoutes from './routes/alerts.js';
+import credentialsRoutes from './routes/credentials.js';
 import chalk from 'chalk';
 import cors from 'cors';
 import fetch from 'node-fetch';
+import fs from 'fs';
+import path from 'path';
 import 'dotenv/config';
 
 const app = express();
@@ -143,9 +146,26 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/version', async (req, res) => {
-    const localVersion = process.env.VERSION;
+    let localVersion = process.env.VERSION;
+    
+    // Fallback to package.json version if env variable not set
+    if (!localVersion) {
+        try {
+            const packagePath = path.resolve(process.cwd(), 'package.json');
+            const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+            localVersion = packageJson.version;
+            logger.info(`Using version from package.json: ${localVersion}`);
+        } catch (error) {
+            logger.error('Failed to read version from package.json:', error);
+        }
+    }
+    
+    // Debug logging
+    logger.debug(`Final version: ${localVersion}`);
+    logger.debug(`Working directory: ${process.cwd()}`);
 
     if (!localVersion) {
+        logger.error('No version information available');
         return res.status(404).send('Local Version Not Set');
     }
 
@@ -235,19 +255,11 @@ app.get('/releases/rss', async (req, res) => {
     }
 });
 
-// Health check endpoint for Electron backend manager
-app.get('/health', (req, res) => {
-    res.status(200).json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        service: 'database-api',
-        port: PORT
-    });
-});
 
 app.use('/users', userRoutes);
 app.use('/ssh', sshRoutes);
 app.use('/alerts', alertRoutes);
+app.use('/credentials', credentialsRoutes);
 
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
     logger.error('Unhandled error:', err);

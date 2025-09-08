@@ -22,6 +22,7 @@ import {Alert, AlertDescription} from "@/components/ui/alert.tsx";
 import {toast} from "sonner";
 import {createSSHHost, updateSSHHost, getSSHHosts} from '@/ui/main-axios.ts';
 import {useTranslation} from "react-i18next";
+import {CredentialSelector} from "@/components/CredentialSelector.tsx";
 
 interface SSHHost {
     id: number;
@@ -44,6 +45,7 @@ interface SSHHost {
     tunnelConnections: any[];
     createdAt: string;
     updatedAt: string;
+    credentialId?: number;
 }
 
 interface SSHManagerHostEditorProps {
@@ -58,7 +60,10 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
     const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const [authTab, setAuthTab] = useState<'password' | 'key'>('password');
+    const [authTab, setAuthTab] = useState<'password' | 'key' | 'credential'>('password');
+    
+    // Ref for the IP address input to manage focus
+    const ipInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -98,7 +103,8 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
         folder: z.string().optional(),
         tags: z.array(z.string().min(1)).default([]),
         pin: z.boolean().default(false),
-        authType: z.enum(['password', 'key']),
+        authType: z.enum(['password', 'key', 'credential']),
+        credentialId: z.number().optional().nullable(),
         password: z.string().optional(),
         key: z.instanceof(File).optional().nullable(),
         keyPassword: z.string().optional(),
@@ -149,6 +155,14 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                     path: ['keyType']
                 });
             }
+        } else if (data.authType === 'credential') {
+            if (!data.credentialId) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: t('hosts.credentialRequired'),
+                    path: ['credentialId']
+                });
+            }
         }
 
         data.tunnelConnections.forEach((connection, index) => {
@@ -174,7 +188,8 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
             folder: editingHost?.folder || "",
             tags: editingHost?.tags || [],
             pin: editingHost?.pin || false,
-            authType: (editingHost?.authType as 'password' | 'key') || "password",
+            authType: (editingHost?.authType as 'password' | 'key' | 'credential') || "password",
+            credentialId: editingHost?.credentialId || null,
             password: "",
             key: null,
             keyPassword: "",
@@ -189,7 +204,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
 
     useEffect(() => {
         if (editingHost) {
-            const defaultAuthType = editingHost.key ? 'key' : 'password';
+            const defaultAuthType = editingHost.credentialId ? 'credential' : (editingHost.key ? 'key' : 'password');
 
             setAuthTab(defaultAuthType);
 
@@ -201,7 +216,8 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                 folder: editingHost.folder || "",
                 tags: editingHost.tags || [],
                 pin: editingHost.pin || false,
-                authType: defaultAuthType,
+                authType: defaultAuthType as 'password' | 'key' | 'credential',
+                credentialId: editingHost.credentialId || null,
                 password: editingHost.password || "",
                 key: editingHost.key ? new File([editingHost.key], "key.pem") : null,
                 keyPassword: editingHost.keyPassword || "",
@@ -224,6 +240,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                 tags: [],
                 pin: false,
                 authType: "password",
+                credentialId: null,
                 password: "",
                 key: null,
                 keyPassword: "",
@@ -236,6 +253,27 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
             });
         }
     }, [editingHost, form]);
+
+    // Focus the IP address field when the component mounts or when editingHost changes
+    useEffect(() => {
+        const focusTimer = setTimeout(() => {
+            if (ipInputRef.current) {
+                ipInputRef.current.focus();
+            }
+        }, 300);
+
+        return () => clearTimeout(focusTimer);
+    }, []); // Focus on mount
+
+    // Also focus when editingHost changes (for tab switching)
+    useEffect(() => {
+        const focusTimer = setTimeout(() => {
+            if (ipInputRef.current) {
+                ipInputRef.current.focus();
+            }
+        }, 300);
+        return () => clearTimeout(focusTimer);
+    }, [editingHost]);
 
     const onSubmit = async (data: any) => {
         try {
@@ -413,7 +451,14 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                             <FormItem className="col-span-5">
                                                 <FormLabel>{t('hosts.ipAddress')}</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder={t('placeholders.ipAddress')} {...field} />
+                                                    <Input 
+                                                        placeholder={t('placeholders.ipAddress')} 
+                                                        {...field}
+                                                        ref={(e) => {
+                                                            field.ref(e);
+                                                            ipInputRef.current = e;
+                                                        }}
+                                                    />
                                                 </FormControl>
                                             </FormItem>
                                         )}
@@ -574,14 +619,28 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                 <Tabs
                                     value={authTab}
                                     onValueChange={(value) => {
-                                        setAuthTab(value as 'password' | 'key');
-                                        form.setValue('authType', value as 'password' | 'key');
+                                        setAuthTab(value as 'password' | 'key' | 'credential');
+                                        form.setValue('authType', value as 'password' | 'key' | 'credential');
+                                        // Clear other auth fields when switching
+                                        if (value === 'password') {
+                                            form.setValue('key', null);
+                                            form.setValue('keyPassword', '');
+                                            form.setValue('credentialId', null);
+                                        } else if (value === 'key') {
+                                            form.setValue('password', '');
+                                            form.setValue('credentialId', null);
+                                        } else if (value === 'credential') {
+                                            form.setValue('password', '');
+                                            form.setValue('key', null);
+                                            form.setValue('keyPassword', '');
+                                        }
                                     }}
                                     className="flex-1 flex flex-col h-full min-h-0"
                                 >
                                     <TabsList>
                                         <TabsTrigger value="password">{t('hosts.password')}</TabsTrigger>
                                         <TabsTrigger value="key">{t('hosts.key')}</TabsTrigger>
+                                        <TabsTrigger value="credential">{t('hosts.credential')}</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="password">
                                         <FormField
@@ -695,6 +754,18 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                                 )}
                                             />
                                         </div>
+                                    </TabsContent>
+                                    <TabsContent value="credential">
+                                        <FormField
+                                            control={form.control}
+                                            name="credentialId"
+                                            render={({ field }) => (
+                                                <CredentialSelector
+                                                    value={field.value}
+                                                    onValueChange={field.onChange}
+                                                />
+                                            )}
+                                        />
                                     </TabsContent>
                                 </Tabs>
                             </TabsContent>
