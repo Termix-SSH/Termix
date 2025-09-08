@@ -4,6 +4,7 @@ import * as schema from './schema.js';
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
+import { MigrationManager } from '../migrations/migrator.js';
 
 const dbIconSymbol = '🗄️';
 const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
@@ -432,6 +433,9 @@ const migrateSchema = () => {
     addColumnIfNotExists('ssh_data', 'default_path', 'TEXT');
     addColumnIfNotExists('ssh_data', 'created_at', 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP');
     addColumnIfNotExists('ssh_data', 'updated_at', 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP');
+    
+    // Add credential_id column for SSH credentials management
+    addColumnIfNotExists('ssh_data', 'credential_id', 'INTEGER REFERENCES ssh_credentials(id)');
 
     addColumnIfNotExists('file_manager_recent', 'host_id', 'INTEGER NOT NULL');
     addColumnIfNotExists('file_manager_pinned', 'host_id', 'INTEGER NOT NULL');
@@ -440,15 +444,27 @@ const migrateSchema = () => {
     logger.success('Schema migration completed');
 };
 
-migrateSchema();
+const initializeDatabase = async () => {
+    migrateSchema();
 
-try {
-    const row = sqlite.prepare("SELECT value FROM settings WHERE key = 'allow_registration'").get();
-    if (!row) {
-        sqlite.prepare("INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')").run();
+    // Run new migration system
+    const migrationManager = new MigrationManager(sqlite);
+    await migrationManager.runMigrations();
+
+    try {
+        const row = sqlite.prepare("SELECT value FROM settings WHERE key = 'allow_registration'").get();
+        if (!row) {
+            sqlite.prepare("INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')").run();
+        }
+    } catch (e) {
+        logger.warn('Could not initialize default settings');
     }
-} catch (e) {
-    logger.warn('Could not initialize default settings');
-}
+};
+
+// Initialize database (async)
+initializeDatabase().catch(error => {
+    logger.error('Failed to initialize database:', error);
+    process.exit(1);
+});
 
 export const db = drizzle(sqlite, {schema});
