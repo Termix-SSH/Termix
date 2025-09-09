@@ -922,6 +922,7 @@ export async function getOIDCConfig(): Promise<any> {
         return response.data;
     } catch (error: any) {
         console.warn('Failed to fetch OIDC config:', error.response?.data?.error || error.message);
+        // Don't show toast for OIDC config as it's optional
         return null;
     }
 }
