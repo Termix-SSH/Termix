@@ -61,6 +61,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
     const [loading, setLoading] = useState(true);
 
     const [authTab, setAuthTab] = useState<'password' | 'key' | 'credential'>('password');
+    const [keyInputMethod, setKeyInputMethod] = useState<'upload' | 'paste'>('upload');
     
     // Ref for the IP address input to manage focus
     const ipInputRef = useRef<HTMLInputElement>(null);
@@ -696,40 +697,79 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                         />
                                     </TabsContent>
                                     <TabsContent value="key">
-                                        <div className="grid grid-cols-15 gap-4">
-                                            <Controller
-                                                control={form.control}
-                                                name="key"
-                                                render={({field}) => (
-                                                    <FormItem className="col-span-4 overflow-hidden min-w-0">
-                                                        <FormLabel>{t('hosts.sshPrivateKey')}</FormLabel>
-                                                        <FormControl>
-                                                            <div className="relative min-w-0">
-                                                                <input
-                                                                    id="key-upload"
-                                                                    type="file"
-                                                                    accept=".pem,.key,.txt,.ppk"
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files?.[0];
-                                                                        field.onChange(file || null);
-                                                                    }}
-                                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        <Tabs
+                                            value={keyInputMethod}
+                                            onValueChange={(value) => {
+                                                setKeyInputMethod(value as 'upload' | 'paste');
+                                                // Clear the other field when switching
+                                                if (value === 'upload') {
+                                                    form.setValue('key', null);
+                                                } else {
+                                                    form.setValue('key', '');
+                                                }
+                                            }}
+                                            className="w-full"
+                                        >
+                                            <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                                                <TabsTrigger value="upload">{t('hosts.uploadFile')}</TabsTrigger>
+                                                <TabsTrigger value="paste">{t('hosts.pasteKey')}</TabsTrigger>
+                                            </TabsList>
+                                            <TabsContent value="upload" className="mt-4">
+                                                <Controller
+                                                    control={form.control}
+                                                    name="key"
+                                                    render={({field}) => (
+                                                        <FormItem className="mb-4">
+                                                            <FormLabel>{t('hosts.sshPrivateKey')}</FormLabel>
+                                                            <FormControl>
+                                                                <div className="relative inline-block">
+                                                                    <input
+                                                                        id="key-upload"
+                                                                        type="file"
+                                                                        accept=".pem,.key,.txt,.ppk"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            field.onChange(file || null);
+                                                                        }}
+                                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                    />
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        className="justify-start text-left"
+                                                                    >
+                                                                        <span className="truncate"
+                                                                              title={field.value?.name || t('hosts.upload')}>
+                                                                            {field.value ? (editingHost ? t('hosts.updateKey') : field.value.name) : t('hosts.upload')}
+                                                                        </span>
+                                                                    </Button>
+                                                                </div>
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TabsContent>
+                                            <TabsContent value="paste" className="mt-4">
+                                                <Controller
+                                                    control={form.control}
+                                                    name="key"
+                                                    render={({field}) => (
+                                                        <FormItem className="mb-4">
+                                                            <FormLabel>{t('hosts.sshPrivateKey')}</FormLabel>
+                                                            <FormControl>
+                                                                <textarea
+                                                                    placeholder={t('placeholders.pastePrivateKey')}
+                                                                    className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    value={typeof field.value === 'string' ? field.value : ''}
+                                                                    onChange={(e) => field.onChange(e.target.value)}
                                                                 />
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    className="w-full min-w-0 overflow-hidden px-3 py-2 text-left"
-                                                                >
-                                                                    <span className="block w-full truncate"
-                                                                          title={field.value?.name || t('hosts.upload')}>
-                                                                        {field.value ? (editingHost ? t('hosts.updateKey') : field.value.name) : t('hosts.upload')}
-                                                                    </span>
-                                                                </Button>
-                                                            </div>
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TabsContent>
+                                        </Tabs>                                        
+                                        <div className="grid grid-cols-15 gap-4 mt-4">
                                             <FormField
                                                 control={form.control}
                                                 name="keyPassword"
