@@ -49,6 +49,9 @@ export function HomepageAlertManager({userId, loggedIn}: AlertManagerProps): Rea
             setAlerts(sortedAlerts);
             setCurrentAlertIndex(0);
         } catch (err) {
+            console.error('Failed to fetch user alerts:', err);
+            const {toast} = await import('sonner');
+            toast.error(t('homepage.failedToLoadAlerts'));
             setError(t('homepage.failedToLoadAlerts'));
         } finally {
             setLoading(false);

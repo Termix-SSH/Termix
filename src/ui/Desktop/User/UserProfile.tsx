@@ -43,6 +43,8 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
             setVersionInfo({version: info.localVersion});
         } catch (err) {
             console.error("Failed to load version info", err);
+            const {toast} = await import('sonner');
+            toast.error(t('user.failedToLoadVersionInfo'));
         }
     };
 

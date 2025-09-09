@@ -127,6 +127,9 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                 type: 'directory'
             })));
         } catch (err: any) {
+            console.error('Failed to fetch home data:', err);
+            const {toast} = await import('sonner');
+            toast.error(t('fileManager.failedToFetchHomeData'));
         }
     }
 

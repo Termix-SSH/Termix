@@ -411,7 +411,7 @@ app.post('/ssh/file_manager/ssh/writeFile', async (req, res) => {
 
                     fileLogger.error('Fallback write command failed:', err);
                     if (!res.headersSent) {
-                        return res.status(500).json({error: `Write failed: ${err.message}`});
+                        return res.status(500).json({error: `Write failed: ${err.message}`, toast: {type: 'error', message: `Write failed: ${err.message}`}});
                     }
                     return;
                 }
@@ -437,7 +437,7 @@ app.post('/ssh/file_manager/ssh/writeFile', async (req, res) => {
                     } else {
                         fileLogger.error(`Fallback write failed with code ${code}: ${errorData}`);
                         if (!res.headersSent) {
-                            res.status(500).json({error: `Write failed: ${errorData}`});
+                            res.status(500).json({error: `Write failed: ${errorData}`, toast: {type: 'error', message: `Write failed: ${errorData}`}});
                         }
                     }
                 });
@@ -602,9 +602,9 @@ app.post('/ssh/file_manager/ssh/uploadFile', async (req, res) => {
                             }
                         } else {
                             fileLogger.error(`Fallback upload failed with code ${code}: ${errorData}`);
-                            if (!res.headersSent) {
-                                res.status(500).json({error: `Upload failed: ${errorData}`});
-                            }
+                    if (!res.headersSent) {
+                        res.status(500).json({error: `Upload failed: ${errorData}`, toast: {type: 'error', message: `Upload failed: ${errorData}`}});
+                    }
                         }
                     });
 
@@ -659,9 +659,9 @@ app.post('/ssh/file_manager/ssh/uploadFile', async (req, res) => {
                             }
                         } else {
                             fileLogger.error(`Chunked fallback upload failed with code ${code}: ${errorData}`);
-                            if (!res.headersSent) {
-                                res.status(500).json({error: `Chunked upload failed: ${errorData}`});
-                            }
+                        if (!res.headersSent) {
+                            res.status(500).json({error: `Chunked upload failed: ${errorData}`, toast: {type: 'error', message: `Chunked upload failed: ${errorData}`}});
+                        }
                         }
                     });
 
@@ -748,7 +748,7 @@ app.post('/ssh/file_manager/ssh/createFile', async (req, res) => {
             if (code !== 0) {
                 fileLogger.error(`SSH createFile command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
-                    return res.status(500).json({error: `Command failed: ${errorData}`});
+                    return res.status(500).json({error: `Command failed: ${errorData}`, toast: {type: 'error', message: `File creation failed: ${errorData}`}});
                 }
                 return;
             }
@@ -832,7 +832,7 @@ app.post('/ssh/file_manager/ssh/createFolder', async (req, res) => {
             if (code !== 0) {
                 fileLogger.error(`SSH createFolder command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
-                    return res.status(500).json({error: `Command failed: ${errorData}`});
+                    return res.status(500).json({error: `Command failed: ${errorData}`, toast: {type: 'error', message: `Folder creation failed: ${errorData}`}});
                 }
                 return;
             }
@@ -915,7 +915,7 @@ app.delete('/ssh/file_manager/ssh/deleteItem', async (req, res) => {
             if (code !== 0) {
                 fileLogger.error(`SSH deleteItem command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
-                    return res.status(500).json({error: `Command failed: ${errorData}`});
+                    return res.status(500).json({error: `Command failed: ${errorData}`, toast: {type: 'error', message: `Delete failed: ${errorData}`}});
                 }
                 return;
             }
@@ -1000,7 +1000,7 @@ app.put('/ssh/file_manager/ssh/renameItem', async (req, res) => {
             if (code !== 0) {
                 fileLogger.error(`SSH renameItem command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
-                    return res.status(500).json({error: `Command failed: ${errorData}`});
+                    return res.status(500).json({error: `Command failed: ${errorData}`, toast: {type: 'error', message: `Rename failed: ${errorData}`}});
                 }
                 return;
             }

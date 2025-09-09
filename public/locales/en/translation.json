@@ -319,6 +319,9 @@
     "oidcConfigurationUpdated": "OIDC configuration updated successfully!",
     "failedToFetchOidcConfig": "Failed to fetch OIDC configuration",
     "failedToFetchRegistrationStatus": "Failed to fetch registration status",
+    "user": {
+      "failedToLoadVersionInfo": "Failed to load version information"
+    },
     "oidcConfigurationDisabled": "OIDC configuration disabled successfully!",
     "failedToUpdateOidcConfig": "Failed to update OIDC configuration",
     "failedToDisableOidcConfig": "Failed to disable OIDC configuration",
@@ -682,7 +685,8 @@
     "feedbackMessage": "Have ideas for what should come next for server management? Share them on",
     "failedToFetchHostConfig": "Failed to fetch host configuration",
     "failedToFetchStatus": "Failed to fetch server status",
-    "failedToFetchMetrics": "Failed to fetch server metrics"
+    "failedToFetchMetrics": "Failed to fetch server metrics",
+    "failedToFetchHomeData": "Failed to fetch home data"
   },
   "auth": {
     "loginTitle": "Login to Termix",
