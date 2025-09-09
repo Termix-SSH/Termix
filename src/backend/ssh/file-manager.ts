@@ -1,7 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import {Client as SSHClient} from 'ssh2';
-import chalk from "chalk";
+import {db} from '../database/db/index.js';
+import {sshData, sshCredentials} from '../database/db/schema.js';
+import {eq, and} from 'drizzle-orm';
+import { fileLogger } from '../utils/logger.js';
 
 const app = express();
 
@@ -14,31 +17,6 @@ app.use(express.json({limit: '100mb'}));
 app.use(express.urlencoded({limit: '100mb', extended: true}));
 app.use(express.raw({limit: '200mb', type: 'application/octet-stream'}));
 
-const sshIconSymbol = '📁';
-const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#1e3a8a')(`[${sshIconSymbol}]`)} ${message}`;
-};
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
 
 interface SSHSession {
     client: SSHClient;
@@ -69,15 +47,52 @@ function scheduleSessionCleanup(sessionId: string) {
 }
 
 app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
-    const {sessionId, ip, port, username, password, sshKey, keyPassword} = req.body;
+    const {sessionId, hostId, ip, port, username, password, sshKey, keyPassword, authType, credentialId, userId} = req.body;
+    
+    fileLogger.info('File manager SSH connection request received', { operation: 'file_connect', sessionId, hostId, ip, port, username, authType, hasCredentialId: !!credentialId });
+    
     if (!sessionId || !ip || !username || !port) {
+        fileLogger.warn('Missing SSH connection parameters for file manager', { operation: 'file_connect', sessionId, hasIp: !!ip, hasUsername: !!username, hasPort: !!port });
         return res.status(400).json({error: 'Missing SSH connection parameters'});
     }
 
     if (sshSessions[sessionId]?.isConnected) {
+        fileLogger.info('Cleaning up existing SSH session', { operation: 'file_connect', sessionId });
         cleanupSession(sessionId);
     }
     const client = new SSHClient();
+
+    let resolvedCredentials = {password, sshKey, keyPassword, authType};
+    if (credentialId && hostId && userId) {
+        fileLogger.info('Resolving credentials from database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, userId });
+        try {
+            const credentials = await db
+                .select()
+                .from(sshCredentials)
+                .where(and(
+                    eq(sshCredentials.id, credentialId),
+                    eq(sshCredentials.userId, userId)
+                ));
+
+            if (credentials.length > 0) {
+                const credential = credentials[0];
+                resolvedCredentials = {
+                    password: credential.password,
+                    sshKey: credential.key,
+                    keyPassword: credential.keyPassword,
+                    authType: credential.authType
+                };
+                fileLogger.success('Credentials resolved successfully for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, authType: credential.authType });
+            } else {
+                fileLogger.warn('No credentials found in database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId });
+            }
+        } catch (error) {
+            fileLogger.warn('Failed to resolve credentials from database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, error: error instanceof Error ? error.message : 'Unknown error' });
+        }
+    } else {
+        fileLogger.info('Using direct credentials for file manager connection', { operation: 'file_connect', sessionId, hostId, authType });
+    }
+
     const config: any = {
         host: ip,
         port: port || 22,
@@ -121,26 +136,29 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
         }
     };
 
-    if (sshKey && sshKey.trim()) {
+    if (resolvedCredentials.sshKey && resolvedCredentials.sshKey.trim()) {
+        fileLogger.info('Configuring SSH key authentication for file manager', { operation: 'file_connect', sessionId, hostId, hasKeyPassword: !!resolvedCredentials.keyPassword });
         try {
-            if (!sshKey.includes('-----BEGIN') || !sshKey.includes('-----END')) {
+            if (!resolvedCredentials.sshKey.includes('-----BEGIN') || !resolvedCredentials.sshKey.includes('-----END')) {
                 throw new Error('Invalid private key format');
             }
-            
-            const cleanKey = sshKey.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            
+
+            const cleanKey = resolvedCredentials.sshKey.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
             config.privateKey = Buffer.from(cleanKey, 'utf8');
-            
-            if (keyPassword) config.passphrase = keyPassword;
-            
-            logger.info('SSH key authentication configured successfully for file manager');
+
+            if (resolvedCredentials.keyPassword) config.passphrase = resolvedCredentials.keyPassword;
+
+            fileLogger.success('SSH key authentication configured successfully for file manager', { operation: 'file_connect', sessionId, hostId });
         } catch (keyError) {
-            logger.error('SSH key format error: ' + keyError.message);
+            fileLogger.error('SSH key format error for file manager', { operation: 'file_connect', sessionId, hostId, error: keyError.message });
             return res.status(400).json({error: 'Invalid SSH key format'});
         }
-    } else if (password && password.trim()) {
-        config.password = password;
+    } else if (resolvedCredentials.password && resolvedCredentials.password.trim()) {
+        fileLogger.info('Configuring password authentication for file manager', { operation: 'file_connect', sessionId, hostId });
+        config.password = resolvedCredentials.password;
     } else {
+        fileLogger.warn('No authentication method provided for file manager', { operation: 'file_connect', sessionId, hostId });
         return res.status(400).json({error: 'Either password or SSH key must be provided'});
     }
 
@@ -149,6 +167,7 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
     client.on('ready', () => {
         if (responseSent) return;
         responseSent = true;
+        fileLogger.success('SSH connection established for file manager', { operation: 'file_connect', sessionId, hostId, ip, port, username, authType: resolvedCredentials.authType });
         sshSessions[sessionId] = {client, isConnected: true, lastActive: Date.now()};
         res.json({status: 'success', message: 'SSH connection established'});
     });
@@ -156,7 +175,7 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
     client.on('error', (err) => {
         if (responseSent) return;
         responseSent = true;
-        logger.error(`SSH connection error for session ${sessionId}:`, err.message);
+        fileLogger.error('SSH connection failed for file manager', { operation: 'file_connect', sessionId, hostId, ip, port, username, error: err.message });
         res.status(500).json({status: 'error', message: err.message});
     });
 
@@ -194,12 +213,12 @@ app.get('/ssh/file_manager/ssh/listFiles', (req, res) => {
     }
 
     sshConn.lastActive = Date.now();
-    
+
 
     const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
     sshConn.client.exec(`ls -la '${escapedPath}'`, (err, stream) => {
         if (err) {
-            logger.error('SSH listFiles error:', err);
+            fileLogger.error('SSH listFiles error:', err);
             return res.status(500).json({error: err.message});
         }
 
@@ -216,7 +235,7 @@ app.get('/ssh/file_manager/ssh/listFiles', (req, res) => {
 
         stream.on('close', (code) => {
             if (code !== 0) {
-                logger.error(`SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
+                fileLogger.error(`SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 return res.status(500).json({error: `Command failed: ${errorData}`});
             }
 
@@ -264,12 +283,12 @@ app.get('/ssh/file_manager/ssh/readFile', (req, res) => {
     }
 
     sshConn.lastActive = Date.now();
-    
+
 
     const escapedPath = filePath.replace(/'/g, "'\"'\"'");
     sshConn.client.exec(`cat '${escapedPath}'`, (err, stream) => {
         if (err) {
-            logger.error('SSH readFile error:', err);
+            fileLogger.error('SSH readFile error:', err);
             return res.status(500).json({error: err.message});
         }
 
@@ -286,7 +305,7 @@ app.get('/ssh/file_manager/ssh/readFile', (req, res) => {
 
         stream.on('close', (code) => {
             if (code !== 0) {
-                logger.error(`SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
+                fileLogger.error(`SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 return res.status(500).json({error: `Command failed: ${errorData}`});
             }
 
@@ -321,7 +340,7 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
         try {
             sshConn.client.sftp((err, sftp) => {
                 if (err) {
-                    logger.warn(`SFTP failed, trying fallback method: ${err.message}`);
+                    fileLogger.warn(`SFTP failed, trying fallback method: ${err.message}`);
                     tryFallbackMethod();
                     return;
                 }
@@ -336,7 +355,7 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                         fileBuffer = Buffer.from(content);
                     }
                 } catch (bufferErr) {
-                    logger.error('Buffer conversion error:', bufferErr);
+                    fileLogger.error('Buffer conversion error:', bufferErr);
                     if (!res.headersSent) {
                         return res.status(500).json({error: 'Invalid file content format'});
                     }
@@ -351,14 +370,14 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                 writeStream.on('error', (streamErr) => {
                     if (hasError || hasFinished) return;
                     hasError = true;
-                    logger.warn(`SFTP write failed, trying fallback method: ${streamErr.message}`);
+                    fileLogger.warn(`SFTP write failed, trying fallback method: ${streamErr.message}`);
                     tryFallbackMethod();
                 });
 
                 writeStream.on('finish', () => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
-                    logger.success(`File written successfully via SFTP: ${filePath}`);
+                    fileLogger.success(`File written successfully via SFTP: ${filePath}`);
                     if (!res.headersSent) {
                         res.json({message: 'File written successfully', path: filePath});
                     }
@@ -367,7 +386,7 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                 writeStream.on('close', () => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
-                    logger.success(`File written successfully via SFTP: ${filePath}`);
+                    fileLogger.success(`File written successfully via SFTP: ${filePath}`);
                     if (!res.headersSent) {
                         res.json({message: 'File written successfully', path: filePath});
                     }
@@ -379,12 +398,12 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                 } catch (writeErr) {
                     if (hasError || hasFinished) return;
                     hasError = true;
-                    logger.warn(`SFTP write operation failed, trying fallback method: ${writeErr.message}`);
+                    fileLogger.warn(`SFTP write operation failed, trying fallback method: ${writeErr.message}`);
                     tryFallbackMethod();
                 }
             });
         } catch (sftpErr) {
-            logger.warn(`SFTP connection error, trying fallback method: ${sftpErr.message}`);
+            fileLogger.warn(`SFTP connection error, trying fallback method: ${sftpErr.message}`);
             tryFallbackMethod();
         }
     };
@@ -399,7 +418,7 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
             sshConn.client.exec(writeCommand, (err, stream) => {
                 if (err) {
 
-                    logger.error('Fallback write command failed:', err);
+                    fileLogger.error('Fallback write command failed:', err);
                     if (!res.headersSent) {
                         return res.status(500).json({error: `Write failed: ${err.message}`});
                     }
@@ -421,12 +440,12 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
 
 
                     if (outputData.includes('SUCCESS')) {
-                        logger.success(`File written successfully via fallback: ${filePath}`);
+                        fileLogger.success(`File written successfully via fallback: ${filePath}`);
                         if (!res.headersSent) {
                             res.json({message: 'File written successfully', path: filePath});
                         }
                     } else {
-                        logger.error(`Fallback write failed with code ${code}: ${errorData}`);
+                        fileLogger.error(`Fallback write failed with code ${code}: ${errorData}`);
                         if (!res.headersSent) {
                             res.status(500).json({error: `Write failed: ${errorData}`});
                         }
@@ -435,7 +454,7 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
 
                 stream.on('error', (streamErr) => {
 
-                    logger.error('Fallback write stream error:', streamErr);
+                    fileLogger.error('Fallback write stream error:', streamErr);
                     if (!res.headersSent) {
                         res.status(500).json({error: `Write stream error: ${streamErr.message}`});
                     }
@@ -443,7 +462,7 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
             });
         } catch (fallbackErr) {
 
-            logger.error('Fallback method failed:', fallbackErr);
+            fileLogger.error('Fallback method failed:', fallbackErr);
             if (!res.headersSent) {
                 res.status(500).json({error: `All write methods failed: ${fallbackErr.message}`});
             }
@@ -470,17 +489,16 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
     }
 
     sshConn.lastActive = Date.now();
-    
+
 
     const fullPath = filePath.endsWith('/') ? filePath + fileName : filePath + '/' + fileName;
-
 
 
     const trySFTP = () => {
         try {
             sshConn.client.sftp((err, sftp) => {
                 if (err) {
-                    logger.warn(`SFTP failed, trying fallback method: ${err.message}`);
+                    fileLogger.warn(`SFTP failed, trying fallback method: ${err.message}`);
                     tryFallbackMethod();
                     return;
                 }
@@ -496,7 +514,7 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     }
                 } catch (bufferErr) {
 
-                    logger.error('Buffer conversion error:', bufferErr);
+                    fileLogger.error('Buffer conversion error:', bufferErr);
                     if (!res.headersSent) {
                         return res.status(500).json({error: 'Invalid file content format'});
                     }
@@ -511,7 +529,7 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                 writeStream.on('error', (streamErr) => {
                     if (hasError || hasFinished) return;
                     hasError = true;
-                    logger.warn(`SFTP write failed, trying fallback method: ${streamErr.message}`);
+                    fileLogger.warn(`SFTP write failed, trying fallback method: ${streamErr.message}`);
                     tryFallbackMethod();
                 });
 
@@ -519,7 +537,7 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
 
-                    logger.success(`File uploaded successfully via SFTP: ${fullPath}`);
+                    fileLogger.success(`File uploaded successfully via SFTP: ${fullPath}`);
                     if (!res.headersSent) {
                         res.json({message: 'File uploaded successfully', path: fullPath});
                     }
@@ -529,7 +547,7 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
 
-                    logger.success(`File uploaded successfully via SFTP: ${fullPath}`);
+                    fileLogger.success(`File uploaded successfully via SFTP: ${fullPath}`);
                     if (!res.headersSent) {
                         res.json({message: 'File uploaded successfully', path: fullPath});
                     }
@@ -541,12 +559,12 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                 } catch (writeErr) {
                     if (hasError || hasFinished) return;
                     hasError = true;
-                    logger.warn(`SFTP write operation failed, trying fallback method: ${writeErr.message}`);
+                    fileLogger.warn(`SFTP write operation failed, trying fallback method: ${writeErr.message}`);
                     tryFallbackMethod();
                 }
             });
         } catch (sftpErr) {
-            logger.warn(`SFTP connection error, trying fallback method: ${sftpErr.message}`);
+            fileLogger.warn(`SFTP connection error, trying fallback method: ${sftpErr.message}`);
             tryFallbackMethod();
         }
     };
@@ -570,8 +588,8 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
 
                 sshConn.client.exec(writeCommand, (err, stream) => {
                     if (err) {
-    
-                        logger.error('Fallback upload command failed:', err);
+
+                        fileLogger.error('Fallback upload command failed:', err);
                         if (!res.headersSent) {
                             return res.status(500).json({error: `Upload failed: ${err.message}`});
                         }
@@ -590,15 +608,15 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     });
 
                     stream.on('close', (code) => {
-    
+
 
                         if (outputData.includes('SUCCESS')) {
-                            logger.success(`File uploaded successfully via fallback: ${fullPath}`);
+                            fileLogger.success(`File uploaded successfully via fallback: ${fullPath}`);
                             if (!res.headersSent) {
                                 res.json({message: 'File uploaded successfully', path: fullPath});
                             }
                         } else {
-                            logger.error(`Fallback upload failed with code ${code}: ${errorData}`);
+                            fileLogger.error(`Fallback upload failed with code ${code}: ${errorData}`);
                             if (!res.headersSent) {
                                 res.status(500).json({error: `Upload failed: ${errorData}`});
                             }
@@ -606,8 +624,8 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     });
 
                     stream.on('error', (streamErr) => {
-    
-                        logger.error('Fallback upload stream error:', streamErr);
+
+                        fileLogger.error('Fallback upload stream error:', streamErr);
                         if (!res.headersSent) {
                             res.status(500).json({error: `Upload stream error: ${streamErr.message}`});
                         }
@@ -628,8 +646,8 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
 
                 sshConn.client.exec(writeCommand, (err, stream) => {
                     if (err) {
-    
-                        logger.error('Chunked fallback upload failed:', err);
+
+                        fileLogger.error('Chunked fallback upload failed:', err);
                         if (!res.headersSent) {
                             return res.status(500).json({error: `Chunked upload failed: ${err.message}`});
                         }
@@ -648,15 +666,15 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     });
 
                     stream.on('close', (code) => {
-    
+
 
                         if (outputData.includes('SUCCESS')) {
-                            logger.success(`File uploaded successfully via chunked fallback: ${fullPath}`);
+                            fileLogger.success(`File uploaded successfully via chunked fallback: ${fullPath}`);
                             if (!res.headersSent) {
                                 res.json({message: 'File uploaded successfully', path: fullPath});
                             }
                         } else {
-                            logger.error(`Chunked fallback upload failed with code ${code}: ${errorData}`);
+                            fileLogger.error(`Chunked fallback upload failed with code ${code}: ${errorData}`);
                             if (!res.headersSent) {
                                 res.status(500).json({error: `Chunked upload failed: ${errorData}`});
                             }
@@ -664,7 +682,7 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     });
 
                     stream.on('error', (streamErr) => {
-                        logger.error('Chunked fallback upload stream error:', streamErr);
+                        fileLogger.error('Chunked fallback upload stream error:', streamErr);
                         if (!res.headersSent) {
                             res.status(500).json({error: `Chunked upload stream error: ${streamErr.message}`});
                         }
@@ -672,7 +690,7 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                 });
             }
         } catch (fallbackErr) {
-            logger.error('Fallback method failed:', fallbackErr);
+            fileLogger.error('Fallback method failed:', fallbackErr);
             if (!res.headersSent) {
                 res.status(500).json({error: `All upload methods failed: ${fallbackErr.message}`});
             }
@@ -707,7 +725,7 @@ app.post('/ssh/file_manager/ssh/createFile', (req, res) => {
 
     sshConn.client.exec(createCommand, (err, stream) => {
         if (err) {
-            logger.error('SSH createFile error:', err);
+            fileLogger.error('SSH createFile error:', err);
             if (!res.headersSent) {
                 return res.status(500).json({error: err.message});
             }
@@ -725,7 +743,7 @@ app.post('/ssh/file_manager/ssh/createFile', (req, res) => {
             errorData += chunk.toString();
 
             if (chunk.toString().includes('Permission denied')) {
-                logger.error(`Permission denied creating file: ${fullPath}`);
+                fileLogger.error(`Permission denied creating file: ${fullPath}`);
                 if (!res.headersSent) {
                     return res.status(403).json({
                         error: `Permission denied: Cannot create file ${fullPath}. Check directory permissions.`
@@ -744,7 +762,7 @@ app.post('/ssh/file_manager/ssh/createFile', (req, res) => {
             }
 
             if (code !== 0) {
-                logger.error(`SSH createFile command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
+                fileLogger.error(`SSH createFile command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
                     return res.status(500).json({error: `Command failed: ${errorData}`});
                 }
@@ -757,7 +775,7 @@ app.post('/ssh/file_manager/ssh/createFile', (req, res) => {
         });
 
         stream.on('error', (streamErr) => {
-            logger.error('SSH createFile stream error:', streamErr);
+            fileLogger.error('SSH createFile stream error:', streamErr);
             if (!res.headersSent) {
                 res.status(500).json({error: `Stream error: ${streamErr.message}`});
             }
@@ -791,7 +809,7 @@ app.post('/ssh/file_manager/ssh/createFolder', (req, res) => {
     sshConn.client.exec(createCommand, (err, stream) => {
         if (err) {
 
-            logger.error('SSH createFolder error:', err);
+            fileLogger.error('SSH createFolder error:', err);
             if (!res.headersSent) {
                 return res.status(500).json({error: err.message});
             }
@@ -809,7 +827,7 @@ app.post('/ssh/file_manager/ssh/createFolder', (req, res) => {
             errorData += chunk.toString();
 
             if (chunk.toString().includes('Permission denied')) {
-                logger.error(`Permission denied creating folder: ${fullPath}`);
+                fileLogger.error(`Permission denied creating folder: ${fullPath}`);
                 if (!res.headersSent) {
                     return res.status(403).json({
                         error: `Permission denied: Cannot create folder ${fullPath}. Check directory permissions.`
@@ -828,7 +846,7 @@ app.post('/ssh/file_manager/ssh/createFolder', (req, res) => {
             }
 
             if (code !== 0) {
-                logger.error(`SSH createFolder command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
+                fileLogger.error(`SSH createFolder command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
                     return res.status(500).json({error: `Command failed: ${errorData}`});
                 }
@@ -841,7 +859,7 @@ app.post('/ssh/file_manager/ssh/createFolder', (req, res) => {
         });
 
         stream.on('error', (streamErr) => {
-            logger.error('SSH createFolder stream error:', streamErr);
+            fileLogger.error('SSH createFolder stream error:', streamErr);
             if (!res.headersSent) {
                 res.status(500).json({error: `Stream error: ${streamErr.message}`});
             }
@@ -874,7 +892,7 @@ app.delete('/ssh/file_manager/ssh/deleteItem', (req, res) => {
 
     sshConn.client.exec(deleteCommand, (err, stream) => {
         if (err) {
-            logger.error('SSH deleteItem error:', err);
+            fileLogger.error('SSH deleteItem error:', err);
             if (!res.headersSent) {
                 return res.status(500).json({error: err.message});
             }
@@ -892,7 +910,7 @@ app.delete('/ssh/file_manager/ssh/deleteItem', (req, res) => {
             errorData += chunk.toString();
 
             if (chunk.toString().includes('Permission denied')) {
-                logger.error(`Permission denied deleting: ${itemPath}`);
+                fileLogger.error(`Permission denied deleting: ${itemPath}`);
                 if (!res.headersSent) {
                     return res.status(403).json({
                         error: `Permission denied: Cannot delete ${itemPath}. Check file permissions.`
@@ -911,7 +929,7 @@ app.delete('/ssh/file_manager/ssh/deleteItem', (req, res) => {
             }
 
             if (code !== 0) {
-                logger.error(`SSH deleteItem command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
+                fileLogger.error(`SSH deleteItem command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
                     return res.status(500).json({error: `Command failed: ${errorData}`});
                 }
@@ -924,7 +942,7 @@ app.delete('/ssh/file_manager/ssh/deleteItem', (req, res) => {
         });
 
         stream.on('error', (streamErr) => {
-            logger.error('SSH deleteItem stream error:', streamErr);
+            fileLogger.error('SSH deleteItem stream error:', streamErr);
             if (!res.headersSent) {
                 res.status(500).json({error: `Stream error: ${streamErr.message}`});
             }
@@ -959,7 +977,7 @@ app.put('/ssh/file_manager/ssh/renameItem', (req, res) => {
 
     sshConn.client.exec(renameCommand, (err, stream) => {
         if (err) {
-            logger.error('SSH renameItem error:', err);
+            fileLogger.error('SSH renameItem error:', err);
             if (!res.headersSent) {
                 return res.status(500).json({error: err.message});
             }
@@ -977,7 +995,7 @@ app.put('/ssh/file_manager/ssh/renameItem', (req, res) => {
             errorData += chunk.toString();
 
             if (chunk.toString().includes('Permission denied')) {
-                logger.error(`Permission denied renaming: ${oldPath}`);
+                fileLogger.error(`Permission denied renaming: ${oldPath}`);
                 if (!res.headersSent) {
                     return res.status(403).json({
                         error: `Permission denied: Cannot rename ${oldPath}. Check file permissions.`
@@ -996,7 +1014,7 @@ app.put('/ssh/file_manager/ssh/renameItem', (req, res) => {
             }
 
             if (code !== 0) {
-                logger.error(`SSH renameItem command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
+                fileLogger.error(`SSH renameItem command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
                     return res.status(500).json({error: `Command failed: ${errorData}`});
                 }
@@ -1009,7 +1027,7 @@ app.put('/ssh/file_manager/ssh/renameItem', (req, res) => {
         });
 
         stream.on('error', (streamErr) => {
-            logger.error('SSH renameItem stream error:', streamErr);
+            fileLogger.error('SSH renameItem stream error:', streamErr);
             if (!res.headersSent) {
                 res.status(500).json({error: `Stream error: ${streamErr.message}`});
             }
@@ -1029,4 +1047,5 @@ process.on('SIGTERM', () => {
 
 const PORT = 8084;
 app.listen(PORT, () => {
+    fileLogger.success('File Manager API server started', { operation: 'server_start', port: PORT });
 });

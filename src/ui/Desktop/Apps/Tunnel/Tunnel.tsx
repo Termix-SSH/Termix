@@ -1,52 +1,7 @@
 import React, {useState, useEffect, useCallback} from "react";
 import {TunnelViewer} from "@/ui/Desktop/Apps/Tunnel/TunnelViewer.tsx";
 import {getSSHHosts, getTunnelStatuses, connectTunnel, disconnectTunnel, cancelTunnel} from "@/ui/main-axios.ts";
-
-interface TunnelConnection {
-    sourcePort: number;
-    endpointPort: number;
-    endpointHost: string;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-}
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: TunnelConnection[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface TunnelStatus {
-    status: string;
-    reason?: string;
-    errorType?: string;
-    retryCount?: number;
-    maxRetries?: number;
-    nextRetryIn?: number;
-    retryExhausted?: boolean;
-}
-
-interface SSHTunnelProps {
-    filterHostKey?: string;
-}
+import type { SSHHost, TunnelConnection, TunnelStatus, SSHTunnelProps } from '../../../types/index.js';
 
 export function Tunnel({filterHostKey}: SSHTunnelProps): React.ReactElement {
     const [allHosts, setAllHosts] = useState<SSHHost[]>([]);
@@ -163,6 +118,8 @@ export function Tunnel({filterHostKey}: SSHTunnelProps): React.ReactElement {
                     sourceSSHKey: host.authType === 'key' ? host.key : undefined,
                     sourceKeyPassword: host.authType === 'key' ? host.keyPassword : undefined,
                     sourceKeyType: host.authType === 'key' ? host.keyType : undefined,
+                    sourceCredentialId: host.credentialId,
+                    sourceUserId: host.userId,
                     endpointIP: endpointHost.ip,
                     endpointSSHPort: endpointHost.port,
                     endpointUsername: endpointHost.username,
@@ -171,6 +128,8 @@ export function Tunnel({filterHostKey}: SSHTunnelProps): React.ReactElement {
                     endpointSSHKey: endpointHost.authType === 'key' ? endpointHost.key : undefined,
                     endpointKeyPassword: endpointHost.authType === 'key' ? endpointHost.keyPassword : undefined,
                     endpointKeyType: endpointHost.authType === 'key' ? endpointHost.keyType : undefined,
+                    endpointCredentialId: endpointHost.credentialId,
+                    endpointUserId: endpointHost.userId,
                     sourcePort: tunnel.sourcePort,
                     endpointPort: tunnel.endpointPort,
                     maxRetries: tunnel.maxRetries,

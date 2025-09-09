@@ -313,17 +313,30 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                     <div className="flex gap-2 pt-2">
                                         <Button type="submit" className="flex-1"
                                                 disabled={oidcLoading}>{oidcLoading ? t('admin.saving') : t('admin.saveConfiguration')}</Button>
-                                        <Button type="button" variant="outline" onClick={() => setOidcConfig({
-                                            client_id: '',
-                                            client_secret: '',
-                                            issuer_url: '',
-                                            authorization_url: '',
-                                            token_url: '',
-                                            identifier_path: 'sub',
-                                            name_path: 'name',
-                                            scopes: 'openid email profile',
-                                            userinfo_url: ''
-                                        })}>{t('admin.reset')}</Button>
+                                        <Button type="button" variant="outline" onClick={async () => {
+                                            const emptyConfig = {
+                                                client_id: '',
+                                                client_secret: '',
+                                                issuer_url: '',
+                                                authorization_url: '',
+                                                token_url: '',
+                                                identifier_path: '',
+                                                name_path: '',
+                                                scopes: '',
+                                                userinfo_url: ''
+                                            };
+                                            setOidcConfig(emptyConfig);
+                                            setOidcError(null);
+                                            setOidcLoading(true);
+                                            try {
+                                                await updateOIDCConfig(emptyConfig);
+                                                toast.success(t('admin.oidcConfigurationDisabled'));
+                                            } catch (err: any) {
+                                                setOidcError(err?.response?.data?.error || t('admin.failedToDisableOidcConfig'));
+                                            } finally {
+                                                setOidcLoading(false);
+                                            }
+                                        }} disabled={oidcLoading}>{t('admin.reset')}</Button>
                                     </div>
                                 </form>
                             </div>

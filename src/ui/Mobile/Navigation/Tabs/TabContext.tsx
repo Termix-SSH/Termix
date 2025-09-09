@@ -1,13 +1,8 @@
 import React, {createContext, useContext, useState, useRef, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
+import type { TabContextTab } from '../../../types/index.js';
 
-export interface Tab {
-    id: number;
-    type: 'terminal';
-    title: string;
-    hostConfig?: any;
-    terminalRef?: React.RefObject<any>;
-}
+export type Tab = TabContextTab;
 
 interface TabContextType {
     tabs: Tab[];

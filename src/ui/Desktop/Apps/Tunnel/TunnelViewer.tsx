@@ -1,44 +1,7 @@
 import React from "react";
 import {TunnelObject} from "./TunnelObject.tsx";
 import {useTranslation} from 'react-i18next';
-
-interface TunnelConnection {
-    sourcePort: number;
-    endpointPort: number;
-    endpointHost: string;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-}
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: TunnelConnection[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface TunnelStatus {
-    status: string;
-    reason?: string;
-    errorType?: string;
-    retryCount?: number;
-    maxRetries?: number;
-    nextRetryIn?: number;
-    retryExhausted?: boolean;
-}
+import type { SSHHost, TunnelConnection, TunnelStatus } from '../../../types/index.js';
 
 interface SSHTunnelViewerProps {
     hosts: SSHHost[];

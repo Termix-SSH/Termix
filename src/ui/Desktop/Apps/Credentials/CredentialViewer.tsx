@@ -27,45 +27,11 @@ import {
 import { getCredentialDetails, getCredentialHosts } from '@/ui/main-axios';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-
-interface Credential {
-    id: number;
-    name: string;
-    description?: string;
-    folder?: string;
-    tags: string[];
-    authType: 'password' | 'key';
-    username: string;
-    keyType?: string;
-    usageCount: number;
-    lastUsed?: string;
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface CredentialWithSecrets extends Credential {
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-}
-
-interface HostInfo {
-    id: number;
-    name?: string;
-    ip: string;
-    port: number;
-    createdAt: string;
-}
-
-interface CredentialViewerProps {
-    credential: Credential;
-    onClose: () => void;
-    onEdit: () => void;
-}
+import type { Credential, HostInfo, CredentialViewerProps } from '../../../types/index.js';
 
 const CredentialViewer: React.FC<CredentialViewerProps> = ({ credential, onClose, onEdit }) => {
     const { t } = useTranslation();
-    const [credentialDetails, setCredentialDetails] = useState<CredentialWithSecrets | null>(null);
+    const [credentialDetails, setCredentialDetails] = useState<Credential | null>(null);
     const [hostsUsing, setHostsUsing] = useState<HostInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});

@@ -106,7 +106,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
         authType: z.enum(['password', 'key', 'credential']),
         credentialId: z.number().optional().nullable(),
         password: z.string().optional(),
-        key: z.instanceof(File).optional().nullable(),
+        key: z.any().optional().nullable(),
         keyPassword: z.string().optional(),
         keyType: z.enum([
             'auto',
@@ -205,7 +205,6 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
     useEffect(() => {
         if (editingHost) {
             const defaultAuthType = editingHost.credentialId ? 'credential' : (editingHost.key ? 'key' : 'password');
-
             setAuthTab(defaultAuthType);
 
             form.reset({
@@ -219,7 +218,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                 authType: defaultAuthType as 'password' | 'key' | 'credential',
                 credentialId: editingHost.credentialId || null,
                 password: editingHost.password || "",
-                key: editingHost.key ? new File([editingHost.key], "key.pem") : null,
+                key: null,
                 keyPassword: editingHost.keyPassword || "",
                 keyType: (editingHost.keyType as any) || "auto",
                 enableTerminal: editingHost.enableTerminal !== false,
@@ -230,7 +229,6 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
             });
         } else {
             setAuthTab('password');
-
             form.reset({
                 name: "",
                 ip: "",
@@ -283,11 +281,52 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                 formData.name = `${formData.username}@${formData.ip}`;
             }
 
+            const submitData: any = {
+                name: formData.name,
+                ip: formData.ip,
+                port: formData.port,
+                username: formData.username,
+                folder: formData.folder,
+                tags: formData.tags,
+                pin: formData.pin,
+                authType: formData.authType,
+                enableTerminal: formData.enableTerminal,
+                enableTunnel: formData.enableTunnel,
+                enableFileManager: formData.enableFileManager,
+                defaultPath: formData.defaultPath,
+                tunnelConnections: formData.tunnelConnections
+            };
+
+            if (formData.authType === 'credential') {
+                submitData.credentialId = formData.credentialId;
+                submitData.password = null;
+                submitData.key = null;
+                submitData.keyPassword = null;
+                submitData.keyType = null;
+            } else if (formData.authType === 'password') {
+                submitData.credentialId = null;
+                submitData.password = formData.password;
+                submitData.key = null;
+                submitData.keyPassword = null;
+                submitData.keyType = null;
+            } else if (formData.authType === 'key') {
+                submitData.credentialId = null;
+                submitData.password = null;
+                if (formData.key instanceof File) {
+                    const keyContent = await formData.key.text();
+                    submitData.key = keyContent;
+                } else {
+                    submitData.key = formData.key;
+                }
+                submitData.keyPassword = formData.keyPassword;
+                submitData.keyType = formData.keyType;
+            }
+
             if (editingHost) {
-                await updateSSHHost(editingHost.id, formData);
+                await updateSSHHost(editingHost.id, submitData);
                 toast.success(t('hosts.hostUpdatedSuccessfully', { name: formData.name }));
             } else {
-                await createSSHHost(formData);
+                await createSSHHost(submitData);
                 toast.success(t('hosts.hostAddedSuccessfully', { name: formData.name }));
             }
 

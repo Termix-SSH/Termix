@@ -7,34 +7,7 @@ import {CredentialsManager} from "@/ui/Desktop/Apps/Credentials/CredentialsManag
 import {CredentialEditor} from "@/ui/Desktop/Apps/Credentials/CredentialEditor.tsx";
 import {useSidebar} from "@/components/ui/sidebar.tsx";
 import {useTranslation} from "react-i18next";
-
-interface HostManagerProps {
-    onSelectView: (view: string) => void;
-    isTopbarOpen?: boolean;
-}
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: any[];
-    createdAt: string;
-    updatedAt: string;
-}
+import type { SSHHost, HostManagerProps } from '../../../types/index.js';
 
 export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): React.ReactElement {
     const {t} = useTranslation();

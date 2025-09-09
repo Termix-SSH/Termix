@@ -2,35 +2,10 @@ import express from 'express';
 import {db} from '../db/index.js';
 import {dismissedAlerts} from '../db/schema.js';
 import {eq, and} from 'drizzle-orm';
-import chalk from 'chalk';
 import fetch from 'node-fetch';
 import type {Request, Response, NextFunction} from 'express';
+import { authLogger } from '../../utils/logger.js';
 
-const dbIconSymbol = '🚨';
-const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#dc2626')(`[${dbIconSymbol}]`)} ${message}`;
-};
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
 
 interface CacheEntry {
     data: any;
@@ -88,9 +63,11 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
     const cacheKey = 'termix_alerts';
     const cachedData = alertCache.get(cacheKey);
     if (cachedData) {
+        authLogger.info('Returning cached alerts from GitHub', { operation: 'alerts_fetch', cacheKey, alertCount: cachedData.length });
         return cachedData;
     }
 
+    authLogger.info('Fetching alerts from GitHub', { operation: 'alerts_fetch', url: `${GITHUB_RAW_BASE}/${REPO_OWNER}/${REPO_NAME}/${ALERTS_FILE}` });
     try {
         const url = `${GITHUB_RAW_BASE}/${REPO_OWNER}/${REPO_NAME}/${ALERTS_FILE}`;
 
@@ -102,10 +79,12 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
         });
 
         if (!response.ok) {
+            authLogger.warn('GitHub API returned error status', { operation: 'alerts_fetch', status: response.status, statusText: response.statusText });
             throw new Error(`GitHub raw content error: ${response.status} ${response.statusText}`);
         }
 
         const alerts: TermixAlert[] = await response.json() as TermixAlert[];
+        authLogger.info('Successfully fetched alerts from GitHub', { operation: 'alerts_fetch', totalAlerts: alerts.length });
 
         const now = new Date();
 
@@ -115,10 +94,12 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
             return isValid;
         });
 
+        authLogger.info('Filtered alerts by expiry date', { operation: 'alerts_fetch', totalAlerts: alerts.length, validAlerts: validAlerts.length });
         alertCache.set(cacheKey, validAlerts);
+        authLogger.success('Alerts cached successfully', { operation: 'alerts_fetch', alertCount: validAlerts.length });
         return validAlerts;
     } catch (error) {
-        logger.error('Failed to fetch alerts from GitHub', error);
+        authLogger.error('Failed to fetch alerts from GitHub', { operation: 'alerts_fetch', error: error instanceof Error ? error.message : 'Unknown error' });
         return [];
     }
 }
@@ -136,7 +117,7 @@ router.get('/', async (req, res) => {
             total_count: alerts.length
         });
     } catch (error) {
-        logger.error('Failed to get alerts', error);
+        authLogger.error('Failed to get alerts', error);
         res.status(500).json({error: 'Failed to fetch alerts'});
     }
 });
@@ -168,7 +149,7 @@ router.get('/user/:userId', async (req, res) => {
             dismissed_count: dismissedAlertIds.size
         });
     } catch (error) {
-        logger.error('Failed to get user alerts', error);
+        authLogger.error('Failed to get user alerts', error);
         res.status(500).json({error: 'Failed to fetch user alerts'});
     }
 });
@@ -180,7 +161,7 @@ router.post('/dismiss', async (req, res) => {
         const {userId, alertId} = req.body;
 
         if (!userId || !alertId) {
-            logger.warn('Missing userId or alertId in dismiss request');
+            authLogger.warn('Missing userId or alertId in dismiss request');
             return res.status(400).json({error: 'User ID and Alert ID are required'});
         }
 
@@ -193,7 +174,7 @@ router.post('/dismiss', async (req, res) => {
             ));
 
         if (existingDismissal.length > 0) {
-            logger.warn(`Alert ${alertId} already dismissed by user ${userId}`);
+            authLogger.warn(`Alert ${alertId} already dismissed by user ${userId}`);
             return res.status(409).json({error: 'Alert already dismissed'});
         }
 
@@ -202,10 +183,10 @@ router.post('/dismiss', async (req, res) => {
             alertId
         });
 
-        logger.success(`Alert ${alertId} dismissed by user ${userId}. Insert result: ${JSON.stringify(result)}`);
+        authLogger.success(`Alert ${alertId} dismissed by user ${userId}. Insert result: ${JSON.stringify(result)}`);
         res.json({message: 'Alert dismissed successfully'});
     } catch (error) {
-        logger.error('Failed to dismiss alert', error);
+        authLogger.error('Failed to dismiss alert', error);
         res.status(500).json({error: 'Failed to dismiss alert'});
     }
 });
@@ -233,7 +214,7 @@ router.get('/dismissed/:userId', async (req, res) => {
             total_count: dismissedAlertRecords.length
         });
     } catch (error) {
-        logger.error('Failed to get dismissed alerts', error);
+        authLogger.error('Failed to get dismissed alerts', error);
         res.status(500).json({error: 'Failed to fetch dismissed alerts'});
     }
 });
@@ -259,10 +240,10 @@ router.delete('/dismiss', async (req, res) => {
             return res.status(404).json({error: 'Dismissed alert not found'});
         }
 
-        logger.success(`Alert ${alertId} undismissed by user ${userId}`);
+        authLogger.success(`Alert ${alertId} undismissed by user ${userId}`);
         res.json({message: 'Alert undismissed successfully'});
     } catch (error) {
-        logger.error('Failed to undismiss alert', error);
+        authLogger.error('Failed to undismiss alert', error);
         res.status(500).json({error: 'Failed to undismiss alert'});
     }
 });

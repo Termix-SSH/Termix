@@ -27,29 +27,7 @@ import {
     Pencil
 } from "lucide-react";
 import {Separator} from "@/components/ui/separator.tsx";
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: any[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface SSHManagerHostViewerProps {
-    onEditHost?: (host: SSHHost) => void;
-}
+import type { SSHHost, SSHManagerHostViewerProps } from '../../../types/index.js';
 
 export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
     const {t} = useTranslation();

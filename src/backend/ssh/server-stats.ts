@@ -1,15 +1,39 @@
 import express from 'express';
-import chalk from 'chalk';
 import fetch from 'node-fetch';
 import net from 'net';
 import cors from 'cors';
 import {Client, type ConnectConfig} from 'ssh2';
-import {sshHostService} from '../services/ssh-host.js';
-import type {SSHHostWithCredentials} from '../services/ssh-host.js';
-
-// Removed HostRecord - using SSHHostWithCredentials from ssh-host service instead
+import {db} from '../database/db/index.js';
+import {sshData, sshCredentials} from '../database/db/schema.js';
+import {eq, and} from 'drizzle-orm';
+import { statsLogger } from '../utils/logger.js';
 
 type HostStatus = 'online' | 'offline';
+
+interface SSHHostWithCredentials {
+    id: number;
+    name: string;
+    ip: string;
+    port: number;
+    username: string;
+    folder: string;
+    tags: string[];
+    pin: boolean;
+    authType: string;
+    password?: string;
+    key?: string;
+    keyPassword?: string;
+    keyType?: string;
+    credentialId?: number;
+    enableTerminal: boolean;
+    enableTunnel: boolean;
+    enableFileManager: boolean;
+    defaultPath: string;
+    tunnelConnections: any[];
+    createdAt: string;
+    updatedAt: string;
+    userId: string;
+}
 
 type StatusEntry = {
     status: HostStatus;
@@ -33,90 +57,125 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 
-const statsIconSymbol = '📡';
-const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#22c55e')(`[${statsIconSymbol}]`)} ${message}`;
-};
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
 
 const hostStatuses: Map<number, StatusEntry> = new Map();
 
 async function fetchAllHosts(): Promise<SSHHostWithCredentials[]> {
-    const url = 'http://localhost:8081/ssh/db/host/internal';
     try {
-        const resp = await fetch(url, {
-            headers: {'x-internal-request': '1'}
-        });
-        if (!resp.ok) {
-            throw new Error(`DB service error: ${resp.status} ${resp.statusText}`);
-        }
-        const data = await resp.json();
-        const rawHosts = Array.isArray(data) ? data : [];
-        
-        // Resolve credentials for each host using the same logic as main SSH connections
+        const hosts = await db.select().from(sshData);
+
         const hostsWithCredentials: SSHHostWithCredentials[] = [];
-        for (const rawHost of rawHosts) {
+        for (const host of hosts) {
             try {
-                // Use the ssh-host service to properly resolve credentials
-                const host = await sshHostService.getHostWithCredentials(rawHost.userId, rawHost.id);
-                if (host) {
-                    hostsWithCredentials.push(host);
+                const hostWithCreds = await resolveHostCredentials(host);
+                if (hostWithCreds) {
+                    hostsWithCredentials.push(hostWithCreds);
                 }
             } catch (err) {
-                logger.warn(`Failed to resolve credentials for host ${rawHost.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                statsLogger.warn(`Failed to resolve credentials for host ${host.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
             }
         }
-        
+
         return hostsWithCredentials.filter(h => !!h.id && !!h.ip && !!h.port);
     } catch (err) {
-        logger.error('Failed to fetch hosts from database service', err);
+        statsLogger.error('Failed to fetch hosts from database', err);
         return [];
     }
 }
 
 async function fetchHostById(id: number): Promise<SSHHostWithCredentials | undefined> {
     try {
-        // Get all users that might own this host
-        const url = 'http://localhost:8081/ssh/db/host/internal';
-        const resp = await fetch(url, {
-            headers: {'x-internal-request': '1'}
-        });
-        if (!resp.ok) {
-            throw new Error(`DB service error: ${resp.status} ${resp.statusText}`);
-        }
-        const data = await resp.json();
-        const rawHost = (Array.isArray(data) ? data : []).find((h: any) => h.id === id);
-        
-        if (!rawHost) {
+        const hosts = await db.select().from(sshData).where(eq(sshData.id, id));
+
+        if (hosts.length === 0) {
             return undefined;
         }
-        
-        // Use ssh-host service to properly resolve credentials
-        return await sshHostService.getHostWithCredentials(rawHost.userId, id);
+
+        const host = hosts[0];
+        return await resolveHostCredentials(host);
     } catch (err) {
-        logger.error(`Failed to fetch host ${id}`, err);
+        statsLogger.error(`Failed to fetch host ${id}`, err);
         return undefined;
     }
+}
+
+async function resolveHostCredentials(host: any): Promise<SSHHostWithCredentials | undefined> {
+    try {
+        statsLogger.info('Resolving credentials for host', { operation: 'host_credential_resolve', hostId: host.id, hostName: host.name, hasCredentialId: !!host.credentialId });
+        
+        const baseHost: any = {
+            id: host.id,
+            name: host.name,
+            ip: host.ip,
+            port: host.port,
+            username: host.username,
+            folder: host.folder || '',
+            tags: typeof host.tags === 'string' ? (host.tags ? host.tags.split(',').filter(Boolean) : []) : [],
+            pin: !!host.pin,
+            authType: host.authType,
+            enableTerminal: !!host.enableTerminal,
+            enableTunnel: !!host.enableTunnel,
+            enableFileManager: !!host.enableFileManager,
+            defaultPath: host.defaultPath || '/',
+            tunnelConnections: host.tunnelConnections ? JSON.parse(host.tunnelConnections) : [],
+            createdAt: host.createdAt,
+            updatedAt: host.updatedAt,
+            userId: host.userId
+        };
+
+        if (host.credentialId) {
+            statsLogger.info('Fetching credentials from database', { operation: 'host_credential_resolve', hostId: host.id, credentialId: host.credentialId, userId: host.userId });
+            try {
+                const credentials = await db
+                    .select()
+                    .from(sshCredentials)
+                    .where(and(
+                        eq(sshCredentials.id, host.credentialId),
+                        eq(sshCredentials.userId, host.userId)
+                    ));
+
+                if (credentials.length > 0) {
+                    const credential = credentials[0];
+                    baseHost.credentialId = credential.id;
+                    baseHost.username = credential.username;
+                    baseHost.authType = credential.authType;
+
+                    if (credential.password) {
+                        baseHost.password = credential.password;
+                    }
+                    if (credential.key) {
+                        baseHost.key = credential.key;
+                    }
+                    if (credential.keyPassword) {
+                        baseHost.keyPassword = credential.keyPassword;
+                    }
+                    if (credential.keyType) {
+                        baseHost.keyType = credential.keyType;
+                    }
+                } else {
+                    statsLogger.warn(`Credential ${host.credentialId} not found for host ${host.id}, using legacy data`);
+                    addLegacyCredentials(baseHost, host);
+                }
+            } catch (error) {
+                statsLogger.warn(`Failed to resolve credential ${host.credentialId} for host ${host.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                addLegacyCredentials(baseHost, host);
+            }
+        } else {
+            addLegacyCredentials(baseHost, host);
+        }
+
+        return baseHost;
+    } catch (error) {
+        statsLogger.error(`Failed to resolve host credentials for host ${host.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return undefined;
+    }
+}
+
+function addLegacyCredentials(baseHost: any, host: any): void {
+    baseHost.password = host.password || null;
+    baseHost.key = host.key || null;
+    baseHost.keyPassword = host.keyPassword || null;
+    baseHost.keyType = host.keyType;
 }
 
 function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
@@ -128,7 +187,6 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
         algorithms: {}
     } as ConnectConfig;
 
-    // Use the same authentication logic as main SSH connections
     if (host.authType === 'password') {
         if (!host.password) {
             throw new Error(`No password available for host ${host.ip}`);
@@ -138,27 +196,27 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
         if (!host.key) {
             throw new Error(`No SSH key available for host ${host.ip}`);
         }
-        
+
         try {
             if (!host.key.includes('-----BEGIN') || !host.key.includes('-----END')) {
                 throw new Error('Invalid private key format');
             }
-            
+
             const cleanKey = host.key.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            
+
             (base as any).privateKey = Buffer.from(cleanKey, 'utf8');
-            
+
             if (host.keyPassword) {
                 (base as any).passphrase = host.keyPassword;
             }
         } catch (keyError) {
-            logger.error(`SSH key format error for host ${host.ip}: ${keyError instanceof Error ? keyError.message : 'Unknown error'}`);
+            statsLogger.error(`SSH key format error for host ${host.ip}: ${keyError instanceof Error ? keyError.message : 'Unknown error'}`);
             throw new Error(`Invalid SSH key format for host ${host.ip}`);
         }
     } else {
         throw new Error(`Unsupported authentication type '${host.authType}' for host ${host.ip}`);
     }
-    
+
     return base;
 }
 
@@ -316,24 +374,22 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         let usedHuman: string | null = null;
         let totalHuman: string | null = null;
         try {
-            // Get both human-readable and bytes format for accurate calculation
             const diskOutHuman = await execCommand(client, 'df -h -P / | tail -n +2');
             const diskOutBytes = await execCommand(client, 'df -B1 -P / | tail -n +2');
-            
+
             const humanLine = diskOutHuman.stdout.split('\n').map(l => l.trim()).filter(Boolean)[0] || '';
             const bytesLine = diskOutBytes.stdout.split('\n').map(l => l.trim()).filter(Boolean)[0] || '';
-            
+
             const humanParts = humanLine.split(/\s+/);
             const bytesParts = bytesLine.split(/\s+/);
-            
+
             if (humanParts.length >= 6 && bytesParts.length >= 6) {
                 totalHuman = humanParts[1] || null;
                 usedHuman = humanParts[2] || null;
-                
-                // Calculate our own percentage using bytes for accuracy
+
                 const totalBytes = Number(bytesParts[1]);
                 const usedBytes = Number(bytesParts[2]);
-                
+
                 if (Number.isFinite(totalBytes) && Number.isFinite(usedBytes) && totalBytes > 0) {
                     diskPercent = Math.max(0, Math.min(100, (usedBytes / totalBytes) * 100));
                 }
@@ -381,25 +437,30 @@ function tcpPing(host: string, port: number, timeoutMs = 5000): Promise<boolean>
 }
 
 async function pollStatusesOnce(): Promise<void> {
+    statsLogger.info('Starting status polling for all hosts', { operation: 'status_poll' });
     const hosts = await fetchAllHosts();
     if (hosts.length === 0) {
-        logger.warn('No hosts retrieved for status polling');
+        statsLogger.warn('No hosts retrieved for status polling', { operation: 'status_poll' });
         return;
     }
 
+    statsLogger.info('Polling status for hosts', { operation: 'status_poll', hostCount: hosts.length, hostIds: hosts.map(h => h.id) });
     const now = new Date().toISOString();
 
     const checks = hosts.map(async (h) => {
+        statsLogger.info('Checking host status', { operation: 'status_poll', hostId: h.id, hostName: h.name, ip: h.ip, port: h.port });
         const isOnline = await tcpPing(h.ip, h.port, 5000);
         const now = new Date().toISOString();
         const statusEntry: StatusEntry = {status: isOnline ? 'online' : 'offline', lastChecked: now};
         hostStatuses.set(h.id, statusEntry);
+        statsLogger.info('Host status check completed', { operation: 'status_poll', hostId: h.id, hostName: h.name, status: isOnline ? 'online' : 'offline' });
         return isOnline;
     });
 
     const results = await Promise.allSettled(checks);
     const onlineCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
     const offlineCount = hosts.length - onlineCount;
+    statsLogger.success('Status polling completed', { operation: 'status_poll', totalHosts: hosts.length, onlineCount, offlineCount });
 }
 
 app.get('/status', async (req, res) => {
@@ -424,15 +485,15 @@ app.get('/status/:id', async (req, res) => {
         if (!host) {
             return res.status(404).json({error: 'Host not found'});
         }
-        
+
         const isOnline = await tcpPing(host.ip, host.port, 5000);
         const now = new Date().toISOString();
         const statusEntry: StatusEntry = {status: isOnline ? 'online' : 'offline', lastChecked: now};
-        
+
         hostStatuses.set(id, statusEntry);
         res.json(statusEntry);
     } catch (err) {
-        logger.error('Failed to check host status', err);
+        statsLogger.error('Failed to check host status', err);
         res.status(500).json({error: 'Failed to check host status'});
     }
 });
@@ -455,7 +516,7 @@ app.get('/metrics/:id', async (req, res) => {
         const metrics = await collectMetrics(host);
         res.json({...metrics, lastChecked: new Date().toISOString()});
     } catch (err) {
-        logger.error('Failed to collect metrics', err);
+        statsLogger.error('Failed to collect metrics', err);
         return res.json({
             cpu: {percent: null, cores: null, load: null},
             memory: {percent: null, usedGiB: null, totalGiB: null},
@@ -467,9 +528,10 @@ app.get('/metrics/:id', async (req, res) => {
 
 const PORT = 8085;
 app.listen(PORT, async () => {
+    statsLogger.success('Server Stats API server started', { operation: 'server_start', port: PORT });
     try {
         await pollStatusesOnce();
     } catch (err) {
-        logger.error('Initial poll failed', err);
+        statsLogger.error('Initial poll failed', err, { operation: 'initial_poll' });
     }
 });

@@ -1,72 +1,32 @@
 import express from 'express';
 import {db} from '../db/index.js';
-import {sshData, fileManagerRecent, fileManagerPinned, fileManagerShortcuts} from '../db/schema.js';
+import {sshData, sshCredentials, fileManagerRecent, fileManagerPinned, fileManagerShortcuts} from '../db/schema.js';
 import {eq, and, desc} from 'drizzle-orm';
-import chalk from 'chalk';
+import type {Request, Response, NextFunction} from 'express';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
-import type {Request, Response, NextFunction} from 'express';
-
-const dbIconSymbol = '🗄️';
-const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#1e3a8a')(`[${dbIconSymbol}]`)} ${message}`;
-};
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
+import { sshLogger } from '../../utils/logger.js';
 
 const router = express.Router();
 
-function isNonEmptyString(val: any): val is string {
-    return typeof val === 'string' && val.trim().length > 0;
-}
-
-function isValidPort(val: any): val is number {
-    return typeof val === 'number' && val > 0 && val < 65536;
-}
+const upload = multer({storage: multer.memoryStorage()});
 
 interface JWTPayload {
     userId: string;
-    iat?: number;
-    exp?: number;
 }
 
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 10 * 1024 * 1024,
-    },
-    fileFilter: (req, file, cb) => {
-        if (file.fieldname === 'key') {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type'));
-        }
-    }
-});
+function isNonEmptyString(value: any): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isValidPort(port: any): port is number {
+    return typeof port === 'number' && port > 0 && port <= 65535;
+}
 
 function authenticateJWT(req: Request, res: Response, next: NextFunction) {
-    const authHeader = req.headers['authorization'];
+    const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        logger.warn('Missing or invalid Authorization header');
+        sshLogger.warn('Missing or invalid Authorization header');
         return res.status(401).json({error: 'Missing or invalid Authorization header'});
     }
     const token = authHeader.split(' ')[1];
@@ -76,7 +36,7 @@ function authenticateJWT(req: Request, res: Response, next: NextFunction) {
         (req as any).userId = payload.userId;
         next();
     } catch (err) {
-        logger.warn('Invalid or expired token');
+        sshLogger.warn('Invalid or expired token');
         return res.status(401).json({error: 'Invalid or expired token'});
     }
 }
@@ -89,23 +49,25 @@ function isLocalhost(req: Request) {
 // Internal-only endpoint for autostart (no JWT)
 router.get('/db/host/internal', async (req: Request, res: Response) => {
     if (!isLocalhost(req) && req.headers['x-internal-request'] !== '1') {
-        logger.warn('Unauthorized attempt to access internal SSH host endpoint');
+        sshLogger.warn('Unauthorized attempt to access internal SSH host endpoint');
         return res.status(403).json({error: 'Forbidden'});
     }
     try {
         const data = await db.select().from(sshData);
-        const result = data.map((row: any) => ({
-            ...row,
-            tags: typeof row.tags === 'string' ? (row.tags ? row.tags.split(',').filter(Boolean) : []) : [],
-            pin: !!row.pin,
-            enableTerminal: !!row.enableTerminal,
-            enableTunnel: !!row.enableTunnel,
-            tunnelConnections: row.tunnelConnections ? JSON.parse(row.tunnelConnections) : [],
-            enableFileManager: !!row.enableFileManager,
-        }));
+        const result = data.map((row: any) => {
+            return {
+                ...row,
+                tags: typeof row.tags === 'string' ? (row.tags ? row.tags.split(',').filter(Boolean) : []) : [],
+                pin: !!row.pin,
+                enableTerminal: !!row.enableTerminal,
+                enableTunnel: !!row.enableTunnel,
+                tunnelConnections: row.tunnelConnections ? JSON.parse(row.tunnelConnections) : [],
+                enableFileManager: !!row.enableFileManager,
+            };
+        });
         res.json(result);
     } catch (err) {
-        logger.error('Failed to fetch SSH data (internal)', err);
+        sshLogger.error('Failed to fetch SSH data (internal)', err);
         res.status(500).json({error: 'Failed to fetch SSH data'});
     }
 });
@@ -113,26 +75,33 @@ router.get('/db/host/internal', async (req: Request, res: Response) => {
 // Route: Create SSH data (requires JWT)
 // POST /ssh/host
 router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    sshLogger.info('SSH host creation request received', { operation: 'host_create', userId, contentType: req.headers['content-type'] });
+    
     let hostData: any;
 
     if (req.headers['content-type']?.includes('multipart/form-data')) {
+        sshLogger.info('Processing multipart form data for SSH host creation', { operation: 'host_create', userId });
         if (req.body.data) {
             try {
                 hostData = JSON.parse(req.body.data);
+                sshLogger.info('Successfully parsed JSON data from multipart request', { operation: 'host_create', userId, hasKey: !!req.file });
             } catch (err) {
-                logger.warn('Invalid JSON data in multipart request');
+                sshLogger.warn('Invalid JSON data in multipart request', { operation: 'host_create', userId, error: err });
                 return res.status(400).json({error: 'Invalid JSON data'});
             }
         } else {
-            logger.warn('Missing data field in multipart request');
+            sshLogger.warn('Missing data field in multipart request', { operation: 'host_create', userId });
             return res.status(400).json({error: 'Missing data field'});
         }
 
         if (req.file) {
             hostData.key = req.file.buffer.toString('utf8');
+            sshLogger.info('SSH key file processed from multipart request', { operation: 'host_create', userId, keySize: req.file.size });
         }
     } else {
         hostData = req.body;
+        sshLogger.info('Processing JSON data for SSH host creation', { operation: 'host_create', userId });
     }
 
     const {
@@ -156,9 +125,14 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         defaultPath,
         tunnelConnections
     } = hostData;
-    const userId = (req as any).userId;
     if (!isNonEmptyString(userId) || !isNonEmptyString(ip) || !isValidPort(port)) {
-        logger.warn('Invalid SSH data input');
+        sshLogger.warn('Invalid SSH data input validation failed', { 
+            operation: 'host_create', 
+            userId, 
+            hasIp: !!ip, 
+            port, 
+            isValidPort: isValidPort(port) 
+        });
         return res.status(400).json({error: 'Invalid SSH data'});
     }
 
@@ -166,38 +140,42 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
     const sshDataObj: any = {
         userId: userId,
         name,
-        folder,
+        folder: folder || null,
         tags: Array.isArray(tags) ? tags.join(',') : (tags || ''),
         ip,
         port,
         username,
         authType: effectiveAuthType,
         credentialId: credentialId || null,
-        pin: !!pin ? 1 : 0,
-        enableTerminal: !!enableTerminal ? 1 : 0,
-        enableTunnel: !!enableTunnel ? 1 : 0,
+        pin: !pin ? 1 : 0,
+        enableTerminal: !enableTerminal ? 1 : 0,
+        enableTunnel: !enableTunnel ? 1 : 0,
         tunnelConnections: Array.isArray(tunnelConnections) ? JSON.stringify(tunnelConnections) : null,
         enableFileManager: !!enableFileManager ? 1 : 0,
         defaultPath: defaultPath || null,
     };
 
     if (effectiveAuthType === 'password') {
-        sshDataObj.password = password;
+        sshDataObj.password = password || null;
         sshDataObj.key = null;
         sshDataObj.keyPassword = null;
         sshDataObj.keyType = null;
+        sshLogger.info('SSH host configured for password authentication', { operation: 'host_create', userId, name, ip, port });
     } else if (effectiveAuthType === 'key') {
-        sshDataObj.key = key;
-        sshDataObj.keyPassword = keyPassword;
+        sshDataObj.key = key || null;
+        sshDataObj.keyPassword = keyPassword || null;
         sshDataObj.keyType = keyType;
         sshDataObj.password = null;
+        sshLogger.info('SSH host configured for key authentication', { operation: 'host_create', userId, name, ip, port, keyType });
     }
 
     try {
+        sshLogger.info('Attempting to save SSH host to database', { operation: 'host_create', userId, name, ip, port, authType: effectiveAuthType });
         await db.insert(sshData).values(sshDataObj);
+        sshLogger.success('SSH host created successfully', { operation: 'host_create', userId, name, ip, port, authType: effectiveAuthType, enableTerminal, enableTunnel, enableFileManager });
         res.json({message: 'SSH data created'});
     } catch (err) {
-        logger.error('Failed to save SSH data', err);
+        sshLogger.error('Failed to save SSH host to database', err, { operation: 'host_create', userId, name, ip, port, authType: effectiveAuthType });
         res.status(500).json({error: 'Failed to save SSH data'});
     }
 });
@@ -205,26 +183,34 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
 // Route: Update SSH data (requires JWT)
 // PUT /ssh/host/:id
 router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Request, res: Response) => {
+    const hostId = req.params.id;
+    const userId = (req as any).userId;
+    sshLogger.info('SSH host update request received', { operation: 'host_update', hostId: parseInt(hostId), userId, contentType: req.headers['content-type'] });
+    
     let hostData: any;
 
     if (req.headers['content-type']?.includes('multipart/form-data')) {
+        sshLogger.info('Processing multipart form data for SSH host update', { operation: 'host_update', hostId: parseInt(hostId), userId });
         if (req.body.data) {
             try {
                 hostData = JSON.parse(req.body.data);
+                sshLogger.info('Successfully parsed JSON data from multipart request', { operation: 'host_update', hostId: parseInt(hostId), userId, hasKey: !!req.file });
             } catch (err) {
-                logger.warn('Invalid JSON data in multipart request');
+                sshLogger.warn('Invalid JSON data in multipart request', { operation: 'host_update', hostId: parseInt(hostId), userId, error: err });
                 return res.status(400).json({error: 'Invalid JSON data'});
             }
         } else {
-            logger.warn('Missing data field in multipart request');
+            sshLogger.warn('Missing data field in multipart request', { operation: 'host_update', hostId: parseInt(hostId), userId });
             return res.status(400).json({error: 'Missing data field'});
         }
 
         if (req.file) {
             hostData.key = req.file.buffer.toString('utf8');
+            sshLogger.info('SSH key file processed from multipart request', { operation: 'host_update', hostId: parseInt(hostId), userId, keySize: req.file.size });
         }
     } else {
         hostData = req.body;
+        sshLogger.info('Processing JSON data for SSH host update', { operation: 'host_update', hostId: parseInt(hostId), userId });
     }
 
     const {
@@ -248,10 +234,15 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         defaultPath,
         tunnelConnections
     } = hostData;
-    const {id} = req.params;
-    const userId = (req as any).userId;
-    if (!isNonEmptyString(userId) || !isNonEmptyString(ip) || !isValidPort(port) || !id) {
-        logger.warn('Invalid SSH data input for update');
+    if (!isNonEmptyString(userId) || !isNonEmptyString(ip) || !isValidPort(port) || !hostId) {
+        sshLogger.warn('Invalid SSH data input validation failed for update', { 
+            operation: 'host_update', 
+            hostId: parseInt(hostId), 
+            userId, 
+            hasIp: !!ip, 
+            port, 
+            isValidPort: isValidPort(port) 
+        });
         return res.status(400).json({error: 'Invalid SSH data'});
     }
 
@@ -265,11 +256,11 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         username,
         authType: effectiveAuthType,
         credentialId: credentialId || null,
-        pin: !!pin ? 1 : 0,
-        enableTerminal: !!enableTerminal ? 1 : 0,
-        enableTunnel: !!enableTunnel ? 1 : 0,
+        pin: !pin ? 1 : 0,
+        enableTerminal: !enableTerminal ? 1 : 0,
+        enableTunnel: !enableTunnel ? 1 : 0,
         tunnelConnections: Array.isArray(tunnelConnections) ? JSON.stringify(tunnelConnections) : null,
-        enableFileManager: !!enableFileManager ? 1 : 0,
+        enableFileManager: !enableFileManager ? 1 : 0,
         defaultPath: defaultPath || null,
     };
 
@@ -280,26 +271,30 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         sshDataObj.key = null;
         sshDataObj.keyPassword = null;
         sshDataObj.keyType = null;
+        sshLogger.info('SSH host update configured for password authentication', { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port });
     } else if (effectiveAuthType === 'key') {
         if (key) {
             sshDataObj.key = key;
         }
         if (keyPassword !== undefined) {
-            sshDataObj.keyPassword = keyPassword;
+            sshDataObj.keyPassword = keyPassword || null;
         }
         if (keyType) {
             sshDataObj.keyType = keyType;
         }
         sshDataObj.password = null;
+        sshLogger.info('SSH host update configured for key authentication', { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, keyType });
     }
 
     try {
+        sshLogger.info('Attempting to update SSH host in database', { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, authType: effectiveAuthType });
         await db.update(sshData)
             .set(sshDataObj)
-            .where(and(eq(sshData.id, Number(id)), eq(sshData.userId, userId)));
+            .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+        sshLogger.success('SSH host updated successfully', { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, authType: effectiveAuthType, enableTerminal, enableTunnel, enableFileManager });
         res.json({message: 'SSH data updated'});
     } catch (err) {
-        logger.error('Failed to update SSH data', err);
+        sshLogger.error('Failed to update SSH host in database', err, { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, authType: effectiveAuthType });
         res.status(500).json({error: 'Failed to update SSH data'});
     }
 });
@@ -308,27 +303,37 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
 // GET /ssh/host
 router.get('/db/host', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
+    sshLogger.info('SSH hosts fetch request received', { operation: 'host_fetch', userId });
     if (!isNonEmptyString(userId)) {
-        logger.warn('Invalid userId for SSH data fetch');
+        sshLogger.warn('Invalid userId for SSH data fetch', { operation: 'host_fetch', userId });
         return res.status(400).json({error: 'Invalid userId'});
     }
     try {
+        sshLogger.info('Fetching SSH hosts from database', { operation: 'host_fetch', userId });
         const data = await db
             .select()
             .from(sshData)
             .where(eq(sshData.userId, userId));
-        const result = data.map((row: any) => ({
-            ...row,
-            tags: typeof row.tags === 'string' ? (row.tags ? row.tags.split(',').filter(Boolean) : []) : [],
-            pin: !!row.pin,
-            enableTerminal: !!row.enableTerminal,
-            enableTunnel: !!row.enableTunnel,
-            tunnelConnections: row.tunnelConnections ? JSON.parse(row.tunnelConnections) : [],
-            enableFileManager: !!row.enableFileManager,
+        
+        sshLogger.info('Processing SSH hosts and resolving credentials', { operation: 'host_fetch', userId, hostCount: data.length });
+        const result = await Promise.all(data.map(async (row: any) => {
+            const baseHost = {
+                ...row,
+                tags: typeof row.tags === 'string' ? (row.tags ? row.tags.split(',').filter(Boolean) : []) : [],
+                pin: !!row.pin,
+                enableTerminal: !!row.enableTerminal,
+                enableTunnel: !!row.enableTunnel,
+                tunnelConnections: row.tunnelConnections ? JSON.parse(row.tunnelConnections) : [],
+                enableFileManager: !!row.enableFileManager,
+            };
+            
+            return await resolveHostCredentials(baseHost) || baseHost;
         }));
+        
+        sshLogger.success('SSH hosts fetched successfully', { operation: 'host_fetch', userId, hostCount: result.length });
         res.json(result);
     } catch (err) {
-        logger.error('Failed to fetch SSH data', err);
+        sshLogger.error('Failed to fetch SSH hosts from database', err, { operation: 'host_fetch', userId });
         res.status(500).json({error: 'Failed to fetch SSH data'});
     }
 });
@@ -336,21 +341,23 @@ router.get('/db/host', authenticateJWT, async (req: Request, res: Response) => {
 // Route: Get SSH host by ID (requires JWT)
 // GET /ssh/host/:id
 router.get('/db/host/:id', authenticateJWT, async (req: Request, res: Response) => {
-    const {id} = req.params;
+    const hostId = req.params.id;
     const userId = (req as any).userId;
-
-    if (!isNonEmptyString(userId) || !id) {
-        logger.warn('Invalid request for SSH host fetch');
-        return res.status(400).json({error: 'Invalid request'});
+    sshLogger.info('SSH host fetch by ID request received', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
+    
+    if (!isNonEmptyString(userId) || !hostId) {
+        sshLogger.warn('Invalid userId or hostId for SSH host fetch by ID', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
+        return res.status(400).json({error: 'Invalid userId or hostId'});
     }
-
     try {
+        sshLogger.info('Fetching SSH host by ID from database', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
         const data = await db
             .select()
             .from(sshData)
-            .where(and(eq(sshData.id, Number(id)), eq(sshData.userId, userId)));
+            .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
 
         if (data.length === 0) {
+            sshLogger.warn('SSH host not found', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
             return res.status(404).json({error: 'SSH host not found'});
         }
 
@@ -364,147 +371,12 @@ router.get('/db/host/:id', authenticateJWT, async (req: Request, res: Response) 
             tunnelConnections: host.tunnelConnections ? JSON.parse(host.tunnelConnections) : [],
             enableFileManager: !!host.enableFileManager,
         };
-
-        res.json(result);
-    } catch (err) {
-        logger.error('Failed to fetch SSH host', err);
-        res.status(500).json({error: 'Failed to fetch SSH host'});
-    }
-});
-
-// Route: Get all unique folders for the authenticated user (requires JWT)
-// GET /ssh/folders
-router.get('/db/folders', authenticateJWT, async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
-    if (!isNonEmptyString(userId)) {
-        logger.warn('Invalid userId for SSH folder fetch');
-        return res.status(400).json({error: 'Invalid userId'});
-    }
-    try {
-        const data = await db
-            .select({folder: sshData.folder})
-            .from(sshData)
-            .where(eq(sshData.userId, userId));
-
-        const folderCounts: Record<string, number> = {};
-        data.forEach(d => {
-            if (d.folder && d.folder.trim() !== '') {
-                folderCounts[d.folder] = (folderCounts[d.folder] || 0) + 1;
-            }
-        });
-
-        const folders = Object.keys(folderCounts).filter(folder => folderCounts[folder] > 0);
-
-        res.json(folders);
-    } catch (err) {
-        logger.error('Failed to fetch SSH folders', err);
-        res.status(500).json({error: 'Failed to fetch SSH folders'});
-    }
-});
-
-// Route: Get all folders with usage statistics for the authenticated user (requires JWT)
-// GET /ssh/folders/with-stats
-router.get('/db/folders/with-stats', authenticateJWT, async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
-    if (!isNonEmptyString(userId)) {
-        logger.warn('Invalid userId for SSH folder stats fetch');
-        return res.status(400).json({error: 'Invalid userId'});
-    }
-    try {
-        const data = await db
-            .select({
-                folder: sshData.folder,
-                hostId: sshData.id,
-                hostName: sshData.name,
-                hostIp: sshData.ip
-            })
-            .from(sshData)
-            .where(eq(sshData.userId, userId));
-
-        const folderStats: Record<string, {
-            name: string;
-            hostCount: number;
-            hosts: Array<{id: number; name?: string; ip: string}>;
-        }> = {};
-
-        data.forEach(d => {
-            if (d.folder && d.folder.trim() !== '') {
-                if (!folderStats[d.folder]) {
-                    folderStats[d.folder] = {
-                        name: d.folder,
-                        hostCount: 0,
-                        hosts: []
-                    };
-                }
-                folderStats[d.folder].hostCount++;
-                folderStats[d.folder].hosts.push({
-                    id: d.hostId,
-                    name: d.hostName || undefined,
-                    ip: d.hostIp
-                });
-            }
-        });
-
-        const result = Object.values(folderStats).sort((a, b) => a.name.localeCompare(b.name));
-
-        res.json(result);
-    } catch (err) {
-        logger.error('Failed to fetch SSH folder statistics', err);
-        res.status(500).json({error: 'Failed to fetch SSH folder statistics'});
-    }
-});
-
-// Route: Rename folder across all hosts for the authenticated user (requires JWT)
-// PUT /ssh/folders/rename
-router.put('/db/folders/rename', authenticateJWT, async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
-    const {oldName, newName} = req.body;
-    
-    if (!isNonEmptyString(userId) || !isNonEmptyString(oldName) || !isNonEmptyString(newName)) {
-        logger.warn('Invalid parameters for folder rename');
-        return res.status(400).json({error: 'userId, oldName, and newName are required'});
-    }
-
-    if (oldName === newName) {
-        logger.warn('Attempt to rename folder to the same name');
-        return res.status(400).json({error: 'New folder name must be different from old name'});
-    }
-
-    try {
-        // Check if the old folder exists
-        const existingHosts = await db
-            .select({id: sshData.id})
-            .from(sshData)
-            .where(and(
-                eq(sshData.userId, userId),
-                eq(sshData.folder, oldName)
-            ));
-
-        if (existingHosts.length === 0) {
-            logger.warn(`Attempt to rename non-existent folder: ${oldName}`);
-            return res.status(404).json({error: 'Folder not found'});
-        }
-
-        // Update all hosts using this folder name
-        const result = await db
-            .update(sshData)
-            .set({folder: newName})
-            .where(and(
-                eq(sshData.userId, userId),
-                eq(sshData.folder, oldName)
-            ));
-
-        logger.success(`Renamed folder "${oldName}" to "${newName}" for ${existingHosts.length} hosts`);
         
-        res.json({
-            message: `Folder renamed successfully`,
-            oldName,
-            newName,
-            affectedHostsCount: existingHosts.length
-        });
+        sshLogger.success('SSH host fetched by ID successfully', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId, hostName: result.name });
+        res.json(await resolveHostCredentials(result) || result);
     } catch (err) {
-        logger.error('Failed to rename SSH folder', err);
-        res.status(500).json({error: 'Failed to rename SSH folder'});
+        sshLogger.error('Failed to fetch SSH host by ID from database', err, { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
+        res.status(500).json({error: 'Failed to fetch SSH host'});
     }
 });
 
@@ -512,17 +384,21 @@ router.put('/db/folders/rename', authenticateJWT, async (req: Request, res: Resp
 // DELETE /ssh/host/:id
 router.delete('/db/host/:id', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const {id} = req.params;
-    if (!isNonEmptyString(userId) || !id) {
-        logger.warn('Invalid userId or id for SSH host delete');
+    const hostId = req.params.id;
+    sshLogger.info('SSH host deletion request received', { operation: 'host_delete', hostId: parseInt(hostId), userId });
+    
+    if (!isNonEmptyString(userId) || !hostId) {
+        sshLogger.warn('Invalid userId or hostId for SSH host delete', { operation: 'host_delete', hostId: parseInt(hostId), userId });
         return res.status(400).json({error: 'Invalid userId or id'});
     }
     try {
+        sshLogger.info('Attempting to delete SSH host from database', { operation: 'host_delete', hostId: parseInt(hostId), userId });
         const result = await db.delete(sshData)
-            .where(and(eq(sshData.id, Number(id)), eq(sshData.userId, userId)));
+            .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+        sshLogger.success('SSH host deleted successfully', { operation: 'host_delete', hostId: parseInt(hostId), userId });
         res.json({message: 'SSH host deleted'});
     } catch (err) {
-        logger.error('Failed to delete SSH host', err);
+        sshLogger.error('Failed to delete SSH host from database', err, { operation: 'host_delete', hostId: parseInt(hostId), userId });
         res.status(500).json({error: 'Failed to delete SSH host'});
     }
 });
@@ -534,12 +410,12 @@ router.get('/file_manager/recent', authenticateJWT, async (req: Request, res: Re
     const hostId = req.query.hostId ? parseInt(req.query.hostId as string) : null;
 
     if (!isNonEmptyString(userId)) {
-        logger.warn('Invalid userId for recent files fetch');
+        sshLogger.warn('Invalid userId for recent files fetch');
         return res.status(400).json({error: 'Invalid userId'});
     }
 
     if (!hostId) {
-        logger.warn('Host ID is required for recent files fetch');
+        sshLogger.warn('Host ID is required for recent files fetch');
         return res.status(400).json({error: 'Host ID is required'});
     }
 
@@ -547,82 +423,82 @@ router.get('/file_manager/recent', authenticateJWT, async (req: Request, res: Re
         const recentFiles = await db
             .select()
             .from(fileManagerRecent)
-            .where(and(
-                eq(fileManagerRecent.userId, userId),
-                eq(fileManagerRecent.hostId, hostId)
-            ))
-            .orderBy(desc(fileManagerRecent.lastOpened));
+            .where(and(eq(fileManagerRecent.userId, userId), eq(fileManagerRecent.hostId, hostId)))
+            .orderBy(desc(fileManagerRecent.lastOpened))
+            .limit(20);
+
         res.json(recentFiles);
     } catch (err) {
-        logger.error('Failed to fetch recent files', err);
+        sshLogger.error('Failed to fetch recent files', err);
         res.status(500).json({error: 'Failed to fetch recent files'});
     }
 });
 
-// Route: Add file to recent (requires JWT)
+// Route: Add recent file (requires JWT)
 // POST /ssh/file_manager/recent
 router.post('/file_manager/recent', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const {name, path, hostId} = req.body;
-    if (!isNonEmptyString(userId) || !name || !path || !hostId) {
-        logger.warn('Invalid request for adding recent file');
-        return res.status(400).json({error: 'Invalid request - userId, name, path, and hostId are required'});
-    }
-    try {
-        const conditions = [
-            eq(fileManagerRecent.userId, userId),
-            eq(fileManagerRecent.path, path),
-            eq(fileManagerRecent.hostId, hostId)
-        ];
+    const { hostId, path, name } = req.body;
 
+    if (!isNonEmptyString(userId) || !hostId || !path) {
+        sshLogger.warn('Invalid data for recent file addition');
+        return res.status(400).json({error: 'Invalid data'});
+    }
+
+    try {
+        // Check if file already exists
         const existing = await db
             .select()
             .from(fileManagerRecent)
-            .where(and(...conditions));
+            .where(and(
+                eq(fileManagerRecent.userId, userId),
+                eq(fileManagerRecent.hostId, hostId),
+                eq(fileManagerRecent.path, path)
+            ));
 
         if (existing.length > 0) {
+            // Update last opened time
             await db
                 .update(fileManagerRecent)
-                .set({lastOpened: new Date().toISOString()})
-                .where(and(...conditions));
+                .set({ lastOpened: new Date().toISOString() })
+                .where(eq(fileManagerRecent.id, existing[0].id));
         } else {
+            // Insert new record
             await db.insert(fileManagerRecent).values({
                 userId,
                 hostId,
-                name,
                 path,
+                name: name || path.split('/').pop() || 'Unknown',
                 lastOpened: new Date().toISOString()
             });
         }
-        res.json({message: 'File added to recent'});
+
+        res.json({message: 'Recent file added'});
     } catch (err) {
-        logger.error('Failed to add recent file', err);
+        sshLogger.error('Failed to add recent file', err);
         res.status(500).json({error: 'Failed to add recent file'});
     }
 });
 
-// Route: Remove file from recent (requires JWT)
-// DELETE /ssh/file_manager/recent
-router.delete('/file_manager/recent', authenticateJWT, async (req: Request, res: Response) => {
+// Route: Remove recent file (requires JWT)
+// DELETE /ssh/file_manager/recent/:id
+router.delete('/file_manager/recent/:id', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const {name, path, hostId} = req.body;
-    if (!isNonEmptyString(userId) || !name || !path || !hostId) {
-        logger.warn('Invalid request for removing recent file');
-        return res.status(400).json({error: 'Invalid request - userId, name, path, and hostId are required'});
-    }
-    try {
-        const conditions = [
-            eq(fileManagerRecent.userId, userId),
-            eq(fileManagerRecent.path, path),
-            eq(fileManagerRecent.hostId, hostId)
-        ];
+    const id = req.params.id;
 
-        const result = await db
+    if (!isNonEmptyString(userId) || !id) {
+        sshLogger.warn('Invalid userId or id for recent file deletion');
+        return res.status(400).json({error: 'Invalid userId or id'});
+    }
+
+    try {
+        await db
             .delete(fileManagerRecent)
-            .where(and(...conditions));
-        res.json({message: 'File removed from recent'});
+            .where(and(eq(fileManagerRecent.id, Number(id)), eq(fileManagerRecent.userId, userId)));
+
+        res.json({message: 'Recent file removed'});
     } catch (err) {
-        logger.error('Failed to remove recent file', err);
+        sshLogger.error('Failed to remove recent file', err);
         res.status(500).json({error: 'Failed to remove recent file'});
     }
 });
@@ -634,12 +510,12 @@ router.get('/file_manager/pinned', authenticateJWT, async (req: Request, res: Re
     const hostId = req.query.hostId ? parseInt(req.query.hostId as string) : null;
 
     if (!isNonEmptyString(userId)) {
-        logger.warn('Invalid userId for pinned files fetch');
+        sshLogger.warn('Invalid userId for pinned files fetch');
         return res.status(400).json({error: 'Invalid userId'});
     }
 
     if (!hostId) {
-        logger.warn('Host ID is required for pinned files fetch');
+        sshLogger.warn('Host ID is required for pinned files fetch');
         return res.status(400).json({error: 'Host ID is required'});
     }
 
@@ -647,92 +523,93 @@ router.get('/file_manager/pinned', authenticateJWT, async (req: Request, res: Re
         const pinnedFiles = await db
             .select()
             .from(fileManagerPinned)
-            .where(and(
-                eq(fileManagerPinned.userId, userId),
-                eq(fileManagerPinned.hostId, hostId)
-            ))
-            .orderBy(fileManagerPinned.pinnedAt);
+            .where(and(eq(fileManagerPinned.userId, userId), eq(fileManagerPinned.hostId, hostId)))
+            .orderBy(desc(fileManagerPinned.pinnedAt));
+
         res.json(pinnedFiles);
     } catch (err) {
-        logger.error('Failed to fetch pinned files', err);
+        sshLogger.error('Failed to fetch pinned files', err);
         res.status(500).json({error: 'Failed to fetch pinned files'});
     }
 });
 
-// Route: Add file to pinned (requires JWT)
+// Route: Add pinned file (requires JWT)
 // POST /ssh/file_manager/pinned
 router.post('/file_manager/pinned', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const {name, path, hostId} = req.body;
-    if (!isNonEmptyString(userId) || !name || !path || !hostId) {
-        logger.warn('Invalid request for adding pinned file');
-        return res.status(400).json({error: 'Invalid request - userId, name, path, and hostId are required'});
-    }
-    try {
-        const conditions = [
-            eq(fileManagerPinned.userId, userId),
-            eq(fileManagerPinned.path, path),
-            eq(fileManagerPinned.hostId, hostId)
-        ];
+    const { hostId, path, name } = req.body;
 
+    if (!isNonEmptyString(userId) || !hostId || !path) {
+        sshLogger.warn('Invalid data for pinned file addition');
+        return res.status(400).json({error: 'Invalid data'});
+    }
+
+    try {
+        // Check if file already exists
         const existing = await db
             .select()
             .from(fileManagerPinned)
-            .where(and(...conditions));
+            .where(and(
+                eq(fileManagerPinned.userId, userId),
+                eq(fileManagerPinned.hostId, hostId),
+                eq(fileManagerPinned.path, path)
+            ));
 
-        if (existing.length === 0) {
-            await db.insert(fileManagerPinned).values({
-                userId,
-                hostId,
-                name,
-                path,
-                pinnedAt: new Date().toISOString()
-            });
+        if (existing.length > 0) {
+            return res.status(409).json({error: 'File already pinned'});
         }
-        res.json({message: 'File pinned successfully'});
+
+        await db.insert(fileManagerPinned).values({
+            userId,
+            hostId,
+            path,
+            name: name || path.split('/').pop() || 'Unknown',
+            pinnedAt: new Date().toISOString()
+        });
+
+        res.json({message: 'File pinned'});
     } catch (err) {
-        logger.error('Failed to pin file', err);
+        sshLogger.error('Failed to pin file', err);
         res.status(500).json({error: 'Failed to pin file'});
     }
 });
 
-// Route: Remove file from pinned (requires JWT)
-// DELETE /ssh/file_manager/pinned
-router.delete('/file_manager/pinned', authenticateJWT, async (req: Request, res: Response) => {
+// Route: Remove pinned file (requires JWT)
+// DELETE /ssh/file_manager/pinned/:id
+router.delete('/file_manager/pinned/:id', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const {name, path, hostId} = req.body;
-    if (!isNonEmptyString(userId) || !name || !path || !hostId) {
-        logger.warn('Invalid request for removing pinned file');
-        return res.status(400).json({error: 'Invalid request - userId, name, path, and hostId are required'});
-    }
-    try {
-        const conditions = [
-            eq(fileManagerPinned.userId, userId),
-            eq(fileManagerPinned.path, path),
-            eq(fileManagerPinned.hostId, hostId)
-        ];
+    const id = req.params.id;
 
-        const result = await db
+    if (!isNonEmptyString(userId) || !id) {
+        sshLogger.warn('Invalid userId or id for pinned file deletion');
+        return res.status(400).json({error: 'Invalid userId or id'});
+    }
+
+    try {
+        await db
             .delete(fileManagerPinned)
-            .where(and(...conditions));
-        res.json({message: 'File unpinned successfully'});
+            .where(and(eq(fileManagerPinned.id, Number(id)), eq(fileManagerPinned.userId, userId)));
+
+        res.json({message: 'Pinned file removed'});
     } catch (err) {
-        logger.error('Failed to unpin file', err);
-        res.status(500).json({error: 'Failed to unpin file'});
+        sshLogger.error('Failed to remove pinned file', err);
+        res.status(500).json({error: 'Failed to remove pinned file'});
     }
 });
 
-// Route: Get folder shortcuts (requires JWT)
+// Route: Get shortcuts (requires JWT)
 // GET /ssh/file_manager/shortcuts
 router.get('/file_manager/shortcuts', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const hostId = req.query.hostId ? parseInt(req.query.hostId as string) : null;
 
     if (!isNonEmptyString(userId)) {
+        sshLogger.warn('Invalid userId for shortcuts fetch');
         return res.status(400).json({error: 'Invalid userId'});
     }
 
     if (!hostId) {
+        sshLogger.warn('Host ID is required for shortcuts fetch');
         return res.status(400).json({error: 'Host ID is required'});
     }
 
@@ -740,292 +617,109 @@ router.get('/file_manager/shortcuts', authenticateJWT, async (req: Request, res:
         const shortcuts = await db
             .select()
             .from(fileManagerShortcuts)
-            .where(and(
-                eq(fileManagerShortcuts.userId, userId),
-                eq(fileManagerShortcuts.hostId, hostId)
-            ))
-            .orderBy(fileManagerShortcuts.createdAt);
+            .where(and(eq(fileManagerShortcuts.userId, userId), eq(fileManagerShortcuts.hostId, hostId)))
+            .orderBy(desc(fileManagerShortcuts.createdAt));
+
         res.json(shortcuts);
     } catch (err) {
-        logger.error('Failed to fetch shortcuts', err);
+        sshLogger.error('Failed to fetch shortcuts', err);
         res.status(500).json({error: 'Failed to fetch shortcuts'});
     }
 });
 
-// Route: Add folder shortcut (requires JWT)
+// Route: Add shortcut (requires JWT)
 // POST /ssh/file_manager/shortcuts
 router.post('/file_manager/shortcuts', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const {name, path, hostId} = req.body;
-    if (!isNonEmptyString(userId) || !name || !path || !hostId) {
-        return res.status(400).json({error: 'Invalid request - userId, name, path, and hostId are required'});
-    }
-    try {
-        const conditions = [
-            eq(fileManagerShortcuts.userId, userId),
-            eq(fileManagerShortcuts.path, path),
-            eq(fileManagerShortcuts.hostId, hostId)
-        ];
+    const { hostId, path, name } = req.body;
 
+    if (!isNonEmptyString(userId) || !hostId || !path) {
+        sshLogger.warn('Invalid data for shortcut addition');
+        return res.status(400).json({error: 'Invalid data'});
+    }
+
+    try {
+        // Check if shortcut already exists
         const existing = await db
             .select()
             .from(fileManagerShortcuts)
-            .where(and(...conditions));
+            .where(and(
+                eq(fileManagerShortcuts.userId, userId),
+                eq(fileManagerShortcuts.hostId, hostId),
+                eq(fileManagerShortcuts.path, path)
+            ));
 
-        if (existing.length === 0) {
-            await db.insert(fileManagerShortcuts).values({
-                userId,
-                hostId,
-                name,
-                path,
-                createdAt: new Date().toISOString()
-            });
+        if (existing.length > 0) {
+            return res.status(409).json({error: 'Shortcut already exists'});
         }
-        res.json({message: 'Shortcut added successfully'});
+
+        await db.insert(fileManagerShortcuts).values({
+            userId,
+            hostId,
+            path,
+            name: name || path.split('/').pop() || 'Unknown',
+            createdAt: new Date().toISOString()
+        });
+
+        res.json({message: 'Shortcut added'});
     } catch (err) {
-        logger.error('Failed to add shortcut', err);
+        sshLogger.error('Failed to add shortcut', err);
         res.status(500).json({error: 'Failed to add shortcut'});
     }
 });
 
-// Route: Remove folder shortcut (requires JWT)
-// DELETE /ssh/file_manager/shortcuts
-router.delete('/file_manager/shortcuts', authenticateJWT, async (req: Request, res: Response) => {
+// Route: Remove shortcut (requires JWT)
+// DELETE /ssh/file_manager/shortcuts/:id
+router.delete('/file_manager/shortcuts/:id', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const {name, path, hostId} = req.body;
-    if (!isNonEmptyString(userId) || !name || !path || !hostId) {
-        return res.status(400).json({error: 'Invalid request - userId, name, path, and hostId are required'});
-    }
-    try {
-        const conditions = [
-            eq(fileManagerShortcuts.userId, userId),
-            eq(fileManagerShortcuts.path, path),
-            eq(fileManagerShortcuts.hostId, hostId)
-        ];
+    const id = req.params.id;
 
-        const result = await db
+    if (!isNonEmptyString(userId) || !id) {
+        sshLogger.warn('Invalid userId or id for shortcut deletion');
+        return res.status(400).json({error: 'Invalid userId or id'});
+    }
+
+    try {
+        await db
             .delete(fileManagerShortcuts)
-            .where(and(...conditions));
-        res.json({message: 'Shortcut removed successfully'});
+            .where(and(eq(fileManagerShortcuts.id, Number(id)), eq(fileManagerShortcuts.userId, userId)));
+
+        res.json({message: 'Shortcut removed'});
     } catch (err) {
-        logger.error('Failed to remove shortcut', err);
+        sshLogger.error('Failed to remove shortcut', err);
         res.status(500).json({error: 'Failed to remove shortcut'});
     }
 });
 
-// Route: Get SSH host by ID with resolved credentials (requires JWT)
-// GET /ssh/host/:id/with-credentials
-router.get('/db/host/:id/with-credentials', authenticateJWT, async (req: Request, res: Response) => {
-    const {id} = req.params;
-    const userId = (req as any).userId;
-
-    if (!isNonEmptyString(userId) || !id) {
-        logger.warn('Invalid request for SSH host with credentials fetch');
-        return res.status(400).json({error: 'Invalid request'});
-    }
-
+async function resolveHostCredentials(host: any): Promise<any> {
     try {
-        const {sshHostService} = await import('../../services/ssh-host.js');
-        const host = await sshHostService.getHostWithCredentials(userId, parseInt(id));
+        if (host.credentialId && host.userId) {
+            const credentials = await db
+                .select()
+                .from(sshCredentials)
+                .where(and(
+                    eq(sshCredentials.id, host.credentialId),
+                    eq(sshCredentials.userId, host.userId)
+                ));
 
-        if (!host) {
-            return res.status(404).json({error: 'SSH host not found'});
+            if (credentials.length > 0) {
+                const credential = credentials[0];
+                return {
+                    ...host,
+                    username: credential.username,
+                    authType: credential.authType,
+                    password: credential.password,
+                    key: credential.key,
+                    keyPassword: credential.keyPassword,
+                    keyType: credential.keyType
+                };
+            }
         }
-
-        res.json(host);
-    } catch (err) {
-        logger.error('Failed to fetch SSH host with credentials', err);
-        res.status(500).json({error: 'Failed to fetch SSH host with credentials'});
+        return host;
+    } catch (error) {
+        sshLogger.warn(`Failed to resolve credentials for host ${host.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return host;
     }
-});
+}
 
-// Route: Apply credential to SSH host (requires JWT)
-// POST /ssh/host/:id/apply-credential
-router.post('/db/host/:id/apply-credential', authenticateJWT, async (req: Request, res: Response) => {
-    const {id: hostId} = req.params;
-    const {credentialId} = req.body;
-    const userId = (req as any).userId;
-
-    if (!isNonEmptyString(userId) || !hostId || !credentialId) {
-        logger.warn('Invalid request for applying credential to host');
-        return res.status(400).json({error: 'Host ID and credential ID are required'});
-    }
-
-    try {
-        const {sshHostService} = await import('../../services/ssh-host.js');
-        await sshHostService.applyCredentialToHost(userId, parseInt(hostId), parseInt(credentialId));
-
-        res.json({message: 'Credential applied to host successfully'});
-    } catch (err) {
-        logger.error('Failed to apply credential to host', err);
-        res.status(500).json({
-            error: err instanceof Error ? err.message : 'Failed to apply credential to host'
-        });
-    }
-});
-
-// Route: Remove credential from SSH host (requires JWT)
-// DELETE /ssh/host/:id/credential
-router.delete('/db/host/:id/credential', authenticateJWT, async (req: Request, res: Response) => {
-    const {id: hostId} = req.params;
-    const userId = (req as any).userId;
-
-    if (!isNonEmptyString(userId) || !hostId) {
-        logger.warn('Invalid request for removing credential from host');
-        return res.status(400).json({error: 'Invalid request'});
-    }
-
-    try {
-        const {sshHostService} = await import('../../services/ssh-host.js');
-        await sshHostService.removeCredentialFromHost(userId, parseInt(hostId));
-
-        res.json({message: 'Credential removed from host successfully'});
-    } catch (err) {
-        logger.error('Failed to remove credential from host', err);
-        res.status(500).json({
-            error: err instanceof Error ? err.message : 'Failed to remove credential from host'
-        });
-    }
-});
-
-// Route: Migrate host to managed credential (requires JWT)
-// POST /ssh/host/:id/migrate-to-credential
-router.post('/db/host/:id/migrate-to-credential', authenticateJWT, async (req: Request, res: Response) => {
-    const {id: hostId} = req.params;
-    const {credentialName} = req.body;
-    const userId = (req as any).userId;
-
-    if (!isNonEmptyString(userId) || !hostId || !credentialName) {
-        logger.warn('Invalid request for migrating host to credential');
-        return res.status(400).json({error: 'Host ID and credential name are required'});
-    }
-
-    try {
-        const {sshHostService} = await import('../../services/ssh-host.js');
-        const credentialId = await sshHostService.migrateHostToCredential(userId, parseInt(hostId), credentialName);
-
-        res.json({
-            message: 'Host migrated to managed credential successfully',
-            credentialId
-        });
-    } catch (err) {
-        logger.error('Failed to migrate host to credential', err);
-        res.status(500).json({
-            error: err instanceof Error ? err.message : 'Failed to migrate host to credential'
-        });
-    }
-});
-
-// Route: Bulk import SSH hosts from JSON (requires JWT)
-// POST /ssh/bulk-import
-router.post('/bulk-import', authenticateJWT, async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
-    const {hosts} = req.body;
-
-    if (!Array.isArray(hosts) || hosts.length === 0) {
-        logger.warn('Invalid bulk import data - hosts array is required and must not be empty');
-        return res.status(400).json({error: 'Hosts array is required and must not be empty'});
-    }
-
-    if (hosts.length > 100) {
-        logger.warn(`Bulk import attempted with too many hosts: ${hosts.length}`);
-        return res.status(400).json({error: 'Maximum 100 hosts allowed per import'});
-    }
-
-    const results = {
-        success: 0,
-        failed: 0,
-        errors: [] as string[]
-    };
-
-    for (let i = 0; i < hosts.length; i++) {
-        const hostData = hosts[i];
-
-        try {
-            if (!isNonEmptyString(hostData.ip) || !isValidPort(hostData.port) || !isNonEmptyString(hostData.username)) {
-                results.failed++;
-                results.errors.push(`Host ${i + 1}: Missing or invalid required fields (ip, port, username)`);
-                continue;
-            }
-
-            if (hostData.authType !== 'password' && hostData.authType !== 'key') {
-                results.failed++;
-                results.errors.push(`Host ${i + 1}: Invalid authType. Must be 'password' or 'key'`);
-                continue;
-            }
-
-            if (hostData.authType === 'password' && !isNonEmptyString(hostData.password)) {
-                results.failed++;
-                results.errors.push(`Host ${i + 1}: Password required for password authentication`);
-                continue;
-            }
-
-            if (hostData.authType === 'key' && !isNonEmptyString(hostData.key)) {
-                results.failed++;
-                results.errors.push(`Host ${i + 1}: SSH key required for key authentication`);
-                continue;
-            }
-
-            if (hostData.enableTunnel && Array.isArray(hostData.tunnelConnections)) {
-                for (let j = 0; j < hostData.tunnelConnections.length; j++) {
-                    const conn = hostData.tunnelConnections[j];
-                    if (!isValidPort(conn.sourcePort) || !isValidPort(conn.endpointPort) || !isNonEmptyString(conn.endpointHost)) {
-                        results.failed++;
-                        results.errors.push(`Host ${i + 1}, Tunnel ${j + 1}: Invalid tunnel connection data`);
-                        break;
-                    }
-                }
-            }
-
-            const sshDataObj: any = {
-                userId: userId,
-                name: hostData.name || '',
-                folder: hostData.folder || '',
-                tags: Array.isArray(hostData.tags) ? hostData.tags.join(',') : (hostData.tags || ''),
-                ip: hostData.ip,
-                port: hostData.port,
-                username: hostData.username,
-                authType: hostData.authType,
-                pin: !!hostData.pin ? 1 : 0,
-                enableTerminal: !!hostData.enableTerminal ? 1 : 0,
-                enableTunnel: !!hostData.enableTunnel ? 1 : 0,
-                tunnelConnections: Array.isArray(hostData.tunnelConnections) ? JSON.stringify(hostData.tunnelConnections) : null,
-                enableFileManager: !!hostData.enableFileManager ? 1 : 0,
-                defaultPath: hostData.defaultPath || null,
-            };
-
-            if (hostData.authType === 'password') {
-                sshDataObj.password = hostData.password;
-                sshDataObj.key = null;
-                sshDataObj.keyPassword = null;
-                sshDataObj.keyType = null;
-            } else if (hostData.authType === 'key') {
-                sshDataObj.key = hostData.key;
-                sshDataObj.keyPassword = hostData.keyPassword || null;
-                sshDataObj.keyType = hostData.keyType || null;
-                sshDataObj.password = null;
-            }
-
-            await db.insert(sshData).values(sshDataObj);
-            results.success++;
-
-        } catch (err) {
-            results.failed++;
-            results.errors.push(`Host ${i + 1}: ${err instanceof Error ? err.message : 'Unknown error'}`);
-            logger.error(`Failed to import host ${i + 1}:`, err);
-        }
-    }
-
-    if (results.success > 0) {
-        logger.success(`Bulk import completed: ${results.success} successful, ${results.failed} failed`);
-    } else {
-        logger.warn(`Bulk import failed: ${results.failed} failed`);
-    }
-
-    res.json({
-        message: `Import completed: ${results.success} successful, ${results.failed} failed`,
-        ...results
-    });
-});
-
-export default router; 
+export default router;

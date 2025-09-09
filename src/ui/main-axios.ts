@@ -1,103 +1,16 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
-interface SSHHostData {
-    name?: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder?: string;
-    tags?: string[];
-    pin?: boolean;
-    authType: 'password' | 'key' | 'credential';
-    password?: string;
-    key?: File | null;
-    keyPassword?: string;
-    keyType?: string;
-    credentialId?: number | null;
-    enableTerminal?: boolean;
-    enableTunnel?: boolean;
-    enableFileManager?: boolean;
-    defaultPath?: string;
-    tunnelConnections?: any[];
-}
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    credentialId?: number;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: any[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface TunnelConfig {
-    name: string;
-    hostName: string;
-    sourceIP: string;
-    sourceSSHPort: number;
-    sourceUsername: string;
-    sourcePassword?: string;
-    sourceAuthMethod: string;
-    sourceSSHKey?: string;
-    sourceKeyPassword?: string;
-    sourceKeyType?: string;
-    endpointIP: string;
-    endpointSSHPort: number;
-    endpointUsername: string;
-    endpointPassword?: string;
-    endpointAuthMethod: string;
-    endpointSSHKey?: string;
-    endpointKeyPassword?: string;
-    endpointKeyType?: string;
-    sourcePort: number;
-    endpointPort: number;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-    isPinned: boolean;
-}
-
-interface TunnelStatus {
-    status: string;
-    reason?: string;
-    errorType?: string;
-    retryCount?: number;
-    maxRetries?: number;
-    nextRetryIn?: number;
-    retryExhausted?: boolean;
-}
-
-interface FileManagerFile {
-    name: string;
-    path: string;
-    type?: 'file' | 'directory';
-    isSSH?: boolean;
-    sshSessionId?: string;
-}
-
-interface FileManagerShortcut {
-    name: string;
-    path: string;
-}
+import type { 
+    SSHHost, 
+    SSHHostData, 
+    TunnelConfig, 
+    TunnelStatus, 
+    Credential,
+    CredentialData,
+    HostInfo,
+    ApiResponse,
+    FileManagerFile,
+    FileManagerShortcut
+} from '../types/index.js';
 
 interface FileManagerOperation {
     name: string;
@@ -203,10 +116,26 @@ function createApiInstance(baseURL: string): AxiosInstance {
     });
 
     instance.interceptors.response.use(
-        (response) => response,
+        (response) => {
+            // Log successful requests in development
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`✅ API ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+            }
+            return response;
+        },
         (error: AxiosError) => {
+            // Improved error logging
+            const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
+            const url = error.config?.url || 'UNKNOWN';
+            const status = error.response?.status || 'NETWORK_ERROR';
+            const message = error.response?.data?.error || (error as Error).message || 'Unknown error';
+            
+            console.error(`❌ API ${method} ${url} - ${status}: ${message}`);
+            
             if (error.response?.status === 401) {
+                console.warn('🔐 Authentication failed, clearing token');
                 document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                localStorage.removeItem('jwt');
             }
             return Promise.reject(error);
         }
@@ -296,17 +225,33 @@ function handleApiError(error: unknown, operation: string): never {
     if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const message = error.response?.data?.error || error.message;
+        const code = error.response?.data?.code;
+        
+        // Enhanced error logging
+        console.error(`🚨 API Error in ${operation}:`, {
+            status,
+            message,
+            code,
+            url: error.config?.url,
+            method: error.config?.method
+        });
         
         if (status === 401) {
-            throw new ApiError('Authentication required', 401);
+            throw new ApiError('Authentication required. Please log in again.', 401, 'AUTH_REQUIRED');
         } else if (status === 403) {
-            throw new ApiError('Access denied', 403);
+            throw new ApiError('Access denied. You do not have permission to perform this action.', 403, 'ACCESS_DENIED');
         } else if (status === 404) {
-            throw new ApiError('Resource not found', 404);
+            throw new ApiError('Resource not found. The requested item may have been deleted.', 404, 'NOT_FOUND');
+        } else if (status === 409) {
+            throw new ApiError('Conflict. The resource already exists or is in use.', 409, 'CONFLICT');
+        } else if (status === 422) {
+            throw new ApiError('Validation error. Please check your input and try again.', 422, 'VALIDATION_ERROR');
         } else if (status && status >= 500) {
-            throw new ApiError('Server error occurred', status);
+            throw new ApiError('Server error occurred. Please try again later.', status, 'SERVER_ERROR');
+        } else if (status === 0) {
+            throw new ApiError('Network error. Please check your connection and try again.', 0, 'NETWORK_ERROR');
         } else {
-            throw new ApiError(message || `Failed to ${operation}`, status);
+            throw new ApiError(message || `Failed to ${operation}`, status, code);
         }
     }
     
@@ -314,7 +259,9 @@ function handleApiError(error: unknown, operation: string): never {
         throw error;
     }
     
-    throw new ApiError(`Unexpected error during ${operation}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`🚨 Unexpected error in ${operation}:`, error);
+    throw new ApiError(`Unexpected error during ${operation}: ${errorMessage}`, undefined, 'UNKNOWN_ERROR');
 }
 
 // ============================================================================
@@ -602,12 +549,16 @@ export async function removeFileManagerShortcut(shortcut: FileManagerOperation):
 // ============================================================================
 
 export async function connectSSH(sessionId: string, config: {
+    hostId?: number;
     ip: string;
     port: number;
     username: string;
     password?: string;
     sshKey?: string;
     keyPassword?: string;
+    authType?: string;
+    credentialId?: number;
+    userId?: string;
 }): Promise<any> {
     try {
         const response = await fileManagerApi.post('/ssh/connect', {
@@ -1119,14 +1070,46 @@ export async function getCredentialFolders(): Promise<any> {
     }
 }
 
-export async function applyCredentialToHost(credentialId: number, hostId: number): Promise<any> {
+// Get SSH host with resolved credentials
+export async function getSSHHostWithCredentials(hostId: number): Promise<any> {
     try {
-        const response = await authApi.post(`/credentials/${credentialId}/apply-to-host/${hostId}`);
+        const response = await sshHostApi.get(`/db/host/${hostId}/with-credentials`);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetch SSH host with credentials');
+    }
+}
+
+// Apply credential to SSH host
+export async function applyCredentialToHost(hostId: number, credentialId: number): Promise<any> {
+    try {
+        const response = await sshHostApi.post(`/db/host/${hostId}/apply-credential`, { credentialId });
         return response.data;
     } catch (error) {
         handleApiError(error, 'apply credential to host');
     }
 }
+
+// Remove credential from SSH host
+export async function removeCredentialFromHost(hostId: number): Promise<any> {
+    try {
+        const response = await sshHostApi.delete(`/db/host/${hostId}/credential`);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'remove credential from host');
+    }
+}
+
+// Migrate host to managed credential
+export async function migrateHostToCredential(hostId: number, credentialName: string): Promise<any> {
+    try {
+        const response = await sshHostApi.post(`/db/host/${hostId}/migrate-to-credential`, { credentialName });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'migrate host to credential');
+    }
+}
+
 
 // ============================================================================
 // SSH FOLDER MANAGEMENT

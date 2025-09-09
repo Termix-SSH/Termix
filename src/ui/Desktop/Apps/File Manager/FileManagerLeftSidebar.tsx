@@ -19,29 +19,7 @@ import {
     getSSHStatus,
     connectSSH
 } from '@/ui/main-axios.ts';
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: any[];
-    createdAt: string;
-    updatedAt: string;
-}
+import type { SSHHost, FileManagerLeftSidebarProps } from '../../../types/index.js';
 
 const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
     {onSelectView, onOpenFile, tabs, host, onOperationComplete, onError, onSuccess, onPathChange, onDeleteItem}: {
@@ -133,12 +111,16 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
             }
 
             const connectionConfig = {
+                hostId: server.id,
                 ip: server.ip,
                 port: server.port,
                 username: server.username,
                 password: server.password,
                 sshKey: server.key,
                 keyPassword: server.keyPassword,
+                authType: server.authType,
+                credentialId: server.credentialId,
+                userId: server.userId,
             };
 
             await connectSSH(sessionId, connectionConfig);

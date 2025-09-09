@@ -5,19 +5,7 @@ import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs.tsx
 import {Input} from '@/components/ui/input.tsx';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
-
-interface FileItem {
-    name: string;
-    path: string;
-    isPinned?: boolean;
-    type: 'file' | 'directory';
-    sshSessionId?: string;
-}
-
-interface ShortcutItem {
-    name: string;
-    path: string;
-}
+import type { FileItem, ShortcutItem } from '../../../types/index.js';
 
 interface FileManagerHomeViewProps {
     recent: FileItem[];

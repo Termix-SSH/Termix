@@ -21,25 +21,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import {CredentialEditor} from './CredentialEditor';
 import CredentialViewer from './CredentialViewer';
-
-interface Credential {
-    id: number;
-    name: string;
-    description?: string;
-    folder?: string;
-    tags: string[];
-    authType: 'password' | 'key';
-    username: string;
-    keyType?: string;
-    usageCount: number;
-    lastUsed?: string;
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface CredentialsManagerProps {
-    onEditCredential?: (credential: Credential) => void;
-}
+import type { Credential, CredentialsManagerProps } from '../../../types/index.js';
 
 export function CredentialsManager({ onEditCredential }: CredentialsManagerProps) {
     const { t } = useTranslation();
@@ -83,19 +65,15 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                 toast.success(t('credentials.credentialDeletedSuccessfully', { name: credentialName }));
                 await fetchCredentials();
                 window.dispatchEvent(new CustomEvent('credentials:changed'));
-            } catch (err) {
-                toast.error(t('credentials.failedToDeleteCredential'));
+            } catch (err: any) {
+                if (err.response?.data?.details) {
+                    toast.error(`${err.response.data.error}\n${err.response.data.details}`);
+                } else {
+                    toast.error(t('credentials.failedToDeleteCredential'));
+                }
             }
         }
     };
-
-
-
-
-
-
-
-
 
     const filteredAndSortedCredentials = useMemo(() => {
         let filtered = credentials;

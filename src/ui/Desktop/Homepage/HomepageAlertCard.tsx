@@ -4,17 +4,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {Badge} from "@/components/ui/badge.tsx";
 import {X, ExternalLink, AlertTriangle, Info, CheckCircle, AlertCircle} from "lucide-react";
 import {useTranslation} from "react-i18next";
-
-interface TermixAlert {
-    id: string;
-    title: string;
-    message: string;
-    expiresAt: string;
-    priority?: 'low' | 'medium' | 'high' | 'critical';
-    type?: 'info' | 'warning' | 'error' | 'success';
-    actionUrl?: string;
-    actionText?: string;
-}
+import type { TermixAlert } from '../../../types/index.js';
 
 interface AlertCardProps {
     alert: TermixAlert;

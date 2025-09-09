@@ -6,51 +6,47 @@ import './ssh/terminal.js';
 import './ssh/tunnel.js';
 import './ssh/file-manager.js';
 import './ssh/server-stats.js';
-import chalk from 'chalk';
-
-const fixedIconSymbol = '🚀';
-
-const getTimeStamp = (): string => {
-    return chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-};
-
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#1e3a8a')(`[${fixedIconSymbol}]`)} ${message}`;
-};
-
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
+import { systemLogger } from './utils/logger.js';
 
 (async () => {
     try {
-        logger.info("Starting all backend servers...");
+        systemLogger.info("Initializing backend services...", { operation: 'startup' });
+        
+        systemLogger.info("Loading database service...", { operation: 'database_init' });
+        systemLogger.info("Loading SSH terminal service...", { operation: 'terminal_init' });
+        systemLogger.info("Loading SSH tunnel service...", { operation: 'tunnel_init' });
+        systemLogger.info("Loading file manager service...", { operation: 'file_manager_init' });
+        systemLogger.info("Loading server stats service...", { operation: 'stats_init' });
 
-        logger.success("All servers started successfully");
+        systemLogger.success("All backend services initialized successfully", { 
+            operation: 'startup_complete',
+            services: ['database', 'terminal', 'tunnel', 'file_manager', 'stats']
+        });
 
         process.on('SIGINT', () => {
-            logger.info("Shutting down servers...");
+            systemLogger.info("Received SIGINT signal, initiating graceful shutdown...", { operation: 'shutdown' });
+            systemLogger.info("Shutting down all services...", { operation: 'shutdown' });
             process.exit(0);
         });
+
+        process.on('SIGTERM', () => {
+            systemLogger.info("Received SIGTERM signal, initiating graceful shutdown...", { operation: 'shutdown' });
+            systemLogger.info("Shutting down all services...", { operation: 'shutdown' });
+            process.exit(0);
+        });
+
+        process.on('uncaughtException', (error) => {
+            systemLogger.error("Uncaught exception occurred", error, { operation: 'error_handling' });
+            process.exit(1);
+        });
+
+        process.on('unhandledRejection', (reason, promise) => {
+            systemLogger.error("Unhandled promise rejection", reason, { operation: 'error_handling' });
+            process.exit(1);
+        });
+
     } catch (error) {
-        logger.error("Failed to start servers:", error);
+        systemLogger.error("Failed to initialize backend services", error, { operation: 'startup_failed' });
         process.exit(1);
     }
 })();

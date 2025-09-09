@@ -2,9 +2,23 @@ import express from 'express';
 import cors from 'cors';
 import {Client} from 'ssh2';
 import {ChildProcess} from 'child_process';
-import chalk from 'chalk';
 import axios from 'axios';
 import * as net from 'net';
+import {db} from '../database/db/index.js';
+import {sshData, sshCredentials} from '../database/db/schema.js';
+import {eq, and} from 'drizzle-orm';
+import type { 
+    SSHHost, 
+    TunnelConfig, 
+    TunnelConnection, 
+    TunnelStatus, 
+    HostConfig,
+    VerificationData,
+    ConnectionState,
+    ErrorType
+} from '../../types/index.js';
+import { CONNECTION_STATES } from '../../types/index.js';
+import { tunnelLogger } from '../utils/logger.js';
 
 const app = express();
 app.use(cors({
@@ -14,31 +28,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-const tunnelIconSymbol = '📡';
-const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#1e3a8a')(`[${tunnelIconSymbol}]`)} ${message}`;
-};
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
 
 const activeTunnels = new Map<string, Client>();
 const retryCounters = new Map<string, number>();
@@ -53,109 +42,17 @@ const retryExhaustedTunnels = new Set<string>();
 const tunnelConfigs = new Map<string, TunnelConfig>();
 const activeTunnelProcesses = new Map<string, ChildProcess>();
 
-interface TunnelConnection {
-    sourcePort: number;
-    endpointPort: number;
-    endpointHost: string;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-}
 
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: TunnelConnection[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface TunnelConfig {
-    name: string;
-    hostName: string;
-    sourceIP: string;
-    sourceSSHPort: number;
-    sourceUsername: string;
-    sourcePassword?: string;
-    sourceAuthMethod: string;
-    sourceSSHKey?: string;
-    sourceKeyPassword?: string;
-    sourceKeyType?: string;
-    endpointIP: string;
-    endpointSSHPort: number;
-    endpointUsername: string;
-    endpointPassword?: string;
-    endpointAuthMethod: string;
-    endpointSSHKey?: string;
-    endpointKeyPassword?: string;
-    endpointKeyType?: string;
-    sourcePort: number;
-    endpointPort: number;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-    isPinned: boolean;
-}
-
-interface HostConfig {
-    host: SSHHost;
-    tunnels: TunnelConfig[];
-}
-
-interface TunnelStatus {
-    connected: boolean;
-    status: ConnectionState;
-    retryCount?: number;
-    maxRetries?: number;
-    nextRetryIn?: number;
-    reason?: string;
-    errorType?: ErrorType;
-    manualDisconnect?: boolean;
-    retryExhausted?: boolean;
-}
-
-interface VerificationData {
-    conn: Client;
-    timeout: NodeJS.Timeout;
-}
-
-const CONNECTION_STATES = {
-    DISCONNECTED: "disconnected",
-    CONNECTING: "connecting",
-    CONNECTED: "connected",
-    VERIFYING: "verifying",
-    FAILED: "failed",
-    UNSTABLE: "unstable",
-    RETRYING: "retrying",
-    WAITING: "waiting"
-} as const;
 
 const ERROR_TYPES = {
-    AUTH: "authentication",
-    NETWORK: "network",
-    PORT: "port_conflict",
-    PERMISSION: "permission",
-    TIMEOUT: "timeout",
-    UNKNOWN: "unknown"
+    AUTH: "AUTHENTICATION_FAILED",
+    NETWORK: "NETWORK_ERROR",
+    PORT: "CONNECTION_FAILED",
+    PERMISSION: "CONNECTION_FAILED",
+    TIMEOUT: "TIMEOUT",
+    UNKNOWN: "UNKNOWN"
 } as const;
 
-type ConnectionState = typeof CONNECTION_STATES[keyof typeof CONNECTION_STATES];
-type ErrorType = typeof ERROR_TYPES[keyof typeof ERROR_TYPES];
 
 function broadcastTunnelStatus(tunnelName: string, status: TunnelStatus): void {
     if (status.status === CONNECTION_STATES.CONNECTED && activeRetryTimers.has(tunnelName)) {
@@ -178,7 +75,7 @@ function getAllTunnelStatus(): Record<string, TunnelStatus> {
 }
 
 function classifyError(errorMessage: string): ErrorType {
-    if (!errorMessage) return ERROR_TYPES.UNKNOWN;
+    if (!errorMessage) return 'UNKNOWN';
 
     const message = errorMessage.toLowerCase();
 
@@ -186,34 +83,34 @@ function classifyError(errorMessage: string): ErrorType {
         message.includes("connection reset by peer") ||
         message.includes("connection refused") ||
         message.includes("broken pipe")) {
-        return ERROR_TYPES.NETWORK;
+        return 'NETWORK_ERROR';
     }
 
     if (message.includes("authentication failed") ||
         message.includes("permission denied") ||
         message.includes("incorrect password")) {
-        return ERROR_TYPES.AUTH;
+        return 'AUTHENTICATION_FAILED';
     }
 
     if (message.includes("connect etimedout") ||
         message.includes("timeout") ||
         message.includes("timed out") ||
         message.includes("keepalive timeout")) {
-        return ERROR_TYPES.TIMEOUT;
+        return 'TIMEOUT';
     }
 
     if (message.includes("bind: address already in use") ||
         message.includes("failed for listen port") ||
         message.includes("port forwarding failed")) {
-        return ERROR_TYPES.PORT;
+        return 'CONNECTION_FAILED';
     }
 
     if (message.includes("permission") ||
         message.includes("access denied")) {
-        return ERROR_TYPES.PERMISSION;
+        return 'CONNECTION_FAILED';
     }
 
-    return ERROR_TYPES.UNKNOWN;
+    return 'UNKNOWN';
 }
 
 function getTunnelMarker(tunnelName: string) {
@@ -225,7 +122,7 @@ function cleanupTunnelResources(tunnelName: string): void {
     if (tunnelConfig) {
         killRemoteTunnelByMarker(tunnelConfig, tunnelName, (err) => {
             if (err) {
-                logger.error(`Failed to kill remote tunnel for '${tunnelName}': ${err.message}`);
+                tunnelLogger.error(`Failed to kill remote tunnel for '${tunnelName}': ${err.message}`);
             }
         });
     }
@@ -237,7 +134,7 @@ function cleanupTunnelResources(tunnelName: string): void {
                 proc.kill('SIGTERM');
             }
         } catch (e) {
-            logger.error(`Error while killing local ssh process for tunnel '${tunnelName}'`, e);
+            tunnelLogger.error(`Error while killing local ssh process for tunnel '${tunnelName}'`, e);
         }
         activeTunnelProcesses.delete(tunnelName);
     }
@@ -249,7 +146,7 @@ function cleanupTunnelResources(tunnelName: string): void {
                 conn.end();
             }
         } catch (e) {
-            logger.error(`Error while closing SSH2 Client for tunnel '${tunnelName}'`, e);
+            tunnelLogger.error(`Error while closing SSH2 Client for tunnel '${tunnelName}'`, e);
         }
         activeTunnels.delete(tunnelName);
     }
@@ -359,7 +256,7 @@ function handleDisconnect(tunnelName: string, tunnelConfig: TunnelConfig | null,
         retryCount = retryCount + 1;
 
         if (retryCount > maxRetries) {
-            logger.error(`All ${maxRetries} retries failed for ${tunnelName}`);
+            tunnelLogger.error(`All ${maxRetries} retries failed for ${tunnelName}`);
 
             retryExhaustedTunnels.add(tunnelName);
             activeTunnels.delete(tunnelName);
@@ -423,7 +320,9 @@ function handleDisconnect(tunnelName: string, tunnelConfig: TunnelConfig | null,
 
                 if (!manualDisconnects.has(tunnelName)) {
                     activeTunnels.delete(tunnelName);
-                    connectSSHTunnel(tunnelConfig, retryCount);
+                    connectSSHTunnel(tunnelConfig, retryCount).catch(error => {
+                        tunnelLogger.error(`Failed to connect tunnel ${tunnelConfig.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    });
                 }
             }, retryInterval);
 
@@ -457,7 +356,7 @@ function setupPingInterval(tunnelName: string, tunnelConfig: TunnelConfig): void
         clearInterval(verificationTimers.get(pingKey)!);
         verificationTimers.delete(pingKey);
     }
-    
+
     const pingInterval = setInterval(() => {
         const currentStatus = connectionStatus.get(tunnelName);
         if (currentStatus?.status === CONNECTION_STATES.CONNECTED) {
@@ -475,15 +374,18 @@ function setupPingInterval(tunnelName: string, tunnelConfig: TunnelConfig): void
             verificationTimers.delete(pingKey);
         }
     }, 120000);
-    
+
     verificationTimers.set(pingKey, pingInterval);
 }
 
-function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
+async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): Promise<void> {
     const tunnelName = tunnelConfig.name;
     const tunnelMarker = getTunnelMarker(tunnelName);
 
+    tunnelLogger.info('SSH tunnel connection attempt started', { operation: 'tunnel_connect', tunnelName, retryAttempt, sourceIP: tunnelConfig.sourceIP, sourcePort: tunnelConfig.sourceSSHPort });
+
     if (manualDisconnects.has(tunnelName)) {
+        tunnelLogger.info('Tunnel connection cancelled due to manual disconnect', { operation: 'tunnel_connect', tunnelName });
         return;
     }
 
@@ -492,10 +394,14 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
     if (retryAttempt === 0) {
         retryExhaustedTunnels.delete(tunnelName);
         retryCounters.delete(tunnelName);
+        tunnelLogger.info('Reset retry state for tunnel', { operation: 'tunnel_connect', tunnelName });
+    } else {
+        tunnelLogger.warn('Tunnel connection retry attempt', { operation: 'tunnel_connect', tunnelName, retryAttempt });
     }
 
     const currentStatus = connectionStatus.get(tunnelName);
     if (!currentStatus || currentStatus.status !== CONNECTION_STATES.WAITING) {
+        tunnelLogger.info('Broadcasting tunnel connecting status', { operation: 'tunnel_connect', tunnelName, retryAttempt });
         broadcastTunnelStatus(tunnelName, {
             connected: false,
             status: CONNECTION_STATES.CONNECTING,
@@ -504,13 +410,86 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
     }
 
     if (!tunnelConfig || !tunnelConfig.sourceIP || !tunnelConfig.sourceUsername || !tunnelConfig.sourceSSHPort) {
-        logger.error(`Invalid connection details for '${tunnelName}'`);
+        tunnelLogger.error('Invalid tunnel connection details', { operation: 'tunnel_connect', tunnelName, hasSourceIP: !!tunnelConfig?.sourceIP, hasSourceUsername: !!tunnelConfig?.sourceUsername, hasSourceSSHPort: !!tunnelConfig?.sourceSSHPort });
         broadcastTunnelStatus(tunnelName, {
             connected: false,
             status: CONNECTION_STATES.FAILED,
             reason: "Missing required connection details"
         });
         return;
+    }
+
+    let resolvedSourceCredentials = {
+        password: tunnelConfig.sourcePassword,
+        sshKey: tunnelConfig.sourceSSHKey,
+        keyPassword: tunnelConfig.sourceKeyPassword,
+        keyType: tunnelConfig.sourceKeyType,
+        authMethod: tunnelConfig.sourceAuthMethod
+    };
+
+    if (tunnelConfig.sourceCredentialId && tunnelConfig.sourceUserId) {
+        tunnelLogger.info('Resolving source credentials from database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.sourceCredentialId, userId: tunnelConfig.sourceUserId });
+        try {
+            const credentials = await db
+                .select()
+                .from(sshCredentials)
+                .where(and(
+                    eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
+                    eq(sshCredentials.userId, tunnelConfig.sourceUserId)
+                ));
+
+            if (credentials.length > 0) {
+                const credential = credentials[0];
+                resolvedSourceCredentials = {
+                    password: credential.password,
+                    sshKey: credential.key,
+                    keyPassword: credential.keyPassword,
+                    keyType: credential.keyType,
+                    authMethod: credential.authType
+                };
+                tunnelLogger.success('Source credentials resolved successfully', { operation: 'tunnel_connect', tunnelName, credentialId: credential.id, authType: credential.authType });
+            } else {
+                tunnelLogger.warn('No source credentials found in database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.sourceCredentialId });
+            }
+        } catch (error) {
+            tunnelLogger.warn('Failed to resolve source credentials from database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.sourceCredentialId, error: error instanceof Error ? error.message : 'Unknown error' });
+        }
+    } else {
+        tunnelLogger.info('Using direct source credentials from tunnel config', { operation: 'tunnel_connect', tunnelName, authMethod: tunnelConfig.sourceAuthMethod });
+    }
+
+    // Resolve endpoint credentials if tunnel config has endpointCredentialId
+    let resolvedEndpointCredentials = {
+        password: tunnelConfig.endpointPassword,
+        sshKey: tunnelConfig.endpointSSHKey,
+        keyPassword: tunnelConfig.endpointKeyPassword,
+        keyType: tunnelConfig.endpointKeyType,
+        authMethod: tunnelConfig.endpointAuthMethod
+    };
+
+    if (tunnelConfig.endpointCredentialId && tunnelConfig.endpointUserId) {
+        try {
+            const credentials = await db
+                .select()
+                .from(sshCredentials)
+                .where(and(
+                    eq(sshCredentials.id, tunnelConfig.endpointCredentialId),
+                    eq(sshCredentials.userId, tunnelConfig.endpointUserId)
+                ));
+
+            if (credentials.length > 0) {
+                const credential = credentials[0];
+                resolvedEndpointCredentials = {
+                    password: credential.password,
+                    sshKey: credential.key,
+                    keyPassword: credential.keyPassword,
+                    keyType: credential.keyType,
+                    authMethod: credential.authType
+                };
+            }
+        } catch (error) {
+            tunnelLogger.warn(`Failed to resolve endpoint credentials for tunnel ${tunnelName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
 
     const conn = new Client();
@@ -536,7 +515,7 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
 
     conn.on("error", (err) => {
         clearTimeout(connectionTimeout);
-        logger.error(`SSH error for '${tunnelName}': ${err.message}`);
+        tunnelLogger.error(`SSH error for '${tunnelName}': ${err.message}`);
 
         if (activeRetryTimers.has(tunnelName)) {
             return;
@@ -555,11 +534,9 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
 
         activeTunnels.delete(tunnelName);
 
-        const shouldNotRetry = errorType === ERROR_TYPES.AUTH ||
-            errorType === ERROR_TYPES.PORT ||
-            errorType === ERROR_TYPES.PERMISSION ||
+        const shouldNotRetry = errorType === 'AUTHENTICATION_FAILED' ||
+            errorType === 'CONNECTION_FAILED' ||
             manualDisconnects.has(tunnelName);
-        
 
 
         handleDisconnect(tunnelName, tunnelConfig, !shouldNotRetry);
@@ -596,25 +573,24 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
         }
 
         let tunnelCmd: string;
-        if (tunnelConfig.endpointAuthMethod === "key" && tunnelConfig.endpointSSHKey) {
+        if (resolvedEndpointCredentials.authMethod === "key" && resolvedEndpointCredentials.sshKey) {
             const keyFilePath = `/tmp/tunnel_key_${tunnelName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-            tunnelCmd = `echo '${tunnelConfig.endpointSSHKey}' > ${keyFilePath} && chmod 600 ${keyFilePath} && ssh -i ${keyFilePath} -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} ${tunnelMarker} && rm -f ${keyFilePath}`;
+            tunnelCmd = `echo '${resolvedEndpointCredentials.sshKey}' > ${keyFilePath} && chmod 600 ${keyFilePath} && ssh -i ${keyFilePath} -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} ${tunnelMarker} && rm -f ${keyFilePath}`;
         } else {
-            tunnelCmd = `sshpass -p '${tunnelConfig.endpointPassword || ''}' ssh -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} ${tunnelMarker}`;
+            tunnelCmd = `sshpass -p '${resolvedEndpointCredentials.password || ''}' ssh -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} ${tunnelMarker}`;
         }
 
         conn.exec(tunnelCmd, (err, stream) => {
             if (err) {
-                logger.error(`Connection error for '${tunnelName}': ${err.message}`);
+                tunnelLogger.error(`Connection error for '${tunnelName}': ${err.message}`);
 
                 conn.end();
 
                 activeTunnels.delete(tunnelName);
 
                 const errorType = classifyError(err.message);
-                const shouldNotRetry = errorType === ERROR_TYPES.AUTH ||
-                    errorType === ERROR_TYPES.PORT ||
-                    errorType === ERROR_TYPES.PERMISSION;
+                const shouldNotRetry = errorType === 'AUTHENTICATION_FAILED' ||
+                    errorType === 'CONNECTION_FAILED';
 
                 handleDisconnect(tunnelName, tunnelConfig, !shouldNotRetry);
                 return;
@@ -696,7 +672,7 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
         host: tunnelConfig.sourceIP,
         port: tunnelConfig.sourceSSHPort,
         username: tunnelConfig.sourceUsername,
-        keepaliveInterval: 30000, 
+        keepaliveInterval: 30000,
         keepaliveCountMax: 3,
         readyTimeout: 60000,
         tcpKeepAlive: true,
@@ -737,9 +713,9 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
         }
     };
 
-    if (tunnelConfig.sourceAuthMethod === "key" && tunnelConfig.sourceSSHKey) {
-        if (!tunnelConfig.sourceSSHKey.includes('-----BEGIN') || !tunnelConfig.sourceSSHKey.includes('-----END')) {
-            logger.error(`Invalid SSH key format for tunnel '${tunnelName}'. Key should contain both BEGIN and END markers`);
+    if (resolvedSourceCredentials.authMethod === "key" && resolvedSourceCredentials.sshKey) {
+        if (!resolvedSourceCredentials.sshKey.includes('-----BEGIN') || !resolvedSourceCredentials.sshKey.includes('-----END')) {
+            tunnelLogger.error(`Invalid SSH key format for tunnel '${tunnelName}'. Key should contain both BEGIN and END markers`);
             broadcastTunnelStatus(tunnelName, {
                 connected: false,
                 status: CONNECTION_STATES.FAILED,
@@ -748,16 +724,16 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
             return;
         }
 
-        const cleanKey = tunnelConfig.sourceSSHKey.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const cleanKey = resolvedSourceCredentials.sshKey.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         connOptions.privateKey = Buffer.from(cleanKey, 'utf8');
-        if (tunnelConfig.sourceKeyPassword) {
-            connOptions.passphrase = tunnelConfig.sourceKeyPassword;
+        if (resolvedSourceCredentials.keyPassword) {
+            connOptions.passphrase = resolvedSourceCredentials.keyPassword;
         }
-        if (tunnelConfig.sourceKeyType && tunnelConfig.sourceKeyType !== 'auto') {
-            connOptions.privateKeyType = tunnelConfig.sourceKeyType;
+        if (resolvedSourceCredentials.keyType && resolvedSourceCredentials.keyType !== 'auto') {
+            connOptions.privateKeyType = resolvedSourceCredentials.keyType;
         }
-    } else if (tunnelConfig.sourceAuthMethod === "key") {
-        logger.error(`SSH key authentication requested but no key provided for tunnel '${tunnelName}'`);
+    } else if (resolvedSourceCredentials.authMethod === "key") {
+        tunnelLogger.error(`SSH key authentication requested but no key provided for tunnel '${tunnelName}'`);
         broadcastTunnelStatus(tunnelName, {
             connected: false,
             status: CONNECTION_STATES.FAILED,
@@ -765,7 +741,7 @@ function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): void {
         });
         return;
     } else {
-        connOptions.password = tunnelConfig.sourcePassword;
+        connOptions.password = resolvedSourceCredentials.password;
     }
 
     const finalStatus = connectionStatus.get(tunnelName);
@@ -832,7 +808,7 @@ function killRemoteTunnelByMarker(tunnelConfig: TunnelConfig, tunnelName: string
             callback(new Error('Invalid SSH key format'));
             return;
         }
-        
+
         const cleanKey = tunnelConfig.sourceSSHKey.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         connOptions.privateKey = Buffer.from(cleanKey, 'utf8');
         if (tunnelConfig.sourceKeyPassword) {
@@ -898,7 +874,9 @@ app.post('/ssh/tunnel/connect', (req, res) => {
 
     tunnelConfigs.set(tunnelName, tunnelConfig);
 
-    connectSSHTunnel(tunnelConfig, 0);
+    connectSSHTunnel(tunnelConfig, 0).catch(error => {
+        tunnelLogger.error(`Failed to connect tunnel ${tunnelConfig.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    });
 
     res.json({message: 'Connection request received', tunnelName});
 });
@@ -1027,22 +1005,25 @@ async function initializeAutoStartTunnels(): Promise<void> {
             }
         }
 
-        logger.info(`Found ${autoStartTunnels.length} auto-start tunnels`);
+        tunnelLogger.info(`Found ${autoStartTunnels.length} auto-start tunnels`);
 
         for (const tunnelConfig of autoStartTunnels) {
             tunnelConfigs.set(tunnelConfig.name, tunnelConfig);
 
             setTimeout(() => {
-                connectSSHTunnel(tunnelConfig, 0);
+                connectSSHTunnel(tunnelConfig, 0).catch(error => {
+                    tunnelLogger.error(`Failed to connect tunnel ${tunnelConfig.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                });
             }, 1000);
         }
     } catch (error: any) {
-        logger.error('Failed to initialize auto-start tunnels:', error.message);
+        tunnelLogger.error('Failed to initialize auto-start tunnels:', error.message);
     }
 }
 
 const PORT = 8083;
 app.listen(PORT, () => {
+    tunnelLogger.success('SSH Tunnel API server started', { operation: 'server_start', port: PORT });
     setTimeout(() => {
         initializeAutoStartTunnels();
     }, 2000);

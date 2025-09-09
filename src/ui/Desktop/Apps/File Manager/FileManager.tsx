@@ -26,41 +26,7 @@ import {
     getSSHStatus,
     connectSSH
 } from '@/ui/main-axios.ts';
-
-interface Tab {
-    id: string | number;
-    title: string;
-    fileName: string;
-    content: string;
-    isSSH?: boolean;
-    sshSessionId?: string;
-    filePath?: string;
-    loading?: boolean;
-    dirty?: boolean;
-}
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: any[];
-    createdAt: string;
-    updatedAt: string;
-}
+import type { SSHHost, Tab, FileManagerProps } from '../../../types/index.js';
 
 export function FileManager({onSelectView, embedded = false, initialHost = null}: {
     onSelectView?: (view: string) => void,
@@ -378,12 +344,16 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
 
                 if (!status.connected) {
                     const connectPromise = connectSSH(tab.sshSessionId, {
+                        hostId: currentHost.id,
                         ip: currentHost.ip,
                         port: currentHost.port,
                         username: currentHost.username,
                         password: currentHost.password,
                         sshKey: currentHost.key,
-                        keyPassword: currentHost.keyPassword
+                        keyPassword: currentHost.keyPassword,
+                        authType: currentHost.authType,
+                        credentialId: currentHost.credentialId,
+                        userId: currentHost.userId
                     });
                     const connectTimeoutPromise = new Promise((_, reject) =>
                         setTimeout(() => reject(new Error(t('fileManager.sshReconnectionTimeout'))), 15000)

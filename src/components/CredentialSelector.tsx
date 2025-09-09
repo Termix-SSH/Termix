@@ -4,15 +4,7 @@ import { Input } from "@/components/ui/input";
 import { FormControl, FormItem, FormLabel } from "@/components/ui/form";
 import { getCredentials } from '@/ui/main-axios';
 import { useTranslation } from "react-i18next";
-
-interface Credential {
-    id: number;
-    name: string;
-    description?: string;
-    username: string;
-    authType: 'password' | 'key';
-    folder?: string;
-}
+import type { Credential } from '../types/index.js';
 
 interface CredentialSelectorProps {
     value?: number | null;

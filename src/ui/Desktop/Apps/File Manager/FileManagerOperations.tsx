@@ -17,14 +17,7 @@ import {
 } from 'lucide-react';
 import {cn} from '@/lib/utils.ts';
 import {useTranslation} from 'react-i18next';
-
-interface FileManagerOperationsProps {
-    currentPath: string;
-    sshSessionId: string | null;
-    onOperationComplete: () => void;
-    onError: (error: string) => void;
-    onSuccess: (message: string) => void;
-}
+import type { FileManagerOperationsProps } from '../../../types/index.js';
 
 export function FileManagerOperations({
                                           currentPath,

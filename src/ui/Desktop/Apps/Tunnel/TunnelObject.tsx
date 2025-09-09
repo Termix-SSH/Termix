@@ -20,65 +20,7 @@ import {
     X
 } from "lucide-react";
 import {Badge} from "@/components/ui/badge.tsx";
-
-const CONNECTION_STATES = {
-    DISCONNECTED: "disconnected",
-    CONNECTING: "connecting",
-    CONNECTED: "connected",
-    VERIFYING: "verifying",
-    FAILED: "failed",
-    UNSTABLE: "unstable",
-    RETRYING: "retrying",
-    WAITING: "waiting",
-    DISCONNECTING: "disconnecting"
-};
-
-interface TunnelConnection {
-    sourcePort: number;
-    endpointPort: number;
-    endpointHost: string;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-}
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: TunnelConnection[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface TunnelStatus {
-    status: string;
-    reason?: string;
-    errorType?: string;
-    retryCount?: number;
-    maxRetries?: number;
-    nextRetryIn?: number;
-    retryExhausted?: boolean;
-}
-
-interface SSHTunnelObjectProps {
-    host: SSHHost;
-    tunnelStatuses: Record<string, TunnelStatus>;
-    tunnelActions: Record<string, boolean>;
-    onTunnelAction: (action: 'connect' | 'disconnect' | 'cancel', host: SSHHost, tunnelIndex: number) => Promise<any>;
-    compact?: boolean;
-    bare?: boolean;
-}
+import type { SSHHost, TunnelConnection, TunnelStatus, CONNECTION_STATES, SSHTunnelObjectProps } from '../../../types/index.js';
 
 export function TunnelObject({
                                  host,

@@ -13,6 +13,7 @@ import {
 import { getFoldersWithStats, renameFolder } from '@/ui/main-axios';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import type { FolderManagerProps } from '../../../types/index.js';
 
 interface FolderStats {
     name: string;
@@ -22,10 +23,6 @@ interface FolderStats {
         name?: string;
         ip: string;
     }>;
-}
-
-interface FolderManagerProps {
-    onFolderChanged?: () => void;
 }
 
 export function FolderManager({ onFolderChanged }: FolderManagerProps) {

@@ -2,13 +2,13 @@ import express from 'express';
 import {db} from '../db/index.js';
 import {users, settings, sshData, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts} from '../db/schema.js';
 import {eq, and} from 'drizzle-orm';
-import chalk from 'chalk';
 import bcrypt from 'bcryptjs';
 import {nanoid} from 'nanoid';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import type {Request, Response, NextFunction} from 'express';
+import { authLogger, apiLogger } from '../../utils/logger.js';
 
 async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: string): Promise<any> {
     try {
@@ -36,7 +36,7 @@ async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: str
                 }
             }
         } catch (discoveryError) {
-            logger.error(`OIDC discovery failed: ${discoveryError}`);
+            authLogger.error(`OIDC discovery failed: ${discoveryError}`);
         }
 
         let jwks: any = null;
@@ -52,13 +52,13 @@ async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: str
                         jwksUrl = url;
                         break;
                     } else {
-                        logger.error(`Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`);
+                        authLogger.error(`Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`);
                     }
                 } else {
-                    logger.error(`JWKS fetch failed from ${url}: ${response.status} ${response.statusText}`);
+                    authLogger.error(`JWKS fetch failed from ${url}: ${response.status} ${response.statusText}`);
                 }
             } catch (error) {
-                logger.error(`JWKS fetch error from ${url}:`, error);
+                authLogger.error(`JWKS fetch error from ${url}:`, error);
                 continue;
             }
         }
@@ -89,36 +89,11 @@ async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: str
 
         return payload;
     } catch (error) {
-        logger.error('OIDC token verification failed:', error);
+        authLogger.error('OIDC token verification failed:', error);
         throw error;
     }
 }
 
-const dbIconSymbol = '🗄️';
-const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#1e3a8a')(`[${dbIconSymbol}]`)} ${message}`;
-};
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
 
 const router = express.Router();
 
@@ -136,7 +111,7 @@ interface JWTPayload {
 function authenticateJWT(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        logger.warn('Missing or invalid Authorization header');
+        authLogger.warn('Missing or invalid Authorization header', { operation: 'auth', method: req.method, url: req.url });
         return res.status(401).json({error: 'Missing or invalid Authorization header'});
     }
     const token = authHeader.split(' ')[1];
@@ -144,9 +119,10 @@ function authenticateJWT(req: Request, res: Response, next: NextFunction) {
     try {
         const payload = jwt.verify(token, jwtSecret) as JWTPayload;
         (req as any).userId = payload.userId;
+        authLogger.debug('JWT authentication successful', { operation: 'auth', userId: payload.userId, method: req.method, url: req.url });
         next();
     } catch (err) {
-        logger.warn('Invalid or expired token');
+        authLogger.warn('Invalid or expired token', { operation: 'auth', method: req.method, url: req.url, error: err });
         return res.status(401).json({error: 'Invalid or expired token'});
     }
 }
@@ -165,7 +141,7 @@ router.post('/create', async (req, res) => {
     const {username, password} = req.body;
 
     if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
-        logger.warn('Invalid user creation attempt - missing username or password');
+        authLogger.warn('Invalid user creation attempt - missing username or password', { operation: 'user_create', hasUsername: !!username, hasPassword: !!password });
         return res.status(400).json({error: 'Username and password are required'});
     }
 
@@ -175,7 +151,7 @@ router.post('/create', async (req, res) => {
             .from(users)
             .where(eq(users.username, username));
         if (existing && existing.length > 0) {
-            logger.warn(`Attempt to create duplicate username: ${username}`);
+            authLogger.warn(`Attempt to create duplicate username: ${username}`, { operation: 'user_create', username });
             return res.status(409).json({error: 'Username already exists'});
         }
 
@@ -183,14 +159,19 @@ router.post('/create', async (req, res) => {
         try {
             const countResult = db.$client.prepare('SELECT COUNT(*) as count FROM users').get();
             isFirstUser = ((countResult as any)?.count || 0) === 0;
+            authLogger.info('Checked user count for admin status', { operation: 'user_create', username, isFirstUser });
         } catch (e) {
             isFirstUser = true;
+            authLogger.warn('Failed to check user count, assuming first user', { operation: 'user_create', username, error: e });
         }
 
+        authLogger.info('Hashing password for new user', { operation: 'user_create', username, saltRounds: parseInt(process.env.SALT || '10', 10) });
         const saltRounds = parseInt(process.env.SALT || '10', 10);
         const password_hash = await bcrypt.hash(password, saltRounds);
         const id = nanoid();
+        authLogger.info('Generated user ID and hashed password', { operation: 'user_create', username, userId: id });
 
+        authLogger.info('Inserting new user into database', { operation: 'user_create', username, userId: id, isAdmin: isFirstUser });
         await db.insert(users).values({
             id,
             username,
@@ -210,10 +191,10 @@ router.post('/create', async (req, res) => {
             totp_backup_codes: null,
         });
 
-        logger.success(`Traditional user created: ${username} (is_admin: ${isFirstUser})`);
+        authLogger.success(`Traditional user created: ${username} (is_admin: ${isFirstUser})`, { operation: 'user_create', username, isAdmin: isFirstUser, userId: id });
         res.json({message: 'User created', is_admin: isFirstUser});
     } catch (err) {
-        logger.error('Failed to create user', err);
+        authLogger.error('Failed to create user', err);
         res.status(500).json({error: 'Failed to create user'});
     }
 });
@@ -240,30 +221,96 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             scopes
         } = req.body;
 
-        if (!isNonEmptyString(client_id) || !isNonEmptyString(client_secret) ||
-            !isNonEmptyString(issuer_url) || !isNonEmptyString(authorization_url) ||
-            !isNonEmptyString(token_url) || !isNonEmptyString(identifier_path) ||
-            !isNonEmptyString(name_path)) {
+        authLogger.info('OIDC config update request received', { 
+            operation: 'oidc_config_update', 
+            userId,
+            hasClientId: !!client_id,
+            hasClientSecret: !!client_secret,
+            hasIssuerUrl: !!issuer_url,
+            hasAuthUrl: !!authorization_url,
+            hasTokenUrl: !!token_url,
+            hasIdentifierPath: !!identifier_path,
+            hasNamePath: !!name_path,
+            clientIdValue: `"${client_id}"`,
+            clientSecretValue: client_secret ? '[REDACTED]' : `"${client_secret}"`,
+            issuerUrlValue: `"${issuer_url}"`,
+            authUrlValue: `"${authorization_url}"`,
+            tokenUrlValue: `"${token_url}"`,
+            identifierPathValue: `"${identifier_path}"`,
+            namePathValue: `"${name_path}"`,
+            scopesValue: `"${scopes}"`,
+            userinfoUrlValue: `"${userinfo_url}"`
+        });
+        
+        const isDisableRequest = (!client_id || client_id.trim() === '') && 
+                                (!client_secret || client_secret.trim() === '') && 
+                                (!issuer_url || issuer_url.trim() === '') && 
+                                (!authorization_url || authorization_url.trim() === '') && 
+                                (!token_url || token_url.trim() === '');
+        
+        const isEnableRequest = isNonEmptyString(client_id) && isNonEmptyString(client_secret) &&
+                              isNonEmptyString(issuer_url) && isNonEmptyString(authorization_url) &&
+                              isNonEmptyString(token_url) && isNonEmptyString(identifier_path) &&
+                              isNonEmptyString(name_path);
+
+        authLogger.info('OIDC validation results', { 
+            operation: 'oidc_config_update', 
+            userId,
+            isDisableRequest,
+            isEnableRequest,
+            disableChecks: {
+                clientIdEmpty: !client_id || client_id.trim() === '',
+                clientSecretEmpty: !client_secret || client_secret.trim() === '',
+                issuerUrlEmpty: !issuer_url || issuer_url.trim() === '',
+                authUrlEmpty: !authorization_url || authorization_url.trim() === '',
+                tokenUrlEmpty: !token_url || token_url.trim() === ''
+            },
+            enableChecks: {
+                clientIdPresent: isNonEmptyString(client_id),
+                clientSecretPresent: isNonEmptyString(client_secret),
+                issuerUrlPresent: isNonEmptyString(issuer_url),
+                authUrlPresent: isNonEmptyString(authorization_url),
+                tokenUrlPresent: isNonEmptyString(token_url),
+                identifierPathPresent: isNonEmptyString(identifier_path),
+                namePathPresent: isNonEmptyString(name_path)
+            }
+        });
+
+        if (!isDisableRequest && !isEnableRequest) {
+            authLogger.warn('OIDC validation failed - neither disable nor enable request', { 
+                operation: 'oidc_config_update', 
+                userId,
+                isDisableRequest,
+                isEnableRequest
+            });
             return res.status(400).json({error: 'All OIDC configuration fields are required'});
         }
 
-        const config = {
-            client_id,
-            client_secret,
-            issuer_url,
-            authorization_url,
-            token_url,
-            userinfo_url: userinfo_url || '',
-            identifier_path,
-            name_path,
-            scopes: scopes || 'openid email profile'
-        };
+        if (isDisableRequest) {
+            // Disable OIDC by removing the configuration
+            db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
+            authLogger.info('OIDC configuration disabled', { operation: 'oidc_disable', userId });
+            res.json({message: 'OIDC configuration disabled'});
+        } else {
+            // Enable OIDC by storing the configuration
+            const config = {
+                client_id,
+                client_secret,
+                issuer_url,
+                authorization_url,
+                token_url,
+                userinfo_url: userinfo_url || '',
+                identifier_path,
+                name_path,
+                scopes: scopes || 'openid email profile'
+            };
 
-        db.$client.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('oidc_config', ?)").run(JSON.stringify(config));
-
-        res.json({message: 'OIDC configuration updated'});
+            db.$client.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('oidc_config', ?)").run(JSON.stringify(config));
+            authLogger.info('OIDC configuration updated', { operation: 'oidc_update', userId, hasUserinfoUrl: !!userinfo_url });
+            res.json({message: 'OIDC configuration updated'});
+        }
     } catch (err) {
-        logger.error('Failed to update OIDC config', err);
+        authLogger.error('Failed to update OIDC config', err);
         res.status(500).json({error: 'Failed to update OIDC config'});
     }
 });
@@ -278,7 +325,7 @@ router.get('/oidc-config', async (req, res) => {
         }
         res.json(JSON.parse((row as any).value));
     } catch (err) {
-        logger.error('Failed to get OIDC config', err);
+        authLogger.error('Failed to get OIDC config', err);
         res.status(500).json({error: 'Failed to get OIDC config'});
     }
 });
@@ -318,7 +365,7 @@ router.get('/oidc/authorize', async (req, res) => {
 
         res.json({auth_url: authUrl.toString(), state, nonce});
     } catch (err) {
-        logger.error('Failed to generate OIDC auth URL', err);
+        authLogger.error('Failed to generate OIDC auth URL', err);
         res.status(500).json({error: 'Failed to generate authorization URL'});
     }
 });
@@ -369,7 +416,7 @@ router.get('/oidc/callback', async (req, res) => {
         });
 
         if (!tokenResponse.ok) {
-            logger.error('OIDC token exchange failed', await tokenResponse.text());
+            authLogger.error('OIDC token exchange failed', await tokenResponse.text());
             return res.status(400).json({error: 'Failed to exchange authorization code'});
         }
 
@@ -391,7 +438,7 @@ router.get('/oidc/callback', async (req, res) => {
                 }
             }
         } catch (discoveryError) {
-            logger.error(`OIDC discovery failed: ${discoveryError}`);
+            authLogger.error(`OIDC discovery failed: ${discoveryError}`);
         }
 
         if (config.userinfo_url) {
@@ -412,18 +459,18 @@ router.get('/oidc/callback', async (req, res) => {
         if (tokenData.id_token) {
             try {
                 userInfo = await verifyOIDCToken(tokenData.id_token, config.issuer_url, config.client_id);
-                logger.info('Successfully verified ID token and extracted user info');
+                authLogger.info('Successfully verified ID token and extracted user info');
             } catch (error) {
-                logger.error('OIDC token verification failed, trying userinfo endpoints', error);
+                authLogger.error('OIDC token verification failed, trying userinfo endpoints', error);
                 try {
                     const parts = tokenData.id_token.split('.');
                     if (parts.length === 3) {
                         const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
                         userInfo = payload;
-                        logger.info('Successfully decoded ID token payload without verification');
+                        authLogger.info('Successfully decoded ID token payload without verification');
                     }
                 } catch (decodeError) {
-                    logger.error('Failed to decode ID token payload:', decodeError);
+                    authLogger.error('Failed to decode ID token payload:', decodeError);
                 }
             }
         }
@@ -441,21 +488,21 @@ router.get('/oidc/callback', async (req, res) => {
                         userInfo = await userInfoResponse.json();
                         break;
                     } else {
-                        logger.error(`Userinfo endpoint ${userInfoUrl} failed with status: ${userInfoResponse.status}`);
+                        authLogger.error(`Userinfo endpoint ${userInfoUrl} failed with status: ${userInfoResponse.status}`);
                     }
                 } catch (error) {
-                    logger.error(`Userinfo endpoint ${userInfoUrl} failed:`, error);
+                    authLogger.error(`Userinfo endpoint ${userInfoUrl} failed:`, error);
                     continue;
                 }
             }
         }
 
         if (!userInfo) {
-            logger.error('Failed to get user information from all sources');
-            logger.error(`Tried userinfo URLs: ${userInfoUrls.join(', ')}`);
-            logger.error(`Token data keys: ${Object.keys(tokenData).join(', ')}`);
-            logger.error(`Has id_token: ${!!tokenData.id_token}`);
-            logger.error(`Has access_token: ${!!tokenData.access_token}`);
+            authLogger.error('Failed to get user information from all sources');
+            authLogger.error(`Tried userinfo URLs: ${userInfoUrls.join(', ')}`);
+            authLogger.error(`Token data keys: ${Object.keys(tokenData).join(', ')}`);
+            authLogger.error(`Has id_token: ${!!tokenData.id_token}`);
+            authLogger.error(`Has access_token: ${!!tokenData.access_token}`);
             return res.status(400).json({error: 'Failed to get user information'});
         }
 
@@ -477,8 +524,8 @@ router.get('/oidc/callback', async (req, res) => {
             identifier;
 
         if (!identifier) {
-            logger.error(`Identifier not found at path: ${config.identifier_path}`);
-            logger.error(`Available fields: ${Object.keys(userInfo).join(', ')}`);
+            authLogger.error(`Identifier not found at path: ${config.identifier_path}`);
+            authLogger.error(`Available fields: ${Object.keys(userInfo).join(', ')}`);
             return res.status(400).json({error: `User identifier not found at path: ${config.identifier_path}. Available fields: ${Object.keys(userInfo).join(', ')}`});
         }
 
@@ -549,7 +596,7 @@ router.get('/oidc/callback', async (req, res) => {
         res.redirect(redirectUrl.toString());
 
     } catch (err) {
-        logger.error('OIDC callback failed', err);
+        authLogger.error('OIDC callback failed', err);
 
         let frontendUrl = redirectUri.replace('/users/oidc/callback', '');
 
@@ -570,7 +617,7 @@ router.post('/login', async (req, res) => {
     const {username, password} = req.body;
 
     if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
-        logger.warn('Invalid traditional login attempt');
+        authLogger.warn('Invalid traditional login attempt', { operation: 'user_login', hasUsername: !!username, hasPassword: !!password });
         return res.status(400).json({error: 'Invalid username or password'});
     }
 
@@ -581,38 +628,45 @@ router.post('/login', async (req, res) => {
             .where(eq(users.username, username));
 
         if (!user || user.length === 0) {
-            logger.warn(`User not found: ${username}`);
+            authLogger.warn(`User not found: ${username}`, { operation: 'user_login', username });
             return res.status(404).json({error: 'User not found'});
         }
 
         const userRecord = user[0];
 
         if (userRecord.is_oidc) {
+            authLogger.warn('OIDC user attempted traditional login', { operation: 'user_login', username, userId: userRecord.id });
             return res.status(403).json({error: 'This user uses external authentication'});
         }
 
+        authLogger.info('Verifying password for user login', { operation: 'user_login', username, userId: userRecord.id });
         const isMatch = await bcrypt.compare(password, userRecord.password_hash);
         if (!isMatch) {
-            logger.warn(`Incorrect password for user: ${username}`);
+            authLogger.warn(`Incorrect password for user: ${username}`, { operation: 'user_login', username, userId: userRecord.id });
             return res.status(401).json({error: 'Incorrect password'});
         }
 
+        authLogger.info('Password verified, generating JWT token', { operation: 'user_login', username, userId: userRecord.id, totpEnabled: userRecord.totp_enabled });
         const jwtSecret = process.env.JWT_SECRET || 'secret';
         const token = jwt.sign({userId: userRecord.id}, jwtSecret, {
             expiresIn: '50d',
         });
 
         if (userRecord.totp_enabled) {
+            authLogger.info('User has TOTP enabled, requiring additional verification', { operation: 'user_login', username, userId: userRecord.id });
+            const tempToken = jwt.sign(
+                {userId: userRecord.id, pending_totp: true},
+                jwtSecret,
+                {expiresIn: '10m'}
+            );
+            authLogger.success('TOTP verification required for login', { operation: 'user_login', username, userId: userRecord.id });
             return res.json({
                 requires_totp: true,
-                temp_token: jwt.sign(
-                    {userId: userRecord.id, pending_totp: true},
-                    jwtSecret,
-                    {expiresIn: '10m'}
-                )
+                temp_token: tempToken
             });
         }
 
+        authLogger.success('User login successful', { operation: 'user_login', username, userId: userRecord.id, isAdmin: !!userRecord.is_admin });
         return res.json({
             token,
             is_admin: !!userRecord.is_admin,
@@ -620,7 +674,7 @@ router.post('/login', async (req, res) => {
         });
 
     } catch (err) {
-        logger.error('Failed to log in user', err);
+        authLogger.error('Failed to log in user', err);
         return res.status(500).json({error: 'Login failed'});
     }
 });
@@ -630,7 +684,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     if (!isNonEmptyString(userId)) {
-        logger.warn('Invalid userId in JWT for /users/me');
+        authLogger.warn('Invalid userId in JWT for /users/me');
         return res.status(401).json({error: 'Invalid userId'});
     }
     try {
@@ -639,7 +693,7 @@ router.get('/me', authenticateJWT, async (req: Request, res: Response) => {
             .from(users)
             .where(eq(users.id, userId));
         if (!user || user.length === 0) {
-            logger.warn(`User not found for /users/me: ${userId}`);
+            authLogger.warn(`User not found for /users/me: ${userId}`);
             return res.status(401).json({error: 'User not found'});
         }
         res.json({
@@ -650,7 +704,7 @@ router.get('/me', authenticateJWT, async (req: Request, res: Response) => {
             totp_enabled: !!user[0].totp_enabled
         });
     } catch (err) {
-        logger.error('Failed to get username', err);
+        authLogger.error('Failed to get username', err);
         res.status(500).json({error: 'Failed to get username'});
     }
 });
@@ -663,7 +717,7 @@ router.get('/count', async (req, res) => {
         const count = (countResult as any)?.count || 0;
         res.json({count});
     } catch (err) {
-        logger.error('Failed to count users', err);
+        authLogger.error('Failed to count users', err);
         res.status(500).json({error: 'Failed to count users'});
     }
 });
@@ -675,7 +729,7 @@ router.get('/db-health', async (req, res) => {
         db.$client.prepare('SELECT 1').get();
         res.json({status: 'ok'});
     } catch (err) {
-        logger.error('DB health check failed', err);
+        authLogger.error('DB health check failed', err);
         res.status(500).json({error: 'Database not accessible'});
     }
 });
@@ -687,7 +741,7 @@ router.get('/registration-allowed', async (req, res) => {
         const row = db.$client.prepare("SELECT value FROM settings WHERE key = 'allow_registration'").get();
         res.json({allowed: row ? (row as any).value === 'true' : true});
     } catch (err) {
-        logger.error('Failed to get registration allowed', err);
+        authLogger.error('Failed to get registration allowed', err);
         res.status(500).json({error: 'Failed to get registration allowed'});
     }
 });
@@ -708,7 +762,7 @@ router.patch('/registration-allowed', authenticateJWT, async (req, res) => {
         db.$client.prepare("UPDATE settings SET value = ? WHERE key = 'allow_registration'").run(allowed ? 'true' : 'false');
         res.json({allowed});
     } catch (err) {
-        logger.error('Failed to set registration allowed', err);
+        authLogger.error('Failed to set registration allowed', err);
         res.status(500).json({error: 'Failed to set registration allowed'});
     }
 });
@@ -737,7 +791,7 @@ router.delete('/delete-account', authenticateJWT, async (req, res) => {
 
         const isMatch = await bcrypt.compare(password, userRecord.password_hash);
         if (!isMatch) {
-            logger.warn(`Incorrect password provided for account deletion: ${userRecord.username}`);
+            authLogger.warn(`Incorrect password provided for account deletion: ${userRecord.username}`);
             return res.status(401).json({error: 'Incorrect password'});
         }
 
@@ -750,11 +804,11 @@ router.delete('/delete-account', authenticateJWT, async (req, res) => {
 
         await db.delete(users).where(eq(users.id, userId));
 
-        logger.success(`User account deleted: ${userRecord.username}`);
+        authLogger.success(`User account deleted: ${userRecord.username}`);
         res.json({message: 'Account deleted successfully'});
 
     } catch (err) {
-        logger.error('Failed to delete user account', err);
+        authLogger.error('Failed to delete user account', err);
         res.status(500).json({error: 'Failed to delete account'});
     }
 });
@@ -775,7 +829,7 @@ router.post('/initiate-reset', async (req, res) => {
             .where(eq(users.username, username));
 
         if (!user || user.length === 0) {
-            logger.warn(`Password reset attempted for non-existent user: ${username}`);
+            authLogger.warn(`Password reset attempted for non-existent user: ${username}`);
             return res.status(404).json({error: 'User not found'});
         }
 
@@ -791,12 +845,12 @@ router.post('/initiate-reset', async (req, res) => {
             JSON.stringify({code: resetCode, expiresAt: expiresAt.toISOString()})
         );
 
-        logger.info(`Password reset code for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`);
+        authLogger.info(`Password reset code for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`);
 
         res.json({message: 'Password reset code has been generated and logged. Check docker logs for the code.'});
 
     } catch (err) {
-        logger.error('Failed to initiate password reset', err);
+        authLogger.error('Failed to initiate password reset', err);
         res.status(500).json({error: 'Failed to initiate password reset'});
     }
 });
@@ -840,7 +894,7 @@ router.post('/verify-reset-code', async (req, res) => {
         res.json({message: 'Reset code verified', tempToken});
 
     } catch (err) {
-        logger.error('Failed to verify reset code', err);
+        authLogger.error('Failed to verify reset code', err);
         res.status(500).json({error: 'Failed to verify reset code'});
     }
 });
@@ -884,11 +938,11 @@ router.post('/complete-reset', async (req, res) => {
         db.$client.prepare("DELETE FROM settings WHERE key = ?").run(`reset_code_${username}`);
         db.$client.prepare("DELETE FROM settings WHERE key = ?").run(`temp_reset_token_${username}`);
 
-        logger.success(`Password successfully reset for user: ${username}`);
+        authLogger.success(`Password successfully reset for user: ${username}`);
         res.json({message: 'Password has been successfully reset'});
 
     } catch (err) {
-        logger.error('Failed to complete password reset', err);
+        authLogger.error('Failed to complete password reset', err);
         res.status(500).json({error: 'Failed to complete password reset'});
     }
 });
@@ -912,7 +966,7 @@ router.get('/list', authenticateJWT, async (req, res) => {
 
         res.json({users: allUsers});
     } catch (err) {
-        logger.error('Failed to list users', err);
+        authLogger.error('Failed to list users', err);
         res.status(500).json({error: 'Failed to list users'});
     }
 });
@@ -946,11 +1000,11 @@ router.post('/make-admin', authenticateJWT, async (req, res) => {
             .set({is_admin: true})
             .where(eq(users.username, username));
 
-        logger.success(`User ${username} made admin by ${adminUser[0].username}`);
+        authLogger.success(`User ${username} made admin by ${adminUser[0].username}`);
         res.json({message: `User ${username} is now an admin`});
 
     } catch (err) {
-        logger.error('Failed to make user admin', err);
+        authLogger.error('Failed to make user admin', err);
         res.status(500).json({error: 'Failed to make user admin'});
     }
 });
@@ -988,11 +1042,11 @@ router.post('/remove-admin', authenticateJWT, async (req, res) => {
             .set({is_admin: false})
             .where(eq(users.username, username));
 
-        logger.success(`Admin status removed from ${username} by ${adminUser[0].username}`);
+        authLogger.success(`Admin status removed from ${username} by ${adminUser[0].username}`);
         res.json({message: `Admin status removed from ${username}`});
 
     } catch (err) {
-        logger.error('Failed to remove admin status', err);
+        authLogger.error('Failed to remove admin status', err);
         res.status(500).json({error: 'Failed to remove admin status'});
     }
 });
@@ -1057,7 +1111,7 @@ router.post('/totp/verify-login', async (req, res) => {
         });
 
     } catch (err) {
-        logger.error('TOTP verification failed', err);
+        authLogger.error('TOTP verification failed', err);
         return res.status(500).json({error: 'TOTP verification failed'});
     }
 });
@@ -1096,7 +1150,7 @@ router.post('/totp/setup', authenticateJWT, async (req, res) => {
         });
 
     } catch (err) {
-        logger.error('Failed to setup TOTP', err);
+        authLogger.error('Failed to setup TOTP', err);
         res.status(500).json({error: 'Failed to setup TOTP'});
     }
 });
@@ -1155,7 +1209,7 @@ router.post('/totp/enable', authenticateJWT, async (req, res) => {
         });
 
     } catch (err) {
-        logger.error('Failed to enable TOTP', err);
+        authLogger.error('Failed to enable TOTP', err);
         res.status(500).json({error: 'Failed to enable TOTP'});
     }
 });
@@ -1213,7 +1267,7 @@ router.post('/totp/disable', authenticateJWT, async (req, res) => {
         res.json({message: 'TOTP disabled successfully'});
 
     } catch (err) {
-        logger.error('Failed to disable TOTP', err);
+        authLogger.error('Failed to disable TOTP', err);
         res.status(500).json({error: 'Failed to disable TOTP'});
     }
 });
@@ -1271,7 +1325,7 @@ router.post('/totp/backup-codes', authenticateJWT, async (req, res) => {
         res.json({backup_codes: backupCodes});
 
     } catch (err) {
-        logger.error('Failed to generate backup codes', err);
+        authLogger.error('Failed to generate backup codes', err);
         res.status(500).json({error: 'Failed to generate backup codes'});
     }
 });
@@ -1318,20 +1372,18 @@ router.delete('/delete-user', authenticateJWT, async (req, res) => {
             await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, targetUserId));
 
             await db.delete(sshData).where(eq(sshData.userId, targetUserId));
-            // Note: All user-related data has been deleted above
-            // The tables config_editor_* and shared_hosts don't exist in the current schema
         } catch (cleanupError) {
-            logger.error(`Cleanup failed for user ${username}:`, cleanupError);
+            authLogger.error(`Cleanup failed for user ${username}:`, cleanupError);
             throw cleanupError;
         }
 
         await db.delete(users).where(eq(users.id, targetUserId));
 
-        logger.success(`User ${username} deleted by admin ${adminUser[0].username}`);
+        authLogger.success(`User ${username} deleted by admin ${adminUser[0].username}`);
         res.json({message: `User ${username} deleted successfully`});
 
     } catch (err) {
-        logger.error('Failed to delete user', err);
+        authLogger.error('Failed to delete user', err);
 
         if (err && typeof err === 'object' && 'code' in err) {
             if (err.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {

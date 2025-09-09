@@ -4,12 +4,12 @@ import userRoutes from './routes/users.js';
 import sshRoutes from './routes/ssh.js';
 import alertRoutes from './routes/alerts.js';
 import credentialsRoutes from './routes/credentials.js';
-import chalk from 'chalk';
 import cors from 'cors';
 import fetch from 'node-fetch';
 import fs from 'fs';
 import path from 'path';
 import 'dotenv/config';
+import { databaseLogger, apiLogger } from '../utils/logger.js';
 
 const app = express();
 app.use(cors({
@@ -17,32 +17,6 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-const dbIconSymbol = '🗄️';
-const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#1e3a8a')(`[${dbIconSymbol}]`)} ${message}`;
-};
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
 
 interface CacheEntry {
     data: any;
@@ -61,19 +35,23 @@ class GitHubCache {
             timestamp: now,
             expiresAt: now + this.CACHE_DURATION
         });
+        databaseLogger.debug(`Cache entry set`, { operation: 'cache_set', key, expiresIn: this.CACHE_DURATION });
     }
 
     get(key: string): any | null {
         const entry = this.cache.get(key);
         if (!entry) {
+            databaseLogger.debug(`Cache miss`, { operation: 'cache_get', key });
             return null;
         }
 
         if (Date.now() > entry.expiresAt) {
             this.cache.delete(key);
+            databaseLogger.debug(`Cache entry expired`, { operation: 'cache_get', key, expired: true });
             return null;
         }
 
+        databaseLogger.debug(`Cache hit`, { operation: 'cache_get', key, age: Date.now() - entry.timestamp });
         return entry.data;
     }
 }
@@ -105,6 +83,7 @@ interface GitHubRelease {
 async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> {
     const cachedData = githubCache.get(cacheKey);
     if (cachedData) {
+        databaseLogger.debug(`Using cached GitHub API data`, { operation: 'github_api', endpoint, cached: true });
         return {
             data: cachedData,
             cached: true,
@@ -113,6 +92,7 @@ async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> 
     }
 
     try {
+        databaseLogger.info(`Fetching from GitHub API`, { operation: 'github_api', endpoint });
         const response = await fetch(`${GITHUB_API_BASE}${endpoint}`, {
             headers: {
                 'Accept': 'application/vnd.github+json',
@@ -126,15 +106,15 @@ async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> 
         }
 
         const data = await response.json();
-
         githubCache.set(cacheKey, data);
 
+        databaseLogger.success(`GitHub API data fetched successfully`, { operation: 'github_api', endpoint, dataSize: JSON.stringify(data).length });
         return {
             data: data,
             cached: false
         };
     } catch (error) {
-        logger.error(`Failed to fetch from GitHub API: ${endpoint}`, error);
+        databaseLogger.error(`Failed to fetch from GitHub API`, error, { operation: 'github_api', endpoint });
         throw error;
     }
 }
@@ -142,10 +122,12 @@ async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> 
 app.use(bodyParser.json());
 
 app.get('/health', (req, res) => {
+    apiLogger.info(`Health check requested`, { operation: 'health_check' });
     res.json({status: 'ok'});
 });
 
 app.get('/version', async (req, res) => {
+    apiLogger.info(`Version check requested`, { operation: 'version_check' });
     let localVersion = process.env.VERSION;
 
     if (!localVersion) {
@@ -153,13 +135,14 @@ app.get('/version', async (req, res) => {
             const packagePath = path.resolve(process.cwd(), 'package.json');
             const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
             localVersion = packageJson.version;
+            databaseLogger.debug(`Version read from package.json`, { operation: 'version_check', localVersion });
         } catch (error) {
-            logger.error('Failed to read version from package.json:', error);
+            databaseLogger.error('Failed to read version from package.json', error, { operation: 'version_check' });
         }
     }
 
     if (!localVersion) {
-        logger.error('No version information available');
+        databaseLogger.error('No version information available', undefined, { operation: 'version_check' });
         return res.status(404).send('Local Version Not Set');
     }
 
@@ -175,11 +158,21 @@ app.get('/version', async (req, res) => {
         const remoteVersion = remoteVersionMatch ? remoteVersionMatch[1] : null;
 
         if (!remoteVersion) {
+            databaseLogger.warn('Remote version not found in GitHub response', { operation: 'version_check', rawTag });
             return res.status(401).send('Remote Version Not Found');
         }
 
+        const isUpToDate = localVersion === remoteVersion;
+        databaseLogger.info(`Version comparison completed`, { 
+            operation: 'version_check', 
+            localVersion, 
+            remoteVersion, 
+            isUpToDate,
+            cached: releaseData.cached 
+        });
+
         const response = {
-            status: localVersion === remoteVersion ? 'up_to_date' : 'requires_update',
+            status: isUpToDate ? 'up_to_date' : 'requires_update',
             localVersion: localVersion,
             version: remoteVersion,
             latest_release: {
@@ -194,7 +187,7 @@ app.get('/version', async (req, res) => {
 
         res.json(response);
     } catch (err) {
-        logger.error('Version check failed', err);
+        databaseLogger.error('Version check failed', err, { operation: 'version_check' });
         res.status(500).send('Fetch Error');
     }
 });
@@ -204,6 +197,8 @@ app.get('/releases/rss', async (req, res) => {
         const page = parseInt(req.query.page as string) || 1;
         const per_page = Math.min(parseInt(req.query.per_page as string) || 20, 100);
         const cacheKey = `releases_rss_${page}_${per_page}`;
+
+        apiLogger.info(`RSS releases requested`, { operation: 'rss_releases', page, per_page });
 
         const releasesData = await fetchGitHubAPI(
             `/repos/${REPO_OWNER}/${REPO_NAME}/releases?page=${page}&per_page=${per_page}`,
@@ -240,9 +235,17 @@ app.get('/releases/rss', async (req, res) => {
             cache_age: releasesData.cache_age
         };
 
+        databaseLogger.success(`RSS releases generated successfully`, { 
+            operation: 'rss_releases', 
+            itemCount: rssItems.length, 
+            page, 
+            per_page,
+            cached: releasesData.cached 
+        });
+
         res.json(response);
     } catch (error) {
-        logger.error('Failed to generate RSS format', error)
+        databaseLogger.error('Failed to generate RSS format', error, { operation: 'rss_releases' });
         res.status(500).json({
             error: 'Failed to generate RSS format',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -257,10 +260,20 @@ app.use('/alerts', alertRoutes);
 app.use('/credentials', credentialsRoutes);
 
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    logger.error('Unhandled error:', err);
+    apiLogger.error('Unhandled error in request', err, { 
+        operation: 'error_handler', 
+        method: req.method, 
+        url: req.url,
+        userAgent: req.get('User-Agent')
+    });
     res.status(500).json({error: 'Internal Server Error'});
 });
 
 const PORT = 8081;
 app.listen(PORT, () => {
+    databaseLogger.success(`Database API server started on port ${PORT}`, { 
+        operation: 'server_start', 
+        port: PORT,
+        routes: ['/users', '/ssh', '/alerts', '/credentials', '/health', '/version', '/releases/rss']
+    });
 });

@@ -1,5 +1,6 @@
 import {sqliteTable, text, integer} from 'drizzle-orm/sqlite-core';
 import {sql} from 'drizzle-orm';
+import { databaseLogger } from '../../utils/logger.js';
 
 export const users = sqliteTable('users', {
     id: text('id').primaryKey(),
@@ -97,12 +98,12 @@ export const sshCredentials = sqliteTable('ssh_credentials', {
     description: text('description'),
     folder: text('folder'),
     tags: text('tags'),
-    authType: text('auth_type').notNull(), // 'password' | 'key'
+    authType: text('auth_type').notNull(),
     username: text('username').notNull(),
-    encryptedPassword: text('encrypted_password'), // AES encrypted
-    encryptedKey: text('encrypted_key', {length: 16384}), // AES encrypted SSH key
-    encryptedKeyPassword: text('encrypted_key_password'), // AES encrypted key passphrase
-    keyType: text('key_type'), // 'rsa' | 'ecdsa' | 'ed25519'
+    password: text('password'),
+    key: text('key', {length: 16384}),
+    keyPassword: text('key_password'),
+    keyType: text('key_type'),
     usageCount: integer('usage_count').notNull().default(0),
     lastUsed: text('last_used'),
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),

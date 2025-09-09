@@ -1,37 +1,14 @@
 import {WebSocketServer, WebSocket, type RawData} from 'ws';
 import {Client, type ClientChannel, type PseudoTtyOptions} from 'ssh2';
-import chalk from 'chalk';
+import {db} from '../database/db/index.js';
+import {sshData, sshCredentials} from '../database/db/schema.js';
+import {eq, and} from 'drizzle-orm';
+import { sshLogger } from '../utils/logger.js';
 
 const wss = new WebSocketServer({port: 8082});
 
+sshLogger.success('SSH Terminal WebSocket server started', { operation: 'server_start', port: 8082 });
 
-
-
-const sshIconSymbol = '🖥️';
-const getTimeStamp = (): string => chalk.gray(`[${new Date().toLocaleTimeString()}]`);
-const formatMessage = (level: string, colorFn: chalk.Chalk, message: string): string => {
-    return `${getTimeStamp()} ${colorFn(`[${level.toUpperCase()}]`)} ${chalk.hex('#1e3a8a')(`[${sshIconSymbol}]`)} ${message}`;
-};
-const logger = {
-    info: (msg: string): void => {
-        console.log(formatMessage('info', chalk.cyan, msg));
-    },
-    warn: (msg: string): void => {
-        console.warn(formatMessage('warn', chalk.yellow, msg));
-    },
-    error: (msg: string, err?: unknown): void => {
-        console.error(formatMessage('error', chalk.redBright, msg));
-        if (err) console.error(err);
-    },
-    success: (msg: string): void => {
-        console.log(formatMessage('success', chalk.greenBright, msg));
-    },
-    debug: (msg: string): void => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.debug(formatMessage('debug', chalk.magenta, msg));
-        }
-    }
-};
 
 
 
@@ -39,10 +16,12 @@ wss.on('connection', (ws: WebSocket) => {
     let sshConn: Client | null = null;
     let sshStream: ClientChannel | null = null;
     let pingInterval: NodeJS.Timeout | null = null;
-
+    
+    sshLogger.info('New WebSocket connection established', { operation: 'websocket_connect' });
 
 
     ws.on('close', () => {
+        sshLogger.info('WebSocket connection closed', { operation: 'websocket_disconnect' });
         cleanupSSH();
     });
 
@@ -53,7 +32,7 @@ wss.on('connection', (ws: WebSocket) => {
         try {
             parsed = JSON.parse(msg.toString());
         } catch (e) {
-            logger.error('Invalid JSON received: ' + msg.toString());
+            sshLogger.error('Invalid JSON received', e, { operation: 'websocket_message', messageLength: msg.toString().length });
             ws.send(JSON.stringify({type: 'error', message: 'Invalid JSON'}));
             return;
         }
@@ -62,7 +41,11 @@ wss.on('connection', (ws: WebSocket) => {
 
         switch (type) {
             case 'connectToHost':
-                handleConnectToHost(data);
+                sshLogger.info('SSH connection request received', { operation: 'ssh_connect', hostId: data.hostConfig?.id, ip: data.hostConfig?.ip, port: data.hostConfig?.port });
+                handleConnectToHost(data).catch(error => {
+                    sshLogger.error('Failed to connect to host', error, { operation: 'ssh_connect', hostId: data.hostConfig?.id, ip: data.hostConfig?.ip });
+                    ws.send(JSON.stringify({type: 'error', message: 'Failed to connect to host: ' + (error instanceof Error ? error.message : 'Unknown error')}));
+                });
                 break;
 
             case 'resize':
@@ -70,6 +53,7 @@ wss.on('connection', (ws: WebSocket) => {
                 break;
 
             case 'disconnect':
+                sshLogger.info('SSH disconnect requested', { operation: 'ssh_disconnect' });
                 cleanupSSH();
                 break;
 
@@ -90,14 +74,15 @@ wss.on('connection', (ws: WebSocket) => {
                 break;
 
             default:
-                logger.warn('Unknown message type: ' + type);
+                sshLogger.warn('Unknown message type received', { operation: 'websocket_message', messageType: type });
         }
     });
 
-    function handleConnectToHost(data: {
+    async function handleConnectToHost(data: {
         cols: number;
         rows: number;
         hostConfig: {
+            id: number;
             ip: string;
             port: number;
             username: string;
@@ -106,25 +91,27 @@ wss.on('connection', (ws: WebSocket) => {
             keyPassword?: string;
             keyType?: string;
             authType?: string;
+            credentialId?: number;
+            userId?: string;
         };
     }) {
         const {cols, rows, hostConfig} = data;
-        const {ip, port, username, password, key, keyPassword, keyType, authType} = hostConfig;
+        const {id, ip, port, username, password, key, keyPassword, keyType, authType, credentialId} = hostConfig;
 
         if (!username || typeof username !== 'string' || username.trim() === '') {
-            logger.error('Invalid username provided');
+            sshLogger.error('Invalid username provided', undefined, { operation: 'ssh_connect', hostId: id, ip });
             ws.send(JSON.stringify({type: 'error', message: 'Invalid username provided'}));
             return;
         }
 
         if (!ip || typeof ip !== 'string' || ip.trim() === '') {
-            logger.error('Invalid IP provided');
+            sshLogger.error('Invalid IP provided', undefined, { operation: 'ssh_connect', hostId: id, username });
             ws.send(JSON.stringify({type: 'error', message: 'Invalid IP provided'}));
             return;
         }
 
         if (!port || typeof port !== 'number' || port <= 0) {
-            logger.error('Invalid port provided');
+            sshLogger.error('Invalid port provided', undefined, { operation: 'ssh_connect', hostId: id, ip, username, port });
             ws.send(JSON.stringify({type: 'error', message: 'Invalid port provided'}));
             return;
         }
@@ -133,14 +120,41 @@ wss.on('connection', (ws: WebSocket) => {
 
         const connectionTimeout = setTimeout(() => {
             if (sshConn) {
-                logger.error('SSH connection timeout');
+                sshLogger.error('SSH connection timeout', undefined, { operation: 'ssh_connect', hostId: id, ip, port, username });
                 ws.send(JSON.stringify({type: 'error', message: 'SSH connection timeout'}));
                 cleanupSSH(connectionTimeout);
             }
         }, 60000);
 
+        let resolvedCredentials = {password, key, keyPassword, keyType, authType};
+        if (credentialId && id) {
+            try {
+                const credentials = await db
+                    .select()
+                    .from(sshCredentials)
+                    .where(and(
+                        eq(sshCredentials.id, credentialId),
+                        eq(sshCredentials.userId, hostConfig.userId || '')
+                    ));
+
+                if (credentials.length > 0) {
+                    const credential = credentials[0];
+                    resolvedCredentials = {
+                        password: credential.password,
+                        key: credential.key,
+                        keyPassword: credential.keyPassword,
+                        keyType: credential.keyType,
+                        authType: credential.authType
+                    };
+                }
+            } catch (error) {
+                sshLogger.warn(`Failed to resolve credentials for host ${id}`, { operation: 'ssh_credentials', hostId: id, credentialId, error: error instanceof Error ? error.message : 'Unknown error' });
+            }
+        }
+
         sshConn.on('ready', () => {
             clearTimeout(connectionTimeout);
+            sshLogger.success('SSH connection established', { operation: 'ssh_connect', hostId: id, ip, port, username, authType: resolvedCredentials.authType });
 
 
             sshConn!.shell({
@@ -149,7 +163,7 @@ wss.on('connection', (ws: WebSocket) => {
                 term: 'xterm-256color'
             } as PseudoTtyOptions, (err, stream) => {
                 if (err) {
-                    logger.error('Shell error: ' + err.message);
+                    sshLogger.error('Shell error', err, { operation: 'ssh_shell', hostId: id, ip, port, username });
                     ws.send(JSON.stringify({type: 'error', message: 'Shell error: ' + err.message}));
                     return;
                 }
@@ -161,12 +175,12 @@ wss.on('connection', (ws: WebSocket) => {
                 });
 
                 stream.on('close', () => {
-
+                    sshLogger.info('SSH stream closed', { operation: 'ssh_stream', hostId: id, ip, port, username });
                     ws.send(JSON.stringify({type: 'disconnected', message: 'Connection lost'}));
                 });
 
                 stream.on('error', (err: Error) => {
-                    logger.error('SSH stream error: ' + err.message);
+                    sshLogger.error('SSH stream error', err, { operation: 'ssh_stream', hostId: id, ip, port, username });
                     ws.send(JSON.stringify({type: 'error', message: 'SSH stream error: ' + err.message}));
                 });
 
@@ -178,7 +192,7 @@ wss.on('connection', (ws: WebSocket) => {
 
         sshConn.on('error', (err: Error) => {
             clearTimeout(connectionTimeout);
-            logger.error('SSH connection error: ' + err.message);
+            sshLogger.error('SSH connection error', err, { operation: 'ssh_connect', hostId: id, ip, port, username, authType: resolvedCredentials.authType });
 
             let errorMessage = 'SSH error: ' + err.message;
             if (err.message.includes('No matching key exchange algorithm')) {
@@ -208,7 +222,6 @@ wss.on('connection', (ws: WebSocket) => {
 
             cleanupSSH(connectionTimeout);
         });
-
 
 
         const connectConfig: any = {
@@ -269,34 +282,34 @@ wss.on('connection', (ws: WebSocket) => {
                 ]
             }
         };
-        if (authType === 'key' && key) {
+        if (resolvedCredentials.authType === 'key' && resolvedCredentials.key) {
             try {
-                if (!key.includes('-----BEGIN') || !key.includes('-----END')) {
+                if (!resolvedCredentials.key.includes('-----BEGIN') || !resolvedCredentials.key.includes('-----END')) {
                     throw new Error('Invalid private key format');
                 }
-             
-                const cleanKey = key.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-                
+
+                const cleanKey = resolvedCredentials.key.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
                 connectConfig.privateKey = Buffer.from(cleanKey, 'utf8');
-                
-                if (keyPassword) {
-                    connectConfig.passphrase = keyPassword;
+
+                if (resolvedCredentials.keyPassword) {
+                    connectConfig.passphrase = resolvedCredentials.keyPassword;
                 }
-                
-                if (keyType && keyType !== 'auto') {
-                    connectConfig.privateKeyType = keyType;
+
+                if (resolvedCredentials.keyType && resolvedCredentials.keyType !== 'auto') {
+                    connectConfig.privateKeyType = resolvedCredentials.keyType;
                 }
             } catch (keyError) {
-                logger.error('SSH key format error: ' + keyError.message);
+                sshLogger.error('SSH key format error: ' + keyError.message);
                 ws.send(JSON.stringify({type: 'error', message: 'SSH key format error: Invalid private key format'}));
                 return;
             }
-        } else if (authType === 'key') {
-            logger.error('SSH key authentication requested but no key provided');
+        } else if (resolvedCredentials.authType === 'key') {
+            sshLogger.error('SSH key authentication requested but no key provided');
             ws.send(JSON.stringify({type: 'error', message: 'SSH key authentication requested but no key provided'}));
             return;
         } else {
-            connectConfig.password = password;
+            connectConfig.password = resolvedCredentials.password;
         }
 
         sshConn.connect(connectConfig);
@@ -323,7 +336,7 @@ wss.on('connection', (ws: WebSocket) => {
             try {
                 sshStream.end();
             } catch (e: any) {
-                logger.error('Error closing stream: ' + e.message);
+                sshLogger.error('Error closing stream: ' + e.message);
             }
             sshStream = null;
         }
@@ -332,7 +345,7 @@ wss.on('connection', (ws: WebSocket) => {
             try {
                 sshConn.end();
             } catch (e: any) {
-                logger.error('Error closing connection: ' + e.message);
+                sshLogger.error('Error closing connection: ' + e.message);
             }
             sshConn = null;
         }
@@ -344,7 +357,7 @@ wss.on('connection', (ws: WebSocket) => {
                 try {
                     sshStream.write('\x00');
                 } catch (e: any) {
-                    logger.error('SSH keepalive failed: ' + e.message);
+                    sshLogger.error('SSH keepalive failed: ' + e.message);
                     cleanupSSH();
                 }
             }

@@ -19,34 +19,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import React, { useEffect, useRef, useState } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
-import { createCredential, updateCredential, getCredentials } from '@/ui/main-axios'
+import { createCredential, updateCredential, getCredentials, getCredentialDetails } from '@/ui/main-axios'
 import { useTranslation } from "react-i18next"
-
-interface Credential {
-    id: number;
-    name: string;
-    description?: string;
-    folder?: string;
-    tags: string[];
-    authType: 'password' | 'key';
-    username: string;
-    keyType?: string;
-    usageCount: number;
-    lastUsed?: string;
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface CredentialEditorProps {
-    editingCredential?: Credential | null;
-    onFormSubmit?: () => void;
-}
+import type { Credential, CredentialEditorProps } from '../../../types/index.js'
 
 export function CredentialEditor({ editingCredential, onFormSubmit }: CredentialEditorProps) {
     const { t } = useTranslation();
     const [credentials, setCredentials] = useState<Credential[]>([]);
     const [folders, setFolders] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
+    const [fullCredentialDetails, setFullCredentialDetails] = useState<Credential | null>(null);
 
     const [authTab, setAuthTab] = useState<'password' | 'key'>('password');
 
@@ -60,8 +42,8 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                 const uniqueFolders = [...new Set(
                     credentialsData
                         .filter(credential => credential.folder && credential.folder.trim() !== '')
-                        .map(credential => credential.folder)
-                )].sort();
+                        .map(credential => credential.folder!)
+                )].sort() as string[];
 
                 setFolders(uniqueFolders);
             } catch (error) {
@@ -73,6 +55,24 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
         fetchData();
     }, []);
 
+    useEffect(() => {
+        const fetchCredentialDetails = async () => {
+            if (editingCredential) {
+                try {
+                    const fullDetails = await getCredentialDetails(editingCredential.id);
+                    setFullCredentialDetails(fullDetails);
+                } catch (error) {
+                    console.error('Failed to fetch credential details:', error);
+                    toast.error(t('credentials.failedToFetchCredentialDetails'));
+                }
+            } else {
+                setFullCredentialDetails(null);
+            }
+        };
+
+        fetchCredentialDetails();
+    }, [editingCredential, t]);
+
     const formSchema = z.object({
         name: z.string().min(1),
         description: z.string().optional(),
@@ -81,7 +81,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
         authType: z.enum(['password', 'key']),
         username: z.string().min(1),
         password: z.string().optional(),
-        key: z.instanceof(File).optional().nullable(),
+        key: z.any().optional().nullable(),
         keyPassword: z.string().optional(),
         keyType: z.enum([
             'rsa',
@@ -127,24 +127,24 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
     });
 
     useEffect(() => {
-        if (editingCredential) {
-            const defaultAuthType = editingCredential.key ? 'key' : 'password';
+        if (editingCredential && fullCredentialDetails) {
+            const defaultAuthType = fullCredentialDetails.authType;
 
             setAuthTab(defaultAuthType);
 
             form.reset({
-                name: editingCredential.name || "",
-                description: editingCredential.description || "",
-                folder: editingCredential.folder || "",
-                tags: editingCredential.tags || [],
+                name: fullCredentialDetails.name || "",
+                description: fullCredentialDetails.description || "",
+                folder: fullCredentialDetails.folder || "",
+                tags: fullCredentialDetails.tags || [],
                 authType: defaultAuthType as 'password' | 'key',
-                username: editingCredential.username || "",
-                password: "",
+                username: fullCredentialDetails.username || "",
+                password: fullCredentialDetails.password || "",
                 key: null,
-                keyPassword: "",
-                keyType: (editingCredential.keyType as any) || "rsa",
+                keyPassword: fullCredentialDetails.keyPassword || "",
+                keyType: (fullCredentialDetails.keyType as any) || "rsa",
             });
-        } else {
+        } else if (!editingCredential) {
             setAuthTab('password');
 
             form.reset({
@@ -160,7 +160,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                 keyType: "rsa",
             });
         }
-    }, [editingCredential, form]);
+    }, [editingCredential, fullCredentialDetails, form]);
 
     const onSubmit = async (data: any) => {
         try {
@@ -170,11 +170,38 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                 formData.name = formData.username;
             }
 
+            const submitData: any = {
+                name: formData.name,
+                description: formData.description,
+                folder: formData.folder,
+                tags: formData.tags,
+                authType: formData.authType,
+                username: formData.username,
+                keyType: formData.keyType
+            };
+
+            if (formData.password !== undefined) {
+                submitData.password = formData.password;
+            }
+            
+            if (formData.key !== undefined) {
+                if (formData.key instanceof File) {
+                    const keyContent = await formData.key.text();
+                    submitData.key = keyContent;
+                } else {
+                    submitData.key = formData.key;
+                }
+            }
+            
+            if (formData.keyPassword !== undefined) {
+                submitData.keyPassword = formData.keyPassword;
+            }
+
             if (editingCredential) {
-                await updateCredential(editingCredential.id, formData);
+                await updateCredential(editingCredential.id, submitData);
                 toast.success(t('credentials.credentialUpdatedSuccessfully', { name: formData.name }));
             } else {
-                await createCredential(formData);
+                await createCredential(submitData);
                 toast.success(t('credentials.credentialAddedSuccessfully', { name: formData.name }));
             }
 

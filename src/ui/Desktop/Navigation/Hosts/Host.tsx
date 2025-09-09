@@ -5,33 +5,7 @@ import {ButtonGroup} from "@/components/ui/button-group.tsx";
 import {Server, Terminal} from "lucide-react";
 import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import {getServerStatusById} from "@/ui/main-axios.ts";
-
-interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: any[];
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface HostProps {
-    host: SSHHost;
-}
+import type { SSHHost, HostProps } from '../../../types/index.js';
 
 export function Host({host}: HostProps): React.ReactElement {
     const {addTab} = useTabs();
