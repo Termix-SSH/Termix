@@ -1,6 +1,6 @@
 {
   "credentials": {
-    "credentialsManager": "Credentials Manager",
+    "credentialsViewer": "Credentials Viewer",
     "manageYourSSHCredentials": "Manage your SSH credentials securely",
     "addCredential": "Add Credential",
     "createCredential": "Create Credential",

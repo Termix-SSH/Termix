@@ -165,13 +165,6 @@ const migrateSchema = () => {
     addColumnIfNotExists('users', 'issuer_url', 'TEXT');
     addColumnIfNotExists('users', 'authorization_url', 'TEXT');
     addColumnIfNotExists('users', 'token_url', 'TEXT');
-    try {
-        databaseLogger.debug('Attempting to drop redirect_uri column', { operation: 'schema_migration', table: 'users' });
-        sqlite.prepare(`ALTER TABLE users DROP COLUMN redirect_uri`).run();
-        databaseLogger.success('redirect_uri column dropped', { operation: 'schema_migration', table: 'users' });
-    } catch (e) {
-        databaseLogger.debug('redirect_uri column does not exist or could not be dropped', { operation: 'schema_migration', table: 'users' });
-    }
 
     addColumnIfNotExists('users', 'identifier_path', 'TEXT');
     addColumnIfNotExists('users', 'name_path', 'TEXT');

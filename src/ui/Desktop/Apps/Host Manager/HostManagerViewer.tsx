@@ -29,7 +29,7 @@ import {
 import {Separator} from "@/components/ui/separator.tsx";
 import type { SSHHost, SSHManagerHostViewerProps } from '../../../types/index.js';
 
-export function HostManagerHostViewer({onEditHost}: SSHManagerHostViewerProps) {
+export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
     const {t} = useTranslation();
     const [hosts, setHosts] = useState<SSHHost[]>([]);
     const [loading, setLoading] = useState(true);

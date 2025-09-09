@@ -21,7 +21,6 @@ wss.on('connection', (ws: WebSocket) => {
 
 
     ws.on('close', () => {
-        sshLogger.info('WebSocket connection closed', { operation: 'websocket_disconnect' });
         cleanupSSH();
     });
 
@@ -53,7 +52,6 @@ wss.on('connection', (ws: WebSocket) => {
                 break;
 
             case 'disconnect':
-                sshLogger.info('SSH disconnect requested', { operation: 'ssh_disconnect' });
                 cleanupSSH();
                 break;
 
@@ -127,14 +125,14 @@ wss.on('connection', (ws: WebSocket) => {
         }, 60000);
 
         let resolvedCredentials = {password, key, keyPassword, keyType, authType};
-        if (credentialId && id) {
+        if (credentialId && id && hostConfig.userId) {
             try {
                 const credentials = await db
                     .select()
                     .from(sshCredentials)
                     .where(and(
                         eq(sshCredentials.id, credentialId),
-                        eq(sshCredentials.userId, hostConfig.userId || '')
+                        eq(sshCredentials.userId, hostConfig.userId)
                     ));
 
                 if (credentials.length > 0) {
@@ -146,15 +144,18 @@ wss.on('connection', (ws: WebSocket) => {
                         keyType: credential.keyType,
                         authType: credential.authType
                     };
+                } else {
+                    sshLogger.warn(`No credentials found for host ${id}`, { operation: 'ssh_credentials', hostId: id, credentialId, userId: hostConfig.userId });
                 }
             } catch (error) {
                 sshLogger.warn(`Failed to resolve credentials for host ${id}`, { operation: 'ssh_credentials', hostId: id, credentialId, error: error instanceof Error ? error.message : 'Unknown error' });
             }
+        } else if (credentialId && id) {
+            sshLogger.warn('Missing userId for credential resolution in terminal', { operation: 'ssh_credentials', hostId: id, credentialId, hasUserId: !!hostConfig.userId });
         }
 
         sshConn.on('ready', () => {
             clearTimeout(connectionTimeout);
-            sshLogger.success('SSH connection established', { operation: 'ssh_connect', hostId: id, ip, port, username, authType: resolvedCredentials.authType });
 
 
             sshConn!.shell({
@@ -175,7 +176,6 @@ wss.on('connection', (ws: WebSocket) => {
                 });
 
                 stream.on('close', () => {
-                    sshLogger.info('SSH stream closed', { operation: 'ssh_stream', hostId: id, ip, port, username });
                     ws.send(JSON.stringify({type: 'disconnected', message: 'Connection lost'}));
                 });
 
@@ -219,7 +219,6 @@ wss.on('connection', (ws: WebSocket) => {
 
         sshConn.on('close', () => {
             clearTimeout(connectionTimeout);
-
             cleanupSSH(connectionTimeout);
         });
 

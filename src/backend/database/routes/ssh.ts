@@ -76,16 +76,12 @@ router.get('/db/host/internal', async (req: Request, res: Response) => {
 // POST /ssh/host
 router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    sshLogger.info('SSH host creation request received', { operation: 'host_create', userId, contentType: req.headers['content-type'] });
-    
     let hostData: any;
 
     if (req.headers['content-type']?.includes('multipart/form-data')) {
-        sshLogger.info('Processing multipart form data for SSH host creation', { operation: 'host_create', userId });
         if (req.body.data) {
             try {
                 hostData = JSON.parse(req.body.data);
-                sshLogger.info('Successfully parsed JSON data from multipart request', { operation: 'host_create', userId, hasKey: !!req.file });
             } catch (err) {
                 sshLogger.warn('Invalid JSON data in multipart request', { operation: 'host_create', userId, error: err });
                 return res.status(400).json({error: 'Invalid JSON data'});
@@ -97,11 +93,9 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
 
         if (req.file) {
             hostData.key = req.file.buffer.toString('utf8');
-            sshLogger.info('SSH key file processed from multipart request', { operation: 'host_create', userId, keySize: req.file.size });
         }
     } else {
         hostData = req.body;
-        sshLogger.info('Processing JSON data for SSH host creation', { operation: 'host_create', userId });
     }
 
     const {
@@ -147,11 +141,11 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         username,
         authType: effectiveAuthType,
         credentialId: credentialId || null,
-        pin: !pin ? 1 : 0,
-        enableTerminal: !enableTerminal ? 1 : 0,
-        enableTunnel: !enableTunnel ? 1 : 0,
+        pin: pin ? 1 : 0,
+        enableTerminal: enableTerminal ? 1 : 0,
+        enableTunnel: enableTunnel ? 1 : 0,
         tunnelConnections: Array.isArray(tunnelConnections) ? JSON.stringify(tunnelConnections) : null,
-        enableFileManager: !!enableFileManager ? 1 : 0,
+        enableFileManager: enableFileManager ? 1 : 0,
         defaultPath: defaultPath || null,
     };
 
@@ -160,20 +154,35 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         sshDataObj.key = null;
         sshDataObj.keyPassword = null;
         sshDataObj.keyType = null;
-        sshLogger.info('SSH host configured for password authentication', { operation: 'host_create', userId, name, ip, port });
     } else if (effectiveAuthType === 'key') {
         sshDataObj.key = key || null;
         sshDataObj.keyPassword = keyPassword || null;
         sshDataObj.keyType = keyType;
         sshDataObj.password = null;
-        sshLogger.info('SSH host configured for key authentication', { operation: 'host_create', userId, name, ip, port, keyType });
     }
 
     try {
-        sshLogger.info('Attempting to save SSH host to database', { operation: 'host_create', userId, name, ip, port, authType: effectiveAuthType });
-        await db.insert(sshData).values(sshDataObj);
-        sshLogger.success('SSH host created successfully', { operation: 'host_create', userId, name, ip, port, authType: effectiveAuthType, enableTerminal, enableTunnel, enableFileManager });
-        res.json({message: 'SSH data created'});
+        const result = await db.insert(sshData).values(sshDataObj).returning();
+        
+        if (result.length === 0) {
+            sshLogger.warn('No host returned after creation', { operation: 'host_create', userId, name, ip, port });
+            return res.status(500).json({error: 'Failed to create host'});
+        }
+        
+        const createdHost = result[0];
+        const baseHost = {
+            ...createdHost,
+            tags: typeof createdHost.tags === 'string' ? (createdHost.tags ? createdHost.tags.split(',').filter(Boolean) : []) : [],
+            pin: !!createdHost.pin,
+            enableTerminal: !!createdHost.enableTerminal,
+            enableTunnel: !!createdHost.enableTunnel,
+            tunnelConnections: createdHost.tunnelConnections ? JSON.parse(createdHost.tunnelConnections) : [],
+            enableFileManager: !!createdHost.enableFileManager,
+        };
+        
+        const resolvedHost = await resolveHostCredentials(baseHost) || baseHost;
+        
+        res.json(resolvedHost);
     } catch (err) {
         sshLogger.error('Failed to save SSH host to database', err, { operation: 'host_create', userId, name, ip, port, authType: effectiveAuthType });
         res.status(500).json({error: 'Failed to save SSH data'});
@@ -185,16 +194,12 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
 router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Request, res: Response) => {
     const hostId = req.params.id;
     const userId = (req as any).userId;
-    sshLogger.info('SSH host update request received', { operation: 'host_update', hostId: parseInt(hostId), userId, contentType: req.headers['content-type'] });
-    
     let hostData: any;
 
     if (req.headers['content-type']?.includes('multipart/form-data')) {
-        sshLogger.info('Processing multipart form data for SSH host update', { operation: 'host_update', hostId: parseInt(hostId), userId });
         if (req.body.data) {
             try {
                 hostData = JSON.parse(req.body.data);
-                sshLogger.info('Successfully parsed JSON data from multipart request', { operation: 'host_update', hostId: parseInt(hostId), userId, hasKey: !!req.file });
             } catch (err) {
                 sshLogger.warn('Invalid JSON data in multipart request', { operation: 'host_update', hostId: parseInt(hostId), userId, error: err });
                 return res.status(400).json({error: 'Invalid JSON data'});
@@ -206,11 +211,9 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
 
         if (req.file) {
             hostData.key = req.file.buffer.toString('utf8');
-            sshLogger.info('SSH key file processed from multipart request', { operation: 'host_update', hostId: parseInt(hostId), userId, keySize: req.file.size });
         }
     } else {
         hostData = req.body;
-        sshLogger.info('Processing JSON data for SSH host update', { operation: 'host_update', hostId: parseInt(hostId), userId });
     }
 
     const {
@@ -256,11 +259,11 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         username,
         authType: effectiveAuthType,
         credentialId: credentialId || null,
-        pin: !pin ? 1 : 0,
-        enableTerminal: !enableTerminal ? 1 : 0,
-        enableTunnel: !enableTunnel ? 1 : 0,
+        pin: pin ? 1 : 0,
+        enableTerminal: enableTerminal ? 1 : 0,
+        enableTunnel: enableTunnel ? 1 : 0,
         tunnelConnections: Array.isArray(tunnelConnections) ? JSON.stringify(tunnelConnections) : null,
-        enableFileManager: !enableFileManager ? 1 : 0,
+        enableFileManager: enableFileManager ? 1 : 0,
         defaultPath: defaultPath || null,
     };
 
@@ -271,7 +274,6 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         sshDataObj.key = null;
         sshDataObj.keyPassword = null;
         sshDataObj.keyType = null;
-        sshLogger.info('SSH host update configured for password authentication', { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port });
     } else if (effectiveAuthType === 'key') {
         if (key) {
             sshDataObj.key = key;
@@ -283,16 +285,37 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
             sshDataObj.keyType = keyType;
         }
         sshDataObj.password = null;
-        sshLogger.info('SSH host update configured for key authentication', { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, keyType });
     }
 
     try {
-        sshLogger.info('Attempting to update SSH host in database', { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, authType: effectiveAuthType });
         await db.update(sshData)
             .set(sshDataObj)
             .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
-        sshLogger.success('SSH host updated successfully', { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, authType: effectiveAuthType, enableTerminal, enableTunnel, enableFileManager });
-        res.json({message: 'SSH data updated'});
+        
+        const updatedHosts = await db
+            .select()
+            .from(sshData)
+            .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+        
+        if (updatedHosts.length === 0) {
+            sshLogger.warn('Updated host not found after update', { operation: 'host_update', hostId: parseInt(hostId), userId });
+            return res.status(404).json({error: 'Host not found after update'});
+        }
+        
+        const updatedHost = updatedHosts[0];
+        const baseHost = {
+            ...updatedHost,
+            tags: typeof updatedHost.tags === 'string' ? (updatedHost.tags ? updatedHost.tags.split(',').filter(Boolean) : []) : [],
+            pin: !!updatedHost.pin,
+            enableTerminal: !!updatedHost.enableTerminal,
+            enableTunnel: !!updatedHost.enableTunnel,
+            tunnelConnections: updatedHost.tunnelConnections ? JSON.parse(updatedHost.tunnelConnections) : [],
+            enableFileManager: !!updatedHost.enableFileManager,
+        };
+        
+        const resolvedHost = await resolveHostCredentials(baseHost) || baseHost;
+        
+        res.json(resolvedHost);
     } catch (err) {
         sshLogger.error('Failed to update SSH host in database', err, { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, authType: effectiveAuthType });
         res.status(500).json({error: 'Failed to update SSH data'});
@@ -303,19 +326,16 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
 // GET /ssh/host
 router.get('/db/host', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    sshLogger.info('SSH hosts fetch request received', { operation: 'host_fetch', userId });
     if (!isNonEmptyString(userId)) {
         sshLogger.warn('Invalid userId for SSH data fetch', { operation: 'host_fetch', userId });
         return res.status(400).json({error: 'Invalid userId'});
     }
     try {
-        sshLogger.info('Fetching SSH hosts from database', { operation: 'host_fetch', userId });
         const data = await db
             .select()
             .from(sshData)
             .where(eq(sshData.userId, userId));
         
-        sshLogger.info('Processing SSH hosts and resolving credentials', { operation: 'host_fetch', userId, hostCount: data.length });
         const result = await Promise.all(data.map(async (row: any) => {
             const baseHost = {
                 ...row,
@@ -330,7 +350,6 @@ router.get('/db/host', authenticateJWT, async (req: Request, res: Response) => {
             return await resolveHostCredentials(baseHost) || baseHost;
         }));
         
-        sshLogger.success('SSH hosts fetched successfully', { operation: 'host_fetch', userId, hostCount: result.length });
         res.json(result);
     } catch (err) {
         sshLogger.error('Failed to fetch SSH hosts from database', err, { operation: 'host_fetch', userId });
@@ -343,14 +362,12 @@ router.get('/db/host', authenticateJWT, async (req: Request, res: Response) => {
 router.get('/db/host/:id', authenticateJWT, async (req: Request, res: Response) => {
     const hostId = req.params.id;
     const userId = (req as any).userId;
-    sshLogger.info('SSH host fetch by ID request received', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
     
     if (!isNonEmptyString(userId) || !hostId) {
         sshLogger.warn('Invalid userId or hostId for SSH host fetch by ID', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
         return res.status(400).json({error: 'Invalid userId or hostId'});
     }
     try {
-        sshLogger.info('Fetching SSH host by ID from database', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
         const data = await db
             .select()
             .from(sshData)
@@ -372,7 +389,6 @@ router.get('/db/host/:id', authenticateJWT, async (req: Request, res: Response) 
             enableFileManager: !!host.enableFileManager,
         };
         
-        sshLogger.success('SSH host fetched by ID successfully', { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId, hostName: result.name });
         res.json(await resolveHostCredentials(result) || result);
     } catch (err) {
         sshLogger.error('Failed to fetch SSH host by ID from database', err, { operation: 'host_fetch_by_id', hostId: parseInt(hostId), userId });
@@ -385,17 +401,14 @@ router.get('/db/host/:id', authenticateJWT, async (req: Request, res: Response) 
 router.delete('/db/host/:id', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const hostId = req.params.id;
-    sshLogger.info('SSH host deletion request received', { operation: 'host_delete', hostId: parseInt(hostId), userId });
     
     if (!isNonEmptyString(userId) || !hostId) {
         sshLogger.warn('Invalid userId or hostId for SSH host delete', { operation: 'host_delete', hostId: parseInt(hostId), userId });
         return res.status(400).json({error: 'Invalid userId or id'});
     }
     try {
-        sshLogger.info('Attempting to delete SSH host from database', { operation: 'host_delete', hostId: parseInt(hostId), userId });
         const result = await db.delete(sshData)
             .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
-        sshLogger.success('SSH host deleted successfully', { operation: 'host_delete', hostId: parseInt(hostId), userId });
         res.json({message: 'SSH host deleted'});
     } catch (err) {
         sshLogger.error('Failed to delete SSH host from database', err, { operation: 'host_delete', hostId: parseInt(hostId), userId });
@@ -721,5 +734,67 @@ async function resolveHostCredentials(host: any): Promise<any> {
         return host;
     }
 }
+
+// Route: Rename folder (requires JWT)
+// PUT /ssh/db/folders/rename
+router.put('/folders/rename', authenticateJWT, async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const { oldName, newName } = req.body;
+
+    if (!isNonEmptyString(userId) || !oldName || !newName) {
+        sshLogger.warn('Invalid data for folder rename');
+        return res.status(400).json({error: 'Old name and new name are required'});
+    }
+
+    if (oldName === newName) {
+        return res.json({message: 'Folder name unchanged'});
+    }
+
+    try {
+        // Update all hosts with the old folder name
+        const updatedHosts = await db
+            .update(sshData)
+            .set({ 
+                folder: newName,
+                updatedAt: new Date().toISOString()
+            })
+            .where(and(
+                eq(sshData.userId, userId),
+                eq(sshData.folder, oldName)
+            ))
+            .returning();
+
+        // Update all credentials with the old folder name
+        const updatedCredentials = await db
+            .update(sshCredentials)
+            .set({ 
+                folder: newName,
+                updatedAt: new Date().toISOString()
+            })
+            .where(and(
+                eq(sshCredentials.userId, userId),
+                eq(sshCredentials.folder, oldName)
+            ))
+            .returning();
+
+        sshLogger.success('Folder renamed successfully', { 
+            operation: 'folder_rename', 
+            userId, 
+            oldName, 
+            newName, 
+            updatedHosts: updatedHosts.length,
+            updatedCredentials: updatedCredentials.length
+        });
+
+        res.json({
+            message: 'Folder renamed successfully',
+            updatedHosts: updatedHosts.length,
+            updatedCredentials: updatedCredentials.length
+        });
+    } catch (err) {
+        sshLogger.error('Failed to rename folder', err, { operation: 'folder_rename', userId, oldName, newName });
+        res.status(500).json({error: 'Failed to rename folder'});
+    }
+});
 
 export default router;

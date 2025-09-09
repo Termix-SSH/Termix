@@ -101,8 +101,6 @@ async function fetchHostById(id: number): Promise<SSHHostWithCredentials | undef
 
 async function resolveHostCredentials(host: any): Promise<SSHHostWithCredentials | undefined> {
     try {
-        statsLogger.info('Resolving credentials for host', { operation: 'host_credential_resolve', hostId: host.id, hostName: host.name, hasCredentialId: !!host.credentialId });
-        
         const baseHost: any = {
             id: host.id,
             name: host.name,
@@ -124,7 +122,6 @@ async function resolveHostCredentials(host: any): Promise<SSHHostWithCredentials
         };
 
         if (host.credentialId) {
-            statsLogger.info('Fetching credentials from database', { operation: 'host_credential_resolve', hostId: host.id, credentialId: host.credentialId, userId: host.userId });
             try {
                 const credentials = await db
                     .select()
@@ -152,6 +149,7 @@ async function resolveHostCredentials(host: any): Promise<SSHHostWithCredentials
                     if (credential.keyType) {
                         baseHost.keyType = credential.keyType;
                     }
+                    
                 } else {
                     statsLogger.warn(`Credential ${host.credentialId} not found for host ${host.id}, using legacy data`);
                     addLegacyCredentials(baseHost, host);
@@ -437,23 +435,19 @@ function tcpPing(host: string, port: number, timeoutMs = 5000): Promise<boolean>
 }
 
 async function pollStatusesOnce(): Promise<void> {
-    statsLogger.info('Starting status polling for all hosts', { operation: 'status_poll' });
     const hosts = await fetchAllHosts();
     if (hosts.length === 0) {
         statsLogger.warn('No hosts retrieved for status polling', { operation: 'status_poll' });
         return;
     }
 
-    statsLogger.info('Polling status for hosts', { operation: 'status_poll', hostCount: hosts.length, hostIds: hosts.map(h => h.id) });
     const now = new Date().toISOString();
 
     const checks = hosts.map(async (h) => {
-        statsLogger.info('Checking host status', { operation: 'status_poll', hostId: h.id, hostName: h.name, ip: h.ip, port: h.port });
         const isOnline = await tcpPing(h.ip, h.port, 5000);
         const now = new Date().toISOString();
         const statusEntry: StatusEntry = {status: isOnline ? 'online' : 'offline', lastChecked: now};
         hostStatuses.set(h.id, statusEntry);
-        statsLogger.info('Host status check completed', { operation: 'status_poll', hostId: h.id, hostName: h.name, status: isOnline ? 'online' : 'offline' });
         return isOnline;
     });
 

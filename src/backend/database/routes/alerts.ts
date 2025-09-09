@@ -63,11 +63,8 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
     const cacheKey = 'termix_alerts';
     const cachedData = alertCache.get(cacheKey);
     if (cachedData) {
-        authLogger.info('Returning cached alerts from GitHub', { operation: 'alerts_fetch', cacheKey, alertCount: cachedData.length });
         return cachedData;
     }
-
-    authLogger.info('Fetching alerts from GitHub', { operation: 'alerts_fetch', url: `${GITHUB_RAW_BASE}/${REPO_OWNER}/${REPO_NAME}/${ALERTS_FILE}` });
     try {
         const url = `${GITHUB_RAW_BASE}/${REPO_OWNER}/${REPO_NAME}/${ALERTS_FILE}`;
 
@@ -84,7 +81,6 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
         }
 
         const alerts: TermixAlert[] = await response.json() as TermixAlert[];
-        authLogger.info('Successfully fetched alerts from GitHub', { operation: 'alerts_fetch', totalAlerts: alerts.length });
 
         const now = new Date();
 
@@ -94,9 +90,7 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
             return isValid;
         });
 
-        authLogger.info('Filtered alerts by expiry date', { operation: 'alerts_fetch', totalAlerts: alerts.length, validAlerts: validAlerts.length });
         alertCache.set(cacheKey, validAlerts);
-        authLogger.success('Alerts cached successfully', { operation: 'alerts_fetch', alertCount: validAlerts.length });
         return validAlerts;
     } catch (error) {
         authLogger.error('Failed to fetch alerts from GitHub', { operation: 'alerts_fetch', error: error instanceof Error ? error.message : 'Unknown error' });

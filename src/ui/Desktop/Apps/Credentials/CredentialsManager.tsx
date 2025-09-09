@@ -19,7 +19,6 @@ import {
 import { getCredentials, deleteCredential } from '@/ui/main-axios';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import {CredentialEditor} from './CredentialEditor';
 import CredentialViewer from './CredentialViewer';
 import type { Credential, CredentialsManagerProps } from '../../../types/index.js';
 

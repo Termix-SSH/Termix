@@ -297,7 +297,7 @@ export interface CredentialViewerProps {
 
 export interface CredentialSelectorProps {
     value?: number | null;
-    onChange: (value: number | null) => void;
+    onValueChange: (value: number | null) => void;
 }
 
 export interface HostManagerProps {
@@ -382,10 +382,6 @@ export interface FolderStats {
         type: string;
         count: number;
     }>;
-}
-
-export interface FolderManagerProps {
-    onFolderChanged?: () => void;
 }
 
 // ============================================================================

@@ -12,12 +12,6 @@ import { systemLogger } from './utils/logger.js';
     try {
         systemLogger.info("Initializing backend services...", { operation: 'startup' });
         
-        systemLogger.info("Loading database service...", { operation: 'database_init' });
-        systemLogger.info("Loading SSH terminal service...", { operation: 'terminal_init' });
-        systemLogger.info("Loading SSH tunnel service...", { operation: 'tunnel_init' });
-        systemLogger.info("Loading file manager service...", { operation: 'file_manager_init' });
-        systemLogger.info("Loading server stats service...", { operation: 'stats_init' });
-
         systemLogger.success("All backend services initialized successfully", { 
             operation: 'startup_complete',
             services: ['database', 'terminal', 'tunnel', 'file_manager', 'stats']
@@ -25,13 +19,11 @@ import { systemLogger } from './utils/logger.js';
 
         process.on('SIGINT', () => {
             systemLogger.info("Received SIGINT signal, initiating graceful shutdown...", { operation: 'shutdown' });
-            systemLogger.info("Shutting down all services...", { operation: 'shutdown' });
             process.exit(0);
         });
 
         process.on('SIGTERM', () => {
             systemLogger.info("Received SIGTERM signal, initiating graceful shutdown...", { operation: 'shutdown' });
-            systemLogger.info("Shutting down all services...", { operation: 'shutdown' });
             process.exit(0);
         });
 

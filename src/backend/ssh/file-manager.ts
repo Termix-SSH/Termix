@@ -49,7 +49,7 @@ function scheduleSessionCleanup(sessionId: string) {
 app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
     const {sessionId, hostId, ip, port, username, password, sshKey, keyPassword, authType, credentialId, userId} = req.body;
     
-    fileLogger.info('File manager SSH connection request received', { operation: 'file_connect', sessionId, hostId, ip, port, username, authType, hasCredentialId: !!credentialId });
+    // Connection request received
     
     if (!sessionId || !ip || !username || !port) {
         fileLogger.warn('Missing SSH connection parameters for file manager', { operation: 'file_connect', sessionId, hasIp: !!ip, hasUsername: !!username, hasPort: !!port });
@@ -57,14 +57,12 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
     }
 
     if (sshSessions[sessionId]?.isConnected) {
-        fileLogger.info('Cleaning up existing SSH session', { operation: 'file_connect', sessionId });
         cleanupSession(sessionId);
     }
     const client = new SSHClient();
 
     let resolvedCredentials = {password, sshKey, keyPassword, authType};
     if (credentialId && hostId && userId) {
-        fileLogger.info('Resolving credentials from database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, userId });
         try {
             const credentials = await db
                 .select()
@@ -82,15 +80,14 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
                     keyPassword: credential.keyPassword,
                     authType: credential.authType
                 };
-                fileLogger.success('Credentials resolved successfully for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, authType: credential.authType });
             } else {
-                fileLogger.warn('No credentials found in database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId });
+                fileLogger.warn('No credentials found in database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, userId });
             }
         } catch (error) {
             fileLogger.warn('Failed to resolve credentials from database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, error: error instanceof Error ? error.message : 'Unknown error' });
         }
-    } else {
-        fileLogger.info('Using direct credentials for file manager connection', { operation: 'file_connect', sessionId, hostId, authType });
+    } else if (credentialId && hostId) {
+        fileLogger.warn('Missing userId for credential resolution in file manager', { operation: 'file_connect', sessionId, hostId, credentialId, hasUserId: !!userId });
     }
 
     const config: any = {
@@ -137,7 +134,6 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
     };
 
     if (resolvedCredentials.sshKey && resolvedCredentials.sshKey.trim()) {
-        fileLogger.info('Configuring SSH key authentication for file manager', { operation: 'file_connect', sessionId, hostId, hasKeyPassword: !!resolvedCredentials.keyPassword });
         try {
             if (!resolvedCredentials.sshKey.includes('-----BEGIN') || !resolvedCredentials.sshKey.includes('-----END')) {
                 throw new Error('Invalid private key format');
@@ -149,13 +145,11 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
 
             if (resolvedCredentials.keyPassword) config.passphrase = resolvedCredentials.keyPassword;
 
-            fileLogger.success('SSH key authentication configured successfully for file manager', { operation: 'file_connect', sessionId, hostId });
         } catch (keyError) {
             fileLogger.error('SSH key format error for file manager', { operation: 'file_connect', sessionId, hostId, error: keyError.message });
             return res.status(400).json({error: 'Invalid SSH key format'});
         }
     } else if (resolvedCredentials.password && resolvedCredentials.password.trim()) {
-        fileLogger.info('Configuring password authentication for file manager', { operation: 'file_connect', sessionId, hostId });
         config.password = resolvedCredentials.password;
     } else {
         fileLogger.warn('No authentication method provided for file manager', { operation: 'file_connect', sessionId, hostId });
@@ -167,7 +161,6 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
     client.on('ready', () => {
         if (responseSent) return;
         responseSent = true;
-        fileLogger.success('SSH connection established for file manager', { operation: 'file_connect', sessionId, hostId, ip, port, username, authType: resolvedCredentials.authType });
         sshSessions[sessionId] = {client, isConnected: true, lastActive: Date.now()};
         res.json({status: 'success', message: 'SSH connection established'});
     });
@@ -377,7 +370,6 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                 writeStream.on('finish', () => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
-                    fileLogger.success(`File written successfully via SFTP: ${filePath}`);
                     if (!res.headersSent) {
                         res.json({message: 'File written successfully', path: filePath});
                     }
@@ -386,7 +378,6 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                 writeStream.on('close', () => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
-                    fileLogger.success(`File written successfully via SFTP: ${filePath}`);
                     if (!res.headersSent) {
                         res.json({message: 'File written successfully', path: filePath});
                     }
@@ -440,7 +431,6 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
 
 
                     if (outputData.includes('SUCCESS')) {
-                        fileLogger.success(`File written successfully via fallback: ${filePath}`);
                         if (!res.headersSent) {
                             res.json({message: 'File written successfully', path: filePath});
                         }
@@ -536,8 +526,6 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                 writeStream.on('finish', () => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
-
-                    fileLogger.success(`File uploaded successfully via SFTP: ${fullPath}`);
                     if (!res.headersSent) {
                         res.json({message: 'File uploaded successfully', path: fullPath});
                     }
@@ -546,8 +534,6 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                 writeStream.on('close', () => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
-
-                    fileLogger.success(`File uploaded successfully via SFTP: ${fullPath}`);
                     if (!res.headersSent) {
                         res.json({message: 'File uploaded successfully', path: fullPath});
                     }

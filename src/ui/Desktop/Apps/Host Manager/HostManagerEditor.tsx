@@ -50,10 +50,10 @@ interface SSHHost {
 
 interface SSHManagerHostEditorProps {
     editingHost?: SSHHost | null;
-    onFormSubmit?: () => void;
+    onFormSubmit?: (updatedHost?: SSHHost) => void;
 }
 
-export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHostEditorProps) {
+export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEditorProps) {
     const {t} = useTranslation();
     const [hosts, setHosts] = useState<SSHHost[]>([]);
     const [folders, setFolders] = useState<string[]>([]);
@@ -62,6 +62,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
 
     const [authTab, setAuthTab] = useState<'password' | 'key' | 'credential'>('password');
     const [keyInputMethod, setKeyInputMethod] = useState<'upload' | 'paste'>('upload');
+    const isSubmittingRef = useRef(false);
     
     // Ref for the IP address input to manage focus
     const ipInputRef = useRef<HTMLInputElement>(null);
@@ -182,24 +183,24 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
-            name: editingHost?.name || "",
-            ip: editingHost?.ip || "",
-            port: editingHost?.port || 22,
-            username: editingHost?.username || "",
-            folder: editingHost?.folder || "",
-            tags: editingHost?.tags || [],
-            pin: editingHost?.pin || false,
-            authType: (editingHost?.authType as 'password' | 'key' | 'credential') || "password",
-            credentialId: editingHost?.credentialId || null,
+            name: "",
+            ip: "",
+            port: 22,
+            username: "",
+            folder: "",
+            tags: [],
+            pin: false,
+            authType: "password" as const,
+            credentialId: null,
             password: "",
             key: null,
             keyPassword: "",
-            keyType: "auto",
-            enableTerminal: editingHost?.enableTerminal !== false,
-            enableTunnel: editingHost?.enableTunnel !== false,
-            enableFileManager: editingHost?.enableFileManager !== false,
-            defaultPath: editingHost?.defaultPath || "/",
-            tunnelConnections: editingHost?.tunnelConnections || [],
+            keyType: "auto" as const,
+            enableTerminal: true,
+            enableTunnel: true,
+            enableFileManager: true,
+            defaultPath: "/",
+            tunnelConnections: [],
         }
     });
 
@@ -207,30 +208,32 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
         if (editingHost) {
             const defaultAuthType = editingHost.credentialId ? 'credential' : (editingHost.key ? 'key' : 'password');
             setAuthTab(defaultAuthType);
-
-            form.reset({
+            
+            const formData = {
                 name: editingHost.name || "",
                 ip: editingHost.ip || "",
                 port: editingHost.port || 22,
                 username: editingHost.username || "",
                 folder: editingHost.folder || "",
                 tags: editingHost.tags || [],
-                pin: editingHost.pin || false,
+                pin: Boolean(editingHost.pin),
                 authType: defaultAuthType as 'password' | 'key' | 'credential',
                 credentialId: editingHost.credentialId || null,
                 password: editingHost.password || "",
                 key: null,
                 keyPassword: editingHost.keyPassword || "",
                 keyType: (editingHost.keyType as any) || "auto",
-                enableTerminal: editingHost.enableTerminal !== false,
-                enableTunnel: editingHost.enableTunnel !== false,
-                enableFileManager: editingHost.enableFileManager !== false,
+                enableTerminal: Boolean(editingHost.enableTerminal),
+                enableTunnel: Boolean(editingHost.enableTunnel),
+                enableFileManager: Boolean(editingHost.enableFileManager),
                 defaultPath: editingHost.defaultPath || "/",
                 tunnelConnections: editingHost.tunnelConnections || [],
-            });
+            };
+
+            form.reset(formData);
         } else {
             setAuthTab('password');
-            form.reset({
+            const defaultFormData = {
                 name: "",
                 ip: "",
                 port: 22,
@@ -238,22 +241,23 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                 folder: "",
                 tags: [],
                 pin: false,
-                authType: "password",
+                authType: "password" as const,
                 credentialId: null,
                 password: "",
                 key: null,
                 keyPassword: "",
-                keyType: "auto",
+                keyType: "auto" as const,
                 enableTerminal: true,
                 enableTunnel: true,
                 enableFileManager: true,
                 defaultPath: "/",
                 tunnelConnections: [],
-            });
+            };
+
+            form.reset(defaultFormData);
         }
-    }, [editingHost, form]);
+    }, [editingHost?.id]);
 
-    // Focus the IP address field when the component mounts or when editingHost changes
     useEffect(() => {
         const focusTimer = setTimeout(() => {
             if (ipInputRef.current) {
@@ -261,83 +265,79 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
             }
         }, 300);
 
-        return () => clearTimeout(focusTimer);
-    }, []); // Focus on mount
-
-    // Also focus when editingHost changes (for tab switching)
-    useEffect(() => {
-        const focusTimer = setTimeout(() => {
-            if (ipInputRef.current) {
-                ipInputRef.current.focus();
-            }
-        }, 300);
         return () => clearTimeout(focusTimer);
     }, [editingHost]);
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: FormData) => {
         try {
-            const formData = data as FormData;
-
-            if (!formData.name || formData.name.trim() === '') {
-                formData.name = `${formData.username}@${formData.ip}`;
+            isSubmittingRef.current = true;
+            
+            if (!data.name || data.name.trim() === '') {
+                data.name = `${data.username}@${data.ip}`;
             }
 
             const submitData: any = {
-                name: formData.name,
-                ip: formData.ip,
-                port: formData.port,
-                username: formData.username,
-                folder: formData.folder,
-                tags: formData.tags,
-                pin: formData.pin,
-                authType: formData.authType,
-                enableTerminal: formData.enableTerminal,
-                enableTunnel: formData.enableTunnel,
-                enableFileManager: formData.enableFileManager,
-                defaultPath: formData.defaultPath,
-                tunnelConnections: formData.tunnelConnections
+                name: data.name,
+                ip: data.ip,
+                port: data.port,
+                username: data.username,
+                folder: data.folder || "",
+                tags: data.tags || [],
+                pin: Boolean(data.pin),
+                authType: data.authType,
+                enableTerminal: Boolean(data.enableTerminal),
+                enableTunnel: Boolean(data.enableTunnel),
+                enableFileManager: Boolean(data.enableFileManager),
+                defaultPath: data.defaultPath || "/",
+                tunnelConnections: data.tunnelConnections || []
             };
 
-            if (formData.authType === 'credential') {
-                submitData.credentialId = formData.credentialId;
+            if (data.authType === 'credential') {
+                submitData.credentialId = data.credentialId;
                 submitData.password = null;
                 submitData.key = null;
                 submitData.keyPassword = null;
                 submitData.keyType = null;
-            } else if (formData.authType === 'password') {
+            } else if (data.authType === 'password') {
                 submitData.credentialId = null;
-                submitData.password = formData.password;
+                submitData.password = data.password;
                 submitData.key = null;
                 submitData.keyPassword = null;
                 submitData.keyType = null;
-            } else if (formData.authType === 'key') {
+            } else if (data.authType === 'key') {
                 submitData.credentialId = null;
                 submitData.password = null;
-                if (formData.key instanceof File) {
-                    const keyContent = await formData.key.text();
+                if (data.key instanceof File) {
+                    const keyContent = await data.key.text();
                     submitData.key = keyContent;
                 } else {
-                    submitData.key = formData.key;
+                    submitData.key = data.key;
                 }
-                submitData.keyPassword = formData.keyPassword;
-                submitData.keyType = formData.keyType;
+                submitData.keyPassword = data.keyPassword;
+                submitData.keyType = data.keyType;
             }
 
             if (editingHost) {
-                await updateSSHHost(editingHost.id, submitData);
-                toast.success(t('hosts.hostUpdatedSuccessfully', { name: formData.name }));
+                const updatedHost = await updateSSHHost(editingHost.id, submitData);
+                toast.success(t('hosts.hostUpdatedSuccessfully', { name: data.name }));
+                
+                if (onFormSubmit) {
+                    onFormSubmit(updatedHost);
+                }
             } else {
-                await createSSHHost(submitData);
-                toast.success(t('hosts.hostAddedSuccessfully', { name: formData.name }));
-            }
-
-            if (onFormSubmit) {
-                onFormSubmit();
+                const newHost = await createSSHHost(submitData);
+                toast.success(t('hosts.hostAddedSuccessfully', { name: data.name }));
+                
+                if (onFormSubmit) {
+                    onFormSubmit(newHost);
+                }
             }
 
             window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
         } catch (error) {
             toast.error(t('hosts.failedToSaveHost'));
+        } finally {
+            isSubmittingRef.current = false;
         }
     };
 
@@ -659,20 +659,24 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                 <Tabs
                                     value={authTab}
                                     onValueChange={(value) => {
-                                        setAuthTab(value as 'password' | 'key' | 'credential');
-                                        form.setValue('authType', value as 'password' | 'key' | 'credential');
+                                        const newAuthType = value as 'password' | 'key' | 'credential';
+                                        setAuthTab(newAuthType);
+                                        form.setValue('authType', newAuthType);
+                                        
                                         // Clear other auth fields when switching
-                                        if (value === 'password') {
+                                        if (newAuthType === 'password') {
                                             form.setValue('key', null);
                                             form.setValue('keyPassword', '');
+                                            form.setValue('keyType', 'auto');
                                             form.setValue('credentialId', null);
-                                        } else if (value === 'key') {
+                                        } else if (newAuthType === 'key') {
                                             form.setValue('password', '');
                                             form.setValue('credentialId', null);
-                                        } else if (value === 'credential') {
+                                        } else if (newAuthType === 'credential') {
                                             form.setValue('password', '');
                                             form.setValue('key', null);
                                             form.setValue('keyPassword', '');
+                                            form.setValue('keyType', 'auto');
                                         }
                                     }}
                                     className="flex-1 flex flex-col h-full min-h-0"
@@ -710,7 +714,7 @@ export function HostManagerHostEditor({editingHost, onFormSubmit}: SSHManagerHos
                                             }}
                                             className="w-full"
                                         >
-                                            <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                                            <TabsList className="inline-flex items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
                                                 <TabsTrigger value="upload">{t('hosts.uploadFile')}</TabsTrigger>
                                                 <TabsTrigger value="paste">{t('hosts.pasteKey')}</TabsTrigger>
                                             </TabsList>

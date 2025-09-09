@@ -35,23 +35,20 @@ class GitHubCache {
             timestamp: now,
             expiresAt: now + this.CACHE_DURATION
         });
-        databaseLogger.debug(`Cache entry set`, { operation: 'cache_set', key, expiresIn: this.CACHE_DURATION });
+        // Cache entry set
     }
 
     get(key: string): any | null {
         const entry = this.cache.get(key);
         if (!entry) {
-            databaseLogger.debug(`Cache miss`, { operation: 'cache_get', key });
             return null;
         }
 
         if (Date.now() > entry.expiresAt) {
             this.cache.delete(key);
-            databaseLogger.debug(`Cache entry expired`, { operation: 'cache_get', key, expired: true });
             return null;
         }
 
-        databaseLogger.debug(`Cache hit`, { operation: 'cache_get', key, age: Date.now() - entry.timestamp });
         return entry.data;
     }
 }
@@ -83,7 +80,6 @@ interface GitHubRelease {
 async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> {
     const cachedData = githubCache.get(cacheKey);
     if (cachedData) {
-        databaseLogger.debug(`Using cached GitHub API data`, { operation: 'github_api', endpoint, cached: true });
         return {
             data: cachedData,
             cached: true,
@@ -92,7 +88,6 @@ async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> 
     }
 
     try {
-        databaseLogger.info(`Fetching from GitHub API`, { operation: 'github_api', endpoint });
         const response = await fetch(`${GITHUB_API_BASE}${endpoint}`, {
             headers: {
                 'Accept': 'application/vnd.github+json',
@@ -108,7 +103,6 @@ async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> 
         const data = await response.json();
         githubCache.set(cacheKey, data);
 
-        databaseLogger.success(`GitHub API data fetched successfully`, { operation: 'github_api', endpoint, dataSize: JSON.stringify(data).length });
         return {
             data: data,
             cached: false
@@ -122,12 +116,10 @@ async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> 
 app.use(bodyParser.json());
 
 app.get('/health', (req, res) => {
-    apiLogger.info(`Health check requested`, { operation: 'health_check' });
     res.json({status: 'ok'});
 });
 
 app.get('/version', async (req, res) => {
-    apiLogger.info(`Version check requested`, { operation: 'version_check' });
     let localVersion = process.env.VERSION;
 
     if (!localVersion) {
@@ -135,7 +127,6 @@ app.get('/version', async (req, res) => {
             const packagePath = path.resolve(process.cwd(), 'package.json');
             const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
             localVersion = packageJson.version;
-            databaseLogger.debug(`Version read from package.json`, { operation: 'version_check', localVersion });
         } catch (error) {
             databaseLogger.error('Failed to read version from package.json', error, { operation: 'version_check' });
         }
@@ -163,13 +154,6 @@ app.get('/version', async (req, res) => {
         }
 
         const isUpToDate = localVersion === remoteVersion;
-        databaseLogger.info(`Version comparison completed`, { 
-            operation: 'version_check', 
-            localVersion, 
-            remoteVersion, 
-            isUpToDate,
-            cached: releaseData.cached 
-        });
 
         const response = {
             status: isUpToDate ? 'up_to_date' : 'requires_update',
@@ -198,7 +182,7 @@ app.get('/releases/rss', async (req, res) => {
         const per_page = Math.min(parseInt(req.query.per_page as string) || 20, 100);
         const cacheKey = `releases_rss_${page}_${per_page}`;
 
-        apiLogger.info(`RSS releases requested`, { operation: 'rss_releases', page, per_page });
+        // RSS releases requested
 
         const releasesData = await fetchGitHubAPI(
             `/repos/${REPO_OWNER}/${REPO_NAME}/releases?page=${page}&per_page=${per_page}`,
@@ -235,13 +219,7 @@ app.get('/releases/rss', async (req, res) => {
             cache_age: releasesData.cache_age
         };
 
-        databaseLogger.success(`RSS releases generated successfully`, { 
-            operation: 'rss_releases', 
-            itemCount: rssItems.length, 
-            page, 
-            per_page,
-            cached: releasesData.cached 
-        });
+        // RSS releases generated successfully
 
         res.json(response);
     } catch (error) {

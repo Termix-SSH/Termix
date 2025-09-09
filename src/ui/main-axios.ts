@@ -75,6 +75,22 @@ interface OIDCAuthorize {
 // UTILITY FUNCTIONS
 // ============================================================================
 
+function getLoggerForService(serviceName: string) {
+    if (serviceName.includes('SSH') || serviceName.includes('ssh')) {
+        return sshLogger;
+    } else if (serviceName.includes('TUNNEL') || serviceName.includes('tunnel')) {
+        return tunnelLogger;
+    } else if (serviceName.includes('FILE') || serviceName.includes('file')) {
+        return fileLogger;
+    } else if (serviceName.includes('STATS') || serviceName.includes('stats')) {
+        return statsLogger;
+    } else if (serviceName.includes('AUTH') || serviceName.includes('auth')) {
+        return authLogger;
+    } else {
+        return apiLogger;
+    }
+}
+
 export function setCookie(name: string, value: string, days = 7): void {
     const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
     
@@ -116,12 +132,24 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
         (config as any).requestId = requestId;
 
         const token = getCookie('jwt');
+        const method = config.method?.toUpperCase() || 'UNKNOWN';
+        const url = config.url || 'UNKNOWN';
+        const fullUrl = `${config.baseURL}${url}`;
+
         const context: LogContext = {
             requestId,
-            method: config.method?.toUpperCase(),
-            url: config.url,
+            method,
+            url: fullUrl,
             operation: 'request_start'
         };
+
+        // Get the appropriate logger for this service
+        const logger = getLoggerForService(serviceName);
+
+        // Log request start with grouping
+        if (process.env.NODE_ENV === 'development') {
+            logger.requestStart(method, fullUrl, context);
+        }
 
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -140,38 +168,31 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
             const requestId = (response.config as any).requestId;
             const responseTime = Math.round(endTime - startTime);
 
+            const method = response.config.method?.toUpperCase() || 'UNKNOWN';
+            const url = response.config.url || 'UNKNOWN';
+            const fullUrl = `${response.config.baseURL}${url}`;
+
             const context: LogContext = {
                 requestId,
-                method: response.config.method?.toUpperCase(),
-                url: response.config.url,
+                method,
+                url: fullUrl,
                 status: response.status,
                 statusText: response.statusText,
                 responseTime,
                 operation: 'request_success'
             };
 
-            // Only log successful requests in development and for slow requests
+            // Get the appropriate logger for this service
+            const logger = getLoggerForService(serviceName);
+
+            // Log successful requests in development
             if (process.env.NODE_ENV === 'development') {
-                const method = response.config.method?.toUpperCase() || 'UNKNOWN';
-                const url = response.config.url || 'UNKNOWN';
-                
-                // Log based on service type
-                if (serviceName.includes('SSH') || serviceName.includes('ssh')) {
-                    sshLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
-                } else if (serviceName.includes('TUNNEL') || serviceName.includes('tunnel')) {
-                    tunnelLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
-                } else if (serviceName.includes('FILE') || serviceName.includes('file')) {
-                    fileLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
-                } else if (serviceName.includes('STATS') || serviceName.includes('stats')) {
-                    statsLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
-                } else {
-                    apiLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
-                }
+                logger.requestSuccess(method, fullUrl, response.status, responseTime, context);
             }
 
             // Performance logging for slow requests
             if (responseTime > 3000) {
-                apiLogger.warn(`Slow request: ${responseTime}ms`, context);
+                logger.warn(`🐌 Slow request: ${responseTime}ms`, context);
             }
 
             return response;
@@ -184,6 +205,7 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
 
             const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
             const url = error.config?.url || 'UNKNOWN';
+            const fullUrl = error.config ? `${error.config.baseURL}${url}` : url;
             const status = error.response?.status;
             const message = (error.response?.data as any)?.error || (error as Error).message || 'Unknown error';
             const errorCode = (error.response?.data as any)?.code || error.code;
@@ -191,7 +213,7 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
             const context: LogContext = {
                 requestId,
                 method,
-                url,
+                url: fullUrl,
                 status,
                 responseTime,
                 errorCode,
@@ -199,7 +221,21 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
                 operation: 'request_error'
             };
 
-            // Only handle auth token clearing here, let handleApiError do the logging
+            // Get the appropriate logger for this service
+            const logger = getLoggerForService(serviceName);
+
+            // Log errors with appropriate method based on error type
+            if (process.env.NODE_ENV === 'development') {
+                if (status === 401) {
+                    logger.authError(method, fullUrl, context);
+                } else if (status === 0 || !status) {
+                    logger.networkError(method, fullUrl, message, context);
+                } else {
+                    logger.requestError(method, fullUrl, status || 0, message, responseTime, context);
+                }
+            }
+
+            // Handle auth token clearing
             if (status === 401) {
                 document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                 localStorage.removeItem('jwt');
@@ -385,17 +421,16 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
             username: hostData.username,
             folder: hostData.folder || '',
             tags: hostData.tags || [],
-            pin: hostData.pin || false,
-            authMethod: hostData.authType,
+            pin: Boolean(hostData.pin),
             authType: hostData.authType,
-            password: hostData.authType === 'password' ? hostData.password : '',
+            password: hostData.authType === 'password' ? hostData.password : null,
             key: hostData.authType === 'key' ? hostData.key : null,
-            keyPassword: hostData.authType === 'key' ? hostData.keyPassword : '',
-            keyType: hostData.authType === 'key' ? hostData.keyType : '',
+            keyPassword: hostData.authType === 'key' ? hostData.keyPassword : null,
+            keyType: hostData.authType === 'key' ? hostData.keyType : null,
             credentialId: hostData.authType === 'credential' ? hostData.credentialId : null,
-            enableTerminal: hostData.enableTerminal !== false,
-            enableTunnel: hostData.enableTunnel !== false,
-            enableFileManager: hostData.enableFileManager !== false,
+            enableTerminal: Boolean(hostData.enableTerminal),
+            enableTunnel: Boolean(hostData.enableTunnel),
+            enableFileManager: Boolean(hostData.enableFileManager),
             defaultPath: hostData.defaultPath || '/',
             tunnelConnections: hostData.tunnelConnections || [],
         };
@@ -438,17 +473,16 @@ export async function updateSSHHost(hostId: number, hostData: SSHHostData): Prom
             username: hostData.username,
             folder: hostData.folder || '',
             tags: hostData.tags || [],
-            pin: hostData.pin || false,
-            authMethod: hostData.authType,
+            pin: Boolean(hostData.pin),
             authType: hostData.authType,
-            password: hostData.authType === 'password' ? hostData.password : '',
+            password: hostData.authType === 'password' ? hostData.password : null,
             key: hostData.authType === 'key' ? hostData.key : null,
-            keyPassword: hostData.authType === 'key' ? hostData.keyPassword : '',
-            keyType: hostData.authType === 'key' ? hostData.keyType : '',
+            keyPassword: hostData.authType === 'key' ? hostData.keyPassword : null,
+            keyType: hostData.authType === 'key' ? hostData.keyType : null,
             credentialId: hostData.authType === 'credential' ? hostData.credentialId : null,
-            enableTerminal: hostData.enableTerminal !== false,
-            enableTunnel: hostData.enableTunnel !== false,
-            enableFileManager: hostData.enableFileManager !== false,
+            enableTerminal: Boolean(hostData.enableTerminal),
+            enableTunnel: Boolean(hostData.enableTunnel),
+            enableFileManager: Boolean(hostData.enableFileManager),
             defaultPath: hostData.defaultPath || '/',
             tunnelConnections: hostData.tunnelConnections || [],
         };
@@ -1234,7 +1268,7 @@ export async function getFoldersWithStats(): Promise<any> {
 
 export async function renameFolder(oldName: string, newName: string): Promise<any> {
     try {
-        const response = await authApi.put('/ssh/db/folders/rename', {
+        const response = await authApi.put('/ssh/folders/rename', {
             oldName,
             newName
         });

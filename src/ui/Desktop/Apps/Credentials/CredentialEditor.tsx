@@ -21,7 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
 import { createCredential, updateCredential, getCredentials, getCredentialDetails } from '@/ui/main-axios'
 import { useTranslation } from "react-i18next"
-import type { Credential, CredentialEditorProps } from '../../../types/index.js'
+import type { Credential, CredentialEditorProps, CredentialData } from '../../../types/index.js'
 
 export function CredentialEditor({ editingCredential, onFormSubmit }: CredentialEditorProps) {
     const { t } = useTranslation();
@@ -31,6 +31,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
     const [fullCredentialDetails, setFullCredentialDetails] = useState<Credential | null>(null);
 
     const [authTab, setAuthTab] = useState<'password' | 'key'>('password');
+    const [keyInputMethod, setKeyInputMethod] = useState<'upload' | 'paste'>('upload');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -84,9 +85,15 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
         key: z.any().optional().nullable(),
         keyPassword: z.string().optional(),
         keyType: z.enum([
-            'rsa',
-            'ecdsa',
-            'ed25519'
+            'auto',
+            'ssh-rsa',
+            'ssh-ed25519',
+            'ecdsa-sha2-nistp256',
+            'ecdsa-sha2-nistp384',
+            'ecdsa-sha2-nistp521',
+            'ssh-dss',
+            'ssh-rsa-sha2-256',
+            'ssh-rsa-sha2-512',
         ]).optional(),
     }).superRefine((data, ctx) => {
         if (data.authType === 'password') {
@@ -122,14 +129,13 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
             password: "",
             key: null,
             keyPassword: "",
-            keyType: "rsa",
+            keyType: "auto",
         }
     });
 
     useEffect(() => {
         if (editingCredential && fullCredentialDetails) {
             const defaultAuthType = fullCredentialDetails.authType;
-
             setAuthTab(defaultAuthType);
 
             form.reset({
@@ -142,11 +148,10 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                 password: fullCredentialDetails.password || "",
                 key: null,
                 keyPassword: fullCredentialDetails.keyPassword || "",
-                keyType: (fullCredentialDetails.keyType as any) || "rsa",
+                keyType: (fullCredentialDetails.keyType as any) || "auto",
             });
         } else if (!editingCredential) {
             setAuthTab('password');
-
             form.reset({
                 name: "",
                 description: "",
@@ -157,52 +162,43 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                 password: "",
                 key: null,
                 keyPassword: "",
-                keyType: "rsa",
+                keyType: "auto",
             });
         }
-    }, [editingCredential, fullCredentialDetails, form]);
+    }, [editingCredential?.id, fullCredentialDetails]);
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: FormData) => {
         try {
-            const formData = data as FormData;
-
-            if (!formData.name || formData.name.trim() === '') {
-                formData.name = formData.username;
+            if (!data.name || data.name.trim() === '') {
+                data.name = data.username;
             }
 
-            const submitData: any = {
-                name: formData.name,
-                description: formData.description,
-                folder: formData.folder,
-                tags: formData.tags,
-                authType: formData.authType,
-                username: formData.username,
-                keyType: formData.keyType
+            const submitData: CredentialData = {
+                name: data.name,
+                description: data.description,
+                folder: data.folder,
+                tags: data.tags,
+                authType: data.authType,
+                username: data.username,
+                keyType: data.keyType
             };
 
-            if (formData.password !== undefined) {
-                submitData.password = formData.password;
-            }
-            
-            if (formData.key !== undefined) {
-                if (formData.key instanceof File) {
-                    const keyContent = await formData.key.text();
-                    submitData.key = keyContent;
-                } else {
-                    submitData.key = formData.key;
-                }
-            }
-            
-            if (formData.keyPassword !== undefined) {
-                submitData.keyPassword = formData.keyPassword;
+            if (data.authType === 'password') {
+                submitData.password = data.password;
+                submitData.key = undefined;
+                submitData.keyPassword = undefined;
+            } else if (data.authType === 'key') {
+                submitData.key = data.key instanceof File ? await data.key.text() : data.key;
+                submitData.keyPassword = data.keyPassword;
+                submitData.password = undefined;
             }
 
             if (editingCredential) {
                 await updateCredential(editingCredential.id, submitData);
-                toast.success(t('credentials.credentialUpdatedSuccessfully', { name: formData.name }));
+                toast.success(t('credentials.credentialUpdatedSuccessfully', { name: data.name }));
             } else {
                 await createCredential(submitData);
-                toast.success(t('credentials.credentialAddedSuccessfully', { name: formData.name }));
+                toast.success(t('credentials.credentialAddedSuccessfully', { name: data.name }));
             }
 
             if (onFormSubmit) {
@@ -256,9 +252,15 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
     }, [folderDropdownOpen]);
 
     const keyTypeOptions = [
-        { value: 'rsa', label: t('credentials.keyTypeRSA') },
-        { value: 'ecdsa', label: t('credentials.keyTypeECDSA') },
-        { value: 'ed25519', label: t('credentials.keyTypeEd25519') },
+        { value: 'auto', label: t('hosts.autoDetect') },
+        { value: 'ssh-rsa', label: t('hosts.rsa') },
+        { value: 'ssh-ed25519', label: t('hosts.ed25519') },
+        { value: 'ecdsa-sha2-nistp256', label: t('hosts.ecdsaNistP256') },
+        { value: 'ecdsa-sha2-nistp384', label: t('hosts.ecdsaNistP384') },
+        { value: 'ecdsa-sha2-nistp521', label: t('hosts.ecdsaNistP521') },
+        { value: 'ssh-dss', label: t('hosts.dsa') },
+        { value: 'ssh-rsa-sha2-256', label: t('hosts.rsaSha2256') },
+        { value: 'ssh-rsa-sha2-512', label: t('hosts.rsaSha2512') },
     ];
 
     const [keyTypeDropdownOpen, setKeyTypeDropdownOpen] = useState(false);
@@ -436,13 +438,16 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                 <Tabs
                                     value={authTab}
                                     onValueChange={(value) => {
-                                        setAuthTab(value as 'password' | 'key');
-                                        form.setValue('authType', value as 'password' | 'key');
+                                        const newAuthType = value as 'password' | 'key';
+                                        setAuthTab(newAuthType);
+                                        form.setValue('authType', newAuthType);
+                                        
                                         // Clear other auth fields when switching
-                                        if (value === 'password') {
+                                        if (newAuthType === 'password') {
                                             form.setValue('key', null);
                                             form.setValue('keyPassword', '');
-                                        } else if (value === 'key') {
+                                            form.setValue('keyType', 'auto');
+                                        } else if (newAuthType === 'key') {
                                             form.setValue('password', '');
                                         }
                                     }}
@@ -467,103 +472,206 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                         />
                                     </TabsContent>
                                     <TabsContent value="key">
-                                        <div className="grid grid-cols-15 gap-4">
-                                            <Controller
-                                                control={form.control}
-                                                name="key"
-                                                render={({ field }) => (
-                                                    <FormItem className="col-span-4 overflow-hidden min-w-0">
-                                                        <FormLabel>{t('credentials.sshPrivateKey')}</FormLabel>
-                                                        <FormControl>
-                                                            <div className="relative min-w-0">
-                                                                <input
-                                                                    id="key-upload"
-                                                                    type="file"
-                                                                    accept=".pem,.key,.txt,.ppk"
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files?.[0];
-                                                                        field.onChange(file || null);
-                                                                    }}
-                                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                                                />
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    className="w-full min-w-0 overflow-hidden px-3 py-2 text-left"
-                                                                >
-                                                                    <span className="block w-full truncate"
-                                                                          title={field.value?.name || t('credentials.upload')}>
-                                                                        {field.value ? (editingCredential ? t('credentials.updateKey') : field.value.name) : t('credentials.upload')}
-                                                                    </span>
-                                                                </Button>
-                                                            </div>
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={form.control}
-                                                name="keyPassword"
-                                                render={({ field }) => (
-                                                    <FormItem className="col-span-8">
-                                                        <FormLabel>{t('credentials.keyPassword')}</FormLabel>
-                                                        <FormControl>
-                                                            <Input
-                                                                placeholder={t('placeholders.keyPassword')}
-                                                                type="password"
-                                                                {...field}
-                                                            />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={form.control}
-                                                name="keyType"
-                                                render={({ field }) => (
-                                                    <FormItem className="relative col-span-3">
-                                                        <FormLabel>{t('credentials.keyType')}</FormLabel>
-                                                        <FormControl>
-                                                            <div className="relative">
-                                                                <Button
-                                                                    ref={keyTypeButtonRef}
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    className="w-full justify-start text-left rounded-md px-2 py-2 bg-[#18181b] border border-input text-foreground"
-                                                                    onClick={() => setKeyTypeDropdownOpen((open) => !open)}
-                                                                >
-                                                                    {keyTypeOptions.find((opt) => opt.value === field.value)?.label || t('credentials.keyTypeRSA')}
-                                                                </Button>
-                                                                {keyTypeDropdownOpen && (
-                                                                    <div
-                                                                        ref={keyTypeDropdownRef}
-                                                                        className="absolute bottom-full left-0 z-50 mb-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
-                                                                    >
-                                                                        <div className="grid grid-cols-1 gap-1 p-0">
-                                                                            {keyTypeOptions.map((opt) => (
-                                                                                <Button
-                                                                                    key={opt.value}
-                                                                                    type="button"
-                                                                                    variant="ghost"
-                                                                                    size="sm"
-                                                                                    className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-[#18181b] text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
-                                                                                    onClick={() => {
-                                                                                        field.onChange(opt.value);
-                                                                                        setKeyTypeDropdownOpen(false);
-                                                                                    }}
-                                                                                >
-                                                                                    {opt.label}
-                                                                                </Button>
-                                                                            ))}
-                                                                        </div>
+                                        <Tabs
+                                            value={keyInputMethod}
+                                            onValueChange={(value) => {
+                                                setKeyInputMethod(value as 'upload' | 'paste');
+                                                // Clear the other field when switching
+                                                if (value === 'upload') {
+                                                    form.setValue('key', null);
+                                                } else {
+                                                    form.setValue('key', '');
+                                                }
+                                            }}
+                                            className="w-full"
+                                        >
+                                            <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                                                <TabsTrigger value="upload">{t('hosts.uploadFile')}</TabsTrigger>
+                                                <TabsTrigger value="paste">{t('hosts.pasteKey')}</TabsTrigger>
+                                            </TabsList>
+                                            <TabsContent value="upload" className="mt-4">
+                                                <div className="grid grid-cols-15 gap-4">
+                                                    <Controller
+                                                        control={form.control}
+                                                        name="key"
+                                                        render={({ field }) => (
+                                                            <FormItem className="col-span-4 overflow-hidden min-w-0">
+                                                                <FormLabel>{t('credentials.sshPrivateKey')}</FormLabel>
+                                                                <FormControl>
+                                                                    <div className="relative min-w-0">
+                                                                        <input
+                                                                            id="key-upload"
+                                                                            type="file"
+                                                                            accept=".pem,.key,.txt,.ppk"
+                                                                            onChange={(e) => {
+                                                                                const file = e.target.files?.[0];
+                                                                                field.onChange(file || null);
+                                                                            }}
+                                                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                        />
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            className="w-full min-w-0 overflow-hidden px-3 py-2 text-left"
+                                                                        >
+                                                                            <span className="block w-full truncate"
+                                                                                  title={field.value?.name || t('credentials.upload')}>
+                                                                                {field.value ? (editingCredential ? t('credentials.updateKey') : field.value.name) : t('credentials.upload')}
+                                                                            </span>
+                                                                        </Button>
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
+                                                                </FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="keyPassword"
+                                                        render={({ field }) => (
+                                                            <FormItem className="col-span-8">
+                                                                <FormLabel>{t('credentials.keyPassword')}</FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        placeholder={t('placeholders.keyPassword')}
+                                                                        type="password"
+                                                                        {...field}
+                                                                    />
+                                                                </FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="keyType"
+                                                        render={({ field }) => (
+                                                            <FormItem className="relative col-span-3">
+                                                                <FormLabel>{t('credentials.keyType')}</FormLabel>
+                                                                <FormControl>
+                                                                    <div className="relative">
+                                                                        <Button
+                                                                            ref={keyTypeButtonRef}
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            className="w-full justify-start text-left rounded-md px-2 py-2 bg-[#18181b] border border-input text-foreground"
+                                                                            onClick={() => setKeyTypeDropdownOpen((open) => !open)}
+                                                                        >
+                                                                            {keyTypeOptions.find((opt) => opt.value === field.value)?.label || t('credentials.keyTypeRSA')}
+                                                                        </Button>
+                                                                        {keyTypeDropdownOpen && (
+                                                                            <div
+                                                                                ref={keyTypeDropdownRef}
+                                                                                className="absolute bottom-full left-0 z-50 mb-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                                            >
+                                                                                <div className="grid grid-cols-1 gap-1 p-0">
+                                                                                    {keyTypeOptions.map((opt) => (
+                                                                                        <Button
+                                                                                            key={opt.value}
+                                                                                            type="button"
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-[#18181b] text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                                                                            onClick={() => {
+                                                                                                field.onChange(opt.value);
+                                                                                                setKeyTypeDropdownOpen(false);
+                                                                                            }}
+                                                                                        >
+                                                                                            {opt.label}
+                                                                                        </Button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            </TabsContent>
+                                            <TabsContent value="paste" className="mt-4">
+                                                <Controller
+                                                    control={form.control}
+                                                    name="key"
+                                                    render={({ field }) => (
+                                                        <FormItem className="mb-4">
+                                                            <FormLabel>{t('credentials.sshPrivateKey')}</FormLabel>
+                                                            <FormControl>
+                                                                <textarea
+                                                                    placeholder={t('placeholders.pastePrivateKey')}
+                                                                    className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    value={typeof field.value === 'string' ? field.value : ''}
+                                                                    onChange={(e) => field.onChange(e.target.value)}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <div className="grid grid-cols-15 gap-4 mt-4">
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="keyPassword"
+                                                        render={({ field }) => (
+                                                            <FormItem className="col-span-8">
+                                                                <FormLabel>{t('credentials.keyPassword')}</FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        placeholder={t('placeholders.keyPassword')}
+                                                                        type="password"
+                                                                        {...field}
+                                                                    />
+                                                                </FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="keyType"
+                                                        render={({ field }) => (
+                                                            <FormItem className="relative col-span-3">
+                                                                <FormLabel>{t('credentials.keyType')}</FormLabel>
+                                                                <FormControl>
+                                                                    <div className="relative">
+                                                                        <Button
+                                                                            ref={keyTypeButtonRef}
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            className="w-full justify-start text-left rounded-md px-2 py-2 bg-[#18181b] border border-input text-foreground"
+                                                                            onClick={() => setKeyTypeDropdownOpen((open) => !open)}
+                                                                        >
+                                                                            {keyTypeOptions.find((opt) => opt.value === field.value)?.label || t('credentials.keyTypeRSA')}
+                                                                        </Button>
+                                                                        {keyTypeDropdownOpen && (
+                                                                            <div
+                                                                                ref={keyTypeDropdownRef}
+                                                                                className="absolute bottom-full left-0 z-50 mb-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                                            >
+                                                                                <div className="grid grid-cols-1 gap-1 p-0">
+                                                                                    {keyTypeOptions.map((opt) => (
+                                                                                        <Button
+                                                                                            key={opt.value}
+                                                                                            type="button"
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-[#18181b] text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                                                                            onClick={() => {
+                                                                                                field.onChange(opt.value);
+                                                                                                setKeyTypeDropdownOpen(false);
+                                                                                            }}
+                                                                                        >
+                                                                                            {opt.label}
+                                                                                        </Button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            </TabsContent>
+                                        </Tabs>
                                     </TabsContent>
                                 </Tabs>
                             </TabsContent>

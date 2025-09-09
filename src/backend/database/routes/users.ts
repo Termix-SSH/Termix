@@ -119,7 +119,7 @@ function authenticateJWT(req: Request, res: Response, next: NextFunction) {
     try {
         const payload = jwt.verify(token, jwtSecret) as JWTPayload;
         (req as any).userId = payload.userId;
-        authLogger.debug('JWT authentication successful', { operation: 'auth', userId: payload.userId, method: req.method, url: req.url });
+        // JWT authentication successful
         next();
     } catch (err) {
         authLogger.warn('Invalid or expired token', { operation: 'auth', method: req.method, url: req.url, error: err });

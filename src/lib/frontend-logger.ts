@@ -1,6 +1,6 @@
 /**
  * Frontend Logger - A comprehensive logging utility for the frontend
- * Based on the backend logger patterns but adapted for browser environment
+ * Enhanced with better formatting, readability, and request/response grouping
  */
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'success';
@@ -45,7 +45,7 @@ class FrontendLogger {
     private formatMessage(level: LogLevel, message: string, context?: LogContext): string {
         const timestamp = this.getTimeStamp();
         const levelTag = this.getLevelTag(level);
-        const serviceTag = this.serviceIcon;
+        const serviceTag = this.getServiceTag();
         
         let contextStr = '';
         if (context && this.isDevelopment) {
@@ -76,6 +76,10 @@ class FrontendLogger {
             success: '✅'
         };
         return `${symbols[level]} [${level.toUpperCase()}]`;
+    }
+
+    private getServiceTag(): string {
+        return `${this.serviceIcon} [${this.serviceName}]`;
     }
 
     private shouldLog(level: LogLevel): boolean {
@@ -181,62 +185,134 @@ class FrontendLogger {
         this.warn(`SECURITY: ${message}`, { ...context, operation: 'security' });
     }
 
-    // Specialized logging methods for different scenarios
+    // Enhanced API request/response logging methods
     requestStart(method: string, url: string, context?: LogContext): void {
-        this.request(`Starting ${method.toUpperCase()} request`, {
+        const cleanUrl = this.sanitizeUrl(url);
+        const shortUrl = this.getShortUrl(cleanUrl);
+        
+        console.group(`🚀 ${method.toUpperCase()} ${shortUrl}`);
+        this.request(`→ Starting request to ${cleanUrl}`, {
             ...context,
             method: method.toUpperCase(),
-            url: this.sanitizeUrl(url)
+            url: cleanUrl
         });
     }
 
     requestSuccess(method: string, url: string, status: number, responseTime: number, context?: LogContext): void {
-        this.response(`Request completed successfully`, {
+        const cleanUrl = this.sanitizeUrl(url);
+        const shortUrl = this.getShortUrl(cleanUrl);
+        const statusIcon = this.getStatusIcon(status);
+        const performanceIcon = this.getPerformanceIcon(responseTime);
+        
+        this.response(`← ${statusIcon} ${status} ${performanceIcon} ${responseTime}ms`, {
             ...context,
             method: method.toUpperCase(),
-            url: this.sanitizeUrl(url),
+            url: cleanUrl,
             status,
             responseTime
         });
+        console.groupEnd();
     }
 
     requestError(method: string, url: string, status: number, errorMessage: string, responseTime?: number, context?: LogContext): void {
-        this.error(`Request failed`, undefined, {
+        const cleanUrl = this.sanitizeUrl(url);
+        const shortUrl = this.getShortUrl(cleanUrl);
+        const statusIcon = this.getStatusIcon(status);
+        
+        this.error(`← ${statusIcon} ${status} ${errorMessage}`, undefined, {
             ...context,
             method: method.toUpperCase(),
-            url: this.sanitizeUrl(url),
+            url: cleanUrl,
             status,
             errorMessage,
             responseTime
         });
+        console.groupEnd();
     }
 
     networkError(method: string, url: string, errorMessage: string, context?: LogContext): void {
-        this.error(`Network error occurred`, undefined, {
+        const cleanUrl = this.sanitizeUrl(url);
+        const shortUrl = this.getShortUrl(cleanUrl);
+        
+        this.error(`🌐 Network Error: ${errorMessage}`, undefined, {
             ...context,
             method: method.toUpperCase(),
-            url: this.sanitizeUrl(url),
+            url: cleanUrl,
             errorMessage,
             errorCode: 'NETWORK_ERROR'
         });
+        console.groupEnd();
     }
 
     authError(method: string, url: string, context?: LogContext): void {
-        this.security(`Authentication failed`, {
+        const cleanUrl = this.sanitizeUrl(url);
+        const shortUrl = this.getShortUrl(cleanUrl);
+        
+        this.security(`🔐 Authentication Required`, {
             ...context,
             method: method.toUpperCase(),
-            url: this.sanitizeUrl(url),
+            url: cleanUrl,
             errorCode: 'AUTH_REQUIRED'
         });
+        console.groupEnd();
     }
 
     retryAttempt(method: string, url: string, attempt: number, maxAttempts: number, context?: LogContext): void {
-        this.retry(`Retry attempt ${attempt}/${maxAttempts}`, {
+        const cleanUrl = this.sanitizeUrl(url);
+        const shortUrl = this.getShortUrl(cleanUrl);
+        
+        this.retry(`🔄 Retry ${attempt}/${maxAttempts}`, {
             ...context,
             method: method.toUpperCase(),
-            url: this.sanitizeUrl(url),
+            url: cleanUrl,
             retryCount: attempt
         });
+    }
+
+    // Enhanced logging for API operations
+    apiOperation(operation: string, details: string, context?: LogContext): void {
+        this.info(`🔧 ${operation}: ${details}`, { ...context, operation: 'api_operation' });
+    }
+
+    // Log request summary for better debugging
+    requestSummary(method: string, url: string, status: number, responseTime: number, context?: LogContext): void {
+        const cleanUrl = this.sanitizeUrl(url);
+        const shortUrl = this.getShortUrl(cleanUrl);
+        const statusIcon = this.getStatusIcon(status);
+        const performanceIcon = this.getPerformanceIcon(responseTime);
+        
+        console.log(`%c📊 ${method} ${shortUrl} ${statusIcon} ${status} ${performanceIcon} ${responseTime}ms`, 
+            'color: #666; font-style: italic; font-size: 0.9em;', 
+            context
+        );
+    }
+
+    // New helper methods for better formatting
+    private getShortUrl(url: string): string {
+        try {
+            const urlObj = new URL(url);
+            const path = urlObj.pathname;
+            const query = urlObj.search;
+            return `${urlObj.hostname}${path}${query}`;
+        } catch {
+            return url.length > 50 ? url.substring(0, 47) + '...' : url;
+        }
+    }
+
+    private getStatusIcon(status: number): string {
+        if (status >= 200 && status < 300) return '✅';
+        if (status >= 300 && status < 400) return '↩️';
+        if (status >= 400 && status < 500) return '⚠️';
+        if (status >= 500) return '❌';
+        return '❓';
+    }
+
+    private getPerformanceIcon(responseTime: number): string {
+        if (responseTime < 100) return '⚡';
+        if (responseTime < 500) return '🚀';
+        if (responseTime < 1000) return '🏃';
+        if (responseTime < 3000) return '🚶';
+        return '🐌';
     }
 
     private sanitizeUrl(url: string): string {

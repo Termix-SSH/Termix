@@ -382,7 +382,9 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
     const tunnelName = tunnelConfig.name;
     const tunnelMarker = getTunnelMarker(tunnelName);
 
-    tunnelLogger.info('SSH tunnel connection attempt started', { operation: 'tunnel_connect', tunnelName, retryAttempt, sourceIP: tunnelConfig.sourceIP, sourcePort: tunnelConfig.sourceSSHPort });
+    if (retryAttempt === 0) {
+        tunnelLogger.info('SSH tunnel connection attempt started', { operation: 'tunnel_connect', tunnelName, sourceIP: tunnelConfig.sourceIP, sourcePort: tunnelConfig.sourceSSHPort });
+    }
 
     if (manualDisconnects.has(tunnelName)) {
         tunnelLogger.info('Tunnel connection cancelled due to manual disconnect', { operation: 'tunnel_connect', tunnelName });
@@ -394,14 +396,10 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
     if (retryAttempt === 0) {
         retryExhaustedTunnels.delete(tunnelName);
         retryCounters.delete(tunnelName);
-        tunnelLogger.info('Reset retry state for tunnel', { operation: 'tunnel_connect', tunnelName });
-    } else {
-        tunnelLogger.warn('Tunnel connection retry attempt', { operation: 'tunnel_connect', tunnelName, retryAttempt });
     }
 
     const currentStatus = connectionStatus.get(tunnelName);
     if (!currentStatus || currentStatus.status !== CONNECTION_STATES.WAITING) {
-        tunnelLogger.info('Broadcasting tunnel connecting status', { operation: 'tunnel_connect', tunnelName, retryAttempt });
         broadcastTunnelStatus(tunnelName, {
             connected: false,
             status: CONNECTION_STATES.CONNECTING,
@@ -428,7 +426,6 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
     };
 
     if (tunnelConfig.sourceCredentialId && tunnelConfig.sourceUserId) {
-        tunnelLogger.info('Resolving source credentials from database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.sourceCredentialId, userId: tunnelConfig.sourceUserId });
         try {
             const credentials = await db
                 .select()
@@ -447,15 +444,12 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
                     keyType: credential.keyType,
                     authMethod: credential.authType
                 };
-                tunnelLogger.success('Source credentials resolved successfully', { operation: 'tunnel_connect', tunnelName, credentialId: credential.id, authType: credential.authType });
             } else {
                 tunnelLogger.warn('No source credentials found in database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.sourceCredentialId });
             }
         } catch (error) {
             tunnelLogger.warn('Failed to resolve source credentials from database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.sourceCredentialId, error: error instanceof Error ? error.message : 'Unknown error' });
         }
-    } else {
-        tunnelLogger.info('Using direct source credentials from tunnel config', { operation: 'tunnel_connect', tunnelName, authMethod: tunnelConfig.sourceAuthMethod });
     }
 
     // Resolve endpoint credentials if tunnel config has endpointCredentialId
@@ -486,10 +480,14 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
                     keyType: credential.keyType,
                     authMethod: credential.authType
                 };
+            } else {
+                tunnelLogger.warn('No endpoint credentials found in database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.endpointCredentialId });
             }
         } catch (error) {
             tunnelLogger.warn(`Failed to resolve endpoint credentials for tunnel ${tunnelName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
+    } else if (tunnelConfig.endpointCredentialId) {
+        tunnelLogger.warn('Missing userId for endpoint credential resolution', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.endpointCredentialId, hasUserId: !!tunnelConfig.endpointUserId });
     }
 
     const conn = new Client();
