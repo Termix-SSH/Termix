@@ -11,6 +11,7 @@ import type {
     FileManagerFile,
     FileManagerShortcut
 } from '../types/index.js';
+import { apiLogger, authLogger, sshLogger, tunnelLogger, fileLogger, statsLogger, systemLogger, type LogContext } from '../lib/frontend-logger.js';
 
 interface FileManagerOperation {
     name: string;
@@ -98,45 +99,112 @@ function getCookie(name: string): string | undefined {
     }
 }
 
-function createApiInstance(baseURL: string): AxiosInstance {
+function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosInstance {
     const instance = axios.create({
         baseURL,
         headers: { 'Content-Type': 'application/json' },
         timeout: 30000,
     });
 
+    // Request interceptor with enhanced logging
     instance.interceptors.request.use((config) => {
+        const startTime = performance.now();
+        const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Store timing and request ID for response logging
+        (config as any).startTime = startTime;
+        (config as any).requestId = requestId;
+
         const token = getCookie('jwt');
+        const context: LogContext = {
+            requestId,
+            method: config.method?.toUpperCase(),
+            url: config.url,
+            operation: 'request_start'
+        };
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
-        } else {
-            console.log('No token found, Authorization header not set');
+        } else if (process.env.NODE_ENV === 'development') {
+            authLogger.warn('No JWT token found, request will be unauthenticated', context);
         }
+
         return config;
     });
 
+    // Response interceptor with comprehensive logging
     instance.interceptors.response.use(
         (response) => {
-            // Log successful requests in development
+            const endTime = performance.now();
+            const startTime = (response.config as any).startTime;
+            const requestId = (response.config as any).requestId;
+            const responseTime = Math.round(endTime - startTime);
+
+            const context: LogContext = {
+                requestId,
+                method: response.config.method?.toUpperCase(),
+                url: response.config.url,
+                status: response.status,
+                statusText: response.statusText,
+                responseTime,
+                operation: 'request_success'
+            };
+
+            // Only log successful requests in development and for slow requests
             if (process.env.NODE_ENV === 'development') {
-                console.log(`✅ API ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+                const method = response.config.method?.toUpperCase() || 'UNKNOWN';
+                const url = response.config.url || 'UNKNOWN';
+                
+                // Log based on service type
+                if (serviceName.includes('SSH') || serviceName.includes('ssh')) {
+                    sshLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
+                } else if (serviceName.includes('TUNNEL') || serviceName.includes('tunnel')) {
+                    tunnelLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
+                } else if (serviceName.includes('FILE') || serviceName.includes('file')) {
+                    fileLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
+                } else if (serviceName.includes('STATS') || serviceName.includes('stats')) {
+                    statsLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
+                } else {
+                    apiLogger.info(`${method} ${url} - ${response.status} (${responseTime}ms)`, context);
+                }
             }
+
+            // Performance logging for slow requests
+            if (responseTime > 3000) {
+                apiLogger.warn(`Slow request: ${responseTime}ms`, context);
+            }
+
             return response;
         },
         (error: AxiosError) => {
-            // Improved error logging
+            const endTime = performance.now();
+            const startTime = (error.config as any)?.startTime;
+            const requestId = (error.config as any)?.requestId;
+            const responseTime = startTime ? Math.round(endTime - startTime) : undefined;
+
             const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
             const url = error.config?.url || 'UNKNOWN';
-            const status = error.response?.status || 'NETWORK_ERROR';
-            const message = error.response?.data?.error || (error as Error).message || 'Unknown error';
-            
-            console.error(`❌ API ${method} ${url} - ${status}: ${message}`);
-            
-            if (error.response?.status === 401) {
-                console.warn('🔐 Authentication failed, clearing token');
+            const status = error.response?.status;
+            const message = (error.response?.data as any)?.error || (error as Error).message || 'Unknown error';
+            const errorCode = (error.response?.data as any)?.code || error.code;
+
+            const context: LogContext = {
+                requestId,
+                method,
+                url,
+                status,
+                responseTime,
+                errorCode,
+                errorMessage: message,
+                operation: 'request_error'
+            };
+
+            // Only handle auth token clearing here, let handleApiError do the logging
+            if (status === 401) {
                 document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                 localStorage.removeItem('jwt');
             }
+
             return Promise.reject(error);
         }
     );
@@ -173,37 +241,52 @@ function getApiUrl(path: string, defaultPort: number): string {
 // Multi-port backend architecture (original design)
 // SSH Host Management API (port 8081)
 export let sshHostApi = createApiInstance(
-    getApiUrl('/ssh', 8081)
+    getApiUrl('/ssh', 8081),
+    'SSH_HOST'
 );
 
 // Tunnel Management API (port 8083)
 export let tunnelApi = createApiInstance(
-    getApiUrl('/ssh', 8083)
+    getApiUrl('/ssh', 8083),
+    'TUNNEL'
 );
 
 // File Manager Operations API (port 8084) - SSH file operations
 export let fileManagerApi = createApiInstance(
-    getApiUrl('/ssh/file_manager', 8084)
+    getApiUrl('/ssh/file_manager', 8084),
+    'FILE_MANAGER'
 );
 
 // Server Statistics API (port 8085)
 export let statsApi = createApiInstance(
-    getApiUrl('', 8085)
+    getApiUrl('', 8085),
+    'STATS'
 );
 
 // Authentication API (port 8081) - includes users, alerts, version, releases
 export let authApi = createApiInstance(
-    getApiUrl('', 8081)
+    getApiUrl('', 8081),
+    'AUTH'
 );
 
 // Function to update API instances with new port (for Electron)
 function updateApiPorts(port: number) {
+    systemLogger.info('Updating API instances with new port', { 
+        operation: 'api_port_update', 
+        newPort: port 
+    });
+    
     apiPort = port;
-    sshHostApi = createApiInstance(`http://127.0.0.1:${port}/ssh`);
-    tunnelApi = createApiInstance(`http://127.0.0.1:${port}/ssh`);
-    fileManagerApi = createApiInstance(`http://127.0.0.1:${port}/ssh/file_manager`);
-    statsApi = createApiInstance(`http://127.0.0.1:${port}`);
-    authApi = createApiInstance(`http://127.0.0.1:${port}`);
+    sshHostApi = createApiInstance(`http://127.0.0.1:${port}/ssh`, 'SSH_HOST');
+    tunnelApi = createApiInstance(`http://127.0.0.1:${port}/ssh`, 'TUNNEL');
+    fileManagerApi = createApiInstance(`http://127.0.0.1:${port}/ssh/file_manager`, 'FILE_MANAGER');
+    statsApi = createApiInstance(`http://127.0.0.1:${port}`, 'STATS');
+    authApi = createApiInstance(`http://127.0.0.1:${port}`, 'AUTH');
+    
+    systemLogger.success('All API instances updated successfully', { 
+        operation: 'api_port_update_complete', 
+        port 
+    });
 }
 
 // ============================================================================
@@ -222,35 +305,51 @@ class ApiError extends Error {
 }
 
 function handleApiError(error: unknown, operation: string): never {
+    const context: LogContext = {
+        operation: 'error_handling',
+        errorOperation: operation
+    };
+
     if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const message = error.response?.data?.error || error.message;
         const code = error.response?.data?.code;
+        const url = error.config?.url;
+        const method = error.config?.method?.toUpperCase();
         
-        // Enhanced error logging
-        console.error(`🚨 API Error in ${operation}:`, {
+        const errorContext: LogContext = {
+            ...context,
+            method,
+            url,
             status,
-            message,
-            code,
-            url: error.config?.url,
-            method: error.config?.method
-        });
+            errorCode: code,
+            errorMessage: message
+        };
         
+        // Enhanced error logging with appropriate logger
         if (status === 401) {
+            authLogger.warn(`Auth failed: ${method} ${url} - ${message}`, errorContext);
             throw new ApiError('Authentication required. Please log in again.', 401, 'AUTH_REQUIRED');
         } else if (status === 403) {
+            authLogger.warn(`Access denied: ${method} ${url}`, errorContext);
             throw new ApiError('Access denied. You do not have permission to perform this action.', 403, 'ACCESS_DENIED');
         } else if (status === 404) {
+            apiLogger.warn(`Not found: ${method} ${url}`, errorContext);
             throw new ApiError('Resource not found. The requested item may have been deleted.', 404, 'NOT_FOUND');
         } else if (status === 409) {
+            apiLogger.warn(`Conflict: ${method} ${url}`, errorContext);
             throw new ApiError('Conflict. The resource already exists or is in use.', 409, 'CONFLICT');
         } else if (status === 422) {
+            apiLogger.warn(`Validation error: ${method} ${url} - ${message}`, errorContext);
             throw new ApiError('Validation error. Please check your input and try again.', 422, 'VALIDATION_ERROR');
         } else if (status && status >= 500) {
+            apiLogger.error(`Server error: ${method} ${url} - ${message}`, error, errorContext);
             throw new ApiError('Server error occurred. Please try again later.', status, 'SERVER_ERROR');
         } else if (status === 0) {
+            apiLogger.error(`Network error: ${method} ${url} - ${message}`, error, errorContext);
             throw new ApiError('Network error. Please check your connection and try again.', 0, 'NETWORK_ERROR');
         } else {
+            apiLogger.error(`Request failed: ${method} ${url} - ${message}`, error, errorContext);
             throw new ApiError(message || `Failed to ${operation}`, status, code);
         }
     }
@@ -260,7 +359,7 @@ function handleApiError(error: unknown, operation: string): never {
     }
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`🚨 Unexpected error in ${operation}:`, error);
+    apiLogger.error(`Unexpected error during ${operation}: ${errorMessage}`, error, context);
     throw new ApiError(`Unexpected error during ${operation}: ${errorMessage}`, undefined, 'UNKNOWN_ERROR');
 }
 
@@ -890,6 +989,15 @@ export async function updateOIDCConfig(config: any): Promise<any> {
         return response.data;
     } catch (error) {
         handleApiError(error, 'update OIDC config');
+    }
+}
+
+export async function disableOIDCConfig(): Promise<any> {
+    try {
+        const response = await authApi.delete('/users/oidc-config');
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'disable OIDC config');
     }
 }
 

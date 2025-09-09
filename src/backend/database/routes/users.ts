@@ -242,11 +242,11 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             userinfoUrlValue: `"${userinfo_url}"`
         });
         
-        const isDisableRequest = (!client_id || client_id.trim() === '') && 
-                                (!client_secret || client_secret.trim() === '') && 
-                                (!issuer_url || issuer_url.trim() === '') && 
-                                (!authorization_url || authorization_url.trim() === '') && 
-                                (!token_url || token_url.trim() === '');
+        const isDisableRequest = (client_id === '' || client_id === null || client_id === undefined) && 
+                                (client_secret === '' || client_secret === null || client_secret === undefined) && 
+                                (issuer_url === '' || issuer_url === null || issuer_url === undefined) && 
+                                (authorization_url === '' || authorization_url === null || authorization_url === undefined) && 
+                                (token_url === '' || token_url === null || token_url === undefined);
         
         const isEnableRequest = isNonEmptyString(client_id) && isNonEmptyString(client_secret) &&
                               isNonEmptyString(issuer_url) && isNonEmptyString(authorization_url) &&
@@ -259,11 +259,11 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             isDisableRequest,
             isEnableRequest,
             disableChecks: {
-                clientIdEmpty: !client_id || client_id.trim() === '',
-                clientSecretEmpty: !client_secret || client_secret.trim() === '',
-                issuerUrlEmpty: !issuer_url || issuer_url.trim() === '',
-                authUrlEmpty: !authorization_url || authorization_url.trim() === '',
-                tokenUrlEmpty: !token_url || token_url.trim() === ''
+                clientIdEmpty: client_id === '' || client_id === null || client_id === undefined,
+                clientSecretEmpty: client_secret === '' || client_secret === null || client_secret === undefined,
+                issuerUrlEmpty: issuer_url === '' || issuer_url === null || issuer_url === undefined,
+                authUrlEmpty: authorization_url === '' || authorization_url === null || authorization_url === undefined,
+                tokenUrlEmpty: token_url === '' || token_url === null || token_url === undefined
             },
             enableChecks: {
                 clientIdPresent: isNonEmptyString(client_id),
@@ -312,6 +312,27 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
     } catch (err) {
         authLogger.error('Failed to update OIDC config', err);
         res.status(500).json({error: 'Failed to update OIDC config'});
+    }
+});
+
+// Route: Disable OIDC configuration (admin only)
+// DELETE /users/oidc-config
+router.delete('/oidc-config', authenticateJWT, async (req, res) => {
+    const userId = (req as any).userId;
+    try {
+        const user = await db.select().from(users).where(eq(users.id, userId));
+        if (!user || user.length === 0 || !user[0].is_admin) {
+            return res.status(403).json({error: 'Not authorized'});
+        }
+
+        authLogger.info('OIDC disable request received', { operation: 'oidc_disable', userId });
+        
+        db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
+        authLogger.success('OIDC configuration disabled', { operation: 'oidc_disable', userId });
+        res.json({message: 'OIDC configuration disabled'});
+    } catch (err) {
+        authLogger.error('Failed to disable OIDC config', err);
+        res.status(500).json({error: 'Failed to disable OIDC config'});
     }
 });
 

@@ -24,6 +24,7 @@ import {
     getUserList,
     updateRegistrationAllowed,
     updateOIDCConfig,
+    disableOIDCConfig,
     makeUserAdmin,
     removeAdminStatus,
     deleteUser
@@ -329,7 +330,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                             setOidcError(null);
                                             setOidcLoading(true);
                                             try {
-                                                await updateOIDCConfig(emptyConfig);
+                                                await disableOIDCConfig();
                                                 toast.success(t('admin.oidcConfigurationDisabled'));
                                             } catch (err: any) {
                                                 setOidcError(err?.response?.data?.error || t('admin.failedToDisableOidcConfig'));

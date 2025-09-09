@@ -158,7 +158,6 @@ class Logger {
     }
 }
 
-// Service-specific loggers
 export const databaseLogger = new Logger('DATABASE', '🗄️', '#1e3a8a');
 export const sshLogger = new Logger('SSH', '🖥️', '#1e3a8a');
 export const tunnelLogger = new Logger('TUNNEL', '📡', '#1e3a8a');
@@ -168,5 +167,4 @@ export const apiLogger = new Logger('API', '🌐', '#3b82f6');
 export const authLogger = new Logger('AUTH', '🔐', '#dc2626');
 export const systemLogger = new Logger('SYSTEM', '🚀', '#1e3a8a');
 
-// Default logger for general use
 export const logger = systemLogger;
