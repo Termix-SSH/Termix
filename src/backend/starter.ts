@@ -6,15 +6,23 @@ import './ssh/terminal.js';
 import './ssh/tunnel.js';
 import './ssh/file-manager.js';
 import './ssh/server-stats.js';
-import { systemLogger } from './utils/logger.js';
+import { systemLogger, versionLogger } from './utils/logger.js';
+import 'dotenv/config';
 
 (async () => {
     try {
+        const version = process.env.VERSION || 'unknown';
+        versionLogger.info(`Termix Backend starting - Version: ${version}`, { 
+            operation: 'startup',
+            version: version
+        });
+        
         systemLogger.info("Initializing backend services...", { operation: 'startup' });
         
         systemLogger.success("All backend services initialized successfully", { 
             operation: 'startup_complete',
-            services: ['database', 'terminal', 'tunnel', 'file_manager', 'stats']
+            services: ['database', 'terminal', 'tunnel', 'file_manager', 'stats'],
+            version: version
         });
 
         process.on('SIGINT', () => {

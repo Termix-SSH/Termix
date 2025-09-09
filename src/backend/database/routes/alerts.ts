@@ -177,7 +177,6 @@ router.post('/dismiss', async (req, res) => {
             alertId
         });
 
-        authLogger.success(`Alert ${alertId} dismissed by user ${userId}. Insert result: ${JSON.stringify(result)}`);
         res.json({message: 'Alert dismissed successfully'});
     } catch (error) {
         authLogger.error('Failed to dismiss alert', error);
@@ -233,8 +232,6 @@ router.delete('/dismiss', async (req, res) => {
         if (result.changes === 0) {
             return res.status(404).json({error: 'Dismissed alert not found'});
         }
-
-        authLogger.success(`Alert ${alertId} undismissed by user ${userId}`);
         res.json({message: 'Alert undismissed successfully'});
     } catch (error) {
         authLogger.error('Failed to undismiss alert', error);

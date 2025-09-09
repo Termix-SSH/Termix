@@ -21,7 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
 import { createCredential, updateCredential, getCredentials, getCredentialDetails } from '@/ui/main-axios'
 import { useTranslation } from "react-i18next"
-import type { Credential, CredentialEditorProps, CredentialData } from '../../../types/index.js'
+import type { Credential, CredentialEditorProps, CredentialData } from '../../../../types/index.js'
 
 export function CredentialEditor({ editingCredential, onFormSubmit }: CredentialEditorProps) {
     const { t } = useTranslation();
@@ -120,12 +120,12 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
-            name: editingCredential?.name || "",
-            description: editingCredential?.description || "",
-            folder: editingCredential?.folder || "",
-            tags: editingCredential?.tags || [],
-            authType: editingCredential?.authType || "password",
-            username: editingCredential?.username || "",
+            name: "",
+            description: "",
+            folder: "",
+            tags: [],
+            authType: "password",
+            username: "",
             password: "",
             key: null,
             keyPassword: "",
@@ -138,18 +138,33 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
             const defaultAuthType = fullCredentialDetails.authType;
             setAuthTab(defaultAuthType);
 
-            form.reset({
-                name: fullCredentialDetails.name || "",
-                description: fullCredentialDetails.description || "",
-                folder: fullCredentialDetails.folder || "",
-                tags: fullCredentialDetails.tags || [],
-                authType: defaultAuthType as 'password' | 'key',
-                username: fullCredentialDetails.username || "",
-                password: fullCredentialDetails.password || "",
-                key: null,
-                keyPassword: fullCredentialDetails.keyPassword || "",
-                keyType: (fullCredentialDetails.keyType as any) || "auto",
-            });
+            // Force form reset with a small delay to ensure proper rendering
+            setTimeout(() => {
+                const formData = {
+                    name: fullCredentialDetails.name || "",
+                    description: fullCredentialDetails.description || "",
+                    folder: fullCredentialDetails.folder || "",
+                    tags: fullCredentialDetails.tags || [],
+                    authType: defaultAuthType as 'password' | 'key',
+                    username: fullCredentialDetails.username || "",
+                    password: "",
+                    key: null,
+                    keyPassword: "",
+                    keyType: "auto" as const,
+                };
+                
+                // Only set the relevant authentication fields based on authType
+                if (defaultAuthType === 'password') {
+                    formData.password = fullCredentialDetails.password || "";
+                } else if (defaultAuthType === 'key') {
+                    formData.key = "existing_key"; // Placeholder to indicate existing key
+                    formData.keyPassword = fullCredentialDetails.keyPassword || "";
+                    formData.keyType = (fullCredentialDetails.keyType as any) || "auto" as const;
+                }
+                
+                form.reset(formData);
+                setTagInput("");
+            }, 100);
         } else if (!editingCredential) {
             setAuthTab('password');
             form.reset({
@@ -164,8 +179,9 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                 keyPassword: "",
                 keyType: "auto",
             });
+            setTagInput("");
         }
-    }, [editingCredential?.id, fullCredentialDetails]);
+    }, [editingCredential?.id, fullCredentialDetails, form]);
 
     const onSubmit = async (data: FormData) => {
         try {
@@ -183,14 +199,24 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                 keyType: data.keyType
             };
 
+            submitData.password = null;
+            submitData.key = null;
+            submitData.keyPassword = null;
+            submitData.keyType = null;
+
             if (data.authType === 'password') {
                 submitData.password = data.password;
-                submitData.key = undefined;
-                submitData.keyPassword = undefined;
             } else if (data.authType === 'key') {
-                submitData.key = data.key instanceof File ? await data.key.text() : data.key;
+                if (data.key instanceof File) {
+                    const keyContent = await data.key.text();
+                    submitData.key = keyContent;
+                } else if (data.key === "existing_key") {
+                    delete submitData.key;
+                } else {
+                    submitData.key = data.key;
+                }
                 submitData.keyPassword = data.keyPassword;
-                submitData.password = undefined;
+                submitData.keyType = data.keyType;
             }
 
             if (editingCredential) {
@@ -206,6 +232,9 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
             }
 
             window.dispatchEvent(new CustomEvent('credentials:changed'));
+            
+            // Reset form after successful submission
+            form.reset();
         } catch (error) {
             toast.error(t('credentials.failedToSaveCredential'));
         }
@@ -285,7 +314,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
     }, [keyTypeDropdownOpen]);
 
     return (
-        <div className="flex-1 flex flex-col h-full min-h-0 w-full">
+        <div className="flex-1 flex flex-col h-full min-h-0 w-full" key={editingCredential?.id || 'new'}>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 h-full">
                     <ScrollArea className="flex-1 min-h-0 w-full my-1 pb-2">
@@ -392,15 +421,17 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                 <FormControl>
                                                     <div
                                                         className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-[#222225] focus-within:ring-2 ring-ring min-h-[40px]">
-                                                        {field.value.map((tag: string, idx: number) => (
-                                                            <span key={tag + idx}
+                                                        {(field.value || []).map((tag: string, idx: number) => (
+                                                            <span key={`${tag}-${idx}`}
                                                                   className="flex items-center bg-gray-200 text-gray-800 rounded-full px-2 py-0.5 text-xs">
                                                                 {tag}
                                                                 <button
                                                                     type="button"
                                                                     className="ml-1 text-gray-500 hover:text-red-500 focus:outline-none"
-                                                                    onClick={() => {
-                                                                        const newTags = field.value.filter((_: string, i: number) => i !== idx);
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        const newTags = (field.value || []).filter((_: string, i: number) => i !== idx);
                                                                         field.onChange(newTags);
                                                                     }}
                                                                 >
@@ -410,18 +441,27 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                         ))}
                                                         <input
                                                             type="text"
-                                                            className="flex-1 min-w-[60px] border-none outline-none bg-transparent p-0 h-6"
+                                                            className="flex-1 min-w-[60px] border-none outline-none bg-transparent p-0 h-6 text-sm"
                                                             value={tagInput}
                                                             onChange={e => setTagInput(e.target.value)}
                                                             onKeyDown={e => {
                                                                 if (e.key === " " && tagInput.trim() !== "") {
                                                                     e.preventDefault();
-                                                                    if (!field.value.includes(tagInput.trim())) {
-                                                                        field.onChange([...field.value, tagInput.trim()]);
+                                                                    const currentTags = field.value || [];
+                                                                    if (!currentTags.includes(tagInput.trim())) {
+                                                                        field.onChange([...currentTags, tagInput.trim()]);
                                                                     }
                                                                     setTagInput("");
-                                                                } else if (e.key === "Backspace" && tagInput === "" && field.value.length > 0) {
-                                                                    field.onChange(field.value.slice(0, -1));
+                                                                } else if (e.key === "Enter" && tagInput.trim() !== "") {
+                                                                    e.preventDefault();
+                                                                    const currentTags = field.value || [];
+                                                                    if (!currentTags.includes(tagInput.trim())) {
+                                                                        field.onChange([...currentTags, tagInput.trim()]);
+                                                                    }
+                                                                    setTagInput("");
+                                                                } else if (e.key === "Backspace" && tagInput === "" && (field.value || []).length > 0) {
+                                                                    const currentTags = field.value || [];
+                                                                    field.onChange(currentTags.slice(0, -1));
                                                                 }
                                                             }}
                                                             placeholder={t('credentials.addTagsSpaceToAdd')}
@@ -442,13 +482,17 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                         setAuthTab(newAuthType);
                                         form.setValue('authType', newAuthType);
                                         
-                                        // Clear other auth fields when switching
+                                        // Clear ALL authentication fields first
+                                        form.setValue('password', '');
+                                        form.setValue('key', null);
+                                        form.setValue('keyPassword', '');
+                                        form.setValue('keyType', 'auto');
+                                        
+                                        // Then set only the relevant fields based on auth type
                                         if (newAuthType === 'password') {
-                                            form.setValue('key', null);
-                                            form.setValue('keyPassword', '');
-                                            form.setValue('keyType', 'auto');
+                                            // Password fields will be filled by user
                                         } else if (newAuthType === 'key') {
-                                            form.setValue('password', '');
+                                            // Key fields will be filled by user
                                         }
                                     }}
                                     className="flex-1 flex flex-col h-full min-h-0"
@@ -490,40 +534,41 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                 <TabsTrigger value="paste">{t('hosts.pasteKey')}</TabsTrigger>
                                             </TabsList>
                                             <TabsContent value="upload" className="mt-4">
-                                                <div className="grid grid-cols-15 gap-4">
-                                                    <Controller
-                                                        control={form.control}
-                                                        name="key"
-                                                        render={({ field }) => (
-                                                            <FormItem className="col-span-4 overflow-hidden min-w-0">
-                                                                <FormLabel>{t('credentials.sshPrivateKey')}</FormLabel>
-                                                                <FormControl>
-                                                                    <div className="relative min-w-0">
-                                                                        <input
-                                                                            id="key-upload"
-                                                                            type="file"
-                                                                            accept=".pem,.key,.txt,.ppk"
-                                                                            onChange={(e) => {
-                                                                                const file = e.target.files?.[0];
-                                                                                field.onChange(file || null);
-                                                                            }}
-                                                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                                                        />
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="outline"
-                                                                            className="w-full min-w-0 overflow-hidden px-3 py-2 text-left"
-                                                                        >
-                                                                            <span className="block w-full truncate"
-                                                                                  title={field.value?.name || t('credentials.upload')}>
-                                                                                {field.value ? (editingCredential ? t('credentials.updateKey') : field.value.name) : t('credentials.upload')}
-                                                                            </span>
-                                                                        </Button>
-                                                                    </div>
-                                                                </FormControl>
-                                                            </FormItem>
-                                                        )}
-                                                    />
+                                                <Controller
+                                                    control={form.control}
+                                                    name="key"
+                                                    render={({ field }) => (
+                                                        <FormItem className="mb-4">
+                                                            <FormLabel>{t('credentials.sshPrivateKey')}</FormLabel>
+                                                            <FormControl>
+                                                                <div className="relative inline-block">
+                                                                    <input
+                                                                        id="key-upload"
+                                                                        type="file"
+                                                                        accept=".pem,.key,.txt,.ppk"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            field.onChange(file || null);
+                                                                        }}
+                                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                    />
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        className="justify-start text-left"
+                                                                    >
+                                                                        <span className="truncate"
+                                                                              title={field.value?.name || t('credentials.upload')}>
+                                                                            {field.value === "existing_key" ? t('hosts.existingKey') : 
+                                                                             field.value ? (editingCredential ? t('credentials.updateKey') : field.value.name) : t('credentials.upload')}
+                                                                        </span>
+                                                                    </Button>
+                                                                </div>
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <div className="grid grid-cols-15 gap-4 mt-4">
                                                     <FormField
                                                         control={form.control}
                                                         name="keyPassword"

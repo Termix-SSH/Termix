@@ -382,12 +382,7 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
     const tunnelName = tunnelConfig.name;
     const tunnelMarker = getTunnelMarker(tunnelName);
 
-    if (retryAttempt === 0) {
-        tunnelLogger.info('SSH tunnel connection attempt started', { operation: 'tunnel_connect', tunnelName, sourceIP: tunnelConfig.sourceIP, sourcePort: tunnelConfig.sourceSSHPort });
-    }
-
     if (manualDisconnects.has(tunnelName)) {
-        tunnelLogger.info('Tunnel connection cancelled due to manual disconnect', { operation: 'tunnel_connect', tunnelName });
         return;
     }
 

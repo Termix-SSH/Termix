@@ -35,7 +35,6 @@ class GitHubCache {
             timestamp: now,
             expiresAt: now + this.CACHE_DURATION
         });
-        // Cache entry set
     }
 
     get(key: string): any | null {

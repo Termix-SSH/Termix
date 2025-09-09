@@ -307,8 +307,8 @@ app.get('/ssh/file_manager/ssh/readFile', (req, res) => {
     });
 });
 
-app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
-    const {sessionId, path: filePath, content} = req.body;
+app.post('/ssh/file_manager/ssh/writeFile', async (req, res) => {
+    const {sessionId, path: filePath, content, hostId, userId} = req.body;
     const sshConn = sshSessions[sessionId];
 
     if (!sessionId) {
@@ -371,7 +371,7 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
                     if (!res.headersSent) {
-                        res.json({message: 'File written successfully', path: filePath});
+                        res.json({message: 'File written successfully', path: filePath, toast: {type: 'success', message: `File written: ${filePath}`}});
                     }
                 });
 
@@ -379,7 +379,7 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
                     if (!res.headersSent) {
-                        res.json({message: 'File written successfully', path: filePath});
+                        res.json({message: 'File written successfully', path: filePath, toast: {type: 'success', message: `File written: ${filePath}`}});
                     }
                 });
 
@@ -430,10 +430,10 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
                 stream.on('close', (code) => {
 
 
-                    if (outputData.includes('SUCCESS')) {
-                        if (!res.headersSent) {
-                            res.json({message: 'File written successfully', path: filePath});
-                        }
+            if (outputData.includes('SUCCESS')) {
+                if (!res.headersSent) {
+                    res.json({message: 'File written successfully', path: filePath, toast: {type: 'success', message: `File written: ${filePath}`}});
+                }
                     } else {
                         fileLogger.error(`Fallback write failed with code ${code}: ${errorData}`);
                         if (!res.headersSent) {
@@ -462,8 +462,8 @@ app.post('/ssh/file_manager/ssh/writeFile', (req, res) => {
     trySFTP();
 });
 
-app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
-    const {sessionId, path: filePath, content, fileName} = req.body;
+app.post('/ssh/file_manager/ssh/uploadFile', async (req, res) => {
+    const {sessionId, path: filePath, content, fileName, hostId, userId} = req.body;
     const sshConn = sshSessions[sessionId];
 
     if (!sessionId) {
@@ -527,7 +527,7 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
                     if (!res.headersSent) {
-                        res.json({message: 'File uploaded successfully', path: fullPath});
+                        res.json({message: 'File uploaded successfully', path: fullPath, toast: {type: 'success', message: `File uploaded: ${fullPath}`}});
                     }
                 });
 
@@ -535,7 +535,7 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
                     if (!res.headersSent) {
-                        res.json({message: 'File uploaded successfully', path: fullPath});
+                        res.json({message: 'File uploaded successfully', path: fullPath, toast: {type: 'success', message: `File uploaded: ${fullPath}`}});
                     }
                 });
 
@@ -597,9 +597,8 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
 
 
                         if (outputData.includes('SUCCESS')) {
-                            fileLogger.success(`File uploaded successfully via fallback: ${fullPath}`);
                             if (!res.headersSent) {
-                                res.json({message: 'File uploaded successfully', path: fullPath});
+                                res.json({message: 'File uploaded successfully', path: fullPath, toast: {type: 'success', message: `File uploaded: ${fullPath}`}});
                             }
                         } else {
                             fileLogger.error(`Fallback upload failed with code ${code}: ${errorData}`);
@@ -655,9 +654,8 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
 
 
                         if (outputData.includes('SUCCESS')) {
-                            fileLogger.success(`File uploaded successfully via chunked fallback: ${fullPath}`);
                             if (!res.headersSent) {
-                                res.json({message: 'File uploaded successfully', path: fullPath});
+                                res.json({message: 'File uploaded successfully', path: fullPath, toast: {type: 'success', message: `File uploaded: ${fullPath}`}});
                             }
                         } else {
                             fileLogger.error(`Chunked fallback upload failed with code ${code}: ${errorData}`);
@@ -686,8 +684,8 @@ app.post('/ssh/file_manager/ssh/uploadFile', (req, res) => {
     trySFTP();
 });
 
-app.post('/ssh/file_manager/ssh/createFile', (req, res) => {
-    const {sessionId, path: filePath, fileName, content = ''} = req.body;
+app.post('/ssh/file_manager/ssh/createFile', async (req, res) => {
+    const {sessionId, path: filePath, fileName, content = '', hostId, userId} = req.body;
     const sshConn = sshSessions[sessionId];
 
     if (!sessionId) {
@@ -742,7 +740,7 @@ app.post('/ssh/file_manager/ssh/createFile', (req, res) => {
         stream.on('close', (code) => {
             if (outputData.includes('SUCCESS')) {
                 if (!res.headersSent) {
-                    res.json({message: 'File created successfully', path: fullPath});
+                    res.json({message: 'File created successfully', path: fullPath, toast: {type: 'success', message: `File created: ${fullPath}`}});
                 }
                 return;
             }
@@ -756,7 +754,7 @@ app.post('/ssh/file_manager/ssh/createFile', (req, res) => {
             }
 
             if (!res.headersSent) {
-                res.json({message: 'File created successfully', path: fullPath});
+                res.json({message: 'File created successfully', path: fullPath, toast: {type: 'success', message: `File created: ${fullPath}`}});
             }
         });
 
@@ -769,8 +767,8 @@ app.post('/ssh/file_manager/ssh/createFile', (req, res) => {
     });
 });
 
-app.post('/ssh/file_manager/ssh/createFolder', (req, res) => {
-    const {sessionId, path: folderPath, folderName} = req.body;
+app.post('/ssh/file_manager/ssh/createFolder', async (req, res) => {
+    const {sessionId, path: folderPath, folderName, hostId, userId} = req.body;
     const sshConn = sshSessions[sessionId];
 
     if (!sessionId) {
@@ -826,7 +824,7 @@ app.post('/ssh/file_manager/ssh/createFolder', (req, res) => {
         stream.on('close', (code) => {
             if (outputData.includes('SUCCESS')) {
                 if (!res.headersSent) {
-                    res.json({message: 'Folder created successfully', path: fullPath});
+                    res.json({message: 'Folder created successfully', path: fullPath, toast: {type: 'success', message: `Folder created: ${fullPath}`}});
                 }
                 return;
             }
@@ -840,7 +838,7 @@ app.post('/ssh/file_manager/ssh/createFolder', (req, res) => {
             }
 
             if (!res.headersSent) {
-                res.json({message: 'Folder created successfully', path: fullPath});
+                res.json({message: 'Folder created successfully', path: fullPath, toast: {type: 'success', message: `Folder created: ${fullPath}`}});
             }
         });
 
@@ -853,8 +851,8 @@ app.post('/ssh/file_manager/ssh/createFolder', (req, res) => {
     });
 });
 
-app.delete('/ssh/file_manager/ssh/deleteItem', (req, res) => {
-    const {sessionId, path: itemPath, isDirectory} = req.body;
+app.delete('/ssh/file_manager/ssh/deleteItem', async (req, res) => {
+    const {sessionId, path: itemPath, isDirectory, hostId, userId} = req.body;
     const sshConn = sshSessions[sessionId];
 
     if (!sessionId) {
@@ -909,7 +907,7 @@ app.delete('/ssh/file_manager/ssh/deleteItem', (req, res) => {
         stream.on('close', (code) => {
             if (outputData.includes('SUCCESS')) {
                 if (!res.headersSent) {
-                    res.json({message: 'Item deleted successfully', path: itemPath});
+                    res.json({message: 'Item deleted successfully', path: itemPath, toast: {type: 'success', message: `${isDirectory ? 'Directory' : 'File'} deleted: ${itemPath}`}});
                 }
                 return;
             }
@@ -923,7 +921,7 @@ app.delete('/ssh/file_manager/ssh/deleteItem', (req, res) => {
             }
 
             if (!res.headersSent) {
-                res.json({message: 'Item deleted successfully', path: itemPath});
+                res.json({message: 'Item deleted successfully', path: itemPath, toast: {type: 'success', message: `${isDirectory ? 'Directory' : 'File'} deleted: ${itemPath}`}});
             }
         });
 
@@ -936,8 +934,8 @@ app.delete('/ssh/file_manager/ssh/deleteItem', (req, res) => {
     });
 });
 
-app.put('/ssh/file_manager/ssh/renameItem', (req, res) => {
-    const {sessionId, oldPath, newName} = req.body;
+app.put('/ssh/file_manager/ssh/renameItem', async (req, res) => {
+    const {sessionId, oldPath, newName, hostId, userId} = req.body;
     const sshConn = sshSessions[sessionId];
 
     if (!sessionId) {
@@ -994,7 +992,7 @@ app.put('/ssh/file_manager/ssh/renameItem', (req, res) => {
         stream.on('close', (code) => {
             if (outputData.includes('SUCCESS')) {
                 if (!res.headersSent) {
-                    res.json({message: 'Item renamed successfully', oldPath, newPath});
+                    res.json({message: 'Item renamed successfully', oldPath, newPath, toast: {type: 'success', message: `Item renamed: ${oldPath} -> ${newPath}`}});
                 }
                 return;
             }
@@ -1008,7 +1006,7 @@ app.put('/ssh/file_manager/ssh/renameItem', (req, res) => {
             }
 
             if (!res.headersSent) {
-                res.json({message: 'Item renamed successfully', oldPath, newPath});
+                res.json({message: 'Item renamed successfully', oldPath, newPath, toast: {type: 'success', message: `Item renamed: ${oldPath} -> ${newPath}`}});
             }
         });
 

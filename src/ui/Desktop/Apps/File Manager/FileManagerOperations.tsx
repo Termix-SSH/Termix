@@ -71,16 +71,33 @@ export function FileManagerOperations({
         if (!uploadFile || !sshSessionId) return;
 
         setIsLoading(true);
+        
+        // Show loading toast
+        const {toast} = await import('sonner');
+        const loadingToast = toast.loading(t('fileManager.uploadingFile', { name: uploadFile.name }));
+        
         try {
             const content = await uploadFile.text();
             const {uploadSSHFile} = await import('@/ui/main-axios.ts');
 
-            await uploadSSHFile(sshSessionId, currentPath, uploadFile.name, content);
-            onSuccess(t('fileManager.fileUploadedSuccessfully', { name: uploadFile.name }));
+            const response = await uploadSSHFile(sshSessionId, currentPath, uploadFile.name, content);
+            
+            // Dismiss loading toast and show success
+            toast.dismiss(loadingToast);
+            
+            // Handle toast notification from backend
+            if (response?.toast) {
+                toast[response.toast.type](response.toast.message);
+            } else {
+                onSuccess(t('fileManager.fileUploadedSuccessfully', { name: uploadFile.name }));
+            }
+            
             setShowUpload(false);
             setUploadFile(null);
             onOperationComplete();
         } catch (error: any) {
+            // Dismiss loading toast and show error
+            toast.dismiss(loadingToast);
             onError(error?.response?.data?.error || t('fileManager.failedToUploadFile'));
         } finally {
             setIsLoading(false);
@@ -91,15 +108,32 @@ export function FileManagerOperations({
         if (!newFileName.trim() || !sshSessionId) return;
 
         setIsLoading(true);
+        
+        // Show loading toast
+        const {toast} = await import('sonner');
+        const loadingToast = toast.loading(t('fileManager.creatingFile', { name: newFileName.trim() }));
+        
         try {
             const {createSSHFile} = await import('@/ui/main-axios.ts');
 
-            await createSSHFile(sshSessionId, currentPath, newFileName.trim());
-            onSuccess(t('fileManager.fileCreatedSuccessfully', { name: newFileName.trim() }));
+            const response = await createSSHFile(sshSessionId, currentPath, newFileName.trim());
+            
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
+            
+            // Handle toast notification from backend
+            if (response?.toast) {
+                toast[response.toast.type](response.toast.message);
+            } else {
+                onSuccess(t('fileManager.fileCreatedSuccessfully', { name: newFileName.trim() }));
+            }
+            
             setShowCreateFile(false);
             setNewFileName('');
             onOperationComplete();
         } catch (error: any) {
+            // Dismiss loading toast and show error
+            toast.dismiss(loadingToast);
             onError(error?.response?.data?.error || t('fileManager.failedToCreateFile'));
         } finally {
             setIsLoading(false);
@@ -110,15 +144,32 @@ export function FileManagerOperations({
         if (!newFolderName.trim() || !sshSessionId) return;
 
         setIsLoading(true);
+        
+        // Show loading toast
+        const {toast} = await import('sonner');
+        const loadingToast = toast.loading(t('fileManager.creatingFolder', { name: newFolderName.trim() }));
+        
         try {
             const {createSSHFolder} = await import('@/ui/main-axios.ts');
 
-            await createSSHFolder(sshSessionId, currentPath, newFolderName.trim());
-            onSuccess(t('fileManager.folderCreatedSuccessfully', { name: newFolderName.trim() }));
+            const response = await createSSHFolder(sshSessionId, currentPath, newFolderName.trim());
+            
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
+            
+            // Handle toast notification from backend
+            if (response?.toast) {
+                toast[response.toast.type](response.toast.message);
+            } else {
+                onSuccess(t('fileManager.folderCreatedSuccessfully', { name: newFolderName.trim() }));
+            }
+            
             setShowCreateFolder(false);
             setNewFolderName('');
             onOperationComplete();
         } catch (error: any) {
+            // Dismiss loading toast and show error
+            toast.dismiss(loadingToast);
             onError(error?.response?.data?.error || t('fileManager.failedToCreateFolder'));
         } finally {
             setIsLoading(false);
@@ -129,16 +180,36 @@ export function FileManagerOperations({
         if (!deletePath || !sshSessionId) return;
 
         setIsLoading(true);
+        
+        // Show loading toast
+        const {toast} = await import('sonner');
+        const loadingToast = toast.loading(t('fileManager.deletingItem', { 
+            type: deleteIsDirectory ? t('fileManager.folder') : t('fileManager.file'),
+            name: deletePath.split('/').pop()
+        }));
+        
         try {
             const {deleteSSHItem} = await import('@/ui/main-axios.ts');
 
-            await deleteSSHItem(sshSessionId, deletePath, deleteIsDirectory);
-            onSuccess(t('fileManager.itemDeletedSuccessfully', { type: deleteIsDirectory ? t('fileManager.folder') : t('fileManager.file') }));
+            const response = await deleteSSHItem(sshSessionId, deletePath, deleteIsDirectory);
+            
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
+            
+            // Handle toast notification from backend
+            if (response?.toast) {
+                toast[response.toast.type](response.toast.message);
+            } else {
+                onSuccess(t('fileManager.itemDeletedSuccessfully', { type: deleteIsDirectory ? t('fileManager.folder') : t('fileManager.file') }));
+            }
+            
             setShowDelete(false);
             setDeletePath('');
             setDeleteIsDirectory(false);
             onOperationComplete();
         } catch (error: any) {
+            // Dismiss loading toast and show error
+            toast.dismiss(loadingToast);
             onError(error?.response?.data?.error || t('fileManager.failedToDeleteItem'));
         } finally {
             setIsLoading(false);
@@ -149,17 +220,38 @@ export function FileManagerOperations({
         if (!renamePath || !newName.trim() || !sshSessionId) return;
 
         setIsLoading(true);
+        
+        // Show loading toast
+        const {toast} = await import('sonner');
+        const loadingToast = toast.loading(t('fileManager.renamingItem', { 
+            type: renameIsDirectory ? t('fileManager.folder') : t('fileManager.file'),
+            oldName: renamePath.split('/').pop(),
+            newName: newName.trim()
+        }));
+        
         try {
             const {renameSSHItem} = await import('@/ui/main-axios.ts');
 
-            await renameSSHItem(sshSessionId, renamePath, newName.trim());
-            onSuccess(t('fileManager.itemRenamedSuccessfully', { type: renameIsDirectory ? t('fileManager.folder') : t('fileManager.file') }));
+            const response = await renameSSHItem(sshSessionId, renamePath, newName.trim());
+            
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
+            
+            // Handle toast notification from backend
+            if (response?.toast) {
+                toast[response.toast.type](response.toast.message);
+            } else {
+                onSuccess(t('fileManager.itemRenamedSuccessfully', { type: renameIsDirectory ? t('fileManager.folder') : t('fileManager.file') }));
+            }
+            
             setShowRename(false);
             setRenamePath('');
             setRenameIsDirectory(false);
             setNewName('');
             onOperationComplete();
         } catch (error: any) {
+            // Dismiss loading toast and show error
+            toast.dismiss(loadingToast);
             onError(error?.response?.data?.error || t('fileManager.failedToRenameItem'));
         } finally {
             setIsLoading(false);

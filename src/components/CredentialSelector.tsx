@@ -9,9 +9,10 @@ import type { Credential } from '../types/index.js';
 interface CredentialSelectorProps {
     value?: number | null;
     onValueChange: (credentialId: number | null) => void;
+    onCredentialSelect?: (credential: Credential | null) => void;
 }
 
-export function CredentialSelector({ value, onValueChange }: CredentialSelectorProps) {
+export function CredentialSelector({ value, onValueChange, onCredentialSelect }: CredentialSelectorProps) {
     const { t } = useTranslation();
     const [credentials, setCredentials] = useState<Credential[]>([]);
     const [loading, setLoading] = useState(true);
@@ -26,11 +27,12 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
             try {
                 setLoading(true);
                 const data = await getCredentials();
-                // Handle both possible response formats: direct array or nested object
                 const credentialsArray = Array.isArray(data) ? data : (data.credentials || data.data || []);
                 setCredentials(credentialsArray);
             } catch (error) {
                 console.error('Failed to fetch credentials:', error);
+                const {toast} = await import('sonner');
+                toast.error(t('credentials.failedToFetchCredentials'));
                 setCredentials([]);
             } finally {
                 setLoading(false);
@@ -77,12 +79,18 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
 
     const handleCredentialSelect = (credential: Credential) => {
         onValueChange(credential.id);
+        if (onCredentialSelect) {
+            onCredentialSelect(credential);
+        }
         setDropdownOpen(false);
         setSearchQuery('');
     };
 
     const handleClear = () => {
         onValueChange(null);
+        if (onCredentialSelect) {
+            onCredentialSelect(null);
+        }
         setDropdownOpen(false);
         setSearchQuery('');
     };
@@ -101,6 +109,12 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                     >
                         {loading ? (
                             t('common.loading')
+                        ) : value === "existing_credential" ? (
+                            <div className="flex items-center justify-between w-full">
+                                <div>
+                                    <span className="font-medium">{t('hosts.existingCredential')}</span>
+                                </div>
+                            </div>
                         ) : selectedCredential ? (
                             <div className="flex items-center justify-between w-full">
                                 <div>
@@ -132,7 +146,7 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                                 />
                             </div>
 
-                            <div className="max-h-60 overflow-y-auto p-1">
+                            <div className="max-h-60 overflow-y-auto p-2">
                                 {loading ? (
                                     <div className="p-3 text-center text-sm text-muted-foreground">
                                         {t('common.loading')}
@@ -142,13 +156,13 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                                         {searchQuery ? t('credentials.noCredentialsMatchFilters') : t('credentials.noCredentialsYet')}
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 gap-1">
+                                    <div className="grid grid-cols-1 gap-2.5">
                                         {value && (
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="w-full justify-start text-left rounded-lg px-2 py-2 text-destructive hover:bg-destructive/10 transition-colors duration-200"
+                                                className="w-full justify-start text-left rounded-lg px-3 py-2 text-destructive hover:bg-destructive/10 transition-colors duration-200"
                                                 onClick={handleClear}
                                             >
                                                 {t('common.clear')}
@@ -160,7 +174,7 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className={`w-full justify-start text-left rounded-lg px-2 py-2 hover:bg-muted focus:bg-muted focus:outline-none transition-colors duration-200 ${
+                                                className={`w-full justify-start text-left rounded-lg px-3 py-7 hover:bg-muted focus:bg-muted focus:outline-none transition-colors duration-200 ${
                                                     credential.id === value ? 'bg-muted' : ''
                                                 }`}
                                                 onClick={() => handleCredentialSelect(credential)}
@@ -168,11 +182,6 @@ export function CredentialSelector({ value, onValueChange }: CredentialSelectorP
                                                 <div className="w-full">
                                                     <div className="flex items-center justify-between">
                                                         <span className="font-medium">{credential.name}</span>
-                                                        {credential.folder && (
-                                                            <span className="text-xs bg-muted px-1 rounded">
-                                                                {credential.folder}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground mt-0.5">
                                                         {credential.username} • {credential.authType}

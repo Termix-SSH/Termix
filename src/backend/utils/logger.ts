@@ -158,13 +158,14 @@ class Logger {
     }
 }
 
-export const databaseLogger = new Logger('DATABASE', '🗄️', '#1e3a8a');
-export const sshLogger = new Logger('SSH', '🖥️', '#1e3a8a');
-export const tunnelLogger = new Logger('TUNNEL', '📡', '#1e3a8a');
-export const fileLogger = new Logger('FILE', '📁', '#1e3a8a');
+export const databaseLogger = new Logger('DATABASE', '🗄️', '#6366f1');
+export const sshLogger = new Logger('SSH', '🖥️', '#0ea5e9');
+export const tunnelLogger = new Logger('TUNNEL', '📡', '#a855f7');
+export const fileLogger = new Logger('FILE', '📁', '#f59e0b');
 export const statsLogger = new Logger('STATS', '📊', '#22c55e');
 export const apiLogger = new Logger('API', '🌐', '#3b82f6');
-export const authLogger = new Logger('AUTH', '🔐', '#dc2626');
-export const systemLogger = new Logger('SYSTEM', '🚀', '#1e3a8a');
+export const authLogger = new Logger('AUTH', '🔐', '#ef4444');
+export const systemLogger = new Logger('SYSTEM', '🚀', '#14b8a6');
+export const versionLogger = new Logger('VERSION', '📦', '#8b5cf6');
 
 export const logger = systemLogger;

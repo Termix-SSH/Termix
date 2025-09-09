@@ -5,6 +5,7 @@ import {ClipboardAddon} from '@xterm/addon-clipboard';
 import {Unicode11Addon} from '@xterm/addon-unicode11';
 import {WebLinksAddon} from '@xterm/addon-web-links';
 import {useTranslation} from 'react-i18next';
+import {toast} from 'sonner';
 
 interface SSHTerminalProps {
     hostConfig: any;
@@ -26,7 +27,12 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [visible, setVisible] = useState(false);
+    const [isConnected, setIsConnected] = useState(false);
+    const [connectionError, setConnectionError] = useState<string | null>(null);
     const isVisibleRef = useRef<boolean>(false);
+    const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const reconnectAttempts = useRef(0);
+    const maxReconnectAttempts = 3;
 
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -69,7 +75,12 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 clearInterval(pingIntervalRef.current);
                 pingIntervalRef.current = null;
             }
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+                reconnectTimeoutRef.current = null;
+            }
             webSocketRef.current?.close();
+            setIsConnected(false);
         },
         fit: () => {
             fitAddonRef.current?.fit();
@@ -118,10 +129,51 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         return getCookie("rightClickCopyPaste") === "true"
     }
 
+    function attemptReconnection() {
+        if (reconnectAttempts.current >= maxReconnectAttempts) {
+            toast.error(t('terminal.maxReconnectAttemptsReached'));
+            return;
+        }
+
+        reconnectAttempts.current++;
+        toast.info(t('terminal.reconnecting', { attempt: reconnectAttempts.current, max: maxReconnectAttempts }));
+        
+        reconnectTimeoutRef.current = setTimeout(() => {
+            if (terminal && hostConfig) {
+                const cols = terminal.cols;
+                const rows = terminal.rows;
+                connectToHost(cols, rows);
+            }
+        }, 2000 * reconnectAttempts.current); // Exponential backoff
+    }
+
+    function connectToHost(cols: number, rows: number) {
+        const isDev = process.env.NODE_ENV === 'development' &&
+            (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
+        
+        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+
+        const wsUrl = isDev
+            ? 'ws://localhost:8082'
+            : isElectron
+            ? 'ws://127.0.0.1:8082'
+            : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
+
+        const ws = new WebSocket(wsUrl);
+        webSocketRef.current = ws;
+        wasDisconnectedBySSH.current = false;
+        setConnectionError(null);
+
+        setupWebSocketListeners(ws, cols, rows);
+    }
+
 
 
     function setupWebSocketListeners(ws: WebSocket, cols: number, rows: number) {
         ws.addEventListener('open', () => {
+            setIsConnected(true);
+            reconnectAttempts.current = 0; // Reset on successful connection
+            toast.success(t('terminal.connected'));
             
             ws.send(JSON.stringify({type: 'connectToHost', data: {cols, rows, hostConfig}}));
             terminal.onData((data) => {
@@ -133,32 +185,72 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     ws.send(JSON.stringify({type: 'ping'}));
                 }
             }, 30000);
-
-
         });
 
         ws.addEventListener('message', (event) => {
             try {
                 const msg = JSON.parse(event.data);
-                if (msg.type === 'data') terminal.write(msg.data);
-                else if (msg.type === 'error') terminal.writeln(`\r\n[${t('terminal.error')}] ${msg.message}`);
-                else if (msg.type === 'connected') {
+                if (msg.type === 'data') {
+                    terminal.write(msg.data);
+                } else if (msg.type === 'error') {
+                    // Handle different types of errors
+                    const errorMessage = msg.message || t('terminal.unknownError');
+                    
+                    // Check if it's an authentication error
+                    if (errorMessage.toLowerCase().includes('auth') || 
+                        errorMessage.toLowerCase().includes('password') ||
+                        errorMessage.toLowerCase().includes('permission') ||
+                        errorMessage.toLowerCase().includes('denied')) {
+                        toast.error(t('terminal.authError', { message: errorMessage }));
+                        // Close terminal on auth errors
+                        if (webSocketRef.current) {
+                            webSocketRef.current.close();
+                        }
+                        return;
+                    }
+                    
+                    // Check if it's a connection error that should trigger reconnection
+                    if (errorMessage.toLowerCase().includes('connection') ||
+                        errorMessage.toLowerCase().includes('timeout') ||
+                        errorMessage.toLowerCase().includes('network')) {
+                        toast.error(t('terminal.connectionError', { message: errorMessage }));
+                        setIsConnected(false);
+                        attemptReconnection();
+                        return;
+                    }
+                    
+                    // For other errors, show toast but don't close terminal
+                    toast.error(t('terminal.error', { message: errorMessage }));
+                } else if (msg.type === 'connected') {
+                    setIsConnected(true);
+                    toast.success(t('terminal.sshConnected'));
                 } else if (msg.type === 'disconnected') {
                     wasDisconnectedBySSH.current = true;
-                    terminal.writeln(`\r\n[${msg.message || t('terminal.disconnected')}]`);
+                    setIsConnected(false);
+                    toast.info(t('terminal.disconnected', { message: msg.message }));
+                    // Attempt reconnection for disconnections
+                    attemptReconnection();
                 }
             } catch (error) {
+                toast.error(t('terminal.messageParseError'));
             }
         });
 
-        ws.addEventListener('close', () => {
+        ws.addEventListener('close', (event) => {
+            setIsConnected(false);
             if (!wasDisconnectedBySSH.current) {
-                terminal.writeln(`\r\n[${t('terminal.connectionClosed')}]`);
+                toast.warning(t('terminal.connectionClosed'));
+                // Attempt reconnection for unexpected disconnections
+                attemptReconnection();
             }
         });
         
-        ws.addEventListener('error', () => {
-            terminal.writeln(`\r\n[${t('terminal.connectionError')}]`);
+        ws.addEventListener('error', (event) => {
+            setIsConnected(false);
+            setConnectionError(t('terminal.websocketError'));
+            toast.error(t('terminal.websocketError'));
+            // Attempt reconnection for WebSocket errors
+            attemptReconnection();
         });
     }
 
@@ -288,11 +380,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     ? 'ws://127.0.0.1:8082'
                     : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
 
-                const ws = new WebSocket(wsUrl);
-                webSocketRef.current = ws;
-                wasDisconnectedBySSH.current = false;
-
-                setupWebSocketListeners(ws, cols, rows);
+                connectToHost(cols, rows);
             }, 300);
         });
 
@@ -301,6 +389,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             element?.removeEventListener('contextmenu', handleContextMenu);
             if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
             if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
+            if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
             if (pingIntervalRef.current) {
                 clearInterval(pingIntervalRef.current);
                 pingIntervalRef.current = null;
@@ -341,16 +430,29 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     }, [splitScreen, isVisible, terminal]);
 
     return (
-        <div 
-            ref={xtermRef} 
-            className="h-full w-full m-1"
-            style={{opacity: visible && isVisible ? 1 : 0, overflow: 'hidden'}}
-            onClick={() => {
-                if (terminal && !splitScreen) {
-                    terminal.focus();
-                }
-            }}
-        />
+        <div className="h-full w-full relative">
+            {/* Connection Status Indicator */}
+            {!isConnected && (
+                <div className="absolute top-2 right-2 z-10 bg-red-500 text-white px-2 py-1 rounded text-xs">
+                    {t('terminal.disconnected')}
+                </div>
+            )}
+            {isConnected && (
+                <div className="absolute top-2 right-2 z-10 bg-green-500 text-white px-2 py-1 rounded text-xs">
+                    {t('terminal.connected')}
+                </div>
+            )}
+            <div 
+                ref={xtermRef} 
+                className="h-full w-full m-1"
+                style={{opacity: visible && isVisible ? 1 : 0, overflow: 'hidden'}}
+                onClick={() => {
+                    if (terminal && !splitScreen) {
+                        terminal.focus();
+                    }
+                }}
+            />
+        </div>
     );
 });
 

@@ -20,7 +20,7 @@ import React, {useEffect, useRef, useState} from "react";
 import {Switch} from "@/components/ui/switch.tsx";
 import {Alert, AlertDescription} from "@/components/ui/alert.tsx";
 import {toast} from "sonner";
-import {createSSHHost, updateSSHHost, getSSHHosts} from '@/ui/main-axios.ts';
+import {createSSHHost, updateSSHHost, getSSHHosts, getCredentials} from '@/ui/main-axios.ts';
 import {useTranslation} from "react-i18next";
 import {CredentialSelector} from "@/components/CredentialSelector.tsx";
 
@@ -58,6 +58,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
     const [hosts, setHosts] = useState<SSHHost[]>([]);
     const [folders, setFolders] = useState<string[]>([]);
     const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
+    const [credentials, setCredentials] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [authTab, setAuthTab] = useState<'password' | 'key' | 'credential'>('password');
@@ -71,8 +72,12 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const hostsData = await getSSHHosts();
+                const [hostsData, credentialsData] = await Promise.all([
+                    getSSHHosts(),
+                    getCredentials()
+                ]);
                 setHosts(hostsData);
+                setCredentials(credentialsData);
 
                 const uniqueFolders = [...new Set(
                     hostsData
@@ -96,6 +101,43 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
 
         fetchData();
     }, []);
+
+    // Listen for credential changes to refresh the credential list
+    useEffect(() => {
+        const handleCredentialChange = async () => {
+            try {
+                setLoading(true);
+                const hostsData = await getSSHHosts();
+                setHosts(hostsData);
+
+                const uniqueFolders = [...new Set(
+                    hostsData
+                        .filter(host => host.folder && host.folder.trim() !== '')
+                        .map(host => host.folder)
+                )].sort();
+
+                const uniqueConfigurations = [...new Set(
+                    hostsData
+                        .filter(host => host.name && host.name.trim() !== '')
+                        .map(host => host.name)
+                )].sort();
+
+                setFolders(uniqueFolders);
+                setSshConfigurations(uniqueConfigurations);
+            } catch (error) {
+                // Handle error silently
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        window.addEventListener('credentials:changed', handleCredentialChange);
+        
+        return () => {
+            window.removeEventListener('credentials:changed', handleCredentialChange);
+        };
+    }, []);
+
 
     const formSchema = z.object({
         name: z.string().optional(),
@@ -143,7 +185,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                 });
             }
         } else if (data.authType === 'key') {
-            if (!data.key) {
+            if (!data.key || (typeof data.key === 'string' && data.key.trim() === '')) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: t('hosts.sshKeyRequired'),
@@ -158,7 +200,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                 });
             }
         } else if (data.authType === 'credential') {
-            if (!data.credentialId) {
+            if (!data.credentialId || (typeof data.credentialId === 'string' && data.credentialId.trim() === '')) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: t('hosts.credentialRequired'),
@@ -204,31 +246,66 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
         }
     });
 
+    // Update username when switching to credential tab and a credential is selected
+    useEffect(() => {
+        if (authTab === 'credential') {
+            const currentCredentialId = form.getValues('credentialId');
+            if (currentCredentialId) {
+                const selectedCredential = credentials.find(c => c.id === currentCredentialId);
+                if (selectedCredential) {
+                    form.setValue('username', selectedCredential.username);
+                }
+            }
+        }
+    }, [authTab, credentials, form]);
+
     useEffect(() => {
         if (editingHost) {
-            const defaultAuthType = editingHost.credentialId ? 'credential' : (editingHost.key ? 'key' : 'password');
+            const cleanedHost = { ...editingHost };
+            if (cleanedHost.credentialId && cleanedHost.key) {
+                cleanedHost.key = undefined;
+                cleanedHost.keyPassword = undefined;
+                cleanedHost.keyType = undefined;
+            } else if (cleanedHost.credentialId && cleanedHost.password) {
+                cleanedHost.password = undefined;
+            } else if (cleanedHost.key && cleanedHost.password) {
+                cleanedHost.password = undefined;
+            }
+            
+            const defaultAuthType = cleanedHost.credentialId ? 'credential' : (cleanedHost.key ? 'key' : 'password');
             setAuthTab(defaultAuthType);
             
             const formData = {
-                name: editingHost.name || "",
-                ip: editingHost.ip || "",
-                port: editingHost.port || 22,
-                username: editingHost.username || "",
-                folder: editingHost.folder || "",
-                tags: editingHost.tags || [],
-                pin: Boolean(editingHost.pin),
+                name: cleanedHost.name || "",
+                ip: cleanedHost.ip || "",
+                port: cleanedHost.port || 22,
+                username: cleanedHost.username || "",
+                folder: cleanedHost.folder || "",
+                tags: cleanedHost.tags || [],
+                pin: Boolean(cleanedHost.pin),
                 authType: defaultAuthType as 'password' | 'key' | 'credential',
-                credentialId: editingHost.credentialId || null,
-                password: editingHost.password || "",
+                credentialId: null,
+                password: "",
                 key: null,
-                keyPassword: editingHost.keyPassword || "",
-                keyType: (editingHost.keyType as any) || "auto",
-                enableTerminal: Boolean(editingHost.enableTerminal),
-                enableTunnel: Boolean(editingHost.enableTunnel),
-                enableFileManager: Boolean(editingHost.enableFileManager),
-                defaultPath: editingHost.defaultPath || "/",
-                tunnelConnections: editingHost.tunnelConnections || [],
+                keyPassword: "",
+                keyType: "auto" as const,
+                enableTerminal: Boolean(cleanedHost.enableTerminal),
+                enableTunnel: Boolean(cleanedHost.enableTunnel),
+                enableFileManager: Boolean(cleanedHost.enableFileManager),
+                defaultPath: cleanedHost.defaultPath || "/",
+                tunnelConnections: cleanedHost.tunnelConnections || [],
             };
+            
+            // Only set the relevant authentication fields based on authType
+            if (defaultAuthType === 'password') {
+                formData.password = cleanedHost.password || "";
+            } else if (defaultAuthType === 'key') {
+                formData.key = "existing_key"; // Placeholder to indicate existing key
+                formData.keyPassword = cleanedHost.keyPassword || "";
+                formData.keyType = (cleanedHost.keyType as any) || "auto";
+            } else if (defaultAuthType === 'credential') {
+                formData.credentialId = cleanedHost.credentialId || "existing_credential";
+            }
 
             form.reset(formData);
         } else {
@@ -292,24 +369,26 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                 tunnelConnections: data.tunnelConnections || []
             };
 
+            submitData.credentialId = null;
+            submitData.password = null;
+            submitData.key = null;
+            submitData.keyPassword = null;
+            submitData.keyType = null;
+
             if (data.authType === 'credential') {
-                submitData.credentialId = data.credentialId;
-                submitData.password = null;
-                submitData.key = null;
-                submitData.keyPassword = null;
-                submitData.keyType = null;
+                if (data.credentialId === "existing_credential") {
+                    delete submitData.credentialId;
+                } else {
+                    submitData.credentialId = data.credentialId;
+                }
             } else if (data.authType === 'password') {
-                submitData.credentialId = null;
                 submitData.password = data.password;
-                submitData.key = null;
-                submitData.keyPassword = null;
-                submitData.keyType = null;
             } else if (data.authType === 'key') {
-                submitData.credentialId = null;
-                submitData.password = null;
                 if (data.key instanceof File) {
                     const keyContent = await data.key.text();
                     submitData.key = keyContent;
+                } else if (data.key === "existing_key") {
+                    delete submitData.key;
                 } else {
                     submitData.key = data.key;
                 }
@@ -334,6 +413,9 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
             }
 
             window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
+            
+            // Reset form after successful submission
+            form.reset();
         } catch (error) {
             toast.error(t('hosts.failedToSaveHost'));
         } finally {
@@ -663,7 +745,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                         setAuthTab(newAuthType);
                                         form.setValue('authType', newAuthType);
                                         
-                                        // Clear other auth fields when switching
+                                        // Clear authentication fields based on what we're switching away from
                                         if (newAuthType === 'password') {
                                             form.setValue('key', null);
                                             form.setValue('keyPassword', '');
@@ -744,7 +826,8 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                                     >
                                                                         <span className="truncate"
                                                                               title={field.value?.name || t('hosts.upload')}>
-                                                                            {field.value ? (editingHost ? t('hosts.updateKey') : field.value.name) : t('hosts.upload')}
+                                                                            {field.value === "existing_key" ? t('hosts.existingKey') : 
+                                                                             field.value ? (editingHost ? t('hosts.updateKey') : field.value.name) : t('hosts.upload')}
                                                                         </span>
                                                                     </Button>
                                                                 </div>
@@ -843,10 +926,21 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                             control={form.control}
                                             name="credentialId"
                                             render={({ field }) => (
-                                                <CredentialSelector
-                                                    value={field.value}
-                                                    onValueChange={field.onChange}
-                                                />
+                                                <FormItem>
+                                                    <CredentialSelector
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        onCredentialSelect={(credential) => {
+                                                            if (credential) {
+                                                                // Update username when credential is selected
+                                                                form.setValue('username', credential.username);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <FormDescription>
+                                                        {t('hosts.credentialDescription')}
+                                                    </FormDescription>
+                                                </FormItem>
                                             )}
                                         />
                                     </TabsContent>

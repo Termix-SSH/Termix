@@ -18,6 +18,7 @@ import {
 import {Shield, Trash2, Users} from "lucide-react";
 import {toast} from "sonner";
 import {useTranslation} from "react-i18next";
+import {useConfirmation} from "@/hooks/use-confirmation.ts";
 import {
     getOIDCConfig,
     getRegistrationAllowed,
@@ -43,6 +44,7 @@ interface AdminSettingsProps {
 
 export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.ReactElement {
     const {t} = useTranslation();
+    const {confirmWithToast} = useConfirmation();
     const {state: sidebarState} = useSidebar();
 
     const [allowRegistration, setAllowRegistration] = React.useState(true);
@@ -80,7 +82,9 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
             .then(res => {
                 if (res) setOidcConfig(res);
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('Failed to fetch OIDC config:', err);
+                toast.error(t('admin.failedToFetchOidcConfig'));
             });
         fetchUsers();
     }, []);
@@ -92,7 +96,9 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                     setAllowRegistration(res.allowed);
                 }
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('Failed to fetch registration status:', err);
+                toast.error(t('admin.failedToFetchRegistrationStatus'));
             });
     }, []);
 
@@ -166,29 +172,38 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
     };
 
     const handleRemoveAdminStatus = async (username: string) => {
-        if (!confirm(t('admin.removeAdminStatus', { username }))) return;
-        const jwt = getCookie("jwt");
-        try {
-            await removeAdminStatus(username);
-            toast.success(t('admin.adminStatusRemoved', { username }));
-            fetchUsers();
-        } catch (err: any) {
-            console.error('Failed to remove admin status:', err);
-            toast.error(t('admin.failedToRemoveAdminStatus'));
-        }
+        confirmWithToast(
+            t('admin.removeAdminStatus', { username }),
+            async () => {
+                const jwt = getCookie("jwt");
+                try {
+                    await removeAdminStatus(username);
+                    toast.success(t('admin.adminStatusRemoved', { username }));
+                    fetchUsers();
+                } catch (err: any) {
+                    console.error('Failed to remove admin status:', err);
+                    toast.error(t('admin.failedToRemoveAdminStatus'));
+                }
+            }
+        );
     };
 
     const handleDeleteUser = async (username: string) => {
-        if (!confirm(t('admin.deleteUser', { username }))) return;
-        const jwt = getCookie("jwt");
-        try {
-            await deleteUser(username);
-            toast.success(t('admin.userDeletedSuccessfully', { username }));
-            fetchUsers();
-        } catch (err: any) {
-            console.error('Failed to delete user:', err);
-            toast.error(t('admin.failedToDeleteUser'));
-        }
+        confirmWithToast(
+            t('admin.deleteUser', { username }),
+            async () => {
+                const jwt = getCookie("jwt");
+                try {
+                    await deleteUser(username);
+                    toast.success(t('admin.userDeletedSuccessfully', { username }));
+                    fetchUsers();
+                } catch (err: any) {
+                    console.error('Failed to delete user:', err);
+                    toast.error(t('admin.failedToDeleteUser'));
+                }
+            },
+            'destructive'
+        );
     };
 
     const topMarginPx = isTopbarOpen ? 74 : 26;

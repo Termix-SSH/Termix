@@ -182,6 +182,16 @@ router.post('/db/host', authenticateJWT, upload.single('key'), async (req: Reque
         
         const resolvedHost = await resolveHostCredentials(baseHost) || baseHost;
         
+        sshLogger.success(`SSH host created: ${name} (${ip}:${port}) by user ${userId}`, { 
+            operation: 'host_create_success', 
+            userId, 
+            hostId: createdHost.id, 
+            name, 
+            ip, 
+            port, 
+            authType: effectiveAuthType 
+        });
+        
         res.json(resolvedHost);
     } catch (err) {
         sshLogger.error('Failed to save SSH host to database', err, { operation: 'host_create', userId, name, ip, port, authType: effectiveAuthType });
@@ -315,6 +325,16 @@ router.put('/db/host/:id', authenticateJWT, upload.single('key'), async (req: Re
         
         const resolvedHost = await resolveHostCredentials(baseHost) || baseHost;
         
+        sshLogger.success(`SSH host updated: ${name} (${ip}:${port}) by user ${userId}`, { 
+            operation: 'host_update_success', 
+            userId, 
+            hostId: parseInt(hostId), 
+            name, 
+            ip, 
+            port, 
+            authType: effectiveAuthType 
+        });
+        
         res.json(resolvedHost);
     } catch (err) {
         sshLogger.error('Failed to update SSH host in database', err, { operation: 'host_update', hostId: parseInt(hostId), userId, name, ip, port, authType: effectiveAuthType });
@@ -407,8 +427,29 @@ router.delete('/db/host/:id', authenticateJWT, async (req: Request, res: Respons
         return res.status(400).json({error: 'Invalid userId or id'});
     }
     try {
+        const hostToDelete = await db
+            .select()
+            .from(sshData)
+            .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+        
+        if (hostToDelete.length === 0) {
+            sshLogger.warn('SSH host not found for deletion', { operation: 'host_delete', hostId: parseInt(hostId), userId });
+            return res.status(404).json({error: 'SSH host not found'});
+        }
+        
         const result = await db.delete(sshData)
             .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+        
+        const host = hostToDelete[0];
+        sshLogger.success(`SSH host deleted: ${host.name} (${host.ip}:${host.port}) by user ${userId}`, { 
+            operation: 'host_delete_success', 
+            userId, 
+            hostId: parseInt(hostId), 
+            name: host.name, 
+            ip: host.ip, 
+            port: host.port 
+        });
+        
         res.json({message: 'SSH host deleted'});
     } catch (err) {
         sshLogger.error('Failed to delete SSH host from database', err, { operation: 'host_delete', hostId: parseInt(hostId), userId });
@@ -777,15 +818,6 @@ router.put('/folders/rename', authenticateJWT, async (req: Request, res: Respons
             ))
             .returning();
 
-        sshLogger.success('Folder renamed successfully', { 
-            operation: 'folder_rename', 
-            userId, 
-            oldName, 
-            newName, 
-            updatedHosts: updatedHosts.length,
-            updatedCredentials: updatedCredentials.length
-        });
-
         res.json({
             message: 'Folder renamed successfully',
             updatedHosts: updatedHosts.length,
@@ -795,6 +827,105 @@ router.put('/folders/rename', authenticateJWT, async (req: Request, res: Respons
         sshLogger.error('Failed to rename folder', err, { operation: 'folder_rename', userId, oldName, newName });
         res.status(500).json({error: 'Failed to rename folder'});
     }
+});
+
+// Route: Bulk import SSH hosts (requires JWT)
+// POST /ssh/bulk-import
+router.post('/bulk-import', authenticateJWT, async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const { hosts } = req.body;
+
+    if (!Array.isArray(hosts) || hosts.length === 0) {
+        return res.status(400).json({ error: 'Hosts array is required and must not be empty' });
+    }
+
+    if (hosts.length > 100) {
+        return res.status(400).json({ error: 'Maximum 100 hosts allowed per import' });
+    }
+
+    const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[]
+    };
+
+    for (let i = 0; i < hosts.length; i++) {
+        const hostData = hosts[i];
+        
+        try {
+            // Validate required fields
+            if (!isNonEmptyString(hostData.ip) || !isValidPort(hostData.port) || !isNonEmptyString(hostData.username)) {
+                results.failed++;
+                results.errors.push(`Host ${i + 1}: Missing required fields (ip, port, username)`);
+                continue;
+            }
+
+            // Validate authType
+            if (!['password', 'key', 'credential'].includes(hostData.authType)) {
+                results.failed++;
+                results.errors.push(`Host ${i + 1}: Invalid authType. Must be 'password', 'key', or 'credential'`);
+                continue;
+            }
+
+            // Validate authentication data based on authType
+            if (hostData.authType === 'password' && !isNonEmptyString(hostData.password)) {
+                results.failed++;
+                results.errors.push(`Host ${i + 1}: Password required for password authentication`);
+                continue;
+            }
+
+            if (hostData.authType === 'key' && !isNonEmptyString(hostData.key)) {
+                results.failed++;
+                results.errors.push(`Host ${i + 1}: Key required for key authentication`);
+                continue;
+            }
+
+            if (hostData.authType === 'credential' && !hostData.credentialId) {
+                results.failed++;
+                results.errors.push(`Host ${i + 1}: credentialId required for credential authentication`);
+                continue;
+            }
+
+            // Prepare host data for insertion
+            const sshDataObj: any = {
+                userId: userId,
+                name: hostData.name || `${hostData.username}@${hostData.ip}`,
+                folder: hostData.folder || 'Default',
+                tags: Array.isArray(hostData.tags) ? hostData.tags.join(',') : '',
+                ip: hostData.ip,
+                port: hostData.port,
+                username: hostData.username,
+                password: hostData.authType === 'password' ? hostData.password : null,
+                authType: hostData.authType,
+                credentialId: hostData.authType === 'credential' ? hostData.credentialId : null,
+                key: hostData.authType === 'key' ? hostData.key : null,
+                keyPassword: hostData.authType === 'key' ? hostData.keyPassword : null,
+                keyType: hostData.authType === 'key' ? (hostData.keyType || 'auto') : null,
+                pin: hostData.pin || false,
+                enableTerminal: hostData.enableTerminal !== false,
+                enableTunnel: hostData.enableTunnel !== false,
+                enableFileManager: hostData.enableFileManager !== false,
+                defaultPath: hostData.defaultPath || '/',
+                tunnelConnections: hostData.tunnelConnections ? JSON.stringify(hostData.tunnelConnections) : '[]',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            await db.insert(sshData).values(sshDataObj);
+            results.success++;
+
+        } catch (error) {
+            results.failed++;
+            results.errors.push(`Host ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    res.json({
+        message: `Import completed: ${results.success} successful, ${results.failed} failed`,
+        success: results.success,
+        failed: results.failed,
+        errors: results.errors
+    });
 });
 
 export default router;

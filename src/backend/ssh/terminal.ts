@@ -16,8 +16,6 @@ wss.on('connection', (ws: WebSocket) => {
     let sshConn: Client | null = null;
     let sshStream: ClientChannel | null = null;
     let pingInterval: NodeJS.Timeout | null = null;
-    
-    sshLogger.info('New WebSocket connection established', { operation: 'websocket_connect' });
 
 
     ws.on('close', () => {
@@ -40,7 +38,6 @@ wss.on('connection', (ws: WebSocket) => {
 
         switch (type) {
             case 'connectToHost':
-                sshLogger.info('SSH connection request received', { operation: 'ssh_connect', hostId: data.hostConfig?.id, ip: data.hostConfig?.ip, port: data.hostConfig?.port });
                 handleConnectToHost(data).catch(error => {
                     sshLogger.error('Failed to connect to host', error, { operation: 'ssh_connect', hostId: data.hostConfig?.id, ip: data.hostConfig?.ip });
                     ws.send(JSON.stringify({type: 'error', message: 'Failed to connect to host: ' + (error instanceof Error ? error.message : 'Unknown error')}));

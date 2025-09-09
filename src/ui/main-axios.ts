@@ -746,12 +746,14 @@ export async function readSSHFile(sessionId: string, path: string): Promise<{ co
     }
 }
 
-export async function writeSSHFile(sessionId: string, path: string, content: string): Promise<any> {
+export async function writeSSHFile(sessionId: string, path: string, content: string, hostId?: number, userId?: string): Promise<any> {
     try {
         const response = await fileManagerApi.post('/ssh/writeFile', {
             sessionId,
             path,
-            content
+            content,
+            hostId,
+            userId
         });
 
         if (response.data && (response.data.message === 'File written successfully' || response.status === 200)) {
@@ -764,13 +766,15 @@ export async function writeSSHFile(sessionId: string, path: string, content: str
     }
 }
 
-export async function uploadSSHFile(sessionId: string, path: string, fileName: string, content: string): Promise<any> {
+export async function uploadSSHFile(sessionId: string, path: string, fileName: string, content: string, hostId?: number, userId?: string): Promise<any> {
     try {
         const response = await fileManagerApi.post('/ssh/uploadFile', {
             sessionId,
             path,
             fileName,
-            content
+            content,
+            hostId,
+            userId
         });
         return response.data;
     } catch (error) {
@@ -778,13 +782,15 @@ export async function uploadSSHFile(sessionId: string, path: string, fileName: s
     }
 }
 
-export async function createSSHFile(sessionId: string, path: string, fileName: string, content: string = ''): Promise<any> {
+export async function createSSHFile(sessionId: string, path: string, fileName: string, content: string = '', hostId?: number, userId?: string): Promise<any> {
     try {
         const response = await fileManagerApi.post('/ssh/createFile', {
             sessionId,
             path,
             fileName,
-            content
+            content,
+            hostId,
+            userId
         });
         return response.data;
     } catch (error) {
@@ -792,12 +798,14 @@ export async function createSSHFile(sessionId: string, path: string, fileName: s
     }
 }
 
-export async function createSSHFolder(sessionId: string, path: string, folderName: string): Promise<any> {
+export async function createSSHFolder(sessionId: string, path: string, folderName: string, hostId?: number, userId?: string): Promise<any> {
     try {
         const response = await fileManagerApi.post('/ssh/createFolder', {
             sessionId,
             path,
-            folderName
+            folderName,
+            hostId,
+            userId
         });
         return response.data;
     } catch (error) {
@@ -805,13 +813,15 @@ export async function createSSHFolder(sessionId: string, path: string, folderNam
     }
 }
 
-export async function deleteSSHItem(sessionId: string, path: string, isDirectory: boolean): Promise<any> {
+export async function deleteSSHItem(sessionId: string, path: string, isDirectory: boolean, hostId?: number, userId?: string): Promise<any> {
     try {
         const response = await fileManagerApi.delete('/ssh/deleteItem', {
             data: {
                 sessionId,
                 path,
-                isDirectory
+                isDirectory,
+                hostId,
+                userId
             }
         });
         return response.data;
@@ -820,12 +830,14 @@ export async function deleteSSHItem(sessionId: string, path: string, isDirectory
     }
 }
 
-export async function renameSSHItem(sessionId: string, oldPath: string, newName: string): Promise<any> {
+export async function renameSSHItem(sessionId: string, oldPath: string, newName: string, hostId?: number, userId?: string): Promise<any> {
     try {
         const response = await fileManagerApi.put('/ssh/renameItem', {
             sessionId,
             oldPath,
-            newName
+            newName,
+            hostId,
+            userId
         });
         return response.data;
     } catch (error) {
@@ -1275,5 +1287,17 @@ export async function renameFolder(oldName: string, newName: string): Promise<an
         return response.data;
     } catch (error) {
         handleApiError(error, 'rename folder');
+    }
+}
+
+export async function renameCredentialFolder(oldName: string, newName: string): Promise<any> {
+    try {
+        const response = await authApi.put('/credentials/folders/rename', {
+            oldName,
+            newName
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'rename credential folder');
     }
 }

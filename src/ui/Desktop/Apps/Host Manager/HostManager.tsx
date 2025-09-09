@@ -23,11 +23,7 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
     };
 
     const handleFormSubmit = (updatedHost?: SSHHost) => {
-        if (updatedHost) {
-            setEditingHost(updatedHost);
-        } else {
-            setEditingHost(null);
-        }
+        setEditingHost(null);
         setActiveTab("host_viewer");
     };
 
@@ -44,10 +40,11 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
 
     const handleTabChange = (value: string) => {
         setActiveTab(value);
-        if (value === "host_viewer") {
+        // Reset editing states when switching away from edit tabs
+        if (value !== "add_host") {
             setEditingHost(null);
         }
-        if (value === "credentials") {
+        if (value !== "add_credential") {
             setEditingCredential(null);
         }
     };

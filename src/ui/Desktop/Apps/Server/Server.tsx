@@ -9,6 +9,7 @@ import {Tunnel} from "@/ui/Desktop/Apps/Tunnel/Tunnel.tsx";
 import {getServerStatusById, getServerMetricsById, type ServerMetrics} from "@/ui/main-axios.ts";
 import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import {useTranslation} from 'react-i18next';
+import {toast} from 'sonner';
 
 interface ServerProps {
     hostConfig?: any;
@@ -47,6 +48,8 @@ export function Server({
                         setCurrentHostConfig(updatedHost);
                     }
                 } catch (error) {
+                    console.error('Failed to fetch latest host config:', error);
+                    toast.error(t('serverStats.failedToFetchHostConfig'));
                 }
             }
         };
@@ -63,6 +66,8 @@ export function Server({
                         setCurrentHostConfig(updatedHost);
                     }
                 } catch (error) {
+                    console.error('Failed to fetch updated host config:', error);
+                    toast.error(t('serverStats.failedToFetchHostConfig'));
                 }
             }
         };
@@ -81,8 +86,12 @@ export function Server({
                 if (!cancelled) {
                     setServerStatus(res?.status === 'online' ? 'online' : 'offline');
                 }
-            } catch {
-                if (!cancelled) setServerStatus('offline');
+            } catch (error) {
+                console.error('Failed to fetch server status:', error);
+                if (!cancelled) {
+                    setServerStatus('offline');
+                    toast.error(t('serverStats.failedToFetchStatus'));
+                }
             }
         };
 
@@ -91,8 +100,12 @@ export function Server({
             try {
                 const data = await getServerMetricsById(currentHostConfig.id);
                 if (!cancelled) setMetrics(data);
-            } catch {
-                if (!cancelled) setMetrics(null);
+            } catch (error) {
+                console.error('Failed to fetch server metrics:', error);
+                if (!cancelled) {
+                    setMetrics(null);
+                    toast.error(t('serverStats.failedToFetchMetrics'));
+                }
             }
         };
 

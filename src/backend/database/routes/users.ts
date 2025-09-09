@@ -135,8 +135,9 @@ router.post('/create', async (req, res) => {
         if (row && (row as any).value !== 'true') {
             return res.status(403).json({error: 'Registration is currently disabled'});
         }
-    } catch (e) {
-    }
+        } catch (e) {
+            authLogger.warn('Failed to check registration status', { operation: 'registration_check', error: e });
+        }
 
     const {username, password} = req.body;
 
@@ -159,19 +160,14 @@ router.post('/create', async (req, res) => {
         try {
             const countResult = db.$client.prepare('SELECT COUNT(*) as count FROM users').get();
             isFirstUser = ((countResult as any)?.count || 0) === 0;
-            authLogger.info('Checked user count for admin status', { operation: 'user_create', username, isFirstUser });
         } catch (e) {
             isFirstUser = true;
             authLogger.warn('Failed to check user count, assuming first user', { operation: 'user_create', username, error: e });
         }
 
-        authLogger.info('Hashing password for new user', { operation: 'user_create', username, saltRounds: parseInt(process.env.SALT || '10', 10) });
         const saltRounds = parseInt(process.env.SALT || '10', 10);
         const password_hash = await bcrypt.hash(password, saltRounds);
         const id = nanoid();
-        authLogger.info('Generated user ID and hashed password', { operation: 'user_create', username, userId: id });
-
-        authLogger.info('Inserting new user into database', { operation: 'user_create', username, userId: id, isAdmin: isFirstUser });
         await db.insert(users).values({
             id,
             username,
@@ -192,7 +188,7 @@ router.post('/create', async (req, res) => {
         });
 
         authLogger.success(`Traditional user created: ${username} (is_admin: ${isFirstUser})`, { operation: 'user_create', username, isAdmin: isFirstUser, userId: id });
-        res.json({message: 'User created', is_admin: isFirstUser});
+        res.json({message: 'User created', is_admin: isFirstUser, toast: {type: 'success', message: `User created: ${username}`}});
     } catch (err) {
         authLogger.error('Failed to create user', err);
         res.status(500).json({error: 'Failed to create user'});
@@ -220,27 +216,6 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             name_path,
             scopes
         } = req.body;
-
-        authLogger.info('OIDC config update request received', { 
-            operation: 'oidc_config_update', 
-            userId,
-            hasClientId: !!client_id,
-            hasClientSecret: !!client_secret,
-            hasIssuerUrl: !!issuer_url,
-            hasAuthUrl: !!authorization_url,
-            hasTokenUrl: !!token_url,
-            hasIdentifierPath: !!identifier_path,
-            hasNamePath: !!name_path,
-            clientIdValue: `"${client_id}"`,
-            clientSecretValue: client_secret ? '[REDACTED]' : `"${client_secret}"`,
-            issuerUrlValue: `"${issuer_url}"`,
-            authUrlValue: `"${authorization_url}"`,
-            tokenUrlValue: `"${token_url}"`,
-            identifierPathValue: `"${identifier_path}"`,
-            namePathValue: `"${name_path}"`,
-            scopesValue: `"${scopes}"`,
-            userinfoUrlValue: `"${userinfo_url}"`
-        });
         
         const isDisableRequest = (client_id === '' || client_id === null || client_id === undefined) && 
                                 (client_secret === '' || client_secret === null || client_secret === undefined) && 
@@ -253,29 +228,6 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
                               isNonEmptyString(token_url) && isNonEmptyString(identifier_path) &&
                               isNonEmptyString(name_path);
 
-        authLogger.info('OIDC validation results', { 
-            operation: 'oidc_config_update', 
-            userId,
-            isDisableRequest,
-            isEnableRequest,
-            disableChecks: {
-                clientIdEmpty: client_id === '' || client_id === null || client_id === undefined,
-                clientSecretEmpty: client_secret === '' || client_secret === null || client_secret === undefined,
-                issuerUrlEmpty: issuer_url === '' || issuer_url === null || issuer_url === undefined,
-                authUrlEmpty: authorization_url === '' || authorization_url === null || authorization_url === undefined,
-                tokenUrlEmpty: token_url === '' || token_url === null || token_url === undefined
-            },
-            enableChecks: {
-                clientIdPresent: isNonEmptyString(client_id),
-                clientSecretPresent: isNonEmptyString(client_secret),
-                issuerUrlPresent: isNonEmptyString(issuer_url),
-                authUrlPresent: isNonEmptyString(authorization_url),
-                tokenUrlPresent: isNonEmptyString(token_url),
-                identifierPathPresent: isNonEmptyString(identifier_path),
-                namePathPresent: isNonEmptyString(name_path)
-            }
-        });
-
         if (!isDisableRequest && !isEnableRequest) {
             authLogger.warn('OIDC validation failed - neither disable nor enable request', { 
                 operation: 'oidc_config_update', 
@@ -287,7 +239,6 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
         }
 
         if (isDisableRequest) {
-            // Disable OIDC by removing the configuration
             db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
             authLogger.info('OIDC configuration disabled', { operation: 'oidc_disable', userId });
             res.json({message: 'OIDC configuration disabled'});
@@ -324,8 +275,6 @@ router.delete('/oidc-config', authenticateJWT, async (req, res) => {
         if (!user || user.length === 0 || !user[0].is_admin) {
             return res.status(403).json({error: 'Not authorized'});
         }
-
-        authLogger.info('OIDC disable request received', { operation: 'oidc_disable', userId });
         
         db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
         authLogger.success('OIDC configuration disabled', { operation: 'oidc_disable', userId });
@@ -480,7 +429,6 @@ router.get('/oidc/callback', async (req, res) => {
         if (tokenData.id_token) {
             try {
                 userInfo = await verifyOIDCToken(tokenData.id_token, config.issuer_url, config.client_id);
-                authLogger.info('Successfully verified ID token and extracted user info');
             } catch (error) {
                 authLogger.error('OIDC token verification failed, trying userinfo endpoints', error);
                 try {
@@ -488,7 +436,6 @@ router.get('/oidc/callback', async (req, res) => {
                     if (parts.length === 3) {
                         const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
                         userInfo = payload;
-                        authLogger.info('Successfully decoded ID token payload without verification');
                     }
                 } catch (decodeError) {
                     authLogger.error('Failed to decode ID token payload:', decodeError);
@@ -586,6 +533,8 @@ router.get('/oidc/callback', async (req, res) => {
                 .select()
                 .from(users)
                 .where(eq(users.id, id));
+            
+            // OIDC user created - toast notification handled by frontend
         } else {
             await db.update(users)
                 .set({username: name})
@@ -595,6 +544,8 @@ router.get('/oidc/callback', async (req, res) => {
                 .select()
                 .from(users)
                 .where(eq(users.id, user[0].id));
+            
+            // OIDC user logged in - toast notification handled by frontend
         }
 
         const userRecord = user[0];
@@ -660,34 +611,29 @@ router.post('/login', async (req, res) => {
             return res.status(403).json({error: 'This user uses external authentication'});
         }
 
-        authLogger.info('Verifying password for user login', { operation: 'user_login', username, userId: userRecord.id });
         const isMatch = await bcrypt.compare(password, userRecord.password_hash);
         if (!isMatch) {
             authLogger.warn(`Incorrect password for user: ${username}`, { operation: 'user_login', username, userId: userRecord.id });
             return res.status(401).json({error: 'Incorrect password'});
         }
-
-        authLogger.info('Password verified, generating JWT token', { operation: 'user_login', username, userId: userRecord.id, totpEnabled: userRecord.totp_enabled });
         const jwtSecret = process.env.JWT_SECRET || 'secret';
         const token = jwt.sign({userId: userRecord.id}, jwtSecret, {
             expiresIn: '50d',
         });
 
+        // Traditional user logged in - toast notification handled by frontend
+
         if (userRecord.totp_enabled) {
-            authLogger.info('User has TOTP enabled, requiring additional verification', { operation: 'user_login', username, userId: userRecord.id });
             const tempToken = jwt.sign(
                 {userId: userRecord.id, pending_totp: true},
                 jwtSecret,
                 {expiresIn: '10m'}
             );
-            authLogger.success('TOTP verification required for login', { operation: 'user_login', username, userId: userRecord.id });
             return res.json({
                 requires_totp: true,
                 temp_token: tempToken
             });
         }
-
-        authLogger.success('User login successful', { operation: 'user_login', username, userId: userRecord.id, isAdmin: !!userRecord.is_admin });
         return res.json({
             token,
             is_admin: !!userRecord.is_admin,
@@ -1022,6 +968,7 @@ router.post('/make-admin', authenticateJWT, async (req, res) => {
             .where(eq(users.username, username));
 
         authLogger.success(`User ${username} made admin by ${adminUser[0].username}`);
+        // User made admin - toast notification handled by frontend
         res.json({message: `User ${username} is now an admin`});
 
     } catch (err) {
@@ -1064,6 +1011,7 @@ router.post('/remove-admin', authenticateJWT, async (req, res) => {
             .where(eq(users.username, username));
 
         authLogger.success(`Admin status removed from ${username} by ${adminUser[0].username}`);
+        // Admin status removed - toast notification handled by frontend
         res.json({message: `Admin status removed from ${username}`});
 
     } catch (err) {
@@ -1124,6 +1072,8 @@ router.post('/totp/verify-login', async (req, res) => {
         const token = jwt.sign({userId: userRecord.id}, jwtSecret, {
             expiresIn: '50d',
         });
+
+        // TOTP login completed - toast notification handled by frontend
 
         return res.json({
             token,
@@ -1224,6 +1174,7 @@ router.post('/totp/enable', authenticateJWT, async (req, res) => {
             })
             .where(eq(users.id, userId));
 
+        // 2FA enabled - toast notification handled by frontend
         res.json({
             message: 'TOTP enabled successfully',
             backup_codes: backupCodes
@@ -1285,6 +1236,7 @@ router.post('/totp/disable', authenticateJWT, async (req, res) => {
             })
             .where(eq(users.id, userId));
 
+        // 2FA disabled - toast notification handled by frontend
         res.json({message: 'TOTP disabled successfully'});
 
     } catch (err) {
@@ -1401,6 +1353,7 @@ router.delete('/delete-user', authenticateJWT, async (req, res) => {
         await db.delete(users).where(eq(users.id, targetUserId));
 
         authLogger.success(`User ${username} deleted by admin ${adminUser[0].username}`);
+        // User deleted - toast notification handled by frontend
         res.json({message: `User ${username} deleted successfully`});
 
     } catch (err) {

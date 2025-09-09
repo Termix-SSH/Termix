@@ -9,6 +9,7 @@ import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/compon
 import {getSSHHosts, deleteSSHHost, bulkImportSSHHosts, updateSSHHost, renameFolder} from "@/ui/main-axios.ts";
 import {toast} from "sonner";
 import {useTranslation} from "react-i18next";
+import {useConfirmation} from "@/hooks/use-confirmation.ts";
 import {
     Edit,
     Trash2,
@@ -24,13 +25,15 @@ import {
     Info,
     X,
     Check,
-    Pencil
+    Pencil,
+    FolderMinus
 } from "lucide-react";
 import {Separator} from "@/components/ui/separator.tsx";
-import type { SSHHost, SSHManagerHostViewerProps } from '../../../types/index.js';
+import type { SSHHost, SSHManagerHostViewerProps } from '../../../../types/index.js';
 
 export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
     const {t} = useTranslation();
+    const {confirmWithToast} = useConfirmation();
     const [hosts, setHosts] = useState<SSHHost[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -66,7 +69,25 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
         try {
             setLoading(true);
             const data = await getSSHHosts();
-            setHosts(data);
+            
+            const cleanedHosts = data.map(host => {
+                const cleanedHost = { ...host };
+                if (cleanedHost.credentialId && cleanedHost.key) {
+                    cleanedHost.key = undefined;
+                    cleanedHost.keyPassword = undefined;
+                    cleanedHost.keyType = undefined;
+                    cleanedHost.authType = 'credential';
+                } else if (cleanedHost.credentialId && cleanedHost.password) {
+                    cleanedHost.password = undefined;
+                    cleanedHost.authType = 'credential';
+                } else if (cleanedHost.key && cleanedHost.password) {
+                    cleanedHost.password = undefined;
+                    cleanedHost.authType = 'key';
+                }
+                return cleanedHost;
+            });
+            
+            setHosts(cleanedHosts);
             setError(null);
         } catch (err) {
             setError(t('hosts.failedToLoadHosts'));
@@ -76,47 +97,92 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
     };
 
     const handleDelete = async (hostId: number, hostName: string) => {
-        if (window.confirm(t('hosts.confirmDelete', { name: hostName }))) {
-            try {
-                await deleteSSHHost(hostId);
-                toast.success(t('hosts.hostDeletedSuccessfully', { name: hostName }));
-                await fetchHosts();
-                window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
-            } catch (err) {
-                toast.error(t('hosts.failedToDeleteHost'));
-            }
-        }
+        confirmWithToast(
+            t('hosts.confirmDelete', { name: hostName }),
+            async () => {
+                try {
+                    await deleteSSHHost(hostId);
+                    toast.success(t('hosts.hostDeletedSuccessfully', { name: hostName }));
+                    await fetchHosts();
+                    window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
+                } catch (err) {
+                    toast.error(t('hosts.failedToDeleteHost'));
+                }
+            },
+            'destructive'
+        );
     };
 
     const handleExport = (host: SSHHost) => {
-    const exportData = {
-        name: host.name,
-        ip: host.ip,
-        port: host.port,
-        username: host.username,
-        authType: host.authType,
-        folder: host.folder,
-        tags: host.tags,
-        pin: host.pin,
-        enableTerminal: host.enableTerminal,
-        enableTunnel: host.enableTunnel,
-        enableFileManager: host.enableFileManager,
-        defaultPath: host.defaultPath,
-        tunnelConnections: host.tunnelConnections,
+        const actualAuthType = host.credentialId ? 'credential' : (host.key ? 'key' : 'password');
+        
+        // Check if host uses sensitive authentication data
+        if (actualAuthType === 'credential') {
+            const confirmMessage = t('hosts.exportCredentialWarning', { 
+                name: host.name || `${host.username}@${host.ip}` 
+            });
+            
+            confirmWithToast(confirmMessage, () => {
+                performExport(host, actualAuthType);
+            });
+            return;
+        } else if (actualAuthType === 'password' || actualAuthType === 'key') {
+            const confirmMessage = t('hosts.exportSensitiveDataWarning', { 
+                name: host.name || `${host.username}@${host.ip}` 
+            });
+            
+            confirmWithToast(confirmMessage, () => {
+                performExport(host, actualAuthType);
+            });
+            return;
+        }
+        
+        // No sensitive data, proceed directly
+        performExport(host, actualAuthType);
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${host.name || host.username + '@' + host.ip}-credentials.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const performExport = (host: SSHHost, actualAuthType: string) => {
 
-    toast.success(`Exported credentials for ${host.name || host.username}@${host.ip}`);
-};
+        // Create export data with sensitive fields excluded
+        const exportData: any = {
+            name: host.name,
+            ip: host.ip,
+            port: host.port,
+            username: host.username,
+            authType: actualAuthType, // Use the determined authType, not the stored one
+            folder: host.folder,
+            tags: host.tags,
+            pin: host.pin,
+            enableTerminal: host.enableTerminal,
+            enableTunnel: host.enableTunnel,
+            enableFileManager: host.enableFileManager,
+            defaultPath: host.defaultPath,
+            tunnelConnections: host.tunnelConnections,
+        };
+
+        // Only include credentialId if actualAuthType is credential, but set it to null for security
+        if (actualAuthType === 'credential') {
+            exportData.credentialId = null; // Set to null instead of undefined so it's included but empty
+        }
+
+        // Remove undefined values from export, but keep null values
+        const cleanExportData = Object.fromEntries(
+            Object.entries(exportData).filter(([_, value]) => value !== undefined)
+        );
+
+
+        const blob = new Blob([JSON.stringify(cleanExportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${host.name || host.username + '@' + host.ip}-host-config.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toast.success(`Exported host configuration for ${host.name || host.username}@${host.ip}`);
+    };
 
 
     const handleEdit = (host: SSHHost) => {
@@ -126,20 +192,23 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
     };
 
     const handleRemoveFromFolder = async (host: SSHHost) => {
-        if (window.confirm(t('hosts.confirmRemoveFromFolder', { name: host.name || `${host.username}@${host.ip}`, folder: host.folder }))) {
-            try {
-                setOperationLoading(true);
-                const updatedHost = { ...host, folder: '' };
-                await updateSSHHost(host.id, updatedHost);
-                toast.success(t('hosts.removedFromFolder', { name: host.name || `${host.username}@${host.ip}` }));
-                await fetchHosts();
-                window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
-            } catch (err) {
-                toast.error(t('hosts.failedToRemoveFromFolder'));
-            } finally {
-                setOperationLoading(false);
+        confirmWithToast(
+            t('hosts.confirmRemoveFromFolder', { name: host.name || `${host.username}@${host.ip}`, folder: host.folder }),
+            async () => {
+                try {
+                    setOperationLoading(true);
+                    const updatedHost = { ...host, folder: '' };
+                    await updateSSHHost(host.id, updatedHost);
+                    toast.success(t('hosts.removedFromFolder', { name: host.name || `${host.username}@${host.ip}` }));
+                    await fetchHosts();
+                    window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
+                } catch (err) {
+                    toast.error(t('hosts.failedToRemoveFromFolder'));
+                } finally {
+                    setOperationLoading(false);
+                }
             }
-        }
+        );
     };
 
     const handleFolderRename = async (oldName: string) => {
@@ -400,51 +469,66 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                                const sampleData = {
-                                    hosts: [
+                        const sampleData = {
+                            hosts: [
+                                {
+                                    name: "Web Server - Production",
+                                    ip: "192.168.1.100",
+                                    port: 22,
+                                    username: "admin",
+                                    authType: "password",
+                                    password: "your_secure_password_here",
+                                    folder: "Production",
+                                    tags: ["web", "production", "nginx"],
+                                    pin: true,
+                                    enableTerminal: true,
+                                    enableTunnel: false,
+                                    enableFileManager: true,
+                                    defaultPath: "/var/www"
+                                },
+                                {
+                                    name: "Database Server",
+                                    ip: "192.168.1.101",
+                                    port: 22,
+                                    username: "dbadmin",
+                                    authType: "key",
+                                    key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
+                                    keyPassword: "optional_key_passphrase",
+                                    keyType: "ssh-ed25519",
+                                    folder: "Production",
+                                    tags: ["database", "production", "postgresql"],
+                                    pin: false,
+                                    enableTerminal: true,
+                                    enableTunnel: true,
+                                    enableFileManager: false,
+                                    tunnelConnections: [
                                         {
-                                            name: "Web Server - Production",
-                                            ip: "192.168.1.100",
-                                            port: 22,
-                                            username: "admin",
-                                            authType: "password",
-                                            password: "your_secure_password_here",
-                                            folder: "Production",
-                                            tags: ["web", "production", "nginx"],
-                                            pin: true,
-                                            enableTerminal: true,
-                                            enableTunnel: false,
-                                            enableFileManager: true,
-                                            defaultPath: "/var/www"
-                                        },
-                                        {
-                                            name: "Database Server",
-                                            ip: "192.168.1.101",
-                                            port: 22,
-                                            username: "dbadmin",
-                                            authType: "key",
-                                            key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
-                                            keyPassword: "optional_key_passphrase",
-                                            keyType: "ssh-ed25519",
-                                            folder: "Production",
-                                            tags: ["database", "production", "postgresql"],
-                                            pin: false,
-                                            enableTerminal: true,
-                                            enableTunnel: true,
-                                            enableFileManager: false,
-                                            tunnelConnections: [
-                                                {
-                                                    sourcePort: 5432,
-                                                    endpointPort: 5432,
-                                                    endpointHost: "Web Server - Production",
-                                                    maxRetries: 3,
-                                                    retryInterval: 10,
-                                                    autoStart: true
-                                                }
-                                            ]
+                                            sourcePort: 5432,
+                                            endpointPort: 5432,
+                                            endpointHost: "Web Server - Production",
+                                            maxRetries: 3,
+                                            retryInterval: 10,
+                                            autoStart: true
                                         }
                                     ]
-                                };
+                                },
+                                {
+                                    name: "Development Server",
+                                    ip: "192.168.1.102",
+                                    port: 2222,
+                                    username: "developer",
+                                    authType: "credential",
+                                    credentialId: 1,
+                                    folder: "Development",
+                                    tags: ["dev", "testing"],
+                                    pin: false,
+                                    enableTerminal: true,
+                                    enableTunnel: false,
+                                    enableFileManager: true,
+                                    defaultPath: "/home/developer"
+                                }
+                            ]
+                        };
 
                                 const blob = new Blob([JSON.stringify(sampleData, null, 2)], {type: 'application/json'});
                                 const url = URL.createObjectURL(blob);
@@ -478,6 +562,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                     </div>
                 </div>
 
+
                 <input
                     id="json-import-input"
                     type="file"
@@ -492,9 +577,6 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                         <h3 className="text-lg font-semibold mb-2">{t('hosts.noHosts')}</h3>
                         <p className="text-muted-foreground mb-4">
                             {t('hosts.noHostsMessage')}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                            {t('hosts.getStartedMessage', { defaultValue: 'Use the Import JSON button above to add hosts from a JSON file.' })}
                         </p>
                     </div>
                 </div>
@@ -583,6 +665,21 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                 autoStart: true
                                             }
                                         ]
+                                    },
+                                    {
+                                        name: "Development Server",
+                                        ip: "192.168.1.102",
+                                        port: 2222,
+                                        username: "developer",
+                                        authType: "credential",
+                                        credentialId: 1,
+                                        folder: "Development",
+                                        tags: ["dev", "testing"],
+                                        pin: false,
+                                        enableTerminal: true,
+                                        enableTunnel: false,
+                                        enableFileManager: true,
+                                        defaultPath: "/home/developer"
                                     }
                                 ]
                             };
@@ -618,6 +715,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                     </Button>
                 </div>
             </div>
+
 
             <input
                 id="json-import-input"
@@ -732,25 +830,27 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                                     <AccordionContent className="p-2">
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                             {folderHosts.map((host) => (
-                                                <div
-                                                    key={host.id}
-                                                    draggable
-                                                    onDragStart={(e) => handleDragStart(e, host)}
-                                                    onDragEnd={handleDragEnd}
-                                                    className={`bg-[#222225] border border-input rounded cursor-move hover:shadow-md transition-all p-2 ${
-                                                        draggedHost?.id === host.id ? 'opacity-50 scale-95' : ''
-                                                    }`}
-                                                    onClick={() => handleEdit(host)}
-                                                >
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-1">
-                                                                {host.pin && <Pin
-                                                                    className="h-3 w-3 text-yellow-500 flex-shrink-0"/>}
-                                                                <h3 className="font-medium truncate text-sm">
-                                                                    {host.name || `${host.username}@${host.ip}`}
-                                                                </h3>
-                                                            </div>
+                                                <TooltipProvider key={host.id}>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <div
+                                                                draggable
+                                                                onDragStart={(e) => handleDragStart(e, host)}
+                                                                onDragEnd={handleDragEnd}
+                                                                className={`bg-[#222225] border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-blue-400/50 hover:bg-[#2a2a2d] transition-all duration-200 p-3 group relative ${
+                                                                    draggedHost?.id === host.id ? 'opacity-50 scale-95' : ''
+                                                                }`}
+                                                                onClick={() => handleEdit(host)}
+                                                            >
+                                                                <div className="flex items-start justify-between">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex items-center gap-1">
+                                                                            {host.pin && <Pin
+                                                                                className="h-3 w-3 text-yellow-500 flex-shrink-0"/>}
+                                                                            <h3 className="font-medium truncate text-sm">
+                                                                                {host.name || `${host.username}@${host.ip}`}
+                                                                            </h3>
+                                                                        </div>
                                                             <p className="text-xs text-muted-foreground truncate">
                                                                 {host.ip}:{host.port}
                                                             </p>
@@ -760,53 +860,80 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                         </div>
                                                         <div className="flex gap-1 flex-shrink-0 ml-1">
                                                             {host.folder && host.folder !== '' && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="ghost"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleRemoveFromFolder(host);
-                                                                    }}
-                                                                    className="h-5 w-5 p-0 text-orange-500 hover:text-orange-700"
-                                                                    title={`Remove from folder "${host.folder}"`}
-                                                                    disabled={operationLoading}
-                                                                >
-                                                                    <X className="h-3 w-3"/>
-                                                                </Button>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="ghost"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleRemoveFromFolder(host);
+                                                                            }}
+                                                                            className="h-5 w-5 p-0 text-orange-500 hover:text-orange-700 hover:bg-orange-500/10"
+                                                                            disabled={operationLoading}
+                                                                        >
+                                                                            <FolderMinus className="h-3 w-3"/>
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>Remove from folder "{host.folder}"</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
                                                             )}
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEdit(host);
-                                                                }}
-                                                                className="h-5 w-5 p-0"
-                                                            >
-                                                                <Edit className="h-3 w-3"/>
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDelete(host.id, host.name || `${host.username}@${host.ip}`);
-                                                                }}
-                                                                className="h-5 w-5 p-0 text-red-500 hover:text-red-700"
-                                                            >
-                                                                <Trash2 className="h-3 w-3"/>
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleExport(host);
-                                                                }}
-                                                                className="h-5 w-5 p-0 text-blue-500 hover:text-blue-700"
-                                                            >
-                                                                <Upload className="h-3 w-3"/>
-                                                            </Button>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleEdit(host);
+                                                                        }}
+                                                                        className="h-5 w-5 p-0 hover:bg-blue-500/10"
+                                                                    >
+                                                                        <Edit className="h-3 w-3"/>
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Edit host</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDelete(host.id, host.name || `${host.username}@${host.ip}`);
+                                                                        }}
+                                                                        className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-500/10"
+                                                                    >
+                                                                        <Trash2 className="h-3 w-3"/>
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Delete host</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleExport(host);
+                                                                        }}
+                                                                        className="h-5 w-5 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-500/10"
+                                                                    >
+                                                                        <Upload className="h-3 w-3"/>
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Export host</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
 
                                                         </div>
                                                     </div>
@@ -856,6 +983,15 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                         </div>
                                                     </div>
                                                 </div>
+                                                            </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <div className="text-center">
+                                                                <p className="font-medium">Click to edit host</p>
+                                                                <p className="text-xs text-muted-foreground">Drag to move between folders</p>
+                                                            </div>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             ))}
                                         </div>
                                     </AccordionContent>

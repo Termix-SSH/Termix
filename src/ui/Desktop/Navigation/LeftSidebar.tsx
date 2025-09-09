@@ -115,7 +115,7 @@ export function LeftSidebar({
 
     const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
-    const {tabs: tabList, addTab, setCurrentTab, allSplitScreenTab} = useTabs() as any;
+    const {tabs: tabList, addTab, setCurrentTab, allSplitScreenTab, updateHostConfig} = useTabs() as any;
     const isSplitScreenActive = Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
     const sshManagerTab = tabList.find((t) => t.type === 'ssh_manager');
     const openSshManagerTab = () => {
@@ -171,7 +171,17 @@ export function LeftSidebar({
                         newHost.username !== existingHost.username ||
                         newHost.pin !== existingHost.pin ||
                         newHost.enableTerminal !== existingHost.enableTerminal ||
-                        JSON.stringify(newHost.tags) !== JSON.stringify(existingHost.tags)
+                        newHost.enableTunnel !== existingHost.enableTunnel ||
+                        newHost.enableFileManager !== existingHost.enableFileManager ||
+                        newHost.authType !== existingHost.authType ||
+                        newHost.password !== existingHost.password ||
+                        newHost.key !== existingHost.key ||
+                        newHost.keyPassword !== existingHost.keyPassword ||
+                        newHost.keyType !== existingHost.keyType ||
+                        newHost.credentialId !== existingHost.credentialId ||
+                        newHost.defaultPath !== existingHost.defaultPath ||
+                        JSON.stringify(newHost.tags) !== JSON.stringify(existingHost.tags) ||
+                        JSON.stringify(newHost.tunnelConnections) !== JSON.stringify(existingHost.tunnelConnections)
                     ) {
                         hasChanges = true;
                         break;
@@ -183,12 +193,17 @@ export function LeftSidebar({
                 setTimeout(() => {
                     setHosts(newHosts);
                     prevHostsRef.current = newHosts;
+                    
+                    // Update hostConfig in existing tabs
+                    newHosts.forEach(newHost => {
+                        updateHostConfig(newHost.id, newHost);
+                    });
                 }, 50);
             }
         } catch (err: any) {
             setHostsError(t('leftSidebar.failedToLoadHosts'));
         }
-    }, []);
+    }, [updateHostConfig]);
 
     React.useEffect(() => {
         fetchHosts();
@@ -200,8 +215,15 @@ export function LeftSidebar({
         const handleHostsChanged = () => {
             fetchHosts();
         };
+        const handleCredentialsChanged = () => {
+            fetchHosts();
+        };
         window.addEventListener('ssh-hosts:changed', handleHostsChanged as EventListener);
-        return () => window.removeEventListener('ssh-hosts:changed', handleHostsChanged as EventListener);
+        window.addEventListener('credentials:changed', handleCredentialsChanged as EventListener);
+        return () => {
+            window.removeEventListener('ssh-hosts:changed', handleHostsChanged as EventListener);
+            window.removeEventListener('credentials:changed', handleCredentialsChanged as EventListener);
+        };
     }, [fetchHosts]);
 
     React.useEffect(() => {

@@ -377,7 +377,12 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                 loading: false
             } : t));
 
-            toast.success(t('fileManager.fileSavedSuccessfully'));
+            // Handle toast notification from backend
+            if (result?.toast) {
+                toast[result.toast.type](result.toast.message);
+            } else {
+                toast.success(t('fileManager.fileSavedSuccessfully'));
+            }
 
             Promise.allSettled([
                 (async () => {
@@ -390,12 +395,14 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                             hostId: currentHost.id
                         });
                     } catch (recentErr) {
+                        console.error('Failed to add recent file:', recentErr);
                     }
                 })(),
                 (async () => {
                     try {
                         await fetchHomeData();
                     } catch (refreshErr) {
+                        console.error('Failed to refresh home data:', refreshErr);
                     }
                 })()
             ]).then(() => {
@@ -451,8 +458,15 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
 
         try {
             const {deleteSSHItem} = await import('@/ui/main-axios.ts');
-            await deleteSSHItem(currentHost.id.toString(), item.path, item.type === 'directory');
-            toast.success(`${item.type === 'directory' ? t('fileManager.folder') : t('fileManager.file')} ${t('fileManager.deletedSuccessfully')}`);
+            const response = await deleteSSHItem(currentHost.id.toString(), item.path, item.type === 'directory');
+            
+            // Handle toast notification from backend
+            if (response?.toast) {
+                toast[response.toast.type](response.toast.message);
+            } else {
+                toast.success(`${item.type === 'directory' ? t('fileManager.folder') : t('fileManager.file')} ${t('fileManager.deletedSuccessfully')}`);
+            }
+            
             setDeletingItem(null);
             handleOperationComplete();
         } catch (error: any) {
