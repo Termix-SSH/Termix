@@ -44,14 +44,12 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 - **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders
 - **Server Stats** - View CPU, memory, and HDD usage on any SSH server
 - **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support
-- **Modern UI** - Clean interface built with React, Tailwind CSS, and Shadcn
+- **Modern UI** - Clean mobile friendly (in progress) interface built with React, Tailwind CSS, and Shadcn
 - **Languages** - Built-in support for English and Chinese
+- **Improved Platform Support** - Now includes an installable Electron app (in progress) for desktop, with a dedicated mobile app also planned.
 
 # Planned Features
-- **Improved Admin Control** - Give more fine-grained control over user and admin permissions, share hosts, etc
-- **Theming** - Modify theming for all tools
-- **Improved Terminal Support** - Add more terminal protocols such as VNC and RDP (anyone who has experience in integrating RDP into a web-application similar to Apache Guacamole, please contact me by creating an issue)
-- **Mobile Support** - Support a mobile app or version of the Termix website to manage servers from your phone
+See [Projects](https://github.com/users/LukeGus/projects/3). If you are looking to contribute, see [Contributing](https://github.com/LukeGus/Termix/blob/main/CONTRIBUTING.md),
 
 # Installation
 Visit the Termix [Docs](https://docs.termix.site/install) for more information on how to install Termix. Otherwise, view a sample docker-compose file here:
