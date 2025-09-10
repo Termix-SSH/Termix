@@ -8,10 +8,7 @@ import {sshData, sshCredentials} from '../database/db/schema.js';
 import {eq, and} from 'drizzle-orm';
 import { statsLogger } from '../utils/logger.js';
 
-// Rate limiting
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
-const RATE_LIMIT_MAX = 100; // 100 requests per window
+// Rate limiting removed - not needed for internal application
 
 // Connection pooling
 interface PooledConnection {
@@ -271,27 +268,7 @@ type StatusEntry = {
     lastChecked: string;
 };
 
-// Rate limiting middleware
-function rateLimitMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
-    const clientId = req.ip || 'unknown';
-    const now = Date.now();
-    const clientData = requestCounts.get(clientId);
-
-    if (!clientData || now > clientData.resetTime) {
-        requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-        return next();
-    }
-
-    if (clientData.count >= RATE_LIMIT_MAX) {
-        return res.status(429).json({ 
-            error: 'Too many requests', 
-            retryAfter: Math.ceil((clientData.resetTime - now) / 1000) 
-        });
-    }
-
-    clientData.count++;
-    next();
-}
+// Rate limiting middleware removed
 
 // Input validation middleware
 function validateHostId(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -318,7 +295,6 @@ app.use((req, res, next) => {
     next();
 });
 app.use(express.json({ limit: '1mb' })); // Add request size limit
-app.use(rateLimitMiddleware);
 
 
 const hostStatuses: Map<number, StatusEntry> = new Map();

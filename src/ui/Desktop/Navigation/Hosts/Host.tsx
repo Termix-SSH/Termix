@@ -5,7 +5,7 @@ import {ButtonGroup} from "@/components/ui/button-group.tsx";
 import {Server, Terminal} from "lucide-react";
 import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import {getServerStatusById} from "@/ui/main-axios.ts";
-import type { SSHHost, HostProps } from '../../../types/index.js';
+import type { HostProps } from '../../../../types/index.js';
 
 export function Host({host}: HostProps): React.ReactElement {
     const {addTab} = useTabs();
@@ -25,8 +25,18 @@ export function Host({host}: HostProps): React.ReactElement {
                 if (!cancelled) {
                     setServerStatus(res?.status === 'online' ? 'online' : 'offline');
                 }
-            } catch {
-                if (!cancelled) setServerStatus('offline');
+            } catch (error: any) {
+                if (!cancelled) {
+                    if (error?.response?.status === 503) {
+                        setServerStatus('offline');
+                    } else if (error?.response?.status === 504) {
+                        setServerStatus('degraded');
+                    } else if (error?.response?.status === 404) {
+                        setServerStatus('offline');
+                    } else {
+                        setServerStatus('offline');
+                    }
+                }
             }
         };
 

@@ -88,10 +88,23 @@ export function Server({
                 if (!cancelled) {
                     setServerStatus(res?.status === 'online' ? 'online' : 'offline');
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to fetch server status:', error);
                 if (!cancelled) {
-                    setServerStatus('offline');
+                    // Handle different error types from the new backend
+                    if (error?.response?.status === 503) {
+                        // Server is offline
+                        setServerStatus('offline');
+                    } else if (error?.response?.status === 504) {
+                        // Timeout - treat as degraded
+                        setServerStatus('offline');
+                    } else if (error?.response?.status === 404) {
+                        // Host not found
+                        setServerStatus('offline');
+                    } else {
+                        // Other errors - treat as offline
+                        setServerStatus('offline');
+                    }
                     toast.error(t('serverStats.failedToFetchStatus'));
                 }
             }
@@ -190,8 +203,21 @@ export function Server({
                                         setServerStatus(res?.status === 'online' ? 'online' : 'offline');
                                         const data = await getServerMetricsById(currentHostConfig.id);
                                         setMetrics(data);
-                                    } catch {
-                                        setServerStatus('offline');
+                                    } catch (error: any) {
+                                        // Handle different error types from the new backend
+                                        if (error?.response?.status === 503) {
+                                            // Server is offline
+                                            setServerStatus('offline');
+                                        } else if (error?.response?.status === 504) {
+                                            // Timeout - treat as offline
+                                            setServerStatus('offline');
+                                        } else if (error?.response?.status === 404) {
+                                            // Host not found
+                                            setServerStatus('offline');
+                                        } else {
+                                            // Other errors - treat as offline
+                                            setServerStatus('offline');
+                                        }
                                         setMetrics(null);
                                     } finally {
                                         setIsRefreshing(false);
