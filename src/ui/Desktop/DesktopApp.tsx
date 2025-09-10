@@ -127,41 +127,41 @@ function AppContent() {
                     isAdmin={isAdmin}
                     username={username}
                 >
-                    <div
-                        className={`h-screen w-full ${showTerminalView ? "visible pointer-events-auto static overflow-hidden" : "invisible pointer-events-none absolute h-0 w-0"}`}
-                    >
-                        <AppView isTopbarOpen={isTopbarOpen} />
-                    </div>
+                    {showTerminalView && (
+                        <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
+                            <AppView isTopbarOpen={isTopbarOpen} />
+                        </div>
+                    )}
 
-                    <div
-                        className={`h-screen w-full ${showHome ? "visible pointer-events-auto static overflow-hidden" : "invisible pointer-events-none absolute h-0 w-0"}`}
-                    >
-                        <Homepage 
-                            onSelectView={handleSelectView}
-                            isAuthenticated={isAuthenticated}
-                            authLoading={authLoading}
-                            onAuthSuccess={handleAuthSuccess}
-                            isTopbarOpen={isTopbarOpen}
-                        />
-                    </div>
+                    {showHome && (
+                        <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
+                            <Homepage 
+                                onSelectView={handleSelectView}
+                                isAuthenticated={isAuthenticated}
+                                authLoading={authLoading}
+                                onAuthSuccess={handleAuthSuccess}
+                                isTopbarOpen={isTopbarOpen}
+                            />
+                        </div>
+                    )}
 
-                    <div
-                        className={`h-screen w-full ${showSshManager ? "visible pointer-events-auto static overflow-hidden" : "invisible pointer-events-none absolute h-0 w-0"}`}
-                    >
-                        <HostManager onSelectView={handleSelectView} isTopbarOpen={isTopbarOpen} />
-                    </div>
+                    {showSshManager && (
+                        <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
+                            <HostManager onSelectView={handleSelectView} isTopbarOpen={isTopbarOpen} />
+                        </div>
+                    )}
 
-                    <div
-                        className={`h-screen w-full ${showAdmin ? "visible pointer-events-auto static overflow-hidden" : "invisible pointer-events-none absolute h-0 w-0"}`}
-                    >
-                        <AdminSettings isTopbarOpen={isTopbarOpen} />
-                    </div>
+                    {showAdmin && (
+                        <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
+                            <AdminSettings isTopbarOpen={isTopbarOpen} />
+                        </div>
+                    )}
 
-                    <div
-                        className={`h-screen w-full ${showProfile ? "visible pointer-events-auto static overflow-auto" : "invisible pointer-events-none absolute h-0 w-0"}`}
-                    >
-                        <UserProfile isTopbarOpen={isTopbarOpen} />
-                    </div>
+                    {showProfile && (
+                        <div className="h-screen w-full visible pointer-events-auto static overflow-auto">
+                            <UserProfile isTopbarOpen={isTopbarOpen} />
+                        </div>
+                    )}
 
                     <TopNavbar isTopbarOpen={isTopbarOpen} setIsTopbarOpen={setIsTopbarOpen}/>
                 </LeftSidebar>

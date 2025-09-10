@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentialsViewer": "凭证查看器",
     "credentialsManager": "凭据管理器",
     "manageYourSSHCredentials": "安全管理您的SSH凭据",
     "addCredential": "添加凭据",
