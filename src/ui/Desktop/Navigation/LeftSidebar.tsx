@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/sheet.tsx";
 import {Checkbox} from "@/components/ui/checkbox.tsx";
 import {Input} from "@/components/ui/input.tsx";
+import {PasswordInput} from "@/components/ui/password-input.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Alert, AlertTitle, AlertDescription} from "@/components/ui/alert.tsx";
@@ -316,7 +317,7 @@ export function LeftSidebar({
                     <Separator className="p-0.25"/>
                     <SidebarContent>
                         <SidebarGroup className="!m-0 !p-0 !-mb-2">
-                            <Button className="m-2 flex flex-row font-semibold border-2 !border-[#303032]" variant="outline"
+                            <Button className="m-2 flex flex-row font-semibold border-2 !border-dark-border" variant="outline"
                                     onClick={openSshManagerTab} disabled={!!sshManagerTab || isSplitScreenActive}
                                     title={sshManagerTab ? t('interface.sshManagerAlreadyOpen') : isSplitScreenActive ? t('interface.disabledDuringSplitScreen') : undefined}>
                                 <HardDrive strokeWidth="2.5"/>
@@ -325,12 +326,12 @@ export function LeftSidebar({
                         </SidebarGroup>
                         <Separator className="p-0.25"/>
                         <SidebarGroup className="flex flex-col gap-y-2 !-mt-2">
-                            <div className="!bg-[#222225] rounded-lg">
+                            <div className="!bg-dark-bg-input rounded-lg">
                                 <Input
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     placeholder={t('placeholders.searchHostsAny')}
-                                    className="w-full h-8 text-sm border-2 !bg-[#222225] border-[#303032] rounded-md"
+                                    className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md"
                                     autoComplete="off"
                                 />
                             </div>
@@ -371,7 +372,6 @@ export function LeftSidebar({
                                     <DropdownMenuTrigger asChild>
                                         <SidebarMenuButton
                                             className="data-[state=open]:opacity-90 w-full"
-                                            style={{width: '100%'}}
                                             disabled={disabled}
                                         >
                                             <User2/> {username ? username : t('common.logout')}
@@ -437,40 +437,28 @@ export function LeftSidebar({
             {!isSidebarOpen && (
                 <div
                     onClick={() => setIsSidebarOpen(true)}
-                    className="absolute top-0 left-0 w-[10px] h-full bg-[#18181b] cursor-pointer z-20 flex items-center justify-center rounded-tr-md rounded-br-md">
+                    className="absolute top-0 left-0 w-[10px] h-full bg-dark-bg cursor-pointer z-20 flex items-center justify-center rounded-tr-md rounded-br-md">
                     <ChevronRight size={10}/>
                 </div>
             )}
 
             {deleteAccountOpen && (
                 <div
-                    className="fixed inset-0 z-[999999] flex"
+                    className="fixed top-0 left-0 right-0 bottom-0 z-[999999] pointer-events-auto isolate"
                     style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 999999,
-                        pointerEvents: 'auto',
-                        isolation: 'isolate',
                         transform: 'translateZ(0)',
                         willChange: 'z-index'
                     }}
                 >
                     <div
-                        className="w-[400px] h-full bg-[#18181b] border-r-2 border-[#303032] flex flex-col shadow-2xl"
+                        className="w-[400px] h-full bg-dark-bg border-r-2 border-dark-border flex flex-col shadow-2xl relative isolate z-[9999999]"
                         style={{
-                            backgroundColor: '#18181b',
                             boxShadow: '4px 0 20px rgba(0, 0, 0, 0.5)',
-                            zIndex: 9999999,
-                            position: 'relative',
-                            isolation: 'isolate',
                             transform: 'translateZ(0)'
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between p-4 border-b border-[#303032]">
+                        <div className="flex items-center justify-between p-4 border-b border-dark-border">
                             <h2 className="text-lg font-semibold text-white">{t('leftSidebar.deleteAccount')}</h2>
                             <Button
                                 variant="outline"
@@ -510,9 +498,8 @@ export function LeftSidebar({
                                 <form onSubmit={handleDeleteAccount} className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="delete-password">{t('leftSidebar.confirmPassword')}</Label>
-                                        <Input
+                                        <PasswordInput
                                             id="delete-password"
-                                            type="password"
                                             value={deletePassword}
                                             onChange={(e) => setDeletePassword(e.target.value)}
                                             placeholder={t('placeholders.confirmPassword')}
@@ -553,7 +540,7 @@ export function LeftSidebar({
                             setDeletePassword("");
                             setDeleteError(null);
                         }}
-                        style={{cursor: 'pointer'}}
+                        className="cursor-pointer"
                     />
                 </div>
             )}

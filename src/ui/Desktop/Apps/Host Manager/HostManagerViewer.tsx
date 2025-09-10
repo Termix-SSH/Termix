@@ -568,7 +568,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                     type="file"
                     accept=".json"
                     onChange={handleJsonImport}
-                    style={{display: 'none'}}
+                    className="hidden"
                 />
 
                 <div className="flex items-center justify-center flex-1">
@@ -722,7 +722,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                 type="file"
                 accept=".json"
                 onChange={handleJsonImport}
-                style={{display: 'none'}}
+                className="hidden"
             />
 
             <div className="relative mb-3">
@@ -837,7 +837,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                                 draggable
                                                                 onDragStart={(e) => handleDragStart(e, host)}
                                                                 onDragEnd={handleDragEnd}
-                                                                className={`bg-[#222225] border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-blue-400/50 hover:bg-[#2a2a2d] transition-all duration-200 p-3 group relative ${
+                                                                className={`bg-dark-bg-input border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-blue-400/50 hover:bg-dark-hover-alt transition-all duration-200 p-3 group relative ${
                                                                     draggedHost?.id === host.id ? 'opacity-50 scale-95' : ''
                                                                 }`}
                                                                 onClick={() => handleEdit(host)}

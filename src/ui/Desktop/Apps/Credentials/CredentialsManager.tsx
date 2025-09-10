@@ -438,7 +438,7 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                                                                 draggable
                                                                 onDragStart={(e) => handleDragStart(e, credential)}
                                                                 onDragEnd={handleDragEnd}
-                                                                className={`bg-[#222225] border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-blue-400/50 hover:bg-[#2a2a2d] transition-all duration-200 p-3 group relative ${
+                                                                className={`bg-dark-bg-input border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-blue-400/50 hover:bg-dark-hover-alt transition-all duration-200 p-3 group relative ${
                                                                     draggedCredential?.id === credential.id ? 'opacity-50 scale-95' : ''
                                                                 }`}
                                                                 onClick={() => handleEdit(credential)}

@@ -5,6 +5,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
 import {Checkbox} from "@/components/ui/checkbox.tsx";
 import {Input} from "@/components/ui/input.tsx";
+import {PasswordInput} from "@/components/ui/password-input.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import {
@@ -219,7 +220,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
 
     return (
         <div style={wrapperStyle}
-             className="bg-[#18181b] text-white rounded-lg border-2 border-[#303032] overflow-hidden">
+             className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
             <div className="h-full w-full flex flex-col">
                 <div className="flex items-center justify-between px-3 pt-2 pb-2">
                     <h1 className="font-bold text-lg">{t('admin.title')}</h1>
@@ -228,7 +229,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
 
                 <div className="px-6 py-4 overflow-auto">
                     <Tabs defaultValue="registration" className="w-full">
-                        <TabsList className="mb-4 bg-[#18181b] border-2 border-[#303032]">
+                        <TabsList className="mb-4 bg-dark-bg border-2 border-dark-border">
                             <TabsTrigger value="registration" className="flex items-center gap-2">
                                 <Users className="h-4 w-4"/>
                                 {t('admin.general')}
@@ -279,7 +280,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="client_secret">{t('admin.clientSecret')}</Label>
-                                        <Input id="client_secret" type="password" value={oidcConfig.client_secret}
+                                        <PasswordInput id="client_secret" value={oidcConfig.client_secret}
                                                onChange={(e) => handleOIDCConfigChange('client_secret', e.target.value)}
                                                placeholder={t('placeholders.clientSecret')} required/>
                                     </div>

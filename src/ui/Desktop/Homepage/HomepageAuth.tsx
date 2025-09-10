@@ -3,6 +3,7 @@ import {Eye, EyeOff} from "lucide-react";
 import {cn} from "@/lib/utils.ts";
 import {Button} from "@/components/ui/button.tsx";
 import {Input} from "@/components/ui/input.tsx";
+import {PasswordInput} from "@/components/ui/password-input.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Alert, AlertTitle, AlertDescription} from "@/components/ui/alert.tsx";
 import {useTranslation} from "react-i18next";
@@ -411,7 +412,7 @@ export function HomepageAuth({
 
     return (
         <div
-            className={`w-[420px] max-w-full p-6 flex flex-col bg-[#18181b] border-2 border-[#303032] rounded-md ${className || ''}`}
+            className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ''}`}
             {...props}
         >
             {dbError && (
@@ -686,51 +687,27 @@ export function HomepageAuth({
                                             <div className="flex flex-col gap-5">
                                                 <div className="flex flex-col gap-2">
                                             <Label htmlFor="new-password">{t('auth.newPassword')}</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="new-password"
-                                                    type={visibility.resetNew ? "text" : "password"}
-                                                    required
-                                                    className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200 pr-10"
-                                                    value={newPassword}
-                                                    onChange={e => setNewPassword(e.target.value)}
-                                                    disabled={resetLoading}
-                                                    autoComplete="new-password"
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => toggleVisibility('resetNew')}
-                                                    className="absolute right-0 top-0 h-full px-3 py-2"
-                                                >
-                                                    {visibility.resetNew ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                                                </Button>
-                                            </div>
+                                            <PasswordInput
+                                                id="new-password"
+                                                required
+                                                className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
+                                                value={newPassword}
+                                                onChange={e => setNewPassword(e.target.value)}
+                                                disabled={resetLoading}
+                                                autoComplete="new-password"
+                                            />
                                         </div>
                                                                                         <div className="flex flex-col gap-2">
                                             <Label htmlFor="confirm-password">{t('auth.confirmNewPassword')}</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="confirm-password"
-                                                    type={visibility.resetConfirm ? "text" : "password"}
-                                                    required
-                                                    className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200 pr-10"
-                                                    value={confirmPassword}
-                                                    onChange={e => setConfirmPassword(e.target.value)}
-                                                    disabled={resetLoading}
-                                                    autoComplete="new-password"
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => toggleVisibility('resetConfirm')}
-                                                    className="absolute right-0 top-0 h-full px-3 py-2"
-                                                >
-                                                    {visibility.resetConfirm ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                                                </Button>
-                                            </div>
+                                            <PasswordInput
+                                                id="confirm-password"
+                                                required
+                                                className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
+                                                value={confirmPassword}
+                                                onChange={e => setConfirmPassword(e.target.value)}
+                                                disabled={resetLoading}
+                                                autoComplete="new-password"
+                                            />
                                         </div>
                                                 <Button
                                                     type="button"
@@ -775,48 +752,24 @@ export function HomepageAuth({
                             </div>
                             <div className="flex flex-col gap-2">
                             <Label htmlFor="password">{t('common.password')}</Label>
-                            <div className="relative">
-                                <Input
-                                    id="password"
-                                    type={visibility.password ? "text" : "password"}
-                                    required
-                                    className="h-11 text-base pr-10"
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    disabled={loading || internalLoggedIn}/>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => toggleVisibility('password')}
-                                    className="absolute right-0 top-0 h-full px-3 py-2"
-                                >
-                                    {visibility.password ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                                </Button>
-                            </div>
+                            <PasswordInput
+                                id="password"
+                                required
+                                className="h-11 text-base"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                disabled={loading || internalLoggedIn}/>
                         </div>
                                                     {tab === "signup" && (
                                                         <div className="flex flex-col gap-2">
                             <Label htmlFor="signup-confirm-password">{t('common.confirmPassword')}</Label>
-                            <div className="relative">
-                                <Input
-                                    id="signup-confirm-password"
-                                    type={visibility.signupConfirm ? "text" : "password"}
-                                    required
-                                    className="h-11 text-base pr-10"
-                                    value={signupConfirmPassword}
-                                    onChange={e => setSignupConfirmPassword(e.target.value)}
-                                    disabled={loading || internalLoggedIn}/>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => toggleVisibility('signupConfirm')}
-                                    className="absolute right-0 top-0 h-full px-3 py-2"
-                                >
-                                    {visibility.signupConfirm ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                                </Button>
-                            </div>
+                            <PasswordInput
+                                id="signup-confirm-password"
+                                required
+                                className="h-11 text-base"
+                                value={signupConfirmPassword}
+                                onChange={e => setSignupConfirmPassword(e.target.value)}
+                                disabled={loading || internalLoggedIn}/>
                         </div>
                             )}
                             <Button type="submit" className="w-full h-11 mt-2 text-base font-semibold"
@@ -839,7 +792,7 @@ export function HomepageAuth({
                         </form>
                     )}
                     
-                    <div className="mt-6 pt-4 border-t border-[#303032]">
+                    <div className="mt-6 pt-4 border-t border-dark-border">
                         <div className="flex items-center justify-between">
                             <div>
                                 <Label className="text-sm text-muted-foreground">{t('common.language')}</Label>

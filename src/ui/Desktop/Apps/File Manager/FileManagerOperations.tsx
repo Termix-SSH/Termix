@@ -301,7 +301,7 @@ export function FileManagerOperations({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowUpload(true)}
-                    className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30]"
+                    className="h-10 bg-dark-bg border-2 border-dark-border hover:border-dark-border-hover hover:bg-dark-hover"
                     title={t('fileManager.uploadFile')}
                 >
                     <Upload className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
@@ -311,7 +311,7 @@ export function FileManagerOperations({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowCreateFile(true)}
-                    className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30]"
+                    className="h-10 bg-dark-bg border-2 border-dark-border hover:border-dark-border-hover hover:bg-dark-hover"
                     title={t('fileManager.newFile')}
                 >
                     <FilePlus className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
@@ -321,7 +321,7 @@ export function FileManagerOperations({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowCreateFolder(true)}
-                    className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30]"
+                    className="h-10 bg-dark-bg border-2 border-dark-border hover:border-dark-border-hover hover:bg-dark-hover"
                     title={t('fileManager.newFolder')}
                 >
                     <FolderPlus className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
@@ -331,7 +331,7 @@ export function FileManagerOperations({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowRename(true)}
-                    className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30]"
+                    className="h-10 bg-dark-bg border-2 border-dark-border hover:border-dark-border-hover hover:bg-dark-hover"
                     title={t('fileManager.rename')}
                 >
                     <Edit3 className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
@@ -341,7 +341,7 @@ export function FileManagerOperations({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowDelete(true)}
-                    className="h-10 bg-[#18181b] border-2 border-[#303032] hover:border-[#434345] hover:bg-[#2d2d30] col-span-2"
+                    className="h-10 bg-dark-bg border-2 border-dark-border hover:border-dark-border-hover hover:bg-dark-hover col-span-2"
                     title={t('fileManager.deleteItem')}
                 >
                     <Trash2 className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")}/>
@@ -349,7 +349,7 @@ export function FileManagerOperations({
                 </Button>
             </div>
 
-            <div className="bg-[#141416] border-2 border-[#373739] rounded-md p-3">
+            <div className="bg-dark-bg-light border-2 border-dark-border-medium rounded-md p-3">
                 <div className="flex items-start gap-2 text-sm">
                     <Folder className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5"/>
                     <div className="flex-1 min-w-0">
@@ -359,10 +359,10 @@ export function FileManagerOperations({
                 </div>
             </div>
 
-            <Separator className="p-0.25 bg-[#303032]"/>
+            <Separator className="p-0.25 bg-dark-border"/>
 
             {showUpload && (
-                <Card className="bg-[#18181b] border-2 border-[#303032] p-3 sm:p-4">
+                <Card className="bg-dark-bg border-2 border-dark-border p-3 sm:p-4">
                     <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2 mb-1">
@@ -384,7 +384,7 @@ export function FileManagerOperations({
                     </div>
 
                     <div className="space-y-3">
-                        <div className="border-2 border-dashed border-[#434345] rounded-lg p-4 text-center">
+                        <div className="border-2 border-dashed border-dark-border-hover rounded-lg p-4 text-center">
                             {uploadFile ? (
                                 <div className="space-y-3">
                                     <FileText className="w-12 h-12 text-blue-400 mx-auto"/>
@@ -447,7 +447,7 @@ export function FileManagerOperations({
             )}
 
             {showCreateFile && (
-                <Card className="bg-[#18181b] border-2 border-[#303032] p-3 sm:p-4">
+                <Card className="bg-dark-bg border-2 border-dark-border p-3 sm:p-4">
                     <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
@@ -474,7 +474,7 @@ export function FileManagerOperations({
                                 value={newFileName}
                                 onChange={(e) => setNewFileName(e.target.value)}
                                 placeholder={t('placeholders.fileName')}
-                                className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
+                                className="bg-dark-bg-button border-2 border-dark-border-hover text-white text-sm"
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreateFile()}
                             />
                         </div>
@@ -501,7 +501,7 @@ export function FileManagerOperations({
             )}
 
             {showCreateFolder && (
-                <Card className="bg-[#18181b] border-2 border-[#303032] p-3">
+                <Card className="bg-dark-bg border-2 border-dark-border p-3">
                     <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base font-semibold text-white flex items-center gap-2">
@@ -528,7 +528,7 @@ export function FileManagerOperations({
                                 value={newFolderName}
                                 onChange={(e) => setNewFolderName(e.target.value)}
                                 placeholder={t('placeholders.folderName')}
-                                className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
+                                className="bg-dark-bg-button border-2 border-dark-border-hover text-white text-sm"
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
                             />
                         </div>
@@ -555,7 +555,7 @@ export function FileManagerOperations({
             )}
 
             {showDelete && (
-                <Card className="bg-[#18181b] border-2 border-[#303032] p-3">
+                <Card className="bg-dark-bg border-2 border-dark-border p-3">
                     <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base font-semibold text-white flex items-center gap-2">
@@ -589,7 +589,7 @@ export function FileManagerOperations({
                                 value={deletePath}
                                 onChange={(e) => setDeletePath(e.target.value)}
                                 placeholder={t('placeholders.fullPath')}
-                                className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
+                                className="bg-dark-bg-button border-2 border-dark-border-hover text-white text-sm"
                             />
                         </div>
 
@@ -599,7 +599,7 @@ export function FileManagerOperations({
                                 id="deleteIsDirectory"
                                 checked={deleteIsDirectory}
                                 onChange={(e) => setDeleteIsDirectory(e.target.checked)}
-                                className="rounded border-[#434345] bg-[#23232a] mt-0.5 flex-shrink-0"
+                                className="rounded border-dark-border-hover bg-dark-bg-button mt-0.5 flex-shrink-0"
                             />
                             <label htmlFor="deleteIsDirectory" className="text-sm text-white break-words">
                                 {t('fileManager.thisIsDirectory')}
@@ -629,7 +629,7 @@ export function FileManagerOperations({
             )}
 
             {showRename && (
-                <Card className="bg-[#18181b] border-2 border-[#303032] p-3">
+                <Card className="bg-dark-bg border-2 border-dark-border p-3">
                     <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
                             <h3 className="text-base font-semibold text-white flex items-center gap-2">
@@ -656,7 +656,7 @@ export function FileManagerOperations({
                                 value={renamePath}
                                 onChange={(e) => setRenamePath(e.target.value)}
                                 placeholder={t('placeholders.currentPath')}
-                                className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
+                                className="bg-dark-bg-button border-2 border-dark-border-hover text-white text-sm"
                             />
                         </div>
 
@@ -668,7 +668,7 @@ export function FileManagerOperations({
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                                 placeholder={t('placeholders.newName')}
-                                className="bg-[#23232a] border-2 border-[#434345] text-white text-sm"
+                                className="bg-dark-bg-button border-2 border-dark-border-hover text-white text-sm"
                                 onKeyDown={(e) => e.key === 'Enter' && handleRename()}
                             />
                         </div>
@@ -679,7 +679,7 @@ export function FileManagerOperations({
                                 id="renameIsDirectory"
                                 checked={renameIsDirectory}
                                 onChange={(e) => setRenameIsDirectory(e.target.checked)}
-                                className="rounded border-[#434345] bg-[#23232a] mt-0.5 flex-shrink-0"
+                                className="rounded border-dark-border-hover bg-dark-bg-button mt-0.5 flex-shrink-0"
                             />
                             <label htmlFor="renameIsDirectory" className="text-sm text-white break-words">
                                 {t('fileManager.thisIsDirectoryRename')}

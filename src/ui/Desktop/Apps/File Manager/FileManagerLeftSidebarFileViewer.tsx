@@ -66,7 +66,7 @@ export function FileManagerLeftSidebarFileViewer({
     
     return (
         <div className="flex flex-col h-full">
-            <div className="flex-1 bg-[#09090b] p-2 overflow-y-auto">
+            <div className="flex-1 bg-dark-bg-darkest p-2 overflow-y-auto">
                 <div className="mb-2 flex items-center gap-2">
                     <span
                         className="text-xs text-muted-foreground font-semibold">{isSSHMode ? t('common.sshPath') : t('common.localPath')}</span>
@@ -80,7 +80,7 @@ export function FileManagerLeftSidebarFileViewer({
                     <div className="flex flex-col gap-1">
                         {files.map((item) => (
                             <Card key={item.path}
-                                  className="flex items-center gap-2 px-2 py-1 bg-[#18181b] border-2 border-[#303032] rounded">
+                                  className="flex items-center gap-2 px-2 py-1 bg-dark-bg border-2 border-dark-border rounded">
                                 <div className="flex items-center gap-2 flex-1 cursor-pointer"
                                      onClick={() => item.type === 'directory' ? onOpenFolder(item) : onOpenFile(item)}>
                                     {item.type === 'directory' ? <Folder className="w-4 h-4 text-blue-400"/> :

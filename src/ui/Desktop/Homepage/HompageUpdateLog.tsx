@@ -90,14 +90,14 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
     };
 
     return (
-        <div className="w-[400px] h-[600px] flex flex-col border-2 border-[#303032] rounded-lg bg-[#18181b] p-4 shadow-lg">
+        <div className="w-[400px] h-[600px] flex flex-col border-2 border-dark-border rounded-lg bg-dark-bg p-4 shadow-lg">
             <div>
                 <h3 className="text-lg font-bold mb-3 text-white">{t('common.updatesAndReleases')}</h3>
 
-                <Separator className="p-0.25 mt-3 mb-3 bg-[#303032]"/>
+                <Separator className="p-0.25 mt-3 mb-3 bg-dark-border"/>
 
                 {versionInfo && versionInfo.status === 'requires_update' && (
-                    <Alert className="bg-[#0e0e10] border-[#303032] text-white">
+                    <Alert className="bg-dark-bg-darker border-dark-border text-white">
                         <AlertTitle className="text-white">{t('common.updateAvailable')}</AlertTitle>
                         <AlertDescription className="text-gray-300">
                             {t('common.newVersionAvailable', { version: versionInfo.version })}
@@ -107,7 +107,7 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
             </div>
 
             {versionInfo && versionInfo.status === 'requires_update' && (
-                <Separator className="p-0.25 mt-3 mb-3 bg-[#303032]"/>
+                <Separator className="p-0.25 mt-3 mb-3 bg-dark-border"/>
             )}
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-2">
@@ -127,7 +127,7 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
                 {releases?.items.map((release) => (
                     <div
                         key={release.id}
-                        className="border border-[#303032] rounded-lg p-3 hover:bg-[#0e0e10] transition-colors cursor-pointer bg-[#0e0e10]/50"
+                        className="border border-dark-border rounded-lg p-3 hover:bg-dark-bg-darker transition-colors cursor-pointer bg-dark-bg-darker/50"
                         onClick={() => window.open(release.link, '_blank')}
                     >
                         <div className="flex items-start justify-between mb-2">
@@ -159,7 +159,7 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
                 ))}
 
                 {releases && releases.items.length === 0 && !loading && (
-                    <Alert className="bg-[#0e0e10] border-[#303032] text-gray-300">
+                    <Alert className="bg-dark-bg-darker border-dark-border text-gray-300">
                         <AlertTitle className="text-gray-300">{t('common.noReleases')}</AlertTitle>
                         <AlertDescription className="text-gray-400">
                             {t('common.noReleasesFound')}

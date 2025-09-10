@@ -43,7 +43,7 @@ export function Tab({
         return (
             <Button
                 variant="outline"
-                className={`!px-2 border-1 border-[#303032] ${isActive ? '!bg-[#1d1d1f] !text-white !border-[#2d2d30]' : ''}`}
+                className={`!px-2 border-1 border-dark-border ${isActive ? '!bg-dark-bg-active !text-white !border-dark-border-active' : ''}`}
                 onClick={onActivate}
                 disabled={disableActivate}
             >
@@ -59,7 +59,7 @@ export function Tab({
             <ButtonGroup>
                 <Button
                     variant="outline"
-                    className={`!px-2 border-1 border-[#303032] ${isActive ? '!bg-[#1d1d1f] !text-white !border-[#2d2d30]' : ''}`}
+                    className={`!px-2 border-1 border-dark-border ${isActive ? '!bg-dark-bg-active !text-white !border-dark-border-active' : ''}`}
                     onClick={onActivate}
                     disabled={disableActivate}
                 >
@@ -70,7 +70,7 @@ export function Tab({
                 {canSplit && (
                     <Button
                         variant="outline"
-                        className="!px-2 border-1 border-[#303032]"
+                        className="!px-2 border-1 border-dark-border"
                         onClick={onSplit}
                         disabled={disableSplit}
                         title={disableSplit ? t('nav.cannotSplitTab') : t('nav.splitScreen')}
@@ -81,7 +81,7 @@ export function Tab({
                 {canClose && (
                     <Button
                         variant="outline"
-                        className="!px-2 border-1 border-[#303032]"
+                        className="!px-2 border-1 border-dark-border"
                         onClick={onClose}
                         disabled={disableClose}
                     >
@@ -97,7 +97,7 @@ export function Tab({
             <ButtonGroup>
                 <Button
                     variant="outline"
-                    className={`!px-2 border-1 border-[#303032] ${isActive ? '!bg-[#1d1d1f] !text-white !border-[#2d2d30]' : ''}`}
+                    className={`!px-2 border-1 border-dark-border ${isActive ? '!bg-dark-bg-active !text-white !border-dark-border-active' : ''}`}
                     onClick={onActivate}
                     disabled={disableActivate}
                 >
@@ -105,7 +105,7 @@ export function Tab({
                 </Button>
                 <Button
                     variant="outline"
-                    className="!px-2 border-1 border-[#303032]"
+                    className="!px-2 border-1 border-dark-border"
                     onClick={onClose}
                     disabled={disableClose}
                 >
@@ -120,7 +120,7 @@ export function Tab({
             <ButtonGroup>
                 <Button
                     variant="outline"
-                    className={`!px-2 border-1 border-[#303032] ${isActive ? '!bg-[#1d1d1f] !text-white !border-[#2d2d30]' : ''}`}
+                    className={`!px-2 border-1 border-dark-border ${isActive ? '!bg-dark-bg-active !text-white !border-dark-border-active' : ''}`}
                     onClick={onActivate}
                     disabled={disableActivate}
                 >
@@ -128,7 +128,7 @@ export function Tab({
                 </Button>
                 <Button
                     variant="outline"
-                    className="!px-2 border-1 border-[#303032]"
+                    className="!px-2 border-1 border-dark-border"
                     onClick={onClose}
                     disabled={disableClose}
                 >

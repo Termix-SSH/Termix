@@ -28,10 +28,11 @@ import {
 } from '@/ui/main-axios.ts';
 import type { SSHHost, Tab, FileManagerProps } from '../../../types/index.js';
 
-export function FileManager({onSelectView, embedded = false, initialHost = null}: {
+export function FileManager({onSelectView, embedded = false, initialHost = null, onClose}: {
     onSelectView?: (view: string) => void,
     embedded?: boolean,
-    initialHost?: SSHHost | null
+    initialHost?: SSHHost | null,
+    onClose?: () => void
 }): React.ReactElement {
     const {t} = useTranslation();
     const [tabs, setTabs] = useState<Tab[]>([]);
@@ -74,12 +75,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
             setShortcuts([]);
         }
     }, [currentHost]);
-
-    useEffect(() => {
-        if (activeTab === 'home' && currentHost) {
-            fetchHomeData();
-        }
-    }, [activeTab, currentHost]);
 
     useEffect(() => {
         if (activeTab === 'home' && currentHost) {
@@ -130,6 +125,10 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
             console.error('Failed to fetch home data:', err);
             const {toast} = await import('sonner');
             toast.error(t('fileManager.failedToFetchHomeData'));
+            // Close the file manager tab on connection failure
+            if (onClose) {
+                onClose();
+            }
         }
     }
 
@@ -185,7 +184,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                     sshSessionId: currentSshSessionId,
                     hostId: currentHost?.id
                 });
-                fetchHomeData();
             } catch (err: any) {
                 const errorMessage = formatErrorMessage(err, t('fileManager.cannotReadFile'));
                 toast.error(errorMessage);
@@ -218,7 +216,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                 sshSessionId: file.sshSessionId,
                 hostId: currentHost?.id
             });
-            fetchHomeData();
             if (sidebarRef.current && sidebarRef.current.fetchFiles) {
                 sidebarRef.current.fetchFiles();
             }
@@ -235,7 +232,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                 sshSessionId: file.sshSessionId,
                 hostId: currentHost?.id
             });
-            fetchHomeData();
             if (sidebarRef.current && sidebarRef.current.fetchFiles) {
                 sidebarRef.current.fetchFiles();
             }
@@ -275,7 +271,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                 sshSessionId: currentHost?.id.toString(),
                 hostId: currentHost?.id
             });
-            fetchHomeData();
         } catch (err) {
         }
     };
@@ -289,7 +284,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                 sshSessionId: currentHost?.id.toString(),
                 hostId: currentHost?.id
             });
-            fetchHomeData();
         } catch (err) {
         }
     };
@@ -301,9 +295,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
         if (activeTab === tabId) {
             if (newTabs.length > 0) setActiveTab(newTabs[Math.max(0, idx - 1)].id);
             else setActiveTab('home');
-        }
-        if (currentHost) {
-            fetchHomeData();
         }
     };
 
@@ -401,13 +392,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                         console.error('Failed to add recent file:', recentErr);
                     }
                 })(),
-                (async () => {
-                    try {
-                        await fetchHomeData();
-                    } catch (refreshErr) {
-                        console.error('Failed to refresh home data:', refreshErr);
-                    }
-                })()
             ]).then(() => {
             });
 
@@ -434,9 +418,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
     const handleOperationComplete = () => {
         if (sidebarRef.current && sidebarRef.current.fetchFiles) {
             sidebarRef.current.fetchFiles();
-        }
-        if (currentHost) {
-            fetchHomeData();
         }
     };
 
@@ -479,8 +460,8 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
 
     if (!currentHost) {
         return (
-            <div style={{position: 'absolute', inset: 0, overflow: 'hidden'}} className="rounded-md">
-                <div style={{position: 'absolute', top: 0, left: 0, width: 256, height: '100%', zIndex: 20}}>
+            <div className="absolute inset-0 overflow-hidden rounded-md">
+                <div className="absolute top-0 left-0 w-64 h-full z-[20]">
                     <FileManagerLeftSidebar
                         onSelectView={onSelectView || (() => {
                         })}
@@ -494,17 +475,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                         onPathChange={updateCurrentPath}
                     />
                 </div>
-                <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 256,
-                    right: 0,
-                    bottom: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#09090b'
-                }}>
+                <div className="absolute top-0 left-64 right-0 bottom-0 flex items-center justify-center bg-dark-bg-darkest">
                     <div className="text-center">
                         <h2 className="text-xl font-semibold text-white mb-2">{t('fileManager.connectToServer')}</h2>
                         <p className="text-muted-foreground">{t('fileManager.selectServerToEdit')}</p>
@@ -515,8 +486,8 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
     }
 
     return (
-        <div style={{position: 'absolute', inset: 0, overflow: 'hidden'}} className="rounded-md">
-            <div style={{position: 'absolute', top: 0, left: 0, width: 256, height: '100%', zIndex: 20}}>
+        <div className="absolute inset-0 overflow-hidden rounded-md">
+            <div className="absolute top-0 left-0 w-64 h-full z-[20]">
                 <FileManagerLeftSidebar
                     onSelectView={onSelectView || (() => {
                     })}
@@ -531,10 +502,10 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                     onDeleteItem={handleDeleteFromSidebar}
                 />
             </div>
-            <div style={{position: 'absolute', top: 0, left: 256, right: 0, height: 50, zIndex: 30}}>
-                <div className="flex items-center w-full bg-[#18181b] border-b-2 border-[#303032] h-[50px] relative">
+            <div className="absolute top-0 left-64 right-0 h-[50px] z-[30]">
+                <div className="flex items-center w-full bg-dark-bg border-b-2 border-dark-border h-[50px] relative">
                     <div
-                        className="h-full p-1 pr-2 border-r-2 border-[#303032] w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-2 thin-scrollbar">
+                        className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-2 thin-scrollbar">
                         <FIleManagerTopNavbar
                             tabs={tabs.map(t => ({id: t.id, title: t.title}))}
                             activeTab={activeTab}
@@ -542,9 +513,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                             closeTab={closeTab}
                             onHomeClick={() => {
                                 setActiveTab('home');
-                                if (currentHost) {
-                                    fetchHomeData();
-                                }
                             }}
                         />
                     </div>
@@ -554,13 +522,13 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                             onClick={() => setShowOperations(!showOperations)}
                             className={cn(
                                 'w-[30px] h-[30px]',
-                                showOperations ? 'bg-[#2d2d30] border-[#434345]' : ''
+                                showOperations ? 'bg-dark-hover border-dark-border-hover' : ''
                             )}
                             title={t('fileManager.fileOperations')}
                         >
                             <Settings className="h-4 w-4"/>
                         </Button>
-                        <div className="p-0.25 w-px h-[30px] bg-[#303032]"></div>
+                        <div className="p-0.25 w-px h-[30px] bg-dark-border"></div>
                         <Button
                             variant="outline"
                             onClick={() => {
@@ -578,18 +546,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                     </div>
                 </div>
             </div>
-            <div style={{
-                position: 'absolute',
-                top: 44,
-                left: 256,
-                right: 0,
-                bottom: 0,
-                overflow: 'hidden',
-                zIndex: 10,
-                background: '#101014',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
+            <div className="absolute top-[44px] left-64 right-0 bottom-0 overflow-hidden z-[10] bg-dark-bg-very-light flex flex-col">
                 <div className="flex h-full">
                     <div className="flex-1">
                         {activeTab === 'home' ? (
@@ -610,7 +567,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                                 const tab = tabs.find(t => t.id === activeTab);
                                 if (!tab) return null;
                                 return (
-                                    <div className="flex flex-col h-full" style={{flex: 1, minHeight: 0}}>
+                                    <div className="flex flex-col h-full flex-1 min-h-0">
                                         <div className="flex-1 min-h-0">
                                             <FileManagerFileEditor
                                                 content={tab.content}
@@ -624,7 +581,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                         )}
                     </div>
                     {showOperations && (
-                        <div className="w-80 border-l-2 border-[#303032] bg-[#09090b] overflow-y-auto">
+                        <div className="w-80 border-l-2 border-dark-border bg-dark-bg-darkest overflow-y-auto">
                             <FileManagerOperations
                                 currentPath={currentPath}
                                 sshSessionId={currentHost?.id.toString() || null}
@@ -642,7 +599,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null}
                     <div className="absolute inset-0 bg-black/60"></div>
 
                     <div className="relative h-full flex items-center justify-center">
-                        <div className="bg-[#18181b] border-2 border-[#303032] rounded-lg p-6 max-w-md mx-4 shadow-2xl">
+                        <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md mx-4 shadow-2xl">
                             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                                 <Trash2 className="w-5 h-5 text-red-400"/>
                                 {t('fileManager.confirmDelete')}

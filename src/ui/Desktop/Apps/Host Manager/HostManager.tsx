@@ -57,7 +57,7 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
         <div>
             <div className="w-full">
                 <div
-                    className="bg-[#18181b] text-white p-4 pt-0 rounded-lg border-2 border-[#303032] flex flex-col min-h-0 overflow-hidden"
+                    className="bg-dark-bg text-white p-4 pt-0 rounded-lg border-2 border-dark-border flex flex-col min-h-0 overflow-hidden"
                     style={{
                         marginLeft: leftMarginPx,
                         marginRight: 17,
@@ -68,12 +68,12 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
                 >
                     <Tabs value={activeTab} onValueChange={handleTabChange}
                           className="flex-1 flex flex-col h-full min-h-0">
-                        <TabsList className="bg-[#18181b] border-2 border-[#303032] mt-1.5">
+                        <TabsList className="bg-dark-bg border-2 border-dark-border mt-1.5">
                             <TabsTrigger value="host_viewer">{t('hosts.hostViewer')}</TabsTrigger>
                             <TabsTrigger value="add_host">
                                 {editingHost ? t('hosts.editHost') : t('hosts.addHost')}
                             </TabsTrigger>
-                            <div className="h-6 w-px bg-[#303032] mx-1"></div>
+                            <div className="h-6 w-px bg-dark-border mx-1"></div>
                             <TabsTrigger value="credentials">{t('credentials.credentialsViewer')}</TabsTrigger>
                             <TabsTrigger value="add_credential">
                                 {editingCredential ? t('credentials.editCredential') : t('credentials.addCredential')}

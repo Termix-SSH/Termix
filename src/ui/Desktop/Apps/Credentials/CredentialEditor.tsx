@@ -13,6 +13,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -390,7 +391,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                 {folderDropdownOpen && filteredFolders.length > 0 && (
                                                     <div
                                                         ref={folderDropdownRef}
-                                                        className="absolute top-full left-0 z-50 mt-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                        className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                     >
                                                         <div className="grid grid-cols-1 gap-1 p-0">
                                                             {filteredFolders.map((folder) => (
@@ -420,7 +421,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                 <FormLabel>{t('credentials.tags')}</FormLabel>
                                                 <FormControl>
                                                     <div
-                                                        className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-[#222225] focus-within:ring-2 ring-ring min-h-[40px]">
+                                                        className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-dark-bg-input focus-within:ring-2 ring-ring min-h-[40px]">
                                                         {(field.value || []).map((tag: string, idx: number) => (
                                                             <span key={`${tag}-${idx}`}
                                                                   className="flex items-center bg-gray-200 text-gray-800 rounded-full px-2 py-0.5 text-xs">
@@ -509,7 +510,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                 <FormItem>
                                                     <FormLabel>{t('credentials.password')}</FormLabel>
                                                     <FormControl>
-                                                        <Input type="password" placeholder={t('placeholders.password')} {...field} />
+                                                        <PasswordInput placeholder={t('placeholders.password')} {...field} />
                                                     </FormControl>
                                                 </FormItem>
                                             )}
@@ -576,9 +577,8 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                             <FormItem className="col-span-8">
                                                                 <FormLabel>{t('credentials.keyPassword')}</FormLabel>
                                                                 <FormControl>
-                                                                    <Input
+                                                                    <PasswordInput
                                                                         placeholder={t('placeholders.keyPassword')}
-                                                                        type="password"
                                                                         {...field}
                                                                     />
                                                                 </FormControl>
@@ -597,7 +597,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                             ref={keyTypeButtonRef}
                                                                             type="button"
                                                                             variant="outline"
-                                                                            className="w-full justify-start text-left rounded-md px-2 py-2 bg-[#18181b] border border-input text-foreground"
+                                                                            className="w-full justify-start text-left rounded-md px-2 py-2 bg-dark-bg border border-input text-foreground"
                                                                             onClick={() => setKeyTypeDropdownOpen((open) => !open)}
                                                                         >
                                                                             {keyTypeOptions.find((opt) => opt.value === field.value)?.label || t('credentials.keyTypeRSA')}
@@ -605,7 +605,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                         {keyTypeDropdownOpen && (
                                                                             <div
                                                                                 ref={keyTypeDropdownRef}
-                                                                                className="absolute bottom-full left-0 z-50 mb-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                                                className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                                             >
                                                                                 <div className="grid grid-cols-1 gap-1 p-0">
                                                                                     {keyTypeOptions.map((opt) => (
@@ -614,7 +614,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                                             type="button"
                                                                                             variant="ghost"
                                                                                             size="sm"
-                                                                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-[#18181b] text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                                                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-dark-bg text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
                                                                                             onClick={() => {
                                                                                                 field.onChange(opt.value);
                                                                                                 setKeyTypeDropdownOpen(false);
@@ -659,9 +659,8 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                             <FormItem className="col-span-8">
                                                                 <FormLabel>{t('credentials.keyPassword')}</FormLabel>
                                                                 <FormControl>
-                                                                    <Input
+                                                                    <PasswordInput
                                                                         placeholder={t('placeholders.keyPassword')}
-                                                                        type="password"
                                                                         {...field}
                                                                     />
                                                                 </FormControl>
@@ -680,7 +679,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                             ref={keyTypeButtonRef}
                                                                             type="button"
                                                                             variant="outline"
-                                                                            className="w-full justify-start text-left rounded-md px-2 py-2 bg-[#18181b] border border-input text-foreground"
+                                                                            className="w-full justify-start text-left rounded-md px-2 py-2 bg-dark-bg border border-input text-foreground"
                                                                             onClick={() => setKeyTypeDropdownOpen((open) => !open)}
                                                                         >
                                                                             {keyTypeOptions.find((opt) => opt.value === field.value)?.label || t('credentials.keyTypeRSA')}
@@ -688,7 +687,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                         {keyTypeDropdownOpen && (
                                                                             <div
                                                                                 ref={keyTypeDropdownRef}
-                                                                                className="absolute bottom-full left-0 z-50 mb-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                                                className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                                             >
                                                                                 <div className="grid grid-cols-1 gap-1 p-0">
                                                                                     {keyTypeOptions.map((opt) => (
@@ -697,7 +696,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                                             type="button"
                                                                                             variant="ghost"
                                                                                             size="sm"
-                                                                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-[#18181b] text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                                                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-dark-bg text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
                                                                                             onClick={() => {
                                                                                                 field.onChange(opt.value);
                                                                                                 setKeyTypeDropdownOpen(false);
@@ -725,12 +724,9 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                     <footer className="shrink-0 w-full pb-0">
                         <Separator className="p-0.25"/>
                         <Button
-                            className=""
+                            className="translate-y-2"
                             type="submit"
                             variant="outline"
-                            style={{
-                                transform: 'translateY(8px)'
-                            }}
                         >
                             {editingCredential ? t('credentials.updateCredential') : t('credentials.addCredential')}
                         </Button>

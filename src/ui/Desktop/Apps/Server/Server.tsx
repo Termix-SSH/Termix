@@ -99,7 +99,9 @@ export function Server({
             if (!currentHostConfig?.id) return;
             try {
                 const data = await getServerMetricsById(currentHostConfig.id);
-                if (!cancelled) setMetrics(data);
+                if (!cancelled) {
+                    setMetrics(data);
+                }
             } catch (error) {
                 console.error('Failed to fetch server metrics:', error);
                 if (!cancelled) {
@@ -151,7 +153,7 @@ export function Server({
 
     const containerClass = embedded
         ? "h-full w-full text-white overflow-hidden bg-transparent"
-        : "bg-[#18181b] text-white rounded-lg border-2 border-[#303032] overflow-hidden";
+        : "bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden";
 
     return (
         <div style={wrapperStyle} className={containerClass}>
@@ -213,7 +215,7 @@ export function Server({
                 <Separator className="p-0.25 w-full"/>
 
                 {/* Stats */}
-                <div className="rounded-lg border-2 border-[#303032] m-3 bg-[#0e0e10] flex flex-row items-stretch">
+                <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker flex flex-row items-stretch">
                     {/* CPU */}
                     <div className="flex-1 min-w-0 px-2 py-2">
                         <h1 className="font-bold xt-lg flex flex-row gap-2 mb-2">
@@ -278,7 +280,7 @@ export function Server({
                 {/* SSH Tunnels */}
                 {(currentHostConfig?.tunnelConnections && currentHostConfig.tunnelConnections.length > 0) && (
                     <div
-                        className="rounded-lg border-2 border-[#303032] m-3 bg-[#0e0e10] h-[360px] overflow-hidden flex flex-col min-h-0">
+                        className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker h-[360px] overflow-hidden flex flex-col min-h-0">
                         <Tunnel
                             filterHostKey={(currentHostConfig?.name && currentHostConfig.name.trim() !== '') ? currentHostConfig.name : `${currentHostConfig?.username}@${currentHostConfig?.ip}`}/>
                     </div>

@@ -304,24 +304,9 @@ export function FileManagerFileEditor({content, fileName, onContentChange}: File
     }, []);
 
     return (
-        <div style={{
-            width: '100%',
-            height: '100%',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-        }}>
+        <div className="w-full h-full relative overflow-hidden flex flex-col">
             <div
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    overflow: 'auto',
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}
-                className="config-codemirror-scroll-wrapper"
+                className="w-full h-full overflow-auto flex-1 flex flex-col config-codemirror-scroll-wrapper"
             >
                 <CodeMirror
                     value={content}
@@ -331,10 +316,10 @@ export function FileManagerFileEditor({content, fileName, onContentChange}: File
                         oneDark,
                         EditorView.theme({
                             '&': {
-                                backgroundColor: '#09090b !important',
+                                backgroundColor: 'var(--color-dark-bg-darkest) !important',
                             },
                             '.cm-gutters': {
-                                backgroundColor: '#18181b !important',
+                                backgroundColor: 'var(--color-dark-bg) !important',
                             },
                         })
                     ]}
@@ -342,7 +327,7 @@ export function FileManagerFileEditor({content, fileName, onContentChange}: File
                     theme={undefined}
                     height="100%"
                     basicSetup={{lineNumbers: true}}
-                    style={{minHeight: '100%', minWidth: '100%', flex: 1}}
+                    className="min-h-full min-w-full flex-1"
                 />
             </div>
         </div>

@@ -21,7 +21,7 @@ export function FileManagerTabList({tabs, activeTab, setActiveTab, closeTab, onH
             <Button
                 onClick={onHomeClick}
                 variant="outline"
-                className={`ml-1 h-8 rounded-md flex items-center !px-2 border-1 border-[#303032] ${activeTab === 'home' ? '!bg-[#1d1d1f] !text-white !border-[#2d2d30] !hover:bg-[#1d1d1f] !active:bg-[#1d1d1f] !focus:bg-[#1d1d1f] !hover:text-white !active:text-white !focus:text-white' : ''}`}
+                className={`ml-1 h-8 rounded-md flex items-center !px-2 border-1 border-dark-border ${activeTab === 'home' ? '!bg-dark-bg-active !text-white !border-dark-border-active !hover:bg-dark-bg-active !active:bg-dark-bg-active !focus:bg-dark-bg-active !hover:text-white !active:text-white !focus:text-white' : ''}`}
             >
                 <Home className="w-4 h-4"/>
             </Button>
@@ -32,7 +32,7 @@ export function FileManagerTabList({tabs, activeTab, setActiveTab, closeTab, onH
                         <Button
                             onClick={() => setActiveTab(tab.id)}
                             variant="outline"
-                            className={`h-8 rounded-r-none !px-2 border-1 border-[#303032] ${isActive ? '!bg-[#1d1d1f] !text-white !border-[#2d2d30] !hover:bg-[#1d1d1f] !active:bg-[#1d1d1f] !focus:bg-[#1d1d1f] !hover:text-white !active:text-white !focus:text-white' : ''}`}
+                            className={`h-8 rounded-r-none !px-2 border-1 border-dark-border ${isActive ? '!bg-dark-bg-active !text-white !border-dark-border-active !hover:bg-dark-bg-active !active:bg-dark-bg-active !focus:bg-dark-bg-active !hover:text-white !active:text-white !focus:text-white' : ''}`}
                         >
                             {tab.title}
                         </Button>
@@ -40,7 +40,7 @@ export function FileManagerTabList({tabs, activeTab, setActiveTab, closeTab, onH
                         <Button
                             onClick={() => closeTab(tab.id)}
                             variant="outline"
-                            className="h-8 rounded-l-none p-0 !w-9 border-1 border-[#303032]"
+                            className="h-8 rounded-l-none p-0 !w-9 border-1 border-dark-border"
                         >
                             <X className="!w-4 !h-4" strokeWidth={2}/>
                         </Button>

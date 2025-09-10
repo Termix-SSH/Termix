@@ -17,7 +17,7 @@ function getCookie(name: string) {
 
 const AppContent: FC = () => {
     const {t} = useTranslation();
-    const {tabs, currentTab, getTab} = useTabs();
+    const {tabs, currentTab, getTab, removeTab} = useTabs();
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
     const [ready, setReady] = React.useState(true);
 
@@ -108,7 +108,7 @@ const AppContent: FC = () => {
 
     if (authLoading) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-[#09090b]">
+            <div className="h-screen w-screen flex items-center justify-center bg-dark-bg-darkest">
                 <p className="text-white">{t('common.loading')}</p>
             </div>
         )
@@ -116,7 +116,7 @@ const AppContent: FC = () => {
 
     if (!isAuthenticated) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-[#18181b] p-4">
+            <div className="h-screen w-screen flex items-center justify-center bg-dark-bg p-4">
                 <HomepageAuth
                     setLoggedIn={setIsAuthenticated}
                     setIsAdmin={setIsAdmin}
@@ -135,21 +135,18 @@ const AppContent: FC = () => {
     }
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-[#09090b] overflow-y-hidden overflow-x-hidden relative">
+        <div className="h-screen w-screen flex flex-col bg-dark-bg-darkest overflow-y-hidden overflow-x-hidden relative">
             <div className="flex-1 min-h-0 relative">
                 {tabs.map(tab => (
                     <div
                         key={tab.id}
-                        className="absolute inset-0 mb-2"
-                        style={{
-                            visibility: tab.id === currentTab ? 'visible' : 'hidden',
-                            opacity: ready ? 1 : 0,
-                        }}
+                        className={`absolute inset-0 mb-2 ${tab.id === currentTab ? 'visible' : 'invisible'} ${ready ? 'opacity-100' : 'opacity-0'}`}
                     >
                         <Terminal
                             ref={tab.terminalRef}
                             hostConfig={tab.hostConfig}
                             isVisible={tab.id === currentTab}
+                            onClose={() => removeTab(tab.id)}
                         />
                     </div>
                 ))}

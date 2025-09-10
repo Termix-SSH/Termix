@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
+import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
@@ -165,9 +166,8 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                             
                             <div className="space-y-2">
                                 <Label htmlFor="disable-password">{t('auth.passwordOrTotpCode')}</Label>
-                                <Input
+                                <PasswordInput
                                     id="disable-password"
-                                    type="password"
                                     placeholder={t('placeholders.enterPassword')}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -199,9 +199,8 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                             
                             <div className="space-y-2">
                                 <Label htmlFor="backup-password">{t('auth.passwordOrTotpCode')}</Label>
-                                <Input
+                                <PasswordInput
                                     id="backup-password"
-                                    type="password"
                                     placeholder={t('placeholders.enterPassword')}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}

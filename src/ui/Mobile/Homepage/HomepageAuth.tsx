@@ -401,7 +401,7 @@ export function HomepageAuth({
 
     return (
         <div
-            className={`w-full max-w-md flex flex-col bg-[#18181b] ${className || ''}`}
+            className={`w-full max-w-md flex flex-col bg-dark-bg ${className || ''}`}
             {...props}
         >
             {dbError && (
@@ -676,9 +676,8 @@ export function HomepageAuth({
                                             <div className="flex flex-col gap-5">
                                                 <div className="flex flex-col gap-2">
                                                     <Label htmlFor="new-password">{t('auth.newPassword')}</Label>
-                                                    <Input
+                                                    <PasswordInput
                                                         id="new-password"
-                                                        type="password"
                                                         required
                                                         className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
                                                         value={newPassword}
@@ -690,9 +689,8 @@ export function HomepageAuth({
                                                 <div className="flex flex-col gap-2">
                                                     <Label
                                                         htmlFor="confirm-password">{t('auth.confirmNewPassword')}</Label>
-                                                    <Input
+                                                    <PasswordInput
                                                         id="confirm-password"
-                                                        type="password"
                                                         required
                                                         className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
                                                         value={confirmPassword}
@@ -744,14 +742,14 @@ export function HomepageAuth({
                             </div>
                             <div className="flex flex-col gap-2">
                                 <Label htmlFor="password">{t('common.password')}</Label>
-                                <PasswordInput id="password" type="password" required className="h-55 text-base"
+                                <PasswordInput id="password" required className="h-55 text-base"
                                        value={password} onChange={e => setPassword(e.target.value)}
                                        disabled={loading || internalLoggedIn}/>
                             </div>
                             {tab === "signup" && (
                                 <div className="flex flex-col gap-2">
                                     <Label htmlFor="signup-confirm-password">{t('common.confirmPassword')}</Label>
-                                    <PasswordInput id="signup-confirm-password" type="password" required
+                                    <PasswordInput id="signup-confirm-password" required
                                            className="h-11 text-base"
                                            value={signupConfirmPassword}
                                            onChange={e => setSignupConfirmPassword(e.target.value)}
@@ -778,7 +776,7 @@ export function HomepageAuth({
                         </form>
                     )}
 
-                    <div className="mt-6 pt-4 border-t border-[#303032]">
+                    <div className="mt-6 pt-4 border-t border-dark-border">
                         <div className="flex items-center justify-between">
                             <div>
                                 <Label className="text-sm text-muted-foreground">{t('common.language')}</Label>

@@ -25,13 +25,13 @@ export function LanguageSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-2 relative" style={{ zIndex: 99999 }}>
+    <div className="flex items-center gap-2 relative z-[99999]">
       <Globe className="h-4 w-4 text-muted-foreground" />
       <Select value={i18n.language} onValueChange={handleLanguageChange}>
         <SelectTrigger className="w-[120px]">
           <SelectValue placeholder={t('placeholders.language')} />
         </SelectTrigger>
-        <SelectContent style={{ zIndex: 99999 }}>
+        <SelectContent className="z-[99999]">
           {languages.map((lang) => (
             <SelectItem key={lang.code} value={lang.code}>
               {lang.nativeName}

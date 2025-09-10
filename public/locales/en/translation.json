@@ -488,6 +488,7 @@
     "messageParseError": "Failed to parse server message",
     "websocketError": "WebSocket connection error",
     "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
+    "reconnected": "Reconnected successfully",
     "maxReconnectAttemptsReached": "Maximum reconnection attempts reached"
   },
   "fileManager": {

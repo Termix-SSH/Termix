@@ -4,6 +4,7 @@ import React, {useState} from "react";
 import {completePasswordReset, initiatePasswordReset, verifyPasswordResetCode} from "@/ui/main-axios.ts";
 import {Label} from "@/components/ui/label.tsx";
 import {Input} from "@/components/ui/input.tsx";
+import {PasswordInput} from "@/components/ui/password-input.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
 import {toast} from "sonner";
@@ -182,9 +183,8 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                             <div className="flex flex-col gap-5">
                                 <div className="flex flex-col gap-2">
                                     <Label htmlFor="new-password">{t('common.newPassword')}</Label>
-                                    <Input
+                                    <PasswordInput
                                         id="new-password"
-                                        type="password"
                                         required
                                         className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
                                         value={newPassword}
@@ -195,9 +195,8 @@ export function PasswordReset({userInfo}: PasswordResetProps) {
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <Label htmlFor="confirm-password">{t('common.confirmPassword')}</Label>
-                                    <Input
+                                    <PasswordInput
                                         id="confirm-password"
-                                        type="password"
                                         required
                                         className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
                                         value={confirmPassword}

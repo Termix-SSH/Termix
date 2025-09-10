@@ -152,7 +152,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             scrollback: 10000,
             fontSize: 14,
             fontFamily: '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
-            theme: {background: '#09090b', foreground: '#f7f7f7'},
+            theme: {background: 'var(--color-dark-bg-darkest)', foreground: '#f7f7f7'},
             allowTransparency: true,
             convertEol: true,
             windowsMode: false,
@@ -265,8 +265,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     return (
         <div
             ref={xtermRef}
-            className="h-full w-full m-1"
-            style={{opacity: visible && isVisible ? 1 : 0, overflow: 'hidden'}}
+            className={`h-full w-full m-1 transition-opacity duration-200 ${visible && isVisible ? 'opacity-100' : 'opacity-0'} overflow-hidden`}
         />
     );
 });

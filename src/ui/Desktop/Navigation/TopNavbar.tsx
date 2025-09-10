@@ -217,19 +217,15 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
     return (
         <div>
             <div
-                className="fixed z-10 h-[50px] bg-[#18181b] border-2 border-[#303032] rounded-lg transition-all duration-200 ease-linear flex flex-row"
+                className="fixed z-10 h-[50px] bg-dark-bg border-2 border-dark-border rounded-lg transition-all duration-200 ease-linear flex flex-row transform-none m-0 p-0"
                 style={{
                     top: isTopbarOpen ? "0.5rem" : "-3rem",
                     left: leftPosition,
-                    right: "17px",
-                    position: "fixed",
-                    transform: "none",
-                    margin: "0",
-                    padding: "0"
+                    right: "17px"
                 }}
             >
                 <div
-                    className="h-full p-1 pr-2 border-r-2 border-[#303032] w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-2 thin-scrollbar">
+                    className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-2 thin-scrollbar">
                     {tabs.map((tab: any) => {
                         const isActive = tab.id === currentTab;
                         const isSplit = Array.isArray(allSplitScreenTab) && allSplitScreenTab.includes(tab.id);
@@ -287,45 +283,32 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
             {!isTopbarOpen && (
                 <div
                     onClick={() => setIsTopbarOpen(true)}
-                    className="absolute top-0 left-0 w-full h-[10px] bg-[#18181b] cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md">
+                    className="absolute top-0 left-0 w-full h-[10px] bg-dark-bg cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md">
                     <ChevronDown size={10}/>
                 </div>
             )}
 
             {toolsSheetOpen && (
                 <div
-                    className="fixed inset-0 z-[999999] flex justify-end"
+                    className="fixed top-0 left-0 right-0 bottom-0 z-[999999] flex justify-end pointer-events-auto isolate"
                     style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 999999,
-                        pointerEvents: 'auto',
-                        isolation: 'isolate',
                         transform: 'translateZ(0)'
                     }}
                 >
                     <div
-                        className="flex-1"
+                        className="flex-1 cursor-pointer"
                         onClick={() => setToolsSheetOpen(false)}
-                        style={{cursor: 'pointer'}}
                     />
 
                     <div
-                        className="w-[400px] h-full bg-[#18181b] border-l-2 border-[#303032] flex flex-col shadow-2xl"
+                        className="w-[400px] h-full bg-dark-bg border-l-2 border-dark-border flex flex-col shadow-2xl relative isolate z-[999999]"
                         style={{
-                            backgroundColor: '#18181b',
                             boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.5)',
-                            zIndex: 999999,
-                            position: 'relative',
-                            isolation: 'isolate',
                             transform: 'translateZ(0)'
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between p-4 border-b border-[#303032]">
+                        <div className="flex items-center justify-between p-4 border-b border-dark-border">
                             <h2 className="text-lg font-semibold text-white">{t('sshTools.title')}</h2>
                             <Button
                                 variant="outline"

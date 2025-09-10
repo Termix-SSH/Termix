@@ -358,16 +358,16 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
     };
 
     return (
-        <div className="flex flex-col h-full w-[256px]" style={{maxWidth: 256}}>
+        <div className="flex flex-col h-full w-[256px] max-w-[256px]">
             <div className="flex flex-col flex-grow min-h-0">
-                <div className="flex-1 w-full h-full flex flex-col bg-[#09090b] border-r-2 border-[#303032] overflow-hidden p-0 relative min-h-0">
+                <div className="flex-1 w-full h-full flex flex-col bg-dark-bg-darkest border-r-2 border-dark-border overflow-hidden p-0 relative min-h-0">
                     {host && (
-                        <div className="flex flex-col h-full w-full" style={{maxWidth: 260}}>
-                            <div className="flex items-center gap-2 px-2 py-1.5 border-b-2 border-[#303032] bg-[#18181b] z-20" style={{maxWidth: 260}}>
+                        <div className="flex flex-col h-full w-full max-w-[260px]">
+                            <div className="flex items-center gap-2 px-2 py-1.5 border-b-2 border-dark-border bg-dark-bg z-20 max-w-[260px]">
                                 <Button
                                     size="icon"
                                     variant="outline"
-                                    className="h-9 w-9 bg-[#18181b] border-2 border-[#303032] rounded-md hover:bg-[#2d2d30] focus:outline-none focus:ring-2 focus:ring-ring"
+                                    className="h-9 w-9 bg-dark-bg border-2 border-dark-border rounded-md hover:bg-dark-hover focus:outline-none focus:ring-2 focus:ring-ring"
                                     onClick={() => {
                                         let path = currentPath;
                                         if (path && path !== '/' && path !== '') {
@@ -387,20 +387,20 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                 </Button>
                                 <Input ref={pathInputRef} value={currentPath}
                                        onChange={e => handlePathChange(e.target.value)}
-                                       className="flex-1 bg-[#18181b] border-2 border-[#434345] text-white truncate rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring hover:border-[#5a5a5d]"
+                                       className="flex-1 bg-dark-bg border-2 border-dark-border-hover text-white truncate rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring hover:border-dark-border-light"
                                 />
                             </div>
-                            <div className="px-2 py-2 border-b-1 border-[#303032] bg-[#18181b]">
+                            <div className="px-2 py-2 border-b-1 border-dark-border bg-dark-bg">
                                 <Input
                                     placeholder={t('fileManager.searchFilesAndFolders')}
-                                    className="w-full h-7 text-sm bg-[#23232a] border-2 border-[#434345] text-white placeholder:text-muted-foreground rounded-md"
+                                    className="w-full h-7 text-sm bg-dark-bg-button border-2 border-dark-border-hover text-white placeholder:text-muted-foreground rounded-md"
                                     autoComplete="off"
                                     value={fileSearch}
                                     onChange={e => setFileSearch(e.target.value)}
                                 />
                             </div>
-                            <div className="flex-1 min-h-0 w-full bg-[#09090b] border-t-1 border-[#303032]">
-                                <ScrollArea className="h-full w-full bg-[#09090b]">
+                            <div className="flex-1 min-h-0 w-full bg-dark-bg-darkest border-t-1 border-dark-border">
+                                <ScrollArea className="h-full w-full bg-dark-bg-darkest">
                                     <div className="p-2 pb-0">
                                         {connectingSSH || filesLoading ? (
                                             <div className="text-xs text-muted-foreground">{t('common.loading')}</div>
@@ -417,10 +417,9 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                                         <div
                                                             key={item.path}
                                                             className={cn(
-                                                                "flex items-center gap-2 px-3 py-2 bg-[#18181b] border-2 border-[#303032] rounded group max-w-full relative",
+                                                                "flex items-center gap-2 px-3 py-2 bg-dark-bg border-2 border-dark-border rounded group max-w-[220px] mb-2 relative",
                                                                 isOpen && "opacity-60 cursor-not-allowed pointer-events-none"
                                                             )}
-                                                            style={{maxWidth: 220, marginBottom: 8}}
                                                             onContextMenu={(e) => !isOpen && handleContextMenu(e, item)}
                                                         >
                                                             {isRenaming ? (
@@ -431,7 +430,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                                                     <Input
                                                                         value={renamingItem.newName}
                                                                         onChange={(e) => setRenamingItem(prev => prev ? {...prev, newName: e.target.value} : null)}
-                                                                        className="flex-1 h-6 text-sm bg-[#23232a] border border-[#434345] text-white"
+                                                                        className="flex-1 h-6 text-sm bg-dark-bg-button border border-dark-border-hover text-white"
                                                                         autoFocus
                                                                         onKeyDown={(e) => {
                                                                             if (e.key === 'Enter') {
@@ -527,21 +526,21 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
 
             {contextMenu.visible && contextMenu.item && (
                 <div
-                    className="fixed z-[99998] bg-[#18181b] border-2 border-[#303032] rounded-lg shadow-xl py-1 min-w-[160px]"
+                    className="fixed z-[99998] bg-dark-bg border-2 border-dark-border rounded-lg shadow-xl py-1 min-w-[160px]"
                     style={{
                         left: contextMenu.x,
                         top: contextMenu.y,
                     }}
                 >
                     <button
-                        className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2d2d30] flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-hover flex items-center gap-2"
                         onClick={() => startRename(contextMenu.item)}
                     >
                         <Edit3 className="w-4 h-4" />
                         Rename
                     </button>
                     <button
-                        className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-[#2d2d30] flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-dark-hover flex items-center gap-2"
                         onClick={() => startDelete(contextMenu.item)}
                     >
                         <Trash2 className="w-4 h-4" />

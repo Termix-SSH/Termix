@@ -86,6 +86,29 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+    
+    /* Custom dark theme colors - exact hex matches */
+    --color-dark-bg: #18181b;
+    --color-dark-bg-darker: #0e0e10;
+    --color-dark-bg-darkest: #09090b;
+    --color-dark-bg-input: #222225;
+    --color-dark-bg-button: #23232a;
+    --color-dark-bg-active: #1d1d1f;
+    --color-dark-bg-header: #131316;
+    --color-dark-border: #303032;
+    --color-dark-border-active: #2d2d30;
+    --color-dark-border-hover: #434345;
+    --color-dark-hover: #2d2d30;
+    --color-dark-active: #2a2a2c;
+    --color-dark-pressed: #1a1a1c;
+    --color-dark-hover-alt: #2a2a2d;
+    --color-dark-border-light: #5a5a5d;
+    --color-dark-bg-light: #141416;
+    --color-dark-border-medium: #373739;
+    --color-dark-bg-very-light: #101014;
+    --color-dark-bg-panel: #1b1b1e;
+    --color-dark-border-panel: #222224;
+    --color-dark-bg-panel-hover: #232327;
 }
 
 .dark {

@@ -535,20 +535,24 @@ router.post('/file_manager/recent', authenticateJWT, async (req: Request, res: R
 });
 
 // Route: Remove recent file (requires JWT)
-// DELETE /ssh/file_manager/recent/:id
-router.delete('/file_manager/recent/:id', authenticateJWT, async (req: Request, res: Response) => {
+// DELETE /ssh/file_manager/recent
+router.delete('/file_manager/recent', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const id = req.params.id;
+    const { hostId, path, name } = req.body;
 
-    if (!isNonEmptyString(userId) || !id) {
-        sshLogger.warn('Invalid userId or id for recent file deletion');
-        return res.status(400).json({error: 'Invalid userId or id'});
+    if (!isNonEmptyString(userId) || !hostId || !path) {
+        sshLogger.warn('Invalid data for recent file deletion');
+        return res.status(400).json({error: 'Invalid data'});
     }
 
     try {
         await db
             .delete(fileManagerRecent)
-            .where(and(eq(fileManagerRecent.id, Number(id)), eq(fileManagerRecent.userId, userId)));
+            .where(and(
+                eq(fileManagerRecent.userId, userId),
+                eq(fileManagerRecent.hostId, hostId),
+                eq(fileManagerRecent.path, path)
+            ));
 
         res.json({message: 'Recent file removed'});
     } catch (err) {
@@ -629,20 +633,24 @@ router.post('/file_manager/pinned', authenticateJWT, async (req: Request, res: R
 });
 
 // Route: Remove pinned file (requires JWT)
-// DELETE /ssh/file_manager/pinned/:id
-router.delete('/file_manager/pinned/:id', authenticateJWT, async (req: Request, res: Response) => {
+// DELETE /ssh/file_manager/pinned
+router.delete('/file_manager/pinned', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const id = req.params.id;
+    const { hostId, path, name } = req.body;
 
-    if (!isNonEmptyString(userId) || !id) {
-        sshLogger.warn('Invalid userId or id for pinned file deletion');
-        return res.status(400).json({error: 'Invalid userId or id'});
+    if (!isNonEmptyString(userId) || !hostId || !path) {
+        sshLogger.warn('Invalid data for pinned file deletion');
+        return res.status(400).json({error: 'Invalid data'});
     }
 
     try {
         await db
             .delete(fileManagerPinned)
-            .where(and(eq(fileManagerPinned.id, Number(id)), eq(fileManagerPinned.userId, userId)));
+            .where(and(
+                eq(fileManagerPinned.userId, userId),
+                eq(fileManagerPinned.hostId, hostId),
+                eq(fileManagerPinned.path, path)
+            ));
 
         res.json({message: 'Pinned file removed'});
     } catch (err) {
@@ -723,20 +731,24 @@ router.post('/file_manager/shortcuts', authenticateJWT, async (req: Request, res
 });
 
 // Route: Remove shortcut (requires JWT)
-// DELETE /ssh/file_manager/shortcuts/:id
-router.delete('/file_manager/shortcuts/:id', authenticateJWT, async (req: Request, res: Response) => {
+// DELETE /ssh/file_manager/shortcuts
+router.delete('/file_manager/shortcuts', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const id = req.params.id;
+    const { hostId, path, name } = req.body;
 
-    if (!isNonEmptyString(userId) || !id) {
-        sshLogger.warn('Invalid userId or id for shortcut deletion');
-        return res.status(400).json({error: 'Invalid userId or id'});
+    if (!isNonEmptyString(userId) || !hostId || !path) {
+        sshLogger.warn('Invalid data for shortcut deletion');
+        return res.status(400).json({error: 'Invalid data'});
     }
 
     try {
         await db
             .delete(fileManagerShortcuts)
-            .where(and(eq(fileManagerShortcuts.id, Number(id)), eq(fileManagerShortcuts.userId, userId)));
+            .where(and(
+                eq(fileManagerShortcuts.userId, userId),
+                eq(fileManagerShortcuts.hostId, hostId),
+                eq(fileManagerShortcuts.path, path)
+            ));
 
         res.json({message: 'Shortcut removed'});
     } catch (err) {

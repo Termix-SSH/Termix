@@ -13,6 +13,7 @@ import {
     FormMessage,
 } from "@/components/ui/form.tsx";
 import {Input} from "@/components/ui/input.tsx";
+import {PasswordInput} from "@/components/ui/password-input.tsx";
 import {ScrollArea} from "@/components/ui/scroll-area.tsx"
 import {Separator} from "@/components/ui/separator.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
@@ -650,7 +651,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                 {folderDropdownOpen && filteredFolders.length > 0 && (
                                                     <div
                                                         ref={folderDropdownRef}
-                                                        className="absolute top-full left-0 z-50 mt-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                        className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                     >
                                                         <div className="grid grid-cols-1 gap-1 p-0">
                                                             {filteredFolders.map((folder) => (
@@ -680,7 +681,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                 <FormLabel>{t('hosts.tags')}</FormLabel>
                                                 <FormControl>
                                                     <div
-                                                        className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-[#222225] focus-within:ring-2 ring-ring min-h-[40px]">
+                                                        className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-dark-bg-input focus-within:ring-2 ring-ring min-h-[40px]">
                                                         {field.value.map((tag: string, idx: number) => (
                                                             <span key={tag + idx}
                                                                   className="flex items-center bg-gray-200 text-gray-800 rounded-full px-2 py-0.5 text-xs">
@@ -776,7 +777,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                 <FormItem>
                                                     <FormLabel>{t('hosts.password')}</FormLabel>
                                                     <FormControl>
-                                                        <Input type="password" placeholder={t('placeholders.password')} {...field} />
+                                                        <PasswordInput placeholder={t('placeholders.password')} {...field} />
                                                     </FormControl>
                                                 </FormItem>
                                             )}
@@ -864,9 +865,8 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                     <FormItem className="col-span-8">
                                                         <FormLabel>{t('hosts.keyPassword')}</FormLabel>
                                                         <FormControl>
-                                                            <Input
+                                                            <PasswordInput
                                                                 placeholder={t('placeholders.keyPassword')}
-                                                                type="password"
                                                                 {...field}
                                                             />
                                                         </FormControl>
@@ -885,7 +885,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                                     ref={keyTypeButtonRef}
                                                                     type="button"
                                                                     variant="outline"
-                                                                    className="w-full justify-start text-left rounded-md px-2 py-2 bg-[#18181b] border border-input text-foreground"
+                                                                    className="w-full justify-start text-left rounded-md px-2 py-2 bg-dark-bg border border-input text-foreground"
                                                                     onClick={() => setKeyTypeDropdownOpen((open) => !open)}
                                                                 >
                                                                     {keyTypeOptions.find((opt) => opt.value === field.value)?.label || t('hosts.autoDetect')}
@@ -893,7 +893,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                                 {keyTypeDropdownOpen && (
                                                                     <div
                                                                         ref={keyTypeDropdownRef}
-                                                                        className="absolute bottom-full left-0 z-50 mb-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                                        className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                                     >
                                                                         <div className="grid grid-cols-1 gap-1 p-0">
                                                                             {keyTypeOptions.map((opt) => (
@@ -902,7 +902,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                                                     type="button"
                                                                                     variant="ghost"
                                                                                     size="sm"
-                                                                                    className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-[#18181b] text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                                                                    className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-dark-bg text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
                                                                                     onClick={() => {
                                                                                         field.onChange(opt.value);
                                                                                         setKeyTypeDropdownOpen(false);
@@ -1115,7 +1115,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                                                             ref={(el) => {
                                                                                                 sshConfigDropdownRefs.current[index] = el;
                                                                                             }}
-                                                                                            className="absolute top-full left-0 z-50 mt-1 w-full bg-[#18181b] border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                                                            className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                                                         >
                                                                                             <div
                                                                                                 className="grid grid-cols-1 gap-1 p-0">
@@ -1269,12 +1269,9 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                     <footer className="shrink-0 w-full pb-0">
                         <Separator className="p-0.25"/>
                         <Button
-                            className=""
+                            className="translate-y-2"
                             type="submit"
                             variant="outline"
-                            style={{
-                                transform: 'translateY(8px)'
-                            }}
                         >
                             {editingHost ? t('hosts.updateHost') : t('hosts.addHost')}
                         </Button>

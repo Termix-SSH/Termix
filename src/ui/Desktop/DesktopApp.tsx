@@ -128,29 +128,13 @@ function AppContent() {
                     username={username}
                 >
                     <div
-                        className="h-screen w-full"
-                        style={{
-                            visibility: showTerminalView ? "visible" : "hidden",
-                            pointerEvents: showTerminalView ? "auto" : "none",
-                            height: showTerminalView ? "100vh" : 0,
-                            width: showTerminalView ? "100%" : 0,
-                            position: showTerminalView ? "static" : "absolute",
-                            overflow: "hidden",
-                        }}
+                        className={`h-screen w-full ${showTerminalView ? "visible pointer-events-auto static overflow-hidden" : "invisible pointer-events-none absolute h-0 w-0"}`}
                     >
                         <AppView isTopbarOpen={isTopbarOpen} />
                     </div>
 
                     <div
-                        className="h-screen w-full"
-                        style={{
-                            visibility: showHome ? "visible" : "hidden",
-                            pointerEvents: showHome ? "auto" : "none",
-                            height: showHome ? "100vh" : 0,
-                            width: showHome ? "100%" : 0,
-                            position: showHome ? "static" : "absolute",
-                            overflow: "hidden",
-                        }}
+                        className={`h-screen w-full ${showHome ? "visible pointer-events-auto static overflow-hidden" : "invisible pointer-events-none absolute h-0 w-0"}`}
                     >
                         <Homepage 
                             onSelectView={handleSelectView}
@@ -162,43 +146,19 @@ function AppContent() {
                     </div>
 
                     <div
-                        className="h-screen w-full"
-                        style={{
-                            visibility: showSshManager ? "visible" : "hidden",
-                            pointerEvents: showSshManager ? "auto" : "none",
-                            height: showSshManager ? "100vh" : 0,
-                            width: showSshManager ? "100%" : 0,
-                            position: showSshManager ? "static" : "absolute",
-                            overflow: "hidden",
-                        }}
+                        className={`h-screen w-full ${showSshManager ? "visible pointer-events-auto static overflow-hidden" : "invisible pointer-events-none absolute h-0 w-0"}`}
                     >
                         <HostManager onSelectView={handleSelectView} isTopbarOpen={isTopbarOpen} />
                     </div>
 
                     <div
-                        className="h-screen w-full"
-                        style={{
-                            visibility: showAdmin ? "visible" : "hidden",
-                            pointerEvents: showAdmin ? "auto" : "none",
-                            height: showAdmin ? "100vh" : 0,
-                            width: showAdmin ? "100%" : 0,
-                            position: showAdmin ? "static" : "absolute",
-                            overflow: "hidden",
-                        }}
+                        className={`h-screen w-full ${showAdmin ? "visible pointer-events-auto static overflow-hidden" : "invisible pointer-events-none absolute h-0 w-0"}`}
                     >
                         <AdminSettings isTopbarOpen={isTopbarOpen} />
                     </div>
 
                     <div
-                        className="h-screen w-full"
-                        style={{
-                            visibility: showProfile ? "visible" : "hidden",
-                            pointerEvents: showProfile ? "auto" : "none",
-                            height: showProfile ? "100vh" : 0,
-                            width: showProfile ? "100%" : 0,
-                            position: showProfile ? "static" : "absolute",
-                            overflow: "auto",
-                        }}
+                        className={`h-screen w-full ${showProfile ? "visible pointer-events-auto static overflow-auto" : "invisible pointer-events-none absolute h-0 w-0"}`}
                     >
                         <UserProfile isTopbarOpen={isTopbarOpen} />
                     </div>

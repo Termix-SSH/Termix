@@ -13,10 +13,11 @@ interface SSHTerminalProps {
     title?: string;
     showTitle?: boolean;
     splitScreen?: boolean;
+    onClose?: () => void;
 }
 
 export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
-    {hostConfig, isVisible, splitScreen = false},
+    {hostConfig, isVisible, splitScreen = false, onClose},
     ref
 ) {
     const {t} = useTranslation();
@@ -33,6 +34,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
     const maxReconnectAttempts = 3;
+    const isUnmountingRef = useRef(false);
+    const shouldNotReconnectRef = useRef(false);
 
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -71,6 +74,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
     useImperativeHandle(ref, () => ({
         disconnect: () => {
+            isUnmountingRef.current = true;
+            shouldNotReconnectRef.current = true;
             if (pingIntervalRef.current) {
                 clearInterval(pingIntervalRef.current);
                 pingIntervalRef.current = null;
@@ -130,6 +135,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     }
 
     function attemptReconnection() {
+        // Don't attempt reconnection if component is unmounting or if we shouldn't reconnect
+        if (isUnmountingRef.current || shouldNotReconnectRef.current) {
+            return;
+        }
+
         if (reconnectAttempts.current >= maxReconnectAttempts) {
             toast.error(t('terminal.maxReconnectAttemptsReached'));
             return;
@@ -139,7 +149,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         toast.info(t('terminal.reconnecting', { attempt: reconnectAttempts.current, max: maxReconnectAttempts }));
         
         reconnectTimeoutRef.current = setTimeout(() => {
+            // Check again if component is still mounted and should reconnect
+            if (isUnmountingRef.current || shouldNotReconnectRef.current) {
+                return;
+            }
             if (terminal && hostConfig) {
+                // Clear terminal before reconnecting
+                terminal.clear();
                 const cols = terminal.cols;
                 const rows = terminal.rows;
                 connectToHost(cols, rows);
@@ -163,6 +179,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         webSocketRef.current = ws;
         wasDisconnectedBySSH.current = false;
         setConnectionError(null);
+        shouldNotReconnectRef.current = false; // Reset reconnection flag
 
         setupWebSocketListeners(ws, cols, rows);
     }
@@ -172,8 +189,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     function setupWebSocketListeners(ws: WebSocket, cols: number, rows: number) {
         ws.addEventListener('open', () => {
             setIsConnected(true);
+            // Show reconnected toast if this was a reconnection attempt
+            if (reconnectAttempts.current > 0) {
+                toast.success(t('terminal.reconnected'));
+            }
             reconnectAttempts.current = 0; // Reset on successful connection
-            toast.success(t('terminal.connected'));
             
             ws.send(JSON.stringify({type: 'connectToHost', data: {cols, rows, hostConfig}}));
             terminal.onData((data) => {
@@ -200,11 +220,19 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     if (errorMessage.toLowerCase().includes('auth') || 
                         errorMessage.toLowerCase().includes('password') ||
                         errorMessage.toLowerCase().includes('permission') ||
-                        errorMessage.toLowerCase().includes('denied')) {
+                        errorMessage.toLowerCase().includes('denied') ||
+                        errorMessage.toLowerCase().includes('invalid') ||
+                        errorMessage.toLowerCase().includes('failed') ||
+                        errorMessage.toLowerCase().includes('incorrect')) {
                         toast.error(t('terminal.authError', { message: errorMessage }));
+                        shouldNotReconnectRef.current = true; // Don't reconnect on auth errors
                         // Close terminal on auth errors
                         if (webSocketRef.current) {
                             webSocketRef.current.close();
+                        }
+                        // Close the terminal tab immediately
+                        if (onClose) {
+                            onClose();
                         }
                         return;
                     }
@@ -223,13 +251,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     toast.error(t('terminal.error', { message: errorMessage }));
                 } else if (msg.type === 'connected') {
                     setIsConnected(true);
-                    toast.success(t('terminal.sshConnected'));
                 } else if (msg.type === 'disconnected') {
                     wasDisconnectedBySSH.current = true;
                     setIsConnected(false);
-                    toast.info(t('terminal.disconnected', { message: msg.message }));
                     // Attempt reconnection for disconnections
-                    attemptReconnection();
+                    if (!isUnmountingRef.current && !shouldNotReconnectRef.current) {
+                        attemptReconnection();
+                    }
                 }
             } catch (error) {
                 toast.error(t('terminal.messageParseError'));
@@ -238,8 +266,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
         ws.addEventListener('close', (event) => {
             setIsConnected(false);
-            if (!wasDisconnectedBySSH.current) {
-                toast.warning(t('terminal.connectionClosed'));
+            if (!wasDisconnectedBySSH.current && !isUnmountingRef.current && !shouldNotReconnectRef.current) {
                 // Attempt reconnection for unexpected disconnections
                 attemptReconnection();
             }
@@ -248,9 +275,10 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         ws.addEventListener('error', (event) => {
             setIsConnected(false);
             setConnectionError(t('terminal.websocketError'));
-            toast.error(t('terminal.websocketError'));
             // Attempt reconnection for WebSocket errors
-            attemptReconnection();
+            if (!isUnmountingRef.current && !shouldNotReconnectRef.current) {
+                attemptReconnection();
+            }
         });
     }
 
@@ -295,7 +323,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             scrollback: 10000,
             fontSize: 14,
             fontFamily: '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
-            theme: {background: '#18181b', foreground: '#f7f7f7'},
+            theme: {background: 'var(--color-dark-bg)', foreground: '#f7f7f7'},
             allowTransparency: true,
             convertEol: true,
             windowsMode: false,
@@ -385,6 +413,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         });
 
         return () => {
+            isUnmountingRef.current = true;
+            shouldNotReconnectRef.current = true;
             resizeObserver.disconnect();
             element?.removeEventListener('contextmenu', handleContextMenu);
             if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
@@ -430,29 +460,15 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     }, [splitScreen, isVisible, terminal]);
 
     return (
-        <div className="h-full w-full relative">
-            {/* Connection Status Indicator */}
-            {!isConnected && (
-                <div className="absolute top-2 right-2 z-10 bg-red-500 text-white px-2 py-1 rounded text-xs">
-                    {t('terminal.disconnected')}
-                </div>
-            )}
-            {isConnected && (
-                <div className="absolute top-2 right-2 z-10 bg-green-500 text-white px-2 py-1 rounded text-xs">
-                    {t('terminal.connected')}
-                </div>
-            )}
-            <div 
-                ref={xtermRef} 
-                className="h-full w-full m-1"
-                style={{opacity: visible && isVisible ? 1 : 0, overflow: 'hidden'}}
-                onClick={() => {
-                    if (terminal && !splitScreen) {
-                        terminal.focus();
-                    }
-                }}
-            />
-        </div>
+        <div 
+            ref={xtermRef} 
+            className={`h-full w-full m-1 transition-opacity duration-200 ${visible && isVisible ? 'opacity-100' : 'opacity-0'} overflow-hidden`}
+            onClick={() => {
+                if (terminal && !splitScreen) {
+                    terminal.focus();
+                }
+            }}
+        />
     );
 });
 

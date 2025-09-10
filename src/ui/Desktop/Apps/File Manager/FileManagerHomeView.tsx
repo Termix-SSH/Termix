@@ -5,7 +5,7 @@ import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs.tsx
 import {Input} from '@/components/ui/input.tsx';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import type { FileItem, ShortcutItem } from '../../../types/index.js';
+import type { FileItem, ShortcutItem } from '../../../types/index';
 
 interface FileManagerHomeViewProps {
     recent: FileItem[];
@@ -39,7 +39,7 @@ export function FileManagerHomeView({
 
     const renderFileCard = (file: FileItem, onRemove: () => void, onPin?: () => void, isPinned = false) => (
         <div key={file.path}
-             className="flex items-center gap-2 px-3 py-2 bg-[#18181b] border-2 border-[#303032] rounded hover:border-[#434345] transition-colors">
+             className="flex items-center gap-2 px-3 py-2 bg-dark-bg border-2 border-dark-border rounded hover:border-dark-border-hover transition-colors">
             <div
                 className="flex items-center gap-2 flex-1 cursor-pointer min-w-0"
                 onClick={() => onOpenFile(file)}
@@ -59,7 +59,7 @@ export function FileManagerHomeView({
                     <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 px-1.5 bg-[#23232a] hover:bg-[#2d2d30] rounded-md"
+                        className="h-6 px-1.5 bg-dark-bg-button hover:bg-dark-hover rounded-md"
                         onClick={onPin}
                     >
                         <Pin
@@ -70,7 +70,7 @@ export function FileManagerHomeView({
                     <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 px-1.5 bg-[#23232a] hover:bg-[#2d2d30] rounded-md"
+                        className="h-6 px-1.5 bg-dark-bg-button hover:bg-dark-hover rounded-md"
                         onClick={onRemove}
                     >
                         <Trash2 className="w-3 h-3 text-red-500"/>
@@ -82,7 +82,7 @@ export function FileManagerHomeView({
 
     const renderShortcutCard = (shortcut: ShortcutItem) => (
         <div key={shortcut.path}
-             className="flex items-center gap-2 px-3 py-2 bg-[#18181b] border-2 border-[#303032] rounded hover:border-[#434345] transition-colors">
+             className="flex items-center gap-2 px-3 py-2 bg-dark-bg border-2 border-dark-border rounded hover:border-dark-border-hover transition-colors">
             <div
                 className="flex items-center gap-2 flex-1 cursor-pointer min-w-0"
                 onClick={() => onOpenShortcut(shortcut)}
@@ -98,7 +98,7 @@ export function FileManagerHomeView({
                 <Button
                     size="sm"
                     variant="ghost"
-                    className="h-6 px-1.5 bg-[#23232a] hover:bg-[#2d2d30] rounded-md"
+                    className="h-6 px-1.5 bg-dark-bg-button hover:bg-dark-hover rounded-md"
                     onClick={() => onRemoveShortcut(shortcut)}
                 >
                     <Trash2 className="w-3 h-3 text-red-500"/>
@@ -108,12 +108,12 @@ export function FileManagerHomeView({
     );
 
     return (
-        <div className="p-4 flex flex-col gap-4 h-full bg-[#09090b]">
+        <div className="p-4 flex flex-col gap-4 h-full bg-dark-bg-darkest">
             <Tabs value={tab} onValueChange={v => setTab(v as 'recent' | 'pinned' | 'shortcuts')} className="w-full">
-                <TabsList className="mb-4 bg-[#18181b] border-2 border-[#303032]">
-                    <TabsTrigger value="recent" className="data-[state=active]:bg-[#23232a]">{t('fileManager.recent')}</TabsTrigger>
-                    <TabsTrigger value="pinned" className="data-[state=active]:bg-[#23232a]">{t('fileManager.pinned')}</TabsTrigger>
-                    <TabsTrigger value="shortcuts" className="data-[state=active]:bg-[#23232a]">{t('fileManager.folderShortcuts')}</TabsTrigger>
+                <TabsList className="mb-4 bg-dark-bg border-2 border-dark-border">
+                    <TabsTrigger value="recent" className="data-[state=active]:bg-dark-bg-button">{t('fileManager.recent')}</TabsTrigger>
+                    <TabsTrigger value="pinned" className="data-[state=active]:bg-dark-bg-button">{t('fileManager.pinned')}</TabsTrigger>
+                    <TabsTrigger value="shortcuts" className="data-[state=active]:bg-dark-bg-button">{t('fileManager.folderShortcuts')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="recent" className="mt-0">
@@ -153,12 +153,12 @@ export function FileManagerHomeView({
                 </TabsContent>
 
                 <TabsContent value="shortcuts" className="mt-0">
-                    <div className="flex items-center gap-3 mb-4 p-3 bg-[#18181b] border-2 border-[#303032] rounded-lg">
+                    <div className="flex items-center gap-3 mb-4 p-3 bg-dark-bg border-2 border-dark-border rounded-lg">
                         <Input
                             placeholder={t('fileManager.enterFolderPath')}
                             value={newShortcut}
                             onChange={e => setNewShortcut(e.target.value)}
-                            className="flex-1 bg-[#23232a] border-2 border-[#303032] text-white placeholder:text-muted-foreground"
+                            className="flex-1 bg-dark-bg-button border-2 border-dark-border text-white placeholder:text-muted-foreground"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && newShortcut.trim()) {
                                     onAddShortcut(newShortcut.trim());
@@ -169,7 +169,7 @@ export function FileManagerHomeView({
                         <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 px-2 bg-[#23232a] border-2 !border-[#303032] hover:bg-[#2d2d30] rounded-md"
+                            className="h-8 px-2 bg-dark-bg-button border-2 !border-dark-border hover:bg-dark-hover rounded-md"
                             onClick={() => {
                                 if (newShortcut.trim()) {
                                     onAddShortcut(newShortcut.trim());
