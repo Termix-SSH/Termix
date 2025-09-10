@@ -81,7 +81,7 @@ export function Homepage({
             style={{ paddingTop: `${topPadding}px` }}>
             {!loggedIn ? (
                 <div 
-                    className="absolute left-0 w-full flex items-center justify-center transition-all duration-300 ease-in-out"
+                    className="absolute left-0 w-full flex items-center justify-center"
                     style={{ 
                         top: `${topOffset}px`, 
                         height: `calc(100% - ${topOffset}px)` 
@@ -100,7 +100,7 @@ export function Homepage({
                 </div>
             ) : (
                 <div 
-                    className="absolute left-0 w-full flex items-center justify-center transition-all duration-300 ease-in-out"
+                    className="absolute left-0 w-full flex items-center justify-center"
                     style={{ 
                         top: `${topOffset}px`, 
                         height: `calc(100% - ${topOffset}px)` 

@@ -323,7 +323,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             scrollback: 10000,
             fontSize: 14,
             fontFamily: '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
-            theme: {background: 'var(--color-dark-bg)', foreground: '#f7f7f7'},
+            theme: {background: '#18181b', foreground: '#f7f7f7'},
             allowTransparency: true,
             convertEol: true,
             windowsMode: false,
