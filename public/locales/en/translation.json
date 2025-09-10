@@ -687,7 +687,14 @@
     "failedToFetchHostConfig": "Failed to fetch host configuration",
     "failedToFetchStatus": "Failed to fetch server status",
     "failedToFetchMetrics": "Failed to fetch server metrics",
-    "failedToFetchHomeData": "Failed to fetch home data"
+    "failedToFetchHomeData": "Failed to fetch home data",
+    "loadingMetrics": "Loading metrics...",
+    "refreshing": "Refreshing...",
+    "serverOffline": "Server Offline",
+    "cannotFetchMetrics": "Cannot fetch metrics from offline server",
+    "load": "Load",
+    "free": "Free",
+    "available": "Available"
   },
   "auth": {
     "loginTitle": "Login to Termix",

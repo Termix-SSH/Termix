@@ -8,6 +8,237 @@ import {sshData, sshCredentials} from '../database/db/schema.js';
 import {eq, and} from 'drizzle-orm';
 import { statsLogger } from '../utils/logger.js';
 
+// Rate limiting
+const requestCounts = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX = 100; // 100 requests per window
+
+// Connection pooling
+interface PooledConnection {
+    client: Client;
+    lastUsed: number;
+    inUse: boolean;
+    hostKey: string;
+}
+
+class SSHConnectionPool {
+    private connections = new Map<string, PooledConnection[]>();
+    private maxConnectionsPerHost = 3;
+    private connectionTimeout = 30000;
+    private cleanupInterval: NodeJS.Timeout;
+
+    constructor() {
+        this.cleanupInterval = setInterval(() => {
+            this.cleanup();
+        }, 5 * 60 * 1000);
+    }
+
+    private getHostKey(host: SSHHostWithCredentials): string {
+        return `${host.ip}:${host.port}:${host.username}`;
+    }
+
+    async getConnection(host: SSHHostWithCredentials): Promise<Client> {
+        const hostKey = this.getHostKey(host);
+        const connections = this.connections.get(hostKey) || [];
+        
+        const available = connections.find(conn => !conn.inUse);
+        if (available) {
+            available.inUse = true;
+            available.lastUsed = Date.now();
+            return available.client;
+        }
+
+        if (connections.length < this.maxConnectionsPerHost) {
+            const client = await this.createConnection(host);
+            const pooled: PooledConnection = {
+                client,
+                lastUsed: Date.now(),
+                inUse: true,
+                hostKey
+            };
+            connections.push(pooled);
+            this.connections.set(hostKey, connections);
+            return client;
+        }
+
+        return new Promise((resolve, reject) => {
+            const checkAvailable = () => {
+                const available = connections.find(conn => !conn.inUse);
+                if (available) {
+                    available.inUse = true;
+                    available.lastUsed = Date.now();
+                    resolve(available.client);
+                } else {
+                    setTimeout(checkAvailable, 100);
+                }
+            };
+            checkAvailable();
+        });
+    }
+
+    private async createConnection(host: SSHHostWithCredentials): Promise<Client> {
+        return new Promise((resolve, reject) => {
+            const client = new Client();
+            const timeout = setTimeout(() => {
+                client.end();
+                reject(new Error('SSH connection timeout'));
+            }, this.connectionTimeout);
+
+            client.on('ready', () => {
+                clearTimeout(timeout);
+                resolve(client);
+            });
+
+            client.on('error', (err) => {
+                clearTimeout(timeout);
+                reject(err);
+            });
+
+            try {
+                client.connect(buildSshConfig(host));
+            } catch (err) {
+                clearTimeout(timeout);
+                reject(err);
+            }
+        });
+    }
+
+    releaseConnection(host: SSHHostWithCredentials, client: Client): void {
+        const hostKey = this.getHostKey(host);
+        const connections = this.connections.get(hostKey) || [];
+        const pooled = connections.find(conn => conn.client === client);
+        if (pooled) {
+            pooled.inUse = false;
+            pooled.lastUsed = Date.now();
+        }
+    }
+
+    private cleanup(): void {
+        const now = Date.now();
+        const maxAge = 10 * 60 * 1000; // 10 minutes
+
+        for (const [hostKey, connections] of this.connections.entries()) {
+            const activeConnections = connections.filter(conn => {
+                if (!conn.inUse && (now - conn.lastUsed) > maxAge) {
+                    try {
+                        conn.client.end();
+                    } catch {
+                        
+                    }
+                    return false;
+                }
+                return true;
+            });
+
+            if (activeConnections.length === 0) {
+                this.connections.delete(hostKey);
+            } else {
+                this.connections.set(hostKey, activeConnections);
+            }
+        }
+    }
+
+    destroy(): void {
+        clearInterval(this.cleanupInterval);
+        for (const connections of this.connections.values()) {
+            for (const conn of connections) {
+                try {
+                    conn.client.end();
+                } catch {
+                    
+                }
+            }
+        }
+        this.connections.clear();
+    }
+}
+
+// Request queuing to prevent race conditions
+class RequestQueue {
+    private queues = new Map<number, Array<() => Promise<any>>>();
+    private processing = new Set<number>();
+
+    async queueRequest<T>(hostId: number, request: () => Promise<T>): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const queue = this.queues.get(hostId) || [];
+            queue.push(async () => {
+                try {
+                    const result = await request();
+                    resolve(result);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+            this.queues.set(hostId, queue);
+            this.processQueue(hostId);
+        });
+    }
+
+    private async processQueue(hostId: number): Promise<void> {
+        if (this.processing.has(hostId)) return;
+        
+        this.processing.add(hostId);
+        const queue = this.queues.get(hostId) || [];
+        
+        while (queue.length > 0) {
+            const request = queue.shift();
+            if (request) {
+                try {
+                    await request();
+                } catch (error) {
+                    
+                }
+            }
+        }
+        
+        this.processing.delete(hostId);
+        if (queue.length > 0) {
+            this.processQueue(hostId);
+        }
+    }
+}
+
+// Metrics caching
+interface CachedMetrics {
+    data: any;
+    timestamp: number;
+    hostId: number;
+}
+
+class MetricsCache {
+    private cache = new Map<number, CachedMetrics>();
+    private ttl = 30000; // 30 seconds
+
+    get(hostId: number): any | null {
+        const cached = this.cache.get(hostId);
+        if (cached && (Date.now() - cached.timestamp) < this.ttl) {
+            return cached.data;
+        }
+        return null;
+    }
+
+    set(hostId: number, data: any): void {
+        this.cache.set(hostId, {
+            data,
+            timestamp: Date.now(),
+            hostId
+        });
+    }
+
+    clear(hostId?: number): void {
+        if (hostId) {
+            this.cache.delete(hostId);
+        } else {
+            this.cache.clear();
+        }
+    }
+}
+
+// Global instances
+const connectionPool = new SSHConnectionPool();
+const requestQueue = new RequestQueue();
+const metricsCache = new MetricsCache();
+
 type HostStatus = 'online' | 'offline';
 
 interface SSHHostWithCredentials {
@@ -40,6 +271,37 @@ type StatusEntry = {
     lastChecked: string;
 };
 
+// Rate limiting middleware
+function rateLimitMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const clientId = req.ip || 'unknown';
+    const now = Date.now();
+    const clientData = requestCounts.get(clientId);
+
+    if (!clientData || now > clientData.resetTime) {
+        requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+        return next();
+    }
+
+    if (clientData.count >= RATE_LIMIT_MAX) {
+        return res.status(429).json({ 
+            error: 'Too many requests', 
+            retryAfter: Math.ceil((clientData.resetTime - now) / 1000) 
+        });
+    }
+
+    clientData.count++;
+    next();
+}
+
+// Input validation middleware
+function validateHostId(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const id = Number(req.params.id);
+    if (!id || !Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ error: 'Invalid host ID' });
+    }
+    next();
+}
+
 const app = express();
 app.use(cors({
     origin: '*',
@@ -55,7 +317,8 @@ app.use((req, res, next) => {
     }
     next();
 });
-app.use(express.json());
+app.use(express.json({ limit: '1mb' })); // Add request size limit
+app.use(rateLimitMiddleware);
 
 
 const hostStatuses: Map<number, StatusEntry> = new Map();
@@ -219,45 +482,13 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
 }
 
 async function withSshConnection<T>(host: SSHHostWithCredentials, fn: (client: Client) => Promise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-        const client = new Client();
-        let settled = false;
-
-        const onError = (err: Error) => {
-            if (!settled) {
-                settled = true;
-                try {
-                    client.end();
-                } catch {
-                }
-                reject(err);
-            }
-        };
-
-        client.on('ready', async () => {
-            try {
-                const result = await fn(client);
-                if (!settled) {
-                    settled = true;
-                    try {
-                        client.end();
-                    } catch {
-                    }
-                    resolve(result);
-                }
-            } catch (err: any) {
-                onError(err);
-            }
-        });
-
-        client.on('error', onError);
-        client.on('timeout', () => onError(new Error('SSH connection timeout')));
-        try {
-            client.connect(buildSshConfig(host));
-        } catch (err: any) {
-            onError(err);
-        }
-    });
+    const client = await connectionPool.getConnection(host);
+    try {
+        const result = await fn(client);
+        return result;
+    } finally {
+        connectionPool.releaseConnection(host, client);
+    }
 }
 
 function execCommand(client: Client, command: string): Promise<{
@@ -307,106 +538,129 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     memory: { percent: number | null; usedGiB: number | null; totalGiB: number | null };
     disk: { percent: number | null; usedHuman: string | null; totalHuman: string | null };
 }> {
-    return withSshConnection(host, async (client) => {
-        let cpuPercent: number | null = null;
-        let cores: number | null = null;
-        let loadTriplet: [number, number, number] | null = null;
-        try {
-            const stat1 = await execCommand(client, 'cat /proc/stat');
-            await new Promise(r => setTimeout(r, 500));
-            const stat2 = await execCommand(client, 'cat /proc/stat');
-            const loadAvgOut = await execCommand(client, 'cat /proc/loadavg');
-            const coresOut = await execCommand(client, 'nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo');
+    // Check cache first
+    const cached = metricsCache.get(host.id);
+    if (cached) {
+        return cached;
+    }
 
-            const cpuLine1 = (stat1.stdout.split('\n').find(l => l.startsWith('cpu ')) || '').trim();
-            const cpuLine2 = (stat2.stdout.split('\n').find(l => l.startsWith('cpu ')) || '').trim();
-            const a = parseCpuLine(cpuLine1);
-            const b = parseCpuLine(cpuLine2);
-            if (a && b) {
-                const totalDiff = b.total - a.total;
-                const idleDiff = b.idle - a.idle;
-                const used = totalDiff - idleDiff;
-                if (totalDiff > 0) cpuPercent = Math.max(0, Math.min(100, (used / totalDiff) * 100));
-            }
+    return requestQueue.queueRequest(host.id, async () => {
+        return withSshConnection(host, async (client) => {
+            let cpuPercent: number | null = null;
+            let cores: number | null = null;
+            let loadTriplet: [number, number, number] | null = null;
+            
+            try {
+                // Execute all commands in parallel for better performance
+                const [stat1, loadAvgOut, coresOut] = await Promise.all([
+                    execCommand(client, 'cat /proc/stat'),
+                    execCommand(client, 'cat /proc/loadavg'),
+                    execCommand(client, 'nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo')
+                ]);
 
-            const laParts = loadAvgOut.stdout.trim().split(/\s+/);
-            if (laParts.length >= 3) {
-                loadTriplet = [Number(laParts[0]), Number(laParts[1]), Number(laParts[2])].map(v => Number.isFinite(v) ? Number(v) : 0) as [number, number, number];
-            }
+                // Wait for CPU calculation
+                await new Promise(r => setTimeout(r, 500));
+                const stat2 = await execCommand(client, 'cat /proc/stat');
 
-            const coresNum = Number((coresOut.stdout || '').trim());
-            cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
-        } catch (e) {
-            cpuPercent = null;
-            cores = null;
-            loadTriplet = null;
-        }
-
-        let memPercent: number | null = null;
-        let usedGiB: number | null = null;
-        let totalGiB: number | null = null;
-        try {
-            const memInfo = await execCommand(client, 'cat /proc/meminfo');
-            const lines = memInfo.stdout.split('\n');
-            const getVal = (key: string) => {
-                const line = lines.find(l => l.startsWith(key));
-                if (!line) return null;
-                const m = line.match(/\d+/);
-                return m ? Number(m[0]) : null;
-            };
-            const totalKb = getVal('MemTotal:');
-            const availKb = getVal('MemAvailable:');
-            if (totalKb && availKb && totalKb > 0) {
-                const usedKb = totalKb - availKb;
-                memPercent = Math.max(0, Math.min(100, (usedKb / totalKb) * 100));
-                usedGiB = kibToGiB(usedKb);
-                totalGiB = kibToGiB(totalKb);
-            }
-        } catch (e) {
-            memPercent = null;
-            usedGiB = null;
-            totalGiB = null;
-        }
-
-        let diskPercent: number | null = null;
-        let usedHuman: string | null = null;
-        let totalHuman: string | null = null;
-        try {
-            const diskOutHuman = await execCommand(client, 'df -h -P / | tail -n +2');
-            const diskOutBytes = await execCommand(client, 'df -B1 -P / | tail -n +2');
-
-            const humanLine = diskOutHuman.stdout.split('\n').map(l => l.trim()).filter(Boolean)[0] || '';
-            const bytesLine = diskOutBytes.stdout.split('\n').map(l => l.trim()).filter(Boolean)[0] || '';
-
-            const humanParts = humanLine.split(/\s+/);
-            const bytesParts = bytesLine.split(/\s+/);
-
-            if (humanParts.length >= 6 && bytesParts.length >= 6) {
-                totalHuman = humanParts[1] || null;
-                usedHuman = humanParts[2] || null;
-
-                const totalBytes = Number(bytesParts[1]);
-                const usedBytes = Number(bytesParts[2]);
-
-                if (Number.isFinite(totalBytes) && Number.isFinite(usedBytes) && totalBytes > 0) {
-                    diskPercent = Math.max(0, Math.min(100, (usedBytes / totalBytes) * 100));
+                const cpuLine1 = (stat1.stdout.split('\n').find(l => l.startsWith('cpu ')) || '').trim();
+                const cpuLine2 = (stat2.stdout.split('\n').find(l => l.startsWith('cpu ')) || '').trim();
+                const a = parseCpuLine(cpuLine1);
+                const b = parseCpuLine(cpuLine2);
+                if (a && b) {
+                    const totalDiff = b.total - a.total;
+                    const idleDiff = b.idle - a.idle;
+                    const used = totalDiff - idleDiff;
+                    if (totalDiff > 0) cpuPercent = Math.max(0, Math.min(100, (used / totalDiff) * 100));
                 }
-            }
-        } catch (e) {
-            diskPercent = null;
-            usedHuman = null;
-            totalHuman = null;
-        }
 
-        return {
-            cpu: {percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet},
-            memory: {
-                percent: toFixedNum(memPercent, 0),
-                usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
-                totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null
-            },
-            disk: {percent: toFixedNum(diskPercent, 0), usedHuman, totalHuman},
-        };
+                const laParts = loadAvgOut.stdout.trim().split(/\s+/);
+                if (laParts.length >= 3) {
+                    loadTriplet = [Number(laParts[0]), Number(laParts[1]), Number(laParts[2])].map(v => Number.isFinite(v) ? Number(v) : 0) as [number, number, number];
+                }
+
+                const coresNum = Number((coresOut.stdout || '').trim());
+                cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
+            } catch (e) {
+                statsLogger.warn(`Failed to collect CPU metrics for host ${host.id}`, e);
+                cpuPercent = null;
+                cores = null;
+                loadTriplet = null;
+            }
+
+            let memPercent: number | null = null;
+            let usedGiB: number | null = null;
+            let totalGiB: number | null = null;
+            try {
+                const memInfo = await execCommand(client, 'cat /proc/meminfo');
+                const lines = memInfo.stdout.split('\n');
+                const getVal = (key: string) => {
+                    const line = lines.find(l => l.startsWith(key));
+                    if (!line) return null;
+                    const m = line.match(/\d+/);
+                    return m ? Number(m[0]) : null;
+                };
+                const totalKb = getVal('MemTotal:');
+                const availKb = getVal('MemAvailable:');
+                if (totalKb && availKb && totalKb > 0) {
+                    const usedKb = totalKb - availKb;
+                    memPercent = Math.max(0, Math.min(100, (usedKb / totalKb) * 100));
+                    usedGiB = kibToGiB(usedKb);
+                    totalGiB = kibToGiB(totalKb);
+                }
+            } catch (e) {
+                statsLogger.warn(`Failed to collect memory metrics for host ${host.id}`, e);
+                memPercent = null;
+                usedGiB = null;
+                totalGiB = null;
+            }
+
+            let diskPercent: number | null = null;
+            let usedHuman: string | null = null;
+            let totalHuman: string | null = null;
+            try {
+                const [diskOutHuman, diskOutBytes] = await Promise.all([
+                    execCommand(client, 'df -h -P / | tail -n +2'),
+                    execCommand(client, 'df -B1 -P / | tail -n +2')
+                ]);
+
+                const humanLine = diskOutHuman.stdout.split('\n').map(l => l.trim()).filter(Boolean)[0] || '';
+                const bytesLine = diskOutBytes.stdout.split('\n').map(l => l.trim()).filter(Boolean)[0] || '';
+
+                const humanParts = humanLine.split(/\s+/);
+                const bytesParts = bytesLine.split(/\s+/);
+
+                if (humanParts.length >= 6 && bytesParts.length >= 6) {
+                    totalHuman = humanParts[1] || null;
+                    usedHuman = humanParts[2] || null;
+
+                    const totalBytes = Number(bytesParts[1]);
+                    const usedBytes = Number(bytesParts[2]);
+
+                    if (Number.isFinite(totalBytes) && Number.isFinite(usedBytes) && totalBytes > 0) {
+                        diskPercent = Math.max(0, Math.min(100, (usedBytes / totalBytes) * 100));
+                    }
+                }
+            } catch (e) {
+                statsLogger.warn(`Failed to collect disk metrics for host ${host.id}`, e);
+                diskPercent = null;
+                usedHuman = null;
+                totalHuman = null;
+            }
+
+            const result = {
+                cpu: {percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet},
+                memory: {
+                    percent: toFixedNum(memPercent, 0),
+                    usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
+                    totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null
+                },
+                disk: {percent: toFixedNum(diskPercent, 0), usedHuman, totalHuman},
+            };
+
+            // Cache the result
+            metricsCache.set(host.id, result);
+            return result;
+        });
     });
 }
 
@@ -468,11 +722,8 @@ app.get('/status', async (req, res) => {
     res.json(result);
 });
 
-app.get('/status/:id', async (req, res) => {
+app.get('/status/:id', validateHostId, async (req, res) => {
     const id = Number(req.params.id);
-    if (!id) {
-        return res.status(400).json({error: 'Invalid id'});
-    }
 
     try {
         const host = await fetchHostById(id);
@@ -497,27 +748,64 @@ app.post('/refresh', async (req, res) => {
     res.json({message: 'Refreshed'});
 });
 
-app.get('/metrics/:id', async (req, res) => {
+app.get('/metrics/:id', validateHostId, async (req, res) => {
     const id = Number(req.params.id);
-    if (!id) {
-        return res.status(400).json({error: 'Invalid id'});
-    }
+    
     try {
         const host = await fetchHostById(id);
         if (!host) {
             return res.status(404).json({error: 'Host not found'});
         }
+
+        // Check if host is online first
+        const isOnline = await tcpPing(host.ip, host.port, 5000);
+        if (!isOnline) {
+            return res.status(503).json({
+                error: 'Host is offline',
+                cpu: {percent: null, cores: null, load: null},
+                memory: {percent: null, usedGiB: null, totalGiB: null},
+                disk: {percent: null, usedHuman: null, totalHuman: null},
+                lastChecked: new Date().toISOString()
+            });
+        }
+
         const metrics = await collectMetrics(host);
         res.json({...metrics, lastChecked: new Date().toISOString()});
     } catch (err) {
         statsLogger.error('Failed to collect metrics', err);
-        return res.json({
+        
+        // Return proper error response instead of empty data
+        if (err instanceof Error && err.message.includes('timeout')) {
+            return res.status(504).json({
+                error: 'Metrics collection timeout',
+                cpu: {percent: null, cores: null, load: null},
+                memory: {percent: null, usedGiB: null, totalGiB: null},
+                disk: {percent: null, usedHuman: null, totalHuman: null},
+                lastChecked: new Date().toISOString()
+            });
+        }
+        
+        return res.status(500).json({
+            error: 'Failed to collect metrics',
             cpu: {percent: null, cores: null, load: null},
             memory: {percent: null, usedGiB: null, totalGiB: null},
             disk: {percent: null, usedHuman: null, totalHuman: null},
             lastChecked: new Date().toISOString()
         });
     }
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    statsLogger.info('Received SIGINT, shutting down gracefully');
+    connectionPool.destroy();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    statsLogger.info('Received SIGTERM, shutting down gracefully');
+    connectionPool.destroy();
+    process.exit(0);
 });
 
 const PORT = 8085;

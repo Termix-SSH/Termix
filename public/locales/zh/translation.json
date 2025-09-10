@@ -701,7 +701,14 @@
     "memoryUsage": "内存使用率",
     "rootStorageSpace": "根目录存储空间",
     "of": "的",
-    "feedbackMessage": "对服务器管理的下一步功能有想法？在这里分享吧"
+    "feedbackMessage": "对服务器管理的下一步功能有想法？在这里分享吧",
+    "loadingMetrics": "正在加载指标...",
+    "refreshing": "正在刷新...",
+    "serverOffline": "服务器离线",
+    "cannotFetchMetrics": "无法从离线服务器获取指标",
+    "load": "负载",
+    "free": "空闲",
+    "available": "可用"
   },
   "auth": {
     "loginTitle": "登录 Termix",

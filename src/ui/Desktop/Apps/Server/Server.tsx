@@ -32,6 +32,8 @@ export function Server({
     const [serverStatus, setServerStatus] = React.useState<'online' | 'offline'>('offline');
     const [metrics, setMetrics] = React.useState<ServerMetrics | null>(null);
     const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
+    const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(false);
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
 
     React.useEffect(() => {
         setCurrentHostConfig(hostConfig);
@@ -98,6 +100,7 @@ export function Server({
         const fetchMetrics = async () => {
             if (!currentHostConfig?.id) return;
             try {
+                setIsLoadingMetrics(true);
                 const data = await getServerMetricsById(currentHostConfig.id);
                 if (!cancelled) {
                     setMetrics(data);
@@ -107,6 +110,10 @@ export function Server({
                 if (!cancelled) {
                     setMetrics(null);
                     toast.error(t('serverStats.failedToFetchMetrics'));
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoadingMetrics(false);
                 }
             }
         };
@@ -160,21 +167,25 @@ export function Server({
             <div className="h-full w-full flex flex-col">
 
                 {/* Top Header */}
-                <div className="flex items-center justify-between px-3 pt-2 pb-2">
-                    <div className="flex items-center gap-4">
-                        <h1 className="font-bold text-lg">
-                            {currentHostConfig?.folder} / {title}
-                        </h1>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
+                    <div className="flex items-center gap-4 min-w-0">
+                        <div className="min-w-0">
+                            <h1 className="font-bold text-lg truncate">
+                                {currentHostConfig?.folder} / {title}
+                            </h1>
+                        </div>
                         <Status status={serverStatus} className="!bg-transparent !p-0.75 flex-shrink-0">
                             <StatusIndicator/>
                         </Status>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <Button
                             variant="outline"
+                            disabled={isRefreshing}
                             onClick={async () => {
                                 if (currentHostConfig?.id) {
                                     try {
+                                        setIsRefreshing(true);
                                         const res = await getServerStatusById(currentHostConfig.id);
                                         setServerStatus(res?.status === 'online' ? 'online' : 'offline');
                                         const data = await getServerMetricsById(currentHostConfig.id);
@@ -182,12 +193,21 @@ export function Server({
                                     } catch {
                                         setServerStatus('offline');
                                         setMetrics(null);
+                                    } finally {
+                                        setIsRefreshing(false);
                                     }
                                 }
                             }}
                             title={t('serverStats.refreshStatusAndMetrics')}
                         >
-                            {t('serverStats.refreshStatus')}
+                            {isRefreshing ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+                                    {t('serverStats.refreshing')}
+                                </div>
+                            ) : (
+                                t('serverStats.refreshStatus')
+                            )}
                         </Button>
                         {currentHostConfig?.enableFileManager && (
                             <Button
@@ -215,66 +235,151 @@ export function Server({
                 <Separator className="p-0.25 w-full"/>
 
                 {/* Stats */}
-                <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker flex flex-row items-stretch">
-                    {/* CPU */}
-                    <div className="flex-1 min-w-0 px-2 py-2">
-                        <h1 className="font-bold xt-lg flex flex-row gap-2 mb-2">
-                            <Cpu/>
-                            {(() => {
-                                const pct = metrics?.cpu?.percent;
-                                const cores = metrics?.cpu?.cores;
-                                const la = metrics?.cpu?.load;
-                                const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
-                                const coresText = (typeof cores === 'number') ? t('serverStats.cpuCores', {count: cores}) : t('serverStats.naCpus');
-                                const laText = (la && la.length === 3)
-                                    ? t('serverStats.loadAverage', {avg1: la[0].toFixed(2), avg5: la[1].toFixed(2), avg15: la[2].toFixed(2)})
-                                    : t('serverStats.loadAverageNA');
-                                return `${t('serverStats.cpuUsage')} - ${pctText} ${t('serverStats.of')} ${coresText} (${laText})`;
-                            })()}
-                        </h1>
+                <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4">
+                    {isLoadingMetrics && !metrics ? (
+                        <div className="flex items-center justify-center py-8">
+                            <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-gray-300">{t('serverStats.loadingMetrics')}</span>
+                            </div>
+                        </div>
+                    ) : !metrics && serverStatus === 'offline' ? (
+                        <div className="flex items-center justify-center py-8">
+                            <div className="text-center">
+                                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
+                                    <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
+                                </div>
+                                <p className="text-gray-300 mb-1">{t('serverStats.serverOffline')}</p>
+                                <p className="text-sm text-gray-500">{t('serverStats.cannotFetchMetrics')}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                        {/* CPU Stats */}
+                        <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Cpu className="h-5 w-5 text-blue-400" />
+                                <h3 className="font-semibold text-lg text-white">{t('serverStats.cpuUsage')}</h3>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-300">
+                                        {(() => {
+                                            const pct = metrics?.cpu?.percent;
+                                            const cores = metrics?.cpu?.cores;
+                                            const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
+                                            const coresText = (typeof cores === 'number') ? t('serverStats.cpuCores', {count: cores}) : t('serverStats.naCpus');
+                                            return `${pctText} ${t('serverStats.of')} ${coresText}`;
+                                        })()}
+                                    </span>
+                                </div>
+                                
+                                <div className="relative">
+                                    <Progress 
+                                        value={typeof metrics?.cpu?.percent === 'number' ? metrics!.cpu!.percent! : 0}
+                                        className="h-2"
+                                    />
+                                    {typeof metrics?.cpu?.percent === 'number' && metrics.cpu.percent > 80 && (
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                    )}
+                                </div>
+                                
+                                <div className="text-xs text-gray-500">
+                                    {metrics?.cpu?.load ? 
+                                        `Load: ${metrics.cpu.load[0].toFixed(2)}, ${metrics.cpu.load[1].toFixed(2)}, ${metrics.cpu.load[2].toFixed(2)}` : 
+                                        'Load: N/A'
+                                    }
+                                </div>
+                            </div>
+                        </div>
 
-                        <Progress value={typeof metrics?.cpu?.percent === 'number' ? metrics!.cpu!.percent! : 0}/>
+                        {/* Memory Stats */}
+                        <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+                            <div className="flex items-center gap-2 mb-3">
+                                <MemoryStick className="h-5 w-5 text-green-400" />
+                                <h3 className="font-semibold text-lg text-white">{t('serverStats.memoryUsage')}</h3>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-300">
+                                        {(() => {
+                                            const pct = metrics?.memory?.percent;
+                                            const used = metrics?.memory?.usedGiB;
+                                            const total = metrics?.memory?.totalGiB;
+                                            const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
+                                            const usedText = (typeof used === 'number') ? `${used.toFixed(1)} GiB` : 'N/A';
+                                            const totalText = (typeof total === 'number') ? `${total.toFixed(1)} GiB` : 'N/A';
+                                            return `${pctText} (${usedText} ${t('serverStats.of')} ${totalText})`;
+                                        })()}
+                                    </span>
+                                </div>
+                                
+                                <div className="relative">
+                                    <Progress 
+                                        value={typeof metrics?.memory?.percent === 'number' ? metrics!.memory!.percent! : 0}
+                                        className="h-2"
+                                    />
+                                    {typeof metrics?.memory?.percent === 'number' && metrics.memory.percent > 85 && (
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                    )}
+                                </div>
+                                
+                                <div className="text-xs text-gray-500">
+                                    {(() => {
+                                        const used = metrics?.memory?.usedGiB;
+                                        const total = metrics?.memory?.totalGiB;
+                                        const free = (typeof used === 'number' && typeof total === 'number') ? (total - used).toFixed(1) : 'N/A';
+                                        return `Free: ${free} GiB`;
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Disk Stats */}
+                        <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+                            <div className="flex items-center gap-2 mb-3">
+                                <HardDrive className="h-5 w-5 text-orange-400" />
+                                <h3 className="font-semibold text-lg text-white">{t('serverStats.rootStorageSpace')}</h3>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-300">
+                                        {(() => {
+                                            const pct = metrics?.disk?.percent;
+                                            const used = metrics?.disk?.usedHuman;
+                                            const total = metrics?.disk?.totalHuman;
+                                            const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
+                                            const usedText = used ?? 'N/A';
+                                            const totalText = total ?? 'N/A';
+                                            return `${pctText} (${usedText} ${t('serverStats.of')} ${totalText})`;
+                                        })()}
+                                    </span>
+                                </div>
+                                
+                                <div className="relative">
+                                    <Progress 
+                                        value={typeof metrics?.disk?.percent === 'number' ? metrics!.disk!.percent! : 0}
+                                        className="h-2"
+                                    />
+                                    {typeof metrics?.disk?.percent === 'number' && metrics.disk.percent > 90 && (
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                    )}
+                                </div>
+                                
+                                <div className="text-xs text-gray-500">
+                                    {(() => {
+                                        const used = metrics?.disk?.usedHuman;
+                                        const total = metrics?.disk?.totalHuman;
+                                        return used && total ? `Available: ${total}` : 'Available: N/A';
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <Separator className="p-0.5 self-stretch" orientation="vertical"/>
-
-                    {/* Memory */}
-                    <div className="flex-1 min-w-0 px-2 py-2">
-                        <h1 className="font-bold xt-lg flex flex-row gap-2 mb-2">
-                            <MemoryStick/>
-                            {(() => {
-                                const pct = metrics?.memory?.percent;
-                                const used = metrics?.memory?.usedGiB;
-                                const total = metrics?.memory?.totalGiB;
-                                const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
-                                const usedText = (typeof used === 'number') ? `${used} GiB` : 'N/A';
-                                const totalText = (typeof total === 'number') ? `${total} GiB` : 'N/A';
-                                return `${t('serverStats.memoryUsage')} - ${pctText} (${usedText} ${t('serverStats.of')} ${totalText})`;
-                            })()}
-                        </h1>
-
-                        <Progress value={typeof metrics?.memory?.percent === 'number' ? metrics!.memory!.percent! : 0}/>
-                    </div>
-
-                    <Separator className="p-0.5 self-stretch" orientation="vertical"/>
-
-                    {/* Root Storage */}
-                    <div className="flex-1 min-w-0 px-2 py-2">
-                        <h1 className="font-bold xt-lg flex flex-row gap-2 mb-2">
-                            <HardDrive/>
-                            {(() => {
-                                const pct = metrics?.disk?.percent;
-                                const used = metrics?.disk?.usedHuman;
-                                const total = metrics?.disk?.totalHuman;
-                                const pctText = (typeof pct === 'number') ? `${pct}%` : 'N/A';
-                                const usedText = used ?? 'N/A';
-                                const totalText = total ?? 'N/A';
-                                return `${t('serverStats.rootStorageSpace')} - ${pctText} (${usedText} ${t('serverStats.of')} ${totalText})`;
-                            })()}
-                        </h1>
-
-                        <Progress value={typeof metrics?.disk?.percent === 'number' ? metrics!.disk!.percent! : 0}/>
-                    </div>
+                    )}
                 </div>
 
                 {/* SSH Tunnels */}
