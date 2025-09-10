@@ -537,13 +537,12 @@ export function LeftSidebar({
                     </div>
 
                     <div
-                        className="flex-1"
+                        className="flex-1 cursor-pointer"
                         onClick={() => {
                             setDeleteAccountOpen(false);
                             setDeletePassword("");
                             setDeleteError(null);
                         }}
-                        className="cursor-pointer"
                     />
                 </div>
             )}

@@ -8,6 +8,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 获取平台信息
     getPlatform: () => ipcRenderer.invoke('get-platform'),
     
+    // 获取后端端口
+    getBackendPort: () => ipcRenderer.invoke('get-backend-port'),
+    
+    // 重启后端服务
+    restartBackend: () => ipcRenderer.invoke('restart-backend'),
+    
     // 环境检测
     isElectron: true,
     isDev: process.env.NODE_ENV === 'development',

@@ -742,7 +742,7 @@ export function HomepageAuth({
                             </div>
                             <div className="flex flex-col gap-2">
                                 <Label htmlFor="password">{t('common.password')}</Label>
-                                <PasswordInput id="password" required className="h-55 text-base"
+                                <PasswordInput id="password" required className="h-11 text-base"
                                        value={password} onChange={e => setPassword(e.target.value)}
                                        disabled={loading || internalLoggedIn}/>
                             </div>

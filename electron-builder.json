@@ -6,18 +6,23 @@
   },
   "files": [
     "dist/**/*",
-    "electron/**/*"
+    "electron/**/*",
+    "public/**/*",
+    "!**/node_modules/**/*",
+    "!src/**/*",
+    "!*.md",
+    "!tsconfig*.json",
+    "!vite.config.ts",
+    "!eslint.config.js"
   ],
   "extraMetadata": {
     "main": "electron/main-simple.cjs"
   },
+  "buildDependenciesFromSource": false,
+  "nodeGypRebuild": false,
+  "npmRebuild": false,
   "mac": {
     "category": "public.app-category.developer-tools",
-    "icon": "public/icon.icns",
-    "hardenedRuntime": true,
-    "gatekeeperAssess": false,
-    "entitlements": "build/entitlements.mac.plist",
-    "entitlementsInherit": "build/entitlements.mac.plist",
     "target": [
       {
         "target": "dmg",
@@ -31,7 +36,7 @@
   },
   "win": {
     "target": "nsis",
-    "icon": "public/icon.ico"
+    "forceCodeSigning": false
   },
   "nsis": {
     "oneClick": false,

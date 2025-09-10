@@ -16,27 +16,68 @@ function startBackendServer() {
         return;
     }
 
-    const backendPath = path.join(__dirname, '../dist/backend/starter.js');
+    // 在打包环境中，后端文件在 resources/app/dist/backend/backend/ 目录下
+    const backendPath = isDev 
+        ? path.join(__dirname, '../dist/backend/starter.js')
+        : path.join(process.resourcesPath, 'app', 'dist', 'backend', 'backend', 'starter.js');
+    
     console.log('Starting backend server from:', backendPath);
+    console.log('Working directory:', process.cwd());
+
+    // 设置环境变量
+    const env = {
+        ...process.env,
+        NODE_ENV: 'production',
+        DATA_PATH: app.getPath('userData'),
+        DB_PATH: path.join(app.getPath('userData'), 'database.db'),
+        VERSION: app.getVersion()
+    };
+
+    // 检查文件是否存在
+    const fs = require('fs');
+    if (!fs.existsSync(backendPath)) {
+        console.error('Backend file not found at:', backendPath);
+        return;
+    }
+
+    console.log('Backend file exists, starting process...');
+    console.log('Environment variables:', env);
 
     backendProcess = spawn('node', [backendPath], {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
-        cwd: path.join(__dirname, '..')  // Set working directory to app root
+        cwd: isDev ? path.join(__dirname, '..') : process.resourcesPath,
+        env: env
     });
 
     backendProcess.stdout.on('data', (data) => {
-        console.log('Backend:', data.toString());
+        console.log('Backend stdout:', data.toString());
     });
 
     backendProcess.stderr.on('data', (data) => {
-        console.error('Backend Error:', data.toString());
+        console.error('Backend stderr:', data.toString());
     });
 
     backendProcess.on('close', (code) => {
         console.log(`Backend process exited with code ${code}`);
         backendProcess = null;
     });
+
+    backendProcess.on('error', (error) => {
+        console.error('Failed to start backend process:', error);
+        console.error('Error details:', error.message);
+        console.error('Error code:', error.code);
+        backendProcess = null;
+    });
+
+    // 等待一下看看进程是否启动成功
+    setTimeout(() => {
+        if (backendProcess && !backendProcess.killed) {
+            console.log('Backend process appears to be running');
+        } else {
+            console.error('Backend process failed to start or died immediately');
+        }
+    }, 1000);
 }
 
 // 停止后端服务
@@ -144,12 +185,29 @@ ipcMain.handle('get-platform', () => {
     return process.platform;
 });
 
-// 应用事件处理
-app.whenReady().then(() => {
-    // 在生产环境启动后端服务
-    if (!isDev) {
+ipcMain.handle('get-backend-port', () => {
+    return 8081; // 后端服务端口
+});
+
+ipcMain.handle('restart-backend', async () => {
+    try {
+        stopBackendServer();
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
         startBackendServer();
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
     }
+});
+
+// 应用事件处理
+app.whenReady().then(async () => {
+    // 启动后端服务
+    startBackendServer();
+    
+    // 等待后端服务启动
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     createWindow();
 });
 
