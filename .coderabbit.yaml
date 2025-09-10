@@ -16,16 +16,563 @@ reviews:
     - "!**/*.jpg"
     - "!**/*.gif"
     - "!**/*.lock"
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/public/locales/**"
+    - "!**/repo-images/**"
   path_instructions:
     - path: "**/*.{ts,tsx}"
-      instructions:
-        "Review the Typescript and React code for conformity with best practices. Ensure that it connects properly to the database, uses Shadcn/Tailwind components, and does not hard code colors. Highlight any deviations."
+      instructions: |
+        Review TypeScript and React code for Termix server management platform. Key considerations:
+        
+        **Architecture & Patterns:**
+        - Follow the established multi-port backend architecture (SSH: 8081, Tunnel: 8083, File Manager: 8084, Stats: 8085)
+        - Use proper separation between Desktop and Mobile UI components
+        - Maintain consistent state management patterns with React hooks and context
+        - Follow the established tab-based navigation system
+        
+        **Database & Backend:**
+        - Use Drizzle ORM with SQLite for database operations
+        - Implement proper JWT authentication middleware patterns
+        - Follow the established API error handling patterns in main-axios.ts
+        - Use proper logging with the structured logger system (apiLogger, authLogger, sshLogger, etc.)
+        - Maintain proper input validation and sanitization
+        
+        **UI/UX Guidelines:**
+        - Use Shadcn/UI components with Tailwind CSS for consistent styling
+        - Follow the established theme system with dark/light mode support
+        - Use proper responsive design patterns for Desktop/Mobile views
+        - Implement proper loading states and error handling
+        - Use the established confirmation patterns with useConfirmation hook
+        - Use CSS variables and classes from index.css instead of hardcoding colors
+        - Follow the established color token system (--primary, --secondary, --background, etc.)
+        - Use proper Tailwind CSS classes instead of inline styles
+        - Implement proper focus states and accessibility indicators
+        
+        **SSH & Security:**
+        - Implement proper SSH connection management with session handling
+        - Use secure credential storage and management patterns
+        - Follow the established authentication flow (password, key, credential-based)
+        - Implement proper file operation security and validation
+        
+        **Code Quality:**
+        - Use proper TypeScript types from the centralized types/index.ts
+        - Follow the established API patterns in main-axios.ts
+        - Implement proper error boundaries and fallback UI
+        - Use proper React patterns (hooks, context, refs)
+        - Maintain consistent naming conventions and file organization
+        - All API interactions should go through main-axios.ts functions, not direct axios calls
+        - Use proper component interaction patterns through props and callbacks
+        - Follow the established state management patterns with useState and useEffect
+        - Use proper event handling and form submission patterns
+        
+        **Bug Detection & Fixes:**
+        - Identify and fix memory leaks in useEffect cleanup functions
+        - Fix missing dependency arrays in useEffect hooks
+        - Resolve infinite re-render loops caused by object/array dependencies
+        - Fix race conditions in async operations and API calls
+        - Identify and fix potential null/undefined access errors
+        - Fix improper state updates that cause stale closures
+        - Resolve event handler memory leaks and proper cleanup
+        - Fix improper error handling that could crash the application
+        - Identify and fix accessibility issues and keyboard navigation problems
+        - Fix responsive design issues and mobile compatibility problems
+        - Resolve TypeScript type errors and missing type definitions
+        - Fix improper form validation and submission handling
+        - Identify and fix performance issues and unnecessary re-renders
+        - Fix improper API error handling and user feedback
+        - Resolve authentication state inconsistencies and token management issues
+        
+        **Internationalization:**
+        - Use the i18next translation system with proper t() function calls
+        - Support both English and Chinese locales
+        - Use proper translation keys and fallbacks
+        
+        **Performance:**
+        - Implement proper cleanup in useEffect hooks
+        - Use proper memoization where appropriate
+        - Follow the established polling and refresh patterns
+        - Implement proper connection pooling and resource management
+        
+        **Specific to Termix:**
+        - Maintain compatibility with Electron and web versions
+        - Follow the established terminal integration patterns with xterm.js
+        - Use proper file manager operations and SSH session management
+        - Implement proper tunnel management and status tracking
+        - Follow the established alert and notification system patterns
+        
+        Highlight any deviations from these patterns and suggest improvements for maintainability, security, and user experience.
+        
+        **General Bug Detection & Fixes:**
+        - Identify and fix common React bugs (missing keys, improper state updates, memory leaks)
+        - Fix TypeScript errors and type safety issues
+        - Resolve accessibility violations and keyboard navigation problems
+        - Fix responsive design issues and mobile compatibility problems
+        - Identify and fix performance bottlenecks and unnecessary re-renders
+        - Fix improper error handling that could crash the application
+        - Resolve security vulnerabilities and improper data handling
+        - Fix improper form validation and user input handling
+        - Identify and fix race conditions and async operation issues
+        - Fix improper cleanup and resource management
+        - Resolve improper authentication and authorization issues
+        - Fix improper API error handling and user feedback
+        - Identify and fix potential null/undefined access errors
+        - Fix improper event handling and memory leaks
+        - Resolve improper state management and data flow issues
+    
+    - path: "**/backend/**/*.{ts,js}"
+      instructions: |
+        Review backend code for Termix server management platform. Key considerations:
+        
+        **Backend Architecture:**
+        - Follow the multi-port microservice architecture (SSH: 8081, Tunnel: 8083, File Manager: 8084, Stats: 8085)
+        - Use Express.js with proper middleware patterns
+        - Implement proper CORS and security headers
+        - Use proper request/response logging with structured logging
+        
+        **Database Operations:**
+        - Use Drizzle ORM with proper schema definitions
+        - Implement proper database migrations and schema updates
+        - Use proper transaction handling for critical operations
+        - Follow the established database connection patterns
+        
+        **Authentication & Security:**
+        - Implement proper JWT token validation and refresh
+        - Use bcryptjs for password hashing with proper salt rounds
+        - Implement proper input validation and sanitization
+        - Use proper CORS configuration for security
+        - Implement proper rate limiting and security headers
+        
+        **SSH Operations:**
+        - Use ssh2 library with proper connection management
+        - Implement proper SSH key handling and validation
+        - Use proper session management and cleanup
+        - Implement proper error handling for SSH operations
+        - Use proper file operation security and validation
+        
+        **API Design:**
+        - Follow RESTful API patterns with proper HTTP status codes
+        - Implement proper error response formatting
+        - Use proper request/response validation
+        - Implement proper API versioning and backward compatibility
+        - All API routes should be defined in main-axios.ts, not scattered across components
+        - Use the established multi-port API architecture (SSH: 8081, Tunnel: 8083, File Manager: 8084, Stats: 8085)
+        - Follow the established error handling patterns with handleApiError function
+        - Use proper structured logging with service-specific loggers (apiLogger, authLogger, sshLogger, etc.)
+        
+        **Logging & Monitoring:**
+        - Use the structured logging system with proper context
+        - Implement proper error tracking and reporting
+        - Use proper performance monitoring and metrics
+        - Implement proper health checks and status endpoints
+        
+        Highlight any security vulnerabilities, performance issues, or architectural deviations.
+    
+    - path: "**/components/**/*.{ts,tsx}"
+      instructions: |
+        Review UI components for Termix server management platform. Key considerations:
+        
+        **Component Design:**
+        - Use Shadcn/UI components as the foundation
+        - Implement proper component composition and reusability
+        - Use proper TypeScript interfaces and prop types
+        - Follow the established component naming conventions
+        
+        **Styling & Theming:**
+        - Use Tailwind CSS with proper responsive design
+        - Implement proper dark/light theme support
+        - Use proper color tokens and design system consistency
+        - Implement proper accessibility features (ARIA labels, keyboard navigation)
+        - Use CSS variables from index.css instead of hardcoding colors (--primary, --secondary, --background, etc.)
+        - Follow the established color scheme and design tokens
+        - Use proper Tailwind CSS utility classes instead of custom CSS
+        - Implement proper focus states and hover effects
+        
+        **State Management:**
+        - Use proper React hooks and context patterns
+        - Implement proper state lifting and prop drilling avoidance
+        - Use proper memoization with useMemo and useCallback
+        - Implement proper cleanup in useEffect hooks
+        
+        **Form Handling:**
+        - Use react-hook-form with proper validation
+        - Implement proper form state management
+        - Use proper error handling and user feedback
+        - Implement proper accessibility for form elements
+        
+        **SSH Integration:**
+        - Implement proper SSH connection status indicators
+        - Use proper terminal integration with xterm.js
+        - Implement proper file manager operations
+        - Use proper tunnel status and management UI
+        
+        Highlight any UI/UX issues, accessibility problems, or performance concerns.
+    
+    - path: "**/types/**/*.{ts,js}"
+      instructions: |
+        Review type definitions for Termix server management platform. Key considerations:
+        
+        **Type Design:**
+        - Use proper TypeScript interfaces and type definitions
+        - Implement proper type safety and validation
+        - Use proper generic types and utility types
+        - Follow the established type naming conventions
+        
+        **API Types:**
+        - Define proper request/response types for all API endpoints
+        - Use proper error types and status codes
+        - Implement proper validation types and schemas
+        - Use proper pagination and filtering types
+        
+        **SSH Types:**
+        - Define proper SSH connection and configuration types
+        - Use proper tunnel and credential types
+        - Implement proper file operation types
+        - Use proper authentication and security types
+        
+        **Type Safety:**
+        - Ensure proper type coverage and completeness
+        - Use proper strict type checking
+        - Implement proper type narrowing and guards
+        - Use proper type assertions and casting
+        
+        Highlight any type safety issues, missing types, or type inconsistencies.
+    
+    - path: "**/hooks/**/*.{ts,tsx}"
+      instructions: |
+        Review custom hooks for Termix server management platform. Key considerations:
+        
+        **Hook Design:**
+        - Use proper React hooks patterns and conventions
+        - Implement proper hook composition and reusability
+        - Use proper TypeScript types for hook parameters and return values
+        - Follow the established hook naming conventions
+        
+        **State Management:**
+        - Implement proper state management with useState and useReducer
+        - Use proper context and provider patterns
+        - Implement proper state persistence and synchronization
+        - Use proper state cleanup and memory management
+        
+        **Side Effects:**
+        - Use proper useEffect patterns with proper dependencies
+        - Implement proper cleanup functions and resource management
+        - Use proper async operations and error handling
+        - Implement proper polling and refresh patterns
+        
+        **Performance:**
+        - Use proper memoization with useMemo and useCallback
+        - Implement proper debouncing and throttling
+        - Use proper lazy loading and code splitting
+        - Implement proper optimization patterns
+        
+        **SSH Integration:**
+        - Implement proper SSH connection management hooks
+        - Use proper terminal integration hooks
+        - Implement proper file manager operation hooks
+        - Use proper tunnel management hooks
+        
+        **Hook-Specific Bug Detection:**
+        - Fix missing cleanup functions in useEffect hooks that cause memory leaks
+        - Resolve infinite loops caused by incorrect dependency arrays
+        - Fix stale closure issues in event handlers and async operations
+        - Identify and fix improper state updates that cause unnecessary re-renders
+        - Fix race conditions in async hooks and API calls
+        - Resolve improper ref usage and null reference errors
+        - Fix improper context usage and provider nesting issues
+        - Identify and fix custom hook dependency issues
+        - Resolve improper memoization that causes stale data
+        - Fix improper error handling in custom hooks
+        
+        Highlight any hook design issues, performance problems, or reusability concerns.
+    
+    - path: "**/lib/**/*.{ts,js}"
+      instructions: |
+        Review utility libraries and helper functions for Termix server management platform. Key considerations:
+        
+        **Utility Functions:**
+        - Implement proper utility functions with clear purposes
+        - Use proper TypeScript types and JSDoc documentation
+        - Implement proper error handling and validation
+        - Follow the established utility naming conventions
+        
+        **Logging System:**
+        - Use proper structured logging with context and metadata
+        - Implement proper log levels and filtering
+        - Use proper log formatting and output
+        - Implement proper log rotation and cleanup
+        
+        **API Utilities:**
+        - Implement proper API client configuration and management
+        - Use proper request/response interceptors
+        - Implement proper error handling and retry logic
+        - Use proper authentication and authorization handling
+        - All API functions should be centralized in main-axios.ts
+        - Use proper service-specific API instances (sshHostApi, tunnelApi, fileManagerApi, statsApi, authApi)
+        - Follow the established error handling patterns with handleApiError function
+        - Use proper structured logging with service-specific loggers
+        
+        **Security Utilities:**
+        - Implement proper input validation and sanitization
+        - Use proper encryption and decryption functions
+        - Implement proper secure random generation
+        - Use proper security headers and CORS handling
+        
+        **SSH Utilities:**
+        - Implement proper SSH connection utilities
+        - Use proper SSH key handling and validation
+        - Implement proper SSH command execution
+        - Use proper SSH file operation utilities
+        
+        **Utility Bug Detection:**
+        - Fix improper error handling in utility functions that could crash the application
+        - Resolve null/undefined access errors in utility functions
+        - Fix improper input validation that could cause security vulnerabilities
+        - Identify and fix memory leaks in utility functions
+        - Fix improper async/await usage and promise handling
+        - Resolve improper type checking and validation errors
+        - Fix improper logging that could expose sensitive information
+        - Identify and fix performance bottlenecks in utility functions
+        - Fix improper data transformation and serialization issues
+        - Resolve improper configuration and environment variable handling
+        
+        Highlight any utility design issues, performance problems, or security concerns.
+    
+    - path: "**/main-axios.ts"
+      instructions: |
+        Review main-axios.ts API client configuration for Termix server management platform. Key considerations:
+        
+        **API Client Architecture:**
+        - Maintain the multi-port API architecture (SSH: 8081, Tunnel: 8083, File Manager: 8084, Stats: 8085)
+        - Use proper service-specific API instances (sshHostApi, tunnelApi, fileManagerApi, statsApi, authApi)
+        - Implement proper API instance creation with createApiInstance function
+        - Use proper base URL configuration for different environments (dev, production, Electron)
+        
+        **Error Handling:**
+        - Use the centralized handleApiError function for consistent error handling
+        - Implement proper error classification (auth, network, validation, server errors)
+        - Use proper error logging with service-specific loggers
+        - Implement proper error response formatting and user-friendly messages
+        
+        **Request/Response Interceptors:**
+        - Implement proper JWT token handling in request interceptors
+        - Use proper request timing and performance logging
+        - Implement proper response logging and error tracking
+        - Use proper authentication token refresh and cleanup
+        
+        **API Function Organization:**
+        - Group API functions by service (SSH Host Management, Tunnel Management, File Manager, etc.)
+        - Use proper TypeScript types for all API functions
+        - Implement proper parameter validation and sanitization
+        - Use proper return type definitions and error handling
+        
+        **Authentication:**
+        - Implement proper JWT token management and refresh
+        - Use proper cookie handling for web and Electron environments
+        - Implement proper authentication state management
+        - Use proper token expiration and cleanup
+        
+        **Logging:**
+        - Use proper structured logging with context and metadata
+        - Implement proper request/response logging with performance metrics
+        - Use proper error logging with appropriate log levels
+        - Implement proper service-specific logger selection
+        
+        **Performance:**
+        - Implement proper request timeout and retry logic
+        - Use proper connection pooling and resource management
+        - Implement proper request deduplication and caching
+        - Use proper performance monitoring and metrics
+        
+        **Security:**
+        - Implement proper input validation and sanitization
+        - Use proper CORS and security header handling
+        - Implement proper authentication and authorization
+        - Use proper secure communication and data handling
+        
+        **API Bug Detection:**
+        - Fix improper error handling that could expose sensitive information
+        - Resolve race conditions in concurrent API calls
+        - Fix improper token management and authentication state issues
+        - Identify and fix memory leaks in API interceptors
+        - Fix improper request/response validation that could cause crashes
+        - Resolve improper timeout handling and retry logic
+        - Fix improper error response formatting and user feedback
+        - Identify and fix performance issues in API calls
+        - Fix improper request deduplication and caching issues
+        - Resolve improper authentication token refresh and cleanup
+        - Fix improper CORS and security header configuration
+        - Identify and fix potential security vulnerabilities in API handling
+        
+        Highlight any API design issues, error handling problems, or security concerns.
+    
+    - path: "**/electron/**/*.{ts,js,cjs}"
+      instructions: |
+        Review Electron application code for Termix server management platform. Key considerations:
+        
+        **Electron Architecture:**
+        - Use proper Electron main and renderer process separation
+        - Implement proper IPC (Inter-Process Communication) patterns
+        - Use proper security and sandboxing configurations
+        - Follow the established Electron best practices
+        
+        **Security:**
+        - Implement proper security policies and configurations
+        - Use proper context isolation and node integration
+        - Implement proper CSP and security headers
+        - Use proper authentication and authorization handling
+        
+        **Performance:**
+        - Implement proper memory management and cleanup
+        - Use proper resource optimization and caching
+        - Implement proper background processing and threading
+        - Use proper performance monitoring and profiling
+        
+        **Electron Bug Detection:**
+        - Fix improper IPC communication that could cause crashes
+        - Resolve memory leaks in Electron main and renderer processes
+        - Fix improper window management and lifecycle issues
+        - Identify and fix security vulnerabilities in Electron configuration
+        - Fix improper context isolation and node integration issues
+        - Resolve improper event handling and cleanup in Electron
+        - Fix improper file system access and permission issues
+        - Identify and fix performance issues in Electron processes
+        - Fix improper auto-updater and version management
+        - Resolve improper tray and menu functionality issues
+        - Fix improper security policies and CSP configuration
+        - Identify and fix potential security vulnerabilities in Electron setup
+        
+        Highlight any Electron-specific issues, security vulnerabilities, or performance problems.
+    
+    - path: "**/docker/**/*"
+      instructions: |
+        Review Docker configuration files for Termix server management platform. Key considerations:
+        
+        **Dockerfile Design:**
+        - Use proper multi-stage builds for optimization
+        - Implement proper layer caching and optimization
+        - Use proper security and minimal base images
+        - Follow the established Docker best practices
+        
+        **Security:**
+        - Implement proper user and permission management
+        - Use proper security scanning and vulnerability assessment
+        - Implement proper secrets and credential management
+        - Use proper network security and isolation
+        
+        **Performance:**
+        - Implement proper resource optimization and allocation
+        - Use proper caching and build optimization
+        - Implement proper monitoring and logging
+        - Use proper health checks and status monitoring
+        
+        **Docker Bug Detection:**
+        - Fix improper multi-stage build optimization that causes large images
+        - Resolve security vulnerabilities in base images and dependencies
+        - Fix improper volume and data persistence configuration
+        - Identify and fix resource limit and constraint issues
+        - Fix improper networking and port configuration
+        - Resolve improper environment variable and secret management
+        - Fix improper health check and status monitoring configuration
+        - Identify and fix performance issues in container startup
+        - Fix improper logging and monitoring configuration
+        - Resolve improper backup and recovery procedures
+        - Fix improper scaling and load balancing configuration
+        - Identify and fix potential security vulnerabilities in Docker setup
+        
+        Highlight any Docker configuration issues, security vulnerabilities, or performance problems.
+
+    - path: "**/*.md"
+      instructions: |
+        Review documentation files for Termix server management platform. Key considerations:
+        
+        **Documentation Quality:**
+        - Ensure proper grammar, spelling, and clarity
+        - Use proper formatting and structure
+        - Implement proper code examples and snippets
+        - Follow the established documentation standards
+        
+        **Content Accuracy:**
+        - Ensure proper technical accuracy and completeness
+        - Use proper up-to-date information and examples
+        - Implement proper cross-references and links
+        - Use proper version and compatibility information
+        
+        **User Experience:**
+        - Ensure proper user-friendly language and explanations
+        - Use proper step-by-step instructions and guides
+        - Implement proper troubleshooting and FAQ sections
+        - Use proper visual aids and diagrams where appropriate
+        
+        Highlight any documentation issues, inaccuracies, or missing information.
+    
+    - path: "**/index.css"
+      instructions: |
+        Review index.css styling configuration for Termix server management platform. Key considerations:
+        
+        **CSS Variable System:**
+        - Define proper CSS custom properties for colors, spacing, and typography
+        - Use consistent naming conventions for CSS variables (--primary, --secondary, --background, etc.)
+        - Implement proper dark/light theme variable definitions
+        - Use proper semantic color naming (--destructive, --muted, --accent, etc.)
+        
+        **Design System:**
+        - Follow the established design token system
+        - Use proper color palette definitions with proper contrast ratios
+        - Implement proper typography scale and font family definitions
+        - Use proper spacing and sizing scale definitions
+        
+        **Theme Support:**
+        - Implement proper dark and light theme variable definitions
+        - Use proper CSS custom property fallbacks
+        - Implement proper theme switching support
+        - Use proper color scheme media queries
+        
+        **Component Styling:**
+        - Define proper base styles for common components
+        - Use proper utility classes and helper styles
+        - Implement proper responsive design utilities
+        - Use proper accessibility-focused styling
+        
+        **Color Management:**
+        - Avoid hardcoded color values, use CSS variables instead
+        - Implement proper color contrast and accessibility
+        - Use proper semantic color definitions
+        - Implement proper color state variations (hover, focus, active)
+        
+        **Typography:**
+        - Define proper font family and weight definitions
+        - Use proper line height and letter spacing
+        - Implement proper text size and hierarchy
+        - Use proper font loading and fallback strategies
+        
+        **Layout Utilities:**
+        - Define proper spacing and margin utilities
+        - Use proper flexbox and grid utilities
+        - Implement proper responsive breakpoint utilities
+        - Use proper container and layout helpers
+        
+        **Accessibility:**
+        - Implement proper focus indicators and states
+        - Use proper color contrast ratios
+        - Implement proper reduced motion support
+        - Use proper screen reader friendly styling
+        
+        **Performance:**
+        - Use efficient CSS selectors and properties
+        - Implement proper CSS organization and structure
+        - Use proper CSS custom property optimization
+        - Implement proper critical CSS and loading strategies
+        
+        Highlight any styling issues, accessibility problems, or design system inconsistencies.
   auto_review:
     enabled: true
     ignore_title_keywords:
       - "WIP"
       - "DO NOT MERGE"
       - "DRAFT"
+      - "EXPERIMENTAL"
+      - "TEST"
     drafts: false
 chat:
   auto_reply: true
