@@ -231,7 +231,7 @@ export interface TermixAlert {
 
 export interface TabContextTab {
     id: number;
-    type: 'home' | 'terminal' | 'ssh_manager' | 'server' | 'admin' | 'file_manager';
+    type: 'home' | 'terminal' | 'ssh_manager' | 'server' | 'admin' | 'file_manager' | 'user_profile';
     title: string;
     hostConfig?: any;
     terminalRef?: React.RefObject<any>;

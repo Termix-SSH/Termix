@@ -87,7 +87,7 @@ function AppContent() {
     const showHome = currentTabData?.type === 'home';
     const showSshManager = currentTabData?.type === 'ssh_manager';
     const showAdmin = currentTabData?.type === 'admin';
-    const showProfile = currentTabData?.type === 'profile';
+    const showProfile = currentTabData?.type === 'user_profile';
 
     return (
         <div>

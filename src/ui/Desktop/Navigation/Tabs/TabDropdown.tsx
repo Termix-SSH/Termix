@@ -13,7 +13,8 @@ import {
     Server as ServerIcon,
     Folder as FolderIcon,
     Shield as AdminIcon,
-    Network as SshManagerIcon
+    Network as SshManagerIcon,
+    User as UserIcon
 } from "lucide-react";
 import { useTabs, type Tab } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
@@ -32,6 +33,8 @@ export function TabDropdown(): React.ReactElement {
                 return <ServerIcon className="h-4 w-4" />;
             case 'file_manager':
                 return <FolderIcon className="h-4 w-4" />;
+            case 'user_profile':
+                return <UserIcon className="h-4 w-4" />;
             case 'ssh_manager':
                 return <SshManagerIcon className="h-4 w-4" />;
             case 'admin':
@@ -49,6 +52,8 @@ export function TabDropdown(): React.ReactElement {
                 return tab.title || t('nav.serverStats');
             case 'file_manager':
                 return tab.title || t('nav.fileManager');
+            case 'user_profile':
+                return tab.title || t('nav.userProfile');
             case 'ssh_manager':
                 return tab.title || t('nav.sshManager');
             case 'admin':

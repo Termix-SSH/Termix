@@ -5,6 +5,7 @@ import {Input} from "@/components/ui/input.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
+import {Separator} from "@/components/ui/separator.tsx";
 import {User, Shield, Key, AlertCircle} from "lucide-react";
 import {TOTPSetup} from "@/ui/Desktop/User/TOTPSetup.tsx";
 import {getUserInfo} from "@/ui/main-axios.ts";
@@ -13,6 +14,7 @@ import {toast} from "sonner";
 import {PasswordReset} from "@/ui/Desktop/User/PasswordReset.tsx";
 import {useTranslation} from "react-i18next";
 import {LanguageSwitcher} from "@/components/LanguageSwitcher.tsx";
+import {useSidebar} from "@/components/ui/sidebar.tsx";
 
 
 interface UserProfileProps {
@@ -21,6 +23,7 @@ interface UserProfileProps {
 
 export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
     const {t} = useTranslation();
+    const {state: sidebarState} = useSidebar();
     const [userInfo, setUserInfo] = useState<{
         username: string;
         is_admin: boolean;
@@ -72,130 +75,148 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
         }
     };
 
+    const topMarginPx = isTopbarOpen ? 74 : 26;
+    const leftMarginPx = sidebarState === 'collapsed' ? 26 : 8;
+    const bottomMarginPx = 8;
+    const wrapperStyle: React.CSSProperties = {
+        marginLeft: leftMarginPx,
+        marginRight: 17,
+        marginTop: topMarginPx,
+        marginBottom: bottomMarginPx,
+        height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`
+    };
+
     if (loading) {
         return (
-            <div className="container max-w-4xl mx-auto p-6">
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <div className="animate-pulse">{t('common.loading')}</div>
-                    </CardContent>
-                </Card>
+            <div style={wrapperStyle} className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
+                <div className="h-full w-full flex flex-col">
+                    <div className="flex items-center justify-between px-3 pt-2 pb-2">
+                        <h1 className="font-bold text-lg">{t('nav.userProfile')}</h1>
+                    </div>
+                    <Separator className="p-0.25 w-full"/>
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="animate-pulse text-gray-300">{t('common.loading')}</div>
+                    </div>
+                </div>
             </div>
         );
     }
 
     if (error || !userInfo) {
         return (
-            <div className="container max-w-4xl mx-auto p-6">
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4"/>
-                    <AlertTitle>{t('common.error')}</AlertTitle>
-                    <AlertDescription>{error || t('errors.loadFailed')}</AlertDescription>
-                </Alert>
+            <div style={wrapperStyle} className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
+                <div className="h-full w-full flex flex-col">
+                    <div className="flex items-center justify-between px-3 pt-2 pb-2">
+                        <h1 className="font-bold text-lg">{t('nav.userProfile')}</h1>
+                    </div>
+                    <Separator className="p-0.25 w-full"/>
+                    <div className="flex-1 flex items-center justify-center p-6">
+                        <Alert variant="destructive" className="bg-red-900/20 border-red-500/50">
+                            <AlertCircle className="h-4 w-4"/>
+                            <AlertTitle className="text-red-400">{t('common.error')}</AlertTitle>
+                            <AlertDescription className="text-red-300">{error || t('errors.loadFailed')}</AlertDescription>
+                        </Alert>
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="container max-w-4xl mx-auto p-6 overflow-y-auto transition-[margin-top] duration-300 ease-in-out" style={{
-            marginTop: isTopbarOpen ? '60px' : '0',
-            maxHeight: 'calc(100vh - 60px)'
-        }}>
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold">{t('common.profile')}</h1>
-                <p className="text-muted-foreground mt-2">{t('profile.description')}</p>
-            </div>
+        <div style={wrapperStyle} className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
+            <div className="h-full w-full flex flex-col">
+                <div className="flex items-center justify-between px-3 pt-2 pb-2">
+                    <h1 className="font-bold text-lg">{t('nav.userProfile')}</h1>
+                </div>
+                <Separator className="p-0.25 w-full"/>
 
-            <Tabs defaultValue="profile" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="profile" className="flex items-center gap-2">
-                        <User className="w-4 h-4"/>
-                        {t('common.profile')}
-                    </TabsTrigger>
-                    {!userInfo.is_oidc && (
-                        <TabsTrigger value="security" className="flex items-center gap-2">
-                            <Shield className="w-4 h-4"/>
-                            {t('profile.security')}
-                        </TabsTrigger>
-                    )}
-                </TabsList>
+                <div className="px-6 py-4 overflow-auto flex-1">
+                    <Tabs defaultValue="profile" className="w-full">
+                        <TabsList className="mb-4 bg-dark-bg border-2 border-dark-border">
+                            <TabsTrigger value="profile" className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button">
+                                <User className="w-4 h-4"/>
+                                {t('nav.userProfile')}
+                            </TabsTrigger>
+                            {!userInfo.is_oidc && (
+                                <TabsTrigger value="security" className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button">
+                                    <Shield className="w-4 h-4"/>
+                                    {t('profile.security')}
+                                </TabsTrigger>
+                            )}
+                        </TabsList>
 
-                <TabsContent value="profile" className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{t('profile.accountInfo')}</CardTitle>
-                            <CardDescription>{t('profile.description')}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label>{t('common.username')}</Label>
-                                    <p className="text-lg font-medium mt-1">{userInfo.username}</p>
-                                </div>
-                                <div>
-                                    <Label>{t('profile.role')}</Label>
-                                    <p className="text-lg font-medium mt-1">
-                                        {userInfo.is_admin ? t('interface.administrator') : t('interface.user')}
-                                    </p>
-                                </div>
-                                <div>
-                                    <Label>{t('profile.authMethod')}</Label>
-                                    <p className="text-lg font-medium mt-1">
-                                        {userInfo.is_oidc ? t('profile.external') : t('profile.local')}
-                                    </p>
-                                </div>
-                                <div>
-                                    <Label>{t('profile.twoFactorAuth')}</Label>
-                                    <p className="text-lg font-medium mt-1">
-                                        {userInfo.is_oidc ? (
-                                            <span className="text-muted-foreground">{t('auth.lockedOidcAuth')}</span>
-                                        ) : (
-                                            userInfo.totp_enabled ? (
-                                                <span className="text-green-600 flex items-center gap-1">
-                                                    <Shield className="w-4 h-4"/>
-                                                    {t('common.enabled')}
-                                                </span>
-                                            ) : (
-                                                <span className="text-muted-foreground">{t('common.disabled')}</span>
-                                            )
-                                        )}
-                                    </p>
-                                </div>
-                                <div>
-                                    <Label>{t('common.version')}</Label>
-                                    <p className="text-lg font-medium mt-1">
-                                        {versionInfo?.version || t('common.loading')}
-                                    </p>
-                                </div>
-
-                            </div>
-
-                            <div className="mt-6 pt-6 border-t">
-                                <div className="flex items-center justify-between">
+                        <TabsContent value="profile" className="space-y-4">
+                            <div className="rounded-lg border-2 border-dark-border bg-dark-bg-darker p-4">
+                                <h3 className="text-lg font-semibold mb-4">{t('profile.accountInfo')}</h3>
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label>{t('common.language')}</Label>
-                                        <p className="text-sm text-muted-foreground mt-1">{t('profile.selectPreferredLanguage')}</p>
+                                        <Label className="text-gray-300">{t('common.username')}</Label>
+                                        <p className="text-lg font-medium mt-1 text-white">{userInfo.username}</p>
                                     </div>
-                                    <LanguageSwitcher/>
+                                    <div>
+                                        <Label className="text-gray-300">{t('profile.role')}</Label>
+                                        <p className="text-lg font-medium mt-1 text-white">
+                                            {userInfo.is_admin ? t('interface.administrator') : t('interface.user')}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-300">{t('profile.authMethod')}</Label>
+                                        <p className="text-lg font-medium mt-1 text-white">
+                                            {userInfo.is_oidc ? t('profile.external') : t('profile.local')}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-300">{t('profile.twoFactorAuth')}</Label>
+                                        <p className="text-lg font-medium mt-1">
+                                            {userInfo.is_oidc ? (
+                                                <span className="text-gray-400">{t('auth.lockedOidcAuth')}</span>
+                                            ) : (
+                                                userInfo.totp_enabled ? (
+                                                    <span className="text-green-400 flex items-center gap-1">
+                                                        <Shield className="w-4 h-4"/>
+                                                        {t('common.enabled')}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-400">{t('common.disabled')}</span>
+                                                )
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-300">{t('common.version')}</Label>
+                                        <p className="text-lg font-medium mt-1 text-white">
+                                            {versionInfo?.version || t('common.loading')}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-6 pt-6 border-t border-dark-border">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label className="text-gray-300">{t('common.language')}</Label>
+                                            <p className="text-sm text-gray-400 mt-1">{t('profile.selectPreferredLanguage')}</p>
+                                        </div>
+                                        <LanguageSwitcher/>
+                                    </div>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
+                        </TabsContent>
 
-                <TabsContent value="security" className="space-y-4">
-                    <TOTPSetup
-                        isEnabled={userInfo.totp_enabled}
-                        onStatusChange={handleTOTPStatusChange}
-                    />
+                        <TabsContent value="security" className="space-y-4">
+                            <TOTPSetup
+                                isEnabled={userInfo.totp_enabled}
+                                onStatusChange={handleTOTPStatusChange}
+                            />
 
-                    {!userInfo.is_oidc && (
-                        <PasswordReset
-                            userInfo={userInfo}
-                        />
-                    )}
-                </TabsContent>
-            </Tabs>
+                            {!userInfo.is_oidc && (
+                                <PasswordReset
+                                    userInfo={userInfo}
+                                />
+                            )}
+                        </TabsContent>
+                    </Tabs>
+                </div>
+            </div>
         </div>
     );
 }

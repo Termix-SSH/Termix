@@ -1,0 +1,31 @@
+language: "en"
+early_access: false
+reviews:
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!**/.xml"
+    - "!**/__generated__/**"
+    - "!**/generated/**"
+    - "!**/*.json"
+    - "!**/*.svg"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.gif"
+    - "!**/*.lock"
+  path_instructions:
+    - path: "**/*.{ts,tsx}"
+      instructions:
+        "Review the Typescript and React code for conformity with best practices. Ensure that it connects properly to the database, uses Shadcn/Tailwind components, and does not hard code colors. Highlight any deviations."
+  auto_review:
+    enabled: true
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+      - "DRAFT"
+    drafts: false
+chat:
+  auto_reply: true

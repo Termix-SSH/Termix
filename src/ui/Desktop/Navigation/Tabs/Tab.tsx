@@ -8,7 +8,8 @@ import {
     X,
     Terminal as TerminalIcon,
     Server as ServerIcon,
-    Folder as FolderIcon
+    Folder as FolderIcon,
+    User as UserIcon
 } from "lucide-react";
 
 interface TabProps {
@@ -52,9 +53,10 @@ export function Tab({
         );
     }
 
-    if (tabType === "terminal" || tabType === "server" || tabType === "file_manager") {
+    if (tabType === "terminal" || tabType === "server" || tabType === "file_manager" || tabType === "user_profile") {
         const isServer = tabType === 'server';
         const isFileManager = tabType === 'file_manager';
+        const isUserProfile = tabType === 'user_profile';
         return (
             <ButtonGroup>
                 <Button
@@ -64,8 +66,9 @@ export function Tab({
                     disabled={disableActivate}
                 >
                     {isServer ? <ServerIcon className="mr-1 h-4 w-4"/> : isFileManager ?
-                        <FolderIcon className="mr-1 h-4 w-4"/> : <TerminalIcon className="mr-1 h-4 w-4"/>}
-                    {title || (isServer ? t('nav.serverStats') : isFileManager ? t('nav.fileManager') : t('nav.terminal'))}
+                        <FolderIcon className="mr-1 h-4 w-4"/> : isUserProfile ?
+                        <UserIcon className="mr-1 h-4 w-4"/> : <TerminalIcon className="mr-1 h-4 w-4"/>}
+                    {title || (isServer ? t('nav.serverStats') : isFileManager ? t('nav.fileManager') : isUserProfile ? t('nav.userProfile') : t('nav.terminal'))}
                 </Button>
                 {canSplit && (
                     <Button

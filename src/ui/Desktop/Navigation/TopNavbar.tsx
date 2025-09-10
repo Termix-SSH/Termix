@@ -200,6 +200,7 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
     const currentTabIsHome = currentTabObj?.type === 'home';
     const currentTabIsSshManager = currentTabObj?.type === 'ssh_manager';
     const currentTabIsAdmin = currentTabObj?.type === 'admin';
+    const currentTabIsUserProfile = currentTabObj?.type === 'user_profile';
 
     const terminalTabs = tabs.filter((tab: any) => tab.type === 'terminal');
 
@@ -234,10 +235,11 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
                         const isFileManager = tab.type === 'file_manager';
                         const isSshManager = tab.type === 'ssh_manager';
                         const isAdmin = tab.type === 'admin';
+                        const isUserProfile = tab.type === 'user_profile';
                         const isSplittable = isTerminal || isServer || isFileManager;
                         const isSplitButtonDisabled = (isActive && !isSplitScreenActive) || ((allSplitScreenTab?.length || 0) >= 3 && !isSplit);
-                        const disableSplit = !isSplittable || isSplitButtonDisabled || isActive || currentTabIsHome || currentTabIsSshManager || currentTabIsAdmin;
-                        const disableActivate = isSplit || ((tab.type === 'home' || tab.type === 'ssh_manager' || tab.type === 'admin') && isSplitScreenActive);
+                        const disableSplit = !isSplittable || isSplitButtonDisabled || isActive || currentTabIsHome || currentTabIsSshManager || currentTabIsAdmin || currentTabIsUserProfile;
+                        const disableActivate = isSplit || ((tab.type === 'home' || tab.type === 'ssh_manager' || tab.type === 'admin' || tab.type === 'user_profile') && isSplitScreenActive);
                         const disableClose = (isSplitScreenActive && isActive) || isSplit;
                         return (
                             <Tab
@@ -246,10 +248,10 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
                                 title={tab.title}
                                 isActive={isActive}
                                 onActivate={() => handleTabActivate(tab.id)}
-                                onClose={isTerminal || isServer || isFileManager || isSshManager || isAdmin ? () => handleTabClose(tab.id) : undefined}
+                                onClose={isTerminal || isServer || isFileManager || isSshManager || isAdmin || isUserProfile ? () => handleTabClose(tab.id) : undefined}
                                 onSplit={isSplittable ? () => handleTabSplit(tab.id) : undefined}
                                 canSplit={isSplittable}
-                                canClose={isTerminal || isServer || isFileManager || isSshManager || isAdmin}
+                                canClose={isTerminal || isServer || isFileManager || isSshManager || isAdmin || isUserProfile}
                                 disableActivate={disableActivate}
                                 disableSplit={disableSplit}
                                 disableClose={disableClose}

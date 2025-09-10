@@ -134,6 +134,16 @@ export function LeftSidebar({
         const id = addTab({type: 'admin'} as any);
         setCurrentTab(id);
     };
+    const userProfileTab = tabList.find((t) => t.type === 'user_profile');
+    const openUserProfileTab = () => {
+        if (isSplitScreenActive) return;
+        if (userProfileTab) {
+            setCurrentTab(userProfileTab.id);
+            return;
+        }
+        const id = addTab({type: 'user_profile'} as any);
+        setCurrentTab(id);
+    };
 
     const [hosts, setHosts] = useState<SSHHost[]>([]);
     const [hostsLoading, setHostsLoading] = useState(false);
@@ -387,14 +397,7 @@ export function LeftSidebar({
                                         <DropdownMenuItem
                                             className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
                                             onClick={() => {
-                                                if (isSplitScreenActive) return;
-                                                const profileTab = tabList.find((t: any) => t.type === 'profile');
-                                                if (profileTab) {
-                                                    setCurrentTab(profileTab.id);
-                                                    return;
-                                                }
-                                                const id = addTab({type: 'profile', title: t('profile.title')} as any);
-                                                setCurrentTab(id);
+                                                openUserProfileTab();
                                             }}>
                                             <span>{t('profile.title')}</span>
                                         </DropdownMenuItem>
