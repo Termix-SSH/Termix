@@ -16,40 +16,28 @@
     "!eslint.config.js"
   ],
   "extraMetadata": {
-    "main": "electron/main-simple.cjs"
+    "main": "electron/main.cjs"
   },
   "buildDependenciesFromSource": false,
   "nodeGypRebuild": false,
   "npmRebuild": false,
-  "mac": {
-    "category": "public.app-category.developer-tools",
-    "target": [
-      {
-        "target": "dmg",
-        "arch": ["x64", "arm64"]
-      },
-      {
-        "target": "zip",
-        "arch": ["x64", "arm64"]
-      }
-    ]
-  },
   "win": {
     "target": "nsis",
-    "forceCodeSigning": false
+    "icon": "public/icon.ico",
+    "executableName": "Termix"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "artifactName": "${productName}-Setup-${version}.${ext}"
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Termix",
+    "uninstallDisplayName": "Termix"
   },
   "linux": {
-    "category": "Development",
-    "target": [
-      {
-        "target": "AppImage",
-        "arch": ["x64"]
-      }
-    ]
+    "target": "AppImage",
+    "icon": "public/icon.png",
+    "category": "Development"
   }
 }

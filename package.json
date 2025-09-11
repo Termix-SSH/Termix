@@ -4,20 +4,19 @@
   "version": "1.6.0",
   "description": "A web-based server management platform with SSH terminal, tunneling, and file editing capabilities",
   "author": "Karmaa",
-  "main": "electron/main-simple.cjs",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:backend": "tsc -p tsconfig.node.json",
+    "build": "vite build && tsc -p tsconfig.node.json",
     "dev:backend": "tsc -p tsconfig.node.json && node ./dist/backend/backend/starter.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "electron": "electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && npm run build:backend && electron-builder --dir",
-    "electron:build-win": "npm run build && npm run build:backend && electron-builder --win --dir",
-    "electron:pack": "npm run build && npm run build:backend && electron-packager . Termix --platform=all --arch=x64,arm64 --out=release --overwrite"
+    "build:win-portable": "npm run build && electron-builder --win --dir",
+    "build:win-installer": "npm run build && electron-builder --win --publish=never",
+    "build:linux-portable": "npm run build && electron-builder --linux --dir"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -108,6 +107,7 @@
     "concurrently": "^9.2.1",
     "electron": "^38.0.0",
     "electron-builder": "^26.0.12",
+    "electron-icon-builder": "^2.0.1",
     "electron-packager": "^17.1.2",
     "eslint": "^9.34.0",
     "eslint-plugin-react-hooks": "^5.2.0",

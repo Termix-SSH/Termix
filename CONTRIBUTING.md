@@ -23,8 +23,7 @@ Run the following commands:
 
 ```sh
 npm run dev
-npx tsc -p tsconfig.node.json
-node ./dist/backend/starter.js
+npm run dev:backend
 ```
 
 This will start the backend and the frontend Vite server. You can access Termix by going to `http://localhost:5174/`.
@@ -40,11 +39,11 @@ This will start the backend and the frontend Vite server. You can access Termix 
 3. **Make your changes**: Implement your feature, fix, or improvement.
 4. **Commit your changes**:
     ```sh
-    git commit -m "Add feature: my new feature"
+    git commit -m "Feature request my new feature"
     ```
 5. **Push to your fork**:
     ```sh
-    git push origin feature/my-new-feature
+    git push origin feature/my-feature-request
     ```
 6. **Open a pull request**: Go to the original repository and create a PR with a clear description.
 
@@ -54,3 +53,8 @@ This will start the backend and the frontend Vite server. You can access Termix 
 - Place all API routes in the `main-axios.ts` file. Updating the `openapi.json` is unneeded.
 - Include meaningful commit messages.
 - Link related issues when applicable.
+- `MobileApp.tsx` renders when the users screen width is less than 768px, otherwise it loads the usual `DesktopApp.tsx`.
+
+## Support
+
+If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues) repo.

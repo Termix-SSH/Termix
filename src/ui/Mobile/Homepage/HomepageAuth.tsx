@@ -5,7 +5,7 @@ import {Input} from "@/components/ui/input.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Alert, AlertTitle, AlertDescription} from "@/components/ui/alert.tsx";
 import {useTranslation} from "react-i18next";
-import {LanguageSwitcher} from "@/components/LanguageSwitcher.tsx";
+import {LanguageSwitcher} from "@/ui/Desktop/User/LanguageSwitcher.tsx";
 import {
     registerUser,
     loginUser,

@@ -23,7 +23,7 @@ import {Alert, AlertDescription} from "@/components/ui/alert.tsx";
 import {toast} from "sonner";
 import {createSSHHost, updateSSHHost, getSSHHosts, getCredentials} from '@/ui/main-axios.ts';
 import {useTranslation} from "react-i18next";
-import {CredentialSelector} from "@/components/CredentialSelector.tsx";
+import {CredentialSelector} from "@/ui/Desktop/Apps/Credentials/CredentialSelector.tsx";
 
 interface SSHHost {
     id: number;

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { FormControl, FormItem, FormLabel } from "@/components/ui/form";
-import { getCredentials } from '@/ui/main-axios';
+import { Button } from "@/components/ui/button.tsx";
+import { Input } from "@/components/ui/input.tsx";
+import { FormControl, FormItem, FormLabel } from "@/components/ui/form.tsx";
+import { getCredentials } from '@/ui/main-axios.ts';
 import { useTranslation } from "react-i18next";
-import type { Credential } from '../types/index.js';
+import type { Credential } from '../../../../types';
 
 interface CredentialSelectorProps {
     value?: number | null;

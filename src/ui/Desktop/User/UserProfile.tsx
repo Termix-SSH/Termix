@@ -13,7 +13,7 @@ import {getVersionInfo} from "@/ui/main-axios.ts";
 import {toast} from "sonner";
 import {PasswordReset} from "@/ui/Desktop/User/PasswordReset.tsx";
 import {useTranslation} from "react-i18next";
-import {LanguageSwitcher} from "@/components/LanguageSwitcher.tsx";
+import {LanguageSwitcher} from "@/ui/Desktop/User/LanguageSwitcher.tsx";
 import {useSidebar} from "@/components/ui/sidebar.tsx";
 
 
