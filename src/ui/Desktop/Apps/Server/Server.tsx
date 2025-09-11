@@ -306,9 +306,6 @@ export function Server({
                                         value={typeof metrics?.cpu?.percent === 'number' ? metrics!.cpu!.percent! : 0}
                                         className="h-2"
                                     />
-                                    {typeof metrics?.cpu?.percent === 'number' && metrics.cpu.percent > 80 && (
-                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                    )}
                                 </div>
                                 
                                 <div className="text-xs text-gray-500">
@@ -347,9 +344,6 @@ export function Server({
                                         value={typeof metrics?.memory?.percent === 'number' ? metrics!.memory!.percent! : 0}
                                         className="h-2"
                                     />
-                                    {typeof metrics?.memory?.percent === 'number' && metrics.memory.percent > 85 && (
-                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                    )}
                                 </div>
                                 
                                 <div className="text-xs text-gray-500">
@@ -390,9 +384,6 @@ export function Server({
                                         value={typeof metrics?.disk?.percent === 'number' ? metrics!.disk!.percent! : 0}
                                         className="h-2"
                                     />
-                                    {typeof metrics?.disk?.percent === 'number' && metrics.disk.percent > 90 && (
-                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                    )}
                                 </div>
                                 
                                 <div className="text-xs text-gray-500">

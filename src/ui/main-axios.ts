@@ -237,8 +237,13 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
 
             // Handle auth token clearing
             if (status === 401) {
-                document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                localStorage.removeItem('jwt');
+                const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+                if (isElectron) {
+                    localStorage.removeItem('jwt');
+                } else {
+                    document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    localStorage.removeItem('jwt');
+                }
             }
 
             return Promise.reject(error);

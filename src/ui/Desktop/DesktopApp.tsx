@@ -115,7 +115,6 @@ function AppContent() {
                         isAuthenticated={isAuthenticated}
                         authLoading={authLoading}
                         onAuthSuccess={handleAuthSuccess}
-                        isTopbarOpen={isTopbarOpen}
                     />
                 </div>
             )}

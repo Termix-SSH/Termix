@@ -11,7 +11,6 @@ interface HomepageProps {
     isAuthenticated: boolean;
     authLoading: boolean;
     onAuthSuccess: (authData: { isAdmin: boolean; username: string | null; userId: string | null }) => void;
-    isTopbarOpen?: boolean;
 }
 
 function getCookie(name: string) {
@@ -30,8 +29,7 @@ export function Homepage({
                              onSelectView,
                              isAuthenticated,
                              authLoading,
-                             onAuthSuccess,
-                             isTopbarOpen = true
+                             onAuthSuccess
                          }: HomepageProps): React.ReactElement {
     const {t} = useTranslation();
     const [loggedIn, setLoggedIn] = useState(isAuthenticated);
@@ -72,82 +70,64 @@ export function Homepage({
         }
     }, [isAuthenticated]);
 
-    const topOffset = isTopbarOpen ? 66 : 0;
-    const topPadding = isTopbarOpen ? 66 : 0;
 
     return (
-        <div
-            className="w-full min-h-svh relative transition-[padding-top] duration-300 ease-in-out"
-            style={{ paddingTop: `${topPadding}px` }}>
+        <div className="w-full h-full flex items-center justify-center">
             {!loggedIn ? (
-                <div 
-                    className="absolute left-0 w-full flex items-center justify-center"
-                    style={{ 
-                        top: `${topOffset}px`, 
-                        height: `calc(100% - ${topOffset}px)` 
-                    }}>
-                    <HomepageAuth
-                        setLoggedIn={setLoggedIn}
-                        setIsAdmin={setIsAdmin}
-                        setUsername={setUsername}
-                        setUserId={setUserId}
-                        loggedIn={loggedIn}
-                        authLoading={authLoading}
-                        dbError={dbError}
-                        setDbError={setDbError}
-                        onAuthSuccess={onAuthSuccess}
-                    />
-                </div>
+                <HomepageAuth
+                    setLoggedIn={setLoggedIn}
+                    setIsAdmin={setIsAdmin}
+                    setUsername={setUsername}
+                    setUserId={setUserId}
+                    loggedIn={loggedIn}
+                    authLoading={authLoading}
+                    dbError={dbError}
+                    setDbError={setDbError}
+                    onAuthSuccess={onAuthSuccess}
+                />
             ) : (
-                <div 
-                    className="absolute left-0 w-full flex items-center justify-center"
-                    style={{ 
-                        top: `${topOffset}px`, 
-                        height: `calc(100% - ${topOffset}px)` 
-                    }}>
-                    <div className="flex flex-row items-center justify-center gap-8 relative z-10">
-                        <div className="flex flex-col items-center gap-6 w-[400px]">
-                            <HomepageUpdateLog
-                                loggedIn={loggedIn}
-                            />
+                <div className="flex flex-row items-center justify-center gap-8 relative z-10">
+                    <div className="flex flex-col items-center gap-6 w-[400px]">
+                        <HomepageUpdateLog
+                            loggedIn={loggedIn}
+                        />
 
-                            <div className="flex flex-row items-center gap-3">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
-                                    onClick={() => window.open('https://github.com/LukeGus/Termix', '_blank')}
-                                >
-                                    GitHub
-                                </Button>
-                                <div className="w-px h-4 bg-dark-border"></div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
-                                    onClick={() => window.open('https://github.com/LukeGus/Termix/issues/new', '_blank')}
-                                >
-                                    Feedback
-                                </Button>
-                                <div className="w-px h-4 bg-dark-border"></div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
-                                    onClick={() => window.open('https://discord.com/invite/jVQGdvHDrf', '_blank')}
-                                >
-                                    Discord
-                                </Button>
-                                <div className="w-px h-4 bg-dark-border"></div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
-                                    onClick={() => window.open('https://github.com/sponsors/LukeGus', '_blank')}
-                                >
-                                    Donate
-                                </Button>
-                            </div>
+                        <div className="flex flex-row items-center gap-3">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
+                                onClick={() => window.open('https://github.com/LukeGus/Termix', '_blank')}
+                            >
+                                GitHub
+                            </Button>
+                            <div className="w-px h-4 bg-dark-border"></div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
+                                onClick={() => window.open('https://github.com/LukeGus/Termix/issues/new', '_blank')}
+                            >
+                                Feedback
+                            </Button>
+                            <div className="w-px h-4 bg-dark-border"></div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
+                                onClick={() => window.open('https://discord.com/invite/jVQGdvHDrf', '_blank')}
+                            >
+                                Discord
+                            </Button>
+                            <div className="w-px h-4 bg-dark-border"></div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
+                                onClick={() => window.open('https://github.com/sponsors/LukeGus', '_blank')}
+                            >
+                                Donate
+                            </Button>
                         </div>
                     </div>
                 </div>

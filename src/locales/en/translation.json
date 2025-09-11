@@ -507,9 +507,11 @@
     "unknownError": "Unknown error occurred",
     "messageParseError": "Failed to parse server message",
     "websocketError": "WebSocket connection error",
+    "connecting": "Connecting...",
     "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
     "reconnected": "Reconnected successfully",
-    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached"
+    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
+    "connectionTimeout": "Connection timeout"
   },
   "fileManager": {
     "title": "File Manager",
@@ -816,7 +818,6 @@
     "oidcAuthFailed": "OIDC authentication failed",
     "noTokenReceived": "No token received from login",
     "invalidAuthUrl": "Invalid authorization URL received from backend",
-    "connectionTimeout": "Connection timeout",
     "invalidInput": "Invalid input",
     "requiredField": "This field is required",
     "minLength": "Minimum length is {{min}}",

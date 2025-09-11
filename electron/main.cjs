@@ -129,7 +129,7 @@ ipcMain.handle('save-server-config', (event, config) => {
 
 ipcMain.handle('test-server-connection', async (event, serverUrl) => {
     try {
-        const { default: fetch } = await import('node-fetch');
+        const fetch = require('node-fetch');
         
         // Try multiple endpoints to test the connection
         const testUrls = [
