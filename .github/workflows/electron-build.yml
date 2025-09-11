@@ -1,0 +1,139 @@
+name: Build Electron App
+
+on:
+  push:
+    branches:
+      - development
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'docker/**'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build type to run"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - windows
+          - linux
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    if: github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'windows' || github.event.inputs.build_type == ''
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows Portable
+        run: npm run build:win-portable
+
+      - name: Build Windows Installer
+        run: npm run build:win-installer
+
+      - name: Create Windows Portable zip
+        run: |
+          cd release/win-unpacked
+          Compress-Archive -Path * -DestinationPath ../Termix-Windows-Portable.zip
+          cd ../..
+
+      - name: Upload Windows Portable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termix-Windows-Portable
+          path: release/Termix-Windows-Portable.zip
+          retention-days: 30
+
+      - name: Upload Windows Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termix-Windows-Installer
+          path: release/*.exe
+          retention-days: 30
+
+  build-linux:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == ''
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux Portable
+        run: npm run build:linux-portable
+
+      - name: Create Linux Portable zip
+        run: |
+          cd release/linux-unpacked
+          zip -r ../Termix-Linux-Portable.zip *
+          cd ../..
+
+      - name: Upload Linux Portable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termix-Linux-Portable
+          path: release/Termix-Linux-Portable.zip
+          retention-days: 30
+
+  create-release:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}-${{ github.run_number }}
+          name: Termix ${{ github.ref_name }} Build ${{ github.run_number }}
+          body: |
+            ## Termix ${{ github.ref_name }} Build ${{ github.run_number }}
+            
+            ### Downloads
+            - **Windows Portable**: Download the zip file and extract to run Termix without installation
+            - **Windows Installer**: Run the .exe file to install Termix on your system
+            - **Linux Portable**: Download the zip file and extract to run Termix on Linux systems
+            
+            ### Changes
+            See the [commit history](https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}) for details.
+          files: |
+            artifacts/Termix-Windows-Portable/Termix-Windows-Portable.zip
+            artifacts/Termix-Windows-Installer/*
+            artifacts/Termix-Linux-Portable/Termix-Linux-Portable.zip
+          draft: false
+          prerelease: ${{ github.ref == 'refs/heads/development' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
