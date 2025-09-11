@@ -127,18 +127,6 @@ ipcMain.handle('save-server-config', (event, config) => {
     }
 });
 
-// OIDC success/error handlers
-ipcMain.handle('oidc-success', (event, data) => {
-    console.log('OIDC authentication successful:', data);
-    // You can add additional logic here if needed
-    return { success: true };
-});
-
-ipcMain.handle('oidc-error', (event, data) => {
-    console.log('OIDC authentication error:', data);
-    // You can add additional logic here if needed
-    return { success: false, error: data.error };
-});
 
 ipcMain.handle('test-server-connection', async (event, serverUrl) => {
     try {
@@ -204,18 +192,28 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
             
             if (response.ok) {
                 const data = await response.text();
+                
+                // Reject if response looks like HTML (YouTube, etc.)
+                if (data.includes('<html') || data.includes('<!DOCTYPE') || data.includes('<head>') || data.includes('<body>')) {
+                    console.log('Health endpoint returned HTML instead of JSON - not a Termix server');
+                    return { success: false, error: 'Server returned HTML instead of JSON. This does not appear to be a Termix server.' };
+                }
+                
                 // A valid Termix health check should return JSON with specific structure
                 try {
                     const healthData = JSON.parse(data);
-                    // Check if it has the expected health check structure
-                    if (healthData && (healthData.status === 'healthy' || healthData.healthy === true || healthData.database === 'connected')) {
+                    // Check if it has the expected Termix health check structure
+                    if (healthData && (
+                        healthData.status === 'healthy' || 
+                        healthData.healthy === true || 
+                        healthData.database === 'connected' ||
+                        (healthData.app && healthData.app.toLowerCase().includes('termix'))
+                    )) {
                         return { success: true, status: response.status, testedUrl: healthUrl };
                     }
                 } catch (parseError) {
-                    // If not JSON, check for text indicators
-                    if (data && (data.includes('healthy') || data.includes('ok') || data.includes('connected'))) {
-                        return { success: true, status: response.status, testedUrl: healthUrl };
-                    }
+                    // If not JSON, reject - Termix health endpoint should return JSON
+                    console.log('Health endpoint did not return valid JSON');
                 }
             }
         } catch (urlError) {
@@ -232,17 +230,26 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
             
             if (response.ok) {
                 const data = await response.text();
+                
+                // Reject if response looks like HTML (YouTube, etc.)
+                if (data.includes('<html') || data.includes('<!DOCTYPE') || data.includes('<head>') || data.includes('<body>')) {
+                    console.log('Version endpoint returned HTML instead of JSON - not a Termix server');
+                    return { success: false, error: 'Server returned HTML instead of JSON. This does not appear to be a Termix server.' };
+                }
+                
                 try {
                     const versionData = JSON.parse(data);
-                    // Check if it looks like a Termix version response
-                    if (versionData && (versionData.version || versionData.app === 'termix' || versionData.name === 'termix')) {
+                    // Check if it looks like a Termix version response - must be JSON and contain Termix-specific fields
+                    if (versionData && (
+                        (versionData.app && versionData.app.toLowerCase().includes('termix')) ||
+                        (versionData.name && versionData.name.toLowerCase().includes('termix')) ||
+                        (versionData.version && versionData.description && versionData.description.toLowerCase().includes('termix'))
+                    )) {
                         return { success: true, status: response.status, testedUrl: versionUrl, warning: 'Health endpoint not available, but server appears to be running' };
                     }
                 } catch (parseError) {
-                    // If not JSON, check for text indicators
-                    if (data && (data.includes('termix') || data.includes('1.6.0') || data.includes('version'))) {
-                        return { success: true, status: response.status, testedUrl: versionUrl, warning: 'Health endpoint not available, but server appears to be running' };
-                    }
+                    // If not JSON, reject - Termix version endpoint should return JSON
+                    console.log('Version endpoint did not return valid JSON');
                 }
             }
         } catch (versionError) {

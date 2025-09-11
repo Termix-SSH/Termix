@@ -135,9 +135,9 @@ router.post('/create', async (req, res) => {
         if (row && (row as any).value !== 'true') {
             return res.status(403).json({error: 'Registration is currently disabled'});
         }
-        } catch (e) {
-            authLogger.warn('Failed to check registration status', { operation: 'registration_check', error: e });
-        }
+    } catch (e) {
+        authLogger.warn('Failed to check registration status', { operation: 'registration_check', error: e });
+    }
 
     const {username, password} = req.body;
 
@@ -216,21 +216,21 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             name_path,
             scopes
         } = req.body;
-        
-        const isDisableRequest = (client_id === '' || client_id === null || client_id === undefined) && 
-                                (client_secret === '' || client_secret === null || client_secret === undefined) && 
-                                (issuer_url === '' || issuer_url === null || issuer_url === undefined) && 
-                                (authorization_url === '' || authorization_url === null || authorization_url === undefined) && 
-                                (token_url === '' || token_url === null || token_url === undefined);
-        
+
+        const isDisableRequest = (client_id === '' || client_id === null || client_id === undefined) &&
+            (client_secret === '' || client_secret === null || client_secret === undefined) &&
+            (issuer_url === '' || issuer_url === null || issuer_url === undefined) &&
+            (authorization_url === '' || authorization_url === null || authorization_url === undefined) &&
+            (token_url === '' || token_url === null || token_url === undefined);
+
         const isEnableRequest = isNonEmptyString(client_id) && isNonEmptyString(client_secret) &&
-                              isNonEmptyString(issuer_url) && isNonEmptyString(authorization_url) &&
-                              isNonEmptyString(token_url) && isNonEmptyString(identifier_path) &&
-                              isNonEmptyString(name_path);
+            isNonEmptyString(issuer_url) && isNonEmptyString(authorization_url) &&
+            isNonEmptyString(token_url) && isNonEmptyString(identifier_path) &&
+            isNonEmptyString(name_path);
 
         if (!isDisableRequest && !isEnableRequest) {
-            authLogger.warn('OIDC validation failed - neither disable nor enable request', { 
-                operation: 'oidc_config_update', 
+            authLogger.warn('OIDC validation failed - neither disable nor enable request', {
+                operation: 'oidc_config_update',
                 userId,
                 isDisableRequest,
                 isEnableRequest
@@ -275,7 +275,7 @@ router.delete('/oidc-config', authenticateJWT, async (req, res) => {
         if (!user || user.length === 0 || !user[0].is_admin) {
             return res.status(403).json({error: 'Not authorized'});
         }
-        
+
         db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
         authLogger.success('OIDC configuration disabled', { operation: 'oidc_disable', userId });
         res.json({message: 'OIDC configuration disabled'});
@@ -315,15 +315,7 @@ router.get('/oidc/authorize', async (req, res) => {
 
         let origin = req.get('Origin') || req.get('Referer')?.replace(/\/[^\/]*$/, '') || 'http://localhost:5173';
 
-        // Handle Electron app - check for custom headers or user agent
-        const userAgent = req.get('User-Agent') || '';
-        const isElectron = userAgent.includes('Electron') || req.get('X-Electron-App') === 'true';
-        
-        if (isElectron) {
-            // For Electron, use the configured server URL or fallback to localhost
-            const serverUrl = process.env.SERVER_URL || 'http://localhost:8081';
-            origin = serverUrl;
-        } else if (origin.includes('localhost')) {
+        if (origin.includes('localhost')) {
             origin = 'http://localhost:8081';
         }
 
@@ -541,7 +533,7 @@ router.get('/oidc/callback', async (req, res) => {
                 .select()
                 .from(users)
                 .where(eq(users.id, id));
-            
+
             // OIDC user created - toast notification handled by frontend
         } else {
             await db.update(users)
@@ -552,7 +544,7 @@ router.get('/oidc/callback', async (req, res) => {
                 .select()
                 .from(users)
                 .where(eq(users.id, user[0].id));
-            
+
             // OIDC user logged in - toast notification handled by frontend
         }
 
@@ -565,15 +557,7 @@ router.get('/oidc/callback', async (req, res) => {
 
         let frontendUrl = redirectUri.replace('/users/oidc/callback', '');
 
-        // Handle Electron app redirects
-        const userAgent = req.get('User-Agent') || '';
-        const isElectron = userAgent.includes('Electron') || req.get('X-Electron-App') === 'true';
-        
-        if (isElectron) {
-            // For Electron, we need to redirect to a special endpoint that will handle the token
-            // and then redirect to the Electron app using a custom protocol or file URL
-            frontendUrl = redirectUri.replace('/users/oidc/callback', '/electron-oidc-success');
-        } else if (frontendUrl.includes('localhost')) {
+        if (frontendUrl.includes('localhost')) {
             frontendUrl = 'http://localhost:5173';
         }
 
@@ -588,14 +572,7 @@ router.get('/oidc/callback', async (req, res) => {
 
         let frontendUrl = redirectUri.replace('/users/oidc/callback', '');
 
-        // Handle Electron app redirects
-        const userAgent = req.get('User-Agent') || '';
-        const isElectron = userAgent.includes('Electron') || req.get('X-Electron-App') === 'true';
-        
-        if (isElectron) {
-            // For Electron, we need to redirect to a special endpoint that will handle the error
-            frontendUrl = redirectUri.replace('/users/oidc/callback', '/electron-oidc-error');
-        } else if (frontendUrl.includes('localhost')) {
+        if (frontendUrl.includes('localhost')) {
             frontendUrl = 'http://localhost:5173';
         }
 
@@ -604,140 +581,6 @@ router.get('/oidc/callback', async (req, res) => {
 
         res.redirect(redirectUrl.toString());
     }
-});
-
-// Route: Electron OIDC success handler
-// GET /electron-oidc-success
-router.get('/electron-oidc-success', (req, res) => {
-    const { success, token, error } = req.query;
-    
-    if (success === 'true' && token) {
-        // Return an HTML page that will communicate with the Electron app
-        res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-    <title>OIDC Authentication Success</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            padding: 50px; 
-            background: #1a1a1a; 
-            color: white; 
-        }
-        .success { color: #4ade80; }
-        .error { color: #f87171; }
-    </style>
-</head>
-<body>
-    <div class="success">
-        <h2>Authentication Successful!</h2>
-        <p>You can close this window and return to the Termix application.</p>
-    </div>
-    <script>
-        // Try to communicate with the Electron app
-        if (window.electronAPI) {
-            window.electronAPI.invoke('oidc-success', { token: '${token}' });
-        }
-        
-        // Fallback: try to close the window after a delay
-        setTimeout(() => {
-            if (window.close) {
-                window.close();
-            }
-        }, 2000);
-    </script>
-</body>
-</html>
-        `);
-    } else if (error) {
-        res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-    <title>OIDC Authentication Error</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            padding: 50px; 
-            background: #1a1a1a; 
-            color: white; 
-        }
-        .error { color: #f87171; }
-    </style>
-</head>
-<body>
-    <div class="error">
-        <h2>Authentication Failed</h2>
-        <p>Error: ${error}</p>
-        <p>You can close this window and try again.</p>
-    </div>
-    <script>
-        // Try to communicate with the Electron app
-        if (window.electronAPI) {
-            window.electronAPI.invoke('oidc-error', { error: '${error}' });
-        }
-        
-        // Fallback: try to close the window after a delay
-        setTimeout(() => {
-            if (window.close) {
-                window.close();
-            }
-        }, 3000);
-    </script>
-</body>
-</html>
-        `);
-    } else {
-        res.status(400).send('Invalid request');
-    }
-});
-
-// Route: Electron OIDC error handler
-// GET /electron-oidc-error
-router.get('/electron-oidc-error', (req, res) => {
-    const { error } = req.query;
-    
-    res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-    <title>OIDC Authentication Error</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            padding: 50px; 
-            background: #1a1a1a; 
-            color: white; 
-        }
-        .error { color: #f87171; }
-    </style>
-</head>
-<body>
-    <div class="error">
-        <h2>Authentication Failed</h2>
-        <p>Error: ${error || 'Unknown error'}</p>
-        <p>You can close this window and try again.</p>
-    </div>
-    <script>
-        // Try to communicate with the Electron app
-        if (window.electronAPI) {
-            window.electronAPI.invoke('oidc-error', { error: '${error || 'Unknown error'}' });
-        }
-        
-        // Fallback: try to close the window after a delay
-        setTimeout(() => {
-            if (window.close) {
-                window.close();
-            }
-        }, 3000);
-    </script>
-</body>
-</html>
-    `);
 });
 
 // Route: Get user JWT by username and password (traditional login)

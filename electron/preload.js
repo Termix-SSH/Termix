@@ -30,9 +30,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Generic invoke method
     invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
     
-    // OIDC handlers
-    oidcSuccess: (data) => ipcRenderer.invoke('oidc-success', data),
-    oidcError: (data) => ipcRenderer.invoke('oidc-error', data)
 });
 
 // Also set the legacy IS_ELECTRON flag for backward compatibility
