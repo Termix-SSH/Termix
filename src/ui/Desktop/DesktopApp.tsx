@@ -8,19 +8,7 @@ import {TopNavbar} from "@/ui/Desktop/Navigation/TopNavbar.tsx";
 import { AdminSettings } from "@/ui/Desktop/Admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/Desktop/User/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
-import { getUserInfo } from "@/ui/main-axios.ts";
-
-function getCookie(name: string) {
-    return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-    }, "");
-}
-
-function setCookie(name: string, value: string, days = 7) {
-    const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
-}
+import { getUserInfo, getCookie, setCookie } from "@/ui/main-axios.ts";
 
 function AppContent() {
     const [view, setView] = useState<string>("homepage")
@@ -115,6 +103,7 @@ function AppContent() {
                         isAuthenticated={isAuthenticated}
                         authLoading={authLoading}
                         onAuthSuccess={handleAuthSuccess}
+                        isTopbarOpen={isTopbarOpen}
                     />
                 </div>
             )}

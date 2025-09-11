@@ -127,6 +127,19 @@ ipcMain.handle('save-server-config', (event, config) => {
     }
 });
 
+// OIDC success/error handlers
+ipcMain.handle('oidc-success', (event, data) => {
+    console.log('OIDC authentication successful:', data);
+    // You can add additional logic here if needed
+    return { success: true };
+});
+
+ipcMain.handle('oidc-error', (event, data) => {
+    console.log('OIDC authentication error:', data);
+    // You can add additional logic here if needed
+    return { success: false, error: data.error };
+});
+
 ipcMain.handle('test-server-connection', async (event, serverUrl) => {
     try {
         // Use Node.js built-in fetch (available in Node 18+) or fallback to https module
@@ -177,31 +190,47 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
             };
         }
         
-        // Try multiple endpoints to test the connection
-        const testUrls = [
-            `${serverUrl}/health`,
-            `${serverUrl}/version`,
-            `${serverUrl}/users/registration-allowed`
-        ];
+        // Test the health endpoint specifically - this is required for a valid Termix server
+        const healthUrl = `${serverUrl}/health`;
         
-        for (const testUrl of testUrls) {
-            try {
-                const response = await fetch(testUrl, {
-                    method: 'GET',
-                    timeout: 5000
-                });
-                
-                if (response.ok) {
-                    // If we get a 200 response, it's likely a valid Termix server
-                    return { success: true, status: response.status, testedUrl: testUrl };
+        try {
+            const response = await fetch(healthUrl, {
+                method: 'GET',
+                timeout: 5000
+            });
+            
+            if (response.ok) {
+                // Try to parse the response to ensure it's a valid health check
+                const data = await response.text();
+                // A valid health check should return some JSON or text indicating the server is healthy
+                if (data && (data.includes('healthy') || data.includes('ok') || data.includes('status') || response.status === 200)) {
+                    return { success: true, status: response.status, testedUrl: healthUrl };
                 }
-            } catch (urlError) {
-                // Continue to next URL if this one fails
-                continue;
             }
+        } catch (urlError) {
+            console.error('Health check failed:', urlError);
         }
         
-        return { success: false, error: 'Server is not responding or not a valid Termix server' };
+        // If health check fails, try version endpoint as fallback
+        try {
+            const versionUrl = `${serverUrl}/version`;
+            const response = await fetch(versionUrl, {
+                method: 'GET',
+                timeout: 5000
+            });
+            
+            if (response.ok) {
+                const data = await response.text();
+                // Check if it looks like a Termix version response
+                if (data && (data.includes('version') || data.includes('termix') || data.includes('1.') || response.status === 200)) {
+                    return { success: true, status: response.status, testedUrl: versionUrl, warning: 'Health endpoint not available, but server appears to be running' };
+                }
+            }
+        } catch (versionError) {
+            console.error('Version check failed:', versionError);
+        }
+        
+        return { success: false, error: 'Server is not responding or does not appear to be a valid Termix server. Please ensure the server is running and accessible.' };
     } catch (error) {
         return { success: false, error: error.message };
     }

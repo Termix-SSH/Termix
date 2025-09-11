@@ -341,7 +341,8 @@ function getApiUrl(path: string, defaultPort: number): string {
             const baseUrl = configuredServerUrl.replace(/\/$/, '');
             return `${baseUrl}${path}`;
         }
-        return `http://127.0.0.1:${defaultPort}${path}`;
+        // In Electron without configured server, return a placeholder that will cause requests to fail gracefully
+        return 'http://no-server-configured';
     } else if (isDev) {
         return `http://${apiHost}:${defaultPort}${path}`;
     } else {
@@ -470,6 +471,11 @@ function handleApiError(error: unknown, operation: string): never {
             apiLogger.error(`Server error: ${method} ${url} - ${message}`, error, errorContext);
             throw new ApiError('Server error occurred. Please try again later.', status, 'SERVER_ERROR');
         } else if (status === 0) {
+            // Check if this is a "no server configured" error
+            if (url.includes('no-server-configured')) {
+                apiLogger.error(`No server configured: ${method} ${url}`, error, errorContext);
+                throw new ApiError('No server configured. Please configure a Termix server first.', 0, 'NO_SERVER_CONFIGURED');
+            }
             apiLogger.error(`Network error: ${method} ${url} - ${message}`, error, errorContext);
             throw new ApiError('Network error. Please check your connection and try again.', 0, 'NETWORK_ERROR');
         } else {

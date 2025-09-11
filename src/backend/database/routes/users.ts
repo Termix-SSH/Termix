@@ -570,8 +570,9 @@ router.get('/oidc/callback', async (req, res) => {
         const isElectron = userAgent.includes('Electron') || req.get('X-Electron-App') === 'true';
         
         if (isElectron) {
-            // For Electron, redirect back to the same server URL (the frontend is served from there)
-            frontendUrl = redirectUri.replace('/users/oidc/callback', '');
+            // For Electron, we need to redirect to a special endpoint that will handle the token
+            // and then redirect to the Electron app using a custom protocol or file URL
+            frontendUrl = redirectUri.replace('/users/oidc/callback', '/electron-oidc-success');
         } else if (frontendUrl.includes('localhost')) {
             frontendUrl = 'http://localhost:5173';
         }
@@ -592,8 +593,8 @@ router.get('/oidc/callback', async (req, res) => {
         const isElectron = userAgent.includes('Electron') || req.get('X-Electron-App') === 'true';
         
         if (isElectron) {
-            // For Electron, redirect back to the same server URL (the frontend is served from there)
-            frontendUrl = redirectUri.replace('/users/oidc/callback', '');
+            // For Electron, we need to redirect to a special endpoint that will handle the error
+            frontendUrl = redirectUri.replace('/users/oidc/callback', '/electron-oidc-error');
         } else if (frontendUrl.includes('localhost')) {
             frontendUrl = 'http://localhost:5173';
         }
@@ -603,6 +604,140 @@ router.get('/oidc/callback', async (req, res) => {
 
         res.redirect(redirectUrl.toString());
     }
+});
+
+// Route: Electron OIDC success handler
+// GET /electron-oidc-success
+router.get('/electron-oidc-success', (req, res) => {
+    const { success, token, error } = req.query;
+    
+    if (success === 'true' && token) {
+        // Return an HTML page that will communicate with the Electron app
+        res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OIDC Authentication Success</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px; 
+            background: #1a1a1a; 
+            color: white; 
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="success">
+        <h2>Authentication Successful!</h2>
+        <p>You can close this window and return to the Termix application.</p>
+    </div>
+    <script>
+        // Try to communicate with the Electron app
+        if (window.electronAPI) {
+            window.electronAPI.invoke('oidc-success', { token: '${token}' });
+        }
+        
+        // Fallback: try to close the window after a delay
+        setTimeout(() => {
+            if (window.close) {
+                window.close();
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
+        `);
+    } else if (error) {
+        res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OIDC Authentication Error</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px; 
+            background: #1a1a1a; 
+            color: white; 
+        }
+        .error { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="error">
+        <h2>Authentication Failed</h2>
+        <p>Error: ${error}</p>
+        <p>You can close this window and try again.</p>
+    </div>
+    <script>
+        // Try to communicate with the Electron app
+        if (window.electronAPI) {
+            window.electronAPI.invoke('oidc-error', { error: '${error}' });
+        }
+        
+        // Fallback: try to close the window after a delay
+        setTimeout(() => {
+            if (window.close) {
+                window.close();
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
+        `);
+    } else {
+        res.status(400).send('Invalid request');
+    }
+});
+
+// Route: Electron OIDC error handler
+// GET /electron-oidc-error
+router.get('/electron-oidc-error', (req, res) => {
+    const { error } = req.query;
+    
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OIDC Authentication Error</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px; 
+            background: #1a1a1a; 
+            color: white; 
+        }
+        .error { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="error">
+        <h2>Authentication Failed</h2>
+        <p>Error: ${error || 'Unknown error'}</p>
+        <p>You can close this window and try again.</p>
+    </div>
+    <script>
+        // Try to communicate with the Electron app
+        if (window.electronAPI) {
+            window.electronAPI.invoke('oidc-error', { error: '${error || 'Unknown error'}' });
+        }
+        
+        // Fallback: try to close the window after a delay
+        setTimeout(() => {
+            if (window.close) {
+                window.close();
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
+    `);
 });
 
 // Route: Get user JWT by username and password (traditional login)
