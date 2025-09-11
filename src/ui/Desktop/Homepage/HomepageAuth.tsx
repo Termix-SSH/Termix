@@ -20,8 +20,11 @@ import {
     completePasswordReset,
     getOIDCAuthorizeUrl,
     verifyTOTPLogin,
-    setCookie
+    setCookie,
+    getServerConfig,
+    type ServerConfig
 } from "../../main-axios.ts";
+import {ServerConfig as ServerConfigComponent} from "@/ui/Desktop/ElectronOnly/ServerConfig.tsx";
 
 function getCookie(name: string) {
     return document.cookie.split('; ').reduce((r, v) => {
@@ -410,6 +413,66 @@ export function HomepageAuth({
         </svg>
     );
 
+    // Check if we need to show server config for Electron
+    const [showServerConfig, setShowServerConfig] = useState<boolean | null>(null);
+    const [currentServerUrl, setCurrentServerUrl] = useState<string>('');
+    
+    useEffect(() => {
+        const checkServerConfig = async () => {
+            if ((window as any).electronAPI) {
+                try {
+                    const config = await getServerConfig();
+                    console.log('Desktop HomepageAuth - Server config check:', config);
+                    setCurrentServerUrl(config?.serverUrl || '');
+                    setShowServerConfig(!config || !config.serverUrl);
+                } catch (error) {
+                    console.log('Desktop HomepageAuth - No server config found, showing config screen');
+                    setShowServerConfig(true);
+                }
+            } else {
+                setShowServerConfig(false);
+            }
+        };
+        
+        checkServerConfig();
+    }, []);
+    
+    if (showServerConfig === null) {
+        // Still checking
+        return (
+            <div
+                className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ''}`}
+                {...props}
+            >
+                <div className="flex items-center justify-center h-32">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+            </div>
+        );
+    }
+    
+    if (showServerConfig) {
+        console.log('Desktop HomepageAuth - SHOWING SERVER CONFIG SCREEN');
+        return (
+            <div
+                className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ''}`}
+                {...props}
+            >
+                <ServerConfigComponent 
+                    onServerConfigured={() => {
+                        console.log('Server configured, reloading page');
+                        window.location.reload();
+                    }}
+                    onCancel={() => {
+                        console.log('Cancelled server config, going back to login');
+                        setShowServerConfig(false);
+                    }}
+                    isFirstTime={!currentServerUrl}
+                />
+            </div>
+        );
+    }
+
     return (
         <div
             className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ''}`}
@@ -792,13 +855,32 @@ export function HomepageAuth({
                         </form>
                     )}
                     
-                    <div className="mt-6 pt-4 border-t border-dark-border">
+                    <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
                                 <Label className="text-sm text-muted-foreground">{t('common.language')}</Label>
                             </div>
                             <LanguageSwitcher />
                         </div>
+                        {(window as any).electronAPI && currentServerUrl && (
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <Label className="text-sm text-muted-foreground">Server</Label>
+                                    <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                        {currentServerUrl}
+                                    </div>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowServerConfig(true)}
+                                    className="h-8 px-3"
+                                >
+                                    Edit
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </>
             )}

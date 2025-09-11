@@ -152,6 +152,24 @@
     "failedToLoadAlerts": "加载警报失败",
     "failedToDismissAlert": "关闭警报失败"
   },
+  "serverConfig": {
+    "title": "服务器配置",
+    "description": "配置 Termix 服务器 URL 以连接到您的后端服务",
+    "serverUrl": "服务器 URL",
+    "enterServerUrl": "请输入服务器 URL",
+    "testConnectionFirst": "请先测试连接",
+    "connectionSuccess": "连接成功！",
+    "connectionFailed": "连接失败",
+    "connectionError": "连接发生错误",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "configSaved": "配置保存成功",
+    "saveFailed": "保存配置失败",
+    "saveError": "保存配置时出错",
+    "saving": "保存中...",
+    "saveConfig": "保存配置",
+    "helpText": "输入您的 Termix 服务器运行地址（例如：http://localhost:8081 或 https://your-server.com）"
+  },
   "common": {
     "close": "关闭",
     "online": "在线",
@@ -212,6 +230,7 @@
     "email": "邮箱",
     "submit": "提交",
     "cancel": "取消",
+    "change": "更改",
     "save": "保存",
     "delete": "删除",
     "edit": "编辑",

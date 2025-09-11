@@ -259,13 +259,77 @@ const isDev = process.env.NODE_ENV === 'development' &&
 
 let apiHost = import.meta.env.VITE_API_HOST || 'localhost';
 let apiPort = 8081;
+let configuredServerUrl: string | null = null;
 
 if (isElectron) {
     apiPort = 8081;
 }
 
+// Server configuration management for Electron
+export interface ServerConfig {
+    serverUrl: string;
+    lastUpdated: string;
+}
+
+export async function getServerConfig(): Promise<ServerConfig | null> {
+    if (!isElectron) return null;
+    
+    try {
+        const result = await (window as any).electronAPI?.invoke('get-server-config');
+        return result;
+    } catch (error) {
+        console.error('Failed to get server config:', error);
+        return null;
+    }
+}
+
+export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
+    if (!isElectron) return false;
+    
+    try {
+        const result = await (window as any).electronAPI?.invoke('save-server-config', config);
+        if (result?.success) {
+            configuredServerUrl = config.serverUrl;
+            updateApiInstances();
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Failed to save server config:', error);
+        return false;
+    }
+}
+
+export async function testServerConnection(serverUrl: string): Promise<{ success: boolean; error?: string }> {
+    if (!isElectron) return { success: false, error: 'Not in Electron environment' };
+    
+    try {
+        const result = await (window as any).electronAPI?.invoke('test-server-connection', serverUrl);
+        return result;
+    } catch (error) {
+        console.error('Failed to test server connection:', error);
+        return { success: false, error: 'Connection test failed' };
+    }
+}
+
+// Initialize server configuration on load
+if (isElectron) {
+    getServerConfig().then(config => {
+        if (config?.serverUrl) {
+            configuredServerUrl = config.serverUrl;
+            updateApiInstances();
+        }
+    });
+}
+
 function getApiUrl(path: string, defaultPort: number): string {
     if (isElectron) {
+        if (configuredServerUrl) {
+            // In Electron with configured server, all requests go through nginx reverse proxy
+            // Use the same base URL for all services (nginx routes to correct backend port)
+            const baseUrl = configuredServerUrl.replace(/\/$/, '');
+            return `${baseUrl}${path}`;
+        }
         return `http://127.0.0.1:${defaultPort}${path}`;
     } else if (isDev) {
         return `http://${apiHost}:${defaultPort}${path}`;
@@ -305,7 +369,29 @@ export let authApi = createApiInstance(
     'AUTH'
 );
 
-// Function to update API instances with new port (for Electron)
+// Function to update API instances with new server configuration
+function updateApiInstances() {
+    systemLogger.info('Updating API instances with new server configuration', { 
+        operation: 'api_instance_update', 
+        configuredServerUrl 
+    });
+    
+    sshHostApi = createApiInstance(getApiUrl('/ssh', 8081), 'SSH_HOST');
+    tunnelApi = createApiInstance(getApiUrl('/ssh', 8083), 'TUNNEL');
+    fileManagerApi = createApiInstance(getApiUrl('/ssh/file_manager', 8084), 'FILE_MANAGER');
+    statsApi = createApiInstance(getApiUrl('', 8085), 'STATS');
+    authApi = createApiInstance(getApiUrl('', 8081), 'AUTH');
+    
+    // Make configuredServerUrl available globally for components that need it
+    (window as any).configuredServerUrl = configuredServerUrl;
+    
+    systemLogger.success('All API instances updated successfully', { 
+        operation: 'api_instance_update_complete', 
+        configuredServerUrl 
+    });
+}
+
+// Function to update API instances with new port (for Electron) - kept for backward compatibility
 function updateApiPorts(port: number) {
     systemLogger.info('Updating API instances with new port', { 
         operation: 'api_port_update', 
@@ -313,16 +399,7 @@ function updateApiPorts(port: number) {
     });
     
     apiPort = port;
-    sshHostApi = createApiInstance(`http://127.0.0.1:${port}/ssh`, 'SSH_HOST');
-    tunnelApi = createApiInstance(`http://127.0.0.1:${port}/ssh`, 'TUNNEL');
-    fileManagerApi = createApiInstance(`http://127.0.0.1:${port}/ssh/file_manager`, 'FILE_MANAGER');
-    statsApi = createApiInstance(`http://127.0.0.1:${port}`, 'STATS');
-    authApi = createApiInstance(`http://127.0.0.1:${port}`, 'AUTH');
-    
-    systemLogger.success('All API instances updated successfully', { 
-        operation: 'api_port_update_complete', 
-        port 
-    });
+    updateApiInstances();
 }
 
 // ============================================================================
@@ -1104,8 +1181,7 @@ export async function generateBackupCodes(password?: string, totp_code?: string)
 
 export async function getUserAlerts(userId: string): Promise<{ alerts: any[] }> {
     try {
-        const apiInstance = createApiInstance(isDev ? `http://${apiHost}:8081` : '');
-        const response = await apiInstance.get(`/alerts/user/${userId}`);
+        const response = await authApi.get(`/alerts/user/${userId}`);
         return response.data;
     } catch (error) {
         handleApiError(error, 'fetch user alerts');
@@ -1114,9 +1190,7 @@ export async function getUserAlerts(userId: string): Promise<{ alerts: any[] }> 
 
 export async function dismissAlert(userId: string, alertId: string): Promise<any> {
     try {
-        // Use the general API instance since alerts endpoint is at root level
-        const apiInstance = createApiInstance(isDev ? `http://${apiHost}:8081` : '');
-        const response = await apiInstance.post('/alerts/dismiss', { userId, alertId });
+        const response = await authApi.post('/alerts/dismiss', { userId, alertId });
         return response.data;
     } catch (error) {
         handleApiError(error, 'dismiss alert');

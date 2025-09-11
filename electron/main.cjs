@@ -1,5 +1,6 @@
 const { app, BrowserWindow, shell, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let mainWindow = null;
 
@@ -34,7 +35,8 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: !isDev
+            webSecurity: !isDev,
+            preload: path.join(__dirname, 'preload.js')
         },
         show: false
     });
@@ -88,6 +90,75 @@ ipcMain.handle('get-app-version', () => {
 
 ipcMain.handle('get-platform', () => {
     return process.platform;
+});
+
+// Server configuration handlers
+ipcMain.handle('get-server-config', () => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const configPath = path.join(userDataPath, 'server-config.json');
+        
+        if (fs.existsSync(configPath)) {
+            const configData = fs.readFileSync(configPath, 'utf8');
+            return JSON.parse(configData);
+        }
+        return null;
+    } catch (error) {
+        console.error('Error reading server config:', error);
+        return null;
+    }
+});
+
+ipcMain.handle('save-server-config', (event, config) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const configPath = path.join(userDataPath, 'server-config.json');
+        
+        // Ensure userData directory exists
+        if (!fs.existsSync(userDataPath)) {
+            fs.mkdirSync(userDataPath, { recursive: true });
+        }
+        
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+        return { success: true };
+    } catch (error) {
+        console.error('Error saving server config:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('test-server-connection', async (event, serverUrl) => {
+    try {
+        const { default: fetch } = await import('node-fetch');
+        
+        // Try multiple endpoints to test the connection
+        const testUrls = [
+            `${serverUrl}/health`,
+            `${serverUrl}/version`,
+            `${serverUrl}/users/registration-allowed`
+        ];
+        
+        for (const testUrl of testUrls) {
+            try {
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    timeout: 5000
+                });
+                
+                if (response.ok) {
+                    // If we get a 200 response, it's likely a valid Termix server
+                    return { success: true, status: response.status, testedUrl: testUrl };
+                }
+            } catch (urlError) {
+                // Continue to next URL if this one fails
+                continue;
+            }
+        }
+        
+        return { success: false, error: 'Server is not responding or not a valid Termix server' };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
 });
 
 app.whenReady().then(() => {

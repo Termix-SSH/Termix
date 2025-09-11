@@ -151,6 +151,24 @@
     "failedToLoadAlerts": "Failed to load alerts",
     "failedToDismissAlert": "Failed to dismiss alert"
   },
+  "serverConfig": {
+    "title": "Server Configuration",
+    "description": "Configure the Termix server URL to connect to your backend services",
+    "serverUrl": "Server URL",
+    "enterServerUrl": "Please enter a server URL",
+    "testConnectionFirst": "Please test the connection first",
+    "connectionSuccess": "Connection successful!",
+    "connectionFailed": "Connection failed",
+    "connectionError": "Connection error occurred",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "configSaved": "Configuration saved successfully",
+    "saveFailed": "Failed to save configuration",
+    "saveError": "Error saving configuration",
+    "saving": "Saving...",
+    "saveConfig": "Save Configuration",
+    "helpText": "Enter the URL where your Termix server is running (e.g., http://localhost:8081 or https://your-server.com)"
+  },
   "common": {
     "close": "Close",
     "online": "Online",
@@ -212,6 +230,7 @@
     "email": "Email",
     "submit": "Submit",
     "cancel": "Cancel",
+    "change": "Change",
     "save": "Save",
     "delete": "Delete",
     "edit": "Edit",

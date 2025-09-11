@@ -172,7 +172,14 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         const wsUrl = isDev
             ? 'ws://localhost:8082'
             : isElectron
-            ? 'ws://127.0.0.1:8082'
+            ? (() => {
+                // Get configured server URL from window object (set by main-axios)
+                const baseUrl = (window as any).configuredServerUrl || 'http://127.0.0.1:8081';
+                // Convert HTTP/HTTPS to WS/WSS and use nginx reverse proxy path
+                const wsProtocol = baseUrl.startsWith('https://') ? 'wss://' : 'ws://';
+                const wsHost = baseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, ''); // Remove port if present
+                return `${wsProtocol}${wsHost}/ssh/websocket/`;
+            })()
             : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
 
         const ws = new WebSocket(wsUrl);
@@ -405,7 +412,14 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 const wsUrl = isDev
                     ? 'ws://localhost:8082'
                     : isElectron
-                    ? 'ws://127.0.0.1:8082'
+                    ? (() => {
+                        // Get configured server URL from window object (set by main-axios)
+                        const baseUrl = (window as any).configuredServerUrl || 'http://127.0.0.1:8081';
+                        // Convert HTTP/HTTPS to WS/WSS and use nginx reverse proxy path
+                        const wsProtocol = baseUrl.startsWith('https://') ? 'wss://' : 'ws://';
+                        const wsHost = baseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, ''); // Remove port if present
+                        return `${wsProtocol}${wsHost}/ssh/websocket/`;
+                    })()
                     : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
 
                 connectToHost(cols, rows);
