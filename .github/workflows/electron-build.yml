@@ -48,7 +48,9 @@ jobs:
 
       - name: Create Windows Portable zip
         run: |
-          Compress-Archive -Path "release/win-unpacked/*" -DestinationPath "Termix-Windows-Portable.zip"
+          cd release/win-unpacked
+          Compress-Archive -Path * -DestinationPath "../../Termix-Windows-Portable.zip"
+          cd ../..
 
       - name: Upload Windows Portable Artifact
         uses: actions/upload-artifact@v4
@@ -88,7 +90,9 @@ jobs:
 
       - name: Create Linux Portable zip
         run: |
-          zip -r Termix-Linux-Portable.zip release/linux-unpacked/*
+          cd release/linux-unpacked
+          zip -r ../../Termix-Linux-Portable.zip *
+          cd ../..
 
       - name: Upload Linux Portable Artifact
         uses: actions/upload-artifact@v4
