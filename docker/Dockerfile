@@ -6,6 +6,11 @@ RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 
+# Set environment variables to force x64 architecture for problematic packages
+ENV npm_config_target_platform=linux
+ENV npm_config_target_arch=x64
+ENV npm_config_target_libc=glibc
+
 RUN npm ci --force && \
     npm cache clean --force
 
@@ -31,6 +36,11 @@ WORKDIR /app
 
 COPY package*.json ./
 
+# Set environment variables to force x64 architecture for problematic packages
+ENV npm_config_target_platform=linux
+ENV npm_config_target_arch=x64
+ENV npm_config_target_libc=glibc
+
 RUN npm ci --only=production --ignore-scripts --force && \
     npm cache clean --force
 
@@ -41,6 +51,11 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ 
 
 COPY package*.json ./
+
+# Set environment variables to force x64 architecture for problematic packages
+ENV npm_config_target_platform=linux
+ENV npm_config_target_arch=x64
+ENV npm_config_target_libc=glibc
 
 RUN npm ci --only=production bcryptjs better-sqlite3 --force && \
     npm cache clean --force
