@@ -15,6 +15,9 @@
     "!vite.config.ts",
     "!eslint.config.js"
   ],
+  "asarUnpack": [
+    "node_modules/node-fetch/**/*"
+  ],
   "extraMetadata": {
     "main": "electron/main.cjs"
   },

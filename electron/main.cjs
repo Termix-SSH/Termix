@@ -129,7 +129,53 @@ ipcMain.handle('save-server-config', (event, config) => {
 
 ipcMain.handle('test-server-connection', async (event, serverUrl) => {
     try {
-        const fetch = require('node-fetch');
+        // Use Node.js built-in fetch (available in Node 18+) or fallback to https module
+        let fetch;
+        try {
+            // Try to use built-in fetch first (Node 18+)
+            fetch = globalThis.fetch || require('node:fetch');
+        } catch (e) {
+            // Fallback to https module for older Node versions
+            const https = require('https');
+            const http = require('http');
+            const { URL } = require('url');
+            
+            fetch = (url, options = {}) => {
+                return new Promise((resolve, reject) => {
+                    const urlObj = new URL(url);
+                    const isHttps = urlObj.protocol === 'https:';
+                    const client = isHttps ? https : http;
+                    
+                    const req = client.request(url, {
+                        method: options.method || 'GET',
+                        headers: options.headers || {},
+                        timeout: options.timeout || 5000
+                    }, (res) => {
+                        let data = '';
+                        res.on('data', chunk => data += chunk);
+                        res.on('end', () => {
+                            resolve({
+                                ok: res.statusCode >= 200 && res.statusCode < 300,
+                                status: res.statusCode,
+                                text: () => Promise.resolve(data),
+                                json: () => Promise.resolve(JSON.parse(data))
+                            });
+                        });
+                    });
+                    
+                    req.on('error', reject);
+                    req.on('timeout', () => {
+                        req.destroy();
+                        reject(new Error('Request timeout'));
+                    });
+                    
+                    if (options.body) {
+                        req.write(options.body);
+                    }
+                    req.end();
+                });
+            };
+        }
         
         // Try multiple endpoints to test the connection
         const testUrls = [

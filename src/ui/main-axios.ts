@@ -102,7 +102,7 @@ export function setCookie(name: string, value: string, days = 7): void {
     }
 }
 
-function getCookie(name: string): string | undefined {
+export function getCookie(name: string): string | undefined {
     const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
     if (isElectron) {
         const token = localStorage.getItem(name) || undefined;
@@ -155,6 +155,12 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
             config.headers.Authorization = `Bearer ${token}`;
         } else if (process.env.NODE_ENV === 'development') {
             authLogger.warn('No JWT token found, request will be unauthenticated', context);
+        }
+
+        // Add Electron-specific headers for OIDC and other backend detection
+        if (isElectron) {
+            config.headers['X-Electron-App'] = 'true';
+            config.headers['User-Agent'] = 'Termix-Electron/1.6.0';
         }
 
         return config;

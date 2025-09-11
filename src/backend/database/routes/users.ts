@@ -315,7 +315,15 @@ router.get('/oidc/authorize', async (req, res) => {
 
         let origin = req.get('Origin') || req.get('Referer')?.replace(/\/[^\/]*$/, '') || 'http://localhost:5173';
 
-        if (origin.includes('localhost')) {
+        // Handle Electron app - check for custom headers or user agent
+        const userAgent = req.get('User-Agent') || '';
+        const isElectron = userAgent.includes('Electron') || req.get('X-Electron-App') === 'true';
+        
+        if (isElectron) {
+            // For Electron, use the configured server URL or fallback to localhost
+            const serverUrl = process.env.SERVER_URL || 'http://localhost:8081';
+            origin = serverUrl;
+        } else if (origin.includes('localhost')) {
             origin = 'http://localhost:8081';
         }
 
@@ -557,7 +565,14 @@ router.get('/oidc/callback', async (req, res) => {
 
         let frontendUrl = redirectUri.replace('/users/oidc/callback', '');
 
-        if (frontendUrl.includes('localhost')) {
+        // Handle Electron app redirects
+        const userAgent = req.get('User-Agent') || '';
+        const isElectron = userAgent.includes('Electron') || req.get('X-Electron-App') === 'true';
+        
+        if (isElectron) {
+            // For Electron, redirect back to the same server URL (the frontend is served from there)
+            frontendUrl = redirectUri.replace('/users/oidc/callback', '');
+        } else if (frontendUrl.includes('localhost')) {
             frontendUrl = 'http://localhost:5173';
         }
 
@@ -572,7 +587,14 @@ router.get('/oidc/callback', async (req, res) => {
 
         let frontendUrl = redirectUri.replace('/users/oidc/callback', '');
 
-        if (frontendUrl.includes('localhost')) {
+        // Handle Electron app redirects
+        const userAgent = req.get('User-Agent') || '';
+        const isElectron = userAgent.includes('Electron') || req.get('X-Electron-App') === 'true';
+        
+        if (isElectron) {
+            // For Electron, redirect back to the same server URL (the frontend is served from there)
+            frontendUrl = redirectUri.replace('/users/oidc/callback', '');
+        } else if (frontendUrl.includes('localhost')) {
             frontendUrl = 'http://localhost:5173';
         }
 
