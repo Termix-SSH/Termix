@@ -35,7 +35,7 @@ ENV npm_config_target_libc=glibc
 # Rebuild native modules for the target platform
 RUN npm rebuild better-sqlite3 --force
 
-RUN npm run dev:backend
+RUN npm run build:backend
 
 # Stage 4: Production dependencies
 FROM node:24-alpine AS production-deps

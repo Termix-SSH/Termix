@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && tsc -p tsconfig.node.json",
+    "build:backend": "tsc -p tsconfig.node.json",
     "dev:backend": "tsc -p tsconfig.node.json && node ./dist/backend/backend/starter.js",
     "lint": "eslint .",
     "preview": "vite preview",
