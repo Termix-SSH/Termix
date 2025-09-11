@@ -6,12 +6,11 @@ RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 
-# Set environment variables to force x64 architecture for problematic packages
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
 
-RUN npm ci --force && \
+RUN npm ci --force --ignore-scripts && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -36,7 +35,6 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# Set environment variables to force x64 architecture for problematic packages
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
@@ -52,12 +50,11 @@ RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 
-# Set environment variables to force x64 architecture for problematic packages
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
 
-RUN npm ci --only=production bcryptjs better-sqlite3 --force && \
+RUN npm ci --only=production bcryptjs better-sqlite3 --force --ignore-scripts && \
     npm cache clean --force
 
 # Stage 6: Final image
