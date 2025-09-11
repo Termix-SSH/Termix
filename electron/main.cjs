@@ -204,10 +204,10 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
                     const healthData = JSON.parse(data);
                     // Check if it has the expected Termix health check structure
                     if (healthData && (
+                        healthData.status === 'ok' ||  // Termix returns {status: 'ok'}
                         healthData.status === 'healthy' || 
                         healthData.healthy === true || 
-                        healthData.database === 'connected' ||
-                        (healthData.app && healthData.app.toLowerCase().includes('termix'))
+                        healthData.database === 'connected'
                     )) {
                         return { success: true, status: response.status, testedUrl: healthUrl };
                     }
@@ -239,11 +239,11 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
                 
                 try {
                     const versionData = JSON.parse(data);
-                    // Check if it looks like a Termix version response - must be JSON and contain Termix-specific fields
+                    // Check if it looks like a Termix version response - must be JSON and contain version-specific fields
                     if (versionData && (
-                        (versionData.app && versionData.app.toLowerCase().includes('termix')) ||
-                        (versionData.name && versionData.name.toLowerCase().includes('termix')) ||
-                        (versionData.version && versionData.description && versionData.description.toLowerCase().includes('termix'))
+                        versionData.status === 'up_to_date' || 
+                        versionData.status === 'requires_update' ||
+                        (versionData.localVersion && versionData.version && versionData.latest_release)
                     )) {
                         return { success: true, status: response.status, testedUrl: versionUrl, warning: 'Health endpoint not available, but server appears to be running' };
                     }

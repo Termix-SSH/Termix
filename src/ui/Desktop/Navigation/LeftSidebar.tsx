@@ -1,9 +1,6 @@
 import React, {useState} from 'react';
 import {
-    Computer,
-    Server,
-    File,
-    Hammer, ChevronUp, User2, HardDrive, Trash2, Users, Shield, Settings, Menu, ChevronRight
+    ChevronUp, User2, HardDrive, Menu, ChevronRight
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import {getCookie, setCookie} from "@/ui/main-axios.ts";
@@ -12,7 +9,6 @@ import {
     Sidebar,
     SidebarContent, SidebarFooter,
     SidebarGroup,
-    SidebarGroupContent,
     SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
@@ -23,32 +19,11 @@ import {
     Separator,
 } from "@/components/ui/separator.tsx"
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@radix-ui/react-dropdown-menu";
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-    SheetClose
-} from "@/components/ui/sheet.tsx";
-import {Checkbox} from "@/components/ui/checkbox.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {PasswordInput} from "@/components/ui/password-input.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Alert, AlertTitle, AlertDescription} from "@/components/ui/alert.tsx";
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table.tsx";
-import {Card} from "@/components/ui/card.tsx";
 import {FolderCard} from "@/ui/Desktop/Navigation/Hosts/FolderCard.tsx";
 import {getSSHHosts} from "@/ui/main-axios.ts";
 import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
@@ -86,11 +61,13 @@ interface SidebarProps {
     children?: React.ReactNode;
 }
 
-function handleLogout() {
-    // Clear the JWT token using the proper cookie functions
+function isElectron() {
     const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-    
-    if (isElectron) {
+    return isElectron;
+}
+
+function handleLogout() {
+    if (isElectron()) {
         localStorage.removeItem('jwt');
     } else {
         document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
@@ -403,7 +380,7 @@ export function LeftSidebar({
                                             }}>
                                             <span>{t('profile.title')}</span>
                                         </DropdownMenuItem>
-                                        {isAdmin && (
+                                        {isAdmin && isElectron() && (
                                             <DropdownMenuItem
                                                 className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
                                                 onClick={() => {
