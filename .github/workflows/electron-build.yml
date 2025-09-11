@@ -101,39 +101,3 @@ jobs:
           path: release/Termix-Linux-Portable.zip
           retention-days: 30
 
-  create-release:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
-    needs: [build-windows, build-linux]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}-${{ github.run_number }}
-          name: Termix ${{ github.ref_name }} Build ${{ github.run_number }}
-          body: |
-            ## Termix ${{ github.ref_name }} Build ${{ github.run_number }}
-            
-            ### Downloads
-            - **Windows Portable**: Download the zip file and extract to run Termix without installation
-            - **Windows Installer**: Run the .exe file to install Termix on your system
-            - **Linux Portable**: Download the zip file and extract to run Termix on Linux systems
-            
-            ### Changes
-            See the [commit history](https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}) for details.
-          files: |
-            artifacts/Termix-Windows-Portable/Termix-Windows-Portable.zip
-            artifacts/Termix-Windows-Installer/*
-            artifacts/Termix-Linux-Portable/Termix-Linux-Portable.zip
-          draft: false
-          prerelease: ${{ github.ref == 'refs/heads/development' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

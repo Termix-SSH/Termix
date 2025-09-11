@@ -19,9 +19,9 @@ cd /app
 export NODE_ENV=production
 
 if command -v su-exec > /dev/null 2>&1; then
-  su-exec node node dist/backend/starter.js
+  su-exec node node dist/backend/backend/starter.js
 else
-  su -s /bin/sh node -c "node dist/backend/starter.js"
+  su -s /bin/sh node -c "node dist/backend/backend/starter.js"
 fi
 
 echo "All services started"
