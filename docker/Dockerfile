@@ -23,7 +23,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm run build:backend
+RUN npm run dev:backend
 
 # Stage 4: Production dependencies
 FROM node:24-alpine AS production-deps
