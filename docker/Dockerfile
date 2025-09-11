@@ -62,7 +62,9 @@ ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
 
-RUN npm ci --only=production bcryptjs better-sqlite3 --force --ignore-scripts && \
+# Install native modules and compile them properly
+RUN npm ci --only=production --force && \
+    npm rebuild better-sqlite3 bcryptjs --force && \
     npm cache clean --force
 
 # Stage 6: Final image
@@ -82,9 +84,7 @@ RUN chown -R nginx:nginx /usr/share/nginx/html
 
 WORKDIR /app
 
-COPY --from=production-deps /app/node_modules /app/node_modules
-COPY --from=native-builder /app/node_modules/bcryptjs /app/node_modules/bcryptjs
-COPY --from=native-builder /app/node_modules/better-sqlite3 /app/node_modules/better-sqlite3
+COPY --from=native-builder /app/node_modules /app/node_modules
 COPY --from=backend-builder /app/dist/backend ./dist/backend
 
 COPY package.json ./
