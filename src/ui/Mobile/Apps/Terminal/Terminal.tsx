@@ -225,7 +225,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                             const baseUrl = (window as any).configuredServerUrl || 'http://127.0.0.1:8081';
                             // Convert HTTP/HTTPS to WS/WSS and use nginx reverse proxy path
                             const wsProtocol = baseUrl.startsWith('https://') ? 'wss://' : 'ws://';
-                            const wsHost = baseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, ''); // Remove port if present
+                            const wsHost = baseUrl.replace(/^https?:\/\//, ''); // Keep the port
                             return `${wsProtocol}${wsHost}/ssh/websocket/`;
                         })()
                         : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;

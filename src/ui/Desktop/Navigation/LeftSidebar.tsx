@@ -6,6 +6,7 @@ import {
     Hammer, ChevronUp, User2, HardDrive, Trash2, Users, Shield, Settings, Menu, ChevronRight
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
+import {getCookie, setCookie} from "@/ui/main-axios.ts";
 
 import {
     Sidebar,
@@ -86,15 +87,16 @@ interface SidebarProps {
 }
 
 function handleLogout() {
-    document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    // Clear the JWT token using the proper cookie functions
+    const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+    
+    if (isElectron) {
+        localStorage.removeItem('jwt');
+    } else {
+        document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    }
+    
     window.location.reload();
-}
-
-function getCookie(name: string) {
-    return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-    }, "");
 }
 
 

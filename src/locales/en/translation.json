@@ -787,6 +787,7 @@
     "external": "External",
     "loginWithExternal": "Login with External Provider",
     "loginWithExternalDesc": "Login using your configured external identity provider",
+    "externalNotSupportedInElectron": "External authentication is not supported in the Electron app yet. Please use the web version for OIDC login.",
     "resetPasswordButton": "Reset Password",
     "sendResetCode": "Send Reset Code",
     "resetCodeDesc": "Enter your username to receive a password reset code. The code will be logged in the docker container logs.",

@@ -79,18 +79,43 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
     React.useEffect(() => {
         const jwt = getCookie("jwt");
         if (!jwt) return;
+        
+        // Check if we're in Electron and have a server configured
+        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+        if (isElectron) {
+            // In Electron, check if we have a configured server
+            const serverUrl = (window as any).configuredServerUrl;
+            if (!serverUrl) {
+                console.log('No server configured in Electron, skipping API calls');
+                return;
+            }
+        }
+        
         getOIDCConfig()
             .then(res => {
                 if (res) setOidcConfig(res);
             })
             .catch((err) => {
                 console.error('Failed to fetch OIDC config:', err);
-                toast.error(t('admin.failedToFetchOidcConfig'));
+                // Only show error if it's not a "no server configured" error
+                if (!err.message?.includes('No server configured')) {
+                    toast.error(t('admin.failedToFetchOidcConfig'));
+                }
             });
         fetchUsers();
     }, []);
 
     React.useEffect(() => {
+        // Check if we're in Electron and have a server configured
+        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+        if (isElectron) {
+            const serverUrl = (window as any).configuredServerUrl;
+            if (!serverUrl) {
+                console.log('No server configured in Electron, skipping registration status check');
+                return;
+            }
+        }
+        
         getRegistrationAllowed()
             .then(res => {
                 if (typeof res?.allowed === 'boolean') {
@@ -99,17 +124,37 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
             })
             .catch((err) => {
                 console.error('Failed to fetch registration status:', err);
-                toast.error(t('admin.failedToFetchRegistrationStatus'));
+                // Only show error if it's not a "no server configured" error
+                if (!err.message?.includes('No server configured')) {
+                    toast.error(t('admin.failedToFetchRegistrationStatus'));
+                }
             });
     }, []);
 
     const fetchUsers = async () => {
         const jwt = getCookie("jwt");
         if (!jwt) return;
+        
+        // Check if we're in Electron and have a server configured
+        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+        if (isElectron) {
+            const serverUrl = (window as any).configuredServerUrl;
+            if (!serverUrl) {
+                console.log('No server configured in Electron, skipping user fetch');
+                return;
+            }
+        }
+        
         setUsersLoading(true);
         try {
             const response = await getUserList();
             setUsers(response.users);
+        } catch (err) {
+            console.error('Failed to fetch users:', err);
+            // Only show error if it's not a "no server configured" error
+            if (!err.message?.includes('No server configured')) {
+                toast.error(t('admin.failedToFetchUsers'));
+            }
         } finally {
             setUsersLoading(false);
         }

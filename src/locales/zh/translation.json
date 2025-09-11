@@ -770,6 +770,7 @@
     "external": "外部",
     "loginWithExternal": "使用外部提供商登录",
     "loginWithExternalDesc": "使用您配置的外部身份提供者登录",
+    "externalNotSupportedInElectron": "Electron 应用暂不支持外部身份验证。请使用网页版本进行 OIDC 登录。",
     "resetPasswordButton": "重置密码",
     "sendResetCode": "发送重置代码",
     "resetCodeDesc": "输入您的用户名以接收密码重置代码。代码将记录在 docker 容器日志中。",

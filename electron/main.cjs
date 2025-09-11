@@ -190,8 +190,11 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
             };
         }
         
+        // Normalize the server URL (remove trailing slash)
+        const normalizedServerUrl = serverUrl.replace(/\/$/, '');
+        
         // Test the health endpoint specifically - this is required for a valid Termix server
-        const healthUrl = `${serverUrl}/health`;
+        const healthUrl = `${normalizedServerUrl}/health`;
         
         try {
             const response = await fetch(healthUrl, {
@@ -200,11 +203,19 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
             });
             
             if (response.ok) {
-                // Try to parse the response to ensure it's a valid health check
                 const data = await response.text();
-                // A valid health check should return some JSON or text indicating the server is healthy
-                if (data && (data.includes('healthy') || data.includes('ok') || data.includes('status') || response.status === 200)) {
-                    return { success: true, status: response.status, testedUrl: healthUrl };
+                // A valid Termix health check should return JSON with specific structure
+                try {
+                    const healthData = JSON.parse(data);
+                    // Check if it has the expected health check structure
+                    if (healthData && (healthData.status === 'healthy' || healthData.healthy === true || healthData.database === 'connected')) {
+                        return { success: true, status: response.status, testedUrl: healthUrl };
+                    }
+                } catch (parseError) {
+                    // If not JSON, check for text indicators
+                    if (data && (data.includes('healthy') || data.includes('ok') || data.includes('connected'))) {
+                        return { success: true, status: response.status, testedUrl: healthUrl };
+                    }
                 }
             }
         } catch (urlError) {
@@ -213,7 +224,7 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
         
         // If health check fails, try version endpoint as fallback
         try {
-            const versionUrl = `${serverUrl}/version`;
+            const versionUrl = `${normalizedServerUrl}/version`;
             const response = await fetch(versionUrl, {
                 method: 'GET',
                 timeout: 5000
@@ -221,9 +232,17 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
             
             if (response.ok) {
                 const data = await response.text();
-                // Check if it looks like a Termix version response
-                if (data && (data.includes('version') || data.includes('termix') || data.includes('1.') || response.status === 200)) {
-                    return { success: true, status: response.status, testedUrl: versionUrl, warning: 'Health endpoint not available, but server appears to be running' };
+                try {
+                    const versionData = JSON.parse(data);
+                    // Check if it looks like a Termix version response
+                    if (versionData && (versionData.version || versionData.app === 'termix' || versionData.name === 'termix')) {
+                        return { success: true, status: response.status, testedUrl: versionUrl, warning: 'Health endpoint not available, but server appears to be running' };
+                    }
+                } catch (parseError) {
+                    // If not JSON, check for text indicators
+                    if (data && (data.includes('termix') || data.includes('1.6.0') || data.includes('version'))) {
+                        return { success: true, status: response.status, testedUrl: versionUrl, warning: 'Health endpoint not available, but server appears to be running' };
+                    }
                 }
             }
         } catch (versionError) {

@@ -185,12 +185,12 @@ export function HomepageAuth({
             setLoggedIn(true);
             setIsAdmin(!!meRes.is_admin);
             setUsername(meRes.username || null);
-            setUserId(meRes.userId || null);
+            setUserId(meRes.id || null);
             setDbError(null);
             onAuthSuccess({
                 isAdmin: !!meRes.is_admin,
                 username: meRes.username || null,
-                userId: meRes.userId || null
+                userId: meRes.id || null
             });
             setInternalLoggedIn(true);
             if (tab === "signup") {
@@ -320,12 +320,12 @@ export function HomepageAuth({
             setLoggedIn(true);
             setIsAdmin(!!meRes.is_admin);
             setUsername(meRes.username || null);
-            setUserId(meRes.userId || null);
+            setUserId(meRes.id || null);
             setDbError(null);
             onAuthSuccess({
                 isAdmin: !!meRes.is_admin,
                 username: meRes.username || null,
-                userId: meRes.userId || null
+                userId: meRes.id || null
             });
             setInternalLoggedIn(true);
             setTotpRequired(false);
@@ -635,14 +635,29 @@ export function HomepageAuth({
                                     <div className="text-center text-muted-foreground mb-4">
                                         <p>{t('auth.loginWithExternalDesc')}</p>
                                     </div>
-                                    <Button
-                                        type="button"
-                                        className="w-full h-11 mt-2 text-base font-semibold"
-                                        disabled={oidcLoading}
-                                        onClick={handleOIDCLogin}
-                                    >
-                                        {oidcLoading ? Spinner : t('auth.loginWithExternal')}
-                                    </Button>
+                                    {(() => {
+                                        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+                                        if (isElectron) {
+                                            return (
+                                                <div className="text-center p-4 bg-muted/50 rounded-lg border">
+                                                    <p className="text-muted-foreground text-sm">
+                                                        {t('auth.externalNotSupportedInElectron')}
+                                                    </p>
+                                                </div>
+                                            );
+                                        } else {
+                                            return (
+                                                <Button
+                                                    type="button"
+                                                    className="w-full h-11 mt-2 text-base font-semibold"
+                                                    disabled={oidcLoading}
+                                                    onClick={handleOIDCLogin}
+                                                >
+                                                    {oidcLoading ? Spinner : t('auth.loginWithExternal')}
+                                                </Button>
+                                            );
+                                        }
+                                    })()}
                                 </>
                             )}
                             {tab === "reset" && (
