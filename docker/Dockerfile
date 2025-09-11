@@ -27,6 +27,14 @@ WORKDIR /app
 
 COPY . .
 
+# Set environment variables for native module compilation
+ENV npm_config_target_platform=linux
+ENV npm_config_target_arch=x64
+ENV npm_config_target_libc=glibc
+
+# Rebuild native modules for the target platform
+RUN npm rebuild better-sqlite3 --force
+
 RUN npm run dev:backend
 
 # Stage 4: Production dependencies
