@@ -151,6 +151,10 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         // Check if we've already reached max attempts
         if (reconnectAttempts.current >= maxReconnectAttempts) {
             toast.error(t('terminal.maxReconnectAttemptsReached'));
+            // Close the terminal tab when max attempts reached
+            if (onClose) {
+                onClose();
+            }
             return;
         }
 
