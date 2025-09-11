@@ -70,6 +70,7 @@ volumes:
   termix-data:
     driver: local 
 ```
+Pre-built binaries are now available for download, including a Windows installer/portable app and a Linux portable app (built with Electron). See [Docs](http://localhost:5174/install#pre-built-binaries) for details. A native iOS/Android app is planned.
 
 # Support
 If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues) repo.
