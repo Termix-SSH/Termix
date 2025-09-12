@@ -4,56 +4,56 @@
 // This file contains all shared interfaces and types used across the application
 // to avoid duplication and ensure consistency.
 
-import type {Client} from 'ssh2';
+import type { Client } from "ssh2";
 
 // ============================================================================
 // SSH HOST TYPES
 // ============================================================================
 
 export interface SSHHost {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder: string;
-    tags: string[];
-    pin: boolean;
-    authType: 'password' | 'key' | 'credential';
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    credentialId?: number;
-    userId?: string;
-    enableTerminal: boolean;
-    enableTunnel: boolean;
-    enableFileManager: boolean;
-    defaultPath: string;
-    tunnelConnections: TunnelConnection[];
-    createdAt: string;
-    updatedAt: string;
+  id: number;
+  name: string;
+  ip: string;
+  port: number;
+  username: string;
+  folder: string;
+  tags: string[];
+  pin: boolean;
+  authType: "password" | "key" | "credential";
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  credentialId?: number;
+  userId?: string;
+  enableTerminal: boolean;
+  enableTunnel: boolean;
+  enableFileManager: boolean;
+  defaultPath: string;
+  tunnelConnections: TunnelConnection[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SSHHostData {
-    name?: string;
-    ip: string;
-    port: number;
-    username: string;
-    folder?: string;
-    tags?: string[];
-    pin?: boolean;
-    authType: 'password' | 'key' | 'credential';
-    password?: string;
-    key?: File | null;
-    keyPassword?: string;
-    keyType?: string;
-    credentialId?: number | null;
-    enableTerminal?: boolean;
-    enableTunnel?: boolean;
-    enableFileManager?: boolean;
-    defaultPath?: string;
-    tunnelConnections?: any[];
+  name?: string;
+  ip: string;
+  port: number;
+  username: string;
+  folder?: string;
+  tags?: string[];
+  pin?: boolean;
+  authType: "password" | "key" | "credential";
+  password?: string;
+  key?: File | null;
+  keyPassword?: string;
+  keyType?: string;
+  credentialId?: number | null;
+  enableTerminal?: boolean;
+  enableTunnel?: boolean;
+  enableFileManager?: boolean;
+  defaultPath?: string;
+  tunnelConnections?: any[];
 }
 
 // ============================================================================
@@ -61,34 +61,34 @@ export interface SSHHostData {
 // ============================================================================
 
 export interface Credential {
-    id: number;
-    name: string;
-    description?: string;
-    folder?: string;
-    tags: string[];
-    authType: 'password' | 'key';
-    username: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-    usageCount: number;
-    lastUsed?: string;
-    createdAt: string;
-    updatedAt: string;
+  id: number;
+  name: string;
+  description?: string;
+  folder?: string;
+  tags: string[];
+  authType: "password" | "key";
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  usageCount: number;
+  lastUsed?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CredentialData {
-    name: string;
-    description?: string;
-    folder?: string;
-    tags: string[];
-    authType: 'password' | 'key';
-    username: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
+  name: string;
+  description?: string;
+  folder?: string;
+  tags: string[];
+  authType: "password" | "key";
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
 }
 
 // ============================================================================
@@ -96,55 +96,55 @@ export interface CredentialData {
 // ============================================================================
 
 export interface TunnelConnection {
-    sourcePort: number;
-    endpointPort: number;
-    endpointHost: string;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
+  sourcePort: number;
+  endpointPort: number;
+  endpointHost: string;
+  maxRetries: number;
+  retryInterval: number;
+  autoStart: boolean;
 }
 
 export interface TunnelConfig {
-    name: string;
-    hostName: string;
-    sourceIP: string;
-    sourceSSHPort: number;
-    sourceUsername: string;
-    sourcePassword?: string;
-    sourceAuthMethod: string;
-    sourceSSHKey?: string;
-    sourceKeyPassword?: string;
-    sourceKeyType?: string;
-    sourceCredentialId?: number;
-    sourceUserId?: string;
-    endpointIP: string;
-    endpointSSHPort: number;
-    endpointUsername: string;
-    endpointPassword?: string;
-    endpointAuthMethod: string;
-    endpointSSHKey?: string;
-    endpointKeyPassword?: string;
-    endpointKeyType?: string;
-    endpointCredentialId?: number;
-    endpointUserId?: string;
-    sourcePort: number;
-    endpointPort: number;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-    isPinned: boolean;
+  name: string;
+  hostName: string;
+  sourceIP: string;
+  sourceSSHPort: number;
+  sourceUsername: string;
+  sourcePassword?: string;
+  sourceAuthMethod: string;
+  sourceSSHKey?: string;
+  sourceKeyPassword?: string;
+  sourceKeyType?: string;
+  sourceCredentialId?: number;
+  sourceUserId?: string;
+  endpointIP: string;
+  endpointSSHPort: number;
+  endpointUsername: string;
+  endpointPassword?: string;
+  endpointAuthMethod: string;
+  endpointSSHKey?: string;
+  endpointKeyPassword?: string;
+  endpointKeyType?: string;
+  endpointCredentialId?: number;
+  endpointUserId?: string;
+  sourcePort: number;
+  endpointPort: number;
+  maxRetries: number;
+  retryInterval: number;
+  autoStart: boolean;
+  isPinned: boolean;
 }
 
 export interface TunnelStatus {
-    connected: boolean;
-    status: ConnectionState;
-    retryCount?: number;
-    maxRetries?: number;
-    nextRetryIn?: number;
-    reason?: string;
-    errorType?: ErrorType;
-    manualDisconnect?: boolean;
-    retryExhausted?: boolean;
+  connected: boolean;
+  status: ConnectionState;
+  retryCount?: number;
+  maxRetries?: number;
+  nextRetryIn?: number;
+  reason?: string;
+  errorType?: ErrorType;
+  manualDisconnect?: boolean;
+  retryExhausted?: boolean;
 }
 
 // ============================================================================
@@ -152,50 +152,50 @@ export interface TunnelStatus {
 // ============================================================================
 
 export interface Tab {
-    id: string | number;
-    title: string;
-    fileName: string;
-    content: string;
-    isSSH?: boolean;
-    sshSessionId?: string;
-    filePath?: string;
-    loading?: boolean;
-    dirty?: boolean;
+  id: string | number;
+  title: string;
+  fileName: string;
+  content: string;
+  isSSH?: boolean;
+  sshSessionId?: string;
+  filePath?: string;
+  loading?: boolean;
+  dirty?: boolean;
 }
 
 export interface FileManagerFile {
-    name: string;
-    path: string;
-    type?: 'file' | 'directory';
-    isSSH?: boolean;
-    sshSessionId?: string;
+  name: string;
+  path: string;
+  type?: "file" | "directory";
+  isSSH?: boolean;
+  sshSessionId?: string;
 }
 
 export interface FileManagerShortcut {
-    name: string;
-    path: string;
+  name: string;
+  path: string;
 }
 
 export interface FileItem {
-    name: string;
-    path: string;
-    isPinned?: boolean;
-    type: 'file' | 'directory';
-    sshSessionId?: string;
+  name: string;
+  path: string;
+  isPinned?: boolean;
+  type: "file" | "directory";
+  sshSessionId?: string;
 }
 
 export interface ShortcutItem {
-    name: string;
-    path: string;
+  name: string;
+  path: string;
 }
 
 export interface SSHConnection {
-    id: number;
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    isPinned?: boolean;
+  id: number;
+  name: string;
+  ip: string;
+  port: number;
+  username: string;
+  isPinned?: boolean;
 }
 
 // ============================================================================
@@ -203,11 +203,11 @@ export interface SSHConnection {
 // ============================================================================
 
 export interface HostInfo {
-    id: number;
-    name?: string;
-    ip: string;
-    port: number;
-    createdAt: string;
+  id: number;
+  name?: string;
+  ip: string;
+  port: number;
+  createdAt: string;
 }
 
 // ============================================================================
@@ -215,14 +215,14 @@ export interface HostInfo {
 // ============================================================================
 
 export interface TermixAlert {
-    id: string;
-    title: string;
-    message: string;
-    expiresAt: string;
-    priority?: 'low' | 'medium' | 'high' | 'critical';
-    type?: 'info' | 'warning' | 'error' | 'success';
-    actionUrl?: string;
-    actionText?: string;
+  id: string;
+  title: string;
+  message: string;
+  expiresAt: string;
+  priority?: "low" | "medium" | "high" | "critical";
+  type?: "info" | "warning" | "error" | "success";
+  actionUrl?: string;
+  actionText?: string;
 }
 
 // ============================================================================
@@ -230,11 +230,18 @@ export interface TermixAlert {
 // ============================================================================
 
 export interface TabContextTab {
-    id: number;
-    type: 'home' | 'terminal' | 'ssh_manager' | 'server' | 'admin' | 'file_manager' | 'user_profile';
-    title: string;
-    hostConfig?: any;
-    terminalRef?: React.RefObject<any>;
+  id: number;
+  type:
+    | "home"
+    | "terminal"
+    | "ssh_manager"
+    | "server"
+    | "admin"
+    | "file_manager"
+    | "user_profile";
+  title: string;
+  hostConfig?: any;
+  terminalRef?: React.RefObject<any>;
 }
 
 // ============================================================================
@@ -242,38 +249,44 @@ export interface TabContextTab {
 // ============================================================================
 
 export const CONNECTION_STATES = {
-    DISCONNECTED: "disconnected",
-    CONNECTING: "connecting",
-    CONNECTED: "connected",
-    VERIFYING: "verifying",
-    FAILED: "failed",
-    UNSTABLE: "unstable",
-    RETRYING: "retrying",
-    WAITING: "waiting",
-    DISCONNECTING: "disconnecting"
+  DISCONNECTED: "disconnected",
+  CONNECTING: "connecting",
+  CONNECTED: "connected",
+  VERIFYING: "verifying",
+  FAILED: "failed",
+  UNSTABLE: "unstable",
+  RETRYING: "retrying",
+  WAITING: "waiting",
+  DISCONNECTING: "disconnecting",
 } as const;
 
-export type ConnectionState = typeof CONNECTION_STATES[keyof typeof CONNECTION_STATES];
+export type ConnectionState =
+  (typeof CONNECTION_STATES)[keyof typeof CONNECTION_STATES];
 
-export type ErrorType = 'CONNECTION_FAILED' | 'AUTHENTICATION_FAILED' | 'TIMEOUT' | 'NETWORK_ERROR' | 'UNKNOWN';
+export type ErrorType =
+  | "CONNECTION_FAILED"
+  | "AUTHENTICATION_FAILED"
+  | "TIMEOUT"
+  | "NETWORK_ERROR"
+  | "UNKNOWN";
 
 // ============================================================================
 // AUTHENTICATION TYPES
 // ============================================================================
 
-export type AuthType = 'password' | 'key' | 'credential';
+export type AuthType = "password" | "key" | "credential";
 
-export type KeyType = 'rsa' | 'ecdsa' | 'ed25519';
+export type KeyType = "rsa" | "ecdsa" | "ed25519";
 
 // ============================================================================
 // API RESPONSE TYPES
 // ============================================================================
 
 export interface ApiResponse<T = any> {
-    data?: T;
-    error?: string;
-    message?: string;
-    status?: number;
+  data?: T;
+  error?: string;
+  message?: string;
+  status?: number;
 }
 
 // ============================================================================
@@ -281,107 +294,122 @@ export interface ApiResponse<T = any> {
 // ============================================================================
 
 export interface CredentialsManagerProps {
-    onEditCredential?: (credential: Credential) => void;
+  onEditCredential?: (credential: Credential) => void;
 }
 
 export interface CredentialEditorProps {
-    editingCredential?: Credential | null;
-    onFormSubmit?: () => void;
+  editingCredential?: Credential | null;
+  onFormSubmit?: () => void;
 }
 
 export interface CredentialViewerProps {
-    credential: Credential;
-    onClose: () => void;
-    onEdit: () => void;
+  credential: Credential;
+  onClose: () => void;
+  onEdit: () => void;
 }
 
 export interface CredentialSelectorProps {
-    value?: number | null;
-    onValueChange: (value: number | null) => void;
+  value?: number | null;
+  onValueChange: (value: number | null) => void;
 }
 
 export interface HostManagerProps {
-    onSelectView?: (view: string) => void;
-    isTopbarOpen?: boolean;
+  onSelectView?: (view: string) => void;
+  isTopbarOpen?: boolean;
 }
 
 export interface SSHManagerHostEditorProps {
-    editingHost?: SSHHost | null;
-    onFormSubmit?: () => void;
+  editingHost?: SSHHost | null;
+  onFormSubmit?: () => void;
 }
 
 export interface SSHManagerHostViewerProps {
-    onEditHost?: (host: SSHHost) => void;
+  onEditHost?: (host: SSHHost) => void;
 }
 
 export interface HostProps {
-    host: SSHHost;
-    onHostConnect?: () => void;
+  host: SSHHost;
+  onHostConnect?: () => void;
 }
 
 export interface SSHTunnelProps {
-    filterHostKey?: string;
+  filterHostKey?: string;
 }
 
 export interface SSHTunnelViewerProps {
-    hosts?: SSHHost[];
-    tunnelStatuses?: Record<string, TunnelStatus>;
-    tunnelActions?: Record<string, (action: 'connect' | 'disconnect' | 'cancel', host: SSHHost, tunnelIndex: number) => Promise<any>>;
-    onTunnelAction?: (action: 'connect' | 'disconnect' | 'cancel', host: SSHHost, tunnelIndex: number) => Promise<any>;
+  hosts?: SSHHost[];
+  tunnelStatuses?: Record<string, TunnelStatus>;
+  tunnelActions?: Record<
+    string,
+    (
+      action: "connect" | "disconnect" | "cancel",
+      host: SSHHost,
+      tunnelIndex: number,
+    ) => Promise<any>
+  >;
+  onTunnelAction?: (
+    action: "connect" | "disconnect" | "cancel",
+    host: SSHHost,
+    tunnelIndex: number,
+  ) => Promise<any>;
 }
 
 export interface FileManagerProps {
-    onSelectView?: (view: string) => void;
-    embedded?: boolean;
-    initialHost?: SSHHost | null;
+  onSelectView?: (view: string) => void;
+  embedded?: boolean;
+  initialHost?: SSHHost | null;
 }
 
 export interface FileManagerLeftSidebarProps {
-    onSelectView?: (view: string) => void;
-    onOpenFile: (file: any) => void;
-    tabs: Tab[];
-    host: SSHHost;
-    onOperationComplete?: () => void;
-    onError?: (error: string) => void;
-    onSuccess?: (message: string) => void;
-    onPathChange?: (path: string) => void;
-    onDeleteItem?: (item: any) => void;
+  onSelectView?: (view: string) => void;
+  onOpenFile: (file: any) => void;
+  tabs: Tab[];
+  host: SSHHost;
+  onOperationComplete?: () => void;
+  onError?: (error: string) => void;
+  onSuccess?: (message: string) => void;
+  onPathChange?: (path: string) => void;
+  onDeleteItem?: (item: any) => void;
 }
 
 export interface FileManagerOperationsProps {
-    currentPath: string;
-    sshSessionId: string | null;
-    onOperationComplete?: () => void;
-    onError?: (error: string) => void;
-    onSuccess?: (message: string) => void;
+  currentPath: string;
+  sshSessionId: string | null;
+  onOperationComplete?: () => void;
+  onError?: (error: string) => void;
+  onSuccess?: (message: string) => void;
 }
 
 export interface AlertCardProps {
-    alert: TermixAlert;
-    onDismiss: (alertId: string) => void;
+  alert: TermixAlert;
+  onDismiss: (alertId: string) => void;
 }
 
 export interface AlertManagerProps {
-    alerts: TermixAlert[];
-    onDismiss: (alertId: string) => void;
-    loggedIn: boolean;
+  alerts: TermixAlert[];
+  onDismiss: (alertId: string) => void;
+  loggedIn: boolean;
 }
 
 export interface SSHTunnelObjectProps {
-    host: SSHHost;
-    tunnelStatuses: Record<string, TunnelStatus>;
-    tunnelActions: Record<string, boolean>;
-    onTunnelAction: (action: 'connect' | 'disconnect' | 'cancel', host: SSHHost, tunnelIndex: number) => Promise<any>;
-    compact?: boolean;
-    bare?: boolean;
+  host: SSHHost;
+  tunnelStatuses: Record<string, TunnelStatus>;
+  tunnelActions: Record<string, boolean>;
+  onTunnelAction: (
+    action: "connect" | "disconnect" | "cancel",
+    host: SSHHost,
+    tunnelIndex: number,
+  ) => Promise<any>;
+  compact?: boolean;
+  bare?: boolean;
 }
 
 export interface FolderStats {
-    totalHosts: number;
-    hostsByType: Array<{
-        type: string;
-        count: number;
-    }>;
+  totalHosts: number;
+  hostsByType: Array<{
+    type: string;
+    count: number;
+  }>;
 }
 
 // ============================================================================
@@ -389,16 +417,16 @@ export interface FolderStats {
 // ============================================================================
 
 export interface HostConfig {
-    host: SSHHost;
-    tunnels: TunnelConfig[];
+  host: SSHHost;
+  tunnels: TunnelConfig[];
 }
 
 export interface VerificationData {
-    conn: Client;
-    timeout: NodeJS.Timeout;
-    startTime: number;
-    attempts: number;
-    maxAttempts: number;
+  conn: Client;
+  timeout: NodeJS.Timeout;
+  startTime: number;
+  attempts: number;
+  maxAttempts: number;
 }
 
 // ============================================================================

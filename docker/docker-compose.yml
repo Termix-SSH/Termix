@@ -12,4 +12,4 @@ services:
 
 volumes:
   termix-data:
-    driver: local 
+    driver: local

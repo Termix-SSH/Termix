@@ -5,8 +5,8 @@ on:
     branches:
       - development
     paths-ignore:
-      - '**.md'
-      - '.gitignore'
+      - "**.md"
+      - ".gitignore"
   workflow_dispatch:
     inputs:
       tag_name:

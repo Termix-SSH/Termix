@@ -77,7 +77,7 @@ services:
 
 volumes:
   termix-data:
-    driver: local 
+    driver: local
 ```
 
 # 支持

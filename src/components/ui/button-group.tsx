@@ -1,37 +1,37 @@
-import { Children, ReactElement, cloneElement, isValidElement } from 'react';
+import { Children, ReactElement, cloneElement, isValidElement } from "react";
 
-import { type ButtonProps } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { type ButtonProps } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface ButtonGroupProps {
   className?: string;
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
   children: ReactElement<ButtonProps>[] | React.ReactNode;
 }
 
 export const ButtonGroup = ({
   className,
-  orientation = 'horizontal',
+  orientation = "horizontal",
   children,
 }: ButtonGroupProps) => {
-  const isHorizontal = orientation === 'horizontal';
-  const isVertical = orientation === 'vertical';
+  const isHorizontal = orientation === "horizontal";
+  const isVertical = orientation === "vertical";
 
   // Normalize and filter only valid React elements
-  const childArray = Children.toArray(children).filter((child): child is ReactElement<ButtonProps> =>
-    isValidElement(child)
+  const childArray = Children.toArray(children).filter(
+    (child): child is ReactElement<ButtonProps> => isValidElement(child),
   );
   const totalButtons = childArray.length;
 
   return (
     <div
       className={cn(
-        'flex',
+        "flex",
         {
-          'flex-col': isVertical,
-          'w-fit': isVertical,
+          "flex-col": isVertical,
+          "w-fit": isVertical,
         },
-        className
+        className,
       )}
     >
       {childArray.map((child, index) => {
@@ -41,15 +41,15 @@ export const ButtonGroup = ({
         return cloneElement(child, {
           className: cn(
             {
-              'rounded-l-none': isHorizontal && !isFirst,
-              'rounded-r-none': isHorizontal && !isLast,
-              'border-l-0': isHorizontal && !isFirst,
+              "rounded-l-none": isHorizontal && !isFirst,
+              "rounded-r-none": isHorizontal && !isLast,
+              "border-l-0": isHorizontal && !isFirst,
 
-              'rounded-t-none': isVertical && !isFirst,
-              'rounded-b-none': isVertical && !isLast,
-              'border-t-0': isVertical && !isFirst,
+              "rounded-t-none": isVertical && !isFirst,
+              "rounded-b-none": isVertical && !isLast,
+              "border-t-0": isVertical && !isFirst,
             },
-            child.props.className
+            child.props.className,
           ),
         });
       })}

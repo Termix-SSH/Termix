@@ -5,7 +5,6 @@
   <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a>
 </p>
 
-
 ![GitHub Repo stars](https://img.shields.io/github/stars/LukeGus/Termix?style=flat&label=Stars)
 ![GitHub forks](https://img.shields.io/github/forks/LukeGus/Termix?style=flat&label=Forks)
 ![GitHub Release](https://img.shields.io/github/v/release/LukeGus/Termix?style=flat&label=Release)
@@ -81,7 +80,7 @@ services:
 
 volumes:
   termix-data:
-    driver: local 
+    driver: local
 ```
 
 Pre-built binaries are now available for download, including a Windows installer/portable app and a Linux portable app (

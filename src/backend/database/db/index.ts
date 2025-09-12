@@ -1,19 +1,25 @@
-import {drizzle} from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import * as schema from './schema.js';
-import fs from 'fs';
-import path from 'path';
-import { databaseLogger } from '../../utils/logger.js';
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import * as schema from "./schema.js";
+import fs from "fs";
+import path from "path";
+import { databaseLogger } from "../../utils/logger.js";
 
-const dataDir = process.env.DATA_DIR || './db/data';
+const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
 if (!fs.existsSync(dbDir)) {
-    databaseLogger.info(`Creating database directory`, { operation: 'db_init', path: dbDir });
-    fs.mkdirSync(dbDir, {recursive: true});
+  databaseLogger.info(`Creating database directory`, {
+    operation: "db_init",
+    path: dbDir,
+  });
+  fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const dbPath = path.join(dataDir, 'db.sqlite');
-databaseLogger.info(`Initializing SQLite database`, { operation: 'db_init', path: dbPath });
+const dbPath = path.join(dataDir, "db.sqlite");
+databaseLogger.info(`Initializing SQLite database`, {
+  operation: "db_init",
+  path: dbPath,
+});
 const sqlite = new Database(dbPath);
 
 sqlite.exec(`
@@ -137,90 +143,164 @@ sqlite.exec(`
     );
 `);
 
-const addColumnIfNotExists = (table: string, column: string, definition: string) => {
+const addColumnIfNotExists = (
+  table: string,
+  column: string,
+  definition: string,
+) => {
+  try {
+    sqlite
+      .prepare(
+        `SELECT ${column}
+                        FROM ${table} LIMIT 1`,
+      )
+      .get();
+  } catch (e) {
     try {
-        sqlite.prepare(`SELECT ${column}
-                        FROM ${table} LIMIT 1`).get();
-    } catch (e) {
-        try {
-            databaseLogger.debug(`Adding column ${column} to ${table}`, { operation: 'schema_migration', table, column });
-            sqlite.exec(`ALTER TABLE ${table}
+      databaseLogger.debug(`Adding column ${column} to ${table}`, {
+        operation: "schema_migration",
+        table,
+        column,
+      });
+      sqlite.exec(`ALTER TABLE ${table}
                 ADD COLUMN ${column} ${definition};`);
-            databaseLogger.success(`Column ${column} added to ${table}`, { operation: 'schema_migration', table, column });
-        } catch (alterError) {
-            databaseLogger.warn(`Failed to add column ${column} to ${table}`, { operation: 'schema_migration', table, column, error: alterError });
-        }
+      databaseLogger.success(`Column ${column} added to ${table}`, {
+        operation: "schema_migration",
+        table,
+        column,
+      });
+    } catch (alterError) {
+      databaseLogger.warn(`Failed to add column ${column} to ${table}`, {
+        operation: "schema_migration",
+        table,
+        column,
+        error: alterError,
+      });
     }
+  }
 };
 
 const migrateSchema = () => {
-    databaseLogger.info('Checking for schema updates...', { operation: 'schema_migration' });
+  databaseLogger.info("Checking for schema updates...", {
+    operation: "schema_migration",
+  });
 
-    addColumnIfNotExists('users', 'is_admin', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 
-    addColumnIfNotExists('users', 'is_oidc', 'INTEGER NOT NULL DEFAULT 0');
-    addColumnIfNotExists('users', 'oidc_identifier', 'TEXT');
-    addColumnIfNotExists('users', 'client_id', 'TEXT');
-    addColumnIfNotExists('users', 'client_secret', 'TEXT');
-    addColumnIfNotExists('users', 'issuer_url', 'TEXT');
-    addColumnIfNotExists('users', 'authorization_url', 'TEXT');
-    addColumnIfNotExists('users', 'token_url', 'TEXT');
+  addColumnIfNotExists("users", "is_oidc", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfNotExists("users", "oidc_identifier", "TEXT");
+  addColumnIfNotExists("users", "client_id", "TEXT");
+  addColumnIfNotExists("users", "client_secret", "TEXT");
+  addColumnIfNotExists("users", "issuer_url", "TEXT");
+  addColumnIfNotExists("users", "authorization_url", "TEXT");
+  addColumnIfNotExists("users", "token_url", "TEXT");
 
-    addColumnIfNotExists('users', 'identifier_path', 'TEXT');
-    addColumnIfNotExists('users', 'name_path', 'TEXT');
-    addColumnIfNotExists('users', 'scopes', 'TEXT');
+  addColumnIfNotExists("users", "identifier_path", "TEXT");
+  addColumnIfNotExists("users", "name_path", "TEXT");
+  addColumnIfNotExists("users", "scopes", "TEXT");
 
-    addColumnIfNotExists('users', 'totp_secret', 'TEXT');
-    addColumnIfNotExists('users', 'totp_enabled', 'INTEGER NOT NULL DEFAULT 0');
-    addColumnIfNotExists('users', 'totp_backup_codes', 'TEXT');
+  addColumnIfNotExists("users", "totp_secret", "TEXT");
+  addColumnIfNotExists("users", "totp_enabled", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfNotExists("users", "totp_backup_codes", "TEXT");
 
-    addColumnIfNotExists('ssh_data', 'name', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'folder', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'tags', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'pin', 'INTEGER NOT NULL DEFAULT 0');
-    addColumnIfNotExists('ssh_data', 'auth_type', 'TEXT NOT NULL DEFAULT "password"');
-    addColumnIfNotExists('ssh_data', 'password', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'key', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'key_password', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'key_type', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'enable_terminal', 'INTEGER NOT NULL DEFAULT 1');
-    addColumnIfNotExists('ssh_data', 'enable_tunnel', 'INTEGER NOT NULL DEFAULT 1');
-    addColumnIfNotExists('ssh_data', 'tunnel_connections', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'enable_file_manager', 'INTEGER NOT NULL DEFAULT 1');
-    addColumnIfNotExists('ssh_data', 'default_path', 'TEXT');
-    addColumnIfNotExists('ssh_data', 'created_at', 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP');
-    addColumnIfNotExists('ssh_data', 'updated_at', 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP');
+  addColumnIfNotExists("ssh_data", "name", "TEXT");
+  addColumnIfNotExists("ssh_data", "folder", "TEXT");
+  addColumnIfNotExists("ssh_data", "tags", "TEXT");
+  addColumnIfNotExists("ssh_data", "pin", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfNotExists(
+    "ssh_data",
+    "auth_type",
+    'TEXT NOT NULL DEFAULT "password"',
+  );
+  addColumnIfNotExists("ssh_data", "password", "TEXT");
+  addColumnIfNotExists("ssh_data", "key", "TEXT");
+  addColumnIfNotExists("ssh_data", "key_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "key_type", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_terminal",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_tunnel",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists("ssh_data", "tunnel_connections", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_file_manager",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists("ssh_data", "default_path", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "created_at",
+    "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "updated_at",
+    "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+  );
 
-    addColumnIfNotExists('ssh_data', 'credential_id', 'INTEGER REFERENCES ssh_credentials(id)');
+  addColumnIfNotExists(
+    "ssh_data",
+    "credential_id",
+    "INTEGER REFERENCES ssh_credentials(id)",
+  );
 
-    addColumnIfNotExists('file_manager_recent', 'host_id', 'INTEGER NOT NULL');
-    addColumnIfNotExists('file_manager_pinned', 'host_id', 'INTEGER NOT NULL');
-    addColumnIfNotExists('file_manager_shortcuts', 'host_id', 'INTEGER NOT NULL');
+  addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
+  addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
+  addColumnIfNotExists("file_manager_shortcuts", "host_id", "INTEGER NOT NULL");
 
-    databaseLogger.success('Schema migration completed', { operation: 'schema_migration' });
+  databaseLogger.success("Schema migration completed", {
+    operation: "schema_migration",
+  });
 };
 
 const initializeDatabase = async () => {
-    migrateSchema();
+  migrateSchema();
 
-    try {
-        const row = sqlite.prepare("SELECT value FROM settings WHERE key = 'allow_registration'").get();
-        if (!row) {
-            databaseLogger.info('Initializing default settings', { operation: 'db_init', setting: 'allow_registration' });
-            sqlite.prepare("INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')").run();
-            databaseLogger.success('Default settings initialized', { operation: 'db_init' });
-        } else {
-            databaseLogger.debug('Default settings already exist', { operation: 'db_init' });
-        }
-    } catch (e) {
-        databaseLogger.warn('Could not initialize default settings', { operation: 'db_init', error: e });
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
+      .get();
+    if (!row) {
+      databaseLogger.info("Initializing default settings", {
+        operation: "db_init",
+        setting: "allow_registration",
+      });
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')",
+        )
+        .run();
+      databaseLogger.success("Default settings initialized", {
+        operation: "db_init",
+      });
+    } else {
+      databaseLogger.debug("Default settings already exist", {
+        operation: "db_init",
+      });
     }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize default settings", {
+      operation: "db_init",
+      error: e,
+    });
+  }
 };
 
-initializeDatabase().catch(error => {
-    databaseLogger.error('Failed to initialize database', error, { operation: 'db_init' });
-    process.exit(1);
+initializeDatabase().catch((error) => {
+  databaseLogger.error("Failed to initialize database", error, {
+    operation: "db_init",
+  });
+  process.exit(1);
 });
 
-databaseLogger.success('Database connection established', { operation: 'db_init', path: dbPath });
-export const db = drizzle(sqlite, {schema});
+databaseLogger.success("Database connection established", {
+  operation: "db_init",
+  path: dbPath,
+});
+export const db = drizzle(sqlite, { schema });

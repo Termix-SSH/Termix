@@ -1,42 +1,42 @@
-import React from 'react';
-import {useTranslation} from 'react-i18next';
+import React from "react";
+import { useTranslation } from "react-i18next";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select.tsx';
-import {Globe} from 'lucide-react';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx";
+import { Globe } from "lucide-react";
 
 const languages = [
-    {code: 'en', name: 'English', nativeName: 'English'},
-    {code: 'zh', name: 'Chinese', nativeName: '中文'},
+  { code: "en", name: "English", nativeName: "English" },
+  { code: "zh", name: "Chinese", nativeName: "中文" },
 ];
 
 export function LanguageSwitcher() {
-    const {i18n, t} = useTranslation();
+  const { i18n, t } = useTranslation();
 
-    const handleLanguageChange = (value: string) => {
-        i18n.changeLanguage(value);
-        localStorage.setItem('i18nextLng', value);
-    };
+  const handleLanguageChange = (value: string) => {
+    i18n.changeLanguage(value);
+    localStorage.setItem("i18nextLng", value);
+  };
 
-    return (
-        <div className="flex items-center gap-2 relative z-[99999]">
-            <Globe className="h-4 w-4 text-muted-foreground"/>
-            <Select value={i18n.language} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder={t('placeholders.language')}/>
-                </SelectTrigger>
-                <SelectContent className="z-[99999]">
-                    {languages.map((lang) => (
-                        <SelectItem key={lang.code} value={lang.code}>
-                            {lang.nativeName}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
+  return (
+    <div className="flex items-center gap-2 relative z-[99999]">
+      <Globe className="h-4 w-4 text-muted-foreground" />
+      <Select value={i18n.language} onValueChange={handleLanguageChange}>
+        <SelectTrigger className="w-[120px]">
+          <SelectValue placeholder={t("placeholders.language")} />
+        </SelectTrigger>
+        <SelectContent className="z-[99999]">
+          {languages.map((lang) => (
+            <SelectItem key={lang.code} value={lang.code}>
+              {lang.nativeName}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
