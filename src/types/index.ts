@@ -4,7 +4,7 @@
 // This file contains all shared interfaces and types used across the application
 // to avoid duplication and ensure consistency.
 
-import type { Client } from 'ssh2';
+import type {Client} from 'ssh2';
 
 // ============================================================================
 // SSH HOST TYPES

@@ -1,6 +1,5 @@
 import React, {useState, useEffect, useRef} from "react";
 import {FileManagerLeftSidebar} from "@/ui/Desktop/Apps/File Manager/FileManagerLeftSidebar.tsx";
-import {FileManagerTabList} from "@/ui/Desktop/Apps/File Manager/FileManagerTabList.tsx";
 import {FileManagerHomeView} from "@/ui/Desktop/Apps/File Manager/FileManagerHomeView.tsx";
 import {FileManagerFileEditor} from "@/ui/Desktop/Apps/File Manager/FileManagerFileEditor.tsx";
 import {FileManagerOperations} from "@/ui/Desktop/Apps/File Manager/FileManagerOperations.tsx";
@@ -8,7 +7,6 @@ import {Button} from '@/components/ui/button.tsx';
 import {FIleManagerTopNavbar} from "@/ui/Desktop/Apps/File Manager/FIleManagerTopNavbar.tsx";
 import {cn} from '@/lib/utils.ts';
 import {Save, RefreshCw, Settings, Trash2} from 'lucide-react';
-import {Separator} from '@/components/ui/separator.tsx';
 import {toast} from 'sonner';
 import {useTranslation} from 'react-i18next';
 import {
@@ -26,9 +24,9 @@ import {
     getSSHStatus,
     connectSSH
 } from '@/ui/main-axios.ts';
-import type { SSHHost, Tab, FileManagerProps } from '../../../types/index.js';
+import type {SSHHost, Tab} from '../../../types/index.js';
 
-export function FileManager({onSelectView, embedded = false, initialHost = null, onClose}: {
+export function FileManager({onSelectView, initialHost = null, onClose}: {
     onSelectView?: (view: string) => void,
     embedded?: boolean,
     initialHost?: SSHHost | null,
@@ -122,10 +120,9 @@ export function FileManager({onSelectView, embedded = false, initialHost = null,
                 type: 'directory'
             })));
         } catch (err: any) {
-            console.error('Failed to fetch home data:', err);
             const {toast} = await import('sonner');
             toast.error(t('fileManager.failedToFetchHomeData'));
-            // Close the file manager tab on connection failure
+
             if (onClose) {
                 onClose();
             }
@@ -371,7 +368,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null,
                 loading: false
             } : t));
 
-            // Handle toast notification from backend
             if (result?.toast) {
                 toast[result.toast.type](result.toast.message);
             } else {
@@ -389,7 +385,6 @@ export function FileManager({onSelectView, embedded = false, initialHost = null,
                             hostId: currentHost.id
                         });
                     } catch (recentErr) {
-                        console.error('Failed to add recent file:', recentErr);
                     }
                 })(),
             ]).then(() => {
@@ -443,14 +438,13 @@ export function FileManager({onSelectView, embedded = false, initialHost = null,
         try {
             const {deleteSSHItem} = await import('@/ui/main-axios.ts');
             const response = await deleteSSHItem(currentHost.id.toString(), item.path, item.type === 'directory');
-            
-            // Handle toast notification from backend
+
             if (response?.toast) {
                 toast[response.toast.type](response.toast.message);
             } else {
                 toast.success(`${item.type === 'directory' ? t('fileManager.folder') : t('fileManager.file')} ${t('fileManager.deletedSuccessfully')}`);
             }
-            
+
             setDeletingItem(null);
             handleOperationComplete();
         } catch (error: any) {
@@ -475,7 +469,8 @@ export function FileManager({onSelectView, embedded = false, initialHost = null,
                         onPathChange={updateCurrentPath}
                     />
                 </div>
-                <div className="absolute top-0 left-64 right-0 bottom-0 flex items-center justify-center bg-dark-bg-darkest">
+                <div
+                    className="absolute top-0 left-64 right-0 bottom-0 flex items-center justify-center bg-dark-bg-darkest">
                     <div className="text-center">
                         <h2 className="text-xl font-semibold text-white mb-2">{t('fileManager.connectToServer')}</h2>
                         <p className="text-muted-foreground">{t('fileManager.selectServerToEdit')}</p>
@@ -546,7 +541,8 @@ export function FileManager({onSelectView, embedded = false, initialHost = null,
                     </div>
                 </div>
             </div>
-            <div className="absolute top-[44px] left-64 right-0 bottom-0 overflow-hidden z-[10] bg-dark-bg-very-light flex flex-col">
+            <div
+                className="absolute top-[44px] left-64 right-0 bottom-0 overflow-hidden z-[10] bg-dark-bg-very-light flex flex-col">
                 <div className="flex h-full">
                     <div className="flex-1">
                         {activeTab === 'home' ? (
@@ -605,7 +601,7 @@ export function FileManager({onSelectView, embedded = false, initialHost = null,
                                 {t('fileManager.confirmDelete')}
                             </h3>
                             <p className="text-white mb-4">
-                                {t('fileManager.confirmDeleteMessage', { name: deletingItem.name })}
+                                {t('fileManager.confirmDeleteMessage', {name: deletingItem.name})}
                                 {deletingItem.type === 'directory' && ` ${t('fileManager.deleteDirectoryWarning')}`}
                             </p>
                             <p className="text-red-400 text-sm mb-6">

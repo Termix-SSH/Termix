@@ -119,7 +119,7 @@ reviews:
         - Identify and fix potential null/undefined access errors
         - Fix improper event handling and memory leaks
         - Resolve improper state management and data flow issues
-    
+
     - path: "**/backend/**/*.{ts,js}"
       instructions: |
         Review backend code for Termix server management platform. Key considerations:
@@ -167,7 +167,7 @@ reviews:
         - Implement proper health checks and status endpoints
         
         Highlight any security vulnerabilities, performance issues, or architectural deviations.
-    
+
     - path: "**/components/**/*.{ts,tsx}"
       instructions: |
         Review UI components for Termix server management platform. Key considerations:
@@ -207,7 +207,7 @@ reviews:
         - Use proper tunnel status and management UI
         
         Highlight any UI/UX issues, accessibility problems, or performance concerns.
-    
+
     - path: "**/types/**/*.{ts,js}"
       instructions: |
         Review type definitions for Termix server management platform. Key considerations:
@@ -237,7 +237,7 @@ reviews:
         - Use proper type assertions and casting
         
         Highlight any type safety issues, missing types, or type inconsistencies.
-    
+
     - path: "**/hooks/**/*.{ts,tsx}"
       instructions: |
         Review custom hooks for Termix server management platform. Key considerations:
@@ -285,7 +285,7 @@ reviews:
         - Fix improper error handling in custom hooks
         
         Highlight any hook design issues, performance problems, or reusability concerns.
-    
+
     - path: "**/lib/**/*.{ts,js}"
       instructions: |
         Review utility libraries and helper functions for Termix server management platform. Key considerations:
@@ -337,7 +337,7 @@ reviews:
         - Resolve improper configuration and environment variable handling
         
         Highlight any utility design issues, performance problems, or security concerns.
-    
+
     - path: "**/main-axios.ts"
       instructions: |
         Review main-axios.ts API client configuration for Termix server management platform. Key considerations:
@@ -405,7 +405,7 @@ reviews:
         - Identify and fix potential security vulnerabilities in API handling
         
         Highlight any API design issues, error handling problems, or security concerns.
-    
+
     - path: "**/electron/**/*.{ts,js,cjs}"
       instructions: |
         Review Electron application code for Termix server management platform. Key considerations:
@@ -443,7 +443,7 @@ reviews:
         - Identify and fix potential security vulnerabilities in Electron setup
         
         Highlight any Electron-specific issues, security vulnerabilities, or performance problems.
-    
+
     - path: "**/docker/**/*"
       instructions: |
         Review Docker configuration files for Termix server management platform. Key considerations:
@@ -505,7 +505,7 @@ reviews:
         - Use proper visual aids and diagrams where appropriate
         
         Highlight any documentation issues, inaccuracies, or missing information.
-    
+
     - path: "**/index.css"
       instructions: |
         Review index.css styling configuration for Termix server management platform. Key considerations:

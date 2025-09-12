@@ -89,8 +89,6 @@ export function TerminalKeyboard({onSendInput, onLayoutChange}: TerminalKeyboard
                 navigator.vibrate(20);
             }
         } catch (e) {
-            console.error("Vibration failed:", e);
-            // Don't show toast for vibration failure as it's not critical
         }
 
         onSendInput(input);

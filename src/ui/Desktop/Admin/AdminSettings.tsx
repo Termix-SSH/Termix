@@ -74,24 +74,19 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
     React.useEffect(() => {
         const jwt = getCookie("jwt");
         if (!jwt) return;
-        
-        // Check if we're in Electron and have a server configured
+
         if (isElectron()) {
-            // In Electron, check if we have a configured server
             const serverUrl = (window as any).configuredServerUrl;
             if (!serverUrl) {
-                console.log('No server configured in Electron, skipping API calls');
                 return;
             }
         }
-        
+
         getOIDCConfig()
             .then(res => {
                 if (res) setOidcConfig(res);
             })
             .catch((err) => {
-                console.error('Failed to fetch OIDC config:', err);
-                // Only show error if it's not a "no server configured" error
                 if (!err.message?.includes('No server configured')) {
                     toast.error(t('admin.failedToFetchOidcConfig'));
                 }
@@ -100,15 +95,13 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
     }, []);
 
     React.useEffect(() => {
-        // Check if we're in Electron and have a server configured
         if (isElectron()) {
             const serverUrl = (window as any).configuredServerUrl;
             if (!serverUrl) {
-                console.log('No server configured in Electron, skipping registration status check');
                 return;
             }
         }
-        
+
         getRegistrationAllowed()
             .then(res => {
                 if (typeof res?.allowed === 'boolean') {
@@ -116,8 +109,6 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                 }
             })
             .catch((err) => {
-                console.error('Failed to fetch registration status:', err);
-                // Only show error if it's not a "no server configured" error
                 if (!err.message?.includes('No server configured')) {
                     toast.error(t('admin.failedToFetchRegistrationStatus'));
                 }
@@ -127,23 +118,19 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
     const fetchUsers = async () => {
         const jwt = getCookie("jwt");
         if (!jwt) return;
-        
-        // Check if we're in Electron and have a server configured
+
         if (isElectron()) {
             const serverUrl = (window as any).configuredServerUrl;
             if (!serverUrl) {
-                console.log('No server configured in Electron, skipping user fetch');
                 return;
             }
         }
-        
+
         setUsersLoading(true);
         try {
             const response = await getUserList();
             setUsers(response.users);
         } catch (err) {
-            console.error('Failed to fetch users:', err);
-            // Only show error if it's not a "no server configured" error
             if (!err.message?.includes('No server configured')) {
                 toast.error(t('admin.failedToFetchUsers'));
             }
@@ -171,7 +158,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         const required = ['client_id', 'client_secret', 'issuer_url', 'authorization_url', 'token_url'];
         const missing = required.filter(f => !oidcConfig[f as keyof typeof oidcConfig]);
         if (missing.length > 0) {
-            setOidcError(t('admin.missingRequiredFields', { fields: missing.join(', ') }));
+            setOidcError(t('admin.missingRequiredFields', {fields: missing.join(', ')}));
             setOidcLoading(false);
             return;
         }
@@ -199,7 +186,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         const jwt = getCookie("jwt");
         try {
             await makeUserAdmin(newAdminUsername.trim());
-            toast.success(t('admin.userIsNowAdmin', { username: newAdminUsername }));
+            toast.success(t('admin.userIsNowAdmin', {username: newAdminUsername}));
             setNewAdminUsername("");
             fetchUsers();
         } catch (err: any) {
@@ -211,15 +198,14 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
 
     const handleRemoveAdminStatus = async (username: string) => {
         confirmWithToast(
-            t('admin.removeAdminStatus', { username }),
+            t('admin.removeAdminStatus', {username}),
             async () => {
                 const jwt = getCookie("jwt");
                 try {
                     await removeAdminStatus(username);
-                    toast.success(t('admin.adminStatusRemoved', { username }));
+                    toast.success(t('admin.adminStatusRemoved', {username}));
                     fetchUsers();
                 } catch (err: any) {
-                    console.error('Failed to remove admin status:', err);
                     toast.error(t('admin.failedToRemoveAdminStatus'));
                 }
             }
@@ -228,15 +214,14 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
 
     const handleDeleteUser = async (username: string) => {
         confirmWithToast(
-            t('admin.deleteUser', { username }),
+            t('admin.deleteUser', {username}),
             async () => {
                 const jwt = getCookie("jwt");
                 try {
                     await deleteUser(username);
-                    toast.success(t('admin.userDeletedSuccessfully', { username }));
+                    toast.success(t('admin.userDeletedSuccessfully', {username}));
                     fetchUsers();
                 } catch (err: any) {
-                    console.error('Failed to delete user:', err);
                     toast.error(t('admin.failedToDeleteUser'));
                 }
             },
@@ -301,9 +286,9 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                 <h3 className="text-lg font-semibold">{t('admin.externalAuthentication')}</h3>
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">{t('admin.configureExternalProvider')}</p>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         className="h-8 px-3 text-xs"
                                         onClick={() => window.open('https://docs.termix.site/oidc', '_blank')}
                                     >
@@ -328,8 +313,8 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                     <div className="space-y-2">
                                         <Label htmlFor="client_secret">{t('admin.clientSecret')}</Label>
                                         <PasswordInput id="client_secret" value={oidcConfig.client_secret}
-                                               onChange={(e) => handleOIDCConfigChange('client_secret', e.target.value)}
-                                               placeholder={t('placeholders.clientSecret')} required/>
+                                                       onChange={(e) => handleOIDCConfigChange('client_secret', e.target.value)}
+                                                       placeholder={t('placeholders.clientSecret')} required/>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="authorization_url">{t('admin.authorizationUrl')}</Label>
@@ -414,7 +399,8 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                                             size="sm">{usersLoading ? t('admin.loading') : t('admin.refresh')}</Button>
                                 </div>
                                 {usersLoading ? (
-                                    <div className="text-center py-8 text-muted-foreground">{t('admin.loadingUsers')}</div>
+                                    <div
+                                        className="text-center py-8 text-muted-foreground">{t('admin.loadingUsers')}</div>
                                 ) : (
                                     <div className="border rounded-md overflow-hidden">
                                         <Table>

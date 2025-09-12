@@ -212,7 +212,11 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
         const layoutTabs = [mainTab, ...splitTabs.filter((t: any) => t && t.id !== (mainTab && (mainTab as any).id))].filter(Boolean) as any[];
         if (allSplitScreenTab.length === 0) return null;
 
-        const handleStyle = {pointerEvents: 'auto', zIndex: 12, background: 'var(--color-dark-border)'} as React.CSSProperties;
+        const handleStyle = {
+            pointerEvents: 'auto',
+            zIndex: 12,
+            background: 'var(--color-dark-border)'
+        } as React.CSSProperties;
         const commonGroupProps = {onLayout: scheduleMeasureAndFit, onResize: scheduleMeasureAndFit} as any;
 
         if (layoutTabs.length === 2) {
@@ -226,7 +230,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                             <div ref={el => {
                                 panelRefs.current[String(a.id)] = el;
                             }} className="h-full w-full flex flex-col bg-transparent relative">
-                                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{a.title}</div>
+                                <div
+                                    className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{a.title}</div>
                             </div>
                         </ResizablePanel>
                         <ResizableHandle style={handleStyle}/>
@@ -235,7 +240,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                             <div ref={el => {
                                 panelRefs.current[String(b.id)] = el;
                             }} className="h-full w-full flex flex-col bg-transparent relative">
-                                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                                <div
+                                    className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                                     {b.title}
                                     <ResetButton onClick={handleReset}/>
                                 </div>
@@ -260,7 +266,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                                     <div ref={el => {
                                         panelRefs.current[String(a.id)] = el;
                                     }} className="h-full w-full flex flex-col relative">
-                                        <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{a.title}</div>
+                                        <div
+                                            className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{a.title}</div>
                                     </div>
                                 </ResizablePanel>
                                 <ResizableHandle style={handleStyle}/>
@@ -269,7 +276,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                                     <div ref={el => {
                                         panelRefs.current[String(b.id)] = el;
                                     }} className="h-full w-full flex flex-col relative">
-                                        <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                                        <div
+                                            className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                                             {b.title}
                                             <ResetButton onClick={handleReset}/>
                                         </div>
@@ -283,7 +291,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                             <div ref={el => {
                                 panelRefs.current[String(c.id)] = el;
                             }} className="h-full w-full flex flex-col relative">
-                                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{c.title}</div>
+                                <div
+                                    className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{c.title}</div>
                             </div>
                         </ResizablePanel>
                     </ResizablePrimitive.PanelGroup>
@@ -305,7 +314,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                                     <div ref={el => {
                                         panelRefs.current[String(a.id)] = el;
                                     }} className="h-full w-full flex flex-col relative">
-                                        <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{a.title}</div>
+                                        <div
+                                            className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{a.title}</div>
                                     </div>
                                 </ResizablePanel>
                                 <ResizableHandle style={handleStyle}/>
@@ -314,7 +324,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                                     <div ref={el => {
                                         panelRefs.current[String(b.id)] = el;
                                     }} className="h-full w-full flex flex-col relative">
-                                        <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                                        <div
+                                            className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                                             {b.title}
                                             <ResetButton onClick={handleReset}/>
                                         </div>
@@ -332,7 +343,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                                     <div ref={el => {
                                         panelRefs.current[String(c.id)] = el;
                                     }} className="h-full w-full flex flex-col relative">
-                                        <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{c.title}</div>
+                                        <div
+                                            className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{c.title}</div>
                                     </div>
                                 </ResizablePanel>
                                 <ResizableHandle style={handleStyle}/>
@@ -341,7 +353,8 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
                                     <div ref={el => {
                                         panelRefs.current[String(d.id)] = el;
                                     }} className="h-full w-full flex flex-col relative">
-                                        <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{d.title}</div>
+                                        <div
+                                            className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">{d.title}</div>
                                     </div>
                                 </ResizablePanel>
                             </ResizablePanelGroup>
@@ -356,7 +369,7 @@ export function AppView({isTopbarOpen = true}: TerminalViewProps): React.ReactEl
     const currentTabData = tabs.find((tab: any) => tab.id === currentTab);
     const isFileManager = currentTabData?.type === 'file_manager';
     const isSplitScreen = allSplitScreenTab.length > 0;
-    
+
     const topMarginPx = isTopbarOpen ? 74 : 26;
     const leftMarginPx = sidebarState === 'collapsed' ? 26 : 8;
     const bottomMarginPx = 8;

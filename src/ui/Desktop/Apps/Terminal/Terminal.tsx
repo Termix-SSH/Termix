@@ -94,7 +94,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             }
             webSocketRef.current?.close();
             setIsConnected(false);
-            setIsConnecting(false); // Clear connecting state
+            setIsConnecting(false);
         },
         fit: () => {
             fitAddonRef.current?.fit();
@@ -138,59 +138,48 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     }
 
     function attemptReconnection() {
-        // Don't attempt reconnection if component is unmounting, shouldn't reconnect, or already reconnecting
         if (isUnmountingRef.current || shouldNotReconnectRef.current || isReconnectingRef.current) {
             return;
         }
 
-        // Check if we've already reached max attempts
         if (reconnectAttempts.current >= maxReconnectAttempts) {
             toast.error(t('terminal.maxReconnectAttemptsReached'));
-            // Close the terminal tab when max attempts reached
             if (onClose) {
                 onClose();
             }
             return;
         }
 
-        // Set reconnecting flag to prevent multiple simultaneous attempts
         isReconnectingRef.current = true;
-        
-        // Clear terminal immediately to prevent showing last line
+
         if (terminal) {
             terminal.clear();
         }
-        
-        // Increment attempt counter
+
         reconnectAttempts.current++;
-        
-        // Show toast with current attempt number
-        toast.info(t('terminal.reconnecting', { attempt: reconnectAttempts.current, max: maxReconnectAttempts }));
-        
+
+        toast.info(t('terminal.reconnecting', {attempt: reconnectAttempts.current, max: maxReconnectAttempts}));
+
         reconnectTimeoutRef.current = setTimeout(() => {
-            // Check again if component is still mounted and should reconnect
             if (isUnmountingRef.current || shouldNotReconnectRef.current) {
                 isReconnectingRef.current = false;
                 return;
             }
-            
-            // Check if we haven't exceeded max attempts during the timeout
+
             if (reconnectAttempts.current > maxReconnectAttempts) {
                 isReconnectingRef.current = false;
                 return;
             }
-            
+
             if (terminal && hostConfig) {
-                // Ensure terminal is clear before reconnecting
                 terminal.clear();
                 const cols = terminal.cols;
                 const rows = terminal.rows;
                 connectToHost(cols, rows);
             }
-            
-            // Reset reconnecting flag after attempting connection
+
             isReconnectingRef.current = false;
-        }, 2000 * reconnectAttempts.current); // Exponential backoff
+        }, 2000 * reconnectAttempts.current);
     }
 
     function connectToHost(cols: number, rows: number) {
@@ -200,39 +189,30 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         const wsUrl = isDev
             ? 'ws://localhost:8082'
             : isElectron
-            ? (() => {
-                // Get configured server URL from window object (set by main-axios)
-                const baseUrl = (window as any).configuredServerUrl || 'http://127.0.0.1:8081';
-                // Convert HTTP/HTTPS to WS/WSS and use nginx reverse proxy path
-                const wsProtocol = baseUrl.startsWith('https://') ? 'wss://' : 'ws://';
-                const wsHost = baseUrl.replace(/^https?:\/\//, ''); // Keep the port
-                return `${wsProtocol}${wsHost}/ssh/websocket/`;
-            })()
-            : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
+                ? (() => {
+                    const baseUrl = (window as any).configuredServerUrl || 'http://127.0.0.1:8081';
+                    const wsProtocol = baseUrl.startsWith('https://') ? 'wss://' : 'ws://';
+                    const wsHost = baseUrl.replace(/^https?:\/\//, '');
+                    return `${wsProtocol}${wsHost}/ssh/websocket/`;
+                })()
+                : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
 
         const ws = new WebSocket(wsUrl);
         webSocketRef.current = ws;
         wasDisconnectedBySSH.current = false;
         setConnectionError(null);
-        shouldNotReconnectRef.current = false; // Reset reconnection flag
-        isReconnectingRef.current = false; // Reset reconnecting flag
-        setIsConnecting(true); // Set connecting state
+        shouldNotReconnectRef.current = false;
+        isReconnectingRef.current = false;
+        setIsConnecting(true);
 
         setupWebSocketListeners(ws, cols, rows);
     }
 
 
-
     function setupWebSocketListeners(ws: WebSocket, cols: number, rows: number) {
         ws.addEventListener('open', () => {
-            // Don't set isConnected to true here - wait for actual SSH connection
-            // Don't show reconnected toast here - wait for actual connection confirmation
-            
-            // Set a timeout for SSH connection establishment
             connectionTimeoutRef.current = setTimeout(() => {
                 if (!isConnected) {
-                    // SSH connection didn't establish within timeout
-                    // Clear terminal immediately when connection times out
                     if (terminal) {
                         terminal.clear();
                     }
@@ -240,18 +220,17 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     if (webSocketRef.current) {
                         webSocketRef.current.close();
                     }
-                    // Attempt reconnection if this was a reconnection attempt
                     if (reconnectAttempts.current > 0) {
                         attemptReconnection();
                     }
                 }
-            }, 10000); // 10 second timeout for SSH connection
-            
+            }, 10000);
+
             ws.send(JSON.stringify({type: 'connectToHost', data: {cols, rows, hostConfig}}));
             terminal.onData((data) => {
                 ws.send(JSON.stringify({type: 'input', data}));
             });
-            
+
             pingIntervalRef.current = setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({type: 'ping'}));
@@ -265,73 +244,59 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 if (msg.type === 'data') {
                     terminal.write(msg.data);
                 } else if (msg.type === 'error') {
-                    // Handle different types of errors
                     const errorMessage = msg.message || t('terminal.unknownError');
-                    
-                    // Check if it's an authentication error
-                    if (errorMessage.toLowerCase().includes('auth') || 
+
+                    if (errorMessage.toLowerCase().includes('auth') ||
                         errorMessage.toLowerCase().includes('password') ||
                         errorMessage.toLowerCase().includes('permission') ||
                         errorMessage.toLowerCase().includes('denied') ||
                         errorMessage.toLowerCase().includes('invalid') ||
                         errorMessage.toLowerCase().includes('failed') ||
                         errorMessage.toLowerCase().includes('incorrect')) {
-                        toast.error(t('terminal.authError', { message: errorMessage }));
-                        shouldNotReconnectRef.current = true; // Don't reconnect on auth errors
-                        // Close terminal on auth errors
+                        toast.error(t('terminal.authError', {message: errorMessage}));
+                        shouldNotReconnectRef.current = true;
                         if (webSocketRef.current) {
                             webSocketRef.current.close();
                         }
-                        // Close the terminal tab immediately
                         if (onClose) {
                             onClose();
                         }
                         return;
                     }
-                    
-                    // Check if it's a connection error that should trigger reconnection
+
                     if (errorMessage.toLowerCase().includes('connection') ||
                         errorMessage.toLowerCase().includes('timeout') ||
                         errorMessage.toLowerCase().includes('network')) {
-                        toast.error(t('terminal.connectionError', { message: errorMessage }));
+                        toast.error(t('terminal.connectionError', {message: errorMessage}));
                         setIsConnected(false);
-                        // Clear terminal immediately when connection error occurs
                         if (terminal) {
                             terminal.clear();
                         }
-                        // Set connecting state immediately for reconnection
                         setIsConnecting(true);
                         attemptReconnection();
                         return;
                     }
-                    
-                    // For other errors, show toast but don't close terminal
-                    toast.error(t('terminal.error', { message: errorMessage }));
+
+                    toast.error(t('terminal.error', {message: errorMessage}));
                 } else if (msg.type === 'connected') {
                     setIsConnected(true);
-                    setIsConnecting(false); // Clear connecting state
-                    // Clear connection timeout since SSH connection is established
+                    setIsConnecting(false);
                     if (connectionTimeoutRef.current) {
                         clearTimeout(connectionTimeoutRef.current);
                         connectionTimeoutRef.current = null;
                     }
-                    // Show reconnected toast if this was a reconnection attempt
                     if (reconnectAttempts.current > 0) {
                         toast.success(t('terminal.reconnected'));
                     }
-                    // Reset reconnection counter and flags on successful connection
                     reconnectAttempts.current = 0;
                     isReconnectingRef.current = false;
                 } else if (msg.type === 'disconnected') {
                     wasDisconnectedBySSH.current = true;
                     setIsConnected(false);
-                    // Clear terminal immediately when disconnected
                     if (terminal) {
                         terminal.clear();
                     }
-                    // Set connecting state immediately for reconnection
                     setIsConnecting(true);
-                    // Attempt reconnection for disconnections
                     if (!isUnmountingRef.current && !shouldNotReconnectRef.current) {
                         attemptReconnection();
                     }
@@ -343,28 +308,22 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
         ws.addEventListener('close', (event) => {
             setIsConnected(false);
-            // Clear terminal immediately when connection closes
             if (terminal) {
                 terminal.clear();
             }
-            // Set connecting state immediately for reconnection
             setIsConnecting(true);
             if (!wasDisconnectedBySSH.current && !isUnmountingRef.current && !shouldNotReconnectRef.current) {
-                // Attempt reconnection for unexpected disconnections
                 attemptReconnection();
             }
         });
-        
+
         ws.addEventListener('error', (event) => {
             setIsConnected(false);
             setConnectionError(t('terminal.websocketError'));
-            // Clear terminal immediately when WebSocket error occurs
             if (terminal) {
                 terminal.clear();
             }
-            // Set connecting state immediately for reconnection
             setIsConnecting(true);
-            // Attempt reconnection for WebSocket errors
             if (!isUnmountingRef.current && !shouldNotReconnectRef.current) {
                 attemptReconnection();
             }
@@ -486,23 +445,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 const cols = terminal.cols;
                 const rows = terminal.rows;
 
-                const isDev = process.env.NODE_ENV === 'development' &&
-                    (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
-                
-
-                const wsUrl = isDev
-                    ? 'ws://localhost:8082'
-                    : isElectron
-                    ? (() => {
-                        // Get configured server URL from window object (set by main-axios)
-                        const baseUrl = (window as any).configuredServerUrl || 'http://127.0.0.1:8081';
-                        // Convert HTTP/HTTPS to WS/WSS and use nginx reverse proxy path
-                        const wsProtocol = baseUrl.startsWith('https://') ? 'wss://' : 'ws://';
-                        const wsHost = baseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, ''); // Remove port if present
-                        return `${wsProtocol}${wsHost}/ssh/websocket/`;
-                    })()
-                    : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;
-
                 connectToHost(cols, rows);
             }, 300);
         });
@@ -511,7 +453,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             isUnmountingRef.current = true;
             shouldNotReconnectRef.current = true;
             isReconnectingRef.current = false;
-            setIsConnecting(false); // Clear connecting state
+            setIsConnecting(false);
             resizeObserver.disconnect();
             element?.removeEventListener('contextmenu', handleContextMenu);
             if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
@@ -536,7 +478,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     terminal.focus();
                 }
             }, 0);
-            
+
             if (terminal && !splitScreen) {
                 setTimeout(() => {
                     terminal.focus();
@@ -560,8 +502,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     return (
         <div className="h-full w-full m-1 relative">
             {/* Terminal */}
-            <div 
-                ref={xtermRef} 
+            <div
+                ref={xtermRef}
                 className={`h-full w-full transition-opacity duration-200 ${visible && isVisible && !isConnecting ? 'opacity-100' : 'opacity-0'} overflow-hidden`}
                 onClick={() => {
                     if (terminal && !splitScreen) {
@@ -569,12 +511,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     }
                 }}
             />
-            
+
             {/* Connecting State */}
             {isConnecting && (
                 <div className="absolute inset-0 flex items-center justify-center bg-dark-bg">
                     <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                        <div
+                            className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-gray-300">{t('terminal.connecting')}</span>
                     </div>
                 </div>

@@ -1,8 +1,3 @@
-/**
- * Frontend Logger - A comprehensive logging utility for the frontend
- * Enhanced with better formatting, readability, and request/response grouping
- */
-
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'success';
 
 export interface LogContext {
@@ -21,6 +16,7 @@ export interface LogContext {
     retryCount?: number;
     errorCode?: string;
     errorMessage?: string;
+
     [key: string]: any;
 }
 
@@ -46,7 +42,7 @@ class FrontendLogger {
         const timestamp = this.getTimeStamp();
         const levelTag = this.getLevelTag(level);
         const serviceTag = this.getServiceTag();
-        
+
         let contextStr = '';
         if (context && this.isDevelopment) {
             const contextParts = [];
@@ -58,7 +54,7 @@ class FrontendLogger {
             if (context.responseTime) contextParts.push(`${context.responseTime}ms`);
             if (context.status) contextParts.push(`status:${context.status}`);
             if (context.errorCode) contextParts.push(`code:${context.errorCode}`);
-            
+
             if (contextParts.length > 0) {
                 contextStr = ` (${contextParts.join(', ')})`;
             }
@@ -91,9 +87,9 @@ class FrontendLogger {
 
     private log(level: LogLevel, message: string, context?: LogContext, error?: unknown): void {
         if (!this.shouldLog(level)) return;
-        
+
         const formattedMessage = this.formatMessage(level, message, context);
-        
+
         switch (level) {
             case 'debug':
                 console.debug(formattedMessage);
@@ -136,60 +132,58 @@ class FrontendLogger {
         this.log('success', message, context);
     }
 
-    // Convenience methods for common operations
     api(message: string, context?: LogContext): void {
-        this.info(`API: ${message}`, { ...context, operation: 'api' });
+        this.info(`API: ${message}`, {...context, operation: 'api'});
     }
 
     request(message: string, context?: LogContext): void {
-        this.info(`REQUEST: ${message}`, { ...context, operation: 'request' });
+        this.info(`REQUEST: ${message}`, {...context, operation: 'request'});
     }
 
     response(message: string, context?: LogContext): void {
-        this.info(`RESPONSE: ${message}`, { ...context, operation: 'response' });
+        this.info(`RESPONSE: ${message}`, {...context, operation: 'response'});
     }
 
     auth(message: string, context?: LogContext): void {
-        this.info(`AUTH: ${message}`, { ...context, operation: 'auth' });
+        this.info(`AUTH: ${message}`, {...context, operation: 'auth'});
     }
 
     ssh(message: string, context?: LogContext): void {
-        this.info(`SSH: ${message}`, { ...context, operation: 'ssh' });
+        this.info(`SSH: ${message}`, {...context, operation: 'ssh'});
     }
 
     tunnel(message: string, context?: LogContext): void {
-        this.info(`TUNNEL: ${message}`, { ...context, operation: 'tunnel' });
+        this.info(`TUNNEL: ${message}`, {...context, operation: 'tunnel'});
     }
 
     file(message: string, context?: LogContext): void {
-        this.info(`FILE: ${message}`, { ...context, operation: 'file' });
+        this.info(`FILE: ${message}`, {...context, operation: 'file'});
     }
 
     connection(message: string, context?: LogContext): void {
-        this.info(`CONNECTION: ${message}`, { ...context, operation: 'connection' });
+        this.info(`CONNECTION: ${message}`, {...context, operation: 'connection'});
     }
 
     disconnect(message: string, context?: LogContext): void {
-        this.info(`DISCONNECT: ${message}`, { ...context, operation: 'disconnect' });
+        this.info(`DISCONNECT: ${message}`, {...context, operation: 'disconnect'});
     }
 
     retry(message: string, context?: LogContext): void {
-        this.warn(`RETRY: ${message}`, { ...context, operation: 'retry' });
+        this.warn(`RETRY: ${message}`, {...context, operation: 'retry'});
     }
 
     performance(message: string, context?: LogContext): void {
-        this.info(`PERFORMANCE: ${message}`, { ...context, operation: 'performance' });
+        this.info(`PERFORMANCE: ${message}`, {...context, operation: 'performance'});
     }
 
     security(message: string, context?: LogContext): void {
-        this.warn(`SECURITY: ${message}`, { ...context, operation: 'security' });
+        this.warn(`SECURITY: ${message}`, {...context, operation: 'security'});
     }
 
-    // Enhanced API request/response logging methods
     requestStart(method: string, url: string, context?: LogContext): void {
         const cleanUrl = this.sanitizeUrl(url);
         const shortUrl = this.getShortUrl(cleanUrl);
-        
+
         console.group(`🚀 ${method.toUpperCase()} ${shortUrl}`);
         this.request(`→ Starting request to ${cleanUrl}`, {
             ...context,
@@ -203,7 +197,7 @@ class FrontendLogger {
         const shortUrl = this.getShortUrl(cleanUrl);
         const statusIcon = this.getStatusIcon(status);
         const performanceIcon = this.getPerformanceIcon(responseTime);
-        
+
         this.response(`← ${statusIcon} ${status} ${performanceIcon} ${responseTime}ms`, {
             ...context,
             method: method.toUpperCase(),
@@ -218,7 +212,7 @@ class FrontendLogger {
         const cleanUrl = this.sanitizeUrl(url);
         const shortUrl = this.getShortUrl(cleanUrl);
         const statusIcon = this.getStatusIcon(status);
-        
+
         this.error(`← ${statusIcon} ${status} ${errorMessage}`, undefined, {
             ...context,
             method: method.toUpperCase(),
@@ -233,7 +227,7 @@ class FrontendLogger {
     networkError(method: string, url: string, errorMessage: string, context?: LogContext): void {
         const cleanUrl = this.sanitizeUrl(url);
         const shortUrl = this.getShortUrl(cleanUrl);
-        
+
         this.error(`🌐 Network Error: ${errorMessage}`, undefined, {
             ...context,
             method: method.toUpperCase(),
@@ -247,7 +241,7 @@ class FrontendLogger {
     authError(method: string, url: string, context?: LogContext): void {
         const cleanUrl = this.sanitizeUrl(url);
         const shortUrl = this.getShortUrl(cleanUrl);
-        
+
         this.security(`🔐 Authentication Required`, {
             ...context,
             method: method.toUpperCase(),
@@ -260,7 +254,7 @@ class FrontendLogger {
     retryAttempt(method: string, url: string, attempt: number, maxAttempts: number, context?: LogContext): void {
         const cleanUrl = this.sanitizeUrl(url);
         const shortUrl = this.getShortUrl(cleanUrl);
-        
+
         this.retry(`🔄 Retry ${attempt}/${maxAttempts}`, {
             ...context,
             method: method.toUpperCase(),
@@ -269,25 +263,22 @@ class FrontendLogger {
         });
     }
 
-    // Enhanced logging for API operations
     apiOperation(operation: string, details: string, context?: LogContext): void {
-        this.info(`🔧 ${operation}: ${details}`, { ...context, operation: 'api_operation' });
+        this.info(`🔧 ${operation}: ${details}`, {...context, operation: 'api_operation'});
     }
 
-    // Log request summary for better debugging
     requestSummary(method: string, url: string, status: number, responseTime: number, context?: LogContext): void {
         const cleanUrl = this.sanitizeUrl(url);
         const shortUrl = this.getShortUrl(cleanUrl);
         const statusIcon = this.getStatusIcon(status);
         const performanceIcon = this.getPerformanceIcon(responseTime);
-        
-        console.log(`%c📊 ${method} ${shortUrl} ${statusIcon} ${status} ${performanceIcon} ${responseTime}ms`, 
-            'color: #666; font-style: italic; font-size: 0.9em;', 
+
+        console.log(`%c📊 ${method} ${shortUrl} ${statusIcon} ${status} ${performanceIcon} ${responseTime}ms`,
+            'color: #666; font-style: italic; font-size: 0.9em;',
             context
         );
     }
 
-    // New helper methods for better formatting
     private getShortUrl(url: string): string {
         try {
             const urlObj = new URL(url);
@@ -316,10 +307,8 @@ class FrontendLogger {
     }
 
     private sanitizeUrl(url: string): string {
-        // Remove sensitive information from URLs for logging
         try {
             const urlObj = new URL(url);
-            // Remove query parameters that might contain sensitive data
             if (urlObj.searchParams.has('password') || urlObj.searchParams.has('token')) {
                 urlObj.search = '';
             }
@@ -330,7 +319,6 @@ class FrontendLogger {
     }
 }
 
-// Service-specific loggers
 export const apiLogger = new FrontendLogger('API', '🌐', '#3b82f6');
 export const authLogger = new FrontendLogger('AUTH', '🔐', '#dc2626');
 export const sshLogger = new FrontendLogger('SSH', '🖥️', '#1e3a8a');
@@ -339,5 +327,4 @@ export const fileLogger = new FrontendLogger('FILE', '📁', '#1e3a8a');
 export const statsLogger = new FrontendLogger('STATS', '📊', '#22c55e');
 export const systemLogger = new FrontendLogger('SYSTEM', '🚀', '#1e3a8a');
 
-// Default logger for general use
 export const logger = systemLogger;

@@ -1,5 +1,4 @@
 import React, {useState, useEffect} from "react";
-import {Eye, EyeOff} from "lucide-react";
 import {cn} from "@/lib/utils.ts";
 import {Button} from "@/components/ui/button.tsx";
 import {Input} from "@/components/ui/input.tsx";
@@ -24,9 +23,8 @@ import {
     getCookie,
     getServerConfig,
     isElectron,
-    type ServerConfig
 } from "../../main-axios.ts";
-import {ServerConfig as ServerConfigComponent} from "@/ui/Desktop/ElectronOnly/ServerConfig.tsx";
+import {ServerConfig as ServerConfigComponent} from "@/ui/Desktop/Electron Only/ServerConfig.tsx";
 
 interface HomepageAuthProps extends React.ComponentProps<"div"> {
     setLoggedIn: (loggedIn: boolean) => void;
@@ -61,14 +59,14 @@ export function HomepageAuth({
     const [loading, setLoading] = useState(false);
     const [oidcLoading, setOidcLoading] = useState(false);
     const [visibility, setVisibility] = useState({
-    password: false,
-    signupConfirm: false,
-    resetNew: false,
-    resetConfirm: false
-});
+        password: false,
+        signupConfirm: false,
+        resetNew: false,
+        resetConfirm: false
+    });
     const toggleVisibility = (field: keyof typeof visibility) => {
-    setVisibility(prev => ({ ...prev, [field]: !prev[field] }));
-};
+        setVisibility(prev => ({...prev, [field]: !prev[field]}));
+    };
 
     const [error, setError] = useState<string | null>(null);
     const [internalLoggedIn, setInternalLoggedIn] = useState(false);
@@ -83,7 +81,7 @@ export function HomepageAuth({
     const [tempToken, setTempToken] = useState("");
     const [resetLoading, setResetLoading] = useState(false);
     const [resetSuccess, setResetSuccess] = useState(false);
-    
+
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpCode, setTotpCode] = useState("");
     const [totpTempToken, setTotpTempToken] = useState("");
@@ -159,23 +157,23 @@ export function HomepageAuth({
                 await registerUser(localUsername, password);
                 res = await loginUser(localUsername, password);
             }
-            
+
             if (res.requires_totp) {
                 setTotpRequired(true);
                 setTotpTempToken(res.temp_token);
                 setLoading(false);
                 return;
             }
-            
+
             if (!res || !res.token) {
                 throw new Error(t('errors.noTokenReceived'));
             }
-            
+
             setCookie("jwt", res.token);
             [meRes] = await Promise.all([
                 getUserInfo(),
             ]);
-            
+
             setInternalLoggedIn(true);
             setLoggedIn(true);
             setIsAdmin(!!meRes.is_admin);
@@ -300,17 +298,17 @@ export function HomepageAuth({
 
         setError(null);
         setTotpLoading(true);
-        
+
         try {
             const res = await verifyTOTPLogin(totpTempToken, totpCode);
-            
+
             if (!res || !res.token) {
                 throw new Error(t('errors.noTokenReceived'));
             }
-            
+
             setCookie("jwt", res.token);
             const meRes = await getUserInfo();
-            
+
             setInternalLoggedIn(true);
             setLoggedIn(true);
             setIsAdmin(!!meRes.is_admin);
@@ -408,58 +406,51 @@ export function HomepageAuth({
         </svg>
     );
 
-    // Check if we need to show server config for Electron
     const [showServerConfig, setShowServerConfig] = useState<boolean | null>(null);
     const [currentServerUrl, setCurrentServerUrl] = useState<string>('');
-    
+
     useEffect(() => {
         const checkServerConfig = async () => {
             if (isElectron()) {
                 try {
                     const config = await getServerConfig();
-                    console.log('Desktop HomepageAuth - Server config check:', config);
                     setCurrentServerUrl(config?.serverUrl || '');
                     setShowServerConfig(!config || !config.serverUrl);
                 } catch (error) {
-                    console.log('Desktop HomepageAuth - No server config found, showing config screen');
                     setShowServerConfig(true);
                 }
             } else {
                 setShowServerConfig(false);
             }
         };
-        
+
         checkServerConfig();
     }, []);
-    
+
     if (showServerConfig === null) {
-        // Still checking
         return (
             <div
                 className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ''}`}
                 {...props}
             >
                 <div className="flex items-center justify-center h-32">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"/>
                 </div>
             </div>
         );
     }
-    
+
     if (showServerConfig) {
-        console.log('Desktop HomepageAuth - SHOWING SERVER CONFIG SCREEN');
         return (
             <div
                 className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ''}`}
                 {...props}
             >
-                <ServerConfigComponent 
+                <ServerConfigComponent
                     onServerConfigured={() => {
-                        console.log('Server configured, reloading page');
                         window.location.reload();
                     }}
                     onCancel={() => {
-                        console.log('Cancelled server config, going back to login');
                         setShowServerConfig(false);
                     }}
                     isFirstTime={!currentServerUrl}
@@ -509,7 +500,7 @@ export function HomepageAuth({
                         <h2 className="text-xl font-bold mb-1">{t('auth.twoFactorAuth')}</h2>
                         <p className="text-muted-foreground">{t('auth.enterCode')}</p>
                     </div>
-                    
+
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="totp-code">{t('auth.verifyCode')}</Label>
                         <Input
@@ -527,7 +518,7 @@ export function HomepageAuth({
                             {t('auth.backupCode')}
                         </p>
                     </div>
-                    
+
                     <Button
                         type="button"
                         className="w-full h-11 text-base font-semibold"
@@ -536,7 +527,7 @@ export function HomepageAuth({
                     >
                         {totpLoading ? Spinner : t('auth.verifyCode')}
                     </Button>
-                    
+
                     <Button
                         type="button"
                         variant="outline"
@@ -553,7 +544,7 @@ export function HomepageAuth({
                     </Button>
                 </div>
             )}
-            
+
             {(!internalLoggedIn && (!authLoading || !getCookie("jwt")) && !totpRequired) && (
                 <>
                     <div className="flex gap-2 mb-6">
@@ -758,29 +749,30 @@ export function HomepageAuth({
                                             </div>
                                             <div className="flex flex-col gap-5">
                                                 <div className="flex flex-col gap-2">
-                                            <Label htmlFor="new-password">{t('auth.newPassword')}</Label>
-                                            <PasswordInput
-                                                id="new-password"
-                                                required
-                                                className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
-                                                value={newPassword}
-                                                onChange={e => setNewPassword(e.target.value)}
-                                                disabled={resetLoading}
-                                                autoComplete="new-password"
-                                            />
-                                        </div>
-                                                                                        <div className="flex flex-col gap-2">
-                                            <Label htmlFor="confirm-password">{t('auth.confirmNewPassword')}</Label>
-                                            <PasswordInput
-                                                id="confirm-password"
-                                                required
-                                                className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
-                                                value={confirmPassword}
-                                                onChange={e => setConfirmPassword(e.target.value)}
-                                                disabled={resetLoading}
-                                                autoComplete="new-password"
-                                            />
-                                        </div>
+                                                    <Label htmlFor="new-password">{t('auth.newPassword')}</Label>
+                                                    <PasswordInput
+                                                        id="new-password"
+                                                        required
+                                                        className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
+                                                        value={newPassword}
+                                                        onChange={e => setNewPassword(e.target.value)}
+                                                        disabled={resetLoading}
+                                                        autoComplete="new-password"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <Label
+                                                        htmlFor="confirm-password">{t('auth.confirmNewPassword')}</Label>
+                                                    <PasswordInput
+                                                        id="confirm-password"
+                                                        required
+                                                        className="h-11 text-base focus:ring-2 focus:ring-primary/50 transition-all duration-200"
+                                                        value={confirmPassword}
+                                                        onChange={e => setConfirmPassword(e.target.value)}
+                                                        disabled={resetLoading}
+                                                        autoComplete="new-password"
+                                                    />
+                                                </div>
                                                 <Button
                                                     type="button"
                                                     className="w-full h-11 text-base font-semibold"
@@ -823,26 +815,26 @@ export function HomepageAuth({
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                            <Label htmlFor="password">{t('common.password')}</Label>
-                            <PasswordInput
-                                id="password"
-                                required
-                                className="h-11 text-base"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                disabled={loading || internalLoggedIn}/>
-                        </div>
-                                                    {tab === "signup" && (
-                                                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="signup-confirm-password">{t('common.confirmPassword')}</Label>
-                            <PasswordInput
-                                id="signup-confirm-password"
-                                required
-                                className="h-11 text-base"
-                                value={signupConfirmPassword}
-                                onChange={e => setSignupConfirmPassword(e.target.value)}
-                                disabled={loading || internalLoggedIn}/>
-                        </div>
+                                <Label htmlFor="password">{t('common.password')}</Label>
+                                <PasswordInput
+                                    id="password"
+                                    required
+                                    className="h-11 text-base"
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    disabled={loading || internalLoggedIn}/>
+                            </div>
+                            {tab === "signup" && (
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="signup-confirm-password">{t('common.confirmPassword')}</Label>
+                                    <PasswordInput
+                                        id="signup-confirm-password"
+                                        required
+                                        className="h-11 text-base"
+                                        value={signupConfirmPassword}
+                                        onChange={e => setSignupConfirmPassword(e.target.value)}
+                                        disabled={loading || internalLoggedIn}/>
+                                </div>
                             )}
                             <Button type="submit" className="w-full h-11 mt-2 text-base font-semibold"
                                     disabled={loading || internalLoggedIn}>
@@ -863,13 +855,13 @@ export function HomepageAuth({
                             )}
                         </form>
                     )}
-                    
+
                     <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
                                 <Label className="text-sm text-muted-foreground">{t('common.language')}</Label>
                             </div>
-                            <LanguageSwitcher />
+                            <LanguageSwitcher/>
                         </div>
                         {isElectron() && currentServerUrl && (
                             <div className="flex items-center justify-between">

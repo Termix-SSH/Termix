@@ -1,4 +1,4 @@
-import React, {useRef, FC, useState, useEffect} from "react";
+import React, {useState, useEffect} from "react";
 import {Terminal} from "@/ui/Mobile/Apps/Terminal/Terminal.tsx";
 import {TerminalKeyboard} from "@/ui/Mobile/Apps/Terminal/TerminalKeyboard.tsx";
 import {BottomNavbar} from "@/ui/Mobile/Navigation/BottomNavbar.tsx";
@@ -128,7 +128,8 @@ const AppContent: FC = () => {
     }
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-dark-bg-darkest overflow-y-hidden overflow-x-hidden relative">
+        <div
+            className="h-screen w-screen flex flex-col bg-dark-bg-darkest overflow-y-hidden overflow-x-hidden relative">
             <div className="flex-1 min-h-0 relative">
                 {tabs.map(tab => (
                     <div

@@ -255,8 +255,8 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
                 </div>
 
                 <div className="flex items-center justify-center gap-2 flex-1 px-2">
-                    <TabDropdown />
-                    
+                    <TabDropdown/>
+
                     <Button
                         variant="outline"
                         className="w-[30px] h-[30px]"
@@ -348,7 +348,8 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
                                         {isRecording && (
                                             <>
                                                 <div className="space-y-2">
-                                                    <label className="text-sm font-medium text-white">{t('sshTools.selectTerminals')}</label>
+                                                    <label
+                                                        className="text-sm font-medium text-white">{t('sshTools.selectTerminals')}</label>
                                                     <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto mt-2">
                                                         {terminalTabs.map(tab => (
                                                             <Button
@@ -370,7 +371,8 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <label className="text-sm font-medium text-white">{t('sshTools.typeCommands')}</label>
+                                                    <label
+                                                        className="text-sm font-medium text-white">{t('sshTools.typeCommands')}</label>
                                                     <Input
                                                         id="ssh-tools-input"
                                                         placeholder={t('placeholders.typeHere')}
@@ -381,7 +383,7 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
                                                         readOnly
                                                     />
                                                     <p className="text-xs text-muted-foreground">
-                                                        {t('sshTools.commandsWillBeSent', { count: selectedTabIds.length })}
+                                                        {t('sshTools.commandsWillBeSent', {count: selectedTabIds.length})}
                                                     </p>
                                                 </div>
                                             </>

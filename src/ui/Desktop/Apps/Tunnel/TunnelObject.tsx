@@ -1,14 +1,12 @@
 import React from "react";
 import {Button} from "@/components/ui/button.tsx";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx";
+import {Card} from "@/components/ui/card.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {useTranslation} from 'react-i18next';
 import {
     Loader2,
     Pin,
-    Terminal,
     Network,
-    FileEdit,
     Tag,
     Play,
     Square,
@@ -16,11 +14,10 @@ import {
     Clock,
     Wifi,
     WifiOff,
-    Zap,
     X
 } from "lucide-react";
 import {Badge} from "@/components/ui/badge.tsx";
-import type { SSHHost, TunnelConnection, TunnelStatus, CONNECTION_STATES, SSHTunnelObjectProps } from '../../../types/index.js';
+import type {TunnelStatus, SSHTunnelObjectProps} from '../../../types/index.js';
 
 export function TunnelObject({
                                  host,
@@ -227,9 +224,12 @@ export function TunnelObject({
                                                     {statusValue === 'WAITING' ? t('tunnels.waitingForRetry') : t('tunnels.retryingConnection')}
                                                 </div>
                                                 <div>
-                                                    {t('tunnels.attempt', { current: status.retryCount, max: status.maxRetries })}
+                                                    {t('tunnels.attempt', {
+                                                        current: status.retryCount,
+                                                        max: status.maxRetries
+                                                    })}
                                                     {status.nextRetryIn && (
-                                                        <span> • {t('tunnels.nextRetryIn', { seconds: status.nextRetryIn })}</span>
+                                                        <span> • {t('tunnels.nextRetryIn', {seconds: status.nextRetryIn})}</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -408,9 +408,12 @@ export function TunnelObject({
                                                     {statusValue === 'WAITING' ? t('tunnels.waitingForRetry') : t('tunnels.retryingConnection')}
                                                 </div>
                                                 <div>
-                                                    {t('tunnels.attempt', { current: status.retryCount, max: status.maxRetries })}
+                                                    {t('tunnels.attempt', {
+                                                        current: status.retryCount,
+                                                        max: status.maxRetries
+                                                    })}
                                                     {status.nextRetryIn && (
-                                                        <span> • {t('tunnels.nextRetryIn', { seconds: status.nextRetryIn })}</span>
+                                                        <span> • {t('tunnels.nextRetryIn', {seconds: status.nextRetryIn})}</span>
                                                     )}
                                                 </div>
                                             </div>

@@ -1,9 +1,9 @@
 import React, {useEffect, useState} from "react";
 import {HomepageAlertCard} from "./HomepageAlertCard.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import { getUserAlerts, dismissAlert } from "@/ui/main-axios.ts";
+import {getUserAlerts, dismissAlert} from "@/ui/main-axios.ts";
 import {useTranslation} from "react-i18next";
-import type { TermixAlert } from '../../../types/index.js';
+import type {TermixAlert} from '../../../types/index.js';
 
 interface AlertManagerProps {
     userId: string | null;
@@ -49,7 +49,6 @@ export function HomepageAlertManager({userId, loggedIn}: AlertManagerProps): Rea
             setAlerts(sortedAlerts);
             setCurrentAlertIndex(0);
         } catch (err) {
-            console.error('Failed to fetch user alerts:', err);
             const {toast} = await import('sonner');
             toast.error(t('homepage.failedToLoadAlerts'));
             setError(t('homepage.failedToLoadAlerts'));

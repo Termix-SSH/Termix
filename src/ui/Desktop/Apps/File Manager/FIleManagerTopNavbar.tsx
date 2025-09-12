@@ -1,8 +1,8 @@
 import React from "react";
-import { FileManagerTabList } from "./FileManagerTabList.tsx";
+import {FileManagerTabList} from "./FileManagerTabList.tsx";
 
 interface FileManagerTopNavbarProps {
-    tabs: {id: string | number, title: string}[];
+    tabs: { id: string | number, title: string }[];
     activeTab: string | number;
     setActiveTab: (tab: string | number) => void;
     closeTab: (tab: string | number) => void;
@@ -10,8 +10,8 @@ interface FileManagerTopNavbarProps {
 }
 
 export function FIleManagerTopNavbar(props: FileManagerTopNavbarProps): React.ReactElement {
-    const { tabs, activeTab, setActiveTab, closeTab, onHomeClick } = props;
-    
+    const {tabs, activeTab, setActiveTab, closeTab, onHomeClick} = props;
+
     return (
         <FileManagerTabList
             tabs={tabs}

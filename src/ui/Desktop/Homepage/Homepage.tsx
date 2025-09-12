@@ -1,9 +1,8 @@
 import React, {useEffect, useState} from "react";
 import {HomepageAuth} from "@/ui/Desktop/Homepage/HomepageAuth.tsx";
 import {HomepageUpdateLog} from "@/ui/Desktop/Homepage/HompageUpdateLog.tsx";
-import {HomepageAlertManager} from "@/ui/Desktop/Homepage/HomepageAlertManager.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import { getUserInfo, getDatabaseHealth, setCookie, getCookie } from "@/ui/main-axios.ts";
+import {getUserInfo, getDatabaseHealth, getCookie} from "@/ui/main-axios.ts";
 import {useTranslation} from "react-i18next";
 
 interface HomepageProps {
@@ -15,22 +14,19 @@ interface HomepageProps {
 }
 
 export function Homepage({
-                             onSelectView,
                              isAuthenticated,
                              authLoading,
                              onAuthSuccess,
                              isTopbarOpen
                          }: HomepageProps): React.ReactElement {
-    const {t} = useTranslation();
     const [loggedIn, setLoggedIn] = useState(isAuthenticated);
     const [isAdmin, setIsAdmin] = useState(false);
     const [username, setUsername] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
     const [dbError, setDbError] = useState<string | null>(null);
 
-    // Calculate margins based on topbar state (same logic as AppView.tsx)
     const topMarginPx = isTopbarOpen ? 74 : 26;
-    const leftMarginPx = 26; // Assuming sidebar is collapsed for homepage
+    const leftMarginPx = 26;
     const bottomMarginPx = 8;
 
     useEffect(() => {
@@ -83,7 +79,7 @@ export function Homepage({
                     />
                 </div>
             ) : (
-                <div 
+                <div
                     className="w-full h-full flex items-center justify-center"
                     style={{
                         marginLeft: leftMarginPx,

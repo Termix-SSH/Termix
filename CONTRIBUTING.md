@@ -1,4 +1,4 @@
-# Contributing
+_# Contributing
 
 ## Prerequisites
 
@@ -26,6 +26,7 @@ npm run dev
 npm run dev:backend
 ```
 
+a
 This will start the backend and the frontend Vite server. You can access Termix by going to `http://localhost:5174/`.
 
 ## Contributing
@@ -59,43 +60,48 @@ This will start the backend and the frontend Vite server. You can access Termix 
 ## Color Scheme
 
 ### Background Colors
-| CSS Variable | Color Value | Usage | Description |
-|--------------|-------------|-------|-------------|
-| `--color-dark-bg` | `#18181b` | Main dark background | Primary dark background color |
-| `--color-dark-bg-darker` | `#0e0e10` | Darker backgrounds | Darker variant for panels and containers |
-| `--color-dark-bg-darkest` | `#09090b` | Darkest backgrounds | Darkest background (terminal) |
-| `--color-dark-bg-light` | `#141416` | Light dark backgrounds | Lighter variant of dark background |
-| `--color-dark-bg-very-light` | `#101014` | Very light dark backgrounds | Very light variant of dark background |
-| `--color-dark-bg-panel` | `#1b1b1e` | Panel backgrounds | Background for panels and cards |
-| `--color-dark-bg-panel-hover` | `#232327` | Panel hover states | Background for panels on hover |
+
+| CSS Variable                  | Color Value | Usage                       | Description                              |
+|-------------------------------|-------------|-----------------------------|------------------------------------------|
+| `--color-dark-bg`             | `#18181b`   | Main dark background        | Primary dark background color            |
+| `--color-dark-bg-darker`      | `#0e0e10`   | Darker backgrounds          | Darker variant for panels and containers |
+| `--color-dark-bg-darkest`     | `#09090b`   | Darkest backgrounds         | Darkest background (terminal)            |
+| `--color-dark-bg-light`       | `#141416`   | Light dark backgrounds      | Lighter variant of dark background       |
+| `--color-dark-bg-very-light`  | `#101014`   | Very light dark backgrounds | Very light variant of dark background    |
+| `--color-dark-bg-panel`       | `#1b1b1e`   | Panel backgrounds           | Background for panels and cards          |
+| `--color-dark-bg-panel-hover` | `#232327`   | Panel hover states          | Background for panels on hover           |
 
 ### Element-Specific Backgrounds
-| CSS Variable | Color Value | Usage | Description |
-|--------------|-------------|-------|-------------|
-| `--color-dark-bg-input` | `#222225` | Input fields | Background for input fields and form elements |
-| `--color-dark-bg-button` | `#23232a` | Button backgrounds | Background for buttons and clickable elements |
-| `--color-dark-bg-active` | `#1d1d1f` | Active states | Background for active/selected elements |
-| `--color-dark-bg-header` | `#131316` | Header backgrounds | Background for headers and navigation bars |
+
+| CSS Variable             | Color Value | Usage              | Description                                   |
+|--------------------------|-------------|--------------------|-----------------------------------------------|
+| `--color-dark-bg-input`  | `#222225`   | Input fields       | Background for input fields and form elements |
+| `--color-dark-bg-button` | `#23232a`   | Button backgrounds | Background for buttons and clickable elements |
+| `--color-dark-bg-active` | `#1d1d1f`   | Active states      | Background for active/selected elements       |
+| `--color-dark-bg-header` | `#131316`   | Header backgrounds | Background for headers and navigation bars    |
 
 ### Border Colors
-| CSS Variable | Color Value | Usage | Description |
-|--------------|-------------|-------|-------------|
-| `--color-dark-border` | `#303032` | Default borders | Standard border color |
-| `--color-dark-border-active` | `#2d2d30` | Active borders | Border color for active elements |
-| `--color-dark-border-hover` | `#434345` | Hover borders | Border color on hover states |
-| `--color-dark-border-light` | `#5a5a5d` | Light borders | Lighter border color for subtle elements |
-| `--color-dark-border-medium` | `#373739` | Medium borders | Medium weight border color |
-| `--color-dark-border-panel` | `#222224` | Panel borders | Border color for panels and cards |
+
+| CSS Variable                 | Color Value | Usage           | Description                              |
+|------------------------------|-------------|-----------------|------------------------------------------|
+| `--color-dark-border`        | `#303032`   | Default borders | Standard border color                    |
+| `--color-dark-border-active` | `#2d2d30`   | Active borders  | Border color for active elements         |
+| `--color-dark-border-hover`  | `#434345`   | Hover borders   | Border color on hover states             |
+| `--color-dark-border-light`  | `#5a5a5d`   | Light borders   | Lighter border color for subtle elements |
+| `--color-dark-border-medium` | `#373739`   | Medium borders  | Medium weight border color               |
+| `--color-dark-border-panel`  | `#222224`   | Panel borders   | Border color for panels and cards        |
 
 ### Interactive States
-| CSS Variable | Color Value | Usage | Description |
-|--------------|-------------|-------|-------------|
-| `--color-dark-hover` | `#2d2d30` | Hover states | Background color for hover effects |
-| `--color-dark-active` | `#2a2a2c` | Active states | Background color for active elements |
-| `--color-dark-pressed` | `#1a1a1c` | Pressed states | Background color for pressed/clicked elements |
-| `--color-dark-hover-alt` | `#2a2a2d` | Alternative hover | Alternative hover state color |
 
+| CSS Variable             | Color Value | Usage             | Description                                   |
+|--------------------------|-------------|-------------------|-----------------------------------------------|
+| `--color-dark-hover`     | `#2d2d30`   | Hover states      | Background color for hover effects            |
+| `--color-dark-active`    | `#2a2a2c`   | Active states     | Background color for active elements          |
+| `--color-dark-pressed`   | `#1a1a1c`   | Pressed states    | Background color for pressed/clicked elements |
+| `--color-dark-hover-alt` | `#2a2a2d`   | Alternative hover | Alternative hover state color                 |
 
 ## Support
 
-If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues) repo.
+If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support
+channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues)
+repo.

@@ -5,7 +5,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu.tsx";
-import { Button } from "@/components/ui/button.tsx";
+import {Button} from "@/components/ui/button.tsx";
 import {
     ChevronDown,
     Home,
@@ -16,31 +16,31 @@ import {
     Network as SshManagerIcon,
     User as UserIcon
 } from "lucide-react";
-import { useTabs, type Tab } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
-import { useTranslation } from "react-i18next";
+import {useTabs, type Tab} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
+import {useTranslation} from "react-i18next";
 
 export function TabDropdown(): React.ReactElement {
-    const { tabs, currentTab, setCurrentTab } = useTabs();
-    const { t } = useTranslation();
+    const {tabs, currentTab, setCurrentTab} = useTabs();
+    const {t} = useTranslation();
 
     const getTabIcon = (tabType: Tab['type']) => {
         switch (tabType) {
             case 'home':
-                return <Home className="h-4 w-4" />;
+                return <Home className="h-4 w-4"/>;
             case 'terminal':
-                return <TerminalIcon className="h-4 w-4" />;
+                return <TerminalIcon className="h-4 w-4"/>;
             case 'server':
-                return <ServerIcon className="h-4 w-4" />;
+                return <ServerIcon className="h-4 w-4"/>;
             case 'file_manager':
-                return <FolderIcon className="h-4 w-4" />;
+                return <FolderIcon className="h-4 w-4"/>;
             case 'user_profile':
-                return <UserIcon className="h-4 w-4" />;
+                return <UserIcon className="h-4 w-4"/>;
             case 'ssh_manager':
-                return <SshManagerIcon className="h-4 w-4" />;
+                return <SshManagerIcon className="h-4 w-4"/>;
             case 'admin':
-                return <AdminIcon className="h-4 w-4" />;
+                return <AdminIcon className="h-4 w-4"/>;
             default:
-                return <TerminalIcon className="h-4 w-4" />;
+                return <TerminalIcon className="h-4 w-4"/>;
         }
     };
 
@@ -68,7 +68,6 @@ export function TabDropdown(): React.ReactElement {
         setCurrentTab(tabId);
     };
 
-    // If only one tab (home), don't show dropdown
     if (tabs.length <= 1) {
         return null;
     }
@@ -79,9 +78,9 @@ export function TabDropdown(): React.ReactElement {
                 <Button
                     variant="outline"
                     className="w-[30px] h-[30px] border-dark-border"
-                    title={t('nav.tabNavigation', { defaultValue: 'Tab Navigation' })}
+                    title={t('nav.tabNavigation', {defaultValue: 'Tab Navigation'})}
                 >
-                    <ChevronDown className="h-4 w-4" />
+                    <ChevronDown className="h-4 w-4"/>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -105,7 +104,7 @@ export function TabDropdown(): React.ReactElement {
                                 {getTabDisplayTitle(tab)}
                             </span>
                             {isActive && (
-                                <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                                <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"/>
                             )}
                         </DropdownMenuItem>
                     );

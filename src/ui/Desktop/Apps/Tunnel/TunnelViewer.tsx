@@ -1,7 +1,7 @@
 import React from "react";
 import {TunnelObject} from "./TunnelObject.tsx";
 import {useTranslation} from 'react-i18next';
-import type { SSHHost, TunnelConnection, TunnelStatus } from '../../../types/index.js';
+import type {SSHHost, TunnelConnection, TunnelStatus} from '../../../types/index.js';
 
 interface SSHTunnelViewerProps {
     hosts: SSHHost[];

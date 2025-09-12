@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { toast } from 'sonner';
+import {useState} from 'react';
+import {toast} from 'sonner';
 
 interface ConfirmationOptions {
     title: string;
@@ -35,11 +35,10 @@ export function useConfirmation() {
         setOnConfirm(null);
     };
 
-    // For simple confirmations, we can use a toast with action
     const confirmWithToast = (message: string, callback: () => void, variant: 'default' | 'destructive' = 'default') => {
         const actionText = variant === 'destructive' ? 'Delete' : 'Confirm';
         const cancelText = 'Cancel';
-        
+
         toast(message, {
             action: {
                 label: actionText,
@@ -47,9 +46,10 @@ export function useConfirmation() {
             },
             cancel: {
                 label: cancelText,
-                onClick: () => {}
+                onClick: () => {
+                }
             },
-            duration: 10000, // Longer duration for confirmations
+            duration: 10000,
             className: variant === 'destructive' ? 'border-red-500' : ''
         });
     };

@@ -1,8 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
-import {Button} from "@/components/ui/button.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
-import { getReleasesRSS, getVersionInfo } from "@/ui/main-axios.ts";
+import {getReleasesRSS, getVersionInfo} from "@/ui/main-axios.ts";
 import {useTranslation} from "react-i18next";
 
 interface HomepageUpdateLogProps extends React.ComponentProps<"div"> {
@@ -90,7 +89,8 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
     };
 
     return (
-        <div className="w-[400px] h-[600px] flex flex-col border-2 border-dark-border rounded-lg bg-dark-bg p-4 shadow-lg">
+        <div
+            className="w-[400px] h-[600px] flex flex-col border-2 border-dark-border rounded-lg bg-dark-bg p-4 shadow-lg">
             <div>
                 <h3 className="text-lg font-bold mb-3 text-white">{t('common.updatesAndReleases')}</h3>
 
@@ -100,7 +100,7 @@ export function HomepageUpdateLog({loggedIn}: HomepageUpdateLogProps) {
                     <Alert className="bg-dark-bg-darker border-dark-border text-white">
                         <AlertTitle className="text-white">{t('common.updateAvailable')}</AlertTitle>
                         <AlertDescription className="text-gray-300">
-                            {t('common.newVersionAvailable', { version: versionInfo.version })}
+                            {t('common.newVersionAvailable', {version: versionInfo.version})}
                         </AlertDescription>
                     </Alert>
                 )}

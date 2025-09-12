@@ -180,24 +180,24 @@
 }
 
 .thin-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+    width: 6px;
+    height: 6px;
 }
 
 .thin-scrollbar::-webkit-scrollbar-track {
-  background: #18181b;
+    background: #18181b;
 }
 
 .thin-scrollbar::-webkit-scrollbar-thumb {
-  background: #434345;
-  border-radius: 3px;
+    background: #434345;
+    border-radius: 3px;
 }
 
 .thin-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #5a5a5d;
+    background: #5a5a5d;
 }
 
 .thin-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #434345 #18181b;
+    scrollbar-width: thin;
+    scrollbar-color: #434345 #18181b;
 }

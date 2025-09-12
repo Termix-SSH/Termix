@@ -1,6 +1,6 @@
 import React, {createContext, useContext, useState, useRef, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
-import type { TabContextTab } from '../../../types/index.js';
+import type {TabContextTab} from '../../../types/index.js';
 
 export type Tab = TabContextTab;
 

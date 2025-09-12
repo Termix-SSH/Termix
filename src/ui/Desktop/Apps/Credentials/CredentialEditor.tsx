@@ -1,31 +1,28 @@
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, useForm } from "react-hook-form"
-import { z } from "zod"
+import {zodResolver} from "@hookform/resolvers/zod"
+import {Controller, useForm} from "react-hook-form"
+import {z} from "zod"
 
-import { Button } from "@/components/ui/button"
+import {Button} from "@/components/ui/button"
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { PasswordInput } from "@/components/ui/password-input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import React, { useEffect, useRef, useState } from "react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { toast } from "sonner"
-import { createCredential, updateCredential, getCredentials, getCredentialDetails } from '@/ui/main-axios'
-import { useTranslation } from "react-i18next"
-import type { Credential, CredentialEditorProps, CredentialData } from '../../../../types/index.js'
+import {Input} from "@/components/ui/input"
+import {PasswordInput} from "@/components/ui/password-input"
+import {ScrollArea} from "@/components/ui/scroll-area"
+import {Separator} from "@/components/ui/separator"
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
+import React, {useEffect, useRef, useState} from "react"
+import {toast} from "sonner"
+import {createCredential, updateCredential, getCredentials, getCredentialDetails} from '@/ui/main-axios'
+import {useTranslation} from "react-i18next"
+import type {Credential, CredentialEditorProps, CredentialData} from '../../../../types/index.js'
 
-export function CredentialEditor({ editingCredential, onFormSubmit }: CredentialEditorProps) {
-    const { t } = useTranslation();
+export function CredentialEditor({editingCredential, onFormSubmit}: CredentialEditorProps) {
+    const {t} = useTranslation();
     const [credentials, setCredentials] = useState<Credential[]>([]);
     const [folders, setFolders] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -64,7 +61,6 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                     const fullDetails = await getCredentialDetails(editingCredential.id);
                     setFullCredentialDetails(fullDetails);
                 } catch (error) {
-                    console.error('Failed to fetch credential details:', error);
                     toast.error(t('credentials.failedToFetchCredentialDetails'));
                 }
             } else {
@@ -139,7 +135,6 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
             const defaultAuthType = fullCredentialDetails.authType;
             setAuthTab(defaultAuthType);
 
-            // Force form reset with a small delay to ensure proper rendering
             setTimeout(() => {
                 const formData = {
                     name: fullCredentialDetails.name || "",
@@ -153,16 +148,15 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                     keyPassword: "",
                     keyType: "auto" as const,
                 };
-                
-                // Only set the relevant authentication fields based on authType
+
                 if (defaultAuthType === 'password') {
                     formData.password = fullCredentialDetails.password || "";
                 } else if (defaultAuthType === 'key') {
-                    formData.key = "existing_key"; // Placeholder to indicate existing key
+                    formData.key = "existing_key";
                     formData.keyPassword = fullCredentialDetails.keyPassword || "";
                     formData.keyType = (fullCredentialDetails.keyType as any) || "auto" as const;
                 }
-                
+
                 form.reset(formData);
                 setTagInput("");
             }, 100);
@@ -222,10 +216,10 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
 
             if (editingCredential) {
                 await updateCredential(editingCredential.id, submitData);
-                toast.success(t('credentials.credentialUpdatedSuccessfully', { name: data.name }));
+                toast.success(t('credentials.credentialUpdatedSuccessfully', {name: data.name}));
             } else {
                 await createCredential(submitData);
-                toast.success(t('credentials.credentialAddedSuccessfully', { name: data.name }));
+                toast.success(t('credentials.credentialAddedSuccessfully', {name: data.name}));
             }
 
             if (onFormSubmit) {
@@ -233,8 +227,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
             }
 
             window.dispatchEvent(new CustomEvent('credentials:changed'));
-            
-            // Reset form after successful submission
+
             form.reset();
         } catch (error) {
             toast.error(t('credentials.failedToSaveCredential'));
@@ -282,15 +275,15 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
     }, [folderDropdownOpen]);
 
     const keyTypeOptions = [
-        { value: 'auto', label: t('hosts.autoDetect') },
-        { value: 'ssh-rsa', label: t('hosts.rsa') },
-        { value: 'ssh-ed25519', label: t('hosts.ed25519') },
-        { value: 'ecdsa-sha2-nistp256', label: t('hosts.ecdsaNistP256') },
-        { value: 'ecdsa-sha2-nistp384', label: t('hosts.ecdsaNistP384') },
-        { value: 'ecdsa-sha2-nistp521', label: t('hosts.ecdsaNistP521') },
-        { value: 'ssh-dss', label: t('hosts.dsa') },
-        { value: 'ssh-rsa-sha2-256', label: t('hosts.rsaSha2256') },
-        { value: 'ssh-rsa-sha2-512', label: t('hosts.rsaSha2512') },
+        {value: 'auto', label: t('hosts.autoDetect')},
+        {value: 'ssh-rsa', label: t('hosts.rsa')},
+        {value: 'ssh-ed25519', label: t('hosts.ed25519')},
+        {value: 'ecdsa-sha2-nistp256', label: t('hosts.ecdsaNistP256')},
+        {value: 'ecdsa-sha2-nistp384', label: t('hosts.ecdsaNistP384')},
+        {value: 'ecdsa-sha2-nistp521', label: t('hosts.ecdsaNistP521')},
+        {value: 'ssh-dss', label: t('hosts.dsa')},
+        {value: 'ssh-rsa-sha2-256', label: t('hosts.rsaSha2256')},
+        {value: 'ssh-rsa-sha2-512', label: t('hosts.rsaSha2512')},
     ];
 
     const [keyTypeDropdownOpen, setKeyTypeDropdownOpen] = useState(false);
@@ -330,7 +323,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                     <FormField
                                         control={form.control}
                                         name="name"
-                                        render={({ field }) => (
+                                        render={({field}) => (
                                             <FormItem className="col-span-6">
                                                 <FormLabel>{t('credentials.credentialName')}</FormLabel>
                                                 <FormControl>
@@ -343,7 +336,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                     <FormField
                                         control={form.control}
                                         name="username"
-                                        render={({ field }) => (
+                                        render={({field}) => (
                                             <FormItem className="col-span-6">
                                                 <FormLabel>{t('credentials.username')}</FormLabel>
                                                 <FormControl>
@@ -358,7 +351,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                     <FormField
                                         control={form.control}
                                         name="description"
-                                        render={({ field }) => (
+                                        render={({field}) => (
                                             <FormItem className="col-span-10">
                                                 <FormLabel>{t('credentials.description')}</FormLabel>
                                                 <FormControl>
@@ -371,7 +364,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                     <FormField
                                         control={form.control}
                                         name="folder"
-                                        render={({ field }) => (
+                                        render={({field}) => (
                                             <FormItem className="col-span-10 relative">
                                                 <FormLabel>{t('credentials.folder')}</FormLabel>
                                                 <FormControl>
@@ -416,7 +409,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                     <FormField
                                         control={form.control}
                                         name="tags"
-                                        render={({ field }) => (
+                                        render={({field}) => (
                                             <FormItem className="col-span-10 overflow-visible">
                                                 <FormLabel>{t('credentials.tags')}</FormLabel>
                                                 <FormControl>
@@ -482,18 +475,14 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                         const newAuthType = value as 'password' | 'key';
                                         setAuthTab(newAuthType);
                                         form.setValue('authType', newAuthType);
-                                        
-                                        // Clear ALL authentication fields first
+
                                         form.setValue('password', '');
                                         form.setValue('key', null);
                                         form.setValue('keyPassword', '');
                                         form.setValue('keyType', 'auto');
-                                        
-                                        // Then set only the relevant fields based on auth type
+
                                         if (newAuthType === 'password') {
-                                            // Password fields will be filled by user
                                         } else if (newAuthType === 'key') {
-                                            // Key fields will be filled by user
                                         }
                                     }}
                                     className="flex-1 flex flex-col h-full min-h-0"
@@ -506,11 +495,12 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                         <FormField
                                             control={form.control}
                                             name="password"
-                                            render={({ field }) => (
+                                            render={({field}) => (
                                                 <FormItem>
                                                     <FormLabel>{t('credentials.password')}</FormLabel>
                                                     <FormControl>
-                                                        <PasswordInput placeholder={t('placeholders.password')} {...field} />
+                                                        <PasswordInput
+                                                            placeholder={t('placeholders.password')} {...field} />
                                                     </FormControl>
                                                 </FormItem>
                                             )}
@@ -521,7 +511,6 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                             value={keyInputMethod}
                                             onValueChange={(value) => {
                                                 setKeyInputMethod(value as 'upload' | 'paste');
-                                                // Clear the other field when switching
                                                 if (value === 'upload') {
                                                     form.setValue('key', null);
                                                 } else {
@@ -530,7 +519,8 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                             }}
                                             className="w-full"
                                         >
-                                            <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                                            <TabsList
+                                                className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
                                                 <TabsTrigger value="upload">{t('hosts.uploadFile')}</TabsTrigger>
                                                 <TabsTrigger value="paste">{t('hosts.pasteKey')}</TabsTrigger>
                                             </TabsList>
@@ -538,7 +528,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                 <Controller
                                                     control={form.control}
                                                     name="key"
-                                                    render={({ field }) => (
+                                                    render={({field}) => (
                                                         <FormItem className="mb-4">
                                                             <FormLabel>{t('credentials.sshPrivateKey')}</FormLabel>
                                                             <FormControl>
@@ -560,8 +550,8 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                     >
                                                                         <span className="truncate"
                                                                               title={field.value?.name || t('credentials.upload')}>
-                                                                            {field.value === "existing_key" ? t('hosts.existingKey') : 
-                                                                             field.value ? (editingCredential ? t('credentials.updateKey') : field.value.name) : t('credentials.upload')}
+                                                                            {field.value === "existing_key" ? t('hosts.existingKey') :
+                                                                                field.value ? (editingCredential ? t('credentials.updateKey') : field.value.name) : t('credentials.upload')}
                                                                         </span>
                                                                     </Button>
                                                                 </div>
@@ -573,7 +563,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                     <FormField
                                                         control={form.control}
                                                         name="keyPassword"
-                                                        render={({ field }) => (
+                                                        render={({field}) => (
                                                             <FormItem className="col-span-8">
                                                                 <FormLabel>{t('credentials.keyPassword')}</FormLabel>
                                                                 <FormControl>
@@ -588,7 +578,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                     <FormField
                                                         control={form.control}
                                                         name="keyType"
-                                                        render={({ field }) => (
+                                                        render={({field}) => (
                                                             <FormItem className="relative col-span-3">
                                                                 <FormLabel>{t('credentials.keyType')}</FormLabel>
                                                                 <FormControl>
@@ -607,7 +597,8 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                                 ref={keyTypeDropdownRef}
                                                                                 className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                                             >
-                                                                                <div className="grid grid-cols-1 gap-1 p-0">
+                                                                                <div
+                                                                                    className="grid grid-cols-1 gap-1 p-0">
                                                                                     {keyTypeOptions.map((opt) => (
                                                                                         <Button
                                                                                             key={opt.value}
@@ -637,7 +628,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                 <Controller
                                                     control={form.control}
                                                     name="key"
-                                                    render={({ field }) => (
+                                                    render={({field}) => (
                                                         <FormItem className="mb-4">
                                                             <FormLabel>{t('credentials.sshPrivateKey')}</FormLabel>
                                                             <FormControl>
@@ -655,7 +646,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                     <FormField
                                                         control={form.control}
                                                         name="keyPassword"
-                                                        render={({ field }) => (
+                                                        render={({field}) => (
                                                             <FormItem className="col-span-8">
                                                                 <FormLabel>{t('credentials.keyPassword')}</FormLabel>
                                                                 <FormControl>
@@ -670,7 +661,7 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                     <FormField
                                                         control={form.control}
                                                         name="keyType"
-                                                        render={({ field }) => (
+                                                        render={({field}) => (
                                                             <FormItem className="relative col-span-3">
                                                                 <FormLabel>{t('credentials.keyType')}</FormLabel>
                                                                 <FormControl>
@@ -689,7 +680,8 @@ export function CredentialEditor({ editingCredential, onFormSubmit }: Credential
                                                                                 ref={keyTypeDropdownRef}
                                                                                 className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
                                                                             >
-                                                                                <div className="grid grid-cols-1 gap-1 p-0">
+                                                                                <div
+                                                                                    className="grid grid-cols-1 gap-1 p-0">
                                                                                     {keyTypeOptions.map((opt) => (
                                                                                         <Button
                                                                                             key={opt.value}

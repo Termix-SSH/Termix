@@ -185,7 +185,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             textarea.blur();
         }
 
-        terminal.focus = () => {};
+        terminal.focus = () => {
+        };
 
         const resizeObserver = new ResizeObserver(() => {
             if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
@@ -221,11 +222,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                     ? 'ws://localhost:8082'
                     : isElectron()
                         ? (() => {
-                            // Get configured server URL from window object (set by main-axios)
                             const baseUrl = (window as any).configuredServerUrl || 'http://127.0.0.1:8081';
-                            // Convert HTTP/HTTPS to WS/WSS and use nginx reverse proxy path
                             const wsProtocol = baseUrl.startsWith('https://') ? 'wss://' : 'ws://';
-                            const wsHost = baseUrl.replace(/^https?:\/\//, ''); // Keep the port
+                            const wsHost = baseUrl.replace(/^https?:\/\//, '');
                             return `${wsProtocol}${wsHost}/ssh/websocket/`;
                         })()
                         : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ssh/websocket/`;

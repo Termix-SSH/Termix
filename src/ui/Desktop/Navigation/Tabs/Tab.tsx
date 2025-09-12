@@ -67,7 +67,7 @@ export function Tab({
                 >
                     {isServer ? <ServerIcon className="mr-1 h-4 w-4"/> : isFileManager ?
                         <FolderIcon className="mr-1 h-4 w-4"/> : isUserProfile ?
-                        <UserIcon className="mr-1 h-4 w-4"/> : <TerminalIcon className="mr-1 h-4 w-4"/>}
+                            <UserIcon className="mr-1 h-4 w-4"/> : <TerminalIcon className="mr-1 h-4 w-4"/>}
                     {title || (isServer ? t('nav.serverStats') : isFileManager ? t('nav.fileManager') : isUserProfile ? t('nav.userProfile') : t('nav.terminal'))}
                 </Button>
                 {canSplit && (

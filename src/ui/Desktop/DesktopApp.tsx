@@ -5,10 +5,10 @@ import {AppView} from "@/ui/Desktop/Navigation/AppView.tsx"
 import {HostManager} from "@/ui/Desktop/Apps/Host Manager/HostManager.tsx"
 import {TabProvider, useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx"
 import {TopNavbar} from "@/ui/Desktop/Navigation/TopNavbar.tsx";
-import { AdminSettings } from "@/ui/Desktop/Admin/AdminSettings.tsx";
-import { UserProfile } from "@/ui/Desktop/User/UserProfile.tsx";
-import { Toaster } from "@/components/ui/sonner.tsx";
-import { getUserInfo, getCookie, setCookie } from "@/ui/main-axios.ts";
+import {AdminSettings} from "@/ui/Desktop/Admin/AdminSettings.tsx";
+import {UserProfile} from "@/ui/Desktop/User/UserProfile.tsx";
+import {Toaster} from "@/components/ui/sonner.tsx";
+import {getUserInfo, getCookie} from "@/ui/main-axios.ts";
 
 function AppContent() {
     const [view, setView] = useState<string>("homepage")
@@ -92,13 +92,13 @@ function AppContent() {
                             transparent 100%
                         )`,
                         backgroundSize: '80px 80px'
-                    }} />
+                    }}/>
                 </div>
             )}
 
             {!isAuthenticated && !authLoading && (
                 <div className="fixed inset-0 flex items-center justify-center z-[10000]">
-                    <Homepage 
+                    <Homepage
                         onSelectView={handleSelectView}
                         isAuthenticated={isAuthenticated}
                         authLoading={authLoading}
@@ -117,13 +117,13 @@ function AppContent() {
                 >
                     {showTerminalView && (
                         <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-                            <AppView isTopbarOpen={isTopbarOpen} />
+                            <AppView isTopbarOpen={isTopbarOpen}/>
                         </div>
                     )}
 
                     {showHome && (
                         <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-                            <Homepage 
+                            <Homepage
                                 onSelectView={handleSelectView}
                                 isAuthenticated={isAuthenticated}
                                 authLoading={authLoading}
@@ -135,26 +135,26 @@ function AppContent() {
 
                     {showSshManager && (
                         <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-                            <HostManager onSelectView={handleSelectView} isTopbarOpen={isTopbarOpen} />
+                            <HostManager onSelectView={handleSelectView} isTopbarOpen={isTopbarOpen}/>
                         </div>
                     )}
 
                     {showAdmin && (
                         <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-                            <AdminSettings isTopbarOpen={isTopbarOpen} />
+                            <AdminSettings isTopbarOpen={isTopbarOpen}/>
                         </div>
                     )}
 
                     {showProfile && (
                         <div className="h-screen w-full visible pointer-events-auto static overflow-auto">
-                            <UserProfile isTopbarOpen={isTopbarOpen} />
+                            <UserProfile isTopbarOpen={isTopbarOpen}/>
                         </div>
                     )}
 
                     <TopNavbar isTopbarOpen={isTopbarOpen} setIsTopbarOpen={setIsTopbarOpen}/>
                 </LeftSidebar>
             )}
-            <Toaster 
+            <Toaster
                 position="bottom-right"
                 richColors={false}
                 closeButton
@@ -168,7 +168,7 @@ function AppContent() {
 function DesktopApp() {
     return (
         <TabProvider>
-            <AppContent />
+            <AppContent/>
         </TabProvider>
     );
 }

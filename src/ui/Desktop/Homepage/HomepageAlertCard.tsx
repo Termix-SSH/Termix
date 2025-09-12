@@ -4,7 +4,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {Badge} from "@/components/ui/badge.tsx";
 import {X, ExternalLink, AlertTriangle, Info, CheckCircle, AlertCircle} from "lucide-react";
 import {useTranslation} from "react-i18next";
-import type { TermixAlert } from '../../../types/index.js';
+import type {TermixAlert} from '../../../types/index.js';
 
 interface AlertCardProps {
     alert: TermixAlert;
@@ -56,7 +56,7 @@ const getTypeBadgeVariant = (type?: string) => {
 
 export function HomepageAlertCard({alert, onDismiss, onClose}: AlertCardProps): React.ReactElement {
     const {t} = useTranslation();
-    
+
     if (!alert) {
         return null;
     }

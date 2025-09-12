@@ -1,9 +1,9 @@
-import axios, { AxiosError, type AxiosInstance } from 'axios';
-import type { 
-    SSHHost, 
-    SSHHostData, 
-    TunnelConfig, 
-    TunnelStatus, 
+import axios, {AxiosError, type AxiosInstance} from 'axios';
+import type {
+    SSHHost,
+    SSHHostData,
+    TunnelConfig,
+    TunnelStatus,
     Credential,
     CredentialData,
     HostInfo,
@@ -11,7 +11,16 @@ import type {
     FileManagerFile,
     FileManagerShortcut
 } from '../types/index.js';
-import { apiLogger, authLogger, sshLogger, tunnelLogger, fileLogger, statsLogger, systemLogger, type LogContext } from '../lib/frontend-logger.js';
+import {
+    apiLogger,
+    authLogger,
+    sshLogger,
+    tunnelLogger,
+    fileLogger,
+    statsLogger,
+    systemLogger,
+    type LogContext
+} from '../lib/frontend-logger.js';
 
 interface FileManagerOperation {
     name: string;
@@ -119,16 +128,14 @@ export function getCookie(name: string): string | undefined {
 function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosInstance {
     const instance = axios.create({
         baseURL,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         timeout: 30000,
     });
 
-    // Request interceptor with enhanced logging
     instance.interceptors.request.use((config) => {
         const startTime = performance.now();
         const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        // Store timing and request ID for response logging
+
         (config as any).startTime = startTime;
         (config as any).requestId = requestId;
 
@@ -144,10 +151,8 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
             operation: 'request_start'
         };
 
-        // Get the appropriate logger for this service
         const logger = getLoggerForService(serviceName);
 
-        // Log request start with grouping
         if (process.env.NODE_ENV === 'development') {
             logger.requestStart(method, fullUrl, context);
         }
@@ -158,7 +163,6 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
             authLogger.warn('No JWT token found, request will be unauthenticated', context);
         }
 
-        // Add Electron-specific headers for OIDC and other backend detection
         if (isElectron) {
             config.headers['X-Electron-App'] = 'true';
             config.headers['User-Agent'] = 'Termix-Electron/1.6.0';
@@ -167,7 +171,6 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
         return config;
     });
 
-    // Response interceptor with comprehensive logging
     instance.interceptors.response.use(
         (response) => {
             const endTime = performance.now();
@@ -189,15 +192,12 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
                 operation: 'request_success'
             };
 
-            // Get the appropriate logger for this service
             const logger = getLoggerForService(serviceName);
 
-            // Log successful requests in development
             if (process.env.NODE_ENV === 'development') {
                 logger.requestSuccess(method, fullUrl, response.status, responseTime, context);
             }
 
-            // Performance logging for slow requests
             if (responseTime > 3000) {
                 logger.warn(`🐌 Slow request: ${responseTime}ms`, context);
             }
@@ -228,10 +228,8 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
                 operation: 'request_error'
             };
 
-            // Get the appropriate logger for this service
             const logger = getLoggerForService(serviceName);
 
-            // Log errors with appropriate method based on error type
             if (process.env.NODE_ENV === 'development') {
                 if (status === 401) {
                     logger.authError(method, fullUrl, context);
@@ -242,7 +240,6 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
                 }
             }
 
-            // Handle auth token clearing
             if (status === 401) {
                 if (isElectron()) {
                     localStorage.removeItem('jwt');
@@ -264,8 +261,8 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
 // ============================================================================
 
 
-const isDev = process.env.NODE_ENV === 'development' && 
-              (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
+const isDev = process.env.NODE_ENV === 'development' &&
+    (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
 
 let apiHost = import.meta.env.VITE_API_HOST || 'localhost';
 let apiPort = 8081;
@@ -275,7 +272,6 @@ if (isElectron) {
     apiPort = 8081;
 }
 
-// Server configuration management for Electron
 export interface ServerConfig {
     serverUrl: string;
     lastUpdated: string;
@@ -283,7 +279,7 @@ export interface ServerConfig {
 
 export async function getServerConfig(): Promise<ServerConfig | null> {
     if (!isElectron) return null;
-    
+
     try {
         const result = await (window as any).electronAPI?.invoke('get-server-config');
         return result;
@@ -295,7 +291,7 @@ export async function getServerConfig(): Promise<ServerConfig | null> {
 
 export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
     if (!isElectron) return false;
-    
+
     try {
         const result = await (window as any).electronAPI?.invoke('save-server-config', config);
         if (result?.success) {
@@ -311,18 +307,17 @@ export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
 }
 
 export async function testServerConnection(serverUrl: string): Promise<{ success: boolean; error?: string }> {
-    if (!isElectron) return { success: false, error: 'Not in Electron environment' };
-    
+    if (!isElectron) return {success: false, error: 'Not in Electron environment'};
+
     try {
         const result = await (window as any).electronAPI?.invoke('test-server-connection', serverUrl);
         return result;
     } catch (error) {
         console.error('Failed to test server connection:', error);
-        return { success: false, error: 'Connection test failed' };
+        return {success: false, error: 'Connection test failed'};
     }
 }
 
-// Initialize server configuration on load
 if (isElectron) {
     getServerConfig().then(config => {
         if (config?.serverUrl) {
@@ -335,12 +330,9 @@ if (isElectron) {
 function getApiUrl(path: string, defaultPort: number): string {
     if (isElectron()) {
         if (configuredServerUrl) {
-            // In Electron with configured server, all requests go through nginx reverse proxy
-            // Use the same base URL for all services (nginx routes to correct backend port)
             const baseUrl = configuredServerUrl.replace(/\/$/, '');
             return `${baseUrl}${path}`;
         }
-        // In Electron without configured server, return a placeholder that will cause requests to fail gracefully
         return 'http://no-server-configured';
     } else if (isDev) {
         return `http://${apiHost}:${defaultPort}${path}`;
@@ -349,7 +341,6 @@ function getApiUrl(path: string, defaultPort: number): string {
     }
 }
 
-// Multi-port backend architecture (original design)
 // SSH Host Management API (port 8081)
 export let sshHostApi = createApiInstance(
     getApiUrl('/ssh', 8081),
@@ -362,7 +353,7 @@ export let tunnelApi = createApiInstance(
     'TUNNEL'
 );
 
-// File Manager Operations API (port 8084) - SSH file operations
+// File Manager Operations API (port 8084)
 export let fileManagerApi = createApiInstance(
     getApiUrl('/ssh/file_manager', 8084),
     'FILE_MANAGER'
@@ -374,43 +365,31 @@ export let statsApi = createApiInstance(
     'STATS'
 );
 
-// Authentication API (port 8081) - includes users, alerts, version, releases
+// Authentication API (port 8081)
 export let authApi = createApiInstance(
     getApiUrl('', 8081),
     'AUTH'
 );
 
-// Function to update API instances with new server configuration
 function updateApiInstances() {
-    systemLogger.info('Updating API instances with new server configuration', { 
-        operation: 'api_instance_update', 
-        configuredServerUrl 
+    systemLogger.info('Updating API instances with new server configuration', {
+        operation: 'api_instance_update',
+        configuredServerUrl
     });
-    
+
     sshHostApi = createApiInstance(getApiUrl('/ssh', 8081), 'SSH_HOST');
     tunnelApi = createApiInstance(getApiUrl('/ssh', 8083), 'TUNNEL');
     fileManagerApi = createApiInstance(getApiUrl('/ssh/file_manager', 8084), 'FILE_MANAGER');
     statsApi = createApiInstance(getApiUrl('', 8085), 'STATS');
     authApi = createApiInstance(getApiUrl('', 8081), 'AUTH');
-    
+
     // Make configuredServerUrl available globally for components that need it
     (window as any).configuredServerUrl = configuredServerUrl;
-    
-    systemLogger.success('All API instances updated successfully', { 
-        operation: 'api_instance_update_complete', 
-        configuredServerUrl 
-    });
-}
 
-// Function to update API instances with new port (for Electron) - kept for backward compatibility
-function updateApiPorts(port: number) {
-    systemLogger.info('Updating API instances with new port', { 
-        operation: 'api_port_update', 
-        newPort: port 
+    systemLogger.success('All API instances updated successfully', {
+        operation: 'api_instance_update_complete',
+        configuredServerUrl
     });
-    
-    apiPort = port;
-    updateApiInstances();
 }
 
 // ============================================================================
@@ -440,7 +419,7 @@ function handleApiError(error: unknown, operation: string): never {
         const code = error.response?.data?.code;
         const url = error.config?.url;
         const method = error.config?.method?.toUpperCase();
-        
+
         const errorContext: LogContext = {
             ...context,
             method,
@@ -449,8 +428,7 @@ function handleApiError(error: unknown, operation: string): never {
             errorCode: code,
             errorMessage: message
         };
-        
-        // Enhanced error logging with appropriate logger
+
         if (status === 401) {
             authLogger.warn(`Auth failed: ${method} ${url} - ${message}`, errorContext);
             throw new ApiError('Authentication required. Please log in again.', 401, 'AUTH_REQUIRED');
@@ -482,11 +460,11 @@ function handleApiError(error: unknown, operation: string): never {
             throw new ApiError(message || `Failed to ${operation}`, status, code);
         }
     }
-    
+
     if (error instanceof ApiError) {
         throw error;
     }
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     apiLogger.error(`Unexpected error during ${operation}: ${errorMessage}`, error, context);
     throw new ApiError(`Unexpected error during ${operation}: ${errorMessage}`, undefined, 'UNKNOWN_ERROR');
@@ -540,12 +518,12 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
             const formData = new FormData();
             formData.append('key', hostData.key);
 
-            const dataWithoutFile = { ...submitData };
+            const dataWithoutFile = {...submitData};
             delete dataWithoutFile.key;
             formData.append('data', JSON.stringify(dataWithoutFile));
 
             const response = await sshHostApi.post('/db/host', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
+                headers: {'Content-Type': 'multipart/form-data'},
             });
             return response.data;
         } else {
@@ -591,12 +569,12 @@ export async function updateSSHHost(hostId: number, hostData: SSHHostData): Prom
             const formData = new FormData();
             formData.append('key', hostData.key);
 
-            const dataWithoutFile = { ...submitData };
+            const dataWithoutFile = {...submitData};
             delete dataWithoutFile.key;
             formData.append('data', JSON.stringify(dataWithoutFile));
 
             const response = await sshHostApi.put(`/db/host/${hostId}`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
+                headers: {'Content-Type': 'multipart/form-data'},
             });
             return response.data;
         } else {
@@ -615,7 +593,7 @@ export async function bulkImportSSHHosts(hosts: SSHHostData[]): Promise<{
     errors: string[];
 }> {
     try {
-        const response = await sshHostApi.post('/bulk-import', { hosts });
+        const response = await sshHostApi.post('/bulk-import', {hosts});
         return response.data;
     } catch (error) {
         handleApiError(error, 'bulk import SSH hosts');
@@ -669,7 +647,7 @@ export async function connectTunnel(tunnelConfig: TunnelConfig): Promise<any> {
 
 export async function disconnectTunnel(tunnelName: string): Promise<any> {
     try {
-        const response = await tunnelApi.post('/tunnel/disconnect', { tunnelName });
+        const response = await tunnelApi.post('/tunnel/disconnect', {tunnelName});
         return response.data;
     } catch (error) {
         handleApiError(error, 'disconnect tunnel');
@@ -678,7 +656,7 @@ export async function disconnectTunnel(tunnelName: string): Promise<any> {
 
 export async function cancelTunnel(tunnelName: string): Promise<any> {
     try {
-        const response = await tunnelApi.post('/tunnel/cancel', { tunnelName });
+        const response = await tunnelApi.post('/tunnel/cancel', {tunnelName});
         return response.data;
     } catch (error) {
         handleApiError(error, 'cancel tunnel');
@@ -709,7 +687,7 @@ export async function addFileManagerRecent(file: FileManagerOperation): Promise<
 
 export async function removeFileManagerRecent(file: FileManagerOperation): Promise<any> {
     try {
-        const response = await sshHostApi.delete('/file_manager/recent', { data: file });
+        const response = await sshHostApi.delete('/file_manager/recent', {data: file});
         return response.data;
     } catch (error) {
         handleApiError(error, 'remove recent file');
@@ -736,7 +714,7 @@ export async function addFileManagerPinned(file: FileManagerOperation): Promise<
 
 export async function removeFileManagerPinned(file: FileManagerOperation): Promise<any> {
     try {
-        const response = await sshHostApi.delete('/file_manager/pinned', { data: file });
+        const response = await sshHostApi.delete('/file_manager/pinned', {data: file});
         return response.data;
     } catch (error) {
         handleApiError(error, 'remove pinned file');
@@ -763,7 +741,7 @@ export async function addFileManagerShortcut(shortcut: FileManagerOperation): Pr
 
 export async function removeFileManagerShortcut(shortcut: FileManagerOperation): Promise<any> {
     try {
-        const response = await sshHostApi.delete('/file_manager/shortcuts', { data: shortcut });
+        const response = await sshHostApi.delete('/file_manager/shortcuts', {data: shortcut});
         return response.data;
     } catch (error) {
         handleApiError(error, 'remove shortcut');
@@ -799,7 +777,7 @@ export async function connectSSH(sessionId: string, config: {
 
 export async function disconnectSSH(sessionId: string): Promise<any> {
     try {
-        const response = await fileManagerApi.post('/ssh/disconnect', { sessionId });
+        const response = await fileManagerApi.post('/ssh/disconnect', {sessionId});
         return response.data;
     } catch (error) {
         handleApiError(error, 'disconnect SSH');
@@ -809,7 +787,7 @@ export async function disconnectSSH(sessionId: string): Promise<any> {
 export async function getSSHStatus(sessionId: string): Promise<{ connected: boolean }> {
     try {
         const response = await fileManagerApi.get('/ssh/status', {
-            params: { sessionId }
+            params: {sessionId}
         });
         return response.data;
     } catch (error) {
@@ -820,7 +798,7 @@ export async function getSSHStatus(sessionId: string): Promise<{ connected: bool
 export async function listSSHFiles(sessionId: string, path: string): Promise<any[]> {
     try {
         const response = await fileManagerApi.get('/ssh/listFiles', {
-            params: { sessionId, path }
+            params: {sessionId, path}
         });
         return response.data || [];
     } catch (error) {
@@ -831,7 +809,7 @@ export async function listSSHFiles(sessionId: string, path: string): Promise<any
 export async function readSSHFile(sessionId: string, path: string): Promise<{ content: string; path: string }> {
     try {
         const response = await fileManagerApi.get('/ssh/readFile', {
-            params: { sessionId, path }
+            params: {sessionId, path}
         });
         return response.data;
     } catch (error) {
@@ -975,7 +953,7 @@ export async function getServerMetricsById(id: number): Promise<ServerMetrics> {
 
 export async function registerUser(username: string, password: string): Promise<any> {
     try {
-        const response = await authApi.post('/users/create', { username, password });
+        const response = await authApi.post('/users/create', {username, password});
         return response.data;
     } catch (error) {
         handleApiError(error, 'register user');
@@ -984,7 +962,7 @@ export async function registerUser(username: string, password: string): Promise<
 
 export async function loginUser(username: string, password: string): Promise<AuthResponse> {
     try {
-        const response = await authApi.post('/users/login', { username, password });
+        const response = await authApi.post('/users/login', {username, password});
         return response.data;
     } catch (error) {
         handleApiError(error, 'login user');
@@ -1015,7 +993,6 @@ export async function getOIDCConfig(): Promise<any> {
         return response.data;
     } catch (error: any) {
         console.warn('Failed to fetch OIDC config:', error.response?.data?.error || error.message);
-        // Don't show toast for OIDC config as it's optional
         return null;
     }
 }
@@ -1031,7 +1008,7 @@ export async function getUserCount(): Promise<UserCount> {
 
 export async function initiatePasswordReset(username: string): Promise<any> {
     try {
-        const response = await authApi.post('/users/initiate-reset', { username });
+        const response = await authApi.post('/users/initiate-reset', {username});
         return response.data;
     } catch (error) {
         handleApiError(error, 'initiate password reset');
@@ -1040,7 +1017,7 @@ export async function initiatePasswordReset(username: string): Promise<any> {
 
 export async function verifyPasswordResetCode(username: string, resetCode: string): Promise<any> {
     try {
-        const response = await authApi.post('/users/verify-reset-code', { username, resetCode });
+        const response = await authApi.post('/users/verify-reset-code', {username, resetCode});
         return response.data;
     } catch (error) {
         handleApiError(error, 'verify reset code');
@@ -1049,7 +1026,7 @@ export async function verifyPasswordResetCode(username: string, resetCode: strin
 
 export async function completePasswordReset(username: string, tempToken: string, newPassword: string): Promise<any> {
     try {
-        const response = await authApi.post('/users/complete-reset', { username, tempToken, newPassword });
+        const response = await authApi.post('/users/complete-reset', {username, tempToken, newPassword});
         return response.data;
     } catch (error) {
         handleApiError(error, 'complete password reset');
@@ -1080,7 +1057,7 @@ export async function getUserList(): Promise<{ users: UserInfo[] }> {
 
 export async function makeUserAdmin(username: string): Promise<any> {
     try {
-        const response = await authApi.post('/users/make-admin', { username });
+        const response = await authApi.post('/users/make-admin', {username});
         return response.data;
     } catch (error) {
         handleApiError(error, 'make user admin');
@@ -1089,7 +1066,7 @@ export async function makeUserAdmin(username: string): Promise<any> {
 
 export async function removeAdminStatus(username: string): Promise<any> {
     try {
-        const response = await authApi.post('/users/remove-admin', { username });
+        const response = await authApi.post('/users/remove-admin', {username});
         return response.data;
     } catch (error) {
         handleApiError(error, 'remove admin status');
@@ -1098,7 +1075,7 @@ export async function removeAdminStatus(username: string): Promise<any> {
 
 export async function deleteUser(username: string): Promise<any> {
     try {
-        const response = await authApi.delete('/users/delete-user', { data: { username } });
+        const response = await authApi.delete('/users/delete-user', {data: {username}});
         return response.data;
     } catch (error) {
         handleApiError(error, 'delete user');
@@ -1107,7 +1084,7 @@ export async function deleteUser(username: string): Promise<any> {
 
 export async function deleteAccount(password: string): Promise<any> {
     try {
-        const response = await authApi.delete('/users/delete-account', { data: { password } });
+        const response = await authApi.delete('/users/delete-account', {data: {password}});
         return response.data;
     } catch (error) {
         handleApiError(error, 'delete account');
@@ -1116,7 +1093,7 @@ export async function deleteAccount(password: string): Promise<any> {
 
 export async function updateRegistrationAllowed(allowed: boolean): Promise<any> {
     try {
-        const response = await authApi.patch('/users/registration-allowed', { allowed });
+        const response = await authApi.patch('/users/registration-allowed', {allowed});
         return response.data;
     } catch (error) {
         handleApiError(error, 'update registration allowed');
@@ -1157,7 +1134,7 @@ export async function setupTOTP(): Promise<{ secret: string; qr_code: string }> 
 
 export async function enableTOTP(totp_code: string): Promise<{ message: string; backup_codes: string[] }> {
     try {
-        const response = await authApi.post('/users/totp/enable', { totp_code });
+        const response = await authApi.post('/users/totp/enable', {totp_code});
         return response.data;
     } catch (error) {
         handleApiError(error as AxiosError, 'enable TOTP');
@@ -1167,7 +1144,7 @@ export async function enableTOTP(totp_code: string): Promise<{ message: string; 
 
 export async function disableTOTP(password?: string, totp_code?: string): Promise<{ message: string }> {
     try {
-        const response = await authApi.post('/users/totp/disable', { password, totp_code });
+        const response = await authApi.post('/users/totp/disable', {password, totp_code});
         return response.data;
     } catch (error) {
         handleApiError(error as AxiosError, 'disable TOTP');
@@ -1177,7 +1154,7 @@ export async function disableTOTP(password?: string, totp_code?: string): Promis
 
 export async function verifyTOTPLogin(temp_token: string, totp_code: string): Promise<AuthResponse> {
     try {
-        const response = await authApi.post('/users/totp/verify-login', { temp_token, totp_code });
+        const response = await authApi.post('/users/totp/verify-login', {temp_token, totp_code});
         return response.data;
     } catch (error) {
         handleApiError(error as AxiosError, 'verify TOTP login');
@@ -1187,7 +1164,7 @@ export async function verifyTOTPLogin(temp_token: string, totp_code: string): Pr
 
 export async function generateBackupCodes(password?: string, totp_code?: string): Promise<{ backup_codes: string[] }> {
     try {
-        const response = await authApi.post('/users/totp/backup-codes', { password, totp_code });
+        const response = await authApi.post('/users/totp/backup-codes', {password, totp_code});
         return response.data;
     } catch (error) {
         handleApiError(error as AxiosError, 'generate backup codes');
@@ -1206,7 +1183,7 @@ export async function getUserAlerts(userId: string): Promise<{ alerts: any[] }> 
 
 export async function dismissAlert(userId: string, alertId: string): Promise<any> {
     try {
-        const response = await authApi.post('/alerts/dismiss', { userId, alertId });
+        const response = await authApi.post('/alerts/dismiss', {userId, alertId});
         return response.data;
     } catch (error) {
         handleApiError(error, 'dismiss alert');
@@ -1328,7 +1305,7 @@ export async function getSSHHostWithCredentials(hostId: number): Promise<any> {
 // Apply credential to SSH host
 export async function applyCredentialToHost(hostId: number, credentialId: number): Promise<any> {
     try {
-        const response = await sshHostApi.post(`/db/host/${hostId}/apply-credential`, { credentialId });
+        const response = await sshHostApi.post(`/db/host/${hostId}/apply-credential`, {credentialId});
         return response.data;
     } catch (error) {
         handleApiError(error, 'apply credential to host');
@@ -1348,7 +1325,7 @@ export async function removeCredentialFromHost(hostId: number): Promise<any> {
 // Migrate host to managed credential
 export async function migrateHostToCredential(hostId: number, credentialName: string): Promise<any> {
     try {
-        const response = await sshHostApi.post(`/db/host/${hostId}/migrate-to-credential`, { credentialName });
+        const response = await sshHostApi.post(`/db/host/${hostId}/migrate-to-credential`, {credentialName});
         return response.data;
     } catch (error) {
         handleApiError(error, 'migrate host to credential');

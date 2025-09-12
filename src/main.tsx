@@ -2,7 +2,7 @@ import {StrictMode, useEffect, useState, useRef} from 'react'
 import {createRoot} from 'react-dom/client'
 import './index.css'
 import DesktopApp from './ui/Desktop/DesktopApp.tsx'
-import { MobileApp } from './ui/Mobile/MobileApp.tsx'
+import {MobileApp} from './ui/Mobile/MobileApp.tsx'
 import {ThemeProvider} from "@/components/theme-provider"
 import './i18n/i18n'
 import {isElectron} from './ui/main-axios.ts'
@@ -54,10 +54,10 @@ function RootApp() {
     const width = useWindowWidth();
     const isMobile = width < 768;
     if (isElectron()) {
-        return <DesktopApp />;
+        return <DesktopApp/>;
     }
 
-    return isMobile ? <MobileApp key="mobile" /> : <DesktopApp key="desktop" />;
+    return isMobile ? <MobileApp key="mobile"/> : <DesktopApp key="desktop"/>;
 }
 
 createRoot(document.getElementById('root')!).render(

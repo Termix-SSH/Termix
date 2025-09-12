@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-    Search, 
-    Key, 
+import React, {useState, useEffect, useMemo, useRef} from 'react';
+import {Button} from "@/components/ui/button";
+import {Badge} from "@/components/ui/badge";
+import {Input} from "@/components/ui/input";
+import {ScrollArea} from "@/components/ui/scroll-area";
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import {
+    Search,
+    Key,
     Folder,
     Edit,
     Trash2,
@@ -20,16 +20,16 @@ import {
     X,
     Check
 } from 'lucide-react';
-import { getCredentials, deleteCredential, updateCredential, renameCredentialFolder } from '@/ui/main-axios';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
-import { useConfirmation } from '@/hooks/use-confirmation.ts';
+import {getCredentials, deleteCredential, updateCredential, renameCredentialFolder} from '@/ui/main-axios';
+import {toast} from 'sonner';
+import {useTranslation} from 'react-i18next';
+import {useConfirmation} from '@/hooks/use-confirmation.ts';
 import CredentialViewer from './CredentialViewer';
-import type { Credential, CredentialsManagerProps } from '../../../../types/index.js';
+import type {Credential, CredentialsManagerProps} from '../../../../types/index.js';
 
-export function CredentialsManager({ onEditCredential }: CredentialsManagerProps) {
-    const { t } = useTranslation();
-    const { confirmWithToast } = useConfirmation();
+export function CredentialsManager({onEditCredential}: CredentialsManagerProps) {
+    const {t} = useTranslation();
+    const {confirmWithToast} = useConfirmation();
     const [credentials, setCredentials] = useState<Credential[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -61,7 +61,6 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
     };
 
 
-
     const handleEdit = (credential: Credential) => {
         if (onEditCredential) {
             onEditCredential(credential);
@@ -71,11 +70,11 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
 
     const handleDelete = async (credentialId: number, credentialName: string) => {
         confirmWithToast(
-            t('credentials.confirmDeleteCredential', { name: credentialName }),
+            t('credentials.confirmDeleteCredential', {name: credentialName}),
             async () => {
                 try {
                     await deleteCredential(credentialId);
-                    toast.success(t('credentials.credentialDeletedSuccessfully', { name: credentialName }));
+                    toast.success(t('credentials.credentialDeletedSuccessfully', {name: credentialName}));
                     await fetchCredentials();
                     window.dispatchEvent(new CustomEvent('credentials:changed'));
                 } catch (err: any) {
@@ -93,13 +92,16 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
 
     const handleRemoveFromFolder = async (credential: Credential) => {
         confirmWithToast(
-            t('credentials.confirmRemoveFromFolder', { name: credential.name || credential.username, folder: credential.folder }),
+            t('credentials.confirmRemoveFromFolder', {
+                name: credential.name || credential.username,
+                folder: credential.folder
+            }),
             async () => {
                 try {
                     setOperationLoading(true);
-                    const updatedCredential = { ...credential, folder: '' };
+                    const updatedCredential = {...credential, folder: ''};
                     await updateCredential(credential.id, updatedCredential);
-                    toast.success(t('credentials.removedFromFolder', { name: credential.name || credential.username }));
+                    toast.success(t('credentials.removedFromFolder', {name: credential.name || credential.username}));
                     await fetchCredentials();
                     window.dispatchEvent(new CustomEvent('credentials:changed'));
                 } catch (err) {
@@ -121,7 +123,7 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
         try {
             setOperationLoading(true);
             await renameCredentialFolder(oldName, editingFolderName.trim());
-            toast.success(t('credentials.folderRenamed', { oldName, newName: editingFolderName.trim() }));
+            toast.success(t('credentials.folderRenamed', {oldName, newName: editingFolderName.trim()}));
             await fetchCredentials();
             window.dispatchEvent(new CustomEvent('credentials:changed'));
             setEditingFolder(null);
@@ -143,11 +145,10 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
         setEditingFolderName('');
     };
 
-    // Drag and drop handlers
     const handleDragStart = (e: React.DragEvent, credential: Credential) => {
         setDraggedCredential(credential);
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+        e.dataTransfer.setData('text/plain', '');
     };
 
     const handleDragEnd = () => {
@@ -182,7 +183,7 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
         if (!draggedCredential) return;
 
         const newFolder = targetFolder === t('credentials.uncategorized') ? '' : targetFolder;
-        
+
         if (draggedCredential.folder === newFolder) {
             setDraggedCredential(null);
             return;
@@ -190,11 +191,11 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
 
         try {
             setOperationLoading(true);
-            const updatedCredential = { ...draggedCredential, folder: newFolder };
+            const updatedCredential = {...draggedCredential, folder: newFolder};
             await updateCredential(draggedCredential.id, updatedCredential);
-            toast.success(t('credentials.movedToFolder', { 
+            toast.success(t('credentials.movedToFolder', {
                 name: draggedCredential.name || draggedCredential.username,
-                folder: targetFolder 
+                folder: targetFolder
             }));
             await fetchCredentials();
             window.dispatchEvent(new CustomEvent('credentials:changed'));
@@ -287,7 +288,7 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                     <div>
                         <h2 className="text-xl font-semibold">{t('credentials.sshCredentials')}</h2>
                         <p className="text-muted-foreground">
-                            {t('credentials.credentialsCount', { count: 0 })}
+                            {t('credentials.credentialsCount', {count: 0})}
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -316,7 +317,7 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                 <div>
                     <h2 className="text-xl font-semibold">{t('credentials.sshCredentials')}</h2>
                     <p className="text-muted-foreground">
-                        {t('credentials.credentialsCount', { count: filteredAndSortedCredentials.length })}
+                        {t('credentials.credentialsCount', {count: filteredAndSortedCredentials.length})}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -339,8 +340,8 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
             <ScrollArea className="flex-1 min-h-0">
                 <div className="space-y-2 pb-20">
                     {Object.entries(credentialsByFolder).map(([folder, folderCredentials]) => (
-                        <div 
-                            key={folder} 
+                        <div
+                            key={folder}
                             className={`border rounded-md transition-all duration-200 ${
                                 dragOverFolder === folder ? 'border-blue-500 bg-blue-500/10' : ''
                             }`}
@@ -356,7 +357,8 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                                         <div className="flex items-center gap-2 flex-1">
                                             <Folder className="h-4 w-4"/>
                                             {editingFolder === folder ? (
-                                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center gap-2"
+                                                     onClick={(e) => e.stopPropagation()}>
                                                     <Input
                                                         value={editingFolderName}
                                                         onChange={(e) => setEditingFolderName(e.target.value)}
@@ -395,8 +397,8 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <span 
-                                                        className="font-medium cursor-pointer hover:text-blue-400 transition-colors" 
+                                                    <span
+                                                        className="font-medium cursor-pointer hover:text-blue-400 transition-colors"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             if (folder !== t('credentials.uncategorized')) {
@@ -471,11 +473,13 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                                                                                         className="h-5 w-5 p-0 text-orange-500 hover:text-orange-700 hover:bg-orange-500/10"
                                                                                         disabled={operationLoading}
                                                                                     >
-                                                                                        <FolderMinus className="h-3 w-3"/>
+                                                                                        <FolderMinus
+                                                                                            className="h-3 w-3"/>
                                                                                     </Button>
                                                                                 </TooltipTrigger>
                                                                                 <TooltipContent>
-                                                                                    <p>Remove from folder "{credential.folder}"</p>
+                                                                                    <p>Remove from folder
+                                                                                        "{credential.folder}"</p>
                                                                                 </TooltipContent>
                                                                             </Tooltip>
                                                                         )}
@@ -538,7 +542,8 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                                                                     )}
 
                                                                     <div className="flex flex-wrap gap-1">
-                                                                        <Badge variant="outline" className="text-xs px-1 py-0">
+                                                                        <Badge variant="outline"
+                                                                               className="text-xs px-1 py-0">
                                                                             {credential.authType === 'password' ? (
                                                                                 <Key className="h-2 w-2 mr-0.5"/>
                                                                             ) : (
@@ -547,7 +552,8 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                                                                             {credential.authType}
                                                                         </Badge>
                                                                         {credential.authType === 'key' && credential.keyType && (
-                                                                            <Badge variant="outline" className="text-xs px-1 py-0">
+                                                                            <Badge variant="outline"
+                                                                                   className="text-xs px-1 py-0">
                                                                                 {credential.keyType}
                                                                             </Badge>
                                                                         )}
@@ -558,7 +564,8 @@ export function CredentialsManager({ onEditCredential }: CredentialsManagerProps
                                                         <TooltipContent>
                                                             <div className="text-center">
                                                                 <p className="font-medium">Click to edit credential</p>
-                                                                <p className="text-xs text-muted-foreground">Drag to move between folders</p>
+                                                                <p className="text-xs text-muted-foreground">Drag to
+                                                                    move between folders</p>
                                                             </div>
                                                         </TooltipContent>
                                                     </Tooltip>

@@ -5,7 +5,7 @@ import {ButtonGroup} from "@/components/ui/button-group.tsx";
 import {Server, Terminal} from "lucide-react";
 import {getServerStatusById} from "@/ui/main-axios.ts";
 import {useTabs} from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
-import type { HostProps } from '../../../../types/index.js';
+import type {HostProps} from '../../../../types/index.js';
 
 export function Host({host, onHostConnect}: HostProps): React.ReactElement {
     const {addTab} = useTabs();

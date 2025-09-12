@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { FormControl, FormItem, FormLabel } from "@/components/ui/form.tsx";
-import { getCredentials } from '@/ui/main-axios.ts';
-import { useTranslation } from "react-i18next";
-import type { Credential } from '../../../../types';
+import React, {useState, useEffect, useRef} from 'react';
+import {Button} from "@/components/ui/button.tsx";
+import {Input} from "@/components/ui/input.tsx";
+import {FormControl, FormItem, FormLabel} from "@/components/ui/form.tsx";
+import {getCredentials} from '@/ui/main-axios.ts';
+import {useTranslation} from "react-i18next";
+import type {Credential} from '../../../../types';
 
 interface CredentialSelectorProps {
     value?: number | null;
@@ -12,8 +12,8 @@ interface CredentialSelectorProps {
     onCredentialSelect?: (credential: Credential | null) => void;
 }
 
-export function CredentialSelector({ value, onValueChange, onCredentialSelect }: CredentialSelectorProps) {
-    const { t } = useTranslation();
+export function CredentialSelector({value, onValueChange, onCredentialSelect}: CredentialSelectorProps) {
+    const {t} = useTranslation();
     const [credentials, setCredentials] = useState<Credential[]>([]);
     const [loading, setLoading] = useState(true);
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -30,7 +30,6 @@ export function CredentialSelector({ value, onValueChange, onCredentialSelect }:
                 const credentialsArray = Array.isArray(data) ? data : (data.credentials || data.data || []);
                 setCredentials(credentialsArray);
             } catch (error) {
-                console.error('Failed to fetch credentials:', error);
                 const {toast} = await import('sonner');
                 toast.error(t('credentials.failedToFetchCredentials'));
                 setCredentials([]);
@@ -128,7 +127,7 @@ export function CredentialSelector({ value, onValueChange, onCredentialSelect }:
                             t('hosts.selectCredentialPlaceholder')
                         )}
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
                         </svg>
                     </Button>
 

@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {
     ChevronUp, User2, HardDrive, Menu, ChevronRight
 } from "lucide-react";
-import { useTranslation } from 'react-i18next';
+import {useTranslation} from 'react-i18next';
 import {getCookie, setCookie, isElectron} from "@/ui/main-axios.ts";
 
 import {
@@ -27,7 +27,7 @@ import {Alert, AlertTitle, AlertDescription} from "@/components/ui/alert.tsx";
 import {FolderCard} from "@/ui/Desktop/Navigation/Hosts/FolderCard.tsx";
 import {getSSHHosts} from "@/ui/main-axios.ts";
 import {useTabs} from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
-import { deleteAccount } from "@/ui/main-axios.ts";
+import {deleteAccount} from "@/ui/main-axios.ts";
 
 interface SSHHost {
     id: number;
@@ -68,10 +68,9 @@ function handleLogout() {
     } else {
         document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     }
-    
+
     window.location.reload();
 }
-
 
 
 export function LeftSidebar({
@@ -82,8 +81,8 @@ export function LeftSidebar({
                                 username,
                                 children,
                             }: SidebarProps): React.ReactElement {
-    const { t } = useTranslation();
-    
+    const {t} = useTranslation();
+
     const [deleteAccountOpen, setDeleteAccountOpen] = React.useState(false);
     const [deletePassword, setDeletePassword] = React.useState("");
     const [deleteLoading, setDeleteLoading] = React.useState(false);
@@ -126,7 +125,6 @@ export function LeftSidebar({
     const prevHostsRef = React.useRef<SSHHost[]>([]);
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
-
 
 
     const fetchHosts = React.useCallback(async () => {
@@ -179,8 +177,7 @@ export function LeftSidebar({
                 setTimeout(() => {
                     setHosts(newHosts);
                     prevHostsRef.current = newHosts;
-                    
-                    // Update hostConfig in existing tabs
+
                     newHosts.forEach(newHost => {
                         updateHostConfig(newHost.id, newHost);
                     });
@@ -193,7 +190,7 @@ export function LeftSidebar({
 
     React.useEffect(() => {
         fetchHosts();
-        const interval = setInterval(fetchHosts, 300000); // 5 minutes instead of 10 seconds
+        const interval = setInterval(fetchHosts, 300000);
         return () => clearInterval(interval);
     }, [fetchHosts]);
 
@@ -302,7 +299,8 @@ export function LeftSidebar({
                     <Separator className="p-0.25"/>
                     <SidebarContent>
                         <SidebarGroup className="!m-0 !p-0 !-mb-2">
-                            <Button className="m-2 flex flex-row font-semibold border-2 !border-dark-border" variant="outline"
+                            <Button className="m-2 flex flex-row font-semibold border-2 !border-dark-border"
+                                    variant="outline"
                                     onClick={openSshManagerTab} disabled={!!sshManagerTab || isSplitScreenActive}
                                     title={sshManagerTab ? t('interface.sshManagerAlreadyOpen') : isSplitScreenActive ? t('interface.disabledDuringSplitScreen') : undefined}>
                                 <HardDrive strokeWidth="2.5"/>

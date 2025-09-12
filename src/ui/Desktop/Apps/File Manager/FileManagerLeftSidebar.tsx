@@ -1,6 +1,5 @@
 import React, {useEffect, useState, useRef, forwardRef, useImperativeHandle} from 'react';
-import {Separator} from '@/components/ui/separator.tsx';
-import {CornerDownLeft, Folder, File, Server, ArrowUp, Pin, MoreVertical, Trash2, Edit3} from 'lucide-react';
+import {Folder, File, ArrowUp, Pin, MoreVertical, Trash2, Edit3} from 'lucide-react';
 import {ScrollArea} from '@/components/ui/scroll-area.tsx';
 import {cn} from '@/lib/utils.ts';
 import {Input} from '@/components/ui/input.tsx';
@@ -11,18 +10,16 @@ import {
     listSSHFiles,
     renameSSHItem,
     deleteSSHItem,
-    getFileManagerRecent,
     getFileManagerPinned,
     addFileManagerPinned,
     removeFileManagerPinned,
-    readSSHFile,
     getSSHStatus,
     connectSSH
 } from '@/ui/main-axios.ts';
-import type { SSHHost, FileManagerLeftSidebarProps } from '../../../types/index.js';
+import type {SSHHost} from '../../../types/index.js';
 
 const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
-    {onSelectView, onOpenFile, tabs, host, onOperationComplete, onError, onSuccess, onPathChange, onDeleteItem}: {
+    {onOpenFile, tabs, host, onOperationComplete, onPathChange, onDeleteItem}: {
         onSelectView?: (view: string) => void;
         onOpenFile: (file: any) => void;
         tabs: any[];
@@ -55,7 +52,6 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
 
     const [sshSessionId, setSshSessionId] = useState<string | null>(null);
     const [filesLoading, setFilesLoading] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const [connectingSSH, setConnectingSSH] = useState(false);
     const [connectionCache, setConnectionCache] = useState<Record<string, {
         sessionId: string;
@@ -287,7 +283,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
         if (y < 0) {
             y = 0;
         }
-        
+
         setContextMenu({
             visible: true,
             x,
@@ -297,7 +293,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
     };
 
     const closeContextMenu = () => {
-        setContextMenu({ visible: false, x: 0, y: 0, item: null });
+        setContextMenu({visible: false, x: 0, y: 0, item: null});
     };
 
     const handleRename = async (item: any, newName: string) => {
@@ -320,24 +316,8 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
         }
     };
 
-    const handleDelete = async (item: any) => {
-        if (!sshSessionId) return;
-
-        try {
-            await deleteSSHItem(sshSessionId, item.path, item.type === 'directory');
-            toast.success(`${item.type === 'directory' ? t('common.folder') : t('common.file')} ${t('common.deletedSuccessfully')}`);
-            if (onOperationComplete) {
-                onOperationComplete();
-            } else {
-                fetchFiles();
-            }
-        } catch (error: any) {
-            toast.error(error?.response?.data?.error || t('fileManager.failedToDeleteItem'));
-        }
-    };
-
     const startRename = (item: any) => {
-        setRenamingItem({ item, newName: item.name });
+        setRenamingItem({item, newName: item.name});
         closeContextMenu();
     };
 
@@ -360,10 +340,12 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
     return (
         <div className="flex flex-col h-full w-[256px] max-w-[256px]">
             <div className="flex flex-col flex-grow min-h-0">
-                <div className="flex-1 w-full h-full flex flex-col bg-dark-bg-darkest border-r-2 border-dark-border overflow-hidden p-0 relative min-h-0">
+                <div
+                    className="flex-1 w-full h-full flex flex-col bg-dark-bg-darkest border-r-2 border-dark-border overflow-hidden p-0 relative min-h-0">
                     {host && (
                         <div className="flex flex-col h-full w-full max-w-[260px]">
-                            <div className="flex items-center gap-2 px-2 py-1.5 border-b-2 border-dark-border bg-dark-bg z-20 max-w-[260px]">
+                            <div
+                                className="flex items-center gap-2 px-2 py-1.5 border-b-2 border-dark-border bg-dark-bg z-20 max-w-[260px]">
                                 <Button
                                     size="icon"
                                     variant="outline"
@@ -405,14 +387,15 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                         {connectingSSH || filesLoading ? (
                                             <div className="text-xs text-muted-foreground">{t('common.loading')}</div>
                                         ) : filteredFiles.length === 0 ? (
-                                            <div className="text-xs text-muted-foreground">{t('fileManager.noFilesOrFoldersFound')}</div>
+                                            <div
+                                                className="text-xs text-muted-foreground">{t('fileManager.noFilesOrFoldersFound')}</div>
                                         ) : (
                                             <div className="flex flex-col gap-1">
                                                 {filteredFiles.map((item: any) => {
                                                     const isOpen = (tabs || []).some((t: any) => t.id === item.path);
                                                     const isRenaming = renamingItem?.item?.path === item.path;
                                                     const isDeleting = false;
-                                                    
+
                                                     return (
                                                         <div
                                                             key={item.path}
@@ -425,18 +408,23 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                                             {isRenaming ? (
                                                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                                                     {item.type === 'directory' ?
-                                                                        <Folder className="w-4 h-4 text-blue-400 flex-shrink-0"/> :
-                                                                        <File className="w-4 h-4 text-muted-foreground flex-shrink-0"/>}
+                                                                        <Folder
+                                                                            className="w-4 h-4 text-blue-400 flex-shrink-0"/> :
+                                                                        <File
+                                                                            className="w-4 h-4 text-muted-foreground flex-shrink-0"/>}
                                                                     <Input
                                                                         value={renamingItem.newName}
-                                                                        onChange={(e) => setRenamingItem(prev => prev ? {...prev, newName: e.target.value} : null)}
+                                                                        onChange={(e) => setRenamingItem(prev => prev ? {
+                                                                            ...prev,
+                                                                            newName: e.target.value
+                                                                        } : null)}
                                                                         className="flex-1 h-6 text-sm bg-dark-bg-button border border-dark-border-hover text-white"
                                                                         autoFocus
                                                                         onKeyDown={(e) => {
                                                                             if (e.key === 'Enter') {
                                                                                 handleRename(item, renamingItem.newName);
                                                                             } else if (e.key === 'Escape') {
-                                                                                                setRenamingItem(null);
+                                                                                setRenamingItem(null);
                                                                             }
                                                                         }}
                                                                         onBlur={() => handleRename(item, renamingItem.newName)}
@@ -454,13 +442,17 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                                                         }))}
                                                                     >
                                                                         {item.type === 'directory' ?
-                                                                            <Folder className="w-4 h-4 text-blue-400 flex-shrink-0"/> :
-                                                                            <File className="w-4 h-4 text-muted-foreground flex-shrink-0"/>}
-                                                                        <span className="text-sm text-white truncate flex-1 min-w-0">{item.name}</span>
+                                                                            <Folder
+                                                                                className="w-4 h-4 text-blue-400 flex-shrink-0"/> :
+                                                                            <File
+                                                                                className="w-4 h-4 text-muted-foreground flex-shrink-0"/>}
+                                                                        <span
+                                                                            className="text-sm text-white truncate flex-1 min-w-0">{item.name}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-1">
                                                                         {item.type === 'file' && (
-                                                                            <Button size="icon" variant="ghost" className="h-7 w-7"
+                                                                            <Button size="icon" variant="ghost"
+                                                                                    className="h-7 w-7"
                                                                                     disabled={isOpen}
                                                                                     onClick={async (e) => {
                                                                                         e.stopPropagation();
@@ -474,7 +466,10 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                                                                                     sshSessionId: host?.id.toString()
                                                                                                 });
                                                                                                 setFiles(files.map(f =>
-                                                                                                    f.path === item.path ? { ...f, isPinned: false } : f
+                                                                                                    f.path === item.path ? {
+                                                                                                        ...f,
+                                                                                                        isPinned: false
+                                                                                                    } : f
                                                                                                 ));
                                                                                             } else {
                                                                                                 await addFileManagerPinned({
@@ -485,14 +480,18 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                                                                                     sshSessionId: host?.id.toString()
                                                                                                 });
                                                                                                 setFiles(files.map(f =>
-                                                                                                    f.path === item.path ? { ...f, isPinned: true } : f
+                                                                                                    f.path === item.path ? {
+                                                                                                        ...f,
+                                                                                                        isPinned: true
+                                                                                                    } : f
                                                                                                 ));
                                                                                             }
                                                                                         } catch (err) {
                                                                                         }
                                                                                     }}
                                                                             >
-                                                                                <Pin className={`w-1 h-1 ${item.isPinned ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}/>
+                                                                                <Pin
+                                                                                    className={`w-1 h-1 ${item.isPinned ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}/>
                                                                             </Button>
                                                                         )}
                                                                         {!isOpen && (
@@ -505,7 +504,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                                                                     handleContextMenu(e, item);
                                                                                 }}
                                                                             >
-                                                                                <MoreVertical className="w-4 h-4" />
+                                                                                <MoreVertical className="w-4 h-4"/>
                                                                             </Button>
                                                                         )}
                                                                     </div>
@@ -536,14 +535,14 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                         className="w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-hover flex items-center gap-2"
                         onClick={() => startRename(contextMenu.item)}
                     >
-                        <Edit3 className="w-4 h-4" />
+                        <Edit3 className="w-4 h-4"/>
                         Rename
                     </button>
                     <button
                         className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-dark-hover flex items-center gap-2"
                         onClick={() => startDelete(contextMenu.item)}
                     >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4"/>
                         Delete
                     </button>
                 </div>

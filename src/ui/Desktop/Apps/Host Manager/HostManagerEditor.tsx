@@ -3,15 +3,7 @@ import {Controller, useForm} from "react-hook-form"
 import {z} from "zod"
 
 import {Button} from "@/components/ui/button.tsx"
-import {
-    Form,
-    FormControl,
-    FormDescription,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form.tsx";
+import {Form, FormControl, FormDescription, FormField, FormItem, FormLabel,} from "@/components/ui/form.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {PasswordInput} from "@/components/ui/password-input.tsx";
 import {ScrollArea} from "@/components/ui/scroll-area.tsx"
@@ -21,7 +13,7 @@ import React, {useEffect, useRef, useState} from "react";
 import {Switch} from "@/components/ui/switch.tsx";
 import {Alert, AlertDescription} from "@/components/ui/alert.tsx";
 import {toast} from "sonner";
-import {createSSHHost, updateSSHHost, getSSHHosts, getCredentials} from '@/ui/main-axios.ts';
+import {createSSHHost, getCredentials, getSSHHosts, updateSSHHost} from '@/ui/main-axios.ts';
 import {useTranslation} from "react-i18next";
 import {CredentialSelector} from "@/ui/Desktop/Apps/Credentials/CredentialSelector.tsx";
 
@@ -65,8 +57,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
     const [authTab, setAuthTab] = useState<'password' | 'key' | 'credential'>('password');
     const [keyInputMethod, setKeyInputMethod] = useState<'upload' | 'paste'>('upload');
     const isSubmittingRef = useRef(false);
-    
-    // Ref for the IP address input to manage focus
+
     const ipInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -103,7 +94,6 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
         fetchData();
     }, []);
 
-    // Listen for credential changes to refresh the credential list
     useEffect(() => {
         const handleCredentialChange = async () => {
             try {
@@ -126,14 +116,13 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                 setFolders(uniqueFolders);
                 setSshConfigurations(uniqueConfigurations);
             } catch (error) {
-                // Handle error silently
             } finally {
                 setLoading(false);
             }
         };
-        
+
         window.addEventListener('credentials:changed', handleCredentialChange);
-        
+
         return () => {
             window.removeEventListener('credentials:changed', handleCredentialChange);
         };
@@ -247,7 +236,6 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
         }
     });
 
-    // Update username when switching to credential tab and a credential is selected
     useEffect(() => {
         if (authTab === 'credential') {
             const currentCredentialId = form.getValues('credentialId');
@@ -262,7 +250,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
 
     useEffect(() => {
         if (editingHost) {
-            const cleanedHost = { ...editingHost };
+            const cleanedHost = {...editingHost};
             if (cleanedHost.credentialId && cleanedHost.key) {
                 cleanedHost.key = undefined;
                 cleanedHost.keyPassword = undefined;
@@ -272,10 +260,10 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
             } else if (cleanedHost.key && cleanedHost.password) {
                 cleanedHost.password = undefined;
             }
-            
+
             const defaultAuthType = cleanedHost.credentialId ? 'credential' : (cleanedHost.key ? 'key' : 'password');
             setAuthTab(defaultAuthType);
-            
+
             const formData = {
                 name: cleanedHost.name || "",
                 ip: cleanedHost.ip || "",
@@ -296,12 +284,11 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                 defaultPath: cleanedHost.defaultPath || "/",
                 tunnelConnections: cleanedHost.tunnelConnections || [],
             };
-            
-            // Only set the relevant authentication fields based on authType
+
             if (defaultAuthType === 'password') {
                 formData.password = cleanedHost.password || "";
             } else if (defaultAuthType === 'key') {
-                formData.key = "existing_key"; // Placeholder to indicate existing key
+                formData.key = "existing_key";
                 formData.keyPassword = cleanedHost.keyPassword || "";
                 formData.keyType = (cleanedHost.keyType as any) || "auto";
             } else if (defaultAuthType === 'credential') {
@@ -349,7 +336,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
     const onSubmit = async (data: FormData) => {
         try {
             isSubmittingRef.current = true;
-            
+
             if (!data.name || data.name.trim() === '') {
                 data.name = `${data.username}@${data.ip}`;
             }
@@ -399,23 +386,22 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
 
             if (editingHost) {
                 const updatedHost = await updateSSHHost(editingHost.id, submitData);
-                toast.success(t('hosts.hostUpdatedSuccessfully', { name: data.name }));
-                
+                toast.success(t('hosts.hostUpdatedSuccessfully', {name: data.name}));
+
                 if (onFormSubmit) {
                     onFormSubmit(updatedHost);
                 }
             } else {
                 const newHost = await createSSHHost(submitData);
-                toast.success(t('hosts.hostAddedSuccessfully', { name: data.name }));
-                
+                toast.success(t('hosts.hostAddedSuccessfully', {name: data.name}));
+
                 if (onFormSubmit) {
                     onFormSubmit(newHost);
                 }
             }
 
             window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
-            
-            // Reset form after successful submission
+
             form.reset();
         } catch (error) {
             toast.error(t('hosts.failedToSaveHost'));
@@ -574,8 +560,8 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                             <FormItem className="col-span-5">
                                                 <FormLabel>{t('hosts.ipAddress')}</FormLabel>
                                                 <FormControl>
-                                                    <Input 
-                                                        placeholder={t('placeholders.ipAddress')} 
+                                                    <Input
+                                                        placeholder={t('placeholders.ipAddress')}
                                                         {...field}
                                                         ref={(e) => {
                                                             field.ref(e);
@@ -745,8 +731,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                         const newAuthType = value as 'password' | 'key' | 'credential';
                                         setAuthTab(newAuthType);
                                         form.setValue('authType', newAuthType);
-                                        
-                                        // Clear authentication fields based on what we're switching away from
+
                                         if (newAuthType === 'password') {
                                             form.setValue('key', null);
                                             form.setValue('keyPassword', '');
@@ -773,11 +758,12 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                         <FormField
                                             control={form.control}
                                             name="password"
-                                            render={({ field }) => (
+                                            render={({field}) => (
                                                 <FormItem>
                                                     <FormLabel>{t('hosts.password')}</FormLabel>
                                                     <FormControl>
-                                                        <PasswordInput placeholder={t('placeholders.password')} {...field} />
+                                                        <PasswordInput
+                                                            placeholder={t('placeholders.password')} {...field} />
                                                     </FormControl>
                                                 </FormItem>
                                             )}
@@ -788,7 +774,6 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                             value={keyInputMethod}
                                             onValueChange={(value) => {
                                                 setKeyInputMethod(value as 'upload' | 'paste');
-                                                // Clear the other field when switching
                                                 if (value === 'upload') {
                                                     form.setValue('key', null);
                                                 } else {
@@ -797,7 +782,8 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                             }}
                                             className="w-full"
                                         >
-                                            <TabsList className="inline-flex items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                                            <TabsList
+                                                className="inline-flex items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
                                                 <TabsTrigger value="upload">{t('hosts.uploadFile')}</TabsTrigger>
                                                 <TabsTrigger value="paste">{t('hosts.pasteKey')}</TabsTrigger>
                                             </TabsList>
@@ -827,8 +813,8 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                                     >
                                                                         <span className="truncate"
                                                                               title={field.value?.name || t('hosts.upload')}>
-                                                                            {field.value === "existing_key" ? t('hosts.existingKey') : 
-                                                                             field.value ? (editingHost ? t('hosts.updateKey') : field.value.name) : t('hosts.upload')}
+                                                                            {field.value === "existing_key" ? t('hosts.existingKey') :
+                                                                                field.value ? (editingHost ? t('hosts.updateKey') : field.value.name) : t('hosts.upload')}
                                                                         </span>
                                                                     </Button>
                                                                 </div>
@@ -856,7 +842,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                     )}
                                                 />
                                             </TabsContent>
-                                        </Tabs>                                        
+                                        </Tabs>
                                         <div className="grid grid-cols-15 gap-4 mt-4">
                                             <FormField
                                                 control={form.control}
@@ -925,14 +911,13 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                         <FormField
                                             control={form.control}
                                             name="credentialId"
-                                            render={({ field }) => (
+                                            render={({field}) => (
                                                 <FormItem>
                                                     <CredentialSelector
                                                         value={field.value}
                                                         onValueChange={field.onChange}
                                                         onCredentialSelect={(credential) => {
                                                             if (credential) {
-                                                                // Update username when credential is selected
                                                                 form.setValue('username', credential.username);
                                                             }
                                                         }}
@@ -1002,7 +987,8 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                         sshpass</code> or <code
                                                         className="bg-muted px-1 rounded inline">sudo dnf install
                                                         sshpass</code></div>
-                                                    <div>• {t('hosts.macos')} <code className="bg-muted px-1 rounded inline">brew
+                                                    <div>• {t('hosts.macos')} <code
+                                                        className="bg-muted px-1 rounded inline">brew
                                                         install hudochenkov/sshpass/sshpass</code></div>
                                                     <div>• {t('hosts.windows')}</div>
                                                 </div>
@@ -1026,9 +1012,9 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                             </AlertDescription>
                                         </Alert>
                                         <div className="mt-3 flex justify-between">
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm" 
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
                                                 className="h-8 px-3 text-xs"
                                                 onClick={() => window.open('https://docs.termix.site/tunnels', '_blank')}
                                             >
@@ -1148,7 +1134,7 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                                     </div>
 
                                                                     <p className="text-sm text-muted-foreground mt-2">
-                                                                        {t('hosts.tunnelForwardDescription', { 
+                                                                        {t('hosts.tunnelForwardDescription', {
                                                                             sourcePort: form.watch(`tunnelConnections.${index}.sourcePort`) || '22',
                                                                             endpointPort: form.watch(`tunnelConnections.${index}.endpointPort`) || '224'
                                                                         })}

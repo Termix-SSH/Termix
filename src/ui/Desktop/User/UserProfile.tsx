@@ -1,7 +1,4 @@
 import React, {useState, useEffect} from "react";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
-import {Button} from "@/components/ui/button.tsx";
-import {Input} from "@/components/ui/input.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
@@ -10,12 +7,10 @@ import {User, Shield, Key, AlertCircle} from "lucide-react";
 import {TOTPSetup} from "@/ui/Desktop/User/TOTPSetup.tsx";
 import {getUserInfo} from "@/ui/main-axios.ts";
 import {getVersionInfo} from "@/ui/main-axios.ts";
-import {toast} from "sonner";
 import {PasswordReset} from "@/ui/Desktop/User/PasswordReset.tsx";
 import {useTranslation} from "react-i18next";
 import {LanguageSwitcher} from "@/ui/Desktop/User/LanguageSwitcher.tsx";
 import {useSidebar} from "@/components/ui/sidebar.tsx";
-
 
 interface UserProfileProps {
     isTopbarOpen?: boolean;
@@ -45,7 +40,6 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
             const info = await getVersionInfo();
             setVersionInfo({version: info.localVersion});
         } catch (err) {
-            console.error("Failed to load version info", err);
             const {toast} = await import('sonner');
             toast.error(t('user.failedToLoadVersionInfo'));
         }
@@ -88,7 +82,8 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
 
     if (loading) {
         return (
-            <div style={wrapperStyle} className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
+            <div style={wrapperStyle}
+                 className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
                 <div className="h-full w-full flex flex-col">
                     <div className="flex items-center justify-between px-3 pt-2 pb-2">
                         <h1 className="font-bold text-lg">{t('nav.userProfile')}</h1>
@@ -104,7 +99,8 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
 
     if (error || !userInfo) {
         return (
-            <div style={wrapperStyle} className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
+            <div style={wrapperStyle}
+                 className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
                 <div className="h-full w-full flex flex-col">
                     <div className="flex items-center justify-between px-3 pt-2 pb-2">
                         <h1 className="font-bold text-lg">{t('nav.userProfile')}</h1>
@@ -114,7 +110,8 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
                         <Alert variant="destructive" className="bg-red-900/20 border-red-500/50">
                             <AlertCircle className="h-4 w-4"/>
                             <AlertTitle className="text-red-400">{t('common.error')}</AlertTitle>
-                            <AlertDescription className="text-red-300">{error || t('errors.loadFailed')}</AlertDescription>
+                            <AlertDescription
+                                className="text-red-300">{error || t('errors.loadFailed')}</AlertDescription>
                         </Alert>
                     </div>
                 </div>
@@ -123,7 +120,8 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
     }
 
     return (
-        <div style={wrapperStyle} className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
+        <div style={wrapperStyle}
+             className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden">
             <div className="h-full w-full flex flex-col">
                 <div className="flex items-center justify-between px-3 pt-2 pb-2">
                     <h1 className="font-bold text-lg">{t('nav.userProfile')}</h1>
@@ -133,12 +131,14 @@ export function UserProfile({isTopbarOpen = true}: UserProfileProps) {
                 <div className="px-6 py-4 overflow-auto flex-1">
                     <Tabs defaultValue="profile" className="w-full">
                         <TabsList className="mb-4 bg-dark-bg border-2 border-dark-border">
-                            <TabsTrigger value="profile" className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button">
+                            <TabsTrigger value="profile"
+                                         className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button">
                                 <User className="w-4 h-4"/>
                                 {t('nav.userProfile')}
                             </TabsTrigger>
                             {!userInfo.is_oidc && (
-                                <TabsTrigger value="security" className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button">
+                                <TabsTrigger value="security"
+                                             className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button">
                                     <Shield className="w-4 h-4"/>
                                     {t('profile.security')}
                                 </TabsTrigger>

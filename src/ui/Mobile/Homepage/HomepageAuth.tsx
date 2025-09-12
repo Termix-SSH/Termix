@@ -737,17 +737,17 @@ export function HomepageAuth({
                             <div className="flex flex-col gap-2">
                                 <Label htmlFor="password">{t('common.password')}</Label>
                                 <PasswordInput id="password" required className="h-11 text-base"
-                                       value={password} onChange={e => setPassword(e.target.value)}
-                                       disabled={loading || internalLoggedIn}/>
+                                               value={password} onChange={e => setPassword(e.target.value)}
+                                               disabled={loading || internalLoggedIn}/>
                             </div>
                             {tab === "signup" && (
                                 <div className="flex flex-col gap-2">
                                     <Label htmlFor="signup-confirm-password">{t('common.confirmPassword')}</Label>
                                     <PasswordInput id="signup-confirm-password" required
-                                           className="h-11 text-base"
-                                           value={signupConfirmPassword}
-                                           onChange={e => setSignupConfirmPassword(e.target.value)}
-                                           disabled={loading || internalLoggedIn}/>
+                                                   className="h-11 text-base"
+                                                   value={signupConfirmPassword}
+                                                   onChange={e => setSignupConfirmPassword(e.target.value)}
+                                                   disabled={loading || internalLoggedIn}/>
                                 </div>
                             )}
                             <Button type="submit" className="w-full h-11 mt-2 text-base font-semibold"

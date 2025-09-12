@@ -1,5 +1,4 @@
 import React, {useState, useEffect, useMemo, useRef} from "react";
-import {Card, CardContent} from "@/components/ui/card.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Badge} from "@/components/ui/badge.tsx";
 import {ScrollArea} from "@/components/ui/scroll-area.tsx";
@@ -22,14 +21,12 @@ import {
     FileEdit,
     Search,
     Upload,
-    Info,
     X,
     Check,
     Pencil,
     FolderMinus
 } from "lucide-react";
-import {Separator} from "@/components/ui/separator.tsx";
-import type { SSHHost, SSHManagerHostViewerProps } from '../../../../types/index.js';
+import type {SSHHost, SSHManagerHostViewerProps} from '../../../../types/index.js';
 
 export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
     const {t} = useTranslation();
@@ -48,16 +45,15 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
 
     useEffect(() => {
         fetchHosts();
-        
-        // Listen for refresh events from other components
+
         const handleHostsRefresh = () => {
             fetchHosts();
         };
-        
+
         window.addEventListener('hosts:refresh', handleHostsRefresh);
         window.addEventListener('ssh-hosts:changed', handleHostsRefresh);
         window.addEventListener('folders:changed', handleHostsRefresh);
-        
+
         return () => {
             window.removeEventListener('hosts:refresh', handleHostsRefresh);
             window.removeEventListener('ssh-hosts:changed', handleHostsRefresh);
@@ -69,9 +65,9 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
         try {
             setLoading(true);
             const data = await getSSHHosts();
-            
+
             const cleanedHosts = data.map(host => {
-                const cleanedHost = { ...host };
+                const cleanedHost = {...host};
                 if (cleanedHost.credentialId && cleanedHost.key) {
                     cleanedHost.key = undefined;
                     cleanedHost.keyPassword = undefined;
@@ -86,7 +82,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                 }
                 return cleanedHost;
             });
-            
+
             setHosts(cleanedHosts);
             setError(null);
         } catch (err) {
@@ -98,11 +94,11 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
 
     const handleDelete = async (hostId: number, hostName: string) => {
         confirmWithToast(
-            t('hosts.confirmDelete', { name: hostName }),
+            t('hosts.confirmDelete', {name: hostName}),
             async () => {
                 try {
                     await deleteSSHHost(hostId);
-                    toast.success(t('hosts.hostDeletedSuccessfully', { name: hostName }));
+                    toast.success(t('hosts.hostDeletedSuccessfully', {name: hostName}));
                     await fetchHosts();
                     window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
                 } catch (err) {
@@ -115,41 +111,38 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
 
     const handleExport = (host: SSHHost) => {
         const actualAuthType = host.credentialId ? 'credential' : (host.key ? 'key' : 'password');
-        
-        // Check if host uses sensitive authentication data
+
         if (actualAuthType === 'credential') {
-            const confirmMessage = t('hosts.exportCredentialWarning', { 
-                name: host.name || `${host.username}@${host.ip}` 
+            const confirmMessage = t('hosts.exportCredentialWarning', {
+                name: host.name || `${host.username}@${host.ip}`
             });
-            
+
             confirmWithToast(confirmMessage, () => {
                 performExport(host, actualAuthType);
             });
             return;
         } else if (actualAuthType === 'password' || actualAuthType === 'key') {
-            const confirmMessage = t('hosts.exportSensitiveDataWarning', { 
-                name: host.name || `${host.username}@${host.ip}` 
+            const confirmMessage = t('hosts.exportSensitiveDataWarning', {
+                name: host.name || `${host.username}@${host.ip}`
             });
-            
+
             confirmWithToast(confirmMessage, () => {
                 performExport(host, actualAuthType);
             });
             return;
         }
-        
-        // No sensitive data, proceed directly
+
         performExport(host, actualAuthType);
     };
 
     const performExport = (host: SSHHost, actualAuthType: string) => {
 
-        // Create export data with sensitive fields excluded
         const exportData: any = {
             name: host.name,
             ip: host.ip,
             port: host.port,
             username: host.username,
-            authType: actualAuthType, // Use the determined authType, not the stored one
+            authType: actualAuthType,
             folder: host.folder,
             tags: host.tags,
             pin: host.pin,
@@ -160,18 +153,16 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
             tunnelConnections: host.tunnelConnections,
         };
 
-        // Only include credentialId if actualAuthType is credential, but set it to null for security
         if (actualAuthType === 'credential') {
-            exportData.credentialId = null; // Set to null instead of undefined so it's included but empty
+            exportData.credentialId = null;
         }
 
-        // Remove undefined values from export, but keep null values
         const cleanExportData = Object.fromEntries(
             Object.entries(exportData).filter(([_, value]) => value !== undefined)
         );
 
 
-        const blob = new Blob([JSON.stringify(cleanExportData, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(cleanExportData, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -193,13 +184,13 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
 
     const handleRemoveFromFolder = async (host: SSHHost) => {
         confirmWithToast(
-            t('hosts.confirmRemoveFromFolder', { name: host.name || `${host.username}@${host.ip}`, folder: host.folder }),
+            t('hosts.confirmRemoveFromFolder', {name: host.name || `${host.username}@${host.ip}`, folder: host.folder}),
             async () => {
                 try {
                     setOperationLoading(true);
-                    const updatedHost = { ...host, folder: '' };
+                    const updatedHost = {...host, folder: ''};
                     await updateSSHHost(host.id, updatedHost);
-                    toast.success(t('hosts.removedFromFolder', { name: host.name || `${host.username}@${host.ip}` }));
+                    toast.success(t('hosts.removedFromFolder', {name: host.name || `${host.username}@${host.ip}`}));
                     await fetchHosts();
                     window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
                 } catch (err) {
@@ -221,7 +212,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
         try {
             setOperationLoading(true);
             await renameFolder(oldName, editingFolderName.trim());
-            toast.success(t('hosts.folderRenamed', { oldName, newName: editingFolderName.trim() }));
+            toast.success(t('hosts.folderRenamed', {oldName, newName: editingFolderName.trim()}));
             await fetchHosts();
             window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
             setEditingFolder(null);
@@ -243,11 +234,10 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
         setEditingFolderName('');
     };
 
-    // Drag and drop handlers
     const handleDragStart = (e: React.DragEvent, host: SSHHost) => {
         setDraggedHost(host);
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+        e.dataTransfer.setData('text/plain', '');
     };
 
     const handleDragEnd = () => {
@@ -282,7 +272,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
         if (!draggedHost) return;
 
         const newFolder = targetFolder === t('hosts.uncategorized') ? '' : targetFolder;
-        
+
         if (draggedHost.folder === newFolder) {
             setDraggedHost(null);
             return;
@@ -290,11 +280,11 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
 
         try {
             setOperationLoading(true);
-            const updatedHost = { ...draggedHost, folder: newFolder };
+            const updatedHost = {...draggedHost, folder: newFolder};
             await updateSSHHost(draggedHost.id, updatedHost);
-            toast.success(t('hosts.movedToFolder', { 
+            toast.success(t('hosts.movedToFolder', {
                 name: draggedHost.name || `${draggedHost.username}@${draggedHost.ip}`,
-                folder: targetFolder 
+                folder: targetFolder
             }));
             await fetchHosts();
             window.dispatchEvent(new CustomEvent('ssh-hosts:changed'));
@@ -332,7 +322,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
             const result = await bulkImportSSHHosts(hostsArray);
 
             if (result.success > 0) {
-                toast.success(t('hosts.importCompleted', { success: result.success, failed: result.failed }));
+                toast.success(t('hosts.importCompleted', {success: result.success, failed: result.failed}));
                 if (result.errors.length > 0) {
                     toast.error(`Import errors: ${result.errors.join(', ')}`);
                 }
@@ -436,7 +426,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                     <div>
                         <h2 className="text-xl font-semibold">{t('hosts.sshHosts')}</h2>
                         <p className="text-muted-foreground">
-                            {t('hosts.hostsCount', { count: 0 })}
+                            {t('hosts.hostsCount', {count: 0})}
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -469,66 +459,66 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                        const sampleData = {
-                            hosts: [
-                                {
-                                    name: "Web Server - Production",
-                                    ip: "192.168.1.100",
-                                    port: 22,
-                                    username: "admin",
-                                    authType: "password",
-                                    password: "your_secure_password_here",
-                                    folder: "Production",
-                                    tags: ["web", "production", "nginx"],
-                                    pin: true,
-                                    enableTerminal: true,
-                                    enableTunnel: false,
-                                    enableFileManager: true,
-                                    defaultPath: "/var/www"
-                                },
-                                {
-                                    name: "Database Server",
-                                    ip: "192.168.1.101",
-                                    port: 22,
-                                    username: "dbadmin",
-                                    authType: "key",
-                                    key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
-                                    keyPassword: "optional_key_passphrase",
-                                    keyType: "ssh-ed25519",
-                                    folder: "Production",
-                                    tags: ["database", "production", "postgresql"],
-                                    pin: false,
-                                    enableTerminal: true,
-                                    enableTunnel: true,
-                                    enableFileManager: false,
-                                    tunnelConnections: [
+                                const sampleData = {
+                                    hosts: [
                                         {
-                                            sourcePort: 5432,
-                                            endpointPort: 5432,
-                                            endpointHost: "Web Server - Production",
-                                            maxRetries: 3,
-                                            retryInterval: 10,
-                                            autoStart: true
+                                            name: "Web Server - Production",
+                                            ip: "192.168.1.100",
+                                            port: 22,
+                                            username: "admin",
+                                            authType: "password",
+                                            password: "your_secure_password_here",
+                                            folder: "Production",
+                                            tags: ["web", "production", "nginx"],
+                                            pin: true,
+                                            enableTerminal: true,
+                                            enableTunnel: false,
+                                            enableFileManager: true,
+                                            defaultPath: "/var/www"
+                                        },
+                                        {
+                                            name: "Database Server",
+                                            ip: "192.168.1.101",
+                                            port: 22,
+                                            username: "dbadmin",
+                                            authType: "key",
+                                            key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
+                                            keyPassword: "optional_key_passphrase",
+                                            keyType: "ssh-ed25519",
+                                            folder: "Production",
+                                            tags: ["database", "production", "postgresql"],
+                                            pin: false,
+                                            enableTerminal: true,
+                                            enableTunnel: true,
+                                            enableFileManager: false,
+                                            tunnelConnections: [
+                                                {
+                                                    sourcePort: 5432,
+                                                    endpointPort: 5432,
+                                                    endpointHost: "Web Server - Production",
+                                                    maxRetries: 3,
+                                                    retryInterval: 10,
+                                                    autoStart: true
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            name: "Development Server",
+                                            ip: "192.168.1.102",
+                                            port: 2222,
+                                            username: "developer",
+                                            authType: "credential",
+                                            credentialId: 1,
+                                            folder: "Development",
+                                            tags: ["dev", "testing"],
+                                            pin: false,
+                                            enableTerminal: true,
+                                            enableTunnel: false,
+                                            enableFileManager: true,
+                                            defaultPath: "/home/developer"
                                         }
                                     ]
-                                },
-                                {
-                                    name: "Development Server",
-                                    ip: "192.168.1.102",
-                                    port: 2222,
-                                    username: "developer",
-                                    authType: "credential",
-                                    credentialId: 1,
-                                    folder: "Development",
-                                    tags: ["dev", "testing"],
-                                    pin: false,
-                                    enableTerminal: true,
-                                    enableTunnel: false,
-                                    enableFileManager: true,
-                                    defaultPath: "/home/developer"
-                                }
-                            ]
-                        };
+                                };
 
                                 const blob = new Blob([JSON.stringify(sampleData, null, 2)], {type: 'application/json'});
                                 const url = URL.createObjectURL(blob);
@@ -590,7 +580,7 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                 <div>
                     <h2 className="text-xl font-semibold">{t('hosts.sshHosts')}</h2>
                     <p className="text-muted-foreground">
-                        {t('hosts.hostsCount', { count: filteredAndSortedHosts.length })}
+                        {t('hosts.hostsCount', {count: filteredAndSortedHosts.length})}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -738,8 +728,8 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
             <ScrollArea className="flex-1 min-h-0">
                 <div className="space-y-2 pb-20">
                     {Object.entries(hostsByFolder).map(([folder, folderHosts]) => (
-                        <div 
-                            key={folder} 
+                        <div
+                            key={folder}
                             className={`border rounded-md transition-all duration-200 ${
                                 dragOverFolder === folder ? 'border-blue-500 bg-blue-500/10' : ''
                             }`}
@@ -755,7 +745,8 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                                         <div className="flex items-center gap-2 flex-1">
                                             <Folder className="h-4 w-4"/>
                                             {editingFolder === folder ? (
-                                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center gap-2"
+                                                     onClick={(e) => e.stopPropagation()}>
                                                     <Input
                                                         value={editingFolderName}
                                                         onChange={(e) => setEditingFolderName(e.target.value)}
@@ -794,8 +785,8 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <span 
-                                                        className="font-medium cursor-pointer hover:text-blue-400 transition-colors" 
+                                                    <span
+                                                        className="font-medium cursor-pointer hover:text-blue-400 transition-colors"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             if (folder !== t('hosts.uncategorized')) {
@@ -851,143 +842,149 @@ export function HostManagerViewer({onEditHost}: SSHManagerHostViewerProps) {
                                                                                 {host.name || `${host.username}@${host.ip}`}
                                                                             </h3>
                                                                         </div>
-                                                            <p className="text-xs text-muted-foreground truncate">
-                                                                {host.ip}:{host.port}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground truncate">
-                                                                {host.username}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex gap-1 flex-shrink-0 ml-1">
-                                                            {host.folder && host.folder !== '' && (
-                                                                <Tooltip>
-                                                                    <TooltipTrigger asChild>
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant="ghost"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleRemoveFromFolder(host);
-                                                                            }}
-                                                                            className="h-5 w-5 p-0 text-orange-500 hover:text-orange-700 hover:bg-orange-500/10"
-                                                                            disabled={operationLoading}
-                                                                        >
-                                                                            <FolderMinus className="h-3 w-3"/>
-                                                                        </Button>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent>
-                                                                        <p>Remove from folder "{host.folder}"</p>
-                                                                    </TooltipContent>
-                                                                </Tooltip>
-                                                            )}
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="ghost"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleEdit(host);
-                                                                        }}
-                                                                        className="h-5 w-5 p-0 hover:bg-blue-500/10"
-                                                                    >
-                                                                        <Edit className="h-3 w-3"/>
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>Edit host</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="ghost"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleDelete(host.id, host.name || `${host.username}@${host.ip}`);
-                                                                        }}
-                                                                        className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-500/10"
-                                                                    >
-                                                                        <Trash2 className="h-3 w-3"/>
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>Delete host</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="ghost"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleExport(host);
-                                                                        }}
-                                                                        className="h-5 w-5 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-500/10"
-                                                                    >
-                                                                        <Upload className="h-3 w-3"/>
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>Export host</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
+                                                                        <p className="text-xs text-muted-foreground truncate">
+                                                                            {host.ip}:{host.port}
+                                                                        </p>
+                                                                        <p className="text-xs text-muted-foreground truncate">
+                                                                            {host.username}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="flex gap-1 flex-shrink-0 ml-1">
+                                                                        {host.folder && host.folder !== '' && (
+                                                                            <Tooltip>
+                                                                                <TooltipTrigger asChild>
+                                                                                    <Button
+                                                                                        size="sm"
+                                                                                        variant="ghost"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleRemoveFromFolder(host);
+                                                                                        }}
+                                                                                        className="h-5 w-5 p-0 text-orange-500 hover:text-orange-700 hover:bg-orange-500/10"
+                                                                                        disabled={operationLoading}
+                                                                                    >
+                                                                                        <FolderMinus
+                                                                                            className="h-3 w-3"/>
+                                                                                    </Button>
+                                                                                </TooltipTrigger>
+                                                                                <TooltipContent>
+                                                                                    <p>Remove from folder
+                                                                                        "{host.folder}"</p>
+                                                                                </TooltipContent>
+                                                                            </Tooltip>
+                                                                        )}
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="ghost"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleEdit(host);
+                                                                                    }}
+                                                                                    className="h-5 w-5 p-0 hover:bg-blue-500/10"
+                                                                                >
+                                                                                    <Edit className="h-3 w-3"/>
+                                                                                </Button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>Edit host</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="ghost"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleDelete(host.id, host.name || `${host.username}@${host.ip}`);
+                                                                                    }}
+                                                                                    className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-500/10"
+                                                                                >
+                                                                                    <Trash2 className="h-3 w-3"/>
+                                                                                </Button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>Delete host</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="ghost"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleExport(host);
+                                                                                    }}
+                                                                                    className="h-5 w-5 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-500/10"
+                                                                                >
+                                                                                    <Upload className="h-3 w-3"/>
+                                                                                </Button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>Export host</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
 
-                                                        </div>
-                                                    </div>
+                                                                    </div>
+                                                                </div>
 
-                                                    <div className="mt-2 space-y-1">
-                                                        {host.tags && host.tags.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {host.tags.slice(0, 6).map((tag, index) => (
-                                                                    <Badge key={index} variant="outline"
-                                                                           className="text-xs px-1 py-0">
-                                                                        <Tag className="h-2 w-2 mr-0.5"/>
-                                                                        {tag}
-                                                                    </Badge>
-                                                                ))}
-                                                                {host.tags.length > 6 && (
-                                                                    <Badge variant="outline"
-                                                                           className="text-xs px-1 py-0">
-                                                                        +{host.tags.length - 6}
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {host.enableTerminal && (
-                                                                <Badge variant="outline" className="text-xs px-1 py-0">
-                                                                    <Terminal className="h-2 w-2 mr-0.5"/>
-                                                                    {t('hosts.terminalBadge')}
-                                                                </Badge>
-                                                            )}
-                                                            {host.enableTunnel && (
-                                                                <Badge variant="outline" className="text-xs px-1 py-0">
-                                                                    <Network className="h-2 w-2 mr-0.5"/>
-                                                                    {t('hosts.tunnelBadge')}
-                                                                    {host.tunnelConnections && host.tunnelConnections.length > 0 && (
-                                                                        <span
-                                                                            className="ml-0.5">({host.tunnelConnections.length})</span>
+                                                                <div className="mt-2 space-y-1">
+                                                                    {host.tags && host.tags.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1">
+                                                                            {host.tags.slice(0, 6).map((tag, index) => (
+                                                                                <Badge key={index} variant="outline"
+                                                                                       className="text-xs px-1 py-0">
+                                                                                    <Tag className="h-2 w-2 mr-0.5"/>
+                                                                                    {tag}
+                                                                                </Badge>
+                                                                            ))}
+                                                                            {host.tags.length > 6 && (
+                                                                                <Badge variant="outline"
+                                                                                       className="text-xs px-1 py-0">
+                                                                                    +{host.tags.length - 6}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
                                                                     )}
-                                                                </Badge>
-                                                            )}
-                                                            {host.enableFileManager && (
-                                                                <Badge variant="outline" className="text-xs px-1 py-0">
-                                                                    <FileEdit className="h-2 w-2 mr-0.5"/>
-                                                                    {t('hosts.fileManagerBadge')}
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                            </TooltipTrigger>
+
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {host.enableTerminal && (
+                                                                            <Badge variant="outline"
+                                                                                   className="text-xs px-1 py-0">
+                                                                                <Terminal className="h-2 w-2 mr-0.5"/>
+                                                                                {t('hosts.terminalBadge')}
+                                                                            </Badge>
+                                                                        )}
+                                                                        {host.enableTunnel && (
+                                                                            <Badge variant="outline"
+                                                                                   className="text-xs px-1 py-0">
+                                                                                <Network className="h-2 w-2 mr-0.5"/>
+                                                                                {t('hosts.tunnelBadge')}
+                                                                                {host.tunnelConnections && host.tunnelConnections.length > 0 && (
+                                                                                    <span
+                                                                                        className="ml-0.5">({host.tunnelConnections.length})</span>
+                                                                                )}
+                                                                            </Badge>
+                                                                        )}
+                                                                        {host.enableFileManager && (
+                                                                            <Badge variant="outline"
+                                                                                   className="text-xs px-1 py-0">
+                                                                                <FileEdit className="h-2 w-2 mr-0.5"/>
+                                                                                {t('hosts.fileManagerBadge')}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </TooltipTrigger>
                                                         <TooltipContent>
                                                             <div className="text-center">
                                                                 <p className="font-medium">Click to edit host</p>
-                                                                <p className="text-xs text-muted-foreground">Drag to move between folders</p>
+                                                                <p className="text-xs text-muted-foreground">Drag to
+                                                                    move between folders</p>
                                                             </div>
                                                         </TooltipContent>
                                                     </Tooltip>

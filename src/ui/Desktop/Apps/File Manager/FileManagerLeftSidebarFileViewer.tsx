@@ -1,8 +1,7 @@
 import React from 'react';
 import {Button} from '@/components/ui/button.tsx';
 import {Card} from '@/components/ui/card.tsx';
-import {Separator} from '@/components/ui/separator.tsx';
-import {Plus, Folder, File, Star, Trash2, Edit, Link2, Server, Pin} from 'lucide-react';
+import {Folder, File, Trash2, Pin} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 
 interface SSHConnection {
@@ -43,12 +42,6 @@ interface FileManagerLeftSidebarVileViewerProps {
 }
 
 export function FileManagerLeftSidebarFileViewer({
-                                                     sshConnections,
-                                                     onAddSSH,
-                                                     onConnectSSH,
-                                                     onEditSSH,
-                                                     onDeleteSSH,
-                                                     onPinSSH,
                                                      currentPath,
                                                      files,
                                                      onOpenFile,
@@ -58,12 +51,9 @@ export function FileManagerLeftSidebarFileViewer({
                                                      isLoading,
                                                      error,
                                                      isSSHMode,
-                                                     onSwitchToLocal,
-                                                     onSwitchToSSH,
-                                                     currentSSH,
                                                  }: FileManagerLeftSidebarVileViewerProps) {
     const {t} = useTranslation();
-    
+
     return (
         <div className="flex flex-col h-full">
             <div className="flex-1 bg-dark-bg-darkest p-2 overflow-y-auto">

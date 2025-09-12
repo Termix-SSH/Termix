@@ -5,7 +5,7 @@ import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs.tsx
 import {Input} from '@/components/ui/input.tsx';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import type { FileItem, ShortcutItem } from '../../../types/index';
+import type {FileItem, ShortcutItem} from '../../../types/index';
 
 interface FileManagerHomeViewProps {
     recent: FileItem[];
@@ -111,9 +111,12 @@ export function FileManagerHomeView({
         <div className="p-4 flex flex-col gap-4 h-full bg-dark-bg-darkest">
             <Tabs value={tab} onValueChange={v => setTab(v as 'recent' | 'pinned' | 'shortcuts')} className="w-full">
                 <TabsList className="mb-4 bg-dark-bg border-2 border-dark-border">
-                    <TabsTrigger value="recent" className="data-[state=active]:bg-dark-bg-button">{t('fileManager.recent')}</TabsTrigger>
-                    <TabsTrigger value="pinned" className="data-[state=active]:bg-dark-bg-button">{t('fileManager.pinned')}</TabsTrigger>
-                    <TabsTrigger value="shortcuts" className="data-[state=active]:bg-dark-bg-button">{t('fileManager.folderShortcuts')}</TabsTrigger>
+                    <TabsTrigger value="recent"
+                                 className="data-[state=active]:bg-dark-bg-button">{t('fileManager.recent')}</TabsTrigger>
+                    <TabsTrigger value="pinned"
+                                 className="data-[state=active]:bg-dark-bg-button">{t('fileManager.pinned')}</TabsTrigger>
+                    <TabsTrigger value="shortcuts"
+                                 className="data-[state=active]:bg-dark-bg-button">{t('fileManager.folderShortcuts')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="recent" className="mt-0">

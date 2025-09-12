@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, {useEffect} from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import {loadLanguage} from '@uiw/codemirror-extensions-langs';
 import {hyperLink} from '@uiw/codemirror-extensions-hyper-link';

@@ -35,7 +35,7 @@ interface FolderCardProps {
     isLast: boolean;
 }
 
-export function FolderCard({folderName, hosts, isFirst, isLast}: FolderCardProps): React.ReactElement {
+export function FolderCard({folderName, hosts}: FolderCardProps): React.ReactElement {
     const [isExpanded, setIsExpanded] = useState(true);
 
     const toggleExpanded = () => {

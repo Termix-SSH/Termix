@@ -1,22 +1,22 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { PasswordInput } from "@/components/ui/password-input.tsx";
-import { Label } from "@/components/ui/label.tsx";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
-import { Shield, Copy, Download, AlertCircle, CheckCircle2 } from "lucide-react";
-import { setupTOTP, enableTOTP, disableTOTP, generateBackupCodes } from "@/ui/main-axios.ts";
-import { toast } from "sonner";
-import { useTranslation } from 'react-i18next';
+import React, {useState} from "react";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
+import {Button} from "@/components/ui/button.tsx";
+import {Input} from "@/components/ui/input.tsx";
+import {PasswordInput} from "@/components/ui/password-input.tsx";
+import {Label} from "@/components/ui/label.tsx";
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
+import {Shield, Copy, Download, AlertCircle, CheckCircle2} from "lucide-react";
+import {setupTOTP, enableTOTP, disableTOTP, generateBackupCodes} from "@/ui/main-axios.ts";
+import {toast} from "sonner";
+import {useTranslation} from 'react-i18next';
 
 interface TOTPSetupProps {
     isEnabled: boolean;
     onStatusChange?: (enabled: boolean) => void;
 }
 
-export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSetupProps) {
+export function TOTPSetup({isEnabled: initialEnabled, onStatusChange}: TOTPSetupProps) {
     const {t} = useTranslation();
     const [isEnabled, setIsEnabled] = useState(initialEnabled);
     const [isSettingUp, setIsSettingUp] = useState(false);
@@ -109,8 +109,8 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
             `Generated: ${new Date().toISOString()}\n\n` +
             `Keep these codes in a safe place. Each code can only be used once.\n\n` +
             backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n');
-        
-        const blob = new Blob([content], { type: 'text/plain' });
+
+        const blob = new Blob([content], {type: 'text/plain'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -133,7 +133,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Shield className="w-5 h-5" />
+                        <Shield className="w-5 h-5"/>
                         {t('auth.twoFactorTitle')}
                     </CardTitle>
                     <CardDescription>
@@ -142,7 +142,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <Alert>
-                        <CheckCircle2 className="h-4 w-4" />
+                        <CheckCircle2 className="h-4 w-4"/>
                         <AlertTitle>{t('common.enabled')}</AlertTitle>
                         <AlertDescription>
                             {t('auth.twoFactorActive')}
@@ -154,16 +154,16 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                             <TabsTrigger value="disable">{t('auth.disable2FA')}</TabsTrigger>
                             <TabsTrigger value="backup">{t('auth.backupCodes')}</TabsTrigger>
                         </TabsList>
-                        
+
                         <TabsContent value="disable" className="space-y-4">
                             <Alert variant="destructive">
-                                <AlertCircle className="h-4 w-4" />
+                                <AlertCircle className="h-4 w-4"/>
                                 <AlertTitle>{t('common.warning')}</AlertTitle>
                                 <AlertDescription>
                                     {t('auth.disableTwoFactorWarning')}
                                 </AlertDescription>
                             </Alert>
-                            
+
                             <div className="space-y-2">
                                 <Label htmlFor="disable-password">{t('auth.passwordOrTotpCode')}</Label>
                                 <PasswordInput
@@ -182,7 +182,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                                     onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ''))}
                                 />
                             </div>
-                            
+
                             <Button
                                 variant="destructive"
                                 onClick={handleDisable}
@@ -191,12 +191,12 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                                 {t('auth.disableTwoFactor')}
                             </Button>
                         </TabsContent>
-                        
+
                         <TabsContent value="backup" className="space-y-4">
                             <p className="text-sm text-muted-foreground">
                                 {t('auth.generateNewBackupCodesText')}
                             </p>
-                            
+
                             <div className="space-y-2">
                                 <Label htmlFor="backup-password">{t('auth.passwordOrTotpCode')}</Label>
                                 <PasswordInput
@@ -215,14 +215,14 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                                     onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ''))}
                                 />
                             </div>
-                            
+
                             <Button
                                 onClick={handleGenerateNewBackupCodes}
                                 disabled={loading || (!password && !disableCode)}
                             >
                                 {t('auth.generateNewBackupCodes')}
                             </Button>
-                            
+
                             {backupCodes.length > 0 && (
                                 <div className="space-y-2 mt-4">
                                     <div className="flex justify-between items-center">
@@ -232,7 +232,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                                             variant="outline"
                                             onClick={downloadBackupCodes}
                                         >
-                                            <Download className="w-4 h-4 mr-2" />
+                                            <Download className="w-4 h-4 mr-2"/>
                                             {t('auth.download')}
                                         </Button>
                                     </div>
@@ -248,7 +248,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
 
                     {error && (
                         <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
+                            <AlertCircle className="h-4 w-4"/>
                             <AlertTitle>{t('common.error')}</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
@@ -269,9 +269,9 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex justify-center">
-                        <img src={qrCode} alt="TOTP QR Code" className="w-64 h-64" />
+                        <img src={qrCode} alt="TOTP QR Code" className="w-64 h-64"/>
                     </div>
-                    
+
                     <div className="space-y-2">
                         <Label>{t('auth.manualEntryCode')}</Label>
                         <div className="flex gap-2">
@@ -285,14 +285,14 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                                 variant="outline"
                                 onClick={() => copyToClipboard(secret, "Secret key")}
                             >
-                                <Copy className="w-4 h-4" />
+                                <Copy className="w-4 h-4"/>
                             </Button>
                         </div>
                         <p className="text-xs text-muted-foreground">
                             {t('auth.cannotScanQRText')}
                         </p>
                     </div>
-                    
+
                     <Button onClick={() => setSetupStep("verify")} className="w-full">
                         {t('auth.nextVerifyCode')}
                     </Button>
@@ -323,15 +323,15 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                             className="text-center text-2xl tracking-widest font-mono"
                         />
                     </div>
-                    
+
                     {error && (
                         <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
+                            <AlertCircle className="h-4 w-4"/>
                             <AlertTitle>{t('common.error')}</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
-                    
+
                     <div className="flex gap-2">
                         <Button
                             variant="outline"
@@ -364,13 +364,13 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <Alert>
-                        <AlertCircle className="h-4 w-4" />
+                        <AlertCircle className="h-4 w-4"/>
                         <AlertTitle>{t('common.important')}</AlertTitle>
                         <AlertDescription>
                             {t('auth.importantBackupCodesText')}
                         </AlertDescription>
                     </Alert>
-                    
+
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <Label>Your Backup Codes</Label>
@@ -379,7 +379,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                                 variant="outline"
                                 onClick={downloadBackupCodes}
                             >
-                                <Download className="w-4 h-4 mr-2" />
+                                <Download className="w-4 h-4 mr-2"/>
                                 Download
                             </Button>
                         </div>
@@ -392,7 +392,7 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                             ))}
                         </div>
                     </div>
-                    
+
                     <Button onClick={handleComplete} className="w-full">
                         {t('auth.completeSetup')}
                     </Button>
@@ -405,14 +405,14 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Shield className="w-5 h-5" />
+                    <Shield className="w-5 h-5"/>
                     {t('auth.twoFactorTitle')}
                 </CardTitle>
                 <CardDescription className="space-y-2">
                     <p>{t('auth.addExtraSecurityLayer')}.</p>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
+                    <Button
+                        variant="outline"
+                        size="sm"
                         className="h-8 px-3 text-xs"
                         onClick={() => window.open('https://docs.termix.site/totp', '_blank')}
                     >
@@ -422,20 +422,20 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
             </CardHeader>
             <CardContent className="space-y-4">
                 <Alert>
-                    <AlertCircle className="h-4 w-4" />
+                    <AlertCircle className="h-4 w-4"/>
                     <AlertTitle>{t('common.notEnabled')}</AlertTitle>
                     <AlertDescription>
                         {t('auth.notEnabledText')}
                     </AlertDescription>
                 </Alert>
-                
+
                 <Button onClick={handleSetupStart} disabled={loading} className="w-full">
                     {loading ? t('common.settingUp') : t('auth.enableTwoFactorButton')}
                 </Button>
-                
+
                 {error && (
                     <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
+                        <AlertCircle className="h-4 w-4"/>
                         <AlertTitle>Error</AlertTitle>
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>

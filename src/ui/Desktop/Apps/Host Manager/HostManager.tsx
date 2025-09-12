@@ -7,7 +7,7 @@ import {CredentialsManager} from "@/ui/Desktop/Apps/Credentials/CredentialsManag
 import {CredentialEditor} from "@/ui/Desktop/Apps/Credentials/CredentialEditor.tsx";
 import {useSidebar} from "@/components/ui/sidebar.tsx";
 import {useTranslation} from "react-i18next";
-import type { SSHHost, HostManagerProps } from '../../../types/index';
+import type {SSHHost, HostManagerProps} from '../../../types/index';
 
 export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): React.ReactElement {
     const {t} = useTranslation();
@@ -40,7 +40,6 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
 
     const handleTabChange = (value: string) => {
         setActiveTab(value);
-        // Reset editing states when switching away from edit tabs
         if (value !== "add_host") {
             setEditingHost(null);
         }
@@ -95,7 +94,7 @@ export function HostManager({onSelectView, isTopbarOpen}: HostManagerProps): Rea
                         <TabsContent value="credentials" className="flex-1 flex flex-col h-full min-h-0">
                             <Separator className="p-0.25 -mt-0.5 mb-1"/>
                             <div className="flex flex-col h-full min-h-0 overflow-auto">
-                                <CredentialsManager onEditCredential={handleEditCredential} />
+                                <CredentialsManager onEditCredential={handleEditCredential}/>
                             </div>
                         </TabsContent>
                         <TabsContent value="add_credential" className="flex-1 flex flex-col h-full min-h-0">
