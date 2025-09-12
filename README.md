@@ -30,8 +30,6 @@
 If you would like, you can support the project here!\
 [![GitHub Sponsor](https://img.shields.io/badge/Sponsor-LukeGus-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/LukeGus)
 
----
-
 # Overview
 
 <p align="center">
@@ -42,8 +40,6 @@ If you would like, you can support the project here!\
 Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a web-based
 solution for managing your servers and infrastructure through a single, intuitive interface. Termix offers SSH terminal
 access, SSH tunneling capabilities, and remote file editing, with many more tools to come.
-
----
 
 # Features
 
@@ -59,14 +55,10 @@ access, SSH tunneling capabilities, and remote file editing, with many more tool
 - **Improved Platform Support** - Now includes an installable Electron app (in progress) for desktop, with a dedicated
   mobile app also planned.
 
----
-
 # Planned Features
 
 See [Projects](https://github.com/users/LukeGus/projects/3). If you are looking to contribute,
 see [Contributing](https://github.com/LukeGus/Termix/blob/main/CONTRIBUTING.md),
-
----
 
 # Installation
 
@@ -95,15 +87,11 @@ Pre-built binaries are now available for download, including a Windows installer
 built with Electron). See [Docs](http://localhost:5174/install#pre-built-binaries) for details. A native iOS/Android app
 is planned.
 
----
-
 # Support
 
 If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support
 channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues)
 repo.
-
----
 
 # Show-off
 
@@ -123,8 +111,6 @@ repo.
     Your browser does not support the video tag.
   </video>
 </p>
-
----
 
 # License
 
