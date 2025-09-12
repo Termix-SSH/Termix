@@ -985,7 +985,6 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                         </FormItem>
                                     )}
                                 />
-
                                 {form.watch('enableTunnel') && (
                                     <>
                                         <Alert className="mt-4">
@@ -1026,7 +1025,16 @@ export function HostManagerEditor({editingHost, onFormSubmit}: SSHManagerHostEdi
                                                 <div className="mt-2">{t('hosts.editSshConfig')}</div>
                                             </AlertDescription>
                                         </Alert>
-
+                                        <div className="mt-3 flex justify-between">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="h-8 px-3 text-xs"
+                                                onClick={() => window.open('https://docs.termix.site/tunnels', '_blank')}
+                                            >
+                                                {t('common.documentation')}
+                                            </Button>
+                                        </div>
                                         <FormField
                                             control={form.control}
                                             name="tunnelConnections"

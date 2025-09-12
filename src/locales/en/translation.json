@@ -269,7 +269,8 @@
     "passwordResetSuccess": "Password reset successfully! You can now log in with your new password.",
     "failedToInitiatePasswordReset": "Failed to initiate password reset",
     "failedToVerifyResetCode": "Failed to verify reset code",
-    "failedToCompletePasswordReset": "Failed to complete password reset"
+    "failedToCompletePasswordReset": "Failed to complete password reset",
+    "documentation": "Documentation"
   },
   "nav": {
     "home": "Home",

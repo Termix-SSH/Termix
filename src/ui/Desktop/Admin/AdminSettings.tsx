@@ -305,9 +305,19 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
                         </TabsContent>
 
                         <TabsContent value="oidc" className="space-y-6">
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 <h3 className="text-lg font-semibold">{t('admin.externalAuthentication')}</h3>
-                                <p className="text-sm text-muted-foreground">{t('admin.configureExternalProvider')}</p>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">{t('admin.configureExternalProvider')}</p>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-8 px-3 text-xs"
+                                        onClick={() => window.open('https://docs.termix.site/oidc', '_blank')}
+                                    >
+                                        {t('common.documentation')}
+                                    </Button>
+                                </div>
 
                                 {oidcError && (
                                     <Alert variant="destructive">

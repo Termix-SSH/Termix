@@ -256,7 +256,8 @@
     "passwordResetSuccess": "密码重置成功！您现在可以使用新密码登录。",
     "failedToInitiatePasswordReset": "启动密码重置失败",
     "failedToVerifyResetCode": "验证重置代码失败",
-    "failedToCompletePasswordReset": "完成密码重置失败"
+    "failedToCompletePasswordReset": "完成密码重置失败",
+    "documentation": "文档"
   },
   "nav": {
     "home": "首页",

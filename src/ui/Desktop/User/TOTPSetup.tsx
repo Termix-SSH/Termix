@@ -408,8 +408,16 @@ export function TOTPSetup({ isEnabled: initialEnabled, onStatusChange }: TOTPSet
                     <Shield className="w-5 h-5" />
                     {t('auth.twoFactorTitle')}
                 </CardTitle>
-                <CardDescription>
-                    {t('auth.addExtraSecurityLayer')}
+                <CardDescription className="space-y-2">
+                    <p>{t('auth.addExtraSecurityLayer')}.</p>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 px-3 text-xs"
+                        onClick={() => window.open('https://docs.termix.site/totp', '_blank')}
+                    >
+                        {t('common.documentation')}
+                    </Button>
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
