@@ -107,7 +107,7 @@
     "@vitejs/plugin-react-swc": "^3.10.2",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
-    "electron": "^38.0.0",
+    "electron": "^38.1.0",
     "electron-builder": "^26.0.12",
     "electron-icon-builder": "^2.0.1",
     "electron-packager": "^17.1.2",
