@@ -8,6 +8,7 @@ import React, {
 import {
   Folder,
   File,
+  FileSymlink,
   ArrowUp,
   Pin,
   MoreVertical,
@@ -29,6 +30,7 @@ import {
   removeFileManagerPinned,
   getSSHStatus,
   connectSSH,
+  identifySSHSymlink,
 } from "@/ui/main-axios.ts";
 import type { SSHHost } from "../../../types/index.js";
 
@@ -339,7 +341,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
     try {
       await renameSSHItem(sshSessionId, item.path, newName.trim());
       toast.success(
-        `${item.type === "directory" ? t("common.folder") : t("common.file")} ${t("common.renamedSuccessfully")}`,
+        `${item.type === "directory" ? t("common.folder") : item.type === "link" ? t("common.link") : t("common.file")} ${t("common.renamedSuccessfully")}`,
       );
       setRenamingItem(null);
       if (onOperationComplete) {
@@ -373,6 +375,74 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
   const handlePathChange = (newPath: string) => {
     setCurrentPath(newPath);
     onPathChange?.(newPath);
+  };
+
+  // Handle symlink resolution
+  const handleSymlinkClick = async (item: any) => {
+    if (!host) return;
+
+    try {
+      // Extract just the symlink path (before the " -> " if present)
+      const symlinkPath = item.path.includes(" -> ") 
+        ? item.path.split(" -> ")[0] 
+        : item.path;
+      
+      let currentSessionId = sshSessionId;
+      
+      // Check SSH connection status and reconnect if needed
+      if (currentSessionId) {
+        try {
+          const status = await getSSHStatus(currentSessionId);
+          if (!status.connected) {
+            const newSessionId = await connectToSSH(host);
+            if (newSessionId) {
+              setSshSessionId(newSessionId);
+              currentSessionId = newSessionId;
+            } else {
+              throw new Error(t("fileManager.failedToReconnectSSH"));
+            }
+          }
+        } catch (sessionErr) {
+          const newSessionId = await connectToSSH(host);
+          if (newSessionId) {
+            setSshSessionId(newSessionId);
+            currentSessionId = newSessionId;
+          } else {
+            throw sessionErr;
+          }
+        }
+      } else {
+        // No session ID, try to connect
+        const newSessionId = await connectToSSH(host);
+        if (newSessionId) {
+          setSshSessionId(newSessionId);
+          currentSessionId = newSessionId;
+        } else {
+          throw new Error(t("fileManager.failedToConnectSSH"));
+        }
+      }
+      
+      const symlinkInfo = await identifySSHSymlink(currentSessionId, symlinkPath);
+      
+      if (symlinkInfo.type === "directory") {
+        // If symlink points to a directory, navigate to it
+        handlePathChange(symlinkInfo.target);
+      } else if (symlinkInfo.type === "file") {
+        // If symlink points to a file, open it as a file
+        onOpenFile({
+          name: item.name,
+          path: symlinkInfo.target, // Use the target path, not the symlink path
+          isSSH: item.isSSH,
+          sshSessionId: currentSessionId,
+        });
+      }
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.error || 
+        error?.message ||
+        t("fileManager.failedToResolveSymlink"),
+      );
+    }
   };
 
   return (
@@ -456,6 +526,8 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                   {item.type === "directory" ? (
                                     <Folder className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                                  ) : item.type === "link" ? (
+                                    <FileSymlink className="w-4 h-4 text-blue-400 flex-shrink-0" />
                                   ) : (
                                     <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                   )}
@@ -496,6 +568,8 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                       !isOpen &&
                                       (item.type === "directory"
                                         ? handlePathChange(item.path)
+                                        : item.type === "link"
+                                        ? handleSymlinkClick(item)
                                         : onOpenFile({
                                             name: item.name,
                                             path: item.path,
@@ -506,6 +580,8 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                   >
                                     {item.type === "directory" ? (
                                       <Folder className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                                    ) : item.type === "link" ? (
+                                      <FileSymlink className="w-4 h-4 text-blue-400 flex-shrink-0" />
                                     ) : (
                                       <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                     )}
@@ -514,7 +590,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1">
-                                    {item.type === "file" && (
+                                    {(item.type === "file") && (
                                       <Button
                                         size="icon"
                                         variant="ghost"
