@@ -12,7 +12,12 @@ app.use(
   cors({
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "User-Agent", "X-Electron-App"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "User-Agent",
+      "X-Electron-App",
+    ],
   }),
 );
 app.use(express.json({ limit: "100mb" }));
