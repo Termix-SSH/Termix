@@ -5,9 +5,9 @@ on:
     branches:
       - development
     paths-ignore:
-      - "**.md"
-      - ".gitignore"
-      - "docker/**"
+      - '**.md'
+      - '.gitignore'
+      - 'docker/**'
   workflow_dispatch:
     inputs:
       build_type:
@@ -34,8 +34,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -48,9 +48,7 @@ jobs:
 
       - name: Create Windows Portable zip
         run: |
-          cd release/win-unpacked
-          Compress-Archive -Path * -DestinationPath "../../Termix-Windows-Portable.zip"
-          cd ../..
+          Compress-Archive -Path "release/win-unpacked/*" -DestinationPath "Termix-Windows-Portable.zip"
 
       - name: Upload Windows Portable Artifact
         uses: actions/upload-artifact@v4
@@ -79,8 +77,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
