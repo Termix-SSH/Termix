@@ -340,9 +340,7 @@
     "oidcConfigurationUpdated": "OIDC configuration updated successfully!",
     "failedToFetchOidcConfig": "Failed to fetch OIDC configuration",
     "failedToFetchRegistrationStatus": "Failed to fetch registration status",
-    "user": {
-      "failedToLoadVersionInfo": "Failed to load version information"
-    },
+    "failedToFetchUsers": "Failed to fetch users",
     "oidcConfigurationDisabled": "OIDC configuration disabled successfully!",
     "failedToUpdateOidcConfig": "Failed to update OIDC configuration",
     "failedToDisableOidcConfig": "Failed to disable OIDC configuration",
@@ -863,6 +861,9 @@
     "local": "Local",
     "external": "External (OIDC)",
     "selectPreferredLanguage": "Select your preferred language for the interface"
+  },
+  "user": {
+    "failedToLoadVersionInfo": "Failed to load version information"
   },
   "placeholders": {
     "enterCode": "000000",

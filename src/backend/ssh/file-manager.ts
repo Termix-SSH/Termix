@@ -825,11 +825,9 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
               streamErr,
             );
             if (!res.headersSent) {
-              res
-                .status(500)
-                .json({
-                  error: `Chunked upload stream error: ${streamErr.message}`,
-                });
+              res.status(500).json({
+                error: `Chunked upload stream error: ${streamErr.message}`,
+              });
             }
           });
         });

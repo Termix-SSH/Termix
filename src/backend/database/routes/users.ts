@@ -640,11 +640,9 @@ router.get("/oidc/callback", async (req, res) => {
         `Identifier not found at path: ${config.identifier_path}`,
       );
       authLogger.error(`Available fields: ${Object.keys(userInfo).join(", ")}`);
-      return res
-        .status(400)
-        .json({
-          error: `User identifier not found at path: ${config.identifier_path}. Available fields: ${Object.keys(userInfo).join(", ")}`,
-        });
+      return res.status(400).json({
+        error: `User identifier not found at path: ${config.identifier_path}. Available fields: ${Object.keys(userInfo).join(", ")}`,
+      });
     }
 
     let user = await db
@@ -916,12 +914,10 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
     const userRecord = user[0];
 
     if (userRecord.is_oidc) {
-      return res
-        .status(403)
-        .json({
-          error:
-            "Cannot delete external authentication accounts through this endpoint",
-        });
+      return res.status(403).json({
+        error:
+          "Cannot delete external authentication accounts through this endpoint",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, userRecord.password_hash);
@@ -976,12 +972,9 @@ router.post("/initiate-reset", async (req, res) => {
     }
 
     if (user[0].is_oidc) {
-      return res
-        .status(403)
-        .json({
-          error:
-            "Password reset not available for external authentication users",
-        });
+      return res.status(403).json({
+        error: "Password reset not available for external authentication users",
+      });
     }
 
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -1074,11 +1067,9 @@ router.post("/complete-reset", async (req, res) => {
     !isNonEmptyString(tempToken) ||
     !isNonEmptyString(newPassword)
   ) {
-    return res
-      .status(400)
-      .json({
-        error: "Username, temporary token, and new password are required",
-      });
+    return res.status(400).json({
+      error: "Username, temporary token, and new password are required",
+    });
   }
 
   try {
@@ -1602,12 +1593,10 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
 
     if (err && typeof err === "object" && "code" in err) {
       if (err.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
-        res
-          .status(400)
-          .json({
-            error:
-              "Cannot delete user: User has associated data that cannot be removed",
-          });
+        res.status(400).json({
+          error:
+            "Cannot delete user: User has associated data that cannot be removed",
+        });
       } else {
         res.status(500).json({ error: `Database error: ${err.code}` });
       }

@@ -209,7 +209,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
     const wsUrl = isDev
       ? "ws://localhost:8082"
-      : isElectron
+      : isElectron()
         ? (() => {
             const baseUrl =
               (window as any).configuredServerUrl || "http://127.0.0.1:8081";
