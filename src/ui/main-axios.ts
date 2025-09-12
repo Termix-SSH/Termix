@@ -173,7 +173,7 @@ function createApiInstance(
       );
     }
 
-    if (isElectron) {
+    if (isElectron()) {
       config.headers["X-Electron-App"] = "true";
       config.headers["User-Agent"] = "Termix-Electron/1.6.0";
     }
@@ -289,17 +289,22 @@ function createApiInstance(
 // API INSTANCES
 // ============================================================================
 
-const isDev =
-  process.env.NODE_ENV === "development" &&
-  (window.location.port === "3000" ||
-    window.location.port === "5173" ||
-    window.location.port === "");
+function isDev(): boolean {
+  return (
+    process.env.NODE_ENV === "development" &&
+    (window.location.port === "3000" ||
+      window.location.port === "5173" ||
+      window.location.port === "" ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1")
+  );
+}
 
 let apiHost = import.meta.env.VITE_API_HOST || "localhost";
 let apiPort = 8081;
 let configuredServerUrl: string | null = null;
 
-if (isElectron) {
+if (isElectron()) {
   apiPort = 8081;
 }
 
@@ -309,7 +314,7 @@ export interface ServerConfig {
 }
 
 export async function getServerConfig(): Promise<ServerConfig | null> {
-  if (!isElectron) return null;
+  if (!isElectron()) return null;
 
   try {
     const result = await (window as any).electronAPI?.invoke(
@@ -323,7 +328,7 @@ export async function getServerConfig(): Promise<ServerConfig | null> {
 }
 
 export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
-  if (!isElectron) return false;
+  if (!isElectron()) return false;
 
   try {
     const result = await (window as any).electronAPI?.invoke(
@@ -345,7 +350,7 @@ export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
 export async function testServerConnection(
   serverUrl: string,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isElectron)
+  if (!isElectron())
     return { success: false, error: "Not in Electron environment" };
 
   try {
@@ -360,7 +365,7 @@ export async function testServerConnection(
   }
 }
 
-if (isElectron) {
+if (isElectron()) {
   getServerConfig().then((config) => {
     if (config?.serverUrl) {
       configuredServerUrl = config.serverUrl;
@@ -370,36 +375,57 @@ if (isElectron) {
 }
 
 function getApiUrl(path: string, defaultPort: number): string {
-  if (isElectron()) {
+  if (isDev()) {
+    return `http://${apiHost}:${defaultPort}${path}`;
+  } else if (isElectron()) {
     if (configuredServerUrl) {
       const baseUrl = configuredServerUrl.replace(/\/$/, "");
       return `${baseUrl}${path}`;
     }
     return "http://no-server-configured";
-  } else if (isDev) {
-    return `http://${apiHost}:${defaultPort}${path}`;
   } else {
     return path;
   }
 }
 
+// Initialize API instances
+function initializeApiInstances() {
+  // SSH Host Management API (port 8081)
+  sshHostApi = createApiInstance(getApiUrl("/ssh", 8081), "SSH_HOST");
+
+  // Tunnel Management API (port 8083)
+  tunnelApi = createApiInstance(getApiUrl("/ssh", 8083), "TUNNEL");
+
+  // File Manager Operations API (port 8084)
+  fileManagerApi = createApiInstance(
+    getApiUrl("/ssh/file_manager", 8084),
+    "FILE_MANAGER",
+  );
+
+  // Server Statistics API (port 8085)
+  statsApi = createApiInstance(getApiUrl("", 8085), "STATS");
+
+  // Authentication API (port 8081)
+  authApi = createApiInstance(getApiUrl("", 8081), "AUTH");
+}
+
 // SSH Host Management API (port 8081)
-export let sshHostApi = createApiInstance(getApiUrl("/ssh", 8081), "SSH_HOST");
+export let sshHostApi: AxiosInstance;
 
 // Tunnel Management API (port 8083)
-export let tunnelApi = createApiInstance(getApiUrl("/ssh", 8083), "TUNNEL");
+export let tunnelApi: AxiosInstance;
 
 // File Manager Operations API (port 8084)
-export let fileManagerApi = createApiInstance(
-  getApiUrl("/ssh/file_manager", 8084),
-  "FILE_MANAGER",
-);
+export let fileManagerApi: AxiosInstance;
 
 // Server Statistics API (port 8085)
-export let statsApi = createApiInstance(getApiUrl("", 8085), "STATS");
+export let statsApi: AxiosInstance;
 
 // Authentication API (port 8081)
-export let authApi = createApiInstance(getApiUrl("", 8081), "AUTH");
+export let authApi: AxiosInstance;
+
+// Initialize API instances immediately
+initializeApiInstances();
 
 function updateApiInstances() {
   systemLogger.info("Updating API instances with new server configuration", {
@@ -407,14 +433,7 @@ function updateApiInstances() {
     configuredServerUrl,
   });
 
-  sshHostApi = createApiInstance(getApiUrl("/ssh", 8081), "SSH_HOST");
-  tunnelApi = createApiInstance(getApiUrl("/ssh", 8083), "TUNNEL");
-  fileManagerApi = createApiInstance(
-    getApiUrl("/ssh/file_manager", 8084),
-    "FILE_MANAGER",
-  );
-  statsApi = createApiInstance(getApiUrl("", 8085), "STATS");
-  authApi = createApiInstance(getApiUrl("", 8081), "AUTH");
+  initializeApiInstances();
 
   // Make configuredServerUrl available globally for components that need it
   (window as any).configuredServerUrl = configuredServerUrl;

@@ -656,7 +656,6 @@ export function HomepageAuth({
 
                     {resetStep === "verify" && (
                       <>
-                        o
                         <div className="text-center text-muted-foreground mb-4">
                           <p>
                             {t("auth.enterResetCode")}{" "}
