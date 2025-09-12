@@ -3,6 +3,7 @@ import { db } from "../db/index.js";
 import {
   sshData,
   sshCredentials,
+  sshCredentialUsage,
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
@@ -586,9 +587,47 @@ router.delete(
         return res.status(404).json({ error: "SSH host not found" });
       }
 
+      const numericHostId = Number(hostId);
+
+      await db
+        .delete(fileManagerRecent)
+        .where(
+          and(
+            eq(fileManagerRecent.userId, userId),
+            eq(fileManagerRecent.hostId, numericHostId),
+          ),
+        );
+
+      await db
+        .delete(fileManagerPinned)
+        .where(
+          and(
+            eq(fileManagerPinned.userId, userId),
+            eq(fileManagerPinned.hostId, numericHostId),
+          ),
+        );
+
+      await db
+        .delete(fileManagerShortcuts)
+        .where(
+          and(
+            eq(fileManagerShortcuts.userId, userId),
+            eq(fileManagerShortcuts.hostId, numericHostId),
+          ),
+        );
+
+      await db
+        .delete(sshCredentialUsage)
+        .where(
+          and(
+            eq(sshCredentialUsage.userId, userId),
+            eq(sshCredentialUsage.hostId, numericHostId),
+          ),
+        );
+
       const result = await db
         .delete(sshData)
-        .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+        .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
 
       const host = hostToDelete[0];
       sshLogger.success(
