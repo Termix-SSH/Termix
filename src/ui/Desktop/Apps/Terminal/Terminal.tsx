@@ -6,6 +6,7 @@ import {Unicode11Addon} from '@xterm/addon-unicode11';
 import {WebLinksAddon} from '@xterm/addon-web-links';
 import {useTranslation} from 'react-i18next';
 import {toast} from 'sonner';
+import {getCookie} from '@/ui/main-axios.ts';
 
 interface SSHTerminalProps {
     hostConfig: any;
@@ -131,12 +132,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         hardRefresh();
     }
 
-    function getCookie(name: string) {
-        return document.cookie.split('; ').reduce((r, v) => {
-            const parts = v.split('=');
-            return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-        }, "");
-    }
 
     function getUseRightClickCopyPaste() {
         return getCookie("rightClickCopyPaste") === "true"

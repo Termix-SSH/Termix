@@ -21,17 +21,11 @@ import {
     getOIDCAuthorizeUrl,
     verifyTOTPLogin,
     setCookie,
+    getCookie,
     getServerConfig,
     type ServerConfig
 } from "../../main-axios.ts";
 import {ServerConfig as ServerConfigComponent} from "@/ui/Desktop/ElectronOnly/ServerConfig.tsx";
-
-function getCookie(name: string) {
-    return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-    }, "");
-}
 
 interface HomepageAuthProps extends React.ComponentProps<"div"> {
     setLoggedIn: (loggedIn: boolean) => void;

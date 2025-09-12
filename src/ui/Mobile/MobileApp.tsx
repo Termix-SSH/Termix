@@ -4,16 +4,9 @@ import {TerminalKeyboard} from "@/ui/Mobile/Apps/Terminal/TerminalKeyboard.tsx";
 import {BottomNavbar} from "@/ui/Mobile/Navigation/BottomNavbar.tsx";
 import {LeftSidebar} from "@/ui/Mobile/Navigation/LeftSidebar.tsx";
 import {TabProvider, useTabs} from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
-import {getUserInfo} from "@/ui/main-axios.ts";
+import {getUserInfo, getCookie} from "@/ui/main-axios.ts";
 import {HomepageAuth} from "@/ui/Mobile/Homepage/HomepageAuth.tsx";
 import {useTranslation} from "react-i18next";
-
-function getCookie(name: string) {
-    return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-    }, "");
-}
 
 const AppContent: FC = () => {
     const {t} = useTranslation();

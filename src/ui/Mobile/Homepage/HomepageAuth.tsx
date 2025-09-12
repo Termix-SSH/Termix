@@ -18,16 +18,10 @@ import {
     completePasswordReset,
     getOIDCAuthorizeUrl,
     verifyTOTPLogin,
-    setCookie
+    setCookie,
+    getCookie
 } from "@/ui/main-axios.ts";
 import {PasswordInput} from "@/components/ui/password-input.tsx";
-
-function getCookie(name: string) {
-    return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-    }, "");
-}
 
 interface HomepageAuthProps extends React.ComponentProps<"div"> {
     setLoggedIn: (loggedIn: boolean) => void;

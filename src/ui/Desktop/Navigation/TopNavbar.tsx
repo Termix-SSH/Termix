@@ -15,6 +15,7 @@ import {Checkbox} from "@/components/ui/checkbox.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {useTranslation} from "react-i18next";
 import {TabDropdown} from "@/ui/Desktop/Navigation/Tabs/TabDropdown.tsx";
+import {getCookie, setCookie} from "@/ui/main-axios.ts";
 
 interface TopNavbarProps {
     isTopbarOpen: boolean;
@@ -204,15 +205,8 @@ export function TopNavbar({isTopbarOpen, setIsTopbarOpen}: TopNavbarProps): Reac
 
     const terminalTabs = tabs.filter((tab: any) => tab.type === 'terminal');
 
-    function getCookie(name: string) {
-        return document.cookie.split('; ').reduce((r, v) => {
-            const parts = v.split('=');
-            return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-        }, "");
-    }
-
     const updateRightClickCopyPaste = (checked: boolean) => {
-        document.cookie = `rightClickCopyPaste=${checked}; expires=2147483647; path=/`;
+        setCookie("rightClickCopyPaste", checked.toString());
     }
 
     return (
