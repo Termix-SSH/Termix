@@ -3,22 +3,18 @@ import cors from 'cors';
 import {Client} from 'ssh2';
 import {ChildProcess} from 'child_process';
 import axios from 'axios';
-import * as net from 'net';
 import {db} from '../database/db/index.js';
-import {sshData, sshCredentials} from '../database/db/schema.js';
+import {sshCredentials} from '../database/db/schema.js';
 import {eq, and} from 'drizzle-orm';
-import type { 
-    SSHHost, 
-    TunnelConfig, 
-    TunnelConnection, 
-    TunnelStatus, 
-    HostConfig,
+import type {
+    SSHHost,
+    TunnelConfig,
+    TunnelStatus,
     VerificationData,
-    ConnectionState,
     ErrorType
 } from '../../types/index.js';
-import { CONNECTION_STATES } from '../../types/index.js';
-import { tunnelLogger } from '../utils/logger.js';
+import {CONNECTION_STATES} from '../../types/index.js';
+import {tunnelLogger} from '../utils/logger.js';
 
 const app = express();
 app.use(cors({
@@ -41,18 +37,6 @@ const retryExhaustedTunnels = new Set<string>();
 
 const tunnelConfigs = new Map<string, TunnelConfig>();
 const activeTunnelProcesses = new Map<string, ChildProcess>();
-
-
-
-const ERROR_TYPES = {
-    AUTH: "AUTHENTICATION_FAILED",
-    NETWORK: "NETWORK_ERROR",
-    PORT: "CONNECTION_FAILED",
-    PERMISSION: "CONNECTION_FAILED",
-    TIMEOUT: "TIMEOUT",
-    UNKNOWN: "UNKNOWN"
-} as const;
-
 
 function broadcastTunnelStatus(tunnelName: string, status: TunnelStatus): void {
     if (status.status === CONNECTION_STATES.CONNECTED && activeRetryTimers.has(tunnelName)) {
@@ -338,19 +322,7 @@ function handleDisconnect(tunnelName: string, tunnelConfig: TunnelConfig | null,
     }
 }
 
-function verifyTunnelConnection(tunnelName: string, tunnelConfig: TunnelConfig, isPeriodic = false): void {
-    if (isPeriodic) {
-        if (!activeTunnels.has(tunnelName)) {
-            broadcastTunnelStatus(tunnelName, {
-                connected: false,
-                status: CONNECTION_STATES.DISCONNECTED,
-                reason: 'Tunnel connection lost'
-            });
-        }
-    }
-}
-
-function setupPingInterval(tunnelName: string, tunnelConfig: TunnelConfig): void {
+function setupPingInterval(tunnelName: string): void {
     const pingKey = `${tunnelName}_ping`;
     if (verificationTimers.has(pingKey)) {
         clearInterval(verificationTimers.get(pingKey)!);
@@ -403,7 +375,13 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
     }
 
     if (!tunnelConfig || !tunnelConfig.sourceIP || !tunnelConfig.sourceUsername || !tunnelConfig.sourceSSHPort) {
-        tunnelLogger.error('Invalid tunnel connection details', { operation: 'tunnel_connect', tunnelName, hasSourceIP: !!tunnelConfig?.sourceIP, hasSourceUsername: !!tunnelConfig?.sourceUsername, hasSourceSSHPort: !!tunnelConfig?.sourceSSHPort });
+        tunnelLogger.error('Invalid tunnel connection details', {
+            operation: 'tunnel_connect',
+            tunnelName,
+            hasSourceIP: !!tunnelConfig?.sourceIP,
+            hasSourceUsername: !!tunnelConfig?.sourceUsername,
+            hasSourceSSHPort: !!tunnelConfig?.sourceSSHPort
+        });
         broadcastTunnelStatus(tunnelName, {
             connected: false,
             status: CONNECTION_STATES.FAILED,
@@ -440,14 +418,22 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
                     authMethod: credential.authType
                 };
             } else {
-                tunnelLogger.warn('No source credentials found in database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.sourceCredentialId });
+                tunnelLogger.warn('No source credentials found in database', {
+                    operation: 'tunnel_connect',
+                    tunnelName,
+                    credentialId: tunnelConfig.sourceCredentialId
+                });
             }
         } catch (error) {
-            tunnelLogger.warn('Failed to resolve source credentials from database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.sourceCredentialId, error: error instanceof Error ? error.message : 'Unknown error' });
+            tunnelLogger.warn('Failed to resolve source credentials from database', {
+                operation: 'tunnel_connect',
+                tunnelName,
+                credentialId: tunnelConfig.sourceCredentialId,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
         }
     }
 
-    // Resolve endpoint credentials if tunnel config has endpointCredentialId
     let resolvedEndpointCredentials = {
         password: tunnelConfig.endpointPassword,
         sshKey: tunnelConfig.endpointSSHKey,
@@ -476,13 +462,22 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
                     authMethod: credential.authType
                 };
             } else {
-                tunnelLogger.warn('No endpoint credentials found in database', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.endpointCredentialId });
+                tunnelLogger.warn('No endpoint credentials found in database', {
+                    operation: 'tunnel_connect',
+                    tunnelName,
+                    credentialId: tunnelConfig.endpointCredentialId
+                });
             }
         } catch (error) {
             tunnelLogger.warn(`Failed to resolve endpoint credentials for tunnel ${tunnelName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     } else if (tunnelConfig.endpointCredentialId) {
-        tunnelLogger.warn('Missing userId for endpoint credential resolution', { operation: 'tunnel_connect', tunnelName, credentialId: tunnelConfig.endpointCredentialId, hasUserId: !!tunnelConfig.endpointUserId });
+        tunnelLogger.warn('Missing userId for endpoint credential resolution', {
+            operation: 'tunnel_connect',
+            tunnelName,
+            credentialId: tunnelConfig.endpointCredentialId,
+            hasUserId: !!tunnelConfig.endpointUserId
+        });
     }
 
     const conn = new Client();
@@ -597,7 +592,7 @@ async function connectSSHTunnel(tunnelConfig: TunnelConfig, retryAttempt = 0): P
                         connected: true,
                         status: CONNECTION_STATES.CONNECTED
                     });
-                    setupPingInterval(tunnelName, tunnelConfig);
+                    setupPingInterval(tunnelName);
                 }
             }, 2000);
 
@@ -1016,7 +1011,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
 
 const PORT = 8083;
 app.listen(PORT, () => {
-    tunnelLogger.success('SSH Tunnel API server started', { operation: 'server_start', port: PORT });
+    tunnelLogger.success('SSH Tunnel API server started', {operation: 'server_start', port: PORT});
     setTimeout(() => {
         initializeAutoStartTunnels();
     }, 2000);

@@ -1,6 +1,5 @@
 import {sqliteTable, text, integer} from 'drizzle-orm/sqlite-core';
 import {sql} from 'drizzle-orm';
-import { databaseLogger } from '../../utils/logger.js';
 
 export const users = sqliteTable('users', {
     id: text('id').primaryKey(),
@@ -40,12 +39,12 @@ export const sshData = sqliteTable('ssh_data', {
     tags: text('tags'),
     pin: integer('pin', {mode: 'boolean'}).notNull().default(false),
     authType: text('auth_type').notNull(),
-    // Legacy credential fields - kept for backward compatibility
+
     password: text('password'),
     key: text('key', {length: 8192}),
     keyPassword: text('key_password'),
     keyType: text('key_type'),
-    // New credential management
+
     credentialId: integer('credential_id').references(() => sshCredentials.id),
     enableTerminal: integer('enable_terminal', {mode: 'boolean'}).notNull().default(true),
     enableTunnel: integer('enable_tunnel', {mode: 'boolean'}).notNull().default(true),
@@ -90,7 +89,6 @@ export const dismissedAlerts = sqliteTable('dismissed_alerts', {
     dismissedAt: text('dismissed_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-// SSH Credentials Management Tables
 export const sshCredentials = sqliteTable('ssh_credentials', {
     id: integer('id').primaryKey({autoIncrement: true}),
     userId: text('user_id').notNull().references(() => users.id),

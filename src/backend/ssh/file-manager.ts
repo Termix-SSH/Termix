@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import {Client as SSHClient} from 'ssh2';
 import {db} from '../database/db/index.js';
-import {sshData, sshCredentials} from '../database/db/schema.js';
+import {sshCredentials} from '../database/db/schema.js';
 import {eq, and} from 'drizzle-orm';
-import { fileLogger } from '../utils/logger.js';
+import {fileLogger} from '../utils/logger.js';
 
 const app = express();
 
@@ -47,12 +47,28 @@ function scheduleSessionCleanup(sessionId: string) {
 }
 
 app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
-    const {sessionId, hostId, ip, port, username, password, sshKey, keyPassword, authType, credentialId, userId} = req.body;
-    
-    // Connection request received
-    
+    const {
+        sessionId,
+        hostId,
+        ip,
+        port,
+        username,
+        password,
+        sshKey,
+        keyPassword,
+        authType,
+        credentialId,
+        userId
+    } = req.body;
+
     if (!sessionId || !ip || !username || !port) {
-        fileLogger.warn('Missing SSH connection parameters for file manager', { operation: 'file_connect', sessionId, hasIp: !!ip, hasUsername: !!username, hasPort: !!port });
+        fileLogger.warn('Missing SSH connection parameters for file manager', {
+            operation: 'file_connect',
+            sessionId,
+            hasIp: !!ip,
+            hasUsername: !!username,
+            hasPort: !!port
+        });
         return res.status(400).json({error: 'Missing SSH connection parameters'});
     }
 
@@ -81,13 +97,31 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
                     authType: credential.authType
                 };
             } else {
-                fileLogger.warn('No credentials found in database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, userId });
+                fileLogger.warn('No credentials found in database for file manager', {
+                    operation: 'file_connect',
+                    sessionId,
+                    hostId,
+                    credentialId,
+                    userId
+                });
             }
         } catch (error) {
-            fileLogger.warn('Failed to resolve credentials from database for file manager', { operation: 'file_connect', sessionId, hostId, credentialId, error: error instanceof Error ? error.message : 'Unknown error' });
+            fileLogger.warn('Failed to resolve credentials from database for file manager', {
+                operation: 'file_connect',
+                sessionId,
+                hostId,
+                credentialId,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
         }
     } else if (credentialId && hostId) {
-        fileLogger.warn('Missing userId for credential resolution in file manager', { operation: 'file_connect', sessionId, hostId, credentialId, hasUserId: !!userId });
+        fileLogger.warn('Missing userId for credential resolution in file manager', {
+            operation: 'file_connect',
+            sessionId,
+            hostId,
+            credentialId,
+            hasUserId: !!userId
+        });
     }
 
     const config: any = {
@@ -146,13 +180,22 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
             if (resolvedCredentials.keyPassword) config.passphrase = resolvedCredentials.keyPassword;
 
         } catch (keyError) {
-            fileLogger.error('SSH key format error for file manager', { operation: 'file_connect', sessionId, hostId, error: keyError.message });
+            fileLogger.error('SSH key format error for file manager', {
+                operation: 'file_connect',
+                sessionId,
+                hostId,
+                error: keyError.message
+            });
             return res.status(400).json({error: 'Invalid SSH key format'});
         }
     } else if (resolvedCredentials.password && resolvedCredentials.password.trim()) {
         config.password = resolvedCredentials.password;
     } else {
-        fileLogger.warn('No authentication method provided for file manager', { operation: 'file_connect', sessionId, hostId });
+        fileLogger.warn('No authentication method provided for file manager', {
+            operation: 'file_connect',
+            sessionId,
+            hostId
+        });
         return res.status(400).json({error: 'Either password or SSH key must be provided'});
     }
 
@@ -168,7 +211,15 @@ app.post('/ssh/file_manager/ssh/connect', async (req, res) => {
     client.on('error', (err) => {
         if (responseSent) return;
         responseSent = true;
-        fileLogger.error('SSH connection failed for file manager', { operation: 'file_connect', sessionId, hostId, ip, port, username, error: err.message });
+        fileLogger.error('SSH connection failed for file manager', {
+            operation: 'file_connect',
+            sessionId,
+            hostId,
+            ip,
+            port,
+            username,
+            error: err.message
+        });
         res.status(500).json({status: 'error', message: err.message});
     });
 
@@ -371,7 +422,11 @@ app.post('/ssh/file_manager/ssh/writeFile', async (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
                     if (!res.headersSent) {
-                        res.json({message: 'File written successfully', path: filePath, toast: {type: 'success', message: `File written: ${filePath}`}});
+                        res.json({
+                            message: 'File written successfully',
+                            path: filePath,
+                            toast: {type: 'success', message: `File written: ${filePath}`}
+                        });
                     }
                 });
 
@@ -379,7 +434,11 @@ app.post('/ssh/file_manager/ssh/writeFile', async (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
                     if (!res.headersSent) {
-                        res.json({message: 'File written successfully', path: filePath, toast: {type: 'success', message: `File written: ${filePath}`}});
+                        res.json({
+                            message: 'File written successfully',
+                            path: filePath,
+                            toast: {type: 'success', message: `File written: ${filePath}`}
+                        });
                     }
                 });
 
@@ -411,7 +470,10 @@ app.post('/ssh/file_manager/ssh/writeFile', async (req, res) => {
 
                     fileLogger.error('Fallback write command failed:', err);
                     if (!res.headersSent) {
-                        return res.status(500).json({error: `Write failed: ${err.message}`, toast: {type: 'error', message: `Write failed: ${err.message}`}});
+                        return res.status(500).json({
+                            error: `Write failed: ${err.message}`,
+                            toast: {type: 'error', message: `Write failed: ${err.message}`}
+                        });
                     }
                     return;
                 }
@@ -430,14 +492,21 @@ app.post('/ssh/file_manager/ssh/writeFile', async (req, res) => {
                 stream.on('close', (code) => {
 
 
-            if (outputData.includes('SUCCESS')) {
-                if (!res.headersSent) {
-                    res.json({message: 'File written successfully', path: filePath, toast: {type: 'success', message: `File written: ${filePath}`}});
-                }
+                    if (outputData.includes('SUCCESS')) {
+                        if (!res.headersSent) {
+                            res.json({
+                                message: 'File written successfully',
+                                path: filePath,
+                                toast: {type: 'success', message: `File written: ${filePath}`}
+                            });
+                        }
                     } else {
                         fileLogger.error(`Fallback write failed with code ${code}: ${errorData}`);
                         if (!res.headersSent) {
-                            res.status(500).json({error: `Write failed: ${errorData}`, toast: {type: 'error', message: `Write failed: ${errorData}`}});
+                            res.status(500).json({
+                                error: `Write failed: ${errorData}`,
+                                toast: {type: 'error', message: `Write failed: ${errorData}`}
+                            });
                         }
                     }
                 });
@@ -527,7 +596,11 @@ app.post('/ssh/file_manager/ssh/uploadFile', async (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
                     if (!res.headersSent) {
-                        res.json({message: 'File uploaded successfully', path: fullPath, toast: {type: 'success', message: `File uploaded: ${fullPath}`}});
+                        res.json({
+                            message: 'File uploaded successfully',
+                            path: fullPath,
+                            toast: {type: 'success', message: `File uploaded: ${fullPath}`}
+                        });
                     }
                 });
 
@@ -535,7 +608,11 @@ app.post('/ssh/file_manager/ssh/uploadFile', async (req, res) => {
                     if (hasError || hasFinished) return;
                     hasFinished = true;
                     if (!res.headersSent) {
-                        res.json({message: 'File uploaded successfully', path: fullPath, toast: {type: 'success', message: `File uploaded: ${fullPath}`}});
+                        res.json({
+                            message: 'File uploaded successfully',
+                            path: fullPath,
+                            toast: {type: 'success', message: `File uploaded: ${fullPath}`}
+                        });
                     }
                 });
 
@@ -598,13 +675,20 @@ app.post('/ssh/file_manager/ssh/uploadFile', async (req, res) => {
 
                         if (outputData.includes('SUCCESS')) {
                             if (!res.headersSent) {
-                                res.json({message: 'File uploaded successfully', path: fullPath, toast: {type: 'success', message: `File uploaded: ${fullPath}`}});
+                                res.json({
+                                    message: 'File uploaded successfully',
+                                    path: fullPath,
+                                    toast: {type: 'success', message: `File uploaded: ${fullPath}`}
+                                });
                             }
                         } else {
                             fileLogger.error(`Fallback upload failed with code ${code}: ${errorData}`);
-                    if (!res.headersSent) {
-                        res.status(500).json({error: `Upload failed: ${errorData}`, toast: {type: 'error', message: `Upload failed: ${errorData}`}});
-                    }
+                            if (!res.headersSent) {
+                                res.status(500).json({
+                                    error: `Upload failed: ${errorData}`,
+                                    toast: {type: 'error', message: `Upload failed: ${errorData}`}
+                                });
+                            }
                         }
                     });
 
@@ -655,13 +739,20 @@ app.post('/ssh/file_manager/ssh/uploadFile', async (req, res) => {
 
                         if (outputData.includes('SUCCESS')) {
                             if (!res.headersSent) {
-                                res.json({message: 'File uploaded successfully', path: fullPath, toast: {type: 'success', message: `File uploaded: ${fullPath}`}});
+                                res.json({
+                                    message: 'File uploaded successfully',
+                                    path: fullPath,
+                                    toast: {type: 'success', message: `File uploaded: ${fullPath}`}
+                                });
                             }
                         } else {
                             fileLogger.error(`Chunked fallback upload failed with code ${code}: ${errorData}`);
-                        if (!res.headersSent) {
-                            res.status(500).json({error: `Chunked upload failed: ${errorData}`, toast: {type: 'error', message: `Chunked upload failed: ${errorData}`}});
-                        }
+                            if (!res.headersSent) {
+                                res.status(500).json({
+                                    error: `Chunked upload failed: ${errorData}`,
+                                    toast: {type: 'error', message: `Chunked upload failed: ${errorData}`}
+                                });
+                            }
                         }
                     });
 
@@ -740,7 +831,11 @@ app.post('/ssh/file_manager/ssh/createFile', async (req, res) => {
         stream.on('close', (code) => {
             if (outputData.includes('SUCCESS')) {
                 if (!res.headersSent) {
-                    res.json({message: 'File created successfully', path: fullPath, toast: {type: 'success', message: `File created: ${fullPath}`}});
+                    res.json({
+                        message: 'File created successfully',
+                        path: fullPath,
+                        toast: {type: 'success', message: `File created: ${fullPath}`}
+                    });
                 }
                 return;
             }
@@ -748,13 +843,20 @@ app.post('/ssh/file_manager/ssh/createFile', async (req, res) => {
             if (code !== 0) {
                 fileLogger.error(`SSH createFile command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
-                    return res.status(500).json({error: `Command failed: ${errorData}`, toast: {type: 'error', message: `File creation failed: ${errorData}`}});
+                    return res.status(500).json({
+                        error: `Command failed: ${errorData}`,
+                        toast: {type: 'error', message: `File creation failed: ${errorData}`}
+                    });
                 }
                 return;
             }
 
             if (!res.headersSent) {
-                res.json({message: 'File created successfully', path: fullPath, toast: {type: 'success', message: `File created: ${fullPath}`}});
+                res.json({
+                    message: 'File created successfully',
+                    path: fullPath,
+                    toast: {type: 'success', message: `File created: ${fullPath}`}
+                });
             }
         });
 
@@ -824,7 +926,11 @@ app.post('/ssh/file_manager/ssh/createFolder', async (req, res) => {
         stream.on('close', (code) => {
             if (outputData.includes('SUCCESS')) {
                 if (!res.headersSent) {
-                    res.json({message: 'Folder created successfully', path: fullPath, toast: {type: 'success', message: `Folder created: ${fullPath}`}});
+                    res.json({
+                        message: 'Folder created successfully',
+                        path: fullPath,
+                        toast: {type: 'success', message: `Folder created: ${fullPath}`}
+                    });
                 }
                 return;
             }
@@ -832,13 +938,20 @@ app.post('/ssh/file_manager/ssh/createFolder', async (req, res) => {
             if (code !== 0) {
                 fileLogger.error(`SSH createFolder command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
-                    return res.status(500).json({error: `Command failed: ${errorData}`, toast: {type: 'error', message: `Folder creation failed: ${errorData}`}});
+                    return res.status(500).json({
+                        error: `Command failed: ${errorData}`,
+                        toast: {type: 'error', message: `Folder creation failed: ${errorData}`}
+                    });
                 }
                 return;
             }
 
             if (!res.headersSent) {
-                res.json({message: 'Folder created successfully', path: fullPath, toast: {type: 'success', message: `Folder created: ${fullPath}`}});
+                res.json({
+                    message: 'Folder created successfully',
+                    path: fullPath,
+                    toast: {type: 'success', message: `Folder created: ${fullPath}`}
+                });
             }
         });
 
@@ -907,7 +1020,11 @@ app.delete('/ssh/file_manager/ssh/deleteItem', async (req, res) => {
         stream.on('close', (code) => {
             if (outputData.includes('SUCCESS')) {
                 if (!res.headersSent) {
-                    res.json({message: 'Item deleted successfully', path: itemPath, toast: {type: 'success', message: `${isDirectory ? 'Directory' : 'File'} deleted: ${itemPath}`}});
+                    res.json({
+                        message: 'Item deleted successfully',
+                        path: itemPath,
+                        toast: {type: 'success', message: `${isDirectory ? 'Directory' : 'File'} deleted: ${itemPath}`}
+                    });
                 }
                 return;
             }
@@ -915,13 +1032,20 @@ app.delete('/ssh/file_manager/ssh/deleteItem', async (req, res) => {
             if (code !== 0) {
                 fileLogger.error(`SSH deleteItem command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
-                    return res.status(500).json({error: `Command failed: ${errorData}`, toast: {type: 'error', message: `Delete failed: ${errorData}`}});
+                    return res.status(500).json({
+                        error: `Command failed: ${errorData}`,
+                        toast: {type: 'error', message: `Delete failed: ${errorData}`}
+                    });
                 }
                 return;
             }
 
             if (!res.headersSent) {
-                res.json({message: 'Item deleted successfully', path: itemPath, toast: {type: 'success', message: `${isDirectory ? 'Directory' : 'File'} deleted: ${itemPath}`}});
+                res.json({
+                    message: 'Item deleted successfully',
+                    path: itemPath,
+                    toast: {type: 'success', message: `${isDirectory ? 'Directory' : 'File'} deleted: ${itemPath}`}
+                });
             }
         });
 
@@ -992,7 +1116,12 @@ app.put('/ssh/file_manager/ssh/renameItem', async (req, res) => {
         stream.on('close', (code) => {
             if (outputData.includes('SUCCESS')) {
                 if (!res.headersSent) {
-                    res.json({message: 'Item renamed successfully', oldPath, newPath, toast: {type: 'success', message: `Item renamed: ${oldPath} -> ${newPath}`}});
+                    res.json({
+                        message: 'Item renamed successfully',
+                        oldPath,
+                        newPath,
+                        toast: {type: 'success', message: `Item renamed: ${oldPath} -> ${newPath}`}
+                    });
                 }
                 return;
             }
@@ -1000,13 +1129,21 @@ app.put('/ssh/file_manager/ssh/renameItem', async (req, res) => {
             if (code !== 0) {
                 fileLogger.error(`SSH renameItem command failed with code ${code}: ${errorData.replace(/\n/g, ' ').trim()}`);
                 if (!res.headersSent) {
-                    return res.status(500).json({error: `Command failed: ${errorData}`, toast: {type: 'error', message: `Rename failed: ${errorData}`}});
+                    return res.status(500).json({
+                        error: `Command failed: ${errorData}`,
+                        toast: {type: 'error', message: `Rename failed: ${errorData}`}
+                    });
                 }
                 return;
             }
 
             if (!res.headersSent) {
-                res.json({message: 'Item renamed successfully', oldPath, newPath, toast: {type: 'success', message: `Item renamed: ${oldPath} -> ${newPath}`}});
+                res.json({
+                    message: 'Item renamed successfully',
+                    oldPath,
+                    newPath,
+                    toast: {type: 'success', message: `Item renamed: ${oldPath} -> ${newPath}`}
+                });
             }
         });
 
@@ -1031,5 +1168,5 @@ process.on('SIGTERM', () => {
 
 const PORT = 8084;
 app.listen(PORT, () => {
-    fileLogger.success('File Manager API server started', { operation: 'server_start', port: PORT });
+    fileLogger.success('File Manager API server started', {operation: 'server_start', port: PORT});
 });

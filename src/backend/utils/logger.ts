@@ -100,7 +100,6 @@ class Logger {
         console.log(this.formatMessage('success', message, context));
     }
 
-    // Convenience methods for common operations
     auth(message: string, context?: LogContext): void {
         this.info(`AUTH: ${message}`, { ...context, operation: 'auth' });
     }
@@ -143,18 +142,6 @@ class Logger {
 
     retry(message: string, context?: LogContext): void {
         this.warn(`RETRY: ${message}`, { ...context, operation: 'retry' });
-    }
-
-    cleanup(message: string, context?: LogContext): void {
-        this.info(`CLEANUP: ${message}`, { ...context, operation: 'cleanup' });
-    }
-
-    metrics(message: string, context?: LogContext): void {
-        this.info(`METRICS: ${message}`, { ...context, operation: 'metrics' });
-    }
-
-    security(message: string, context?: LogContext): void {
-        this.warn(`SECURITY: ${message}`, { ...context, operation: 'security' });
     }
 }
 

@@ -21,7 +21,7 @@ updates:
         dependency-type: "production"
         update-types:
           - "minor"
-          
+
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:

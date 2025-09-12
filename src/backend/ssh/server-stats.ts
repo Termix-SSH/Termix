@@ -1,16 +1,12 @@
 import express from 'express';
-import fetch from 'node-fetch';
 import net from 'net';
 import cors from 'cors';
 import {Client, type ConnectConfig} from 'ssh2';
 import {db} from '../database/db/index.js';
 import {sshData, sshCredentials} from '../database/db/schema.js';
 import {eq, and} from 'drizzle-orm';
-import { statsLogger } from '../utils/logger.js';
+import {statsLogger} from '../utils/logger.js';
 
-// Rate limiting removed - not needed for internal application
-
-// Connection pooling
 interface PooledConnection {
     client: Client;
     lastUsed: number;
@@ -37,7 +33,7 @@ class SSHConnectionPool {
     async getConnection(host: SSHHostWithCredentials): Promise<Client> {
         const hostKey = this.getHostKey(host);
         const connections = this.connections.get(hostKey) || [];
-        
+
         const available = connections.find(conn => !conn.inUse);
         if (available) {
             available.inUse = true;
@@ -112,7 +108,7 @@ class SSHConnectionPool {
 
     private cleanup(): void {
         const now = Date.now();
-        const maxAge = 10 * 60 * 1000; // 10 minutes
+        const maxAge = 10 * 60 * 1000;
 
         for (const [hostKey, connections] of this.connections.entries()) {
             const activeConnections = connections.filter(conn => {
@@ -120,7 +116,7 @@ class SSHConnectionPool {
                     try {
                         conn.client.end();
                     } catch {
-                        
+
                     }
                     return false;
                 }
@@ -142,7 +138,7 @@ class SSHConnectionPool {
                 try {
                     conn.client.end();
                 } catch {
-                    
+
                 }
             }
         }
@@ -150,7 +146,6 @@ class SSHConnectionPool {
     }
 }
 
-// Request queuing to prevent race conditions
 class RequestQueue {
     private queues = new Map<number, Array<() => Promise<any>>>();
     private processing = new Set<number>();
@@ -173,21 +168,21 @@ class RequestQueue {
 
     private async processQueue(hostId: number): Promise<void> {
         if (this.processing.has(hostId)) return;
-        
+
         this.processing.add(hostId);
         const queue = this.queues.get(hostId) || [];
-        
+
         while (queue.length > 0) {
             const request = queue.shift();
             if (request) {
                 try {
                     await request();
                 } catch (error) {
-                    
+
                 }
             }
         }
-        
+
         this.processing.delete(hostId);
         if (queue.length > 0) {
             this.processQueue(hostId);
@@ -195,7 +190,6 @@ class RequestQueue {
     }
 }
 
-// Metrics caching
 interface CachedMetrics {
     data: any;
     timestamp: number;
@@ -204,7 +198,7 @@ interface CachedMetrics {
 
 class MetricsCache {
     private cache = new Map<number, CachedMetrics>();
-    private ttl = 30000; // 30 seconds
+    private ttl = 30000;
 
     get(hostId: number): any | null {
         const cached = this.cache.get(hostId);
@@ -231,7 +225,6 @@ class MetricsCache {
     }
 }
 
-// Global instances
 const connectionPool = new SSHConnectionPool();
 const requestQueue = new RequestQueue();
 const metricsCache = new MetricsCache();
@@ -268,13 +261,10 @@ type StatusEntry = {
     lastChecked: string;
 };
 
-// Rate limiting middleware removed
-
-// Input validation middleware
 function validateHostId(req: express.Request, res: express.Response, next: express.NextFunction) {
     const id = Number(req.params.id);
     if (!id || !Number.isInteger(id) || id <= 0) {
-        return res.status(400).json({ error: 'Invalid host ID' });
+        return res.status(400).json({error: 'Invalid host ID'});
     }
     next();
 }
@@ -294,7 +284,7 @@ app.use((req, res, next) => {
     }
     next();
 });
-app.use(express.json({ limit: '1mb' })); // Add request size limit
+app.use(express.json({limit: '1mb'}));
 
 
 const hostStatuses: Map<number, StatusEntry> = new Map();
@@ -388,7 +378,7 @@ async function resolveHostCredentials(host: any): Promise<SSHHostWithCredentials
                     if (credential.keyType) {
                         baseHost.keyType = credential.keyType;
                     }
-                    
+
                 } else {
                     statsLogger.warn(`Credential ${host.credentialId} not found for host ${host.id}, using legacy data`);
                     addLegacyCredentials(baseHost, host);
@@ -514,7 +504,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     memory: { percent: number | null; usedGiB: number | null; totalGiB: number | null };
     disk: { percent: number | null; usedHuman: string | null; totalHuman: string | null };
 }> {
-    // Check cache first
     const cached = metricsCache.get(host.id);
     if (cached) {
         return cached;
@@ -525,16 +514,14 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
             let cpuPercent: number | null = null;
             let cores: number | null = null;
             let loadTriplet: [number, number, number] | null = null;
-            
+
             try {
-                // Execute all commands in parallel for better performance
                 const [stat1, loadAvgOut, coresOut] = await Promise.all([
                     execCommand(client, 'cat /proc/stat'),
                     execCommand(client, 'cat /proc/loadavg'),
                     execCommand(client, 'nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo')
                 ]);
 
-                // Wait for CPU calculation
                 await new Promise(r => setTimeout(r, 500));
                 const stat2 = await execCommand(client, 'cat /proc/stat');
 
@@ -633,7 +620,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
                 disk: {percent: toFixedNum(diskPercent, 0), usedHuman, totalHuman},
             };
 
-            // Cache the result
             metricsCache.set(host.id, result);
             return result;
         });
@@ -667,7 +653,7 @@ function tcpPing(host: string, port: number, timeoutMs = 5000): Promise<boolean>
 async function pollStatusesOnce(): Promise<void> {
     const hosts = await fetchAllHosts();
     if (hosts.length === 0) {
-        statsLogger.warn('No hosts retrieved for status polling', { operation: 'status_poll' });
+        statsLogger.warn('No hosts retrieved for status polling', {operation: 'status_poll'});
         return;
     }
 
@@ -684,7 +670,12 @@ async function pollStatusesOnce(): Promise<void> {
     const results = await Promise.allSettled(checks);
     const onlineCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
     const offlineCount = hosts.length - onlineCount;
-    statsLogger.success('Status polling completed', { operation: 'status_poll', totalHosts: hosts.length, onlineCount, offlineCount });
+    statsLogger.success('Status polling completed', {
+        operation: 'status_poll',
+        totalHosts: hosts.length,
+        onlineCount,
+        offlineCount
+    });
 }
 
 app.get('/status', async (req, res) => {
@@ -726,14 +717,13 @@ app.post('/refresh', async (req, res) => {
 
 app.get('/metrics/:id', validateHostId, async (req, res) => {
     const id = Number(req.params.id);
-    
+
     try {
         const host = await fetchHostById(id);
         if (!host) {
             return res.status(404).json({error: 'Host not found'});
         }
 
-        // Check if host is online first
         const isOnline = await tcpPing(host.ip, host.port, 5000);
         if (!isOnline) {
             return res.status(503).json({
@@ -749,8 +739,7 @@ app.get('/metrics/:id', validateHostId, async (req, res) => {
         res.json({...metrics, lastChecked: new Date().toISOString()});
     } catch (err) {
         statsLogger.error('Failed to collect metrics', err);
-        
-        // Return proper error response instead of empty data
+
         if (err instanceof Error && err.message.includes('timeout')) {
             return res.status(504).json({
                 error: 'Metrics collection timeout',
@@ -760,7 +749,7 @@ app.get('/metrics/:id', validateHostId, async (req, res) => {
                 lastChecked: new Date().toISOString()
             });
         }
-        
+
         return res.status(500).json({
             error: 'Failed to collect metrics',
             cpu: {percent: null, cores: null, load: null},
@@ -771,7 +760,6 @@ app.get('/metrics/:id', validateHostId, async (req, res) => {
     }
 });
 
-// Graceful shutdown
 process.on('SIGINT', () => {
     statsLogger.info('Received SIGINT, shutting down gracefully');
     connectionPool.destroy();
@@ -786,10 +774,10 @@ process.on('SIGTERM', () => {
 
 const PORT = 8085;
 app.listen(PORT, async () => {
-    statsLogger.success('Server Stats API server started', { operation: 'server_start', port: PORT });
+    statsLogger.success('Server Stats API server started', {operation: 'server_start', port: PORT});
     try {
         await pollStatusesOnce();
     } catch (err) {
-        statsLogger.error('Initial poll failed', err, { operation: 'initial_poll' });
+        statsLogger.error('Initial poll failed', err, {operation: 'initial_poll'});
     }
 });

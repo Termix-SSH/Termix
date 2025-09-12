@@ -4,7 +4,7 @@ import {sshCredentials, sshCredentialUsage, sshData} from '../db/schema.js';
 import {eq, and, desc, sql} from 'drizzle-orm';
 import type {Request, Response, NextFunction} from 'express';
 import jwt from 'jsonwebtoken';
-import { authLogger } from '../../utils/logger.js';
+import {authLogger} from '../../utils/logger.js';
 
 
 const router = express.Router();
@@ -55,22 +55,37 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
     } = req.body;
 
     if (!isNonEmptyString(userId) || !isNonEmptyString(name) || !isNonEmptyString(username)) {
-        authLogger.warn('Invalid credential creation data validation failed', { operation: 'credential_create', userId, hasName: !!name, hasUsername: !!username });
+        authLogger.warn('Invalid credential creation data validation failed', {
+            operation: 'credential_create',
+            userId,
+            hasName: !!name,
+            hasUsername: !!username
+        });
         return res.status(400).json({error: 'Name and username are required'});
     }
 
     if (!['password', 'key'].includes(authType)) {
-        authLogger.warn('Invalid auth type provided', { operation: 'credential_create', userId, name, authType });
+        authLogger.warn('Invalid auth type provided', {operation: 'credential_create', userId, name, authType});
         return res.status(400).json({error: 'Auth type must be "password" or "key"'});
     }
 
     try {
         if (authType === 'password' && !password) {
-            authLogger.warn('Password required for password authentication', { operation: 'credential_create', userId, name, authType });
+            authLogger.warn('Password required for password authentication', {
+                operation: 'credential_create',
+                userId,
+                name,
+                authType
+            });
             return res.status(400).json({error: 'Password is required for password authentication'});
         }
         if (authType === 'key' && !key) {
-            authLogger.warn('SSH key required for key authentication', { operation: 'credential_create', userId, name, authType });
+            authLogger.warn('SSH key required for key authentication', {
+                operation: 'credential_create',
+                userId,
+                name,
+                authType
+            });
             return res.status(400).json({error: 'SSH key is required for key authentication'});
         }
         const plainPassword = (authType === 'password' && password) ? password : null;
@@ -95,19 +110,25 @@ router.post('/', authenticateJWT, async (req: Request, res: Response) => {
 
         const result = await db.insert(sshCredentials).values(credentialData).returning();
         const created = result[0];
-        
-        authLogger.success(`SSH credential created: ${name} (${authType}) by user ${userId}`, { 
-            operation: 'credential_create_success', 
-            userId, 
-            credentialId: created.id, 
-            name, 
-            authType, 
-            username 
+
+        authLogger.success(`SSH credential created: ${name} (${authType}) by user ${userId}`, {
+            operation: 'credential_create_success',
+            userId,
+            credentialId: created.id,
+            name,
+            authType,
+            username
         });
-        
+
         res.status(201).json(formatCredentialOutput(created));
     } catch (err) {
-        authLogger.error('Failed to create credential in database', err, { operation: 'credential_create', userId, name, authType, username });
+        authLogger.error('Failed to create credential in database', err, {
+            operation: 'credential_create',
+            userId,
+            name,
+            authType,
+            username
+        });
         res.status(500).json({
             error: err instanceof Error ? err.message : 'Failed to create credential'
         });
@@ -285,13 +306,13 @@ router.put('/:id', authenticateJWT, async (req: Request, res: Response) => {
             .where(eq(sshCredentials.id, parseInt(id)));
 
         const credential = updated[0];
-        authLogger.success(`SSH credential updated: ${credential.name} (${credential.authType}) by user ${userId}`, { 
-            operation: 'credential_update_success', 
-            userId, 
-            credentialId: parseInt(id), 
-            name: credential.name, 
-            authType: credential.authType, 
-            username: credential.username 
+        authLogger.success(`SSH credential updated: ${credential.name} (${credential.authType}) by user ${userId}`, {
+            operation: 'credential_update_success',
+            userId,
+            credentialId: parseInt(id),
+            name: credential.name,
+            authType: credential.authType,
+            username: credential.username
         });
 
         res.json(formatCredentialOutput(updated[0]));
@@ -366,13 +387,13 @@ router.delete('/:id', authenticateJWT, async (req: Request, res: Response) => {
             ));
 
         const credential = credentialToDelete[0];
-        authLogger.success(`SSH credential deleted: ${credential.name} (${credential.authType}) by user ${userId}`, { 
-            operation: 'credential_delete_success', 
-            userId, 
-            credentialId: parseInt(id), 
-            name: credential.name, 
-            authType: credential.authType, 
-            username: credential.username 
+        authLogger.success(`SSH credential deleted: ${credential.name} (${credential.authType}) by user ${userId}`, {
+            operation: 'credential_delete_success',
+            userId,
+            credentialId: parseInt(id),
+            name: credential.name,
+            authType: credential.authType,
+            username: credential.username
         });
 
         res.json({message: 'Credential deleted successfully'});
@@ -427,14 +448,12 @@ router.post('/:id/apply-to-host/:hostId', authenticateJWT, async (req: Request, 
                 eq(sshData.userId, userId)
             ));
 
-        // Record credential usage
         await db.insert(sshCredentialUsage).values({
             credentialId: parseInt(credentialId),
             hostId: parseInt(hostId),
             userId,
         });
 
-        // Update credential usage stats
         await db
             .update(sshCredentials)
             .set({
@@ -529,28 +548,28 @@ function formatSSHHostOutput(host: any): any {
 // PUT /credentials/folders/rename
 router.put('/folders/rename', authenticateJWT, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const { oldName, newName } = req.body;
+    const {oldName, newName} = req.body;
 
     if (!isNonEmptyString(oldName) || !isNonEmptyString(newName)) {
-        return res.status(400).json({ error: 'Both oldName and newName are required' });
+        return res.status(400).json({error: 'Both oldName and newName are required'});
     }
 
     if (oldName === newName) {
-        return res.status(400).json({ error: 'Old name and new name cannot be the same' });
+        return res.status(400).json({error: 'Old name and new name cannot be the same'});
     }
 
     try {
         await db.update(sshCredentials)
-            .set({ folder: newName })
+            .set({folder: newName})
             .where(and(
                 eq(sshCredentials.userId, userId),
                 eq(sshCredentials.folder, oldName)
             ));
 
-        res.json({ success: true, message: 'Folder renamed successfully' });
+        res.json({success: true, message: 'Folder renamed successfully'});
     } catch (error) {
         authLogger.error('Error renaming credential folder:', error);
-        res.status(500).json({ error: 'Failed to rename folder' });
+        res.status(500).json({error: 'Failed to rename folder'});
     }
 });
 

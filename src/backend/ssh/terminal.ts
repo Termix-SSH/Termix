@@ -1,35 +1,32 @@
 import {WebSocketServer, WebSocket, type RawData} from 'ws';
 import {Client, type ClientChannel, type PseudoTtyOptions} from 'ssh2';
 import {db} from '../database/db/index.js';
-import {sshData, sshCredentials} from '../database/db/schema.js';
+import {sshCredentials} from '../database/db/schema.js';
 import {eq, and} from 'drizzle-orm';
-import { sshLogger } from '../utils/logger.js';
+import {sshLogger} from '../utils/logger.js';
 
 const wss = new WebSocketServer({port: 8082});
 
-sshLogger.success('SSH Terminal WebSocket server started', { operation: 'server_start', port: 8082 });
-
-
-
+sshLogger.success('SSH Terminal WebSocket server started', {operation: 'server_start', port: 8082});
 
 wss.on('connection', (ws: WebSocket) => {
     let sshConn: Client | null = null;
     let sshStream: ClientChannel | null = null;
     let pingInterval: NodeJS.Timeout | null = null;
 
-
     ws.on('close', () => {
         cleanupSSH();
     });
 
     ws.on('message', (msg: RawData) => {
-
-
         let parsed: any;
         try {
             parsed = JSON.parse(msg.toString());
         } catch (e) {
-            sshLogger.error('Invalid JSON received', e, { operation: 'websocket_message', messageLength: msg.toString().length });
+            sshLogger.error('Invalid JSON received', e, {
+                operation: 'websocket_message',
+                messageLength: msg.toString().length
+            });
             ws.send(JSON.stringify({type: 'error', message: 'Invalid JSON'}));
             return;
         }
@@ -39,8 +36,15 @@ wss.on('connection', (ws: WebSocket) => {
         switch (type) {
             case 'connectToHost':
                 handleConnectToHost(data).catch(error => {
-                    sshLogger.error('Failed to connect to host', error, { operation: 'ssh_connect', hostId: data.hostConfig?.id, ip: data.hostConfig?.ip });
-                    ws.send(JSON.stringify({type: 'error', message: 'Failed to connect to host: ' + (error instanceof Error ? error.message : 'Unknown error')}));
+                    sshLogger.error('Failed to connect to host', error, {
+                        operation: 'ssh_connect',
+                        hostId: data.hostConfig?.id,
+                        ip: data.hostConfig?.ip
+                    });
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        message: 'Failed to connect to host: ' + (error instanceof Error ? error.message : 'Unknown error')
+                    }));
                 });
                 break;
 
@@ -69,7 +73,7 @@ wss.on('connection', (ws: WebSocket) => {
                 break;
 
             default:
-                sshLogger.warn('Unknown message type received', { operation: 'websocket_message', messageType: type });
+                sshLogger.warn('Unknown message type received', {operation: 'websocket_message', messageType: type});
         }
     });
 
@@ -94,19 +98,25 @@ wss.on('connection', (ws: WebSocket) => {
         const {id, ip, port, username, password, key, keyPassword, keyType, authType, credentialId} = hostConfig;
 
         if (!username || typeof username !== 'string' || username.trim() === '') {
-            sshLogger.error('Invalid username provided', undefined, { operation: 'ssh_connect', hostId: id, ip });
+            sshLogger.error('Invalid username provided', undefined, {operation: 'ssh_connect', hostId: id, ip});
             ws.send(JSON.stringify({type: 'error', message: 'Invalid username provided'}));
             return;
         }
 
         if (!ip || typeof ip !== 'string' || ip.trim() === '') {
-            sshLogger.error('Invalid IP provided', undefined, { operation: 'ssh_connect', hostId: id, username });
+            sshLogger.error('Invalid IP provided', undefined, {operation: 'ssh_connect', hostId: id, username});
             ws.send(JSON.stringify({type: 'error', message: 'Invalid IP provided'}));
             return;
         }
 
         if (!port || typeof port !== 'number' || port <= 0) {
-            sshLogger.error('Invalid port provided', undefined, { operation: 'ssh_connect', hostId: id, ip, username, port });
+            sshLogger.error('Invalid port provided', undefined, {
+                operation: 'ssh_connect',
+                hostId: id,
+                ip,
+                username,
+                port
+            });
             ws.send(JSON.stringify({type: 'error', message: 'Invalid port provided'}));
             return;
         }
@@ -115,7 +125,13 @@ wss.on('connection', (ws: WebSocket) => {
 
         const connectionTimeout = setTimeout(() => {
             if (sshConn) {
-                sshLogger.error('SSH connection timeout', undefined, { operation: 'ssh_connect', hostId: id, ip, port, username });
+                sshLogger.error('SSH connection timeout', undefined, {
+                    operation: 'ssh_connect',
+                    hostId: id,
+                    ip,
+                    port,
+                    username
+                });
                 ws.send(JSON.stringify({type: 'error', message: 'SSH connection timeout'}));
                 cleanupSSH(connectionTimeout);
             }
@@ -142,13 +158,28 @@ wss.on('connection', (ws: WebSocket) => {
                         authType: credential.authType
                     };
                 } else {
-                    sshLogger.warn(`No credentials found for host ${id}`, { operation: 'ssh_credentials', hostId: id, credentialId, userId: hostConfig.userId });
+                    sshLogger.warn(`No credentials found for host ${id}`, {
+                        operation: 'ssh_credentials',
+                        hostId: id,
+                        credentialId,
+                        userId: hostConfig.userId
+                    });
                 }
             } catch (error) {
-                sshLogger.warn(`Failed to resolve credentials for host ${id}`, { operation: 'ssh_credentials', hostId: id, credentialId, error: error instanceof Error ? error.message : 'Unknown error' });
+                sshLogger.warn(`Failed to resolve credentials for host ${id}`, {
+                    operation: 'ssh_credentials',
+                    hostId: id,
+                    credentialId,
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                });
             }
         } else if (credentialId && id) {
-            sshLogger.warn('Missing userId for credential resolution in terminal', { operation: 'ssh_credentials', hostId: id, credentialId, hasUserId: !!hostConfig.userId });
+            sshLogger.warn('Missing userId for credential resolution in terminal', {
+                operation: 'ssh_credentials',
+                hostId: id,
+                credentialId,
+                hasUserId: !!hostConfig.userId
+            });
         }
 
         sshConn.on('ready', () => {
@@ -161,7 +192,7 @@ wss.on('connection', (ws: WebSocket) => {
                 term: 'xterm-256color'
             } as PseudoTtyOptions, (err, stream) => {
                 if (err) {
-                    sshLogger.error('Shell error', err, { operation: 'ssh_shell', hostId: id, ip, port, username });
+                    sshLogger.error('Shell error', err, {operation: 'ssh_shell', hostId: id, ip, port, username});
                     ws.send(JSON.stringify({type: 'error', message: 'Shell error: ' + err.message}));
                     return;
                 }
@@ -177,7 +208,7 @@ wss.on('connection', (ws: WebSocket) => {
                 });
 
                 stream.on('error', (err: Error) => {
-                    sshLogger.error('SSH stream error', err, { operation: 'ssh_stream', hostId: id, ip, port, username });
+                    sshLogger.error('SSH stream error', err, {operation: 'ssh_stream', hostId: id, ip, port, username});
                     ws.send(JSON.stringify({type: 'error', message: 'SSH stream error: ' + err.message}));
                 });
 
@@ -189,7 +220,14 @@ wss.on('connection', (ws: WebSocket) => {
 
         sshConn.on('error', (err: Error) => {
             clearTimeout(connectionTimeout);
-            sshLogger.error('SSH connection error', err, { operation: 'ssh_connect', hostId: id, ip, port, username, authType: resolvedCredentials.authType });
+            sshLogger.error('SSH connection error', err, {
+                operation: 'ssh_connect',
+                hostId: id,
+                ip,
+                port,
+                username,
+                authType: resolvedCredentials.authType
+            });
 
             let errorMessage = 'SSH error: ' + err.message;
             if (err.message.includes('No matching key exchange algorithm')) {
@@ -218,7 +256,6 @@ wss.on('connection', (ws: WebSocket) => {
             clearTimeout(connectionTimeout);
             cleanupSSH(connectionTimeout);
         });
-
 
         const connectConfig: any = {
             host: ip,
@@ -359,6 +396,4 @@ wss.on('connection', (ws: WebSocket) => {
             }
         }, 60000);
     }
-
-
 });

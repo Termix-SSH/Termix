@@ -1,6 +1,13 @@
 import express from 'express';
 import {db} from '../db/index.js';
-import {users, settings, sshData, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts} from '../db/schema.js';
+import {
+    users,
+    sshData,
+    fileManagerRecent,
+    fileManagerPinned,
+    fileManagerShortcuts,
+    dismissedAlerts
+} from '../db/schema.js';
 import {eq, and} from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import {nanoid} from 'nanoid';
@@ -8,7 +15,7 @@ import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import type {Request, Response, NextFunction} from 'express';
-import { authLogger, apiLogger } from '../../utils/logger.js';
+import {authLogger, apiLogger} from '../../utils/logger.js';
 
 async function verifyOIDCToken(idToken: string, issuerUrl: string, clientId: string): Promise<any> {
     try {
@@ -111,7 +118,11 @@ interface JWTPayload {
 function authenticateJWT(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        authLogger.warn('Missing or invalid Authorization header', { operation: 'auth', method: req.method, url: req.url });
+        authLogger.warn('Missing or invalid Authorization header', {
+            operation: 'auth',
+            method: req.method,
+            url: req.url
+        });
         return res.status(401).json({error: 'Missing or invalid Authorization header'});
     }
     const token = authHeader.split(' ')[1];
@@ -119,10 +130,9 @@ function authenticateJWT(req: Request, res: Response, next: NextFunction) {
     try {
         const payload = jwt.verify(token, jwtSecret) as JWTPayload;
         (req as any).userId = payload.userId;
-        // JWT authentication successful
         next();
     } catch (err) {
-        authLogger.warn('Invalid or expired token', { operation: 'auth', method: req.method, url: req.url, error: err });
+        authLogger.warn('Invalid or expired token', {operation: 'auth', method: req.method, url: req.url, error: err});
         return res.status(401).json({error: 'Invalid or expired token'});
     }
 }
@@ -136,13 +146,17 @@ router.post('/create', async (req, res) => {
             return res.status(403).json({error: 'Registration is currently disabled'});
         }
     } catch (e) {
-        authLogger.warn('Failed to check registration status', { operation: 'registration_check', error: e });
+        authLogger.warn('Failed to check registration status', {operation: 'registration_check', error: e});
     }
 
     const {username, password} = req.body;
 
     if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
-        authLogger.warn('Invalid user creation attempt - missing username or password', { operation: 'user_create', hasUsername: !!username, hasPassword: !!password });
+        authLogger.warn('Invalid user creation attempt - missing username or password', {
+            operation: 'user_create',
+            hasUsername: !!username,
+            hasPassword: !!password
+        });
         return res.status(400).json({error: 'Username and password are required'});
     }
 
@@ -152,7 +166,7 @@ router.post('/create', async (req, res) => {
             .from(users)
             .where(eq(users.username, username));
         if (existing && existing.length > 0) {
-            authLogger.warn(`Attempt to create duplicate username: ${username}`, { operation: 'user_create', username });
+            authLogger.warn(`Attempt to create duplicate username: ${username}`, {operation: 'user_create', username});
             return res.status(409).json({error: 'Username already exists'});
         }
 
@@ -162,7 +176,11 @@ router.post('/create', async (req, res) => {
             isFirstUser = ((countResult as any)?.count || 0) === 0;
         } catch (e) {
             isFirstUser = true;
-            authLogger.warn('Failed to check user count, assuming first user', { operation: 'user_create', username, error: e });
+            authLogger.warn('Failed to check user count, assuming first user', {
+                operation: 'user_create',
+                username,
+                error: e
+            });
         }
 
         const saltRounds = parseInt(process.env.SALT || '10', 10);
@@ -187,8 +205,17 @@ router.post('/create', async (req, res) => {
             totp_backup_codes: null,
         });
 
-        authLogger.success(`Traditional user created: ${username} (is_admin: ${isFirstUser})`, { operation: 'user_create', username, isAdmin: isFirstUser, userId: id });
-        res.json({message: 'User created', is_admin: isFirstUser, toast: {type: 'success', message: `User created: ${username}`}});
+        authLogger.success(`Traditional user created: ${username} (is_admin: ${isFirstUser})`, {
+            operation: 'user_create',
+            username,
+            isAdmin: isFirstUser,
+            userId: id
+        });
+        res.json({
+            message: 'User created',
+            is_admin: isFirstUser,
+            toast: {type: 'success', message: `User created: ${username}`}
+        });
     } catch (err) {
         authLogger.error('Failed to create user', err);
         res.status(500).json({error: 'Failed to create user'});
@@ -240,10 +267,9 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
 
         if (isDisableRequest) {
             db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
-            authLogger.info('OIDC configuration disabled', { operation: 'oidc_disable', userId });
+            authLogger.info('OIDC configuration disabled', {operation: 'oidc_disable', userId});
             res.json({message: 'OIDC configuration disabled'});
         } else {
-            // Enable OIDC by storing the configuration
             const config = {
                 client_id,
                 client_secret,
@@ -257,7 +283,11 @@ router.post('/oidc-config', authenticateJWT, async (req, res) => {
             };
 
             db.$client.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('oidc_config', ?)").run(JSON.stringify(config));
-            authLogger.info('OIDC configuration updated', { operation: 'oidc_update', userId, hasUserinfoUrl: !!userinfo_url });
+            authLogger.info('OIDC configuration updated', {
+                operation: 'oidc_update',
+                userId,
+                hasUserinfoUrl: !!userinfo_url
+            });
             res.json({message: 'OIDC configuration updated'});
         }
     } catch (err) {
@@ -277,7 +307,7 @@ router.delete('/oidc-config', authenticateJWT, async (req, res) => {
         }
 
         db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
-        authLogger.success('OIDC configuration disabled', { operation: 'oidc_disable', userId });
+        authLogger.success('OIDC configuration disabled', {operation: 'oidc_disable', userId});
         res.json({message: 'OIDC configuration disabled'});
     } catch (err) {
         authLogger.error('Failed to disable OIDC config', err);
@@ -533,8 +563,6 @@ router.get('/oidc/callback', async (req, res) => {
                 .select()
                 .from(users)
                 .where(eq(users.id, id));
-
-            // OIDC user created - toast notification handled by frontend
         } else {
             await db.update(users)
                 .set({username: name})
@@ -544,8 +572,6 @@ router.get('/oidc/callback', async (req, res) => {
                 .select()
                 .from(users)
                 .where(eq(users.id, user[0].id));
-
-            // OIDC user logged in - toast notification handled by frontend
         }
 
         const userRecord = user[0];
@@ -589,7 +615,11 @@ router.post('/login', async (req, res) => {
     const {username, password} = req.body;
 
     if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
-        authLogger.warn('Invalid traditional login attempt', { operation: 'user_login', hasUsername: !!username, hasPassword: !!password });
+        authLogger.warn('Invalid traditional login attempt', {
+            operation: 'user_login',
+            hasUsername: !!username,
+            hasPassword: !!password
+        });
         return res.status(400).json({error: 'Invalid username or password'});
     }
 
@@ -600,28 +630,34 @@ router.post('/login', async (req, res) => {
             .where(eq(users.username, username));
 
         if (!user || user.length === 0) {
-            authLogger.warn(`User not found: ${username}`, { operation: 'user_login', username });
+            authLogger.warn(`User not found: ${username}`, {operation: 'user_login', username});
             return res.status(404).json({error: 'User not found'});
         }
 
         const userRecord = user[0];
 
         if (userRecord.is_oidc) {
-            authLogger.warn('OIDC user attempted traditional login', { operation: 'user_login', username, userId: userRecord.id });
+            authLogger.warn('OIDC user attempted traditional login', {
+                operation: 'user_login',
+                username,
+                userId: userRecord.id
+            });
             return res.status(403).json({error: 'This user uses external authentication'});
         }
 
         const isMatch = await bcrypt.compare(password, userRecord.password_hash);
         if (!isMatch) {
-            authLogger.warn(`Incorrect password for user: ${username}`, { operation: 'user_login', username, userId: userRecord.id });
+            authLogger.warn(`Incorrect password for user: ${username}`, {
+                operation: 'user_login',
+                username,
+                userId: userRecord.id
+            });
             return res.status(401).json({error: 'Incorrect password'});
         }
         const jwtSecret = process.env.JWT_SECRET || 'secret';
         const token = jwt.sign({userId: userRecord.id}, jwtSecret, {
             expiresIn: '50d',
         });
-
-        // Traditional user logged in - toast notification handled by frontend
 
         if (userRecord.totp_enabled) {
             const tempToken = jwt.sign(
@@ -886,7 +922,6 @@ router.post('/complete-reset', async (req, res) => {
         const expiresAt = new Date(tempTokenData.expiresAt);
 
         if (now > expiresAt) {
-            // Clean up expired token
             db.$client.prepare("DELETE FROM settings WHERE key = ?").run(`temp_reset_token_${username}`);
             return res.status(400).json({error: 'Temporary token has expired'});
         }
@@ -968,7 +1003,6 @@ router.post('/make-admin', authenticateJWT, async (req, res) => {
             .where(eq(users.username, username));
 
         authLogger.success(`User ${username} made admin by ${adminUser[0].username}`);
-        // User made admin - toast notification handled by frontend
         res.json({message: `User ${username} is now an admin`});
 
     } catch (err) {
@@ -1011,7 +1045,6 @@ router.post('/remove-admin', authenticateJWT, async (req, res) => {
             .where(eq(users.username, username));
 
         authLogger.success(`Admin status removed from ${username} by ${adminUser[0].username}`);
-        // Admin status removed - toast notification handled by frontend
         res.json({message: `Admin status removed from ${username}`});
 
     } catch (err) {
@@ -1072,8 +1105,6 @@ router.post('/totp/verify-login', async (req, res) => {
         const token = jwt.sign({userId: userRecord.id}, jwtSecret, {
             expiresIn: '50d',
         });
-
-        // TOTP login completed - toast notification handled by frontend
 
         return res.json({
             token,
@@ -1174,7 +1205,6 @@ router.post('/totp/enable', authenticateJWT, async (req, res) => {
             })
             .where(eq(users.id, userId));
 
-        // 2FA enabled - toast notification handled by frontend
         res.json({
             message: 'TOTP enabled successfully',
             backup_codes: backupCodes
@@ -1236,7 +1266,6 @@ router.post('/totp/disable', authenticateJWT, async (req, res) => {
             })
             .where(eq(users.id, userId));
 
-        // 2FA disabled - toast notification handled by frontend
         res.json({message: 'TOTP disabled successfully'});
 
     } catch (err) {
@@ -1353,7 +1382,6 @@ router.delete('/delete-user', authenticateJWT, async (req, res) => {
         await db.delete(users).where(eq(users.id, targetUserId));
 
         authLogger.success(`User ${username} deleted by admin ${adminUser[0].username}`);
-        // User deleted - toast notification handled by frontend
         res.json({message: `User ${username} deleted successfully`});
 
     } catch (err) {

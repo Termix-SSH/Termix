@@ -196,7 +196,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     function connectToHost(cols: number, rows: number) {
         const isDev = process.env.NODE_ENV === 'development' &&
             (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
-        
 
         const wsUrl = isDev
             ? 'ws://localhost:8082'

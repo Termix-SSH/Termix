@@ -3,8 +3,7 @@ import {db} from '../db/index.js';
 import {dismissedAlerts} from '../db/schema.js';
 import {eq, and} from 'drizzle-orm';
 import fetch from 'node-fetch';
-import type {Request, Response, NextFunction} from 'express';
-import { authLogger } from '../../utils/logger.js';
+import {authLogger} from '../../utils/logger.js';
 
 
 interface CacheEntry {
@@ -76,7 +75,11 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
         });
 
         if (!response.ok) {
-            authLogger.warn('GitHub API returned error status', { operation: 'alerts_fetch', status: response.status, statusText: response.statusText });
+            authLogger.warn('GitHub API returned error status', {
+                operation: 'alerts_fetch',
+                status: response.status,
+                statusText: response.statusText
+            });
             throw new Error(`GitHub raw content error: ${response.status} ${response.statusText}`);
         }
 
@@ -93,7 +96,10 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
         alertCache.set(cacheKey, validAlerts);
         return validAlerts;
     } catch (error) {
-        authLogger.error('Failed to fetch alerts from GitHub', { operation: 'alerts_fetch', error: error instanceof Error ? error.message : 'Unknown error' });
+        authLogger.error('Failed to fetch alerts from GitHub', {
+            operation: 'alerts_fetch',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
         return [];
     }
 }

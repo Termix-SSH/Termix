@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain } = require('electron');
+const {app, BrowserWindow, shell, ipcMain} = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -29,7 +29,7 @@ function createWindow() {
         minWidth: 800,
         minHeight: 600,
         title: 'Termix',
-        icon: isDev 
+        icon: isDev
             ? path.join(__dirname, '..', 'public', 'icon.png')
             : path.join(process.resourcesPath, 'public', 'icon.png'),
         webPreferences: {
@@ -78,9 +78,9 @@ function createWindow() {
         mainWindow = null;
     });
 
-    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    mainWindow.webContents.setWindowOpenHandler(({url}) => {
         shell.openExternal(url);
-        return { action: 'deny' };
+        return {action: 'deny'};
     });
 }
 
@@ -92,12 +92,11 @@ ipcMain.handle('get-platform', () => {
     return process.platform;
 });
 
-// Server configuration handlers
 ipcMain.handle('get-server-config', () => {
     try {
         const userDataPath = app.getPath('userData');
         const configPath = path.join(userDataPath, 'server-config.json');
-        
+
         if (fs.existsSync(configPath)) {
             const configData = fs.readFileSync(configPath, 'utf8');
             return JSON.parse(configData);
@@ -113,40 +112,36 @@ ipcMain.handle('save-server-config', (event, config) => {
     try {
         const userDataPath = app.getPath('userData');
         const configPath = path.join(userDataPath, 'server-config.json');
-        
-        // Ensure userData directory exists
+
         if (!fs.existsSync(userDataPath)) {
-            fs.mkdirSync(userDataPath, { recursive: true });
+            fs.mkdirSync(userDataPath, {recursive: true});
         }
-        
+
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-        return { success: true };
+        return {success: true};
     } catch (error) {
         console.error('Error saving server config:', error);
-        return { success: false, error: error.message };
+        return {success: false, error: error.message};
     }
 });
 
 
 ipcMain.handle('test-server-connection', async (event, serverUrl) => {
     try {
-        // Use Node.js built-in fetch (available in Node 18+) or fallback to https module
         let fetch;
         try {
-            // Try to use built-in fetch first (Node 18+)
             fetch = globalThis.fetch || require('node:fetch');
         } catch (e) {
-            // Fallback to https module for older Node versions
             const https = require('https');
             const http = require('http');
-            const { URL } = require('url');
-            
+            const {URL} = require('url');
+
             fetch = (url, options = {}) => {
                 return new Promise((resolve, reject) => {
                     const urlObj = new URL(url);
                     const isHttps = urlObj.protocol === 'https:';
                     const client = isHttps ? https : http;
-                    
+
                     const req = client.request(url, {
                         method: options.method || 'GET',
                         headers: options.headers || {},
@@ -163,13 +158,13 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
                             });
                         });
                     });
-                    
+
                     req.on('error', reject);
                     req.on('timeout', () => {
                         req.destroy();
                         reject(new Error('Request timeout'));
                     });
-                    
+
                     if (options.body) {
                         req.write(options.body);
                     }
@@ -177,88 +172,92 @@ ipcMain.handle('test-server-connection', async (event, serverUrl) => {
                 });
             };
         }
-        
-        // Normalize the server URL (remove trailing slash)
+
         const normalizedServerUrl = serverUrl.replace(/\/$/, '');
-        
-        // Test the health endpoint specifically - this is required for a valid Termix server
+
         const healthUrl = `${normalizedServerUrl}/health`;
-        
+
         try {
             const response = await fetch(healthUrl, {
                 method: 'GET',
                 timeout: 5000
             });
-            
+
             if (response.ok) {
                 const data = await response.text();
-                
-                // Reject if response looks like HTML (YouTube, etc.)
+
                 if (data.includes('<html') || data.includes('<!DOCTYPE') || data.includes('<head>') || data.includes('<body>')) {
                     console.log('Health endpoint returned HTML instead of JSON - not a Termix server');
-                    return { success: false, error: 'Server returned HTML instead of JSON. This does not appear to be a Termix server.' };
+                    return {
+                        success: false,
+                        error: 'Server returned HTML instead of JSON. This does not appear to be a Termix server.'
+                    };
                 }
-                
-                // A valid Termix health check should return JSON with specific structure
+
                 try {
                     const healthData = JSON.parse(data);
-                    // Check if it has the expected Termix health check structure
                     if (healthData && (
-                        healthData.status === 'ok' ||  // Termix returns {status: 'ok'}
-                        healthData.status === 'healthy' || 
-                        healthData.healthy === true || 
+                        healthData.status === 'ok' ||
+                        healthData.status === 'healthy' ||
+                        healthData.healthy === true ||
                         healthData.database === 'connected'
                     )) {
-                        return { success: true, status: response.status, testedUrl: healthUrl };
+                        return {success: true, status: response.status, testedUrl: healthUrl};
                     }
                 } catch (parseError) {
-                    // If not JSON, reject - Termix health endpoint should return JSON
                     console.log('Health endpoint did not return valid JSON');
                 }
             }
         } catch (urlError) {
             console.error('Health check failed:', urlError);
         }
-        
-        // If health check fails, try version endpoint as fallback
+
         try {
             const versionUrl = `${normalizedServerUrl}/version`;
             const response = await fetch(versionUrl, {
                 method: 'GET',
                 timeout: 5000
             });
-            
+
             if (response.ok) {
                 const data = await response.text();
-                
-                // Reject if response looks like HTML (YouTube, etc.)
+
                 if (data.includes('<html') || data.includes('<!DOCTYPE') || data.includes('<head>') || data.includes('<body>')) {
                     console.log('Version endpoint returned HTML instead of JSON - not a Termix server');
-                    return { success: false, error: 'Server returned HTML instead of JSON. This does not appear to be a Termix server.' };
+                    return {
+                        success: false,
+                        error: 'Server returned HTML instead of JSON. This does not appear to be a Termix server.'
+                    };
                 }
-                
+
                 try {
                     const versionData = JSON.parse(data);
-                    // Check if it looks like a Termix version response - must be JSON and contain version-specific fields
                     if (versionData && (
-                        versionData.status === 'up_to_date' || 
+                        versionData.status === 'up_to_date' ||
                         versionData.status === 'requires_update' ||
                         (versionData.localVersion && versionData.version && versionData.latest_release)
                     )) {
-                        return { success: true, status: response.status, testedUrl: versionUrl, warning: 'Health endpoint not available, but server appears to be running' };
+                        return {
+                            success: true,
+                            status: response.status,
+                            testedUrl: versionUrl,
+                            warning: 'Health endpoint not available, but server appears to be running'
+                        };
                     }
                 } catch (parseError) {
-                    // If not JSON, reject - Termix version endpoint should return JSON
                     console.log('Version endpoint did not return valid JSON');
                 }
             }
         } catch (versionError) {
             console.error('Version check failed:', versionError);
         }
-        
-        return { success: false, error: 'Server is not responding or does not appear to be a valid Termix server. Please ensure the server is running and accessible.' };
+
+        return {
+            success: false,
+            error: 'Server is not responding or does not appear to be a valid Termix server. Please ensure the server is running and accessible.'
+        };
     } catch (error) {
-        return { success: false, error: error.message };
+        return {success: false, error: error.message};
     }
 });
 

@@ -9,7 +9,7 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 import path from 'path';
 import 'dotenv/config';
-import { databaseLogger, apiLogger } from '../utils/logger.js';
+import {databaseLogger, apiLogger} from '../utils/logger.js';
 
 const app = express();
 app.use(cors({
@@ -107,7 +107,7 @@ async function fetchGitHubAPI(endpoint: string, cacheKey: string): Promise<any> 
             cached: false
         };
     } catch (error) {
-        databaseLogger.error(`Failed to fetch from GitHub API`, error, { operation: 'github_api', endpoint });
+        databaseLogger.error(`Failed to fetch from GitHub API`, error, {operation: 'github_api', endpoint});
         throw error;
     }
 }
@@ -127,12 +127,12 @@ app.get('/version', async (req, res) => {
             const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
             localVersion = packageJson.version;
         } catch (error) {
-            databaseLogger.error('Failed to read version from package.json', error, { operation: 'version_check' });
+            databaseLogger.error('Failed to read version from package.json', error, {operation: 'version_check'});
         }
     }
 
     if (!localVersion) {
-        databaseLogger.error('No version information available', undefined, { operation: 'version_check' });
+        databaseLogger.error('No version information available', undefined, {operation: 'version_check'});
         return res.status(404).send('Local Version Not Set');
     }
 
@@ -148,7 +148,7 @@ app.get('/version', async (req, res) => {
         const remoteVersion = remoteVersionMatch ? remoteVersionMatch[1] : null;
 
         if (!remoteVersion) {
-            databaseLogger.warn('Remote version not found in GitHub response', { operation: 'version_check', rawTag });
+            databaseLogger.warn('Remote version not found in GitHub response', {operation: 'version_check', rawTag});
             return res.status(401).send('Remote Version Not Found');
         }
 
@@ -170,7 +170,7 @@ app.get('/version', async (req, res) => {
 
         res.json(response);
     } catch (err) {
-        databaseLogger.error('Version check failed', err, { operation: 'version_check' });
+        databaseLogger.error('Version check failed', err, {operation: 'version_check'});
         res.status(500).send('Fetch Error');
     }
 });
@@ -180,8 +180,6 @@ app.get('/releases/rss', async (req, res) => {
         const page = parseInt(req.query.page as string) || 1;
         const per_page = Math.min(parseInt(req.query.per_page as string) || 20, 100);
         const cacheKey = `releases_rss_${page}_${per_page}`;
-
-        // RSS releases requested
 
         const releasesData = await fetchGitHubAPI(
             `/repos/${REPO_OWNER}/${REPO_NAME}/releases?page=${page}&per_page=${per_page}`,
@@ -218,11 +216,9 @@ app.get('/releases/rss', async (req, res) => {
             cache_age: releasesData.cache_age
         };
 
-        // RSS releases generated successfully
-
         res.json(response);
     } catch (error) {
-        databaseLogger.error('Failed to generate RSS format', error, { operation: 'rss_releases' });
+        databaseLogger.error('Failed to generate RSS format', error, {operation: 'rss_releases'});
         res.status(500).json({
             error: 'Failed to generate RSS format',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -237,9 +233,9 @@ app.use('/alerts', alertRoutes);
 app.use('/credentials', credentialsRoutes);
 
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    apiLogger.error('Unhandled error in request', err, { 
-        operation: 'error_handler', 
-        method: req.method, 
+    apiLogger.error('Unhandled error in request', err, {
+        operation: 'error_handler',
+        method: req.method,
         url: req.url,
         userAgent: req.get('User-Agent')
     });
@@ -248,8 +244,8 @@ app.use((err: unknown, req: express.Request, res: express.Response, next: expres
 
 const PORT = 8081;
 app.listen(PORT, () => {
-    databaseLogger.success(`Database API server started on port ${PORT}`, { 
-        operation: 'server_start', 
+    databaseLogger.success(`Database API server started on port ${PORT}`, {
+        operation: 'server_start',
         port: PORT,
         routes: ['/users', '/ssh', '/alerts', '/credentials', '/health', '/version', '/releases/rss']
     });
