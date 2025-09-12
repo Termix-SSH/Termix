@@ -5,6 +5,7 @@ import {ClipboardAddon} from '@xterm/addon-clipboard';
 import {Unicode11Addon} from '@xterm/addon-unicode11';
 import {WebLinksAddon} from '@xterm/addon-web-links';
 import {useTranslation} from 'react-i18next';
+import {isElectron} from '@/ui/main-axios.ts';
 
 interface SSHTerminalProps {
     hostConfig: any;
@@ -215,11 +216,10 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 const isDev = process.env.NODE_ENV === 'development' &&
                     (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
 
-                const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
                 const wsUrl = isDev
                     ? 'ws://localhost:8082'
-                    : isElectron
+                    : isElectron()
                         ? (() => {
                             // Get configured server URL from window object (set by main-axios)
                             const baseUrl = (window as any).configuredServerUrl || 'http://127.0.0.1:8081';

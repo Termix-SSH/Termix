@@ -30,7 +30,8 @@ import {
     makeUserAdmin,
     removeAdminStatus,
     deleteUser,
-    getCookie
+    getCookie,
+    isElectron
 } from "@/ui/main-axios.ts";
 
 interface AdminSettingsProps {
@@ -75,8 +76,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         if (!jwt) return;
         
         // Check if we're in Electron and have a server configured
-        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-        if (isElectron) {
+        if (isElectron()) {
             // In Electron, check if we have a configured server
             const serverUrl = (window as any).configuredServerUrl;
             if (!serverUrl) {
@@ -101,8 +101,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
 
     React.useEffect(() => {
         // Check if we're in Electron and have a server configured
-        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-        if (isElectron) {
+        if (isElectron()) {
             const serverUrl = (window as any).configuredServerUrl;
             if (!serverUrl) {
                 console.log('No server configured in Electron, skipping registration status check');
@@ -130,8 +129,7 @@ export function AdminSettings({isTopbarOpen = true}: AdminSettingsProps): React.
         if (!jwt) return;
         
         // Check if we're in Electron and have a server configured
-        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-        if (isElectron) {
+        if (isElectron()) {
             const serverUrl = (window as any).configuredServerUrl;
             if (!serverUrl) {
                 console.log('No server configured in Electron, skipping user fetch');

@@ -6,7 +6,7 @@ import {Unicode11Addon} from '@xterm/addon-unicode11';
 import {WebLinksAddon} from '@xterm/addon-web-links';
 import {useTranslation} from 'react-i18next';
 import {toast} from 'sonner';
-import {getCookie} from '@/ui/main-axios.ts';
+import {getCookie, isElectron} from '@/ui/main-axios.ts';
 
 interface SSHTerminalProps {
     hostConfig: any;
@@ -197,7 +197,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         const isDev = process.env.NODE_ENV === 'development' &&
             (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
         
-        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
         const wsUrl = isDev
             ? 'ws://localhost:8082'
@@ -491,7 +490,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 const isDev = process.env.NODE_ENV === 'development' &&
                     (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
                 
-                const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
                 const wsUrl = isDev
                     ? 'ws://localhost:8082'

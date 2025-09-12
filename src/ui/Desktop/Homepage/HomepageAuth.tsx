@@ -23,6 +23,7 @@ import {
     setCookie,
     getCookie,
     getServerConfig,
+    isElectron,
     type ServerConfig
 } from "../../main-axios.ts";
 import {ServerConfig as ServerConfigComponent} from "@/ui/Desktop/ElectronOnly/ServerConfig.tsx";
@@ -413,7 +414,7 @@ export function HomepageAuth({
     
     useEffect(() => {
         const checkServerConfig = async () => {
-            if ((window as any).electronAPI) {
+            if (isElectron()) {
                 try {
                     const config = await getServerConfig();
                     console.log('Desktop HomepageAuth - Server config check:', config);
@@ -630,8 +631,7 @@ export function HomepageAuth({
                                         <p>{t('auth.loginWithExternalDesc')}</p>
                                     </div>
                                     {(() => {
-                                        const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-                                        if (isElectron) {
+                                        if (isElectron()) {
                                             return (
                                                 <div className="text-center p-4 bg-muted/50 rounded-lg border">
                                                     <p className="text-muted-foreground text-sm">
@@ -871,7 +871,7 @@ export function HomepageAuth({
                             </div>
                             <LanguageSwitcher />
                         </div>
-                        {(window as any).electronAPI && currentServerUrl && (
+                        {isElectron() && currentServerUrl && (
                             <div className="flex items-center justify-between">
                                 <div>
                                     <Label className="text-sm text-muted-foreground">Server</Label>

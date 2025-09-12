@@ -75,6 +75,10 @@ interface OIDCAuthorize {
 // UTILITY FUNCTIONS
 // ============================================================================
 
+export function isElectron(): boolean {
+    return (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
+}
+
 function getLoggerForService(serviceName: string) {
     if (serviceName.includes('SSH') || serviceName.includes('ssh')) {
         return sshLogger;
@@ -92,9 +96,7 @@ function getLoggerForService(serviceName: string) {
 }
 
 export function setCookie(name: string, value: string, days = 7): void {
-    const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-    
-    if (isElectron) {
+    if (isElectron()) {
         localStorage.setItem(name, value);
     } else {
         const expires = new Date(Date.now() + days * 864e5).toUTCString();
@@ -103,8 +105,7 @@ export function setCookie(name: string, value: string, days = 7): void {
 }
 
 export function getCookie(name: string): string | undefined {
-    const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-    if (isElectron) {
+    if (isElectron()) {
         const token = localStorage.getItem(name) || undefined;
         return token;
     } else {
@@ -243,8 +244,7 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
 
             // Handle auth token clearing
             if (status === 401) {
-                const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-                if (isElectron) {
+                if (isElectron()) {
                     localStorage.removeItem('jwt');
                 } else {
                     document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
@@ -263,7 +263,6 @@ function createApiInstance(baseURL: string, serviceName: string = 'API'): AxiosI
 // API INSTANCES
 // ============================================================================
 
-const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
 
 const isDev = process.env.NODE_ENV === 'development' && 
               (window.location.port === '3000' || window.location.port === '5173' || window.location.port === '');
@@ -334,7 +333,7 @@ if (isElectron) {
 }
 
 function getApiUrl(path: string, defaultPort: number): string {
-    if (isElectron) {
+    if (isElectron()) {
         if (configuredServerUrl) {
             // In Electron with configured server, all requests go through nginx reverse proxy
             // Use the same base URL for all services (nginx routes to correct backend port)

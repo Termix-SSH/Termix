@@ -5,6 +5,7 @@ import DesktopApp from './ui/Desktop/DesktopApp.tsx'
 import { MobileApp } from './ui/Mobile/MobileApp.tsx'
 import {ThemeProvider} from "@/components/theme-provider"
 import './i18n/i18n'
+import {isElectron} from './ui/main-axios.ts'
 
 function useWindowWidth() {
     const [width, setWidth] = useState(window.innerWidth);
@@ -52,9 +53,7 @@ function useWindowWidth() {
 function RootApp() {
     const width = useWindowWidth();
     const isMobile = width < 768;
-    const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-
-    if (isElectron) {
+    if (isElectron()) {
         return <DesktopApp />;
     }
 

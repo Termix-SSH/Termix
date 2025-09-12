@@ -3,7 +3,7 @@ import {
     ChevronUp, User2, HardDrive, Menu, ChevronRight
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
-import {getCookie, setCookie} from "@/ui/main-axios.ts";
+import {getCookie, setCookie, isElectron} from "@/ui/main-axios.ts";
 
 import {
     Sidebar,
@@ -61,10 +61,6 @@ interface SidebarProps {
     children?: React.ReactNode;
 }
 
-function isElectron() {
-    const isElectron = (window as any).IS_ELECTRON === true || (window as any).electronAPI?.isElectron === true;
-    return isElectron;
-}
 
 function handleLogout() {
     if (isElectron()) {
