@@ -1506,7 +1506,7 @@ export async function getCredentials(): Promise<any> {
     const response = await authApi.get("/credentials");
     return response.data;
   } catch (error) {
-    handleApiError(error, "fetch credentials");
+    throw handleApiError(error, "fetch credentials");
   }
 }
 
@@ -1515,7 +1515,7 @@ export async function getCredentialDetails(credentialId: number): Promise<any> {
     const response = await authApi.get(`/credentials/${credentialId}`);
     return response.data;
   } catch (error) {
-    handleApiError(error, "fetch credential details");
+    throw handleApiError(error, "fetch credential details");
   }
 }
 
@@ -1524,7 +1524,7 @@ export async function createCredential(credentialData: any): Promise<any> {
     const response = await authApi.post("/credentials", credentialData);
     return response.data;
   } catch (error) {
-    handleApiError(error, "create credential");
+    throw handleApiError(error, "create credential");
   }
 }
 
@@ -1539,7 +1539,7 @@ export async function updateCredential(
     );
     return response.data;
   } catch (error) {
-    handleApiError(error, "update credential");
+    throw handleApiError(error, "update credential");
   }
 }
 
@@ -1548,7 +1548,7 @@ export async function deleteCredential(credentialId: number): Promise<any> {
     const response = await authApi.delete(`/credentials/${credentialId}`);
     return response.data;
   } catch (error) {
-    handleApiError(error, "delete credential");
+    throw handleApiError(error, "delete credential");
   }
 }
 
@@ -1594,7 +1594,7 @@ export async function applyCredentialToHost(
     );
     return response.data;
   } catch (error) {
-    handleApiError(error, "apply credential to host");
+    throw handleApiError(error, "apply credential to host");
   }
 }
 
@@ -1604,7 +1604,7 @@ export async function removeCredentialFromHost(hostId: number): Promise<any> {
     const response = await sshHostApi.delete(`/db/host/${hostId}/credential`);
     return response.data;
   } catch (error) {
-    handleApiError(error, "remove credential from host");
+    throw handleApiError(error, "remove credential from host");
   }
 }
 
@@ -1620,7 +1620,7 @@ export async function migrateHostToCredential(
     );
     return response.data;
   } catch (error) {
-    handleApiError(error, "migrate host to credential");
+    throw handleApiError(error, "migrate host to credential");
   }
 }
 
@@ -1663,6 +1663,6 @@ export async function renameCredentialFolder(
     });
     return response.data;
   } catch (error) {
-    handleApiError(error, "rename credential folder");
+    throw handleApiError(error, "rename credential folder");
   }
 }

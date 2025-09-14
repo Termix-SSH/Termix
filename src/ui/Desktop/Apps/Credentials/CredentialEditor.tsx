@@ -176,7 +176,7 @@ export function CredentialEditor({
         if (defaultAuthType === "password") {
           formData.password = fullCredentialDetails.password || "";
         } else if (defaultAuthType === "key") {
-          formData.key = "existing_key";
+          formData.key = fullCredentialDetails.key || "";
           formData.keyPassword = fullCredentialDetails.keyPassword || "";
           formData.keyType =
             (fullCredentialDetails.keyType as any) || ("auto" as const);
@@ -230,8 +230,6 @@ export function CredentialEditor({
         if (data.key instanceof File) {
           const keyContent = await data.key.text();
           submitData.key = keyContent;
-        } else if (data.key === "existing_key") {
-          delete submitData.key;
         } else {
           submitData.key = data.key;
         }
@@ -259,7 +257,12 @@ export function CredentialEditor({
 
       form.reset();
     } catch (error) {
-      toast.error(t("credentials.failedToSaveCredential"));
+      console.error("Credential save error:", error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(t("credentials.failedToSaveCredential"));
+      }
     }
   };
 
@@ -593,10 +596,22 @@ export function CredentialEditor({
                       value={keyInputMethod}
                       onValueChange={(value) => {
                         setKeyInputMethod(value as "upload" | "paste");
-                        if (value === "upload") {
-                          form.setValue("key", null);
+                        // Only reset key value if we're not editing an existing credential
+                        if (!editingCredential) {
+                          if (value === "upload") {
+                            form.setValue("key", null);
+                          } else {
+                            form.setValue("key", "");
+                          }
                         } else {
-                          form.setValue("key", "");
+                          // For existing credentials, preserve the key data when switching methods
+                          const currentKey = fullCredentialDetails?.key || "";
+                          if (value === "paste") {
+                            form.setValue("key", currentKey);
+                          } else {
+                            // For upload mode, keep the current string value to show "existing key" status
+                            form.setValue("key", currentKey);
+                          }
                         }
                       }}
                       className="w-full"
@@ -642,13 +657,13 @@ export function CredentialEditor({
                                         t("credentials.upload")
                                       }
                                     >
-                                      {field.value === "existing_key"
-                                        ? t("hosts.existingKey")
-                                        : field.value
-                                          ? editingCredential
+                                      {field.value instanceof File
+                                        ? field.value.name
+                                        : typeof field.value === "string" && field.value && editingCredential
+                                          ? t("hosts.existingKey") + " - " + t("credentials.updateKey")
+                                          : field.value
                                             ? t("credentials.updateKey")
-                                            : field.value.name
-                                          : t("credentials.upload")}
+                                            : t("credentials.upload")}
                                     </span>
                                   </Button>
                                 </div>
@@ -656,6 +671,22 @@ export function CredentialEditor({
                             </FormItem>
                           )}
                         />
+                        {/* Show existing key content preview for upload mode */}
+                        {editingCredential && fullCredentialDetails?.key && typeof form.watch("key") === "string" && (
+                          <FormItem className="mb-4">
+                            <FormLabel>{t("credentials.sshPrivateKey")} ({t("hosts.existingKey")})</FormLabel>
+                            <FormControl>
+                              <textarea
+                                readOnly
+                                className="flex min-h-[120px] w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={fullCredentialDetails.key}
+                              />
+                            </FormControl>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Current SSH key content - {t("credentials.uploadFile")} to replace
+                            </div>
+                          </FormItem>
+                        )}
                         <div className="grid grid-cols-15 gap-4 mt-4">
                           <FormField
                             control={form.control}
