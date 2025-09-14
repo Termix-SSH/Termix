@@ -11,7 +11,7 @@ import ssh2Pkg from "ssh2";
 const { utils: ssh2Utils } = ssh2Pkg;
 
 // Direct SSH key generation with ssh2 - the right way
-function generateSSHKeyPair(keyType: string, keySize?: number): { success: boolean; privateKey?: string; publicKey?: string; error?: string } {
+function generateSSHKeyPair(keyType: string, keySize?: number, passphrase?: string): { success: boolean; privateKey?: string; publicKey?: string; error?: string } {
   console.log('Generating SSH key pair with ssh2:', keyType);
 
   try {
@@ -27,6 +27,12 @@ function generateSSHKeyPair(keyType: string, keySize?: number): { success: boole
     } else if (keyType === 'ecdsa-sha2-nistp256') {
       ssh2Type = 'ecdsa';
       options.bits = 256; // ECDSA P-256 uses 256 bits
+    }
+
+    // Add passphrase protection if provided
+    if (passphrase && passphrase.trim()) {
+      options.passphrase = passphrase;
+      options.cipher = 'aes128-cbc'; // Default cipher for encrypted private keys
     }
 
     // Use ssh2's native key generation
@@ -882,8 +888,8 @@ router.post("/generate-key-pair", authenticateJWT, async (req: Request, res: Res
   console.log("Has passphrase:", !!passphrase);
 
   try {
-    // Generate keys with crypto, convert public key to SSH format
-    const result = generateSSHKeyPair(keyType, keySize);
+    // Generate SSH keys directly with ssh2
+    const result = generateSSHKeyPair(keyType, keySize, passphrase);
 
     if (result.success && result.privateKey && result.publicKey) {
       const response = {

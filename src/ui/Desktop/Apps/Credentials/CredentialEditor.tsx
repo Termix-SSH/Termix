@@ -376,6 +376,7 @@ export function CredentialEditor({
   };
 
   const [tagInput, setTagInput] = useState("");
+  const [keyGenerationPassphrase, setKeyGenerationPassphrase] = useState("");
 
   const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -675,6 +676,23 @@ export function CredentialEditor({
                         <FormLabel className="mb-3 font-bold block">
                           {t("credentials.generateKeyPair")}
                         </FormLabel>
+
+                        {/* Key Generation Passphrase Input */}
+                        <div className="mb-3">
+                          <FormLabel className="text-sm mb-2 block">
+                            {t("credentials.keyPassword")} ({t("credentials.optional")})
+                          </FormLabel>
+                          <PasswordInput
+                            placeholder={t("placeholders.keyPassword")}
+                            value={keyGenerationPassphrase}
+                            onChange={(e) => setKeyGenerationPassphrase(e.target.value)}
+                            className="max-w-xs"
+                          />
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {t("credentials.keyPassphraseOptional")}
+                          </div>
+                        </div>
+
                         <div className="flex gap-2 flex-wrap">
                           <Button
                             type="button"
@@ -682,13 +700,16 @@ export function CredentialEditor({
                             size="sm"
                             onClick={async () => {
                               try {
-                                const keyPassword = form.watch("keyPassword");
-                                const result = await generateKeyPair('ssh-ed25519', undefined, keyPassword);
+                                const result = await generateKeyPair('ssh-ed25519', undefined, keyGenerationPassphrase);
 
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  debouncedKeyDetection(result.privateKey, keyPassword);
+                                  // Auto-fill the key password field if passphrase was used
+                                  if (keyGenerationPassphrase) {
+                                    form.setValue("keyPassword", keyGenerationPassphrase);
+                                  }
+                                  debouncedKeyDetection(result.privateKey, keyGenerationPassphrase);
                                   debouncedPublicKeyDetection(result.publicKey);
                                   toast.success(t("credentials.keyPairGeneratedSuccessfully", { keyType: "Ed25519" }));
                                 } else {
@@ -708,13 +729,16 @@ export function CredentialEditor({
                             size="sm"
                             onClick={async () => {
                               try {
-                                const keyPassword = form.watch("keyPassword");
-                                const result = await generateKeyPair('ecdsa-sha2-nistp256', undefined, keyPassword);
+                                const result = await generateKeyPair('ecdsa-sha2-nistp256', undefined, keyGenerationPassphrase);
 
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  debouncedKeyDetection(result.privateKey, keyPassword);
+                                  // Auto-fill the key password field if passphrase was used
+                                  if (keyGenerationPassphrase) {
+                                    form.setValue("keyPassword", keyGenerationPassphrase);
+                                  }
+                                  debouncedKeyDetection(result.privateKey, keyGenerationPassphrase);
                                   debouncedPublicKeyDetection(result.publicKey);
                                   toast.success(t("credentials.keyPairGeneratedSuccessfully", { keyType: "ECDSA" }));
                                 } else {
@@ -734,13 +758,16 @@ export function CredentialEditor({
                             size="sm"
                             onClick={async () => {
                               try {
-                                const keyPassword = form.watch("keyPassword");
-                                const result = await generateKeyPair('ssh-rsa', 2048, keyPassword);
+                                const result = await generateKeyPair('ssh-rsa', 2048, keyGenerationPassphrase);
 
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  debouncedKeyDetection(result.privateKey, keyPassword);
+                                  // Auto-fill the key password field if passphrase was used
+                                  if (keyGenerationPassphrase) {
+                                    form.setValue("keyPassword", keyGenerationPassphrase);
+                                  }
+                                  debouncedKeyDetection(result.privateKey, keyGenerationPassphrase);
                                   debouncedPublicKeyDetection(result.publicKey);
                                   toast.success(t("credentials.keyPairGeneratedSuccessfully", { keyType: "RSA" }));
                                 } else {
