@@ -8,7 +8,7 @@ import { authLogger } from "../../utils/logger.js";
 import { parseSSHKey, parsePublicKey, detectKeyType, validateKeyPair } from "../../utils/ssh-key-utils.js";
 import crypto from "crypto";
 import ssh2Pkg from "ssh2";
-const { utils: ssh2Utils } = ssh2Pkg;
+const { utils: ssh2Utils, Client } = ssh2Pkg;
 
 // Direct SSH key generation with ssh2 - the right way
 function generateSSHKeyPair(keyType: string, keySize?: number, passphrase?: string): { success: boolean; privateKey?: string; publicKey?: string; error?: string } {
@@ -678,6 +678,7 @@ function formatCredentialOutput(credential: any): any {
         : [],
     authType: credential.authType,
     username: credential.username,
+    publicKey: credential.publicKey,
     keyType: credential.keyType,
     detectedKeyType: credential.detectedKeyType,
     usageCount: credential.usageCount || 0,
@@ -1114,6 +1115,282 @@ router.post("/generate-public-key", authenticateJWT, async (req: Request, res: R
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Failed to generate public key"
+    });
+  }
+});
+
+// SSH Key Deployment Function
+async function deploySSHKeyToHost(
+  hostConfig: any,
+  publicKey: string,
+  credentialData: any
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  return new Promise((resolve) => {
+    const conn = new Client();
+    let connectionTimeout: NodeJS.Timeout;
+
+    // Connection timeout
+    connectionTimeout = setTimeout(() => {
+      conn.destroy();
+      resolve({ success: false, error: "Connection timeout" });
+    }, 30000);
+
+    conn.on('ready', async () => {
+      clearTimeout(connectionTimeout);
+
+      try {
+        // Step 1: Create ~/.ssh directory if it doesn't exist
+        await new Promise<void>((resolveCmd, rejectCmd) => {
+          conn.exec('mkdir -p ~/.ssh && chmod 700 ~/.ssh', (err, stream) => {
+            if (err) return rejectCmd(err);
+
+            stream.on('close', (code) => {
+              if (code === 0) {
+                resolveCmd();
+              } else {
+                rejectCmd(new Error(`mkdir command failed with code ${code}`));
+              }
+            });
+          });
+        });
+
+        // Step 2: Check if public key already exists
+        const keyExists = await new Promise<boolean>((resolveCheck, rejectCheck) => {
+          const keyPattern = publicKey.split(' ')[1]; // Get the key part without algorithm
+          conn.exec(`grep -q "${keyPattern}" ~/.ssh/authorized_keys 2>/dev/null`, (err, stream) => {
+            if (err) return rejectCheck(err);
+
+            stream.on('close', (code) => {
+              resolveCheck(code === 0); // code 0 means key found
+            });
+          });
+        });
+
+        if (keyExists) {
+          conn.end();
+          resolve({ success: true, message: "SSH key already deployed" });
+          return;
+        }
+
+        // Step 3: Add public key to authorized_keys
+        await new Promise<void>((resolveAdd, rejectAdd) => {
+          const escapedKey = publicKey.replace(/'/g, "'\\''");
+          conn.exec(`echo '${escapedKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`, (err, stream) => {
+            if (err) return rejectAdd(err);
+
+            stream.on('close', (code) => {
+              if (code === 0) {
+                resolveAdd();
+              } else {
+                rejectAdd(new Error(`Key deployment failed with code ${code}`));
+              }
+            });
+          });
+        });
+
+        // Step 4: Verify deployment
+        const verifySuccess = await new Promise<boolean>((resolveVerify, rejectVerify) => {
+          const keyPattern = publicKey.split(' ')[1];
+          conn.exec(`grep -q "${keyPattern}" ~/.ssh/authorized_keys`, (err, stream) => {
+            if (err) return rejectVerify(err);
+
+            stream.on('close', (code) => {
+              resolveVerify(code === 0);
+            });
+          });
+        });
+
+        conn.end();
+
+        if (verifySuccess) {
+          resolve({ success: true, message: "SSH key deployed successfully" });
+        } else {
+          resolve({ success: false, error: "Key deployment verification failed" });
+        }
+      } catch (error) {
+        conn.end();
+        resolve({
+          success: false,
+          error: error instanceof Error ? error.message : "Deployment failed"
+        });
+      }
+    });
+
+    conn.on('error', (err) => {
+      clearTimeout(connectionTimeout);
+      resolve({ success: false, error: err.message });
+    });
+
+    // Connect to the target host
+    try {
+      const connectionConfig: any = {
+        host: hostConfig.ip,
+        port: hostConfig.port || 22,
+        username: hostConfig.username,
+      };
+
+      if (hostConfig.authType === 'password' && hostConfig.password) {
+        connectionConfig.password = hostConfig.password;
+      } else if (hostConfig.authType === 'key' && hostConfig.privateKey) {
+        connectionConfig.privateKey = hostConfig.privateKey;
+        if (hostConfig.keyPassword) {
+          connectionConfig.passphrase = hostConfig.keyPassword;
+        }
+      } else {
+        resolve({ success: false, error: "Invalid authentication configuration" });
+        return;
+      }
+
+      conn.connect(connectionConfig);
+    } catch (error) {
+      clearTimeout(connectionTimeout);
+      resolve({
+        success: false,
+        error: error instanceof Error ? error.message : "Connection failed"
+      });
+    }
+  });
+}
+
+// Deploy SSH Key to Host endpoint
+// POST /credentials/:id/deploy-to-host
+router.post("/:id/deploy-to-host", authenticateJWT, async (req: Request, res: Response) => {
+  const credentialId = parseInt(req.params.id);
+  const { targetHostId } = req.body;
+
+
+  if (!credentialId || !targetHostId) {
+    return res.status(400).json({
+      success: false,
+      error: "Credential ID and target host ID are required"
+    });
+  }
+
+  try {
+    // Get credential details
+    const credential = await db
+      .select()
+      .from(sshCredentials)
+      .where(eq(sshCredentials.id, credentialId))
+      .limit(1);
+
+    if (!credential || credential.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Credential not found"
+      });
+    }
+
+    const credData = credential[0];
+
+    // Only support key-based credentials for deployment
+    if (credData.authType !== 'key') {
+      return res.status(400).json({
+        success: false,
+        error: "Only SSH key-based credentials can be deployed"
+      });
+    }
+
+    if (!credData.publicKey) {
+      return res.status(400).json({
+        success: false,
+        error: "Public key is required for deployment"
+      });
+    }
+
+    // Get target host details
+    const targetHost = await db
+      .select()
+      .from(sshData)
+      .where(eq(sshData.id, targetHostId))
+      .limit(1);
+
+    if (!targetHost || targetHost.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Target host not found"
+      });
+    }
+
+    const hostData = targetHost[0];
+
+    // Prepare host configuration for connection
+    let hostConfig = {
+      ip: hostData.ip,
+      port: hostData.port,
+      username: hostData.username,
+      authType: hostData.authType,
+      password: hostData.password,
+      privateKey: hostData.key,
+      keyPassword: hostData.keyPassword
+    };
+
+    // If host uses credential authentication, resolve the credential
+    if (hostData.authType === 'credential' && hostData.credentialId) {
+      const hostCredential = await db
+        .select()
+        .from(sshCredentials)
+        .where(eq(sshCredentials.id, hostData.credentialId))
+        .limit(1);
+
+      if (hostCredential && hostCredential.length > 0) {
+        const cred = hostCredential[0];
+
+        // Update hostConfig with credential data
+        hostConfig.authType = cred.authType;
+        hostConfig.username = cred.username; // Use credential's username
+
+        if (cred.authType === 'password') {
+          hostConfig.password = cred.password;
+        } else if (cred.authType === 'key') {
+          hostConfig.privateKey = cred.privateKey || cred.key; // Try both fields
+          hostConfig.keyPassword = cred.keyPassword;
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: "Host credential not found"
+        });
+      }
+    }
+
+    // Deploy the SSH key
+    const deployResult = await deploySSHKeyToHost(
+      hostConfig,
+      credData.publicKey,
+      credData
+    );
+
+    if (deployResult.success) {
+      // Log successful deployment
+      authLogger.info(`SSH key deployed successfully`, {
+        credentialId,
+        targetHostId,
+        operation: "deploy_ssh_key"
+      });
+
+      res.json({
+        success: true,
+        message: deployResult.message || "SSH key deployed successfully"
+      });
+    } else {
+      authLogger.error(`SSH key deployment failed`, {
+        credentialId,
+        targetHostId,
+        error: deployResult.error,
+        operation: "deploy_ssh_key"
+      });
+
+      res.status(500).json({
+        success: false,
+        error: deployResult.error || "Deployment failed"
+      });
+    }
+  } catch (error) {
+    authLogger.error("Failed to deploy SSH key", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to deploy SSH key"
     });
   }
 });

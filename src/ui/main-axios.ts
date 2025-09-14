@@ -1743,3 +1743,18 @@ export async function generateKeyPair(
     throw handleApiError(error, "generate SSH key pair");
   }
 }
+
+export async function deployCredentialToHost(
+  credentialId: number,
+  targetHostId: number,
+): Promise<any> {
+  try {
+    const response = await authApi.post(
+      `/credentials/${credentialId}/deploy-to-host`,
+      { targetHostId }
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "deploy credential to host");
+  }
+}

@@ -70,6 +70,7 @@ export interface Credential {
   username: string;
   password?: string;
   key?: string;
+  publicKey?: string;
   keyPassword?: string;
   keyType?: string;
   usageCount: number;
@@ -87,6 +88,7 @@ export interface CredentialData {
   username: string;
   password?: string;
   key?: string;
+  publicKey?: string;
   keyPassword?: string;
   keyType?: string;
 }
