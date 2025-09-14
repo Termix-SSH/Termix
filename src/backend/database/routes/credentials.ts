@@ -828,4 +828,56 @@ router.post("/validate-key-pair", authenticateJWT, async (req: Request, res: Res
   }
 });
 
+// Generate public key from private key endpoint
+// POST /credentials/generate-public-key
+router.post("/generate-public-key", authenticateJWT, async (req: Request, res: Response) => {
+  const { privateKey, keyPassword } = req.body;
+
+  console.log("=== Generate Public Key API Called ===");
+  console.log("Request body keys:", Object.keys(req.body));
+  console.log("Private key provided:", !!privateKey);
+  console.log("Private key type:", typeof privateKey);
+
+  if (!privateKey || typeof privateKey !== "string") {
+    console.log("Invalid private key provided");
+    return res.status(400).json({ error: "Private key is required" });
+  }
+
+  try {
+    console.log("Calling parseSSHKey to generate public key...");
+    const keyInfo = parseSSHKey(privateKey, keyPassword);
+    console.log("parseSSHKey result:", keyInfo);
+
+    if (!keyInfo.success) {
+      return res.status(400).json({
+        success: false,
+        error: keyInfo.error || "Failed to parse private key"
+      });
+    }
+
+    if (!keyInfo.publicKey || !keyInfo.publicKey.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Unable to generate public key from the provided private key"
+      });
+    }
+
+    const response = {
+      success: true,
+      publicKey: keyInfo.publicKey,
+      keyType: keyInfo.keyType
+    };
+
+    console.log("Sending response:", response);
+    res.json(response);
+  } catch (error) {
+    console.error("Exception in generate-public-key endpoint:", error);
+    authLogger.error("Failed to generate public key", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to generate public key"
+    });
+  }
+});
+
 export default router;

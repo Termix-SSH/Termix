@@ -24,7 +24,7 @@ import {
   getCredentialDetails,
   detectKeyType,
   detectPublicKeyType,
-  validateKeyPair,
+  generatePublicKeyFromPrivate,
 } from "@/ui/main-axios";
 import { useTranslation } from "react-i18next";
 import type {
@@ -45,9 +45,6 @@ export function CredentialEditor({
     useState<Credential | null>(null);
 
   const [authTab, setAuthTab] = useState<"password" | "key">("password");
-  const [keyInputMethod, setKeyInputMethod] = useState<"upload" | "paste">(
-    "upload",
-  );
   const [detectedKeyType, setDetectedKeyType] = useState<string | null>(null);
   const [keyDetectionLoading, setKeyDetectionLoading] = useState(false);
   const keyDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -56,12 +53,6 @@ export function CredentialEditor({
   const [publicKeyDetectionLoading, setPublicKeyDetectionLoading] = useState(false);
   const publicKeyDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [keyPairValidation, setKeyPairValidation] = useState<{
-    isValid: boolean | null;
-    loading: boolean;
-    error?: string;
-  }>({ isValid: null, loading: false });
-  const keyPairValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -234,9 +225,6 @@ export function CredentialEditor({
       if (publicKeyDetectionTimeoutRef.current) {
         clearTimeout(publicKeyDetectionTimeoutRef.current);
       }
-      if (keyPairValidationTimeoutRef.current) {
-        clearTimeout(keyPairValidationTimeoutRef.current);
-      }
     };
   }, []);
 
@@ -308,39 +296,6 @@ export function CredentialEditor({
     }, 1000);
   };
 
-  // Validate key pair function
-  const handleKeyPairValidation = async (privateKeyValue: string, publicKeyValue: string, keyPassword?: string) => {
-    if (!privateKeyValue || privateKeyValue.trim() === '' || !publicKeyValue || publicKeyValue.trim() === '') {
-      setKeyPairValidation({ isValid: null, loading: false });
-      return;
-    }
-
-    setKeyPairValidation({ isValid: null, loading: true });
-    try {
-      const result = await validateKeyPair(privateKeyValue, publicKeyValue, keyPassword);
-      setKeyPairValidation({
-        isValid: result.isValid,
-        loading: false,
-        error: result.error
-      });
-    } catch (error) {
-      setKeyPairValidation({
-        isValid: false,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Unknown error during validation'
-      });
-    }
-  };
-
-  // Debounced key pair validation
-  const debouncedKeyPairValidation = (privateKeyValue: string, publicKeyValue: string, keyPassword?: string) => {
-    if (keyPairValidationTimeoutRef.current) {
-      clearTimeout(keyPairValidationTimeoutRef.current);
-    }
-    keyPairValidationTimeoutRef.current = setTimeout(() => {
-      handleKeyPairValidation(privateKeyValue, publicKeyValue, keyPassword);
-    }, 1500); // Slightly longer delay since this is more expensive
-  };
 
   const getFriendlyKeyTypeName = (keyType: string): string => {
     const keyTypeMap: Record<string, string> = {
@@ -384,12 +339,7 @@ export function CredentialEditor({
       if (data.authType === "password") {
         submitData.password = data.password;
       } else if (data.authType === "key") {
-        if (data.key instanceof File) {
-          const keyContent = await data.key.text();
-          submitData.key = keyContent;
-        } else {
-          submitData.key = data.key;
-        }
+        submitData.key = data.key;
         submitData.publicKey = data.publicKey;
         submitData.keyPassword = data.keyPassword;
         submitData.keyType = data.keyType;
@@ -466,38 +416,6 @@ export function CredentialEditor({
     };
   }, [folderDropdownOpen]);
 
-  const keyTypeOptions = [
-    { value: "auto", label: t("hosts.autoDetect") },
-    { value: "ssh-rsa", label: t("hosts.rsa") },
-    { value: "ssh-ed25519", label: t("hosts.ed25519") },
-    { value: "ecdsa-sha2-nistp256", label: t("hosts.ecdsaNistP256") },
-    { value: "ecdsa-sha2-nistp384", label: t("hosts.ecdsaNistP384") },
-    { value: "ecdsa-sha2-nistp521", label: t("hosts.ecdsaNistP521") },
-    { value: "ssh-dss", label: t("hosts.dsa") },
-    { value: "ssh-rsa-sha2-256", label: t("hosts.rsaSha2256") },
-    { value: "ssh-rsa-sha2-512", label: t("hosts.rsaSha2512") },
-  ];
-
-  const [keyTypeDropdownOpen, setKeyTypeDropdownOpen] = useState(false);
-  const keyTypeButtonRef = useRef<HTMLButtonElement>(null);
-  const keyTypeDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onClickOutside(event: MouseEvent) {
-      if (
-        keyTypeDropdownOpen &&
-        keyTypeDropdownRef.current &&
-        !keyTypeDropdownRef.current.contains(event.target as Node) &&
-        keyTypeButtonRef.current &&
-        !keyTypeButtonRef.current.contains(event.target as Node)
-      ) {
-        setKeyTypeDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [keyTypeDropdownOpen]);
 
   return (
     <div
@@ -750,44 +668,7 @@ export function CredentialEditor({
                     />
                   </TabsContent>
                   <TabsContent value="key">
-                    <Tabs
-                      value={keyInputMethod}
-                      onValueChange={(value) => {
-                        setKeyInputMethod(value as "upload" | "paste");
-                        // Only reset key value if we're not editing an existing credential
-                        if (!editingCredential) {
-                          if (value === "upload") {
-                            form.setValue("key", null);
-                            form.setValue("publicKey", "");
-                          } else if (value === "paste") {
-                            form.setValue("key", "");
-                            form.setValue("publicKey", "");
-                          }
-                        } else {
-                          // For existing credentials, preserve the key data when switching methods
-                          const currentKey = fullCredentialDetails?.key || "";
-                          const currentPublicKey = fullCredentialDetails?.publicKey || "";
-                          if (value === "paste") {
-                            form.setValue("key", currentKey);
-                            form.setValue("publicKey", currentPublicKey);
-                          } else {
-                            // For upload mode, keep the current string value to show "existing key" status
-                            form.setValue("key", currentKey);
-                            form.setValue("publicKey", currentPublicKey);
-                          }
-                        }
-                      }}
-                      className="w-full"
-                    >
-                      <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-                        <TabsTrigger value="upload">
-                          {t("hosts.uploadFile")}
-                        </TabsTrigger>
-                        <TabsTrigger value="paste">
-                          {t("hosts.pasteKey")}
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="upload" className="mt-4">
+                    <div className="mt-4">
                         <div className="grid grid-cols-2 gap-4 items-start">
                           <Controller
                             control={form.control}
@@ -797,7 +678,7 @@ export function CredentialEditor({
                                 <FormLabel className="mb-2 min-h-[20px]">
                                   {t("credentials.sshPrivateKey")}
                                 </FormLabel>
-                                <FormControl>
+                                <div className="mb-2">
                                   <div className="relative inline-block w-full">
                                     <input
                                       id="key-upload"
@@ -805,102 +686,14 @@ export function CredentialEditor({
                                       accept="*,.pem,.key,.txt,.ppk"
                                       onChange={async (e) => {
                                         const file = e.target.files?.[0];
-                                        field.onChange(file || null);
-
-                                        // Detect key type from uploaded file
-                                        if (file) {
-                                          try {
-                                            const fileContent = await file.text();
-                                            debouncedKeyDetection(fileContent, form.watch("keyPassword"));
-                                            // Trigger key pair validation if public key is available
-                                            const publicKeyValue = form.watch("publicKey");
-                                            if (publicKeyValue && publicKeyValue.trim()) {
-                                              debouncedKeyPairValidation(fileContent, publicKeyValue, form.watch("keyPassword"));
-                                            }
-                                          } catch (error) {
-                                            console.error('Failed to read uploaded file:', error);
-                                          }
-                                        } else {
-                                          setDetectedKeyType(null);
-                                        }
-                                      }}
-                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      className="w-full justify-start text-left"
-                                    >
-                                      <span
-                                        className="truncate"
-                                        title={
-                                          field.value?.name ||
-                                          t("credentials.upload")
-                                        }
-                                      >
-                                        {field.value instanceof File
-                                          ? field.value.name
-                                          : typeof field.value === "string" && field.value && editingCredential
-                                            ? t("hosts.existingKey") + " - " + t("credentials.updateKey")
-                                            : field.value
-                                              ? t("credentials.updateKey")
-                                              : t("credentials.upload")}
-                                      </span>
-                                    </Button>
-                                  </div>
-                                </FormControl>
-                                {/* Key type detection display for uploaded files */}
-                                {detectedKeyType && field.value instanceof File && (
-                                  <div className="text-sm mt-2">
-                                    <span className="text-muted-foreground">Detected key type: </span>
-                                    <span className={`font-medium ${
-                                      detectedKeyType === 'invalid' || detectedKeyType === 'error'
-                                        ? 'text-destructive'
-                                        : 'text-green-600'
-                                    }`}>
-                                      {getFriendlyKeyTypeName(detectedKeyType)}
-                                    </span>
-                                    {keyDetectionLoading && (
-                                      <span className="ml-2 text-muted-foreground">(detecting...)</span>
-                                    )}
-                                  </div>
-                                )}
-                              </FormItem>
-                            )}
-                          />
-                          <Controller
-                            control={form.control}
-                            name="publicKey"
-                            render={({ field }) => (
-                              <FormItem className="mb-4 flex flex-col">
-                                <FormLabel className="mb-2 min-h-[20px]">
-                                  {t("credentials.sshPublicKey")} ({t("credentials.optional")})
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative inline-block w-full">
-                                    <input
-                                      id="public-key-upload"
-                                      type="file"
-                                      accept="*,.pub,.txt"
-                                      onChange={async (e) => {
-                                        const file = e.target.files?.[0];
                                         if (file) {
                                           try {
                                             const fileContent = await file.text();
                                             field.onChange(fileContent);
-                                            // Detect public key type from uploaded file
-                                            debouncedPublicKeyDetection(fileContent);
-                                            // Trigger key pair validation if private key is available
-                                            const privateKeyValue = form.watch("key");
-                                            if (privateKeyValue && typeof privateKeyValue === "string" && privateKeyValue.trim()) {
-                                              debouncedKeyPairValidation(privateKeyValue, fileContent, form.watch("keyPassword"));
-                                            }
+                                            debouncedKeyDetection(fileContent, form.watch("keyPassword"));
                                           } catch (error) {
-                                            console.error('Failed to read uploaded public key file:', error);
+                                            console.error('Failed to read uploaded file:', error);
                                           }
-                                        } else {
-                                          field.onChange("");
-                                          setDetectedPublicKeyType(null);
                                         }
                                       }}
                                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -911,143 +704,11 @@ export function CredentialEditor({
                                       className="w-full justify-start text-left"
                                     >
                                       <span className="truncate">
-                                        {field.value
-                                          ? t("credentials.publicKeyUploaded")
-                                          : t("credentials.uploadPublicKey")}
+                                        {t("credentials.uploadPrivateKeyFile")}
                                       </span>
                                     </Button>
                                   </div>
-                                </FormControl>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {t("credentials.publicKeyNote")}
                                 </div>
-                                {/* Public key type detection display for upload mode */}
-                                {detectedPublicKeyType && field.value && (
-                                  <div className="text-sm mt-2">
-                                    <span className="text-muted-foreground">Detected key type: </span>
-                                    <span className={`font-medium ${
-                                      detectedPublicKeyType === 'invalid' || detectedPublicKeyType === 'error'
-                                        ? 'text-destructive'
-                                        : 'text-green-600'
-                                    }`}>
-                                      {getFriendlyKeyTypeName(detectedPublicKeyType)}
-                                    </span>
-                                    {publicKeyDetectionLoading && (
-                                      <span className="ml-2 text-muted-foreground">(detecting...)</span>
-                                    )}
-                                  </div>
-                                )}
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        {/* Show existing key content preview for upload mode */}
-                        {editingCredential && fullCredentialDetails?.key && typeof form.watch("key") === "string" && (
-                          <FormItem className="mb-4">
-                            <FormLabel>{t("credentials.sshPrivateKey")} ({t("hosts.existingKey")})</FormLabel>
-                            <FormControl>
-                              <textarea
-                                readOnly
-                                className="flex min-h-[120px] w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                value={fullCredentialDetails.key}
-                              />
-                            </FormControl>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Current SSH key content - {t("credentials.uploadFile")} to replace
-                            </div>
-                            {/* Show detected key type for existing credential */}
-                            {fullCredentialDetails?.detectedKeyType && (
-                              <div className="text-sm mt-2">
-                                <span className="text-muted-foreground">Key type: </span>
-                                <span className="font-medium text-green-600">
-                                  {getFriendlyKeyTypeName(fullCredentialDetails.detectedKeyType)}
-                                </span>
-                              </div>
-                            )}
-                          </FormItem>
-                        )}
-                        <div className="grid grid-cols-15 gap-4 mt-4">
-                          <FormField
-                            control={form.control}
-                            name="keyPassword"
-                            render={({ field }) => (
-                              <FormItem className="col-span-8">
-                                <FormLabel>
-                                  {t("credentials.keyPassword")}
-                                </FormLabel>
-                                <FormControl>
-                                  <PasswordInput
-                                    placeholder={t("placeholders.keyPassword")}
-                                    {...field}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="keyType"
-                            render={({ field }) => (
-                              <FormItem className="relative col-span-3">
-                                <FormLabel>
-                                  {t("credentials.keyType")}
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <Button
-                                      ref={keyTypeButtonRef}
-                                      type="button"
-                                      variant="outline"
-                                      className="w-full justify-start text-left rounded-md px-2 py-2 bg-dark-bg border border-input text-foreground"
-                                      onClick={() =>
-                                        setKeyTypeDropdownOpen((open) => !open)
-                                      }
-                                    >
-                                      {keyTypeOptions.find(
-                                        (opt) => opt.value === field.value,
-                                      )?.label || t("credentials.keyTypeRSA")}
-                                    </Button>
-                                    {keyTypeDropdownOpen && (
-                                      <div
-                                        ref={keyTypeDropdownRef}
-                                        className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
-                                      >
-                                        <div className="grid grid-cols-1 gap-1 p-0">
-                                          {keyTypeOptions.map((opt) => (
-                                            <Button
-                                              key={opt.value}
-                                              type="button"
-                                              variant="ghost"
-                                              size="sm"
-                                              className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-dark-bg text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
-                                              onClick={() => {
-                                                field.onChange(opt.value);
-                                                setKeyTypeDropdownOpen(false);
-                                              }}
-                                            >
-                                              {opt.label}
-                                            </Button>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="paste" className="mt-4">
-                        <div className="grid grid-cols-2 gap-4 items-start">
-                          <Controller
-                            control={form.control}
-                            name="key"
-                            render={({ field }) => (
-                              <FormItem className="mb-4 flex flex-col">
-                                <FormLabel className="mb-2 min-h-[20px]">
-                                  {t("credentials.sshPrivateKey")}
-                                </FormLabel>
                                 <FormControl>
                                   <textarea
                                     placeholder={t(
@@ -1061,20 +722,13 @@ export function CredentialEditor({
                                     }
                                     onChange={(e) => {
                                       field.onChange(e.target.value);
-                                      // Trigger key type detection with debounce
                                       debouncedKeyDetection(e.target.value, form.watch("keyPassword"));
-                                      // Trigger key pair validation if public key is available
-                                      const publicKeyValue = form.watch("publicKey");
-                                      if (publicKeyValue && publicKeyValue.trim()) {
-                                        debouncedKeyPairValidation(e.target.value, publicKeyValue, form.watch("keyPassword"));
-                                      }
                                     }}
                                   />
                                 </FormControl>
-                                {/* Key type detection display */}
                                 {detectedKeyType && (
                                   <div className="text-sm mt-2">
-                                    <span className="text-muted-foreground">Detected key type: </span>
+                                    <span className="text-muted-foreground">{t("credentials.detectedKeyType")}: </span>
                                     <span className={`font-medium ${
                                       detectedKeyType === 'invalid' || detectedKeyType === 'error'
                                         ? 'text-destructive'
@@ -1083,7 +737,7 @@ export function CredentialEditor({
                                       {getFriendlyKeyTypeName(detectedKeyType)}
                                     </span>
                                     {keyDetectionLoading && (
-                                      <span className="ml-2 text-muted-foreground">(detecting...)</span>
+                                      <span className="ml-2 text-muted-foreground">({t("credentials.detectingKeyType")})</span>
                                     )}
                                   </div>
                                 )}
@@ -1098,6 +752,70 @@ export function CredentialEditor({
                                 <FormLabel className="mb-2 min-h-[20px]">
                                   {t("credentials.sshPublicKey")} ({t("credentials.optional")})
                                 </FormLabel>
+                                <div className="mb-2 flex gap-2">
+                                  <div className="relative inline-block flex-1">
+                                    <input
+                                      id="public-key-upload"
+                                      type="file"
+                                      accept="*,.pub,.txt"
+                                      onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          try {
+                                            const fileContent = await file.text();
+                                            field.onChange(fileContent);
+                                            debouncedPublicKeyDetection(fileContent);
+                                          } catch (error) {
+                                            console.error('Failed to read uploaded public key file:', error);
+                                          }
+                                        }
+                                      }}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className="w-full justify-start text-left"
+                                    >
+                                      <span className="truncate">
+                                        {t("credentials.uploadPublicKeyFile")}
+                                      </span>
+                                    </Button>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="flex-shrink-0"
+                                    onClick={async () => {
+                                      const privateKey = form.watch("key");
+                                      if (!privateKey || typeof privateKey !== "string" || !privateKey.trim()) {
+                                        toast.error(t("credentials.privateKeyRequiredForGeneration"));
+                                        return;
+                                      }
+
+                                      try {
+                                        const keyPassword = form.watch("keyPassword");
+                                        const result = await generatePublicKeyFromPrivate(privateKey, keyPassword);
+
+                                        if (result.success && result.publicKey) {
+                                          // Set the generated public key
+                                          field.onChange(result.publicKey);
+                                          // Trigger public key detection
+                                          debouncedPublicKeyDetection(result.publicKey);
+
+                                          toast.success(t("credentials.publicKeyGeneratedSuccessfully"));
+                                        } else {
+                                          toast.error(result.error || t("credentials.failedToGeneratePublicKey"));
+                                        }
+                                      } catch (error) {
+                                        console.error('Failed to generate public key:', error);
+                                        toast.error(t("credentials.failedToGeneratePublicKey"));
+                                      }
+                                    }}
+                                  >
+                                    {t("credentials.generatePublicKey")}
+                                  </Button>
+                                </div>
                                 <FormControl>
                                   <textarea
                                     placeholder={t(
@@ -1107,23 +825,16 @@ export function CredentialEditor({
                                     value={field.value || ""}
                                     onChange={(e) => {
                                       field.onChange(e.target.value);
-                                      // Trigger public key type detection with debounce
                                       debouncedPublicKeyDetection(e.target.value);
-                                      // Trigger key pair validation if private key is available
-                                      const privateKeyValue = form.watch("key");
-                                      if (privateKeyValue && typeof privateKeyValue === "string" && privateKeyValue.trim()) {
-                                        debouncedKeyPairValidation(privateKeyValue, e.target.value, form.watch("keyPassword"));
-                                      }
                                     }}
                                   />
                                 </FormControl>
                                 <div className="text-xs text-muted-foreground mt-1">
                                   {t("credentials.publicKeyNote")}
                                 </div>
-                                {/* Public key type detection display for paste mode */}
                                 {detectedPublicKeyType && field.value && (
                                   <div className="text-sm mt-2">
-                                    <span className="text-muted-foreground">Detected key type: </span>
+                                    <span className="text-muted-foreground">{t("credentials.detectedKeyType")}: </span>
                                     <span className={`font-medium ${
                                       detectedPublicKeyType === 'invalid' || detectedPublicKeyType === 'error'
                                         ? 'text-destructive'
@@ -1132,7 +843,7 @@ export function CredentialEditor({
                                       {getFriendlyKeyTypeName(detectedPublicKeyType)}
                                     </span>
                                     {publicKeyDetectionLoading && (
-                                      <span className="ml-2 text-muted-foreground">(detecting...)</span>
+                                      <span className="ml-2 text-muted-foreground">({t("credentials.detectingKeyType")})</span>
                                     )}
                                   </div>
                                 )}
@@ -1140,30 +851,7 @@ export function CredentialEditor({
                             )}
                           />
                         </div>
-                        {/* Key pair validation display */}
-                        {(form.watch("key") && form.watch("publicKey") &&
-                          typeof form.watch("key") === "string" && form.watch("key").trim() &&
-                          form.watch("publicKey").trim()) && (
-                          <div className="mt-4 p-3 border rounded-md bg-muted/50">
-                            <div className="text-sm font-medium mb-1">Key Pair Validation</div>
-                            {keyPairValidation.loading && (
-                              <div className="text-sm text-muted-foreground">
-                                <span>Validating key pair...</span>
-                              </div>
-                            )}
-                            {!keyPairValidation.loading && keyPairValidation.isValid === true && (
-                              <div className="text-sm text-green-600 font-medium">
-                                ✓ Private and public keys match
-                              </div>
-                            )}
-                            {!keyPairValidation.loading && keyPairValidation.isValid === false && (
-                              <div className="text-sm text-destructive">
-                                ✗ Keys do not match: {keyPairValidation.error}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <div className="grid grid-cols-15 gap-4 mt-4">
+                        <div className="grid grid-cols-8 gap-4 mt-4">
                           <FormField
                             control={form.control}
                             name="keyPassword"
@@ -1181,61 +869,8 @@ export function CredentialEditor({
                               </FormItem>
                             )}
                           />
-                          <FormField
-                            control={form.control}
-                            name="keyType"
-                            render={({ field }) => (
-                              <FormItem className="relative col-span-3">
-                                <FormLabel>
-                                  {t("credentials.keyType")}
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <Button
-                                      ref={keyTypeButtonRef}
-                                      type="button"
-                                      variant="outline"
-                                      className="w-full justify-start text-left rounded-md px-2 py-2 bg-dark-bg border border-input text-foreground"
-                                      onClick={() =>
-                                        setKeyTypeDropdownOpen((open) => !open)
-                                      }
-                                    >
-                                      {keyTypeOptions.find(
-                                        (opt) => opt.value === field.value,
-                                      )?.label || t("credentials.keyTypeRSA")}
-                                    </Button>
-                                    {keyTypeDropdownOpen && (
-                                      <div
-                                        ref={keyTypeDropdownRef}
-                                        className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
-                                      >
-                                        <div className="grid grid-cols-1 gap-1 p-0">
-                                          {keyTypeOptions.map((opt) => (
-                                            <Button
-                                              key={opt.value}
-                                              type="button"
-                                              variant="ghost"
-                                              size="sm"
-                                              className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-dark-bg text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
-                                              onClick={() => {
-                                                field.onChange(opt.value);
-                                                setKeyTypeDropdownOpen(false);
-                                              }}
-                                            >
-                                              {opt.label}
-                                            </Button>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
                         </div>
-                      </TabsContent>
-                    </Tabs>
+                    </div>
                   </TabsContent>
                 </Tabs>
               </TabsContent>

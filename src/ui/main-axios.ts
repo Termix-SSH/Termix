@@ -1711,3 +1711,18 @@ export async function validateKeyPair(
     throw handleApiError(error, "validate key pair");
   }
 }
+
+export async function generatePublicKeyFromPrivate(
+  privateKey: string,
+  keyPassword?: string,
+): Promise<any> {
+  try {
+    const response = await authApi.post("/credentials/generate-public-key", {
+      privateKey,
+      keyPassword,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "generate public key from private key");
+  }
+}
