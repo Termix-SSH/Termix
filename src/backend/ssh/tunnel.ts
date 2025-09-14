@@ -455,7 +455,7 @@ async function connectSSHTunnel(
         const credential = credentials[0];
         resolvedSourceCredentials = {
           password: credential.password,
-          sshKey: credential.key,
+          sshKey: credential.privateKey || credential.key, // prefer new privateKey field
           keyPassword: credential.keyPassword,
           keyType: credential.keyType,
           authMethod: credential.authType,
@@ -501,7 +501,7 @@ async function connectSSHTunnel(
         const credential = credentials[0];
         resolvedEndpointCredentials = {
           password: credential.password,
-          sshKey: credential.key,
+          sshKey: credential.privateKey || credential.key, // prefer new privateKey field
           keyPassword: credential.keyPassword,
           keyType: credential.keyType,
           authMethod: credential.authType,

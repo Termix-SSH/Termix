@@ -1666,3 +1666,48 @@ export async function renameCredentialFolder(
     throw handleApiError(error, "rename credential folder");
   }
 }
+
+export async function detectKeyType(
+  privateKey: string,
+  keyPassword?: string,
+): Promise<any> {
+  try {
+    const response = await authApi.post("/credentials/detect-key-type", {
+      privateKey,
+      keyPassword,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "detect key type");
+  }
+}
+
+export async function detectPublicKeyType(
+  publicKey: string,
+): Promise<any> {
+  try {
+    const response = await authApi.post("/credentials/detect-public-key-type", {
+      publicKey,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "detect public key type");
+  }
+}
+
+export async function validateKeyPair(
+  privateKey: string,
+  publicKey: string,
+  keyPassword?: string,
+): Promise<any> {
+  try {
+    const response = await authApi.post("/credentials/validate-key-pair", {
+      privateKey,
+      publicKey,
+      keyPassword,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "validate key pair");
+  }
+}

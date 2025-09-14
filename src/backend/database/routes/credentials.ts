@@ -5,6 +5,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { authLogger } from "../../utils/logger.js";
+import { parseSSHKey, parsePublicKey, detectKeyType, validateKeyPair } from "../../utils/ssh-key-utils.js";
 
 const router = express.Router();
 
@@ -109,6 +110,22 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
     const plainKeyPassword =
       authType === "key" && keyPassword ? keyPassword : null;
 
+    let keyInfo = null;
+    if (authType === "key" && plainKey) {
+      keyInfo = parseSSHKey(plainKey, plainKeyPassword);
+      if (!keyInfo.success) {
+        authLogger.warn("SSH key parsing failed", {
+          operation: "credential_create",
+          userId,
+          name,
+          error: keyInfo.error,
+        });
+        return res.status(400).json({
+          error: `Invalid SSH key: ${keyInfo.error}`
+        });
+      }
+    }
+
     const credentialData = {
       userId,
       name: name.trim(),
@@ -118,9 +135,12 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
       authType,
       username: username.trim(),
       password: plainPassword,
-      key: plainKey,
+      key: plainKey, // backward compatibility
+      privateKey: keyInfo?.privateKey || plainKey,
+      publicKey: keyInfo?.publicKey || null,
       keyPassword: plainKeyPassword,
       keyType: keyType || null,
+      detectedKeyType: keyInfo?.keyType || null,
       usageCount: 0,
       lastUsed: null,
     };
@@ -248,7 +268,13 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
       (output as any).password = credential.password;
     }
     if (credential.key) {
-      (output as any).key = credential.key;
+      (output as any).key = credential.key; // backward compatibility
+    }
+    if (credential.privateKey) {
+      (output as any).privateKey = credential.privateKey;
+    }
+    if (credential.publicKey) {
+      (output as any).publicKey = credential.publicKey;
     }
     if (credential.keyPassword) {
       (output as any).keyPassword = credential.keyPassword;
@@ -314,7 +340,26 @@ router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
       updateFields.password = updateData.password || null;
     }
     if (updateData.key !== undefined) {
-      updateFields.key = updateData.key || null;
+      updateFields.key = updateData.key || null; // backward compatibility
+
+      // Parse SSH key if provided
+      if (updateData.key && existing[0].authType === "key") {
+        const keyInfo = parseSSHKey(updateData.key, updateData.keyPassword);
+        if (!keyInfo.success) {
+          authLogger.warn("SSH key parsing failed during update", {
+            operation: "credential_update",
+            userId,
+            credentialId: parseInt(id),
+            error: keyInfo.error,
+          });
+          return res.status(400).json({
+            error: `Invalid SSH key: ${keyInfo.error}`
+          });
+        }
+        updateFields.privateKey = keyInfo.privateKey;
+        updateFields.publicKey = keyInfo.publicKey;
+        updateFields.detectedKeyType = keyInfo.keyType;
+      }
     }
     if (updateData.keyPassword !== undefined) {
       updateFields.keyPassword = updateData.keyPassword || null;
@@ -585,6 +630,7 @@ function formatCredentialOutput(credential: any): any {
     authType: credential.authType,
     username: credential.username,
     keyType: credential.keyType,
+    detectedKeyType: credential.detectedKeyType,
     usageCount: credential.usageCount || 0,
     lastUsed: credential.lastUsed,
     createdAt: credential.createdAt,
@@ -660,5 +706,126 @@ router.put(
     }
   },
 );
+
+// Detect SSH key type endpoint
+// POST /credentials/detect-key-type
+router.post("/detect-key-type", authenticateJWT, async (req: Request, res: Response) => {
+  const { privateKey, keyPassword } = req.body;
+
+  console.log("=== Key Detection API Called ===");
+  console.log("Request body keys:", Object.keys(req.body));
+  console.log("Private key provided:", !!privateKey);
+  console.log("Private key type:", typeof privateKey);
+
+  if (!privateKey || typeof privateKey !== "string") {
+    console.log("Invalid private key provided");
+    return res.status(400).json({ error: "Private key is required" });
+  }
+
+  try {
+    console.log("Calling parseSSHKey...");
+    const keyInfo = parseSSHKey(privateKey, keyPassword);
+    console.log("parseSSHKey result:", keyInfo);
+
+    const response = {
+      success: keyInfo.success,
+      keyType: keyInfo.keyType,
+      detectedKeyType: keyInfo.keyType,
+      hasPublicKey: !!keyInfo.publicKey,
+      error: keyInfo.error || null
+    };
+
+    console.log("Sending response:", response);
+    res.json(response);
+  } catch (error) {
+    console.error("Exception in detect-key-type endpoint:", error);
+    authLogger.error("Failed to detect key type", error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Failed to detect key type"
+    });
+  }
+});
+
+// Detect SSH public key type endpoint
+// POST /credentials/detect-public-key-type
+router.post("/detect-public-key-type", authenticateJWT, async (req: Request, res: Response) => {
+  const { publicKey } = req.body;
+
+  console.log("=== Public Key Detection API Called ===");
+  console.log("Request body keys:", Object.keys(req.body));
+  console.log("Public key provided:", !!publicKey);
+  console.log("Public key type:", typeof publicKey);
+
+  if (!publicKey || typeof publicKey !== "string") {
+    console.log("Invalid public key provided");
+    return res.status(400).json({ error: "Public key is required" });
+  }
+
+  try {
+    console.log("Calling parsePublicKey...");
+    const keyInfo = parsePublicKey(publicKey);
+    console.log("parsePublicKey result:", keyInfo);
+
+    const response = {
+      success: keyInfo.success,
+      keyType: keyInfo.keyType,
+      detectedKeyType: keyInfo.keyType,
+      error: keyInfo.error || null
+    };
+
+    console.log("Sending response:", response);
+    res.json(response);
+  } catch (error) {
+    console.error("Exception in detect-public-key-type endpoint:", error);
+    authLogger.error("Failed to detect public key type", error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Failed to detect public key type"
+    });
+  }
+});
+
+// Validate SSH key pair endpoint
+// POST /credentials/validate-key-pair
+router.post("/validate-key-pair", authenticateJWT, async (req: Request, res: Response) => {
+  const { privateKey, publicKey, keyPassword } = req.body;
+
+  console.log("=== Key Pair Validation API Called ===");
+  console.log("Request body keys:", Object.keys(req.body));
+  console.log("Private key provided:", !!privateKey);
+  console.log("Public key provided:", !!publicKey);
+
+  if (!privateKey || typeof privateKey !== "string") {
+    console.log("Invalid private key provided");
+    return res.status(400).json({ error: "Private key is required" });
+  }
+
+  if (!publicKey || typeof publicKey !== "string") {
+    console.log("Invalid public key provided");
+    return res.status(400).json({ error: "Public key is required" });
+  }
+
+  try {
+    console.log("Calling validateKeyPair...");
+    const validationResult = validateKeyPair(privateKey, publicKey, keyPassword);
+    console.log("validateKeyPair result:", validationResult);
+
+    const response = {
+      isValid: validationResult.isValid,
+      privateKeyType: validationResult.privateKeyType,
+      publicKeyType: validationResult.publicKeyType,
+      generatedPublicKey: validationResult.generatedPublicKey,
+      error: validationResult.error || null
+    };
+
+    console.log("Sending response:", response);
+    res.json(response);
+  } catch (error) {
+    console.error("Exception in validate-key-pair endpoint:", error);
+    authLogger.error("Failed to validate key pair", error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Failed to validate key pair"
+    });
+  }
+});
 
 export default router;

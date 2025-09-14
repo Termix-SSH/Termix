@@ -191,7 +191,7 @@ wss.on("connection", (ws: WebSocket) => {
           const credential = credentials[0];
           resolvedCredentials = {
             password: credential.password,
-            key: credential.key,
+            key: credential.privateKey || credential.key, // prefer new privateKey field
             keyPassword: credential.keyPassword,
             keyType: credential.keyType,
             authType: credential.authType,
