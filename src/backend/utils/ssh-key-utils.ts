@@ -1,3 +1,7 @@
+// Import SSH2 using ES modules
+import ssh2Pkg from 'ssh2';
+const ssh2Utils = ssh2Pkg.utils;
+
 // Simple fallback SSH key type detection
 function detectKeyTypeFromContent(keyContent: string): string {
   const content = keyContent.trim();
@@ -67,6 +71,52 @@ function detectKeyTypeFromContent(keyContent: string): string {
     return 'ecdsa-sha2-nistp256'; // Default ECDSA type
   }
 
+  // Check for PKCS#8 format (modern format)
+  if (content.includes('-----BEGIN PRIVATE KEY-----')) {
+    // Try to decode and analyze the DER structure for better detection
+    try {
+      const base64Content = content
+        .replace('-----BEGIN PRIVATE KEY-----', '')
+        .replace('-----END PRIVATE KEY-----', '')
+        .replace(/\s/g, '');
+
+      const decoded = Buffer.from(base64Content, 'base64');
+      const decodedString = decoded.toString('binary');
+
+      // Check for algorithm identifiers in the DER structure
+      if (decodedString.includes('1.2.840.113549.1.1.1')) {
+        // RSA OID
+        return 'ssh-rsa';
+      } else if (decodedString.includes('1.2.840.10045.2.1')) {
+        // EC Private Key OID - this indicates ECDSA
+        if (decodedString.includes('1.2.840.10045.3.1.7')) {
+          // prime256v1 curve OID
+          return 'ecdsa-sha2-nistp256';
+        }
+        return 'ecdsa-sha2-nistp256'; // Default to P-256
+      } else if (decodedString.includes('1.3.101.112')) {
+        // Ed25519 OID
+        return 'ssh-ed25519';
+      }
+    } catch (error) {
+      // If decoding fails, fall back to length-based detection
+      console.warn('Failed to decode private key for type detection:', error);
+    }
+
+    // Fallback: Try to detect key type from the content structure
+    // This is a fallback for PKCS#8 format keys
+    if (content.length < 800) {
+      // Ed25519 keys are typically shorter
+      return 'ssh-ed25519';
+    } else if (content.length > 1600) {
+      // RSA keys are typically longer
+      return 'ssh-rsa';
+    } else {
+      // ECDSA keys are typically medium length
+      return 'ecdsa-sha2-nistp256';
+    }
+  }
+
   return 'unknown';
 }
 
@@ -94,6 +144,52 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
     return 'ssh-dss';
   }
 
+  // Check for PEM format public keys
+  if (content.includes('-----BEGIN PUBLIC KEY-----')) {
+    // Try to decode the base64 content to detect key type
+    try {
+      const base64Content = content
+        .replace('-----BEGIN PUBLIC KEY-----', '')
+        .replace('-----END PUBLIC KEY-----', '')
+        .replace(/\s/g, '');
+
+      const decoded = Buffer.from(base64Content, 'base64');
+      const decodedString = decoded.toString('binary');
+
+      // Check for algorithm identifiers in the DER structure
+      if (decodedString.includes('1.2.840.113549.1.1.1')) {
+        // RSA OID
+        return 'ssh-rsa';
+      } else if (decodedString.includes('1.2.840.10045.2.1')) {
+        // EC Public Key OID - this indicates ECDSA
+        if (decodedString.includes('1.2.840.10045.3.1.7')) {
+          // prime256v1 curve OID
+          return 'ecdsa-sha2-nistp256';
+        }
+        return 'ecdsa-sha2-nistp256'; // Default to P-256
+      } else if (decodedString.includes('1.3.101.112')) {
+        // Ed25519 OID
+        return 'ssh-ed25519';
+      }
+    } catch (error) {
+      // If decoding fails, fall back to length-based detection
+      console.warn('Failed to decode public key for type detection:', error);
+    }
+
+    // Fallback: Try to guess based on key length
+    if (content.length < 400) {
+      return 'ssh-ed25519';
+    } else if (content.length > 600) {
+      return 'ssh-rsa';
+    } else {
+      return 'ecdsa-sha2-nistp256';
+    }
+  }
+
+  if (content.includes('-----BEGIN RSA PUBLIC KEY-----')) {
+    return 'ssh-rsa';
+  }
+
   // Check for base64 encoded key data patterns
   if (content.includes('AAAAB3NzaC1yc2E')) {
     return 'ssh-rsa';
@@ -115,44 +211,6 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
   }
 
   return 'unknown';
-}
-
-// Try multiple import approaches for SSH2
-let ssh2Utils: any = null;
-
-try {
-  // Approach 1: Default import
-  console.log('Trying SSH2 default import...');
-  const ssh2Default = require('ssh2');
-  console.log('SSH2 default import result:', typeof ssh2Default);
-  console.log('SSH2 utils from default:', typeof ssh2Default?.utils);
-
-  if (ssh2Default && ssh2Default.utils) {
-    ssh2Utils = ssh2Default.utils;
-    console.log('Using SSH2 from default import');
-  }
-} catch (error) {
-  console.log('SSH2 default import failed:', error instanceof Error ? error.message : error);
-}
-
-if (!ssh2Utils) {
-  try {
-    // Approach 2: Direct utils import
-    console.log('Trying SSH2 utils direct import...');
-    const ssh2UtilsDirect = require('ssh2').utils;
-    console.log('SSH2 utils direct import result:', typeof ssh2UtilsDirect);
-
-    if (ssh2UtilsDirect) {
-      ssh2Utils = ssh2UtilsDirect;
-      console.log('Using SSH2 from direct utils import');
-    }
-  } catch (error) {
-    console.log('SSH2 utils direct import failed:', error instanceof Error ? error.message : error);
-  }
-}
-
-if (!ssh2Utils) {
-  console.error('Failed to import SSH2 utils with any method - using fallback detection');
 }
 
 export interface KeyInfo {
@@ -211,9 +269,32 @@ export function parseSSHKey(privateKeyData: string, passphrase?: string): KeyInf
           try {
             console.log('Attempting to generate public key...');
             const publicKeyBuffer = parsedKey.getPublicSSH();
-            // Handle SSH public key format properly
-            publicKey = publicKeyBuffer.toString('utf8').trim();
-            console.log('Public key generated, length:', publicKey.length);
+            console.log('Public key buffer type:', typeof publicKeyBuffer);
+            console.log('Public key buffer is Buffer:', Buffer.isBuffer(publicKeyBuffer));
+
+            // ssh2's getPublicSSH() returns binary SSH protocol data, not text
+            // We need to convert this to proper SSH public key format
+            if (Buffer.isBuffer(publicKeyBuffer)) {
+              // Convert binary SSH data to base64 and create proper SSH key format
+              const base64Data = publicKeyBuffer.toString('base64');
+
+              // Create proper SSH public key format: "keytype base64data"
+              if (keyType === 'ssh-rsa') {
+                publicKey = `ssh-rsa ${base64Data}`;
+              } else if (keyType === 'ssh-ed25519') {
+                publicKey = `ssh-ed25519 ${base64Data}`;
+              } else if (keyType.startsWith('ecdsa-')) {
+                publicKey = `${keyType} ${base64Data}`;
+              } else {
+                publicKey = `${keyType} ${base64Data}`;
+              }
+
+              console.log('Generated SSH public key format, length:', publicKey.length);
+              console.log('Public key starts with:', publicKey.substring(0, 50));
+            } else {
+              console.warn('Unexpected public key buffer type');
+              publicKey = '';
+            }
           } catch (error) {
             console.warn('Failed to generate public key:', error);
             publicKey = '';
@@ -227,6 +308,8 @@ export function parseSSHKey(privateKeyData: string, passphrase?: string): KeyInf
       } catch (error) {
         console.warn('SSH2 parsing exception:', error instanceof Error ? error.message : error);
       }
+    } else {
+      console.warn('SSH2 parseKey function not available');
     }
 
     // Fallback to content-based detection

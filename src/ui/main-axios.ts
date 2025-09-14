@@ -1726,3 +1726,20 @@ export async function generatePublicKeyFromPrivate(
     throw handleApiError(error, "generate public key from private key");
   }
 }
+
+export async function generateKeyPair(
+  keyType: 'ssh-ed25519' | 'ssh-rsa' | 'ecdsa-sha2-nistp256',
+  keySize?: number,
+  passphrase?: string,
+): Promise<any> {
+  try {
+    const response = await authApi.post("/credentials/generate-key-pair", {
+      keyType,
+      keySize,
+      passphrase,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "generate SSH key pair");
+  }
+}

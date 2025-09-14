@@ -142,7 +142,14 @@
     "publicKeyGeneratedSuccessfully": "公钥生成成功",
     "detectedKeyType": "检测到的密钥类型",
     "detectingKeyType": "检测中...",
-    "optional": "可选"
+    "optional": "可选",
+    "generateKeyPair": "生成新的密钥对",
+    "generateEd25519": "生成 Ed25519",
+    "generateECDSA": "生成 ECDSA",
+    "generateRSA": "生成 RSA",
+    "keyPairGeneratedSuccessfully": "{{keyType}} 密钥对生成成功",
+    "failedToGenerateKeyPair": "生成密钥对失败",
+    "generateKeyPairNote": "直接生成新的SSH密钥对。这将替换表单中的现有密钥。"
   },
   "sshTools": {
     "title": "SSH 工具",

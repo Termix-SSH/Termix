@@ -143,7 +143,14 @@
     "publicKeyGeneratedSuccessfully": "Public key generated successfully",
     "detectedKeyType": "Detected key type",
     "detectingKeyType": "detecting...",
-    "optional": "Optional"
+    "optional": "Optional",
+    "generateKeyPair": "Generate New Key Pair",
+    "generateEd25519": "Generate Ed25519",
+    "generateECDSA": "Generate ECDSA",
+    "generateRSA": "Generate RSA",
+    "keyPairGeneratedSuccessfully": "{{keyType}} key pair generated successfully",
+    "failedToGenerateKeyPair": "Failed to generate key pair",
+    "generateKeyPairNote": "Generate a new SSH key pair directly. This will replace any existing keys in the form."
   },
   "sshTools": {
     "title": "SSH Tools",

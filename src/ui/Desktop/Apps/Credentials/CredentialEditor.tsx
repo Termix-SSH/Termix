@@ -25,6 +25,7 @@ import {
   detectKeyType,
   detectPublicKeyType,
   generatePublicKeyFromPrivate,
+  generateKeyPair,
 } from "@/ui/main-axios";
 import { useTranslation } from "react-i18next";
 import type {
@@ -299,12 +300,12 @@ export function CredentialEditor({
 
   const getFriendlyKeyTypeName = (keyType: string): string => {
     const keyTypeMap: Record<string, string> = {
-      'ssh-rsa': 'RSA',
-      'ssh-ed25519': 'Ed25519',
-      'ecdsa-sha2-nistp256': 'ECDSA P-256',
-      'ecdsa-sha2-nistp384': 'ECDSA P-384',
-      'ecdsa-sha2-nistp521': 'ECDSA P-521',
-      'ssh-dss': 'DSA',
+      'ssh-rsa': 'RSA (SSH)',
+      'ssh-ed25519': 'Ed25519 (SSH)',
+      'ecdsa-sha2-nistp256': 'ECDSA P-256 (SSH)',
+      'ecdsa-sha2-nistp384': 'ECDSA P-384 (SSH)',
+      'ecdsa-sha2-nistp521': 'ECDSA P-521 (SSH)',
+      'ssh-dss': 'DSA (SSH)',
       'rsa-sha2-256': 'RSA-SHA2-256',
       'rsa-sha2-512': 'RSA-SHA2-512',
       'invalid': 'Invalid Key',
@@ -669,6 +670,95 @@ export function CredentialEditor({
                   </TabsContent>
                   <TabsContent value="key">
                     <div className="mt-4">
+                      {/* Generate Key Pair Buttons */}
+                      <div className="mb-4 p-4 bg-muted/20 border border-muted rounded-md">
+                        <FormLabel className="mb-3 font-bold block">
+                          {t("credentials.generateKeyPair")}
+                        </FormLabel>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const keyPassword = form.watch("keyPassword");
+                                const result = await generateKeyPair('ssh-ed25519', undefined, keyPassword);
+
+                                if (result.success) {
+                                  form.setValue("key", result.privateKey);
+                                  form.setValue("publicKey", result.publicKey);
+                                  debouncedKeyDetection(result.privateKey, keyPassword);
+                                  debouncedPublicKeyDetection(result.publicKey);
+                                  toast.success(t("credentials.keyPairGeneratedSuccessfully", { keyType: "Ed25519" }));
+                                } else {
+                                  toast.error(result.error || t("credentials.failedToGenerateKeyPair"));
+                                }
+                              } catch (error) {
+                                console.error('Failed to generate Ed25519 key pair:', error);
+                                toast.error(t("credentials.failedToGenerateKeyPair"));
+                              }
+                            }}
+                          >
+                            {t("credentials.generateEd25519")}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const keyPassword = form.watch("keyPassword");
+                                const result = await generateKeyPair('ecdsa-sha2-nistp256', undefined, keyPassword);
+
+                                if (result.success) {
+                                  form.setValue("key", result.privateKey);
+                                  form.setValue("publicKey", result.publicKey);
+                                  debouncedKeyDetection(result.privateKey, keyPassword);
+                                  debouncedPublicKeyDetection(result.publicKey);
+                                  toast.success(t("credentials.keyPairGeneratedSuccessfully", { keyType: "ECDSA" }));
+                                } else {
+                                  toast.error(result.error || t("credentials.failedToGenerateKeyPair"));
+                                }
+                              } catch (error) {
+                                console.error('Failed to generate ECDSA key pair:', error);
+                                toast.error(t("credentials.failedToGenerateKeyPair"));
+                              }
+                            }}
+                          >
+                            {t("credentials.generateECDSA")}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const keyPassword = form.watch("keyPassword");
+                                const result = await generateKeyPair('ssh-rsa', 2048, keyPassword);
+
+                                if (result.success) {
+                                  form.setValue("key", result.privateKey);
+                                  form.setValue("publicKey", result.publicKey);
+                                  debouncedKeyDetection(result.privateKey, keyPassword);
+                                  debouncedPublicKeyDetection(result.publicKey);
+                                  toast.success(t("credentials.keyPairGeneratedSuccessfully", { keyType: "RSA" }));
+                                } else {
+                                  toast.error(result.error || t("credentials.failedToGenerateKeyPair"));
+                                }
+                              } catch (error) {
+                                console.error('Failed to generate RSA key pair:', error);
+                                toast.error(t("credentials.failedToGenerateKeyPair"));
+                              }
+                            }}
+                          >
+                            {t("credentials.generateRSA")}
+                          </Button>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-2">
+                          {t("credentials.generateKeyPairNote")}
+                        </div>
+                      </div>
                         <div className="grid grid-cols-2 gap-4 items-start">
                           <Controller
                             control={form.control}
