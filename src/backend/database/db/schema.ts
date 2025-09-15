@@ -137,9 +137,12 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   authType: text("auth_type").notNull(),
   username: text("username").notNull(),
   password: text("password"),
-  key: text("key", { length: 16384 }),
+  key: text("key", { length: 16384 }), // backward compatibility
+  privateKey: text("private_key", { length: 16384 }),
+  publicKey: text("public_key", { length: 4096 }),
   keyPassword: text("key_password"),
   keyType: text("key_type"),
+  detectedKeyType: text("detected_key_type"),
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
   createdAt: text("created_at")
