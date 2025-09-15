@@ -969,6 +969,20 @@ export async function listSSHFiles(
   }
 }
 
+export async function identifySSHSymlink(
+  sessionId: string,
+  path: string,
+): Promise<{ path: string; target: string; type: "directory" | "file" }> {
+  try {
+    const response = await fileManagerApi.get("/ssh/identifySymlink", {
+      params: { sessionId, path },
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "identify SSH symlink");
+  }
+}
+
 export async function readSSHFile(
   sessionId: string,
   path: string,
