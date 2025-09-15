@@ -343,7 +343,7 @@ export function HostManagerEditor({
       if (defaultAuthType === "password") {
         formData.password = cleanedHost.password || "";
       } else if (defaultAuthType === "key") {
-        formData.key = "existing_key";
+        formData.key = editingHost.id ? "existing_key" : editingHost.key;
         formData.keyPassword = cleanedHost.keyPassword || "";
         formData.keyType = (cleanedHost.keyType as any) || "auto";
       } else if (defaultAuthType === "credential") {
@@ -420,7 +420,7 @@ export function HostManagerEditor({
       submitData.keyType = null;
 
       if (data.authType === "credential") {
-        if (data.credentialId === "existing_credential") {
+        if (data.credentialId === "existing_credential" && editingHost && editingHost.id) {
           delete submitData.credentialId;
         } else {
           submitData.credentialId = data.credentialId;
@@ -440,7 +440,7 @@ export function HostManagerEditor({
         submitData.keyType = data.keyType;
       }
 
-      if (editingHost) {
+      if (editingHost && editingHost.id) {
         const updatedHost = await updateSSHHost(editingHost.id, submitData);
         toast.success(t("hosts.hostUpdatedSuccessfully", { name: data.name }));
 
@@ -1497,7 +1497,7 @@ export function HostManagerEditor({
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
             <Button className="translate-y-2" type="submit" variant="outline">
-              {editingHost ? t("hosts.updateHost") : t("hosts.addHost")}
+              {editingHost ? editingHost.id ? t("hosts.updateHost") : t("hosts.cloneHost") : t("hosts.addHost")}
             </Button>
           </footer>
         </form>
