@@ -108,24 +108,66 @@ export function FileManagerContextMenu({
 
     adjustPosition();
 
-    // 点击外部关闭菜单
-    const handleClickOutside = (event: MouseEvent) => {
-      onClose();
-    };
+    // 延迟添加事件监听器，避免捕获到触发菜单的那次点击
+    let cleanupFn: (() => void) | null = null;
 
-    // 键盘支持
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+    const timeoutId = setTimeout(() => {
+      // 点击外部关闭菜单
+      const handleClickOutside = (event: MouseEvent) => {
+        // 检查点击是否在菜单内部
+        const target = event.target as Element;
+        const menuElement = document.querySelector('[data-context-menu]');
+
+        if (!menuElement?.contains(target)) {
+          onClose();
+        }
+      };
+
+      // 右键点击关闭菜单（Windows行为）
+      const handleRightClick = (event: MouseEvent) => {
+        event.preventDefault();
         onClose();
-      }
-    };
+      };
 
-    document.addEventListener('click', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
+      // 键盘支持
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      };
+
+      // 窗口失焦关闭菜单
+      const handleBlur = () => {
+        onClose();
+      };
+
+      // 滚动时关闭菜单（Windows行为）
+      const handleScroll = () => {
+        onClose();
+      };
+
+      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('contextmenu', handleRightClick);
+      document.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('blur', handleBlur);
+      window.addEventListener('scroll', handleScroll, true);
+
+      // 设置清理函数
+      cleanupFn = () => {
+        document.removeEventListener('mousedown', handleClickOutside, true);
+        document.removeEventListener('contextmenu', handleRightClick);
+        document.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('blur', handleBlur);
+        window.removeEventListener('scroll', handleScroll, true);
+      };
+    }, 50); // 50ms延迟，确保不会捕获到触发菜单的点击
 
     return () => {
-      document.removeEventListener('click', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(timeoutId);
+      if (cleanupFn) {
+        cleanupFn();
+      }
     };
   }, [isVisible, x, y, onClose]);
 
@@ -271,17 +313,18 @@ export function FileManagerContextMenu({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <>
+      {/* 透明遮罩层用于捕获点击事件 */}
+      <div className="fixed inset-0 z-40" />
+
+      {/* 菜单本体 */}
       <div
-        className="absolute bg-dark-bg border border-dark-border rounded-lg shadow-lg py-1 min-w-[180px] max-w-[250px] z-50"
+        data-context-menu
+        className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl py-1 min-w-[180px] max-w-[250px] z-50"
         style={{
           left: menuPosition.x,
           top: menuPosition.y
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {menuItems.map((item, index) => {
           if (item.separator) {
@@ -323,6 +366,6 @@ export function FileManagerContextMenu({
           );
         })}
       </div>
-    </div>
+    </>
   );
 }
