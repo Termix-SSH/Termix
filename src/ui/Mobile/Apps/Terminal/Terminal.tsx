@@ -175,6 +175,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       allowTransparency: true,
       convertEol: true,
       windowsMode: false,
+      // Keep Option key for special characters on macOS (false = allows special chars, true = Meta key)
       macOptionIsMeta: false,
       macOptionClickForcesSelection: false,
       rightClickSelectsWord: false,

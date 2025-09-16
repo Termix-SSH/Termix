@@ -412,6 +412,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       allowTransparency: true,
       convertEol: true,
       windowsMode: false,
+      // Keep Option key for special characters on macOS (false = allows special chars, true = Meta key)
       macOptionIsMeta: false,
       macOptionClickForcesSelection: false,
       rightClickSelectsWord: false,
@@ -451,6 +452,49 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       } catch (_) {}
     };
     element?.addEventListener("contextmenu", handleContextMenu);
+
+    // Add macOS-specific keyboard event handling for special characters
+    const handleMacKeyboard = (e: KeyboardEvent) => {
+      // Detect macOS
+      const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
+                      navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+
+      if (!isMacOS) return;
+
+      // Handle Option key combinations for special characters
+      if (e.altKey && !e.metaKey && !e.ctrlKey) {
+        // Use both e.key and e.code to handle different keyboard layouts
+        const keyMappings: { [key: string]: string } = {
+          // Using e.key values
+          '7': '|',  // Option+7 = pipe symbol
+          '2': '€',  // Option+2 = euro symbol
+          '8': '[',  // Option+8 = left bracket
+          '9': ']',  // Option+9 = right bracket
+          'l': '@',  // Option+L = at symbol
+          'L': '@',  // Option+L = at symbol (uppercase)
+          // Using e.code values as fallback
+          'Digit7': '|',  // Option+7 = pipe symbol
+          'Digit2': '€',  // Option+2 = euro symbol
+          'Digit8': '[',  // Option+8 = left bracket
+          'Digit9': ']',  // Option+9 = right bracket
+          'KeyL': '@',    // Option+L = at symbol
+        };
+
+        const char = keyMappings[e.key] || keyMappings[e.code];
+        if (char) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Send the character directly to the terminal
+          if (webSocketRef.current?.readyState === 1) {
+            webSocketRef.current.send(JSON.stringify({ type: "input", data: char }));
+          }
+          return false;
+        }
+      }
+    };
+
+    element?.addEventListener("keydown", handleMacKeyboard, true);
 
     const resizeObserver = new ResizeObserver(() => {
       if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
@@ -495,6 +539,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       setIsConnecting(false);
       resizeObserver.disconnect();
       element?.removeEventListener("contextmenu", handleContextMenu);
+      element?.removeEventListener("keydown", handleMacKeyboard, true);
       if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
       if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
       if (reconnectTimeoutRef.current)
