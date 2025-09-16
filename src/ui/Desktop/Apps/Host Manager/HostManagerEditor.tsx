@@ -45,6 +45,7 @@ interface SSHHost {
   pin: boolean;
   authType: string;
   password?: string;
+  requirePassword?: boolean;
   key?: string;
   keyPassword?: string;
   keyType?: string;
@@ -172,6 +173,7 @@ export function HostManagerEditor({
       authType: z.enum(["password", "key", "credential"]),
       credentialId: z.number().optional().nullable(),
       password: z.string().optional(),
+      requirePassword: z.boolean().default(true),
       key: z.any().optional().nullable(),
       keyPassword: z.string().optional(),
       keyType: z
@@ -206,7 +208,7 @@ export function HostManagerEditor({
     })
     .superRefine((data, ctx) => {
       if (data.authType === "password") {
-        if (!data.password || data.password.trim() === "") {
+        if (data.requirePassword && (!data.password || data.password.trim() === "")) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: t("hosts.passwordRequired"),
@@ -274,6 +276,7 @@ export function HostManagerEditor({
       authType: "password" as const,
       credentialId: null,
       password: "",
+      requirePassword: true,
       key: null,
       keyPassword: "",
       keyType: "auto" as const,
@@ -330,6 +333,7 @@ export function HostManagerEditor({
         authType: defaultAuthType as "password" | "key" | "credential",
         credentialId: null,
         password: "",
+        requirePassword: cleanedHost.requirePassword ?? true,
         key: null,
         keyPassword: "",
         keyType: "auto" as const,
@@ -365,6 +369,7 @@ export function HostManagerEditor({
         authType: "password" as const,
         credentialId: null,
         password: "",
+        requirePassword: true,
         key: null,
         keyPassword: "",
         keyType: "auto" as const,
@@ -869,6 +874,24 @@ export function HostManagerEditor({
                   <TabsContent value="password">
                     <FormField
                       control={form.control}
+                      name="requirePassword"
+                      render={({ field }) => (
+                        <FormItem className="mb-4">
+                          <FormLabel>{t("hosts.requirePassword")}</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {t("hosts.requirePasswordDescription")}
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem>
@@ -876,6 +899,7 @@ export function HostManagerEditor({
                           <FormControl>
                             <PasswordInput
                               placeholder={t("placeholders.password")}
+                              disabled={!form.watch("requirePassword")}
                               {...field}
                             />
                           </FormControl>

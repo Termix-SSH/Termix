@@ -77,6 +77,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
               : []
             : [],
         pin: !!row.pin,
+        requirePassword: !!row.requirePassword,
         enableTerminal: !!row.enableTerminal,
         enableTunnel: !!row.enableTunnel,
         tunnelConnections: row.tunnelConnections
@@ -137,6 +138,7 @@ router.post(
       port,
       username,
       password,
+      requirePassword,
       authMethod,
       authType,
       credentialId,
@@ -188,6 +190,7 @@ router.post(
 
     if (effectiveAuthType === "password") {
       sshDataObj.password = password || null;
+      sshDataObj.requirePassword = requirePassword !== false ? 1 : 0;
       sshDataObj.key = null;
       sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
@@ -196,6 +199,14 @@ router.post(
       sshDataObj.keyPassword = keyPassword || null;
       sshDataObj.keyType = keyType;
       sshDataObj.password = null;
+      sshDataObj.requirePassword = 1; // Default to true for non-password auth
+    } else {
+      // For credential auth
+      sshDataObj.password = null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
+      sshDataObj.requirePassword = 1; // Default to true for non-password auth
     }
 
     try {
@@ -222,6 +233,7 @@ router.post(
               : []
             : [],
         pin: !!createdHost.pin,
+        requirePassword: !!createdHost.requirePassword,
         enableTerminal: !!createdHost.enableTerminal,
         enableTunnel: !!createdHost.enableTunnel,
         tunnelConnections: createdHost.tunnelConnections
@@ -308,6 +320,7 @@ router.put(
       port,
       username,
       password,
+      requirePassword,
       authMethod,
       authType,
       credentialId,
@@ -362,6 +375,7 @@ router.put(
       if (password) {
         sshDataObj.password = password;
       }
+      sshDataObj.requirePassword = requirePassword !== false ? 1 : 0;
       sshDataObj.key = null;
       sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
@@ -376,6 +390,14 @@ router.put(
         sshDataObj.keyType = keyType;
       }
       sshDataObj.password = null;
+      sshDataObj.requirePassword = 1; // Default to true for non-password auth
+    } else {
+      // For credential auth
+      sshDataObj.password = null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
+      sshDataObj.requirePassword = 1; // Default to true for non-password auth
     }
 
     try {
@@ -408,6 +430,7 @@ router.put(
               : []
             : [],
         pin: !!updatedHost.pin,
+        requirePassword: !!updatedHost.requirePassword,
         enableTerminal: !!updatedHost.enableTerminal,
         enableTunnel: !!updatedHost.enableTunnel,
         tunnelConnections: updatedHost.tunnelConnections
@@ -475,6 +498,7 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
                 : []
               : [],
           pin: !!row.pin,
+          requirePassword: !!row.requirePassword,
           enableTerminal: !!row.enableTerminal,
           enableTunnel: !!row.enableTunnel,
           tunnelConnections: row.tunnelConnections
