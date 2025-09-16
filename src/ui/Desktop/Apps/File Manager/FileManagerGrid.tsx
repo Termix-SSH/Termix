@@ -199,6 +199,7 @@ export function FileManagerGrid({
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [justFinishedSelecting, setJustFinishedSelecting] = useState(false);
 
   // 导航历史管理
   const [navigationHistory, setNavigationHistory] = useState<string[]>([currentPath]);
@@ -284,6 +285,161 @@ export function FileManagerGrid({
     e.stopPropagation();
   }, []);
 
+  // 框选功能实现
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // 只在空白区域开始框选，避免干扰文件点击
+    if (e.target === e.currentTarget && e.button === 0) {
+      e.preventDefault();
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const startX = e.clientX - rect.left;
+      const startY = e.clientY - rect.top;
+
+      setIsSelecting(true);
+      setSelectionStart({ x: startX, y: startY });
+      setSelectionRect({ x: startX, y: startY, width: 0, height: 0 });
+
+      // 重置刚完成框选的标志，准备新的框选
+      setJustFinishedSelecting(false);
+    }
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isSelecting && selectionStart && gridRef.current) {
+      const rect = gridRef.current.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+
+      const x = Math.min(selectionStart.x, currentX);
+      const y = Math.min(selectionStart.y, currentY);
+      const width = Math.abs(currentX - selectionStart.x);
+      const height = Math.abs(currentY - selectionStart.y);
+
+      setSelectionRect({ x, y, width, height });
+
+      // 检测与文件项的交集，进行实时选择
+      if (gridRef.current) {
+        const fileElements = gridRef.current.querySelectorAll('[data-file-path]');
+        const selectedPaths: string[] = [];
+
+        fileElements.forEach((element) => {
+          const elementRect = element.getBoundingClientRect();
+          const containerRect = gridRef.current!.getBoundingClientRect();
+
+          // 简化坐标计算 - 直接使用相对于容器的坐标
+          const relativeElementRect = {
+            left: elementRect.left - containerRect.left,
+            top: elementRect.top - containerRect.top,
+            right: elementRect.right - containerRect.left,
+            bottom: elementRect.bottom - containerRect.top,
+          };
+
+          // 选择框坐标
+          const selectionBox = {
+            left: x,
+            top: y,
+            right: x + width,
+            bottom: y + height,
+          };
+
+          // 检查是否相交
+          const intersects = !(
+            relativeElementRect.right < selectionBox.left ||
+            relativeElementRect.left > selectionBox.right ||
+            relativeElementRect.bottom < selectionBox.top ||
+            relativeElementRect.top > selectionBox.bottom
+          );
+
+          if (intersects) {
+            const filePath = element.getAttribute('data-file-path');
+            if (filePath) {
+              selectedPaths.push(filePath);
+              console.log('Selected file:', filePath);
+            }
+          }
+        });
+
+        console.log('Total selected paths:', selectedPaths.length);
+
+        // 更新选中的文件
+        const newSelection = files.filter(file => selectedPaths.includes(file.path));
+        console.log('New selection:', newSelection.map(f => f.name));
+        onSelectionChange(newSelection);
+      }
+    }
+  }, [isSelecting, selectionStart, files, onSelectionChange]);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (isSelecting) {
+      setIsSelecting(false);
+      setSelectionStart(null);
+      setSelectionRect(null);
+
+      // 只有当移动距离足够大时才认为是框选，否则是点击
+      const startPos = selectionStart;
+      if (startPos) {
+        const rect = gridRef.current?.getBoundingClientRect();
+        if (rect) {
+          const endX = e.clientX - rect.left;
+          const endY = e.clientY - rect.top;
+          const distance = Math.sqrt(Math.pow(endX - startPos.x, 2) + Math.pow(endY - startPos.y, 2));
+
+          if (distance > 5) {
+            // 真正的框选，设置标志防止立即清空
+            setJustFinishedSelecting(true);
+            setTimeout(() => {
+              setJustFinishedSelecting(false);
+            }, 50);
+          } else {
+            // 只是点击，不设置标志，让handleGridClick正常处理
+            setJustFinishedSelecting(false);
+          }
+        }
+      }
+    }
+  }, [isSelecting, selectionStart]);
+
+  // 全局鼠标事件监听，确保在容器外也能结束框选
+  useEffect(() => {
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      if (isSelecting) {
+        setIsSelecting(false);
+        setSelectionStart(null);
+        setSelectionRect(null);
+
+        // 全局mouseup说明是拖拽框选，设置标志
+        setJustFinishedSelecting(true);
+        setTimeout(() => {
+          setJustFinishedSelecting(false);
+        }, 50);
+      }
+    };
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isSelecting && selectionStart && gridRef.current) {
+        const rect = gridRef.current.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+
+        const x = Math.min(selectionStart.x, currentX);
+        const y = Math.min(selectionStart.y, currentY);
+        const width = Math.abs(currentX - selectionStart.x);
+        const height = Math.abs(currentY - selectionStart.y);
+
+        setSelectionRect({ x, y, width, height });
+      }
+    };
+
+    if (isSelecting) {
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+
+      return () => {
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+      };
+    }
+  }, [isSelecting, selectionStart]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -348,7 +504,8 @@ export function FileManagerGrid({
 
   // 空白区域点击取消选择
   const handleGridClick = (event: React.MouseEvent) => {
-    if (event.target === event.currentTarget) {
+    // 如果刚完成框选，不要清空选择
+    if (event.target === event.currentTarget && !isSelecting && !justFinishedSelecting) {
       onSelectionChange([]);
     }
   };
@@ -485,6 +642,9 @@ export function FileManagerGrid({
             isDragging && "bg-blue-500/10 border-2 border-dashed border-blue-500"
           )}
           onClick={handleGridClick}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
@@ -530,6 +690,7 @@ export function FileManagerGrid({
               return (
                 <div
                   key={file.path}
+                  data-file-path={file.path}
                   className={cn(
                     "group p-3 rounded-lg cursor-pointer transition-all",
                     "hover:bg-dark-hover border-2 border-transparent",
@@ -606,6 +767,7 @@ export function FileManagerGrid({
               return (
                 <div
                   key={file.path}
+                  data-file-path={file.path}
                   className={cn(
                     "flex items-center gap-3 p-2 rounded cursor-pointer transition-all",
                     "hover:bg-dark-hover",
@@ -688,6 +850,19 @@ export function FileManagerGrid({
               );
             })}
           </div>
+        )}
+
+        {/* 框选矩形 */}
+        {isSelecting && selectionRect && (
+          <div
+            className="absolute pointer-events-none border-2 border-blue-500 bg-blue-500/10 z-50"
+            style={{
+              left: selectionRect.x,
+              top: selectionRect.y,
+              width: selectionRect.width,
+              height: selectionRect.height,
+            }}
+          />
         )}
         </div>
       </div>
