@@ -190,6 +190,7 @@ export interface FileItem {
   owner?: string;
   group?: string;
   linkTarget?: string;
+  executable?: boolean;
 }
 
 export interface ShortcutItem {

@@ -23,6 +23,7 @@ import {
   Eye,
   Settings
 } from "lucide-react";
+import { TerminalWindow } from "./components/TerminalWindow";
 import type { SSHHost, FileItem } from "../../../types/index.js";
 import {
   listSSHFiles,
@@ -1137,6 +1138,100 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
+  // 打开终端处理函数
+  function handleOpenTerminal(path: string) {
+    if (!currentHost) {
+      toast.error("没有选择主机");
+      return;
+    }
+
+    console.log('Opening terminal at path:', path);
+
+    // 创建终端窗口
+    const windowCount = Date.now() % 10;
+    const offsetX = 200 + (windowCount * 40);
+    const offsetY = 150 + (windowCount * 40);
+
+    const createTerminalComponent = (windowId: string) => (
+      <TerminalWindow
+        windowId={windowId}
+        hostConfig={currentHost}
+        initialPath={path}
+        initialX={offsetX}
+        initialY={offsetY}
+      />
+    );
+
+    openWindow({
+      title: `终端 - ${currentHost.name}:${path}`,
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 500,
+      isMaximized: false,
+      isMinimized: false,
+      component: createTerminalComponent
+    });
+
+    toast.success(`在 ${path} 打开终端`);
+  }
+
+  // 运行可执行文件处理函数
+  function handleRunExecutable(file: FileItem) {
+    if (!currentHost) {
+      toast.error("没有选择主机");
+      return;
+    }
+
+    if (file.type !== 'file' || !file.executable) {
+      toast.error("只能运行可执行文件");
+      return;
+    }
+
+    console.log('Running executable file:', file.path);
+
+    // 获取文件所在目录
+    const fileDir = file.path.substring(0, file.path.lastIndexOf('/'));
+    const fileName = file.name;
+    const executeCmd = `./${fileName}`;
+
+    console.log('Execute command details:', {
+      filePath: file.path,
+      fileDir,
+      fileName,
+      executeCommand: executeCmd
+    });
+
+    // 创建执行用的终端窗口
+    const windowCount = Date.now() % 10;
+    const offsetX = 250 + (windowCount * 40);
+    const offsetY = 200 + (windowCount * 40);
+
+    const createExecutionTerminal = (windowId: string) => (
+      <TerminalWindow
+        windowId={windowId}
+        hostConfig={currentHost}
+        initialPath={fileDir}
+        initialX={offsetX}
+        initialY={offsetY}
+        executeCommand={executeCmd} // 自动执行命令
+      />
+    );
+
+    openWindow({
+      title: `运行 - ${file.name}`,
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 500,
+      isMaximized: false,
+      isMinimized: false,
+      component: createExecutionTerminal
+    });
+
+    toast.success(`正在运行: ${file.name}`);
+  }
+
   // 过滤文件并添加新建的临时项目
   let filteredFiles = files.filter(file =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1320,6 +1415,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           onRefresh={() => loadDirectory(currentPath)}
           hasClipboard={!!clipboard}
           onDragToDesktop={() => handleDragToDesktop(contextMenu.files)}
+          onOpenTerminal={(path) => handleOpenTerminal(path)}
+          onRunExecutable={(file) => handleRunExecutable(file)}
+          currentPath={currentPath}
         />
 
       </div>

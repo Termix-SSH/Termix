@@ -104,8 +104,18 @@ wss.on("connection", (ws: WebSocket) => {
       credentialId?: number;
       userId?: string;
     };
+    initialPath?: string;
+    executeCommand?: string;
   }) {
-    const { cols, rows, hostConfig } = data;
+    const { cols, rows, hostConfig, initialPath, executeCommand } = data;
+
+    sshLogger.debug("Terminal connection data received", {
+      operation: "terminal_connect_data",
+      hasInitialPath: !!initialPath,
+      initialPath,
+      hasExecuteCommand: !!executeCommand,
+      executeCommand
+    });
     const {
       id,
       ip,
@@ -301,6 +311,34 @@ wss.on("connection", (ws: WebSocket) => {
           });
 
           setupPingInterval();
+
+          // Change to initial path if specified
+          if (initialPath && initialPath.trim() !== "") {
+            sshLogger.debug(`Changing to initial path: ${initialPath}`, {
+              operation: "ssh_initial_path",
+              hostId: id,
+              path: initialPath,
+            });
+
+            // Send cd command to change directory
+            const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
+            stream.write(cdCommand);
+          }
+
+          // Execute command if specified
+          if (executeCommand && executeCommand.trim() !== "") {
+            sshLogger.debug(`Executing command: ${executeCommand}`, {
+              operation: "ssh_execute_command",
+              hostId: id,
+              command: executeCommand,
+            });
+
+            // Wait a moment for the cd command to complete, then execute the command
+            setTimeout(() => {
+              const command = `${executeCommand}\n`;
+              stream.write(command);
+            }, 500);
+          }
 
           ws.send(
             JSON.stringify({ type: "connected", message: "SSH connected" }),

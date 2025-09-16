@@ -14,7 +14,9 @@ import {
   Clipboard,
   Eye,
   Share,
-  ExternalLink
+  ExternalLink,
+  Terminal,
+  Play
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -27,6 +29,7 @@ interface FileItem {
   permissions?: string;
   owner?: string;
   group?: string;
+  executable?: boolean;
 }
 
 interface ContextMenuProps {
@@ -49,6 +52,9 @@ interface ContextMenuProps {
   onPreview?: (file: FileItem) => void;
   hasClipboard?: boolean;
   onDragToDesktop?: () => void;
+  onOpenTerminal?: (path: string) => void;
+  onRunExecutable?: (file: FileItem) => void;
+  currentPath?: string;
 }
 
 interface MenuItem {
@@ -80,7 +86,10 @@ export function FileManagerContextMenu({
   onPaste,
   onPreview,
   hasClipboard = false,
-  onDragToDesktop
+  onDragToDesktop,
+  onOpenTerminal,
+  onRunExecutable,
+  currentPath
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
@@ -181,12 +190,42 @@ export function FileManagerContextMenu({
   const isMultipleFiles = files.length > 1;
   const hasFiles = files.some(f => f.type === 'file');
   const hasDirectories = files.some(f => f.type === 'directory');
+  const hasExecutableFiles = files.some(f => f.type === 'file' && f.executable);
 
   // 构建菜单项
   const menuItems: MenuItem[] = [];
 
   if (isFileContext) {
     // 文件/文件夹选中时的菜单
+
+    // 打开终端功能 - 支持文件和文件夹
+    if (onOpenTerminal) {
+      const targetPath = isSingleFile
+        ? (files[0].type === 'directory' ? files[0].path : files[0].path.substring(0, files[0].path.lastIndexOf('/')))
+        : files[0].path.substring(0, files[0].path.lastIndexOf('/'));
+
+      menuItems.push({
+        icon: <Terminal className="w-4 h-4" />,
+        label: files[0].type === 'directory' ? "在此文件夹打开终端" : "在文件位置打开终端",
+        action: () => onOpenTerminal(targetPath),
+        shortcut: "Ctrl+T"
+      });
+    }
+
+    // 运行可执行文件功能 - 仅对单个可执行文件显示
+    if (isSingleFile && hasExecutableFiles && onRunExecutable) {
+      menuItems.push({
+        icon: <Play className="w-4 h-4" />,
+        label: "运行",
+        action: () => onRunExecutable(files[0]),
+        shortcut: "Enter"
+      });
+    }
+
+    if ((onOpenTerminal || (isSingleFile && hasExecutableFiles && onRunExecutable))) {
+      menuItems.push({ separator: true } as MenuItem);
+    }
+
     if (hasFiles && onPreview) {
       menuItems.push({
         icon: <Eye className="w-4 h-4" />,
@@ -278,6 +317,19 @@ export function FileManagerContextMenu({
     }
   } else {
     // 空白区域右键菜单
+
+    // 在当前目录打开终端
+    if (onOpenTerminal && currentPath) {
+      menuItems.push({
+        icon: <Terminal className="w-4 h-4" />,
+        label: "在此处打开终端",
+        action: () => onOpenTerminal(currentPath),
+        shortcut: "Ctrl+T"
+      });
+
+      menuItems.push({ separator: true } as MenuItem);
+    }
+
     if (onUpload) {
       menuItems.push({
         icon: <Upload className="w-4 h-4" />,

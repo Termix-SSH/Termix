@@ -6,6 +6,25 @@ import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 
+// 可执行文件检测工具函数
+function isExecutableFile(permissions: string, fileName: string): boolean {
+  // 检查执行权限位 (user, group, other)
+  const hasExecutePermission = permissions[3] === 'x' || permissions[6] === 'x' || permissions[9] === 'x';
+
+  // 常见的脚本文件扩展名
+  const scriptExtensions = ['.sh', '.py', '.pl', '.rb', '.js', '.php', '.bash', '.zsh', '.fish'];
+  const hasScriptExtension = scriptExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+
+  // 常见的编译可执行文件（无扩展名或特定扩展名）
+  const executableExtensions = ['.bin', '.exe', '.out'];
+  const hasExecutableExtension = executableExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+
+  // 无扩展名且有执行权限的文件通常是可执行文件
+  const hasNoExtension = !fileName.includes('.') && hasExecutePermission;
+
+  return hasExecutePermission && (hasScriptExtension || hasExecutableExtension || hasNoExtension);
+}
+
 const app = express();
 
 app.use(
@@ -349,7 +368,8 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
             owner,
             group,
             linkTarget, // 符号链接的目标
-            path: `${sshPath.endsWith('/') ? sshPath : sshPath + '/'}${actualName}` // 添加完整路径
+            path: `${sshPath.endsWith('/') ? sshPath : sshPath + '/'}${actualName}`, // 添加完整路径
+            executable: !isDirectory && !isLink ? isExecutableFile(permissions, actualName) : false // 检测可执行文件
           });
         }
       }
@@ -1854,6 +1874,108 @@ process.on("SIGINT", () => {
 process.on("SIGTERM", () => {
   Object.keys(sshSessions).forEach(cleanupSession);
   process.exit(0);
+});
+
+// 执行可执行文件
+app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
+  const { sessionId, filePath, hostId, userId } = req.body;
+  const sshConn = sshSessions[sessionId];
+
+  if (!sshConn || !sshConn.isConnected) {
+    fileLogger.error("SSH connection not found or not connected for executeFile", {
+      operation: "execute_file",
+      sessionId,
+      hasConnection: !!sshConn,
+      isConnected: sshConn?.isConnected
+    });
+    return res.status(400).json({ error: "SSH connection not available" });
+  }
+
+  if (!filePath) {
+    return res.status(400).json({ error: "File path is required" });
+  }
+
+  const escapedPath = filePath.replace(/'/g, "'\"'\"'");
+
+  // 检查文件是否存在且可执行
+  const checkCommand = `test -x '${escapedPath}' && echo "EXECUTABLE" || echo "NOT_EXECUTABLE"`;
+
+  sshConn.client.exec(checkCommand, (checkErr, checkStream) => {
+    if (checkErr) {
+      fileLogger.error("SSH executeFile check error:", checkErr);
+      return res.status(500).json({ error: "Failed to check file executability" });
+    }
+
+    let checkResult = '';
+    checkStream.on("data", (data) => {
+      checkResult += data.toString();
+    });
+
+    checkStream.on("close", (code) => {
+      if (!checkResult.includes("EXECUTABLE")) {
+        return res.status(400).json({ error: "File is not executable" });
+      }
+
+      // 执行文件
+      const executeCommand = `cd "$(dirname '${escapedPath}')" && '${escapedPath}' 2>&1; echo "EXIT_CODE:$?"`;
+
+      fileLogger.info("Executing file", {
+        operation: "execute_file",
+        sessionId,
+        filePath,
+        command: executeCommand.substring(0, 100) + "..."
+      });
+
+      sshConn.client.exec(executeCommand, (err, stream) => {
+        if (err) {
+          fileLogger.error("SSH executeFile error:", err);
+          return res.status(500).json({ error: "Failed to execute file" });
+        }
+
+        let output = '';
+        let errorOutput = '';
+
+        stream.on("data", (data) => {
+          output += data.toString();
+        });
+
+        stream.stderr.on("data", (data) => {
+          errorOutput += data.toString();
+        });
+
+        stream.on("close", (code) => {
+          // 从输出中提取退出代码
+          const exitCodeMatch = output.match(/EXIT_CODE:(\d+)$/);
+          const actualExitCode = exitCodeMatch ? parseInt(exitCodeMatch[1]) : code;
+          const cleanOutput = output.replace(/EXIT_CODE:\d+$/, '').trim();
+
+          fileLogger.info("File execution completed", {
+            operation: "execute_file",
+            sessionId,
+            filePath,
+            exitCode: actualExitCode,
+            outputLength: cleanOutput.length,
+            errorLength: errorOutput.length
+          });
+
+          res.json({
+            success: true,
+            exitCode: actualExitCode,
+            output: cleanOutput,
+            error: errorOutput,
+            timestamp: new Date().toISOString()
+          });
+        });
+
+        stream.on("error", (streamErr) => {
+          fileLogger.error("SSH executeFile stream error:", streamErr);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Execution stream error" });
+          }
+        });
+      });
+    });
+  });
 });
 
 const PORT = 8084;
