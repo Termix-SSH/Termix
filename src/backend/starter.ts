@@ -2,10 +2,7 @@
 //  node ./dist/backend/starter.js
 
 import "./database/database.js";
-import "./ssh/terminal.js";
-import "./ssh/tunnel.js";
-import "./ssh/file-manager.js";
-import "./ssh/server-stats.js";
+import { DatabaseEncryption } from "./utils/database-encryption.js";
 import { systemLogger, versionLogger } from "./utils/logger.js";
 import "dotenv/config";
 
@@ -21,9 +18,21 @@ import "dotenv/config";
       operation: "startup",
     });
 
+    // Initialize database encryption before other services
+    await DatabaseEncryption.initialize();
+    systemLogger.info("Database encryption initialized", {
+      operation: "encryption_init",
+    });
+
+    // Load modules that depend on encryption after initialization
+    await import("./ssh/terminal.js");
+    await import("./ssh/tunnel.js");
+    await import("./ssh/file-manager.js");
+    await import("./ssh/server-stats.js");
+
     systemLogger.success("All backend services initialized successfully", {
       operation: "startup_complete",
-      services: ["database", "terminal", "tunnel", "file_manager", "stats"],
+      services: ["database", "encryption", "terminal", "tunnel", "file_manager", "stats"],
       version: version,
     });
 

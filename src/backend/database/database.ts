@@ -10,6 +10,8 @@ import fs from "fs";
 import path from "path";
 import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
+import { DatabaseEncryption } from "../utils/database-encryption.js";
+import { EncryptionMigration } from "../utils/encryption-migration.js";
 
 const app = express();
 app.use(
@@ -255,6 +257,111 @@ app.get("/releases/rss", async (req, res) => {
   }
 });
 
+app.get("/encryption/status", async (req, res) => {
+  try {
+    const detailedStatus = await DatabaseEncryption.getDetailedStatus();
+    const migrationStatus = await EncryptionMigration.checkMigrationStatus();
+
+    res.json({
+      encryption: detailedStatus,
+      migration: migrationStatus
+    });
+  } catch (error) {
+    apiLogger.error("Failed to get encryption status", error, {
+      operation: "encryption_status"
+    });
+    res.status(500).json({ error: "Failed to get encryption status" });
+  }
+});
+
+app.post("/encryption/initialize", async (req, res) => {
+  try {
+    const { EncryptionKeyManager } = await import("../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+
+    const newKey = await keyManager.generateNewKey();
+    await DatabaseEncryption.initialize({ masterPassword: newKey });
+
+    apiLogger.info("Encryption initialized via API", {
+      operation: "encryption_init_api"
+    });
+
+    res.json({
+      success: true,
+      message: "Encryption initialized successfully",
+      keyPreview: newKey.substring(0, 8) + "..."
+    });
+  } catch (error) {
+    apiLogger.error("Failed to initialize encryption", error, {
+      operation: "encryption_init_api_failed"
+    });
+    res.status(500).json({ error: "Failed to initialize encryption" });
+  }
+});
+
+app.post("/encryption/migrate", async (req, res) => {
+  try {
+    const { dryRun = false } = req.body;
+
+    const migration = new EncryptionMigration({
+      dryRun,
+      backupEnabled: true
+    });
+
+    if (dryRun) {
+      apiLogger.info("Starting encryption migration (dry run)", {
+        operation: "encryption_migrate_dry_run"
+      });
+
+      res.json({
+        success: true,
+        message: "Dry run mode - no changes made",
+        dryRun: true
+      });
+    } else {
+      apiLogger.info("Starting encryption migration", {
+        operation: "encryption_migrate"
+      });
+
+      await migration.runMigration();
+
+      res.json({
+        success: true,
+        message: "Migration completed successfully"
+      });
+    }
+  } catch (error) {
+    apiLogger.error("Migration failed", error, {
+      operation: "encryption_migrate_failed"
+    });
+    res.status(500).json({
+      error: "Migration failed",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+app.post("/encryption/regenerate", async (req, res) => {
+  try {
+    await DatabaseEncryption.reinitializeWithNewKey();
+
+    apiLogger.warn("Encryption key regenerated via API", {
+      operation: "encryption_regenerate_api"
+    });
+
+    res.json({
+      success: true,
+      message: "New encryption key generated",
+      warning: "All encrypted data must be re-encrypted"
+    });
+  } catch (error) {
+    apiLogger.error("Failed to regenerate encryption key", error, {
+      operation: "encryption_regenerate_failed"
+    });
+    res.status(500).json({ error: "Failed to regenerate encryption key" });
+  }
+});
+
 app.use("/users", userRoutes);
 app.use("/ssh", sshRoutes);
 app.use("/alerts", alertRoutes);
@@ -278,7 +385,43 @@ app.use(
 );
 
 const PORT = 8081;
-app.listen(PORT, () => {
+
+async function initializeEncryption() {
+  try {
+    databaseLogger.info("Initializing database encryption...", {
+      operation: "encryption_init"
+    });
+
+    await DatabaseEncryption.initialize({
+      encryptionEnabled: process.env.ENCRYPTION_ENABLED !== 'false',
+      forceEncryption: process.env.FORCE_ENCRYPTION === 'true',
+      migrateOnAccess: process.env.MIGRATE_ON_ACCESS !== 'false'
+    });
+
+    const status = await DatabaseEncryption.getDetailedStatus();
+    if (status.configValid && status.key.keyValid) {
+      databaseLogger.success("Database encryption initialized successfully", {
+        operation: "encryption_init_complete",
+        enabled: status.enabled,
+        keyId: status.key.keyId,
+        hasStoredKey: status.key.hasKey
+      });
+    } else {
+      databaseLogger.error("Database encryption configuration invalid", undefined, {
+        operation: "encryption_init_failed",
+        status
+      });
+    }
+  } catch (error) {
+    databaseLogger.error("Failed to initialize database encryption", error, {
+      operation: "encryption_init_error"
+    });
+  }
+}
+
+app.listen(PORT, async () => {
+  await initializeEncryption();
+
   databaseLogger.success(`Database API server started on port ${PORT}`, {
     operation: "server_start",
     port: PORT,
@@ -290,6 +433,10 @@ app.listen(PORT, () => {
       "/health",
       "/version",
       "/releases/rss",
+      "/encryption/status",
+      "/encryption/initialize",
+      "/encryption/migrate",
+      "/encryption/regenerate",
     ],
   });
 });

@@ -18,7 +18,9 @@
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "build:win-portable": "npm run build && electron-builder --win --dir",
     "build:win-installer": "npm run build && electron-builder --win --publish=never",
-    "build:linux-portable": "npm run build && electron-builder --linux --dir"
+    "build:linux-portable": "npm run build && electron-builder --linux --dir",
+    "test:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-test.js",
+    "migrate:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-migration.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",

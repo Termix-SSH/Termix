@@ -3,6 +3,7 @@ import { db } from '../database/db/index.js';
 import { settings } from '../database/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { databaseLogger } from './logger.js';
+import { MasterKeyProtection } from './master-key-protection.js';
 
 interface EncryptionKeyInfo {
   hasKey: boolean;
@@ -26,11 +27,17 @@ class EncryptionKeyManager {
   }
 
   private encodeKey(key: string): string {
-    const buffer = Buffer.from(key, 'hex');
-    return Buffer.from(buffer).toString('base64');
+    return MasterKeyProtection.encryptMasterKey(key);
   }
 
   private decodeKey(encodedKey: string): string {
+    if (MasterKeyProtection.isProtectedKey(encodedKey)) {
+      return MasterKeyProtection.decryptMasterKey(encodedKey);
+    }
+
+    databaseLogger.warn('Found legacy base64-encoded key, migrating to KEK protection', {
+      operation: 'key_migration_legacy'
+    });
     const buffer = Buffer.from(encodedKey, 'base64');
     return buffer.toString('hex');
   }
@@ -117,7 +124,7 @@ class EncryptionKeyManager {
       algorithm: 'aes-256-gcm'
     };
 
-    const encodedData = Buffer.from(JSON.stringify(keyData)).toString('base64');
+    const encodedData = JSON.stringify(keyData);
 
     try {
       const existing = await db.select().from(settings).where(eq(settings.key, 'db_encryption_key'));
@@ -170,7 +177,16 @@ class EncryptionKeyManager {
       }
 
       const encodedData = result[0].value;
-      const keyData = JSON.parse(Buffer.from(encodedData, 'base64').toString());
+      let keyData;
+
+      try {
+        keyData = JSON.parse(encodedData);
+      } catch {
+        databaseLogger.warn('Found legacy base64-encoded key data, migrating', {
+          operation: 'key_data_migration_legacy'
+        });
+        keyData = JSON.parse(Buffer.from(encodedData, 'base64').toString());
+      }
 
       this.keyInfo = {
         hasKey: true,
@@ -179,7 +195,17 @@ class EncryptionKeyManager {
         algorithm: keyData.algorithm
       };
 
-      return this.decodeKey(keyData.key);
+      const decodedKey = this.decodeKey(keyData.key);
+
+      if (!MasterKeyProtection.isProtectedKey(keyData.key)) {
+        databaseLogger.info('Auto-migrating legacy key to KEK protection', {
+          operation: 'key_auto_migration',
+          keyId: keyData.keyId
+        });
+        await this.storeKey(decodedKey, keyData.keyId);
+      }
+
+      return decodedKey;
 
     } catch (error) {
       databaseLogger.error('Failed to retrieve stored encryption key', error, {
@@ -231,7 +257,8 @@ class EncryptionKeyManager {
 
     const entropyTest = new Set(key).size / key.length;
 
-    return (hasLower + hasUpper + hasDigit + hasSpecial) >= 3 && entropyTest > 0.4;
+    const complexity = Number(hasLower) + Number(hasUpper) + Number(hasDigit) + Number(hasSpecial);
+    return complexity >= 3 && entropyTest > 0.4;
   }
 
   async validateKey(key?: string): Promise<boolean> {
@@ -265,6 +292,7 @@ class EncryptionKeyManager {
   async getEncryptionStatus() {
     const keyInfo = await this.getKeyInfo();
     const isValid = await this.validateKey();
+    const kekProtected = await this.isKEKProtected();
 
     return {
       hasKey: keyInfo.hasKey,
@@ -272,8 +300,22 @@ class EncryptionKeyManager {
       keyId: keyInfo.keyId,
       createdAt: keyInfo.createdAt,
       algorithm: keyInfo.algorithm,
-      initialized: this.isInitialized()
+      initialized: this.isInitialized(),
+      kekProtected,
+      kekValid: kekProtected ? MasterKeyProtection.validateProtection() : false
     };
+  }
+
+  private async isKEKProtected(): Promise<boolean> {
+    try {
+      const result = await db.select().from(settings).where(eq(settings.key, 'db_encryption_key'));
+      if (result.length === 0) return false;
+
+      const keyData = JSON.parse(result[0].value);
+      return MasterKeyProtection.isProtectedKey(keyData.key);
+    } catch {
+      return false;
+    }
   }
 }
 

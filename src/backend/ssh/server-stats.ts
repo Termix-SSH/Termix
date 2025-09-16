@@ -6,6 +6,7 @@ import { db } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
+import { EncryptedDBOperations } from "../utils/encrypted-db-operations.js";
 
 interface PooledConnection {
   client: Client;
@@ -306,7 +307,10 @@ const hostStatuses: Map<number, StatusEntry> = new Map();
 
 async function fetchAllHosts(): Promise<SSHHostWithCredentials[]> {
   try {
-    const hosts = await db.select().from(sshData);
+    const hosts = await EncryptedDBOperations.select(
+      db.select().from(sshData),
+      'ssh_data'
+    );
 
     const hostsWithCredentials: SSHHostWithCredentials[] = [];
     for (const host of hosts) {
@@ -333,7 +337,10 @@ async function fetchHostById(
   id: number,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    const hosts = await db.select().from(sshData).where(eq(sshData.id, id));
+    const hosts = await EncryptedDBOperations.select(
+      db.select().from(sshData).where(eq(sshData.id, id)),
+      'ssh_data'
+    );
 
     if (hosts.length === 0) {
       return undefined;
@@ -380,15 +387,13 @@ async function resolveHostCredentials(
 
     if (host.credentialId) {
       try {
-        const credentials = await db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId),
-              eq(sshCredentials.userId, host.userId),
-            ),
-          );
+        const credentials = await EncryptedDBOperations.select(
+          db.select().from(sshCredentials).where(and(
+            eq(sshCredentials.id, host.credentialId),
+            eq(sshCredentials.userId, host.userId),
+          )),
+          'ssh_credentials'
+        );
 
         if (credentials.length > 0) {
           const credential = credentials[0];

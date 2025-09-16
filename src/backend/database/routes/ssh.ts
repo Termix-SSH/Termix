@@ -13,6 +13,7 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import { sshLogger } from "../../utils/logger.js";
+import { EncryptedDBOperations } from "../../utils/encrypted-db-operations.js";
 
 const router = express.Router();
 
@@ -62,7 +63,10 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
     return res.status(403).json({ error: "Forbidden" });
   }
   try {
-    const data = await db.select().from(sshData);
+    const data = await EncryptedDBOperations.select(
+      db.select().from(sshData),
+      'ssh_data'
+    );
     const result = data.map((row: any) => {
       return {
         ...row,

@@ -5,6 +5,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { authLogger } from "../../utils/logger.js";
+import { EncryptedDBOperations } from "../../utils/encrypted-db-operations.js";
 import { parseSSHKey, parsePublicKey, detectKeyType, validateKeyPair } from "../../utils/ssh-key-utils.js";
 import crypto from "crypto";
 import ssh2Pkg from "ssh2";
@@ -194,11 +195,11 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
       lastUsed: null,
     };
 
-    const result = await db
-      .insert(sshCredentials)
-      .values(credentialData)
-      .returning();
-    const created = result[0];
+    const created = await EncryptedDBOperations.insert(
+      sshCredentials,
+      'ssh_credentials',
+      credentialData
+    ) as typeof credentialData & { id: number };
 
     authLogger.success(
       `SSH credential created: ${name} (${authType}) by user ${userId}`,
@@ -238,11 +239,10 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   }
 
   try {
-    const credentials = await db
-      .select()
-      .from(sshCredentials)
-      .where(eq(sshCredentials.userId, userId))
-      .orderBy(desc(sshCredentials.updatedAt));
+    const credentials = await EncryptedDBOperations.select(
+      db.select().from(sshCredentials).where(eq(sshCredentials.userId, userId)).orderBy(desc(sshCredentials.updatedAt)),
+      'ssh_credentials'
+    );
 
     res.json(credentials.map((cred) => formatCredentialOutput(cred)));
   } catch (err) {
@@ -296,15 +296,13 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
   }
 
   try {
-    const credentials = await db
-      .select()
-      .from(sshCredentials)
-      .where(
-        and(
-          eq(sshCredentials.id, parseInt(id)),
-          eq(sshCredentials.userId, userId),
-        ),
-      );
+    const credentials = await EncryptedDBOperations.select(
+      db.select().from(sshCredentials).where(and(
+        eq(sshCredentials.id, parseInt(id)),
+        eq(sshCredentials.userId, userId),
+      )),
+      'ssh_credentials'
+    );
 
     if (credentials.length === 0) {
       return res.status(404).json({ error: "Credential not found" });
@@ -415,28 +413,28 @@ router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
     }
 
     if (Object.keys(updateFields).length === 0) {
-      const existing = await db
-        .select()
-        .from(sshCredentials)
-        .where(eq(sshCredentials.id, parseInt(id)));
+      const existing = await EncryptedDBOperations.select(
+        db.select().from(sshCredentials).where(eq(sshCredentials.id, parseInt(id))),
+        'ssh_credentials'
+      );
 
       return res.json(formatCredentialOutput(existing[0]));
     }
 
-    await db
-      .update(sshCredentials)
-      .set(updateFields)
-      .where(
-        and(
-          eq(sshCredentials.id, parseInt(id)),
-          eq(sshCredentials.userId, userId),
-        ),
-      );
+    await EncryptedDBOperations.update(
+      sshCredentials,
+      'ssh_credentials',
+      and(
+        eq(sshCredentials.id, parseInt(id)),
+        eq(sshCredentials.userId, userId),
+      ),
+      updateFields
+    );
 
-    const updated = await db
-      .select()
-      .from(sshCredentials)
-      .where(eq(sshCredentials.id, parseInt(id)));
+    const updated = await EncryptedDBOperations.select(
+      db.select().from(sshCredentials).where(eq(sshCredentials.id, parseInt(id))),
+      'ssh_credentials'
+    );
 
     const credential = updated[0];
     authLogger.success(

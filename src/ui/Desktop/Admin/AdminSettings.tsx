@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.tsx";
-import { Shield, Trash2, Users } from "lucide-react";
+import { Shield, Trash2, Users, Database, Key, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -82,6 +82,12 @@ export function AdminSettings({
     null,
   );
 
+  // Database encryption state
+  const [encryptionStatus, setEncryptionStatus] = React.useState<any>(null);
+  const [encryptionLoading, setEncryptionLoading] = React.useState(false);
+  const [migrationLoading, setMigrationLoading] = React.useState(false);
+  const [migrationProgress, setMigrationProgress] = React.useState<string>("");
+
   React.useEffect(() => {
     const jwt = getCookie("jwt");
     if (!jwt) return;
@@ -103,6 +109,7 @@ export function AdminSettings({
         }
       });
     fetchUsers();
+    fetchEncryptionStatus();
   }, []);
 
   React.useEffect(() => {
@@ -251,6 +258,105 @@ export function AdminSettings({
     );
   };
 
+  const fetchEncryptionStatus = async () => {
+    if (isElectron()) {
+      const serverUrl = (window as any).configuredServerUrl;
+      if (!serverUrl) return;
+    }
+
+    try {
+      const jwt = getCookie("jwt");
+      const apiUrl = isElectron()
+        ? `${(window as any).configuredServerUrl}/encryption/status`
+        : "http://localhost:8081/encryption/status";
+
+      const response = await fetch(apiUrl, {
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEncryptionStatus(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch encryption status:", err);
+    }
+  };
+
+  const handleInitializeEncryption = async () => {
+    setEncryptionLoading(true);
+    try {
+      const jwt = getCookie("jwt");
+      const apiUrl = isElectron()
+        ? `${(window as any).configuredServerUrl}/encryption/initialize`
+        : "http://localhost:8081/encryption/initialize";
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+          "Content-Type": "application/json"
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success("Database encryption initialized successfully!");
+        await fetchEncryptionStatus();
+      } else {
+        throw new Error("Failed to initialize encryption");
+      }
+    } catch (err) {
+      toast.error("Failed to initialize encryption");
+    } finally {
+      setEncryptionLoading(false);
+    }
+  };
+
+  const handleMigrateData = async (dryRun: boolean = false) => {
+    setMigrationLoading(true);
+    setMigrationProgress(dryRun ? "Running dry run..." : "Starting migration...");
+
+    try {
+      const jwt = getCookie("jwt");
+      const apiUrl = isElectron()
+        ? `${(window as any).configuredServerUrl}/encryption/migrate`
+        : "http://localhost:8081/encryption/migrate";
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ dryRun }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (dryRun) {
+          toast.success("Dry run completed - no data was changed");
+          setMigrationProgress("Dry run completed");
+        } else {
+          toast.success("Data migration completed successfully!");
+          setMigrationProgress("Migration completed");
+          await fetchEncryptionStatus();
+        }
+      } else {
+        throw new Error("Migration failed");
+      }
+    } catch (err) {
+      toast.error(dryRun ? "Dry run failed" : "Migration failed");
+      setMigrationProgress("Failed");
+    } finally {
+      setMigrationLoading(false);
+      setTimeout(() => setMigrationProgress(""), 3000);
+    }
+  };
+
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
@@ -294,6 +400,10 @@ export function AdminSettings({
               <TabsTrigger value="admins" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 {t("admin.adminManagement")}
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+{t("admin.databaseSecurity")}
               </TabsTrigger>
             </TabsList>
 
@@ -678,6 +788,213 @@ export function AdminSettings({
                     </Table>
                   </div>
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="security" className="space-y-6">
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  <h3 className="text-lg font-semibold">Database Encryption</h3>
+                </div>
+
+                {encryptionStatus && (
+                  <div className="space-y-4">
+                    <div className="p-4 border rounded-md bg-muted/50">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          {encryptionStatus.encryption?.enabled ? (
+                            <Lock className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Key className="h-4 w-4 text-yellow-600" />
+                          )}
+                          <span className="font-medium">
+                            {t("admin.encryptionStatus")}: {" "}
+                            {encryptionStatus.encryption?.enabled ? (
+                              <span className="text-green-600">{t("admin.enabled")}</span>
+                            ) : (
+                              <span className="text-yellow-600">{t("admin.disabled")}</span>
+                            )}
+                          </span>
+                        </div>
+
+                        {encryptionStatus.encryption?.key && (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">{t("admin.keyId")}:</span>
+                                <div className="font-mono text-xs bg-background rounded px-2 py-1 mt-1">
+                                  {encryptionStatus.encryption.key.keyId || "Not available"}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">{t("admin.created")}:</span>
+                                <div className="text-xs mt-1">
+                                  {encryptionStatus.encryption.key.createdAt
+                                    ? new Date(encryptionStatus.encryption.key.createdAt).toLocaleDateString()
+                                    : "Not available"}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* KEK Protection Status */}
+                            <div className="flex items-center gap-2 p-2 rounded-md bg-background border">
+                              {encryptionStatus.encryption.key.kekProtected ? (
+                                <>
+                                  <Shield className="h-4 w-4 text-green-600" />
+                                  <div className="flex-1">
+                                    <div className="text-sm font-medium text-green-600">
+                                      {t("admin.deviceProtectedMasterKey")}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {t("admin.masterKeyEncryptedWithDeviceFingerprint")}
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <Shield className="h-4 w-4 text-yellow-600" />
+                                  <div className="flex-1">
+                                    <div className="text-sm font-medium text-yellow-600">
+                                      {t("admin.legacyKeyStorage")}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {t("admin.keyNotProtectedByDeviceBinding")}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                              {encryptionStatus.encryption.key.kekValid && (
+                                <div className="text-xs text-green-600 font-medium">✓ {t("admin.valid")}</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">{t("admin.migrationStatus")}:</span>
+                          <div className="mt-1">
+                            {encryptionStatus.migration?.migrationCompleted ? (
+                              <span className="text-green-600">✓ {t("admin.migrationCompleted")}</span>
+                            ) : (
+                              <span className="text-yellow-600">⚠ {t("admin.migrationRequired")}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {!encryptionStatus.encryption?.key?.hasKey ? (
+                        <div className="space-y-3">
+                          <h4 className="font-medium">{t("admin.initializeDatabaseEncryption")}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {t("admin.enableAes256EncryptionWithDeviceBinding")}
+                                                      </p>
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <div className="text-sm text-blue-800">
+                              <div className="font-medium">{t("admin.featuresEnabled")}</div>
+                              <div className="mt-1 space-y-1 text-xs">
+                                <div>• {t("admin.aes256GcmAuthenticatedEncryption")}</div>
+                                <div>• {t("admin.deviceFingerprintMasterKeyProtection")}</div>
+                                <div>• {t("admin.pbkdf2KeyDerivation")}</div>
+                                <div>• {t("admin.automaticKeyManagement")}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={handleInitializeEncryption}
+                            disabled={encryptionLoading}
+                            className="flex items-center gap-2"
+                          >
+                            <Shield className="h-4 w-4" />
+                            {encryptionLoading ? t("admin.initializing") : t("admin.initializeEnterpriseEncryption")}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {!encryptionStatus.migration?.migrationCompleted && (
+                            <div className="space-y-3">
+                              <h4 className="font-medium">{t("admin.migrateExistingData")}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {t("admin.encryptExistingUnprotectedData")}
+                              </p>
+
+                              {migrationProgress && (
+                                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                  <div className="text-sm text-blue-800">{migrationProgress}</div>
+                                </div>
+                              )}
+
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => handleMigrateData(true)}
+                                  disabled={migrationLoading}
+                                  variant="outline"
+                                  size="sm"
+                                >
+                                  {t("admin.testMigrationDryRun")}
+                                </Button>
+                                <Button
+                                  onClick={() => handleMigrateData(false)}
+                                  disabled={migrationLoading}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Database className="h-4 w-4" />
+                                  {migrationLoading ? t("admin.migrating") : t("admin.migrateData")}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-3">
+                            <h4 className="font-medium">{t("admin.securityInformation")}</h4>
+                            <div className="text-sm space-y-2 text-muted-foreground">
+                              <div>• {t("admin.sshPrivateKeysEncryptedWithAes256")}</div>
+                              <div>• {t("admin.userAuthTokensProtected")}</div>
+                              <div>• {t("admin.masterKeysProtectedByDeviceFingerprint")}</div>
+                              <div>• {t("admin.keysBoundToServerInstance")}</div>
+                              <div>• {t("admin.pbkdf2HkdfKeyDerivation")}</div>
+                              <div>• {t("admin.backwardCompatibleMigration")}</div>
+                            </div>
+
+                            {encryptionStatus.encryption?.key?.kekProtected && (
+                              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                                <div className="flex items-start gap-2">
+                                  <Shield className="h-4 w-4 text-green-600 mt-0.5" />
+                                  <div className="text-sm">
+                                    <div className="font-medium text-green-800">{t("admin.enterpriseGradeSecurityActive")}</div>
+                                    <div className="text-green-700 mt-1">
+                                      {t("admin.masterKeysProtectedByDeviceBinding")}
+                                                                                                                </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-md">
+                            <div className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 text-yellow-600 mt-0.5" />
+                              <div className="text-sm">
+                                <div className="font-medium text-yellow-800">{t("admin.important")}</div>
+                                <div className="text-yellow-700 mt-1">
+                                  {t("admin.keepEncryptionKeysSecure")}
+                                                                  </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {!encryptionStatus && (
+                  <div className="text-center py-8">
+                    <div className="text-muted-foreground">{t("admin.loadingEncryptionStatus")}</div>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>

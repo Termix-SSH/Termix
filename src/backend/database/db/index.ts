@@ -250,6 +250,11 @@ const migrateSchema = () => {
     "INTEGER REFERENCES ssh_credentials(id)",
   );
 
+  // SSH credentials table migrations for encryption support
+  addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");
+
   addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_shortcuts", "host_id", "INTEGER NOT NULL");
