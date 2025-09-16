@@ -326,7 +326,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       // 确保SSH连接有效
       await ensureSSHConnection();
 
-      await createSSHFolder(sshSessionId, folderPath);
+      // API需要分离的path和folderName参数
+      await createSSHFolder(
+        sshSessionId,
+        currentPath,
+        defaultName,
+        currentHost?.id,
+        currentHost?.userId?.toString()
+      );
 
       // 重新加载目录
       await loadDirectory(currentPath);
@@ -361,7 +368,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       // 确保SSH连接有效
       await ensureSSHConnection();
 
-      await createSSHFile(sshSessionId, filePath, "");
+      // API需要分离的path、fileName和content参数
+      await createSSHFile(
+        sshSessionId,
+        currentPath,
+        defaultName,
+        "",
+        currentHost?.id,
+        currentHost?.userId?.toString()
+      );
 
       // 重新加载目录
       await loadDirectory(currentPath);
