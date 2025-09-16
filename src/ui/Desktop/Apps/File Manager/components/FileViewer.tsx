@@ -78,14 +78,37 @@ export function FileViewer({
 }: FileViewerProps) {
   const [editedContent, setEditedContent] = useState(content);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showLargeFileWarning, setShowLargeFileWarning] = useState(false);
+  const [forceShowAsText, setForceShowAsText] = useState(false);
 
   const fileTypeInfo = getFileType(file.name);
+
+  // 文件大小限制 (1MB for warning, 10MB for hard limit)
+  const WARNING_SIZE = 1024 * 1024; // 1MB
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+  // 检查是否应该显示为文本
+  const shouldShowAsText =
+    fileTypeInfo.type === 'text' ||
+    fileTypeInfo.type === 'code' ||
+    (fileTypeInfo.type === 'unknown' && (forceShowAsText || !file.size || file.size <= WARNING_SIZE));
+
+  // 检查文件是否过大
+  const isLargeFile = file.size && file.size > WARNING_SIZE;
+  const isTooLarge = file.size && file.size > MAX_SIZE;
 
   // 同步外部内容更改
   useEffect(() => {
     setEditedContent(content);
     setHasChanges(false);
-  }, [content]);
+
+    // 如果是未知文件类型且文件较大，显示警告
+    if (fileTypeInfo.type === 'unknown' && isLargeFile && !forceShowAsText) {
+      setShowLargeFileWarning(true);
+    } else {
+      setShowLargeFileWarning(false);
+    }
+  }, [content, fileTypeInfo.type, isLargeFile, forceShowAsText]);
 
   // 处理内容更改
   const handleContentChange = (newContent: string) => {
@@ -98,6 +121,17 @@ export function FileViewer({
   const handleSave = () => {
     onSave?.(editedContent);
     setHasChanges(false);
+  };
+
+  // 处理用户确认打开大文件
+  const handleConfirmOpenAsText = () => {
+    setForceShowAsText(true);
+    setShowLargeFileWarning(false);
+  };
+
+  // 处理用户拒绝打开大文件
+  const handleCancelOpenAsText = () => {
+    setShowLargeFileWarning(false);
   };
 
   if (isLoading) {
@@ -161,7 +195,66 @@ export function FileViewer({
 
       {/* 文件内容 */}
       <div className="flex-1 overflow-auto">
-        {fileTypeInfo.type === 'image' && (
+        {/* 大文件警告对话框 */}
+        {showLargeFileWarning && (
+          <div className="h-full flex items-center justify-center bg-gray-50">
+            <div className="bg-white border border-orange-200 rounded-lg p-6 max-w-md mx-4 shadow-lg">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertCircle className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Large File Warning</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    This file is {formatFileSize(file.size)} in size, which may cause performance issues when opened as text.
+                  </p>
+                  {isTooLarge ? (
+                    <div className="bg-red-50 border border-red-200 rounded p-3 mb-4">
+                      <p className="text-sm text-red-700 font-medium">
+                        File is too large (&gt; 10MB) and cannot be opened as text for security reasons.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600 mb-4">
+                      Do you want to continue opening this file as text? This may slow down your browser.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                {!isTooLarge && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleConfirmOpenAsText}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Open as Text
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onDownload}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Instead
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelOpenAsText}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 图片预览 */}
+        {fileTypeInfo.type === 'image' && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
             <img
               src={`data:image/*;base64,${content}`}
@@ -175,7 +268,8 @@ export function FileViewer({
           </div>
         )}
 
-        {(fileTypeInfo.type === 'text' || fileTypeInfo.type === 'code') && (
+        {/* 文本和代码文件预览 */}
+        {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full">
             {isEditable ? (
               <textarea
@@ -200,7 +294,8 @@ export function FileViewer({
           </div>
         )}
 
-        {fileTypeInfo.type === 'video' && (
+        {/* 视频文件预览 */}
+        {fileTypeInfo.type === 'video' && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
             <video
               controls
@@ -212,7 +307,8 @@ export function FileViewer({
           </div>
         )}
 
-        {fileTypeInfo.type === 'audio' && (
+        {/* 音频文件预览 */}
+        {fileTypeInfo.type === 'audio' && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
             <div className="text-center">
               <div className={cn("w-24 h-24 mx-auto mb-4 rounded-full bg-pink-100 flex items-center justify-center", fileTypeInfo.color)}>
@@ -229,7 +325,8 @@ export function FileViewer({
           </div>
         )}
 
-        {fileTypeInfo.type === 'unknown' && (
+        {/* 未知文件类型 - 只在不能显示为文本且没有警告时显示 */}
+        {fileTypeInfo.type === 'unknown' && !shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex items-center justify-center">
             <div className="text-center text-gray-500">
               <AlertCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
