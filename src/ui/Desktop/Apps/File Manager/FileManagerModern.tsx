@@ -940,6 +940,147 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     return candidateName;
   }
 
+  // 拖拽处理：文件/文件夹拖到文件夹 = 移动操作
+  async function handleFileDrop(draggedFiles: FileItem[], targetFolder: FileItem) {
+    if (!sshSessionId || targetFolder.type !== 'directory') return;
+
+    try {
+      await ensureSSHConnection();
+
+      let successCount = 0;
+      const movedItems: string[] = [];
+
+      for (const file of draggedFiles) {
+        try {
+          const targetPath = targetFolder.path.endsWith('/')
+            ? `${targetFolder.path}${file.name}`
+            : `${targetFolder.path}/${file.name}`;
+
+          // 只有当目标路径与原路径不同时才移动
+          if (file.path !== targetPath) {
+            await moveSSHItem(
+              sshSessionId,
+              file.path,
+              targetPath,
+              currentHost?.id,
+              currentHost?.userId?.toString()
+            );
+            movedItems.push(file.name);
+            successCount++;
+          }
+        } catch (error: any) {
+          console.error(`Failed to move file ${file.name}:`, error);
+          toast.error(`移动 ${file.name} 失败: ${error.message}`);
+        }
+      }
+
+      if (successCount > 0) {
+        // 记录撤销历史
+        const movedFiles = draggedFiles.slice(0, successCount).map((file, index) => {
+          const targetPath = targetFolder.path.endsWith('/')
+            ? `${targetFolder.path}${file.name}`
+            : `${targetFolder.path}/${file.name}`;
+          return {
+            originalPath: file.path,
+            targetPath: targetPath,
+            targetName: file.name
+          };
+        });
+
+        const undoAction: UndoAction = {
+          type: 'cut',
+          description: `拖拽移动了 ${successCount} 个项目到 ${targetFolder.name}`,
+          data: {
+            operation: 'cut',
+            copiedFiles: movedFiles,
+            targetDirectory: targetFolder.path
+          },
+          timestamp: Date.now()
+        };
+        setUndoHistory(prev => [...prev.slice(-9), undoAction]);
+
+        toast.success(`成功移动了 ${successCount} 个项目到 ${targetFolder.name}`);
+        loadDirectory(currentPath);
+        clearSelection(); // 清除选中状态
+      }
+    } catch (error: any) {
+      console.error('Drag move operation failed:', error);
+      toast.error(`移动操作失败: ${error.message}`);
+    }
+  }
+
+  // 拖拽处理：文件拖到文件 = diff对比操作
+  function handleFileDiff(file1: FileItem, file2: FileItem) {
+    if (file1.type !== 'file' || file2.type !== 'file') {
+      toast.error('只能对比两个文件');
+      return;
+    }
+
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    // 在新窗口中打开两个文件进行对比
+    console.log('Opening diff comparison:', file1.name, 'vs', file2.name);
+
+    // 计算第一个窗口位置
+    const offsetX1 = 100;
+    const offsetY1 = 100;
+
+    // 计算第二个窗口位置（偏移）
+    const offsetX2 = 450;
+    const offsetY2 = 120;
+
+    // 创建第一个文件窗口
+    const windowId1 = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const createWindowComponent1 = (windowId: string) => (
+      <FileWindow
+        windowId={windowId}
+        file={file1}
+        sshSessionId={sshSessionId}
+        sshHost={currentHost}
+        initialX={offsetX1}
+        initialY={offsetY1}
+      />
+    );
+
+    openWindow({
+      id: windowId1,
+      type: 'file',
+      title: `${file1.name} (对比文件1)`,
+      isMaximized: false,
+      component: createWindowComponent1,
+      zIndex: Date.now()
+    });
+
+    // 稍后打开第二个文件窗口
+    setTimeout(() => {
+      const windowId2 = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const createWindowComponent2 = (windowId: string) => (
+        <FileWindow
+          windowId={windowId}
+          file={file2}
+          sshSessionId={sshSessionId}
+          sshHost={currentHost}
+          initialX={offsetX2}
+          initialY={offsetY2}
+        />
+      );
+
+      openWindow({
+        id: windowId2,
+        type: 'file',
+        title: `${file2.name} (对比文件2)`,
+        isMaximized: false,
+        component: createWindowComponent2,
+        zIndex: Date.now() + 1
+      });
+    }, 200);
+
+    toast.success(`正在打开文件对比: ${file1.name} 与 ${file2.name}`);
+  }
+
   // 过滤文件并添加新建的临时项目
   let filteredFiles = files.filter(file =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1088,6 +1229,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           onCut={handleCutFiles}
           onPaste={handlePasteFiles}
           onUndo={handleUndo}
+          onFileDrop={handleFileDrop}
+          onFileDiff={handleFileDiff}
         />
 
         {/* 右键菜单 */}
