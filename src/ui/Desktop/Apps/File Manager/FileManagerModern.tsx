@@ -27,7 +27,8 @@ import {
   createSSHFolder,
   deleteSSHItem,
   renameSSHItem,
-  connectSSH
+  connectSSH,
+  getSSHStatus
 } from "@/ui/main-axios.ts";
 
 interface FileItem {
@@ -83,7 +84,7 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
     selectFile,
     selectAll,
     clearSelection,
-    setSelectedFiles
+    setSelection
   } = useFileSelection();
 
   const { isDragging, dragHandlers } = useDragAndDrop({
@@ -111,11 +112,24 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
 
     try {
       setIsLoading(true);
+      console.log("Initializing SSH connection for host:", currentHost.name, "ID:", currentHost.id);
+
       // 使用主机ID作为会话ID
       const sessionId = currentHost.id.toString();
+      console.log("Using session ID:", sessionId);
 
       // 调用connectSSH建立连接
-      await connectSSH(sessionId, {
+      console.log("Connecting to SSH with config:", {
+        hostId: currentHost.id,
+        ip: currentHost.ip,
+        port: currentHost.port,
+        username: currentHost.username,
+        authType: currentHost.authType,
+        credentialId: currentHost.credentialId,
+        userId: currentHost.userId
+      });
+
+      const result = await connectSSH(sessionId, {
         hostId: currentHost.id,
         ip: currentHost.ip,
         port: currentHost.port,
@@ -128,26 +142,67 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
         userId: currentHost.userId
       });
 
+      console.log("SSH connection result:", result);
       setSshSessionId(sessionId);
+      console.log("SSH session ID set to:", sessionId);
     } catch (error: any) {
-      toast.error(t("fileManager.failedToConnect"));
       console.error("SSH connection failed:", error);
+      toast.error(t("fileManager.failedToConnect") + ": " + (error.message || error));
     } finally {
       setIsLoading(false);
     }
   }
 
   async function loadDirectory(path: string) {
-    if (!sshSessionId) return;
+    if (!sshSessionId) {
+      console.error("Cannot load directory: no SSH session ID");
+      return;
+    }
 
     try {
       setIsLoading(true);
+      console.log("Loading directory:", path, "with session ID:", sshSessionId);
+
+      // 首先检查SSH连接状态
+      try {
+        const status = await getSSHStatus(sshSessionId);
+        console.log("SSH connection status:", status);
+
+        if (!status.connected) {
+          console.log("SSH not connected, attempting to reconnect...");
+          await initializeSSHConnection();
+          return; // 重连后会触发useEffect重新加载目录
+        }
+      } catch (statusError) {
+        console.log("Failed to get SSH status, attempting to reconnect...");
+        await initializeSSHConnection();
+        return;
+      }
+
       const contents = await listSSHFiles(sshSessionId, path);
-      setFiles(contents || []);
+      console.log("Directory contents loaded:", contents?.length || 0, "items");
+      console.log("Raw file data from backend:", contents);
+
+      // 为文件添加完整路径
+      const filesWithPath = (contents || []).map(file => ({
+        ...file,
+        path: path + (path.endsWith("/") ? "" : "/") + file.name
+      }));
+
+      console.log("Files with constructed paths:", filesWithPath.map(f => ({ name: f.name, path: f.path })));
+
+      setFiles(filesWithPath);
       clearSelection();
     } catch (error: any) {
-      toast.error(t("fileManager.failedToLoadDirectory"));
       console.error("Failed to load directory:", error);
+
+      // 如果是连接错误，尝试重连
+      if (error.message?.includes("connection") || error.message?.includes("established")) {
+        console.log("Connection error detected, attempting to reconnect...");
+        await initializeSSHConnection();
+      } else {
+        toast.error(t("fileManager.failedToLoadDirectory") + ": " + (error.message || error));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -440,9 +495,9 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
         <FileManagerGrid
           files={filteredFiles}
           selectedFiles={selectedFiles}
-          onFileSelect={selectFile}
+          onFileSelect={() => {}} // 不再需要这个回调，使用onSelectionChange
           onFileOpen={handleFileOpen}
-          onSelectionChange={setSelectedFiles}
+          onSelectionChange={setSelection}
           currentPath={currentPath}
           isLoading={isLoading}
           onPathChange={setCurrentPath}

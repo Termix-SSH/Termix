@@ -185,16 +185,22 @@ export function FileManagerGrid({
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
     event.stopPropagation();
 
+    console.log('File clicked:', file.name, 'Current selected:', selectedFiles.length);
+
     if (event.detail === 2) {
       // 双击打开
+      console.log('Double click - opening file');
       onFileOpen(file);
     } else {
       // 单击选择
       const multiSelect = event.ctrlKey || event.metaKey;
       const rangeSelect = event.shiftKey;
 
+      console.log('Single click - multiSelect:', multiSelect, 'rangeSelect:', rangeSelect);
+
       if (rangeSelect && selectedFiles.length > 0) {
         // 范围选择 (Shift+点击)
+        console.log('Range selection');
         const lastSelected = selectedFiles[selectedFiles.length - 1];
         const currentIndex = files.findIndex(f => f.path === file.path);
         const lastIndex = files.findIndex(f => f.path === lastSelected.path);
@@ -203,19 +209,23 @@ export function FileManagerGrid({
           const start = Math.min(currentIndex, lastIndex);
           const end = Math.max(currentIndex, lastIndex);
           const rangeFiles = files.slice(start, end + 1);
+          console.log('Range selection result:', rangeFiles.length, 'files');
           onSelectionChange(rangeFiles);
         }
       } else if (multiSelect) {
         // 多选 (Ctrl+点击)
+        console.log('Multi selection');
         const isSelected = selectedFiles.some(f => f.path === file.path);
         if (isSelected) {
+          console.log('Removing from selection');
           onSelectionChange(selectedFiles.filter(f => f.path !== file.path));
         } else {
+          console.log('Adding to selection');
           onSelectionChange([...selectedFiles, file]);
         }
       } else {
         // 单选
-        onFileSelect(file);
+        console.log('Single selection - should select only:', file.name);
         onSelectionChange([file]);
       }
     }
@@ -241,6 +251,7 @@ export function FileManagerGrid({
         case 'A':
           if (event.ctrlKey || event.metaKey) {
             event.preventDefault();
+            console.log('Ctrl+A pressed - selecting all files:', files.length);
             onSelectionChange([...files]);
           }
           break;
@@ -374,6 +385,17 @@ export function FileManagerGrid({
             {files.map((file) => {
               const isSelected = selectedFiles.some(f => f.path === file.path);
 
+              // 详细调试路径比较
+              if (selectedFiles.length > 0) {
+                console.log(`\n=== File: ${file.name} ===`);
+                console.log(`File path: "${file.path}"`);
+                console.log(`Selected files:`, selectedFiles.map(f => `"${f.path}"`));
+                console.log(`Path comparison results:`, selectedFiles.map(f =>
+                  `"${f.path}" === "${file.path}" -> ${f.path === file.path}`
+                ));
+                console.log(`Final isSelected: ${isSelected}`);
+              }
+
               return (
                 <div
                   key={file.path}
@@ -382,6 +404,7 @@ export function FileManagerGrid({
                     "hover:bg-dark-hover border-2 border-transparent",
                     isSelected && "bg-blue-500/20 border-blue-500"
                   )}
+                  title={`${file.name} - Selected: ${isSelected} - SelectedCount: ${selectedFiles.length}`}
                   onClick={(e) => handleFileClick(file, e)}
                   onContextMenu={(e) => {
                     e.preventDefault();
