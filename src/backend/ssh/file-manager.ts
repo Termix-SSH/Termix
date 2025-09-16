@@ -1521,6 +1521,155 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
   });
 });
 
+// Copy SSH file/directory
+app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
+  const { sessionId, sourcePath, targetDir, hostId, userId } = req.body;
+
+  if (!sessionId || !sourcePath || !targetDir) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const sshConn = sshSessions[sessionId];
+  if (!sshConn || !sshConn.isConnected) {
+    return res.status(400).json({ error: "SSH session not found or not connected" });
+  }
+
+  sshConn.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  try {
+    // Extract source name
+    const sourceName = sourcePath.split('/').pop() || 'copied_item';
+
+    // Skip file existence check to avoid SSH hanging - just use timestamp for uniqueness
+    const timestamp = Date.now().toString().slice(-8);
+    const nameWithoutExt = sourceName.includes('.')
+      ? sourceName.substring(0, sourceName.lastIndexOf('.'))
+      : sourceName;
+    const extension = sourceName.includes('.')
+      ? sourceName.substring(sourceName.lastIndexOf('.'))
+      : '';
+
+    // Always use timestamp suffix to ensure uniqueness without SSH calls
+    const uniqueName = `${nameWithoutExt}_copy_${timestamp}${extension}`;
+
+    fileLogger.info("Using timestamp-based unique name", { originalName: sourceName, uniqueName });
+    const targetPath = `${targetDir}/${uniqueName}`;
+
+    // Escape paths for shell commands
+    const escapedSource = sourcePath.replace(/'/g, "'\"'\"'");
+    const escapedTarget = targetPath.replace(/'/g, "'\"'\"'");
+
+    // Use cp with explicit flags to avoid hanging on prompts
+    // -f: force overwrite without prompting
+    // -r: recursive for directories
+    // -p: preserve timestamps, permissions
+    const copyCommand = `cp -fpr '${escapedSource}' '${escapedTarget}' 2>&1`;
+
+    fileLogger.info("Starting file copy operation", {
+      operation: "file_copy_start",
+      sessionId,
+      sourcePath,
+      targetPath,
+      uniqueName,
+      command: copyCommand.substring(0, 200) + "..." // Log truncated command
+    });
+
+    // Add timeout to prevent hanging
+    const commandTimeout = setTimeout(() => {
+      fileLogger.error("Copy command timed out after 20 seconds", {
+        sourcePath,
+        targetPath,
+        command: copyCommand
+      });
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: "Copy operation timed out",
+          toast: { type: "error", message: "Copy operation timed out. SSH connection may be unstable." }
+        });
+      }
+    }, 20000); // 20 second timeout for better responsiveness
+
+    sshConn.client.exec(copyCommand, (err, stream) => {
+      if (err) {
+        clearTimeout(commandTimeout);
+        fileLogger.error("SSH copyItem error:", err);
+        if (!res.headersSent) {
+          return res.status(500).json({ error: err.message });
+        }
+        return;
+      }
+
+      let errorData = "";
+      let stdoutData = "";
+
+      // Monitor both stdout and stderr
+      stream.on("data", (data: Buffer) => {
+        const output = data.toString();
+        stdoutData += output;
+        fileLogger.info("Copy command stdout", { output: output.substring(0, 200) });
+      });
+
+      stream.stderr.on("data", (data: Buffer) => {
+        const output = data.toString();
+        errorData += output;
+        fileLogger.info("Copy command stderr", { output: output.substring(0, 200) });
+      });
+
+      stream.on("close", (code) => {
+        clearTimeout(commandTimeout);
+        fileLogger.info("Copy command completed", { code, errorData, hasError: errorData.length > 0 });
+
+        if (code !== 0) {
+          fileLogger.error(`SSH copyItem command failed with code ${code}: ${errorData}`);
+          if (!res.headersSent) {
+            return res.status(500).json({
+              error: `Copy failed: ${errorData}`,
+              toast: { type: "error", message: `Copy failed: ${errorData}` }
+            });
+          }
+          return;
+        }
+
+        fileLogger.success("Item copied successfully", {
+          operation: "file_copy",
+          sessionId,
+          sourcePath,
+          targetPath,
+          uniqueName,
+          hostId,
+          userId,
+        });
+
+        if (!res.headersSent) {
+          res.json({
+            message: "Item copied successfully",
+            sourcePath,
+            targetPath,
+            uniqueName,
+            toast: {
+              type: "success",
+              message: `Successfully copied to: ${uniqueName}`,
+            },
+          });
+        }
+      });
+
+      stream.on("error", (streamErr) => {
+        clearTimeout(commandTimeout);
+        fileLogger.error("SSH copyItem stream error:", streamErr);
+        if (!res.headersSent) {
+          res.status(500).json({ error: `Stream error: ${streamErr.message}` });
+        }
+      });
+    });
+
+  } catch (error: any) {
+    fileLogger.error("Copy operation error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Helper function to determine MIME type based on file extension
 function getMimeType(fileName: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase();

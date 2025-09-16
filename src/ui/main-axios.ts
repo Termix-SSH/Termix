@@ -1136,6 +1136,30 @@ export async function deleteSSHItem(
   }
 }
 
+export async function copySSHItem(
+  sessionId: string,
+  sourcePath: string,
+  targetDir: string,
+  hostId?: number,
+  userId?: string,
+): Promise<any> {
+  try {
+    const response = await fileManagerApi.post("/ssh/copyItem", {
+      sessionId,
+      sourcePath,
+      targetDir,
+      hostId,
+      userId,
+    }, {
+      timeout: 60000, // 60秒超时，因为文件复制可能需要更长时间
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "copy SSH item");
+    throw error;
+  }
+}
+
 export async function renameSSHItem(
   sessionId: string,
   oldPath: string,

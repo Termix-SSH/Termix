@@ -63,6 +63,11 @@ interface FileManagerGridProps {
   editingFile?: FileItem | null;
   onStartEdit?: (file: FileItem) => void;
   onCancelEdit?: () => void;
+  onDelete?: (files: FileItem[]) => void;
+  onCopy?: (files: FileItem[]) => void;
+  onCut?: (files: FileItem[]) => void;
+  onPaste?: () => void;
+  onUndo?: () => void;
 }
 
 const getFileIcon = (file: FileItem, viewMode: 'grid' | 'list' = 'grid') => {
@@ -151,7 +156,12 @@ export function FileManagerGrid({
   onRename,
   editingFile,
   onStartEdit,
-  onCancelEdit
+  onCancelEdit,
+  onDelete,
+  onCopy,
+  onCut,
+  onPaste,
+  onUndo
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -456,6 +466,11 @@ export function FileManagerGrid({
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
     event.stopPropagation();
 
+    // 确保网格获得焦点以支持键盘事件
+    if (gridRef.current) {
+      gridRef.current.focus();
+    }
+
     console.log('File clicked:', file.name, 'Current selected:', selectedFiles.length);
 
     if (event.detail === 2) {
@@ -504,6 +519,11 @@ export function FileManagerGrid({
 
   // 空白区域点击取消选择
   const handleGridClick = (event: React.MouseEvent) => {
+    // 确保网格获得焦点以支持键盘事件
+    if (gridRef.current) {
+      gridRef.current.focus();
+    }
+
     // 如果刚完成框选，不要清空选择
     if (event.target === event.currentTarget && !isSelecting && !justFinishedSelecting) {
       onSelectionChange([]);
@@ -513,7 +533,15 @@ export function FileManagerGrid({
   // 键盘支持
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!gridRef.current?.contains(document.activeElement)) return;
+      // 检查是否有输入框或可编辑元素获得焦点，如果有则跳过
+      const activeElement = document.activeElement;
+      if (activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.contentEditable === 'true'
+      )) {
+        return;
+      }
 
       switch (event.key) {
         case 'Escape':
@@ -527,10 +555,38 @@ export function FileManagerGrid({
             onSelectionChange([...files]);
           }
           break;
+        case 'c':
+        case 'C':
+          if ((event.ctrlKey || event.metaKey) && selectedFiles.length > 0 && onCopy) {
+            event.preventDefault();
+            onCopy(selectedFiles);
+          }
+          break;
+        case 'x':
+        case 'X':
+          if ((event.ctrlKey || event.metaKey) && selectedFiles.length > 0 && onCut) {
+            event.preventDefault();
+            onCut(selectedFiles);
+          }
+          break;
+        case 'v':
+        case 'V':
+          if ((event.ctrlKey || event.metaKey) && onPaste) {
+            event.preventDefault();
+            onPaste();
+          }
+          break;
+        case 'z':
+        case 'Z':
+          if ((event.ctrlKey || event.metaKey) && onUndo) {
+            event.preventDefault();
+            onUndo();
+          }
+          break;
         case 'Delete':
-          if (selectedFiles.length > 0) {
+          if (selectedFiles.length > 0 && onDelete) {
             // 触发删除操作
-            console.log('Delete selected files:', selectedFiles);
+            onDelete(selectedFiles);
           }
           break;
         case 'F2':
@@ -548,7 +604,7 @@ export function FileManagerGrid({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedFiles, files, onSelectionChange, onRefresh]);
+  }, [selectedFiles, files, onSelectionChange, onRefresh, onDelete, onCopy, onCut, onPaste, onUndo]);
 
   if (isLoading) {
     return (

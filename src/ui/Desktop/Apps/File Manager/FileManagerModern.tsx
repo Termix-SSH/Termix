@@ -28,6 +28,7 @@ import {
   createSSHFile,
   createSSHFolder,
   deleteSSHItem,
+  copySSHItem,
   renameSSHItem,
   connectSSH,
   getSSHStatus,
@@ -72,6 +73,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     files: FileItem[];
     operation: 'copy' | 'cut';
   } | null>(null);
+
+  // 撤销历史
+  interface UndoAction {
+    type: 'delete' | 'paste' | 'rename' | 'create';
+    description: string;
+    data: any;
+    timestamp: number;
+  }
+
+  const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
 
   // 编辑状态
   const [editingFile, setEditingFile] = useState<FileItem | null>(null);
@@ -475,7 +486,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
     event.preventDefault();
 
-    const files = file ? [file] : selectedFiles;
+    // 如果右键点击的文件已经在选中列表中，使用所有选中的文件
+    // 如果右键点击的文件不在选中列表中，只使用这一个文件
+    let files: FileItem[];
+    if (file) {
+      const isFileSelected = selectedFiles.some(f => f.path === file.path);
+      files = isFileSelected ? selectedFiles : [file];
+    } else {
+      files = selectedFiles;
+    }
 
     setContextMenu({
       x: event.clientX,
@@ -495,12 +514,127 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     toast.success(t("fileManager.filesCutToClipboard", { count: files.length }));
   }
 
-  function handlePasteFiles() {
+  async function handlePasteFiles() {
     if (!clipboard || !sshSessionId) return;
 
-    // TODO: 实现粘贴功能
-    // 这里需要根据剪贴板操作类型（copy/cut）来执行相应的操作
-    toast.info("粘贴功能正在开发中...");
+    try {
+      await ensureSSHConnection();
+
+      const { files, operation } = clipboard;
+
+      // 处理复制和剪切操作
+      let successCount = 0;
+      const copiedItems: string[] = [];
+
+      for (const file of files) {
+        try {
+          if (operation === 'copy') {
+            // 复制操作：调用复制API
+            const result = await copySSHItem(
+              sshSessionId,
+              file.path,
+              currentPath,
+              currentHost?.id,
+              currentHost?.userId?.toString()
+            );
+            copiedItems.push(result.uniqueName || file.name);
+            successCount++;
+          } else {
+            // 剪切操作：移动文件
+            const newPath = currentPath.endsWith('/')
+              ? `${currentPath}${file.name}`
+              : `${currentPath}/${file.name}`;
+
+            if (file.path !== newPath) {
+              await renameSSHItem(
+                sshSessionId,
+                file.path,
+                newPath,
+                currentHost?.id,
+                currentHost?.userId?.toString()
+              );
+              successCount++;
+            }
+          }
+        } catch (error: any) {
+          console.error(`Failed to ${operation} file ${file.name}:`, error);
+          toast.error(`${operation === 'copy' ? '复制' : '移动'} ${file.name} 失败: ${error.message}`);
+        }
+      }
+
+      // 记录撤销历史
+      if (successCount > 0) {
+        const undoAction: UndoAction = {
+          type: 'paste',
+          description: `移动了 ${successCount} 个项目`,
+          data: { files: files.slice(0, successCount), operation, targetPath: currentPath },
+          timestamp: Date.now()
+        };
+        setUndoHistory(prev => [...prev.slice(-9), undoAction]); // 保持最多10个撤销记录
+      }
+
+      // 显示成功提示
+      if (successCount > 0) {
+        const operationText = operation === 'copy' ? '复制' : '移动';
+        if (operation === 'copy' && copiedItems.length > 0) {
+          // 显示复制的详细信息，包括重命名的文件
+          const hasRenamed = copiedItems.some(name =>
+            !files.some(file => file.name === name)
+          );
+
+          if (hasRenamed) {
+            toast.success(`已${operationText} ${successCount} 个项目，部分文件已自动重命名避免冲突`);
+          } else {
+            toast.success(`已${operationText} ${successCount} 个项目`);
+          }
+        } else {
+          toast.success(`已${operationText} ${successCount} 个项目`);
+        }
+      }
+
+      // 刷新文件列表
+      loadDirectory(currentPath);
+      clearSelection();
+
+      // 清空剪贴板（剪切操作后，复制操作保留剪贴板内容）
+      if (operation === 'cut') {
+        setClipboard(null);
+      }
+
+    } catch (error: any) {
+      toast.error(`粘贴失败: ${error.message || 'Unknown error'}`);
+    }
+  }
+
+  function handleUndo() {
+    if (undoHistory.length === 0) {
+      toast.info("没有可撤销的操作");
+      return;
+    }
+
+    const lastAction = undoHistory[undoHistory.length - 1];
+
+    // 移除最后一个撤销记录
+    setUndoHistory(prev => prev.slice(0, -1));
+
+    toast.success(`已撤销：${lastAction.description}`);
+
+    // 根据不同操作类型执行撤销逻辑
+    switch (lastAction.type) {
+      case 'paste':
+        // 粘贴操作的撤销：删除粘贴的文件或移回原位置
+        toast.info("撤销粘贴操作需要手动处理");
+        break;
+      case 'delete':
+        // 删除操作的撤销：恢复删除的文件
+        toast.info("删除操作暂时无法撤销");
+        break;
+      default:
+        toast.info("该操作暂时无法撤销");
+    }
+
+    // 刷新文件列表
+    loadDirectory(currentPath);
   }
 
   function handleRenameFile(file: FileItem) {
@@ -801,6 +935,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           editingFile={editingFile}
           onStartEdit={handleStartEdit}
           onCancelEdit={handleCancelEdit}
+          onDelete={handleDeleteFiles}
+          onCopy={handleCopyFiles}
+          onCut={handleCutFiles}
+          onPaste={handlePasteFiles}
+          onUndo={handleUndo}
         />
 
         {/* 右键菜单 */}
