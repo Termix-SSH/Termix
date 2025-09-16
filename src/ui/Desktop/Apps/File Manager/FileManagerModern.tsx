@@ -5,6 +5,7 @@ import { useFileSelection } from "./hooks/useFileSelection";
 import { useDragAndDrop } from "./hooks/useDragAndDrop";
 import { WindowManager, useWindowManager } from "./components/WindowManager";
 import { FileWindow } from "./components/FileWindow";
+import { DiffWindow } from "./components/DiffWindow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -1021,64 +1022,37 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       return;
     }
 
-    // 在新窗口中打开两个文件进行对比
+    // 使用专用的DiffWindow进行文件对比
     console.log('Opening diff comparison:', file1.name, 'vs', file2.name);
 
-    // 计算第一个窗口位置
-    const offsetX1 = 100;
-    const offsetY1 = 100;
+    // 计算窗口位置
+    const offsetX = 100;
+    const offsetY = 80;
 
-    // 计算第二个窗口位置（偏移）
-    const offsetX2 = 450;
-    const offsetY2 = 120;
-
-    // 创建第一个文件窗口
-    const windowId1 = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const createWindowComponent1 = (windowId: string) => (
-      <FileWindow
+    // 创建diff窗口
+    const windowId = `diff-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const createWindowComponent = (windowId: string) => (
+      <DiffWindow
         windowId={windowId}
-        file={file1}
+        file1={file1}
+        file2={file2}
         sshSessionId={sshSessionId}
         sshHost={currentHost}
-        initialX={offsetX1}
-        initialY={offsetY1}
+        initialX={offsetX}
+        initialY={offsetY}
       />
     );
 
     openWindow({
-      id: windowId1,
-      type: 'file',
-      title: `${file1.name} (对比文件1)`,
+      id: windowId,
+      type: 'diff',
+      title: `文件对比: ${file1.name} ↔ ${file2.name}`,
       isMaximized: false,
-      component: createWindowComponent1,
+      component: createWindowComponent,
       zIndex: Date.now()
     });
 
-    // 稍后打开第二个文件窗口
-    setTimeout(() => {
-      const windowId2 = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const createWindowComponent2 = (windowId: string) => (
-        <FileWindow
-          windowId={windowId}
-          file={file2}
-          sshSessionId={sshSessionId}
-          sshHost={currentHost}
-          initialX={offsetX2}
-          initialY={offsetY2}
-        />
-      );
-
-      openWindow({
-        id: windowId2,
-        type: 'file',
-        title: `${file2.name} (对比文件2)`,
-        isMaximized: false,
-        component: createWindowComponent2,
-        zIndex: Date.now() + 1
-      });
-    }, 200);
-
-    toast.success(`正在打开文件对比: ${file1.name} 与 ${file2.name}`);
+    toast.success(`正在对比文件: ${file1.name} 与 ${file2.name}`);
   }
 
   // 过滤文件并添加新建的临时项目
