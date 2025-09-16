@@ -3,6 +3,8 @@ import { FileManagerGrid } from "./FileManagerGrid";
 import { FileManagerContextMenu } from "./FileManagerContextMenu";
 import { useFileSelection } from "./hooks/useFileSelection";
 import { useDragAndDrop } from "./hooks/useDragAndDrop";
+import { WindowManager, useWindowManager } from "./components/WindowManager";
+import { FileWindow } from "./components/FileWindow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -47,7 +49,9 @@ interface FileManagerModernProps {
   onClose?: () => void;
 }
 
-export function FileManagerModern({ initialHost, onClose }: FileManagerModernProps) {
+// 内部组件，使用窗口管理器
+function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
+  const { openWindow } = useWindowManager();
   const { t } = useTranslation();
 
   // State
@@ -329,8 +333,38 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
     if (file.type === 'directory') {
       setCurrentPath(file.path);
     } else {
-      // 打开文件编辑器或预览
-      console.log("Open file:", file);
+      // 在新窗口中打开文件
+      if (!sshSessionId) {
+        toast.error(t("fileManager.noSSHConnection"));
+        return;
+      }
+
+      // 计算窗口位置（稍微错开）
+      const windowCount = Date.now() % 10; // 简单的偏移计算
+      const offsetX = 120 + (windowCount * 30);
+      const offsetY = 120 + (windowCount * 30);
+
+      // 创建窗口组件工厂函数
+      const createWindowComponent = (windowId: string) => (
+        <FileWindow
+          windowId={windowId}
+          file={file}
+          sshSessionId={sshSessionId}
+          initialX={offsetX}
+          initialY={offsetY}
+        />
+      );
+
+      openWindow({
+        title: file.name,
+        x: offsetX,
+        y: offsetY,
+        width: 800,
+        height: 600,
+        isMaximized: false,
+        isMinimized: false,
+        component: createWindowComponent
+      });
     }
   }
 
@@ -537,5 +571,14 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
         />
       </div>
     </div>
+  );
+}
+
+// 主要的导出组件，包装了 WindowManager
+export function FileManagerModern({ initialHost, onClose }: FileManagerModernProps) {
+  return (
+    <WindowManager>
+      <FileManagerContent initialHost={initialHost} onClose={onClose} />
+    </WindowManager>
   );
 }
