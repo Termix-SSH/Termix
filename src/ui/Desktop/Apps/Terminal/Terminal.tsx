@@ -29,13 +29,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   { hostConfig, isVisible, splitScreen = false, onClose, initialPath, executeCommand },
   ref,
 ) {
-  console.log('Terminal component props:', {
-    hasHostConfig: !!hostConfig,
-    isVisible,
-    initialPath,
-    executeCommand,
-    hasExecuteCommand: !!executeCommand
-  });
   const { t } = useTranslation();
   const { instance: terminal, ref: xtermRef } = useXTerm();
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -258,13 +251,10 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         }
       }, 10000);
 
-      const connectionData = { cols, rows, hostConfig, initialPath, executeCommand };
-      console.log('Sending terminal connection data:', connectionData);
-
       ws.send(
         JSON.stringify({
           type: "connectToHost",
-          data: connectionData,
+          data: { cols, rows, hostConfig, initialPath, executeCommand },
         }),
       );
       terminal.onData((data) => {

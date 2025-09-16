@@ -108,14 +108,6 @@ wss.on("connection", (ws: WebSocket) => {
     executeCommand?: string;
   }) {
     const { cols, rows, hostConfig, initialPath, executeCommand } = data;
-
-    sshLogger.debug("Terminal connection data received", {
-      operation: "terminal_connect_data",
-      hasInitialPath: !!initialPath,
-      initialPath,
-      hasExecuteCommand: !!executeCommand,
-      executeCommand
-    });
     const {
       id,
       ip,

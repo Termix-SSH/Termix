@@ -34,12 +34,6 @@ export function TerminalWindow({
   initialY = 150,
   executeCommand
 }: TerminalWindowProps) {
-  console.log('TerminalWindow props:', {
-    windowId,
-    initialPath,
-    executeCommand,
-    hasExecuteCommand: !!executeCommand
-  });
   const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } = useWindowManager();
 
   // 获取当前窗口状态

@@ -1145,7 +1145,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       return;
     }
 
-    console.log('Opening terminal at path:', path);
 
     // 创建终端窗口
     const windowCount = Date.now() % 10;
@@ -1188,19 +1187,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       return;
     }
 
-    console.log('Running executable file:', file.path);
-
     // 获取文件所在目录
     const fileDir = file.path.substring(0, file.path.lastIndexOf('/'));
     const fileName = file.name;
     const executeCmd = `./${fileName}`;
-
-    console.log('Execute command details:', {
-      filePath: file.path,
-      fileDir,
-      fileName,
-      executeCommand: executeCmd
-    });
 
     // 创建执行用的终端窗口
     const windowCount = Date.now() % 10;
