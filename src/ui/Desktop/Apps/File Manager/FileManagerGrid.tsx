@@ -70,6 +70,8 @@ interface FileManagerGridProps {
   onUndo?: () => void;
   onFileDrop?: (draggedFiles: FileItem[], targetFile: FileItem) => void;
   onFileDiff?: (file1: FileItem, file2: FileItem) => void;
+  onSystemDragStart?: (files: FileItem[]) => void;
+  onSystemDragEnd?: (e: DragEvent) => void;
 }
 
 const getFileIcon = (file: FileItem, viewMode: 'grid' | 'list' = 'grid') => {
@@ -165,7 +167,9 @@ export function FileManagerGrid({
   onPaste,
   onUndo,
   onFileDrop,
-  onFileDiff
+  onFileDiff,
+  onSystemDragStart,
+  onSystemDragEnd
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -227,6 +231,9 @@ export function FileManagerGrid({
       files: filesToDrag.map(f => f.path)
     };
     e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+
+    // 触发系统级拖拽开始
+    onSystemDragStart?.(filesToDrag);
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -280,9 +287,12 @@ export function FileManagerGrid({
     setDraggedFiles([]);
   };
 
-  const handleFileDragEnd = () => {
+  const handleFileDragEnd = (e: React.DragEvent) => {
     setDraggedFiles([]);
     setDragOverTarget(null);
+
+    // 触发系统级拖拽结束检测
+    onSystemDragEnd?.(e.nativeEvent);
   };
 
   const [isSelecting, setIsSelecting] = useState(false);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { FileManagerGrid } from "./FileManagerGrid";
 import { FileManagerContextMenu } from "./FileManagerContextMenu";
 import { useFileSelection } from "./hooks/useFileSelection";
@@ -6,6 +6,9 @@ import { useDragAndDrop } from "./hooks/useDragAndDrop";
 import { WindowManager, useWindowManager } from "./components/WindowManager";
 import { FileWindow } from "./components/FileWindow";
 import { DiffWindow } from "./components/DiffWindow";
+import { useDragToDesktop } from "../../../hooks/useDragToDesktop";
+import { useDragToSystemDesktop } from "../../../hooks/useDragToSystemDesktop";
+import { DragIndicator } from "../../../components/DragIndicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -110,6 +113,18 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     maxFileSize: 100 // 100MB
   });
 
+  // 拖拽到桌面功能
+  const dragToDesktop = useDragToDesktop({
+    sshSessionId: sshSessionId || '',
+    sshHost: currentHost!
+  });
+
+  // 系统级拖拽到桌面功能（新方案）
+  const systemDrag = useDragToSystemDesktop({
+    sshSessionId: sshSessionId || '',
+    sshHost: currentHost!
+  });
+
   // 初始化SSH连接
   useEffect(() => {
     if (currentHost) {
@@ -123,6 +138,41 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       loadDirectory(currentPath);
     }
   }, [sshSessionId, currentPath]);
+
+  // 文件拖拽到外部处理
+  const handleFileDragStart = useCallback((files: FileItem[]) => {
+    // 记录当前拖拽的文件
+    systemDrag.startDragToSystem(files, {
+      enableToast: true,
+      onSuccess: () => {
+        clearSelection();
+      },
+      onError: (error) => {
+        console.error('拖拽失败:', error);
+      }
+    });
+  }, [systemDrag, clearSelection]);
+
+  const handleFileDragEnd = useCallback((e: DragEvent) => {
+    // 检查是否拖拽到窗口外
+    const margin = 50;
+    const isOutside = (
+      e.clientX < margin ||
+      e.clientX > window.innerWidth - margin ||
+      e.clientY < margin ||
+      e.clientY > window.innerHeight - margin
+    );
+
+    if (isOutside) {
+      // 延迟执行，避免与其他事件冲突
+      setTimeout(() => {
+        systemDrag.handleDragEnd(e);
+      }, 100);
+    } else {
+      // 取消拖拽
+      systemDrag.cancelDragToSystem();
+    }
+  }, [systemDrag]);
 
   async function initializeSSHConnection() {
     if (!currentHost) return;
@@ -1055,6 +1105,39 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     toast.success(`正在对比文件: ${file1.name} 与 ${file2.name}`);
   }
 
+  // 拖拽到桌面处理函数
+  async function handleDragToDesktop(files: FileItem[]) {
+    if (!currentHost || !sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    try {
+      // 优先使用新的系统级拖拽方案
+      if (systemDrag.isFileSystemAPISupported) {
+        await systemDrag.handleDragToSystem(files, {
+          enableToast: true,
+          onSuccess: () => {
+            console.log('系统级拖拽成功');
+          },
+          onError: (error) => {
+            console.error('系统级拖拽失败:', error);
+          }
+        });
+      } else {
+        // 降级到Electron方案
+        if (files.length === 1) {
+          await dragToDesktop.dragFileToDesktop(files[0]);
+        } else if (files.length > 1) {
+          await dragToDesktop.dragFilesToDesktop(files);
+        }
+      }
+    } catch (error: any) {
+      console.error('拖拽到桌面失败:', error);
+      toast.error(`拖拽失败: ${error.message || '未知错误'}`);
+    }
+  }
+
   // 过滤文件并添加新建的临时项目
   let filteredFiles = files.filter(file =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1205,6 +1288,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           onUndo={handleUndo}
           onFileDrop={handleFileDrop}
           onFileDiff={handleFileDiff}
+          onSystemDragStart={handleFileDragStart}
+          onSystemDragEnd={handleFileDragEnd}
         />
 
         {/* 右键菜单 */}
@@ -1234,6 +1319,31 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           onNewFile={handleCreateNewFile}
           onRefresh={() => loadDirectory(currentPath)}
           hasClipboard={!!clipboard}
+          onDragToDesktop={() => handleDragToDesktop(contextMenu.files)}
+        />
+
+        {/* 拖拽到桌面指示器 */}
+        <DragIndicator
+          isVisible={
+            dragToDesktop.isDownloading ||
+            dragToDesktop.isDragging ||
+            systemDrag.isDownloading ||
+            systemDrag.isDragging
+          }
+          isDragging={
+            systemDrag.isDragging || dragToDesktop.isDragging
+          }
+          isDownloading={
+            systemDrag.isDownloading || dragToDesktop.isDownloading
+          }
+          progress={
+            systemDrag.isDownloading || systemDrag.isDragging
+              ? systemDrag.progress
+              : dragToDesktop.progress
+          }
+          fileName={selectedFiles.length === 1 ? selectedFiles[0]?.name : undefined}
+          fileCount={selectedFiles.length}
+          error={systemDrag.error || dragToDesktop.error}
         />
       </div>
     </div>

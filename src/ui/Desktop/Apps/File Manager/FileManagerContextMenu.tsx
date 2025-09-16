@@ -13,7 +13,8 @@ import {
   RefreshCw,
   Clipboard,
   Eye,
-  Share
+  Share,
+  ExternalLink
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -47,6 +48,7 @@ interface ContextMenuProps {
   onPaste?: () => void;
   onPreview?: (file: FileItem) => void;
   hasClipboard?: boolean;
+  onDragToDesktop?: () => void;
 }
 
 interface MenuItem {
@@ -77,7 +79,8 @@ export function FileManagerContextMenu({
   onRefresh,
   onPaste,
   onPreview,
-  hasClipboard = false
+  hasClipboard = false,
+  onDragToDesktop
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
@@ -201,6 +204,19 @@ export function FileManagerContextMenu({
           : t("fileManager.downloadFile"),
         action: () => onDownload(files),
         shortcut: "Ctrl+D"
+      });
+    }
+
+    // 拖拽到桌面菜单项（支持浏览器和桌面应用）
+    if (hasFiles && onDragToDesktop) {
+      const isModernBrowser = 'showSaveFilePicker' in window;
+      menuItems.push({
+        icon: <ExternalLink className="w-4 h-4" />,
+        label: isMultipleFiles
+          ? `保存 ${files.length} 个文件到系统`
+          : "保存到系统",
+        action: () => onDragToDesktop(),
+        shortcut: isModernBrowser ? "选择位置保存" : "下载到默认位置"
       });
     }
 
