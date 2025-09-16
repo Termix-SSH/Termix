@@ -30,7 +30,8 @@ import {
   deleteSSHItem,
   renameSSHItem,
   connectSSH,
-  getSSHStatus
+  getSSHStatus,
+  identifySSHSymlink
 } from "@/ui/main-axios.ts";
 
 
@@ -345,9 +346,95 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     setIsCreatingNewFile(true);
   }
 
-  function handleFileOpen(file: FileItem) {
+  // Handle symlink resolution
+  const handleSymlinkClick = async (file: FileItem) => {
+    if (!currentHost || !sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    try {
+      // 确保SSH连接有效
+      let currentSessionId = sshSessionId;
+      try {
+        const status = await getSSHStatus(currentSessionId);
+        if (!status.connected) {
+          const result = await connectSSH(currentSessionId, {
+            hostId: currentHost.id,
+            host: currentHost.ip,
+            port: currentHost.port,
+            username: currentHost.username,
+            authType: currentHost.authType,
+            password: currentHost.password,
+            key: currentHost.key,
+            keyPassword: currentHost.keyPassword,
+            credentialId: currentHost.credentialId
+          });
+
+          if (!result.success) {
+            throw new Error(t("fileManager.failedToReconnectSSH"));
+          }
+        }
+      } catch (sessionErr) {
+        throw sessionErr;
+      }
+
+      const symlinkInfo = await identifySSHSymlink(currentSessionId, file.path);
+
+      if (symlinkInfo.type === "directory") {
+        // 如果软链接指向目录，导航到它
+        setCurrentPath(symlinkInfo.target);
+      } else if (symlinkInfo.type === "file") {
+        // 如果软链接指向文件，打开文件
+        // 计算窗口位置（稍微错开）
+        const windowCount = Date.now() % 10;
+        const offsetX = 120 + (windowCount * 30);
+        const offsetY = 120 + (windowCount * 30);
+
+        // 创建目标文件对象
+        const targetFile: FileItem = {
+          ...file,
+          path: symlinkInfo.target
+        };
+
+        // 创建窗口组件工厂函数
+        const createWindowComponent = (windowId: string) => (
+          <FileWindow
+            windowId={windowId}
+            file={targetFile}
+            sshSessionId={currentSessionId}
+            sshHost={currentHost}
+            initialX={offsetX}
+            initialY={offsetY}
+          />
+        );
+
+        openWindow({
+          title: file.name,
+          x: offsetX,
+          y: offsetY,
+          width: 800,
+          height: 600,
+          isMaximized: false,
+          isMinimized: false,
+          component: createWindowComponent
+        });
+      }
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.error ||
+        error?.message ||
+        t("fileManager.failedToResolveSymlink")
+      );
+    }
+  };
+
+  async function handleFileOpen(file: FileItem) {
     if (file.type === 'directory') {
       setCurrentPath(file.path);
+    } else if (file.type === 'link') {
+      // 处理软链接
+      await handleSymlinkClick(file);
     } else {
       // 在新窗口中打开文件
       if (!sshSessionId) {

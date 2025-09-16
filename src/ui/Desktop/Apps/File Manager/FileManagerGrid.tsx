@@ -15,7 +15,8 @@ import {
   ChevronRight,
   MoreHorizontal,
   RefreshCw,
-  ArrowUp
+  ArrowUp,
+  FileSymlink
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
@@ -64,14 +65,18 @@ interface FileManagerGridProps {
   onCancelEdit?: () => void;
 }
 
-const getFileIcon = (fileName: string, isDirectory: boolean, viewMode: 'grid' | 'list' = 'grid') => {
+const getFileIcon = (file: FileItem, viewMode: 'grid' | 'list' = 'grid') => {
   const iconClass = viewMode === 'grid' ? "w-8 h-8" : "w-6 h-6";
 
-  if (isDirectory) {
+  if (file.type === 'directory') {
     return <Folder className={`${iconClass} text-blue-400`} />;
   }
 
-  const ext = fileName.split('.').pop()?.toLowerCase();
+  if (file.type === 'link') {
+    return <FileSymlink className={`${iconClass} text-cyan-400`} />;
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase();
 
   switch (ext) {
     case 'txt':
@@ -273,6 +278,12 @@ export function FileManagerGrid({
     e.stopPropagation();
   }, []);
 
+  // 滚轮事件处理，确保滚动正常工作
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    // 不阻止默认滚动行为，让浏览器自己处理滚动
+    e.stopPropagation();
+  }, []);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -394,7 +405,7 @@ export function FileManagerGrid({
   }
 
   return (
-    <div className="h-full flex flex-col bg-dark-bg">
+    <div className="h-full flex flex-col bg-dark-bg overflow-hidden">
       {/* 工具栏和路径导航 */}
       <div className="flex-shrink-0 border-b border-dark-border">
         {/* 导航按钮 */}
@@ -463,42 +474,44 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      {/* 主文件网格 */}
-      <div
-        ref={gridRef}
-        className={cn(
-          "flex-1 p-4 overflow-auto",
-          isDragging && "bg-blue-500/10 border-2 border-dashed border-blue-500"
-        )}
-        onClick={handleGridClick}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onContextMenu={(e) => onContextMenu?.(e)}
-        tabIndex={0}
-      >
-        {isDragging && (
-          <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 backdrop-blur-sm z-10">
-            <div className="text-center">
-              <Download className="w-12 h-12 mx-auto mb-2 text-blue-500" />
-              <p className="text-lg font-medium text-blue-500">
-                {t("fileManager.dragFilesToUpload")}
-              </p>
+      {/* 主文件网格 - 滚动区域 */}
+      <div className="flex-1 relative overflow-hidden">
+        <div
+          ref={gridRef}
+          className={cn(
+            "absolute inset-0 p-4 overflow-y-auto thin-scrollbar",
+            isDragging && "bg-blue-500/10 border-2 border-dashed border-blue-500"
+          )}
+          onClick={handleGridClick}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onWheel={handleWheel}
+          onContextMenu={(e) => onContextMenu?.(e)}
+          tabIndex={0}
+        >
+          {isDragging && (
+            <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 backdrop-blur-sm z-10 pointer-events-none">
+              <div className="text-center">
+                <Download className="w-12 h-12 mx-auto mb-2 text-blue-500" />
+                <p className="text-lg font-medium text-blue-500">
+                  {t("fileManager.dragFilesToUpload")}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {files.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <Folder className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p>{t("fileManager.emptyFolder")}</p>
+          {files.length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <Folder className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p>{t("fileManager.emptyFolder")}</p>
+              </div>
             </div>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {files.map((file) => {
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+              {files.map((file) => {
               const isSelected = selectedFiles.some(f => f.path === file.path);
 
               // 详细调试路径比较
@@ -531,11 +544,11 @@ export function FileManagerGrid({
                   <div className="flex flex-col items-center text-center">
                     {/* 文件图标 */}
                     <div className="mb-2">
-                      {getFileIcon(file.name, file.type === 'directory', viewMode)}
+                      {getFileIcon(file, viewMode)}
                     </div>
 
                     {/* 文件名 */}
-                    <div className="w-full">
+                    <div className="w-full flex flex-col items-center">
                       {editingFile?.path === file.path ? (
                         <input
                           ref={editInputRef}
@@ -545,7 +558,7 @@ export function FileManagerGrid({
                           onKeyDown={handleEditKeyDown}
                           onBlur={handleEditConfirm}
                           className={cn(
-                            "max-w-[120px] min-w-[60px] w-full rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none",
+                            "max-w-[120px] min-w-[60px] w-fit rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none",
                             "text-center text-foreground placeholder:text-muted-foreground",
                             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]"
                           )}
@@ -553,7 +566,7 @@ export function FileManagerGrid({
                         />
                       ) : (
                         <p
-                          className="text-xs text-white truncate cursor-pointer hover:bg-white/10 px-1 py-0.5 rounded transition-colors duration-150"
+                          className="text-xs text-white truncate cursor-pointer hover:bg-white/10 px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full text-center"
                           title={`${file.name} (点击重命名)`}
                           onClick={(e) => {
                             // 阻止文件选择事件
@@ -569,6 +582,11 @@ export function FileManagerGrid({
                       {file.type === 'file' && file.size !== undefined && file.size !== null && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatFileSize(file.size)}
+                        </p>
+                      )}
+                      {file.type === 'link' && file.linkTarget && (
+                        <p className="text-xs text-cyan-400 mt-1 truncate max-w-full" title={file.linkTarget}>
+                          → {file.linkTarget}
                         </p>
                       )}
                     </div>
@@ -600,7 +618,7 @@ export function FileManagerGrid({
                 >
                   {/* 文件图标 */}
                   <div className="flex-shrink-0">
-                    {getFileIcon(file.name, file.type === 'directory', viewMode)}
+                    {getFileIcon(file, viewMode)}
                   </div>
 
                   {/* 文件信息 */}
@@ -622,7 +640,7 @@ export function FileManagerGrid({
                       />
                     ) : (
                       <p
-                        className="text-sm text-white truncate cursor-pointer hover:bg-white/10 px-2 py-1 rounded transition-colors duration-150"
+                        className="text-sm text-white truncate cursor-pointer hover:bg-white/10 px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full"
                         title={`${file.name} (点击重命名)`}
                         onClick={(e) => {
                           // 阻止文件选择事件
@@ -633,6 +651,11 @@ export function FileManagerGrid({
                         }}
                       >
                         {file.name}
+                      </p>
+                    )}
+                    {file.type === 'link' && file.linkTarget && (
+                      <p className="text-xs text-cyan-400 truncate" title={file.linkTarget}>
+                        → {file.linkTarget}
                       </p>
                     )}
                     {file.modified && (
@@ -664,6 +687,7 @@ export function FileManagerGrid({
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* 状态栏 */}
