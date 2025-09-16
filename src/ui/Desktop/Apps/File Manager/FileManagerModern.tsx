@@ -111,7 +111,23 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
 
     try {
       setIsLoading(true);
-      const sessionId = await connectSSH(currentHost.id);
+      // 使用主机ID作为会话ID
+      const sessionId = currentHost.id.toString();
+
+      // 调用connectSSH建立连接
+      await connectSSH(sessionId, {
+        hostId: currentHost.id,
+        ip: currentHost.ip,
+        port: currentHost.port,
+        username: currentHost.username,
+        password: currentHost.password,
+        sshKey: currentHost.key,
+        keyPassword: currentHost.keyPassword,
+        authType: currentHost.authType,
+        credentialId: currentHost.credentialId,
+        userId: currentHost.userId
+      });
+
       setSshSessionId(sessionId);
     } catch (error: any) {
       toast.error(t("fileManager.failedToConnect"));
@@ -286,6 +302,24 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
     toast.success(t("fileManager.filesCutToClipboard", { count: files.length }));
   }
 
+  function handlePasteFiles() {
+    if (!clipboard || !sshSessionId) return;
+
+    // TODO: 实现粘贴功能
+    // 这里需要根据剪贴板操作类型（copy/cut）来执行相应的操作
+    toast.info("粘贴功能正在开发中...");
+  }
+
+  function handleRenameFile(file: FileItem) {
+    if (!sshSessionId) return;
+
+    const newName = prompt(t("fileManager.enterNewName"), file.name);
+    if (!newName || newName === file.name) return;
+
+    // TODO: 实现重命名功能
+    toast.info("重命名功能正在开发中...");
+  }
+
   // 过滤文件
   const filteredFiles = files.filter(file =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -382,6 +416,16 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
             <Button
               variant="outline"
               size="sm"
+              onClick={handleCreateNewFile}
+              className="h-9"
+            >
+              <FilePlus className="w-4 h-4 mr-2" />
+              {t("fileManager.newFile")}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => loadDirectory(currentPath)}
               className="h-9"
             >
@@ -415,8 +459,10 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
           isVisible={contextMenu.isVisible}
           onClose={() => setContextMenu(prev => ({ ...prev, isVisible: false }))}
           onDownload={(files) => files.forEach(handleDownloadFile)}
+          onRename={handleRenameFile}
           onCopy={handleCopyFiles}
           onCut={handleCutFiles}
+          onPaste={handlePasteFiles}
           onDelete={handleDeleteFiles}
           onUpload={() => {
             const input = document.createElement('input');
