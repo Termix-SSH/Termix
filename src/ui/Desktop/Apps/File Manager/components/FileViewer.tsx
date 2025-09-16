@@ -34,6 +34,7 @@ import {
   SiSass,
   SiLess,
   SiJson,
+  SiXml,
   SiYaml,
   SiToml,
   SiShell,
