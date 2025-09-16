@@ -11,12 +11,15 @@ import {
   Code,
   Settings,
   Download,
+  Upload,
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
   RefreshCw,
   ArrowUp,
-  FileSymlink
+  FileSymlink,
+  Move,
+  GitCompare
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
@@ -46,6 +49,14 @@ function formatFileSize(bytes?: number): string {
   return `${formattedSize} ${units[unitIndex]}`;
 }
 
+interface DragState {
+  type: 'none' | 'internal' | 'external';
+  files: FileItem[];
+  target?: FileItem;
+  counter: number;
+  mousePosition?: { x: number; y: number };
+}
+
 interface FileManagerGridProps {
   files: FileItem[];
   selectedFiles: FileItem[];
@@ -57,6 +68,7 @@ interface FileManagerGridProps {
   onPathChange: (path: string) => void;
   onRefresh: () => void;
   onUpload?: (files: FileList) => void;
+  onDownload?: (files: FileItem[]) => void;
   onContextMenu?: (event: React.MouseEvent, file?: FileItem) => void;
   viewMode?: 'grid' | 'list';
   onRename?: (file: FileItem, newName: string) => void;
@@ -155,6 +167,7 @@ export function FileManagerGrid({
   onPathChange,
   onRefresh,
   onUpload,
+  onDownload,
   onContextMenu,
   viewMode = 'grid',
   onRename,
@@ -173,13 +186,32 @@ export function FileManagerGrid({
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
   const [editingName, setEditingName] = useState('');
 
-  // 拖拽状态管理
-  const [draggedFiles, setDraggedFiles] = useState<FileItem[]>([]);
-  const [dragOverTarget, setDragOverTarget] = useState<FileItem | null>(null);
+  // 统一拖拽状态管理
+  const [dragState, setDragState] = useState<DragState>({
+    type: 'none',
+    files: [],
+    counter: 0
+  });
+
+  // 全局鼠标移动监听 - 用于拖拽tooltip跟随
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (dragState.type === 'internal' && dragState.files.length > 0) {
+        setDragState(prev => ({
+          ...prev,
+          mousePosition: { x: e.clientX, y: e.clientY }
+        }));
+      }
+    };
+
+    if (dragState.type === 'internal' && dragState.files.length > 0) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      return () => document.removeEventListener('mousemove', handleGlobalMouseMove);
+    }
+  }, [dragState.type, dragState.files.length]);
+
   const editInputRef = useRef<HTMLInputElement>(null);
 
   // 开始编辑时设置初始名称
@@ -223,7 +255,13 @@ export function FileManagerGrid({
   const handleFileDragStart = (e: React.DragEvent, file: FileItem) => {
     // 如果拖拽的文件已选中，则拖拽所有选中的文件
     const filesToDrag = selectedFiles.includes(file) ? selectedFiles : [file];
-    setDraggedFiles(filesToDrag);
+
+    setDragState({
+      type: 'internal',
+      files: filesToDrag,
+      counter: 0,
+      mousePosition: { x: e.clientX, y: e.clientY }
+    });
 
     // 设置拖拽数据，添加内部拖拽标识
     const dragData = {
@@ -242,8 +280,8 @@ export function FileManagerGrid({
     e.stopPropagation();
 
     // 只有拖拽到不同文件且不是被拖拽的文件时才设置目标
-    if (draggedFiles.length > 0 && !draggedFiles.some(f => f.path === targetFile.path)) {
-      setDragOverTarget(targetFile);
+    if (dragState.type === 'internal' && !dragState.files.some(f => f.path === targetFile.path)) {
+      setDragState(prev => ({ ...prev, target: targetFile }));
       e.dataTransfer.dropEffect = 'move';
     }
   };
@@ -253,8 +291,8 @@ export function FileManagerGrid({
     e.stopPropagation();
 
     // 清除拖拽目标高亮
-    if (dragOverTarget?.path === targetFile.path) {
-      setDragOverTarget(null);
+    if (dragState.target?.path === targetFile.path) {
+      setDragState(prev => ({ ...prev, target: undefined }));
     }
   };
 
@@ -262,9 +300,18 @@ export function FileManagerGrid({
     e.preventDefault();
     e.stopPropagation();
 
-    setDragOverTarget(null);
+    if (dragState.type !== 'internal' || dragState.files.length === 0) {
+      setDragState(prev => ({ ...prev, target: undefined }));
+      return;
+    }
 
-    if (draggedFiles.length === 0) return;
+    // 检查是否拖拽到自身
+    const isDroppingOnSelf = dragState.files.some(f => f.path === targetFile.path);
+    if (isDroppingOnSelf) {
+      console.log('Ignoring drop on self');
+      setDragState({ type: 'none', files: [], counter: 0 });
+      return;
+    }
 
     // 判断拖拽行为：
     // 1. 文件/文件夹 拖拽到 文件夹 = 移动操作
@@ -273,23 +320,22 @@ export function FileManagerGrid({
 
     if (targetFile.type === 'directory') {
       // 移动操作
-      console.log('Moving files to directory:', draggedFiles.map(f => f.name), 'to', targetFile.name);
-      onFileDrop?.(draggedFiles, targetFile);
-    } else if (targetFile.type === 'file' && draggedFiles.length === 1 && draggedFiles[0].type === 'file') {
+      console.log('Moving files to directory:', dragState.files.map(f => f.name), 'to', targetFile.name);
+      onFileDrop?.(dragState.files, targetFile);
+    } else if (targetFile.type === 'file' && dragState.files.length === 1 && dragState.files[0].type === 'file') {
       // diff对比操作
-      console.log('Comparing files:', draggedFiles[0].name, 'vs', targetFile.name);
-      onFileDiff?.(draggedFiles[0], targetFile);
+      console.log('Comparing files:', dragState.files[0].name, 'vs', targetFile.name);
+      onFileDiff?.(dragState.files[0], targetFile);
     } else {
       // 无效操作，给用户提示
       console.log('Invalid drag operation');
     }
 
-    setDraggedFiles([]);
+    setDragState({ type: 'none', files: [], counter: 0 });
   };
 
   const handleFileDragEnd = (e: React.DragEvent) => {
-    setDraggedFiles([]);
-    setDragOverTarget(null);
+    setDragState({ type: 'none', files: [], counter: 0 });
 
     // 触发系统级拖拽结束检测
     onSystemDragEnd?.(e.nativeEvent);
@@ -360,45 +406,58 @@ export function FileManagerGrid({
     e.stopPropagation();
 
     // 检查是否是内部文件拖拽
-    const isInternalDrag = draggedFiles.length > 0; // 如果有内部拖拽的文件，说明是内部拖拽
+    const isInternalDrag = dragState.type === 'internal';
 
     if (!isInternalDrag) {
       // 只有外部文件拖拽才显示上传提示
-      setDragCounter(prev => prev + 1);
+      setDragState(prev => ({
+        ...prev,
+        type: 'external',
+        counter: prev.counter + 1
+      }));
       if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-        setIsDragging(true);
+        // External drag detected
       }
     }
-  }, [draggedFiles]);
+  }, [dragState.type]);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     // 检查是否是内部文件拖拽
-    const isInternalDrag = draggedFiles.length > 0;
+    const isInternalDrag = dragState.type === 'internal';
 
-    if (!isInternalDrag) {
-      setDragCounter(prev => prev - 1);
-      if (dragCounter <= 1) {
-        setIsDragging(false);
-      }
+    if (!isInternalDrag && dragState.type === 'external') {
+      setDragState(prev => {
+        const newCounter = prev.counter - 1;
+        return {
+          ...prev,
+          counter: newCounter,
+          type: newCounter <= 0 ? 'none' : 'external'
+        };
+      });
     }
-  }, [dragCounter, draggedFiles]);
+  }, [dragState.type, dragState.counter]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     // 检查是否是内部文件拖拽
-    const isInternalDrag = draggedFiles.length > 0;
+    const isInternalDrag = dragState.type === 'internal';
 
     if (isInternalDrag) {
+      // 更新鼠标位置
+      setDragState(prev => ({
+        ...prev,
+        mousePosition: { x: e.clientX, y: e.clientY }
+      }));
       e.dataTransfer.dropEffect = 'move';
     } else {
       e.dataTransfer.dropEffect = 'copy';
     }
-  }, [draggedFiles]);
+  }, [dragState.type]);
 
   // 滚轮事件处理，确保滚动正常工作
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -565,22 +624,22 @@ export function FileManagerGrid({
     e.preventDefault();
     e.stopPropagation();
 
-    // 检查是否是内部文件拖拽
-    const isInternalDrag = draggedFiles.length > 0;
-
-    if (isInternalDrag) {
-      // 内部拖拽：不处理，因为已经在 handleFileDrop 中处理了
-      console.log('Internal drag detected, ignoring container drop');
-    } else {
+    if (dragState.type === 'internal') {
+      // 内部拖拽到空白区域：触发下载
+      console.log('Internal drag to empty area detected, triggering download');
+      if (onDownload && dragState.files.length > 0) {
+        onDownload(dragState.files);
+      }
+    } else if (dragState.type === 'external') {
       // 外部拖拽：处理文件上传
-      setIsDragging(false);
-      setDragCounter(0);
-
       if (onUpload && e.dataTransfer.files.length > 0) {
         onUpload(e.dataTransfer.files);
       }
     }
-  }, [onUpload, draggedFiles]);
+
+    // 重置拖拽状态
+    setDragState({ type: 'none', files: [], counter: 0 });
+  }, [onUpload, onDownload, dragState]);
 
   // 文件选择处理
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
@@ -815,7 +874,7 @@ export function FileManagerGrid({
           ref={gridRef}
           className={cn(
             "absolute inset-0 p-4 overflow-y-auto thin-scrollbar",
-            isDragging && "bg-blue-500/10 border-2 border-dashed border-blue-500"
+            dragState.type === 'external' && "bg-muted/20 border-2 border-dashed border-primary"
           )}
           onClick={handleGridClick}
           onMouseDown={handleMouseDown}
@@ -829,22 +888,37 @@ export function FileManagerGrid({
           onContextMenu={(e) => onContextMenu?.(e)}
           tabIndex={0}
         >
-          {isDragging && (
-            <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 backdrop-blur-sm z-10 pointer-events-none">
-              <div className="text-center">
-                <Download className="w-12 h-12 mx-auto mb-2 text-primary" />
-                <p className="text-lg font-medium text-primary">
-                  {t("fileManager.dragFilesToUpload")}
+          {/* 拖拽提示覆盖层 */}
+          {dragState.type === 'external' && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 pointer-events-none animate-in fade-in-0">
+              <div className="text-center p-8 bg-background/95 border-2 border-dashed border-primary rounded-lg shadow-lg">
+                <Upload className="w-16 h-16 mx-auto mb-4 text-primary" />
+                <p className="text-xl font-semibold text-foreground mb-2">
+                  拖拽文件到此处上传
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  从系统文件管理器拖拽文件到这里进行上传
                 </p>
               </div>
             </div>
           )}
 
+
           {files.length === 0 ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <Folder className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>{t("fileManager.emptyFolder")}</p>
+            <div className="h-full flex items-center justify-center p-8">
+              <div className="text-center">
+                <Folder className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-lg font-medium text-foreground mb-4">{t("fileManager.emptyFolder")}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                    <Upload className="w-4 h-4" />
+                    拖拽系统文件到此处上传
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                    <Download className="w-4 h-4" />
+                    拖拽文件到窗口外下载
+                  </div>
+                </div>
               </div>
             </div>
           ) : viewMode === 'grid' ? (
@@ -872,8 +946,8 @@ export function FileManagerGrid({
                     "group p-3 rounded-lg cursor-pointer transition-all",
                     "hover:bg-accent hover:text-accent-foreground border-2 border-transparent",
                     isSelected && "bg-primary/20 border-primary",
-                    dragOverTarget?.path === file.path && "bg-blue-100 border-blue-400 border-dashed",
-                    draggedFiles.some(f => f.path === file.path) && "opacity-50"
+                    dragState.target?.path === file.path && "bg-muted border-primary border-dashed",
+                    dragState.files.some(f => f.path === file.path) && "opacity-50"
                   )}
                   title={`${file.name} - Selected: ${isSelected} - SelectedCount: ${selectedFiles.length}`}
                   onClick={(e) => handleFileClick(file, e)}
@@ -957,8 +1031,8 @@ export function FileManagerGrid({
                     "flex items-center gap-3 p-2 rounded cursor-pointer transition-all",
                     "hover:bg-accent hover:text-accent-foreground",
                     isSelected && "bg-primary/20",
-                    dragOverTarget?.path === file.path && "bg-blue-100 border-blue-400 border-dashed",
-                    draggedFiles.some(f => f.path === file.path) && "opacity-50"
+                    dragState.target?.path === file.path && "bg-muted border-primary border-dashed",
+                    dragState.files.some(f => f.path === file.path) && "opacity-50"
                   )}
                   onClick={(e) => handleFileClick(file, e)}
                   onContextMenu={(e) => {
@@ -1072,6 +1146,44 @@ export function FileManagerGrid({
           )}
         </div>
       </div>
+
+      {/* 拖拽跟随tooltip */}
+      {dragState.type === 'internal' && dragState.files.length > 0 && dragState.mousePosition && (
+        <div
+          className="fixed z-50 pointer-events-none"
+          style={{
+            left: dragState.mousePosition.x + 16,
+            top: dragState.mousePosition.y - 8
+          }}
+        >
+          <div className="bg-background border border-border rounded-md shadow-md px-3 py-2 flex items-center gap-2">
+            {dragState.target ? (
+              dragState.target.type === 'directory' ? (
+                <>
+                  <Move className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-foreground">
+                    移动到 {dragState.target.name}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <GitCompare className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm font-medium text-foreground">
+                    与 {dragState.target.name} 进行diff对比
+                  </span>
+                </>
+              )
+            ) : (
+              <>
+                <Download className="w-4 h-4 text-green-500" />
+                <span className="text-sm font-medium text-foreground">
+                  拖到窗口外下载 ({dragState.files.length} 个文件)
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

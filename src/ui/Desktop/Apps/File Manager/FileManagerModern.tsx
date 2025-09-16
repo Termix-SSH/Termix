@@ -8,7 +8,6 @@ import { FileWindow } from "./components/FileWindow";
 import { DiffWindow } from "./components/DiffWindow";
 import { useDragToDesktop } from "../../../hooks/useDragToDesktop";
 import { useDragToSystemDesktop } from "../../../hooks/useDragToSystemDesktop";
-import { DragIndicator } from "../../../components/DragIndicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -1275,6 +1274,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           onPathChange={setCurrentPath}
           onRefresh={() => loadDirectory(currentPath)}
           onUpload={handleFilesDropped}
+          onDownload={(files) => files.forEach(handleDownloadFile)}
           onContextMenu={handleContextMenu}
           viewMode={viewMode}
           onRename={handleRenameConfirm}
@@ -1322,29 +1322,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           onDragToDesktop={() => handleDragToDesktop(contextMenu.files)}
         />
 
-        {/* 拖拽到桌面指示器 */}
-        <DragIndicator
-          isVisible={
-            dragToDesktop.isDownloading ||
-            dragToDesktop.isDragging ||
-            systemDrag.isDownloading ||
-            systemDrag.isDragging
-          }
-          isDragging={
-            systemDrag.isDragging || dragToDesktop.isDragging
-          }
-          isDownloading={
-            systemDrag.isDownloading || dragToDesktop.isDownloading
-          }
-          progress={
-            systemDrag.isDownloading || systemDrag.isDragging
-              ? systemDrag.progress
-              : dragToDesktop.progress
-          }
-          fileName={selectedFiles.length === 1 ? selectedFiles[0]?.name : undefined}
-          fileCount={selectedFiles.length}
-          error={systemDrag.error || dragToDesktop.error}
-        />
       </div>
     </div>
   );
