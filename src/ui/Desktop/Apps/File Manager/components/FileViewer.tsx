@@ -24,7 +24,7 @@ import {
   SiJava,
   SiCplusplus,
   SiC,
-  SiCsharp,
+  SiDotnet,
   SiPhp,
   SiRuby,
   SiGo,
@@ -34,7 +34,6 @@ import {
   SiSass,
   SiLess,
   SiJson,
-  SiXml,
   SiYaml,
   SiToml,
   SiShell,
@@ -95,7 +94,7 @@ function getLanguageIcon(filename: string): React.ReactNode {
     'java': <SiJava className="w-6 h-6 text-red-500" />,
     'cpp': <SiCplusplus className="w-6 h-6 text-blue-600" />,
     'c': <SiC className="w-6 h-6 text-blue-700" />,
-    'cs': <SiCsharp className="w-6 h-6 text-purple-600" />,
+    'cs': <SiDotnet className="w-6 h-6 text-purple-600" />,
     'php': <SiPhp className="w-6 h-6 text-indigo-500" />,
     'rb': <SiRuby className="w-6 h-6 text-red-500" />,
     'go': <SiGo className="w-6 h-6 text-cyan-500" />,
@@ -132,8 +131,7 @@ function getFileType(filename: string): { type: string; icon: React.ReactNode; c
   const videoExts = ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'];
   const audioExts = ['mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'];
   const textExts = ['txt', 'readme'];
-  const yamlExts = ['yaml', 'yml'];
-  const codeExts = ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'cs', 'php', 'rb', 'go', 'rs', 'html', 'css', 'scss', 'less', 'json', 'xml', 'toml', 'ini', 'conf', 'sh', 'bash', 'zsh', 'sql', 'vue', 'svelte', 'md'];
+  const codeExts = ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'cs', 'php', 'rb', 'go', 'rs', 'html', 'css', 'scss', 'less', 'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'conf', 'sh', 'bash', 'zsh', 'sql', 'vue', 'svelte', 'md'];
 
   if (imageExts.includes(ext)) {
     return { type: 'image', icon: <ImageIcon className="w-6 h-6" />, color: 'text-green-500' };
@@ -143,9 +141,7 @@ function getFileType(filename: string): { type: string; icon: React.ReactNode; c
     return { type: 'audio', icon: <Music className="w-6 h-6" />, color: 'text-pink-500' };
   } else if (textExts.includes(ext)) {
     return { type: 'text', icon: <FileText className="w-6 h-6" />, color: 'text-blue-500' };
-  } else if (yamlExts.includes(ext)) {
-    return { type: 'yaml', icon: getLanguageIcon(filename), color: 'text-red-400' };
-  } else if (codeExts.includes(ext) || ['md'].includes(ext)) {
+  } else if (codeExts.includes(ext)) {
     return { type: 'code', icon: getLanguageIcon(filename), color: 'text-yellow-500' };
   } else {
     return { type: 'unknown', icon: <FileIcon className="w-6 h-6" />, color: 'text-gray-500' };
@@ -241,7 +237,6 @@ export function FileViewer({
   const shouldShowAsText =
     fileTypeInfo.type === 'text' ||
     fileTypeInfo.type === 'code' ||
-    fileTypeInfo.type === 'yaml' ||
     (fileTypeInfo.type === 'unknown' && (forceShowAsText || !file.size || file.size <= WARNING_SIZE));
 
   // 检查文件是否过大
@@ -656,7 +651,7 @@ export function FileViewer({
         {/* 文本和代码文件预览 */}
         {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
-            {(fileTypeInfo.type === 'code' || fileTypeInfo.type === 'yaml') ? (
+            {fileTypeInfo.type === 'code' ? (
               // 代码文件使用CodeMirror
               <div className="h-full">
                 {searchText && searchMatches.length > 0 ? (
