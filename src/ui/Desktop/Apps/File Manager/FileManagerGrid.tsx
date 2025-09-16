@@ -456,19 +456,21 @@ export function FileManagerGrid({
         <div className="flex items-center px-3 py-2 text-sm">
           <button
             onClick={() => navigateToPath(-1)}
-            className="hover:text-blue-400 hover:underline"
+            className="hover:text-blue-400 hover:underline mr-1"
           >
             /
           </button>
           {pathParts.map((part, index) => (
             <React.Fragment key={index}>
-              <span className="mx-1 text-muted-foreground">/</span>
               <button
                 onClick={() => navigateToPath(index)}
                 className="hover:text-blue-400 hover:underline"
               >
                 {part}
               </button>
+              {index < pathParts.length - 1 && (
+                <span className="mx-1 text-muted-foreground">/</span>
+              )}
             </React.Fragment>
           ))}
         </div>
@@ -694,7 +696,7 @@ export function FileManagerGrid({
       <div className="flex-shrink-0 border-t border-dark-border px-4 py-2 text-xs text-muted-foreground">
         <div className="flex justify-between items-center">
           <span>
-            {files.length} {t("fileManager.itemCount", { count: files.length })}
+            {t("fileManager.itemCount", { count: files.length })}
           </span>
           {selectedFiles.length > 0 && (
             <span>
