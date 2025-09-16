@@ -714,7 +714,19 @@
     "sshStatusCheckTimeout": "SSH status check timed out",
     "sshReconnectionTimeout": "SSH reconnection timed out",
     "saveOperationTimeout": "Save operation timed out",
-    "cannotSaveFile": "Cannot save file"
+    "cannotSaveFile": "Cannot save file",
+    "dragSystemFilesToUpload": "Drag system files here to upload",
+    "dragFilesToWindowToDownload": "Drag files outside window to download",
+    "openTerminalHere": "Open Terminal Here",
+    "run": "Run",
+    "saveToSystem": "Save to System",
+    "selectLocationToSave": "Select Location to Save",
+    "openTerminalInFolder": "Open Terminal in This Folder",
+    "openTerminalInFileLocation": "Open Terminal at File Location",
+    "terminalWithPath": "Terminal - {{host}}:{{path}}",
+    "runningFile": "Running - {{file}}",
+    "onlyRunExecutableFiles": "Can only run executable files",
+    "noHostSelected": "No host selected"
   },
   "tunnels": {
     "title": "SSH Tunnels",

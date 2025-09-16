@@ -894,10 +894,10 @@ export function FileManagerGrid({
               <div className="text-center p-8 bg-background/95 border-2 border-dashed border-primary rounded-lg shadow-lg">
                 <Upload className="w-16 h-16 mx-auto mb-4 text-primary" />
                 <p className="text-xl font-semibold text-foreground mb-2">
-                  拖拽文件到此处上传
+                  {t("fileManager.dragFilesToUpload")}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  从系统文件管理器拖拽文件到这里进行上传
+                  {t("fileManager.dragSystemFilesToUpload")}
                 </p>
               </div>
             </div>
@@ -912,11 +912,11 @@ export function FileManagerGrid({
                 <div className="space-y-3">
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
                     <Upload className="w-4 h-4" />
-                    拖拽系统文件到此处上传
+                    {t("fileManager.dragSystemFilesToUpload")}
                   </div>
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
                     <Download className="w-4 h-4" />
-                    拖拽文件到窗口外下载
+                    {t("fileManager.dragFilesToWindowToDownload")}
                   </div>
                 </div>
               </div>

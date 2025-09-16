@@ -1141,7 +1141,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   // 打开终端处理函数
   function handleOpenTerminal(path: string) {
     if (!currentHost) {
-      toast.error("没有选择主机");
+      toast.error(t("fileManager.noHostSelected"));
       return;
     }
 
@@ -1172,18 +1172,18 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       component: createTerminalComponent
     });
 
-    toast.success(`在 ${path} 打开终端`);
+    toast.success(t("fileManager.terminalWithPath", { host: currentHost.name, path }));
   }
 
   // 运行可执行文件处理函数
   function handleRunExecutable(file: FileItem) {
     if (!currentHost) {
-      toast.error("没有选择主机");
+      toast.error(t("fileManager.noHostSelected"));
       return;
     }
 
     if (file.type !== 'file' || !file.executable) {
-      toast.error("只能运行可执行文件");
+      toast.error(t("fileManager.onlyRunExecutableFiles"));
       return;
     }
 
@@ -1209,7 +1209,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     );
 
     openWindow({
-      title: `运行 - ${file.name}`,
+      title: t("fileManager.runningFile", { file: file.name }),
       x: offsetX,
       y: offsetY,
       width: 800,
@@ -1219,7 +1219,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       component: createExecutionTerminal
     });
 
-    toast.success(`正在运行: ${file.name}`);
+    toast.success(t("fileManager.runningFile", { file: file.name }));
   }
 
   // 过滤文件并添加新建的临时项目

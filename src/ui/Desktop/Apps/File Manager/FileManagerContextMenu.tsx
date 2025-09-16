@@ -206,7 +206,7 @@ export function FileManagerContextMenu({
 
       menuItems.push({
         icon: <Terminal className="w-4 h-4" />,
-        label: files[0].type === 'directory' ? "在此文件夹打开终端" : "在文件位置打开终端",
+        label: files[0].type === 'directory' ? t("fileManager.openTerminalInFolder") : t("fileManager.openTerminalInFileLocation"),
         action: () => onOpenTerminal(targetPath),
         shortcut: "Ctrl+T"
       });
@@ -216,7 +216,7 @@ export function FileManagerContextMenu({
     if (isSingleFile && hasExecutableFiles && onRunExecutable) {
       menuItems.push({
         icon: <Play className="w-4 h-4" />,
-        label: "运行",
+        label: t("fileManager.run"),
         action: () => onRunExecutable(files[0]),
         shortcut: "Enter"
       });
@@ -322,7 +322,7 @@ export function FileManagerContextMenu({
     if (onOpenTerminal && currentPath) {
       menuItems.push({
         icon: <Terminal className="w-4 h-4" />,
-        label: "在此处打开终端",
+        label: t("fileManager.openTerminalHere"),
         action: () => onOpenTerminal(currentPath),
         shortcut: "Ctrl+T"
       });
