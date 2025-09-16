@@ -42,15 +42,17 @@ interface FileManagerGridProps {
   onRefresh: () => void;
   onUpload?: (files: FileList) => void;
   onContextMenu?: (event: React.MouseEvent, file?: FileItem) => void;
+  viewMode?: 'grid' | 'list';
 }
 
-const getFileIcon = (fileName: string, isDirectory: boolean) => {
+const getFileIcon = (fileName: string, isDirectory: boolean, viewMode: 'grid' | 'list' = 'grid') => {
+  const iconClass = viewMode === 'grid' ? "w-8 h-8" : "w-6 h-6";
+
   if (isDirectory) {
-    return <Folder className="w-8 h-8 text-blue-400" />;
+    return <Folder className={`${iconClass} text-blue-400`} />;
   }
 
   const ext = fileName.split('.').pop()?.toLowerCase();
-  const iconClass = "w-8 h-8";
 
   switch (ext) {
     case 'txt':
@@ -126,7 +128,8 @@ export function FileManagerGrid({
   onPathChange,
   onRefresh,
   onUpload,
-  onContextMenu
+  onContextMenu,
+  viewMode = 'grid'
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -437,7 +440,7 @@ export function FileManagerGrid({
               <p>{t("fileManager.emptyFolder")}</p>
             </div>
           </div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             {files.map((file) => {
               const isSelected = selectedFiles.some(f => f.path === file.path);
@@ -472,7 +475,7 @@ export function FileManagerGrid({
                   <div className="flex flex-col items-center text-center">
                     {/* 文件图标 */}
                     <div className="mb-2">
-                      {getFileIcon(file.name, file.type === 'directory')}
+                      {getFileIcon(file.name, file.type === 'directory', viewMode)}
                     </div>
 
                     {/* 文件名 */}
@@ -486,6 +489,65 @@ export function FileManagerGrid({
                         </p>
                       )}
                     </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* 列表视图 */
+          <div className="space-y-1">
+            {files.map((file) => {
+              const isSelected = selectedFiles.some(f => f.path === file.path);
+
+              return (
+                <div
+                  key={file.path}
+                  className={cn(
+                    "flex items-center gap-3 p-2 rounded cursor-pointer transition-all",
+                    "hover:bg-dark-hover",
+                    isSelected && "bg-blue-500/20"
+                  )}
+                  onClick={(e) => handleFileClick(file, e)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onContextMenu?.(e, file);
+                  }}
+                >
+                  {/* 文件图标 */}
+                  <div className="flex-shrink-0">
+                    {getFileIcon(file.name, file.type === 'directory', viewMode)}
+                  </div>
+
+                  {/* 文件信息 */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate" title={file.name}>
+                      {file.name}
+                    </p>
+                    {file.modified && (
+                      <p className="text-xs text-muted-foreground">
+                        {file.modified}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 文件大小 */}
+                  <div className="flex-shrink-0 text-right">
+                    {file.type === 'file' && file.size && (
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(file.size)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 权限信息 */}
+                  <div className="flex-shrink-0 text-right w-20">
+                    {file.permissions && (
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {file.permissions}
+                      </p>
+                    )}
                   </div>
                 </div>
               );

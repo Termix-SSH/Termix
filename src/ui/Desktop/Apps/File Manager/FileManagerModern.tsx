@@ -504,6 +504,7 @@ export function FileManagerModern({ initialHost, onClose }: FileManagerModernPro
           onRefresh={() => loadDirectory(currentPath)}
           onUpload={handleFilesDropped}
           onContextMenu={handleContextMenu}
+          viewMode={viewMode}
         />
 
         {/* 右键菜单 */}
