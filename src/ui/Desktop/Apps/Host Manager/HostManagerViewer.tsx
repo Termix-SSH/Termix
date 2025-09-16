@@ -41,6 +41,7 @@ import {
   Check,
   Pencil,
   FolderMinus,
+  Copy,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -205,6 +206,14 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       onEditHost(host);
     }
   };
+
+  const handleClone = (host: SSHHost) => {
+    if(onEditHost) {
+      const clonedHost = {...host};
+      delete clonedHost.id;
+      onEditHost(clonedHost);
+    }
+  }
 
   const handleRemoveFromFolder = async (host: SSHHost) => {
     confirmWithToast(
@@ -1007,6 +1016,24 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         <p>Export host</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleClone(host);
+                                          }}
+                                          className="h-5 w-5 p-0 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-500/10"
+                                        >
+                                          <Copy className="h-3 w-3" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Clone host</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </div>

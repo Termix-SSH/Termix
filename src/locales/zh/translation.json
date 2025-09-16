@@ -444,6 +444,7 @@
     "mustSelectValidSshConfig": "必须从列表中选择有效的 SSH 配置",
     "addHost": "添加主机",
     "editHost": "编辑主机",
+    "cloneHost": "克隆主机",
     "deleteHost": "删除主机",
     "authType": "认证类型",
     "passwordAuth": "密码",

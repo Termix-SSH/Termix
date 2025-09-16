@@ -82,7 +82,11 @@ export function HostManager({
                 {t("hosts.hostViewer")}
               </TabsTrigger>
               <TabsTrigger value="add_host">
-                {editingHost ? t("hosts.editHost") : t("hosts.addHost")}
+                {editingHost
+                  ? editingHost.id
+                    ? t("hosts.editHost")
+                    : t("hosts.cloneHost")
+                  : t("hosts.addHost")}
               </TabsTrigger>
               <div className="h-6 w-px bg-dark-border mx-1"></div>
               <TabsTrigger value="credentials">
