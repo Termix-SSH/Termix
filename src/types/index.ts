@@ -182,8 +182,14 @@ export interface FileItem {
   name: string;
   path: string;
   isPinned?: boolean;
-  type: "file" | "directory";
+  type: "file" | "directory" | "link";
   sshSessionId?: string;
+  size?: number;
+  modified?: string;
+  permissions?: string;
+  owner?: string;
+  group?: string;
+  linkTarget?: string;
 }
 
 export interface ShortcutItem {

@@ -18,16 +18,31 @@ import {
   ArrowUp
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { FileItem } from "../../../types/index.js";
 
-interface FileItem {
-  name: string;
-  type: "file" | "directory" | "link";
-  path: string;
-  size?: number;
-  modified?: string;
-  permissions?: string;
-  owner?: string;
-  group?: string;
+// 格式化文件大小
+function formatFileSize(bytes?: number): string {
+  // 处理未定义或null的情况
+  if (bytes === undefined || bytes === null) return '-';
+
+  // 0字节的文件显示为 "0 B"
+  if (bytes === 0) return '0 B';
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  // 对于小于10的数值显示一位小数，大于10的显示整数
+  const formattedSize = size < 10 && unitIndex > 0
+    ? size.toFixed(1)
+    : Math.round(size).toString();
+
+  return `${formattedSize} ${units[unitIndex]}`;
 }
 
 interface FileManagerGridProps {
@@ -114,12 +129,6 @@ const getFileIcon = (fileName: string, isDirectory: boolean, viewMode: 'grid' | 
   }
 };
 
-const formatFileSize = (bytes?: number): string => {
-  if (!bytes) return '';
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
-};
 
 export function FileManagerGrid({
   files,
@@ -535,7 +544,11 @@ export function FileManagerGrid({
                           onChange={(e) => setEditingName(e.target.value)}
                           onKeyDown={handleEditKeyDown}
                           onBlur={handleEditConfirm}
-                          className="w-full text-xs bg-blue-50 text-gray-900 px-2 py-1 rounded border border-blue-300 text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className={cn(
+                            "max-w-[120px] min-w-[60px] w-full rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none",
+                            "text-center text-foreground placeholder:text-muted-foreground",
+                            "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]"
+                          )}
                           onClick={(e) => e.stopPropagation()}
                         />
                       ) : (
@@ -553,7 +566,7 @@ export function FileManagerGrid({
                           {file.name}
                         </p>
                       )}
-                      {file.size && file.type === 'file' && (
+                      {file.type === 'file' && file.size !== undefined && file.size !== null && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatFileSize(file.size)}
                         </p>
@@ -600,7 +613,11 @@ export function FileManagerGrid({
                         onChange={(e) => setEditingName(e.target.value)}
                         onKeyDown={handleEditKeyDown}
                         onBlur={handleEditConfirm}
-                        className="w-full text-sm bg-blue-50 text-gray-900 px-3 py-1.5 rounded-md border border-blue-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className={cn(
+                          "flex-1 min-w-0 max-w-[200px] rounded-md border border-input bg-background px-2 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none",
+                          "text-foreground placeholder:text-muted-foreground",
+                          "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]"
+                        )}
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
@@ -627,7 +644,7 @@ export function FileManagerGrid({
 
                   {/* 文件大小 */}
                   <div className="flex-shrink-0 text-right">
-                    {file.type === 'file' && file.size && (
+                    {file.type === 'file' && file.size !== undefined && file.size !== null && (
                       <p className="text-xs text-muted-foreground">
                         {formatFileSize(file.size)}
                       </p>

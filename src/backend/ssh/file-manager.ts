@@ -311,20 +311,50 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
         const parts = line.split(/\s+/);
         if (parts.length >= 9) {
           const permissions = parts[0];
-          const name = parts.slice(8).join(" ");
+          const linkCount = parts[1];
+          const owner = parts[2];
+          const group = parts[3];
+          const size = parseInt(parts[4], 10);
+
+          // 日期可能占夨3个部分（月 日 时间）或者是（月 日 年）
+          let dateStr = "";
+          let nameStartIndex = 8;
+
+          if (parts[5] && parts[6] && parts[7]) {
+            // 常规格式: 月 日 时间/年
+            dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
+          }
+
+          const name = parts.slice(nameStartIndex).join(" ");
           const isDirectory = permissions.startsWith("d");
           const isLink = permissions.startsWith("l");
 
           if (name === "." || name === "..") continue;
 
+          // 解析符号链接目标
+          let actualName = name;
+          let linkTarget = undefined;
+          if (isLink && name.includes(" -> ")) {
+            const linkParts = name.split(" -> ");
+            actualName = linkParts[0];
+            linkTarget = linkParts[1];
+          }
+
           files.push({
-            name,
+            name: actualName,
             type: isDirectory ? "directory" : isLink ? "link" : "file",
+            size: isDirectory ? undefined : size, // 目录不显示大小
+            modified: dateStr,
+            permissions,
+            owner,
+            group,
+            linkTarget, // 符号链接的目标
+            path: `${sshPath.endsWith('/') ? sshPath : sshPath + '/'}${actualName}` // 添加完整路径
           });
         }
       }
 
-      res.json(files);
+      res.json({ files, path: sshPath });
     });
   });
 });

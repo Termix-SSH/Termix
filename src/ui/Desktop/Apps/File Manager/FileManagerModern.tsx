@@ -20,7 +20,7 @@ import {
   Eye,
   Settings
 } from "lucide-react";
-import type { SSHHost } from "../../../types/index.js";
+import type { SSHHost, FileItem } from "../../../types/index.js";
 import {
   listSSHFiles,
   uploadSSHFile,
@@ -33,16 +33,6 @@ import {
   getSSHStatus
 } from "@/ui/main-axios.ts";
 
-interface FileItem {
-  name: string;
-  type: "file" | "directory" | "link";
-  path: string;
-  size?: number;
-  modified?: string;
-  permissions?: string;
-  owner?: string;
-  group?: string;
-}
 
 interface FileManagerModernProps {
   initialHost?: SSHHost | null;
@@ -187,19 +177,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         return;
       }
 
-      const contents = await listSSHFiles(sshSessionId, path);
-      console.log("Directory contents loaded:", contents?.length || 0, "items");
-      console.log("Raw file data from backend:", contents);
+      const response = await listSSHFiles(sshSessionId, path);
+      console.log("Directory response from backend:", response);
 
-      // 为文件添加完整路径
-      const filesWithPath = (contents || []).map(file => ({
-        ...file,
-        path: path + (path.endsWith("/") ? "" : "/") + file.name
-      }));
+      // 处理新的返回格式 { files: FileItem[], path: string }
+      const files = Array.isArray(response) ? response : response?.files || [];
+      console.log("Directory contents loaded:", files.length, "items");
+      console.log("Files with sizes:", files.map(f => ({ name: f.name, size: f.size, type: f.type })));
 
-      console.log("Files with constructed paths:", filesWithPath.map(f => ({ name: f.name, path: f.path })));
-
-      setFiles(filesWithPath);
+      setFiles(files);
       clearSelection();
     } catch (error: any) {
       console.error("Failed to load directory:", error);
@@ -321,42 +307,42 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   }
 
   function handleCreateNewFolder() {
-    const defaultName = "NewFolder"; // 移除空格避免路径问题
+    const baseName = "NewFolder";
+    const uniqueName = generateUniqueName(baseName, 'directory');
     const folderPath = currentPath.endsWith('/')
-      ? `${currentPath}${defaultName}`
-      : `${currentPath}/${defaultName}`;
+      ? `${currentPath}${uniqueName}`
+      : `${currentPath}/${uniqueName}`;
 
-    // 直接进入编辑模式，不在服务器创建文件夹
+    // 直接进入编辑模式，使用唯一名字
     const newFolder: FileItem = {
-      name: defaultName,
+      name: uniqueName,
       type: 'directory',
       path: folderPath
     };
 
-    console.log('Starting edit for new folder (not created yet):', newFolder);
+    console.log('Starting edit for new folder with unique name:', newFolder);
     setEditingFile(newFolder);
     setIsCreatingNewFile(true);
-    console.log('Edit state set:', { editingFile: newFolder, isCreatingNewFile: true });
   }
 
   function handleCreateNewFile() {
-    const defaultName = "NewFile.txt"; // 移除空格避免路径问题
+    const baseName = "NewFile.txt";
+    const uniqueName = generateUniqueName(baseName, 'file');
     const filePath = currentPath.endsWith('/')
-      ? `${currentPath}${defaultName}`
-      : `${currentPath}/${defaultName}`;
+      ? `${currentPath}${uniqueName}`
+      : `${currentPath}/${uniqueName}`;
 
-    // 直接进入编辑模式，不在服务器创建文件
+    // 直接进入编辑模式，使用唯一名字
     const newFile: FileItem = {
-      name: defaultName,
+      name: uniqueName,
       type: 'file',
       path: filePath,
       size: 0
     };
 
-    console.log('Starting edit for new file (not created yet):', newFile);
+    console.log('Starting edit for new file with unique name:', newFile);
     setEditingFile(newFile);
     setIsCreatingNewFile(true);
-    console.log('Edit state set:', { editingFile: newFile, isCreatingNewFile: true });
   }
 
   function handleFileOpen(file: FileItem) {
@@ -549,14 +535,40 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     setEditingFile(file);
   }
 
-  // 取消编辑
-  function handleCancelEdit() {
+  // 取消编辑（现在也会保留项目）
+  async function handleCancelEdit() {
     if (isCreatingNewFile && editingFile) {
-      // 如果是新建文件/文件夹且取消了编辑，删除刚创建的项目
-      handleDeleteFiles([editingFile]);
-      setIsCreatingNewFile(false);
+      // 取消时也使用默认名字创建项目
+      console.log('Creating item with default name on cancel:', editingFile.name);
+      await handleRenameConfirm(editingFile, editingFile.name);
+    } else {
+      setEditingFile(null);
     }
-    setEditingFile(null);
+  }
+
+  // 生成唯一名字（处理重名冲突）
+  function generateUniqueName(baseName: string, type: 'file' | 'directory'): string {
+    const existingNames = files.map(f => f.name.toLowerCase());
+    let candidateName = baseName;
+    let counter = 1;
+
+    // 如果名字已存在，尝试添加数字后缀
+    while (existingNames.includes(candidateName.toLowerCase())) {
+      if (type === 'file' && baseName.includes('.')) {
+        // 对于文件，在文件名和扩展名之间添加数字
+        const lastDotIndex = baseName.lastIndexOf('.');
+        const nameWithoutExt = baseName.substring(0, lastDotIndex);
+        const extension = baseName.substring(lastDotIndex);
+        candidateName = `${nameWithoutExt}${counter}${extension}`;
+      } else {
+        // 对于文件夹或没有扩展名的文件，直接添加数字
+        candidateName = `${baseName}${counter}`;
+      }
+      counter++;
+    }
+
+    console.log(`Generated unique name: ${baseName} -> ${candidateName}`);
+    return candidateName;
   }
 
   // 过滤文件并添加新建的临时项目
