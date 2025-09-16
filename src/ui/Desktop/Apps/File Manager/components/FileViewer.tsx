@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import CodeMirror from '@uiw/react-codemirror';
+import { oneDark } from '@uiw/codemirror-themes';
+import { languages, loadLanguage } from '@uiw/codemirror-extensions-langs';
 
 interface FileItem {
   name: string;
@@ -50,7 +53,7 @@ function getFileType(filename: string): { type: string; icon: React.ReactNode; c
   const videoExts = ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'];
   const audioExts = ['mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'];
   const textExts = ['txt', 'md', 'readme'];
-  const codeExts = ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'cs', 'php', 'rb', 'go', 'rs', 'html', 'css', 'scss', 'less', 'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'conf'];
+  const codeExts = ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'cs', 'php', 'rb', 'go', 'rs', 'html', 'css', 'scss', 'less', 'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'conf', 'sh', 'bash', 'zsh', 'sql', 'vue', 'svelte'];
 
   if (imageExts.includes(ext)) {
     return { type: 'image', icon: <ImageIcon className="w-6 h-6" />, color: 'text-green-500' };
@@ -65,6 +68,55 @@ function getFileType(filename: string): { type: string; icon: React.ReactNode; c
   } else {
     return { type: 'unknown', icon: <FileIcon className="w-6 h-6" />, color: 'text-gray-500' };
   }
+}
+
+// 获取CodeMirror语言扩展
+function getLanguageExtension(filename: string) {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  const baseName = filename.toLowerCase();
+
+  // 特殊文件名处理
+  if (['dockerfile', 'makefile', 'rakefile', 'gemfile'].includes(baseName)) {
+    return loadLanguage(baseName);
+  }
+
+  // 根据扩展名映射
+  const langMap: Record<string, string> = {
+    'js': 'javascript',
+    'jsx': 'jsx',
+    'ts': 'typescript',
+    'tsx': 'tsx',
+    'py': 'python',
+    'java': 'java',
+    'cpp': 'cpp',
+    'c': 'c',
+    'cs': 'csharp',
+    'php': 'php',
+    'rb': 'ruby',
+    'go': 'go',
+    'rs': 'rust',
+    'html': 'html',
+    'css': 'css',
+    'scss': 'sass',
+    'less': 'less',
+    'json': 'json',
+    'xml': 'xml',
+    'yaml': 'yaml',
+    'yml': 'yaml',
+    'toml': 'toml',
+    'sql': 'sql',
+    'sh': 'shell',
+    'bash': 'shell',
+    'zsh': 'shell',
+    'vue': 'vue',
+    'svelte': 'svelte',
+    'md': 'markdown',
+    'conf': 'shell',
+    'ini': 'properties'
+  };
+
+  const language = langMap[ext];
+  return language ? loadLanguage(language) : null;
 }
 
 // 格式化文件大小
@@ -521,37 +573,74 @@ export function FileViewer({
         {/* 文本和代码文件预览 */}
         {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
-            {isEditable ? (
+            {fileTypeInfo.type === 'code' ? (
+              // 代码文件使用CodeMirror
               <div className="h-full">
                 {searchText && searchMatches.length > 0 ? (
-                  // 当有搜索结果时，显示只读的高亮文本
-                  <div className={cn(
-                    "h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto",
-                    fileTypeInfo.type === 'code' ? "bg-muted text-foreground" : "bg-background text-foreground"
-                  )}>
-                    {renderHighlightedText(editedContent)}
+                  // 当有搜索结果时，显示只读的高亮文本（带行号）
+                  <div className="h-full flex bg-muted">
+                    {/* 行号列 */}
+                    <div className="flex-shrink-0 bg-muted border-r border-border px-2 py-4 text-xs text-muted-foreground font-mono select-none">
+                      {editedContent.split('\n').map((_, index) => (
+                        <div key={index + 1} className="text-right leading-5 min-w-[2rem]">
+                          {index + 1}
+                        </div>
+                      ))}
+                    </div>
+                    {/* 代码内容 */}
+                    <div className="flex-1 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto text-foreground">
+                      {renderHighlightedText(editedContent)}
+                    </div>
                   </div>
                 ) : (
-                  // 没有搜索时显示可编辑的textarea
-                  <textarea
+                  // 没有搜索时显示CodeMirror编辑器
+                  <CodeMirror
                     value={editedContent}
-                    onChange={(e) => handleContentChange(e.target.value)}
-                    className={cn(
-                      "w-full h-full p-4 border-none resize-none outline-none",
-                      "font-mono text-sm overflow-auto bg-background text-foreground",
-                      fileTypeInfo.type === 'code' && "bg-muted text-foreground"
-                    )}
-                    placeholder="Start typing..."
-                    spellCheck={false}
+                    onChange={(value) => handleContentChange(value)}
+                    extensions={getLanguageExtension(file.name) ? [getLanguageExtension(file.name)!] : []}
+                    theme="dark"
+                    basicSetup={{
+                      lineNumbers: true,
+                      foldGutter: true,
+                      dropCursor: false,
+                      allowMultipleSelections: false,
+                      indentOnInput: true,
+                      bracketMatching: true,
+                      closeBrackets: true,
+                      autocompletion: true,
+                      highlightSelectionMatches: false
+                    }}
+                    className="h-full overflow-auto"
+                    readOnly={!isEditable}
                   />
                 )}
               </div>
             ) : (
-              <div className={cn(
-                "h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto",
-                fileTypeInfo.type === 'code' ? "bg-muted text-foreground" : "bg-background text-foreground"
-              )}>
-                {content ? renderHighlightedText(content) : 'File is empty'}
+              // 普通文本文件
+              <div className="h-full">
+                {isEditable ? (
+                  <div className="h-full">
+                    {searchText && searchMatches.length > 0 ? (
+                      // 当有搜索结果时，显示只读的高亮文本
+                      <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
+                        {renderHighlightedText(editedContent)}
+                      </div>
+                    ) : (
+                      // 没有搜索时显示可编辑的textarea
+                      <textarea
+                        value={editedContent}
+                        onChange={(e) => handleContentChange(e.target.value)}
+                        className="w-full h-full p-4 border-none resize-none outline-none font-mono text-sm overflow-auto bg-background text-foreground"
+                        placeholder="Start typing..."
+                        spellCheck={false}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
+                    {content ? renderHighlightedText(content) : 'File is empty'}
+                  </div>
+                )}
               </div>
             )}
           </div>
