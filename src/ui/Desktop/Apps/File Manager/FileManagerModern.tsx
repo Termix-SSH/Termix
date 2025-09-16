@@ -299,7 +299,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       await ensureSSHConnection();
 
       for (const file of files) {
-        await deleteSSHItem(sshSessionId, file.path);
+        await deleteSSHItem(
+          sshSessionId,
+          file.path,
+          file.type === 'directory', // isDirectory
+          currentHost?.id,
+          currentHost?.userId?.toString()
+        );
       }
       toast.success(t("fileManager.itemsDeletedSuccessfully", { count: files.length }));
       loadDirectory(currentPath);
@@ -314,90 +320,43 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
-  async function handleCreateNewFolder() {
-    if (!sshSessionId) return;
-
-    const defaultName = "New Folder";
+  function handleCreateNewFolder() {
+    const defaultName = "NewFolder"; // 移除空格避免路径问题
     const folderPath = currentPath.endsWith('/')
       ? `${currentPath}${defaultName}`
       : `${currentPath}/${defaultName}`;
 
-    try {
-      // 确保SSH连接有效
-      await ensureSSHConnection();
+    // 直接进入编辑模式，不在服务器创建文件夹
+    const newFolder: FileItem = {
+      name: defaultName,
+      type: 'directory',
+      path: folderPath
+    };
 
-      // API需要分离的path和folderName参数
-      await createSSHFolder(
-        sshSessionId,
-        currentPath,
-        defaultName,
-        currentHost?.id,
-        currentHost?.userId?.toString()
-      );
-
-      // 重新加载目录
-      await loadDirectory(currentPath);
-
-      // 找到新创建的文件夹并开始编辑
-      const newFolder: FileItem = {
-        name: defaultName,
-        type: 'directory',
-        path: folderPath
-      };
-      setEditingFile(newFolder);
-      setIsCreatingNewFile(true);
-    } catch (error: any) {
-      if (error.message?.includes('connection') || error.message?.includes('established')) {
-        toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
-      } else {
-        toast.error(t("fileManager.failedToCreateFolder"));
-      }
-      console.error("Create folder failed:", error);
-    }
+    console.log('Starting edit for new folder (not created yet):', newFolder);
+    setEditingFile(newFolder);
+    setIsCreatingNewFile(true);
+    console.log('Edit state set:', { editingFile: newFolder, isCreatingNewFile: true });
   }
 
-  async function handleCreateNewFile() {
-    if (!sshSessionId) return;
-
-    const defaultName = "New File.txt";
+  function handleCreateNewFile() {
+    const defaultName = "NewFile.txt"; // 移除空格避免路径问题
     const filePath = currentPath.endsWith('/')
       ? `${currentPath}${defaultName}`
       : `${currentPath}/${defaultName}`;
 
-    try {
-      // 确保SSH连接有效
-      await ensureSSHConnection();
+    // 直接进入编辑模式，不在服务器创建文件
+    const newFile: FileItem = {
+      name: defaultName,
+      type: 'file',
+      path: filePath,
+      size: 0
+    };
 
-      // API需要分离的path、fileName和content参数
-      await createSSHFile(
-        sshSessionId,
-        currentPath,
-        defaultName,
-        "",
-        currentHost?.id,
-        currentHost?.userId?.toString()
-      );
-
-      // 重新加载目录
-      await loadDirectory(currentPath);
-
-      // 找到新创建的文件并开始编辑
-      const newFile: FileItem = {
-        name: defaultName,
-        type: 'file',
-        path: filePath,
-        size: 0
-      };
-      setEditingFile(newFile);
-      setIsCreatingNewFile(true);
-    } catch (error: any) {
-      if (error.message?.includes('connection') || error.message?.includes('established')) {
-        toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
-      } else {
-        toast.error(t("fileManager.failedToCreateFile"));
-      }
-      console.error("Create file failed:", error);
-    }
+    console.log('Starting edit for new file (not created yet):', newFile);
+    setEditingFile(newFile);
+    setIsCreatingNewFile(true);
+    console.log('Edit state set:', { editingFile: newFile, isCreatingNewFile: true });
   }
 
   function handleFileOpen(file: FileItem) {
@@ -507,27 +466,81 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
-  // 处理重命名确认
+  // 处理重命名/创建确认
   async function handleRenameConfirm(file: FileItem, newName: string) {
     if (!sshSessionId) return;
-
-    const oldPath = file.path;
-    const newPath = file.path.replace(file.name, newName);
 
     try {
       // 确保SSH连接有效
       await ensureSSHConnection();
 
-      await renameSSHItem(sshSessionId, oldPath, newPath);
-      toast.success(t("fileManager.itemRenamedSuccessfully", { name: newName }));
+      if (isCreatingNewFile) {
+        // 新建项目：直接创建最终名字
+        console.log('Creating new item:', {
+          type: file.type,
+          name: newName,
+          path: currentPath,
+          hostId: currentHost?.id,
+          userId: currentHost?.userId
+        });
+
+        if (file.type === 'file') {
+          await createSSHFile(
+            sshSessionId,
+            currentPath,
+            newName,
+            "",
+            currentHost?.id,
+            currentHost?.userId?.toString()
+          );
+          toast.success(t("fileManager.fileCreatedSuccessfully", { name: newName }));
+        } else if (file.type === 'directory') {
+          await createSSHFolder(
+            sshSessionId,
+            currentPath,
+            newName,
+            currentHost?.id,
+            currentHost?.userId?.toString()
+          );
+          toast.success(t("fileManager.folderCreatedSuccessfully", { name: newName }));
+        }
+
+        setIsCreatingNewFile(false);
+      } else {
+        // 现有项目：重命名
+        console.log('Renaming existing item:', {
+          from: file.path,
+          to: newName,
+          hostId: currentHost?.id,
+          userId: currentHost?.userId
+        });
+
+        await renameSSHItem(
+          sshSessionId,
+          file.path,
+          newName,
+          currentHost?.id,
+          currentHost?.userId?.toString()
+        );
+        toast.success(t("fileManager.itemRenamedSuccessfully", { name: newName }));
+      }
+
+      // 清除编辑状态
+      setEditingFile(null);
       loadDirectory(currentPath);
     } catch (error: any) {
+      console.error("Rename failed with error:", {
+        error,
+        oldPath,
+        newName,
+        message: error.message
+      });
+
       if (error.message?.includes('connection') || error.message?.includes('established')) {
         toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
       } else {
         toast.error(t("fileManager.failedToRenameItem"));
       }
-      console.error("Rename failed:", error);
     }
   }
 
@@ -546,10 +559,19 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     setEditingFile(null);
   }
 
-  // 过滤文件
-  const filteredFiles = files.filter(file =>
+  // 过滤文件并添加新建的临时项目
+  let filteredFiles = files.filter(file =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // 如果正在创建新项目，将其添加到列表中
+  if (isCreatingNewFile && editingFile) {
+    // 检查是否已经存在同名项目，避免重复
+    const exists = filteredFiles.some(f => f.path === editingFile.path);
+    if (!exists && editingFile.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      filteredFiles = [editingFile, ...filteredFiles]; // 将新项目放在前面
+    }
+  }
 
   if (!currentHost) {
     return (
