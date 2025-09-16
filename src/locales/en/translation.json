@@ -418,6 +418,7 @@
     "mustSelectValidSshConfig": "Must select a valid SSH configuration from the list",
     "addHost": "Add Host",
     "editHost": "Edit Host",
+    "cloneHost": "Clone Host",
     "updateHost": "Update Host",
     "hostUpdatedSuccessfully": "Host \"{{name}}\" updated successfully!",
     "hostAddedSuccessfully": "Host \"{{name}}\" added successfully!",
