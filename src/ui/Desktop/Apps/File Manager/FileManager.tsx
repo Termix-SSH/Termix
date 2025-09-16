@@ -3,10 +3,11 @@ import { FileManagerLeftSidebar } from "@/ui/Desktop/Apps/File Manager/FileManag
 import { FileManagerHomeView } from "@/ui/Desktop/Apps/File Manager/FileManagerHomeView.tsx";
 import { FileManagerFileEditor } from "@/ui/Desktop/Apps/File Manager/FileManagerFileEditor.tsx";
 import { FileManagerOperations } from "@/ui/Desktop/Apps/File Manager/FileManagerOperations.tsx";
+import { FileManagerModern } from "@/ui/Desktop/Apps/File Manager/FileManagerModern.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { FIleManagerTopNavbar } from "@/ui/Desktop/Apps/File Manager/FIleManagerTopNavbar.tsx";
 import { cn } from "@/lib/utils.ts";
-import { Save, RefreshCw, Settings, Trash2 } from "lucide-react";
+import { Save, RefreshCw, Settings, Trash2, Grid3X3, Sidebar } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
@@ -48,6 +49,7 @@ export function FileManager({
 
   const [showOperations, setShowOperations] = useState(false);
   const [currentPath, setCurrentPath] = useState("/");
+  const [useModernView, setUseModernView] = useState(true); // 默认使用现代视图
 
   const [deletingItem, setDeletingItem] = useState<any | null>(null);
 
@@ -518,6 +520,15 @@ export function FileManager({
   };
 
   if (!currentHost) {
+    if (useModernView) {
+      return (
+        <FileManagerModern
+          initialHost={initialHost}
+          onClose={onClose}
+        />
+      );
+    }
+
     return (
       <div className="absolute inset-0 overflow-hidden rounded-md">
         <div className="absolute top-0 left-0 w-64 h-full z-[20]">
@@ -543,6 +554,30 @@ export function FileManager({
             </p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // 如果使用现代视图且有主机连接，显示现代文件管理器
+  if (useModernView && currentHost) {
+    return (
+      <div className="absolute inset-0 overflow-hidden rounded-md">
+        {/* 视图切换按钮 */}
+        <div className="absolute top-2 right-2 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setUseModernView(false)}
+            className="bg-dark-bg/80 border-dark-border hover:bg-dark-hover"
+            title="切换到传统视图"
+          >
+            <Sidebar className="w-4 h-4" />
+          </Button>
+        </div>
+        <FileManagerModern
+          initialHost={currentHost}
+          onClose={onClose}
+        />
       </div>
     );
   }
@@ -577,6 +612,16 @@ export function FileManager({
             />
           </div>
           <div className="flex items-center justify-center gap-2 flex-1">
+            {/* 添加现代视图切换按钮 */}
+            <Button
+              variant="outline"
+              onClick={() => setUseModernView(true)}
+              className="w-[30px] h-[30px]"
+              title="切换到现代视图"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <div className="p-0.25 w-px h-[30px] bg-dark-border"></div>
             <Button
               variant="outline"
               onClick={() => setShowOperations(!showOperations)}

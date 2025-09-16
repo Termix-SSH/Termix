@@ -1,0 +1,439 @@
+import React, { useState, useEffect, useRef } from "react";
+import { FileManagerGrid } from "./FileManagerGrid";
+import { FileManagerContextMenu } from "./FileManagerContextMenu";
+import { useFileSelection } from "./hooks/useFileSelection";
+import { useDragAndDrop } from "./hooks/useDragAndDrop";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import {
+  Upload,
+  FolderPlus,
+  FilePlus,
+  RefreshCw,
+  Search,
+  Grid3X3,
+  List,
+  Eye,
+  Settings
+} from "lucide-react";
+import type { SSHHost } from "../../../types/index.js";
+import {
+  listSSHFiles,
+  uploadSSHFile,
+  downloadSSHFile,
+  createSSHFile,
+  createSSHFolder,
+  deleteSSHItem,
+  renameSSHItem,
+  connectSSH
+} from "@/ui/main-axios.ts";
+
+interface FileItem {
+  name: string;
+  type: "file" | "directory" | "link";
+  path: string;
+  size?: number;
+  modified?: string;
+  permissions?: string;
+  owner?: string;
+  group?: string;
+}
+
+interface FileManagerModernProps {
+  initialHost?: SSHHost | null;
+  onClose?: () => void;
+}
+
+export function FileManagerModern({ initialHost, onClose }: FileManagerModernProps) {
+  const { t } = useTranslation();
+
+  // State
+  const [currentHost, setCurrentHost] = useState<SSHHost | null>(initialHost || null);
+  const [currentPath, setCurrentPath] = useState("/");
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sshSessionId, setSshSessionId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    isVisible: boolean;
+    files: FileItem[];
+  }>({
+    x: 0,
+    y: 0,
+    isVisible: false,
+    files: []
+  });
+
+  // 操作状态
+  const [clipboard, setClipboard] = useState<{
+    files: FileItem[];
+    operation: 'copy' | 'cut';
+  } | null>(null);
+
+  // Hooks
+  const {
+    selectedFiles,
+    selectFile,
+    selectAll,
+    clearSelection,
+    setSelectedFiles
+  } = useFileSelection();
+
+  const { isDragging, dragHandlers } = useDragAndDrop({
+    onFilesDropped: handleFilesDropped,
+    onError: (error) => toast.error(error),
+    maxFileSize: 100 // 100MB
+  });
+
+  // 初始化SSH连接
+  useEffect(() => {
+    if (currentHost) {
+      initializeSSHConnection();
+    }
+  }, [currentHost]);
+
+  // 文件列表更新
+  useEffect(() => {
+    if (sshSessionId) {
+      loadDirectory(currentPath);
+    }
+  }, [sshSessionId, currentPath]);
+
+  async function initializeSSHConnection() {
+    if (!currentHost) return;
+
+    try {
+      setIsLoading(true);
+      const sessionId = await connectSSH(currentHost.id);
+      setSshSessionId(sessionId);
+    } catch (error: any) {
+      toast.error(t("fileManager.failedToConnect"));
+      console.error("SSH connection failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function loadDirectory(path: string) {
+    if (!sshSessionId) return;
+
+    try {
+      setIsLoading(true);
+      const contents = await listSSHFiles(sshSessionId, path);
+      setFiles(contents || []);
+      clearSelection();
+    } catch (error: any) {
+      toast.error(t("fileManager.failedToLoadDirectory"));
+      console.error("Failed to load directory:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleFilesDropped(fileList: FileList) {
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    Array.from(fileList).forEach(file => {
+      handleUploadFile(file);
+    });
+  }
+
+  async function handleUploadFile(file: File) {
+    if (!sshSessionId) return;
+
+    try {
+      const targetPath = currentPath.endsWith('/')
+        ? `${currentPath}${file.name}`
+        : `${currentPath}/${file.name}`;
+
+      await uploadSSHFile(sshSessionId, targetPath, file);
+      toast.success(t("fileManager.fileUploadedSuccessfully", { name: file.name }));
+      loadDirectory(currentPath);
+    } catch (error: any) {
+      toast.error(t("fileManager.failedToUploadFile"));
+      console.error("Upload failed:", error);
+    }
+  }
+
+  async function handleDownloadFile(file: FileItem) {
+    if (!sshSessionId) return;
+
+    try {
+      const response = await downloadSSHFile(sshSessionId, file.path);
+
+      if (response?.content) {
+        // 转换为blob并触发下载
+        const byteCharacters = atob(response.content);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: response.mimeType || 'application/octet-stream' });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = response.fileName || file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast.success(t("fileManager.fileDownloadedSuccessfully", { name: file.name }));
+      }
+    } catch (error: any) {
+      toast.error(t("fileManager.failedToDownloadFile"));
+      console.error("Download failed:", error);
+    }
+  }
+
+  async function handleDeleteFiles(files: FileItem[]) {
+    if (!sshSessionId || files.length === 0) return;
+
+    try {
+      for (const file of files) {
+        await deleteSSHItem(sshSessionId, file.path);
+      }
+      toast.success(t("fileManager.itemsDeletedSuccessfully", { count: files.length }));
+      loadDirectory(currentPath);
+      clearSelection();
+    } catch (error: any) {
+      toast.error(t("fileManager.failedToDeleteItems"));
+      console.error("Delete failed:", error);
+    }
+  }
+
+  async function handleCreateNewFolder() {
+    if (!sshSessionId) return;
+
+    const folderName = prompt(t("fileManager.enterFolderName"));
+    if (!folderName) return;
+
+    try {
+      const folderPath = currentPath.endsWith('/')
+        ? `${currentPath}${folderName}`
+        : `${currentPath}/${folderName}`;
+
+      await createSSHFolder(sshSessionId, folderPath);
+      toast.success(t("fileManager.folderCreatedSuccessfully", { name: folderName }));
+      loadDirectory(currentPath);
+    } catch (error: any) {
+      toast.error(t("fileManager.failedToCreateFolder"));
+      console.error("Create folder failed:", error);
+    }
+  }
+
+  async function handleCreateNewFile() {
+    if (!sshSessionId) return;
+
+    const fileName = prompt(t("fileManager.enterFileName"));
+    if (!fileName) return;
+
+    try {
+      const filePath = currentPath.endsWith('/')
+        ? `${currentPath}${fileName}`
+        : `${currentPath}/${fileName}`;
+
+      await createSSHFile(sshSessionId, filePath, "");
+      toast.success(t("fileManager.fileCreatedSuccessfully", { name: fileName }));
+      loadDirectory(currentPath);
+    } catch (error: any) {
+      toast.error(t("fileManager.failedToCreateFile"));
+      console.error("Create file failed:", error);
+    }
+  }
+
+  function handleFileOpen(file: FileItem) {
+    if (file.type === 'directory') {
+      setCurrentPath(file.path);
+    } else {
+      // 打开文件编辑器或预览
+      console.log("Open file:", file);
+    }
+  }
+
+  function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
+    event.preventDefault();
+
+    const files = file ? [file] : selectedFiles;
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      isVisible: true,
+      files
+    });
+  }
+
+  function handleCopyFiles(files: FileItem[]) {
+    setClipboard({ files, operation: 'copy' });
+    toast.success(t("fileManager.filesCopiedToClipboard", { count: files.length }));
+  }
+
+  function handleCutFiles(files: FileItem[]) {
+    setClipboard({ files, operation: 'cut' });
+    toast.success(t("fileManager.filesCutToClipboard", { count: files.length }));
+  }
+
+  // 过滤文件
+  const filteredFiles = files.filter(file =>
+    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (!currentHost) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground mb-4">
+            {t("fileManager.selectHostToStart")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-dark-bg">
+      {/* 工具栏 */}
+      <div className="flex-shrink-0 border-b border-dark-border">
+        <div className="flex items-center justify-between p-3">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-white">
+              {currentHost.name}
+            </h2>
+            <span className="text-sm text-muted-foreground">
+              {currentHost.ip}:{currentHost.port}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* 搜索 */}
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t("fileManager.searchFiles")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 w-48 h-9 bg-dark-bg-button border-dark-border"
+              />
+            </div>
+
+            {/* 视图切换 */}
+            <div className="flex border border-dark-border rounded-md">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="rounded-r-none h-9"
+              >
+                <Grid3X3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="rounded-l-none h-9"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* 操作按钮 */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.multiple = true;
+                input.onchange = (e) => {
+                  const files = (e.target as HTMLInputElement).files;
+                  if (files) handleFilesDropped(files);
+                };
+                input.click();
+              }}
+              className="h-9"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {t("fileManager.upload")}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCreateNewFolder}
+              className="h-9"
+            >
+              <FolderPlus className="w-4 h-4 mr-2" />
+              {t("fileManager.newFolder")}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadDirectory(currentPath)}
+              className="h-9"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* 主内容区域 */}
+      <div className="flex-1 relative" {...dragHandlers}>
+        <FileManagerGrid
+          files={filteredFiles}
+          selectedFiles={selectedFiles}
+          onFileSelect={selectFile}
+          onFileOpen={handleFileOpen}
+          onSelectionChange={setSelectedFiles}
+          currentPath={currentPath}
+          isLoading={isLoading}
+          onPathChange={setCurrentPath}
+          onRefresh={() => loadDirectory(currentPath)}
+          onUpload={handleFilesDropped}
+          onContextMenu={handleContextMenu}
+        />
+
+        {/* 右键菜单 */}
+        <FileManagerContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          files={contextMenu.files}
+          isVisible={contextMenu.isVisible}
+          onClose={() => setContextMenu(prev => ({ ...prev, isVisible: false }))}
+          onDownload={(files) => files.forEach(handleDownloadFile)}
+          onCopy={handleCopyFiles}
+          onCut={handleCutFiles}
+          onDelete={handleDeleteFiles}
+          onUpload={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.onchange = (e) => {
+              const files = (e.target as HTMLInputElement).files;
+              if (files) handleFilesDropped(files);
+            };
+            input.click();
+          }}
+          onNewFolder={handleCreateNewFolder}
+          onNewFile={handleCreateNewFile}
+          onRefresh={() => loadDirectory(currentPath)}
+          hasClipboard={!!clipboard}
+        />
+      </div>
+    </div>
+  );
+}
