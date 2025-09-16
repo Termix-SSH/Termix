@@ -535,13 +535,13 @@ export function FileManagerGrid({
                           onChange={(e) => setEditingName(e.target.value)}
                           onKeyDown={handleEditKeyDown}
                           onBlur={handleEditConfirm}
-                          className="w-full text-xs bg-white text-black px-1 py-0.5 rounded border-2 border-blue-500 text-center"
+                          className="w-full text-xs bg-blue-50 text-gray-900 px-2 py-1 rounded border border-blue-300 text-center shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           onClick={(e) => e.stopPropagation()}
                         />
                       ) : (
                         <p
-                          className="text-xs text-white truncate cursor-pointer"
-                          title={file.name}
+                          className="text-xs text-white truncate cursor-pointer hover:bg-white/10 px-1 py-0.5 rounded transition-colors duration-150"
+                          title={`${file.name} (点击重命名)`}
                           onClick={(e) => {
                             // 阻止文件选择事件
                             if (onStartEdit) {
@@ -600,13 +600,13 @@ export function FileManagerGrid({
                         onChange={(e) => setEditingName(e.target.value)}
                         onKeyDown={handleEditKeyDown}
                         onBlur={handleEditConfirm}
-                        className="w-full text-sm bg-white text-black px-2 py-1 rounded border-2 border-blue-500"
+                        className="w-full text-sm bg-blue-50 text-gray-900 px-3 py-1.5 rounded-md border border-blue-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
                       <p
-                        className="text-sm text-white truncate cursor-pointer"
-                        title={file.name}
+                        className="text-sm text-white truncate cursor-pointer hover:bg-white/10 px-2 py-1 rounded transition-colors duration-150"
+                        title={`${file.name} (点击重命名)`}
                         onClick={(e) => {
                           // 阻止文件选择事件
                           if (onStartEdit) {
