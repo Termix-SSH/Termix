@@ -17,6 +17,34 @@ import {
   ChevronDown,
   Replace
 } from 'lucide-react';
+import {
+  SiJavascript,
+  SiTypescript,
+  SiPython,
+  SiJava,
+  SiCplusplus,
+  SiC,
+  SiCsharp,
+  SiPhp,
+  SiRuby,
+  SiGo,
+  SiRust,
+  SiHtml5,
+  SiCss3,
+  SiSass,
+  SiLess,
+  SiJson,
+  SiXml,
+  SiYaml,
+  SiToml,
+  SiShell,
+  SiVuedotjs,
+  SiSvelte,
+  SiMarkdown,
+  SiGnubash,
+  SiMysql,
+  SiDocker
+} from 'react-icons/si';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import CodeMirror from '@uiw/react-codemirror';
@@ -45,6 +73,57 @@ interface FileViewerProps {
   onDownload?: () => void;
 }
 
+// 获取编程语言的官方图标
+function getLanguageIcon(filename: string): React.ReactNode {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  const baseName = filename.toLowerCase();
+
+  // 特殊文件名处理
+  if (['dockerfile'].includes(baseName)) {
+    return <SiDocker className="w-6 h-6 text-blue-400" />;
+  }
+  if (['makefile', 'rakefile', 'gemfile'].includes(baseName)) {
+    return <SiRuby className="w-6 h-6 text-red-500" />;
+  }
+
+  const iconMap: Record<string, React.ReactNode> = {
+    'js': <SiJavascript className="w-6 h-6 text-yellow-400" />,
+    'jsx': <SiJavascript className="w-6 h-6 text-yellow-400" />,
+    'ts': <SiTypescript className="w-6 h-6 text-blue-500" />,
+    'tsx': <SiTypescript className="w-6 h-6 text-blue-500" />,
+    'py': <SiPython className="w-6 h-6 text-blue-400" />,
+    'java': <SiJava className="w-6 h-6 text-red-500" />,
+    'cpp': <SiCplusplus className="w-6 h-6 text-blue-600" />,
+    'c': <SiC className="w-6 h-6 text-blue-700" />,
+    'cs': <SiCsharp className="w-6 h-6 text-purple-600" />,
+    'php': <SiPhp className="w-6 h-6 text-indigo-500" />,
+    'rb': <SiRuby className="w-6 h-6 text-red-500" />,
+    'go': <SiGo className="w-6 h-6 text-cyan-500" />,
+    'rs': <SiRust className="w-6 h-6 text-orange-600" />,
+    'html': <SiHtml5 className="w-6 h-6 text-orange-500" />,
+    'css': <SiCss3 className="w-6 h-6 text-blue-500" />,
+    'scss': <SiSass className="w-6 h-6 text-pink-500" />,
+    'sass': <SiSass className="w-6 h-6 text-pink-500" />,
+    'less': <SiLess className="w-6 h-6 text-blue-600" />,
+    'json': <SiJson className="w-6 h-6 text-yellow-500" />,
+    'xml': <SiXml className="w-6 h-6 text-orange-500" />,
+    'yaml': <SiYaml className="w-6 h-6 text-red-400" />,
+    'yml': <SiYaml className="w-6 h-6 text-red-400" />,
+    'toml': <SiToml className="w-6 h-6 text-orange-400" />,
+    'sql': <SiMysql className="w-6 h-6 text-blue-500" />,
+    'sh': <SiGnubash className="w-6 h-6 text-gray-700" />,
+    'bash': <SiGnubash className="w-6 h-6 text-gray-700" />,
+    'zsh': <SiShell className="w-6 h-6 text-gray-700" />,
+    'vue': <SiVuedotjs className="w-6 h-6 text-green-500" />,
+    'svelte': <SiSvelte className="w-6 h-6 text-orange-500" />,
+    'md': <SiMarkdown className="w-6 h-6 text-gray-600" />,
+    'conf': <SiShell className="w-6 h-6 text-gray-600" />,
+    'ini': <Code className="w-6 h-6 text-gray-600" />
+  };
+
+  return iconMap[ext] || <Code className="w-6 h-6 text-yellow-500" />;
+}
+
 // 获取文件类型和图标
 function getFileType(filename: string): { type: string; icon: React.ReactNode; color: string } {
   const ext = filename.split('.').pop()?.toLowerCase() || '';
@@ -52,8 +131,9 @@ function getFileType(filename: string): { type: string; icon: React.ReactNode; c
   const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
   const videoExts = ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'];
   const audioExts = ['mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'];
-  const textExts = ['txt', 'md', 'readme'];
-  const codeExts = ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'cs', 'php', 'rb', 'go', 'rs', 'html', 'css', 'scss', 'less', 'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'conf', 'sh', 'bash', 'zsh', 'sql', 'vue', 'svelte'];
+  const textExts = ['txt', 'readme'];
+  const yamlExts = ['yaml', 'yml'];
+  const codeExts = ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'cs', 'php', 'rb', 'go', 'rs', 'html', 'css', 'scss', 'less', 'json', 'xml', 'toml', 'ini', 'conf', 'sh', 'bash', 'zsh', 'sql', 'vue', 'svelte', 'md'];
 
   if (imageExts.includes(ext)) {
     return { type: 'image', icon: <ImageIcon className="w-6 h-6" />, color: 'text-green-500' };
@@ -63,8 +143,10 @@ function getFileType(filename: string): { type: string; icon: React.ReactNode; c
     return { type: 'audio', icon: <Music className="w-6 h-6" />, color: 'text-pink-500' };
   } else if (textExts.includes(ext)) {
     return { type: 'text', icon: <FileText className="w-6 h-6" />, color: 'text-blue-500' };
-  } else if (codeExts.includes(ext)) {
-    return { type: 'code', icon: <Code className="w-6 h-6" />, color: 'text-yellow-500' };
+  } else if (yamlExts.includes(ext)) {
+    return { type: 'yaml', icon: getLanguageIcon(filename), color: 'text-red-400' };
+  } else if (codeExts.includes(ext) || ['md'].includes(ext)) {
+    return { type: 'code', icon: getLanguageIcon(filename), color: 'text-yellow-500' };
   } else {
     return { type: 'unknown', icon: <FileIcon className="w-6 h-6" />, color: 'text-gray-500' };
   }
@@ -159,6 +241,7 @@ export function FileViewer({
   const shouldShowAsText =
     fileTypeInfo.type === 'text' ||
     fileTypeInfo.type === 'code' ||
+    fileTypeInfo.type === 'yaml' ||
     (fileTypeInfo.type === 'unknown' && (forceShowAsText || !file.size || file.size <= WARNING_SIZE));
 
   // 检查文件是否过大
@@ -573,7 +656,7 @@ export function FileViewer({
         {/* 文本和代码文件预览 */}
         {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
-            {fileTypeInfo.type === 'code' ? (
+            {(fileTypeInfo.type === 'code' || fileTypeInfo.type === 'yaml') ? (
               // 代码文件使用CodeMirror
               <div className="h-full">
                 {searchText && searchMatches.length > 0 ? (
