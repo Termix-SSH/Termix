@@ -1334,6 +1334,130 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
   });
 });
 
+app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
+  const {
+    sessionId,
+    path: filePath,
+    hostId,
+    userId,
+  } = req.body;
+
+  if (!sessionId || !filePath) {
+    fileLogger.warn("Missing download parameters", {
+      operation: "file_download",
+      sessionId,
+      hasFilePath: !!filePath,
+    });
+    return res.status(400).json({ error: "Missing download parameters" });
+  }
+
+  const sshConn = sshSessions[sessionId];
+  if (!sshConn || !sshConn.isConnected) {
+    fileLogger.warn("SSH session not found or not connected for download", {
+      operation: "file_download",
+      sessionId,
+      isConnected: sshConn?.isConnected,
+    });
+    return res.status(400).json({ error: "SSH session not found or not connected" });
+  }
+
+  sshConn.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  // Use SFTP to read file for binary safety
+  sshConn.client.sftp((err, sftp) => {
+    if (err) {
+      fileLogger.error("SFTP connection failed for download:", err);
+      return res.status(500).json({ error: "SFTP connection failed" });
+    }
+
+    // Get file stats first to check if it's a regular file and get size
+    sftp.stat(filePath, (statErr, stats) => {
+      if (statErr) {
+        fileLogger.error("File stat failed for download:", statErr);
+        return res.status(500).json({ error: `Cannot access file: ${statErr.message}` });
+      }
+
+      if (!stats.isFile()) {
+        fileLogger.warn("Attempted to download non-file", {
+          operation: "file_download",
+          sessionId,
+          filePath,
+          isFile: stats.isFile(),
+          isDirectory: stats.isDirectory(),
+        });
+        return res.status(400).json({ error: "Cannot download directories or special files" });
+      }
+
+      // Check file size (limit to 100MB for safety)
+      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+      if (stats.size > MAX_FILE_SIZE) {
+        fileLogger.warn("File too large for download", {
+          operation: "file_download",
+          sessionId,
+          filePath,
+          fileSize: stats.size,
+          maxSize: MAX_FILE_SIZE,
+        });
+        return res.status(400).json({
+          error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB, file is ${(stats.size / 1024 / 1024).toFixed(2)}MB`
+        });
+      }
+
+      // Read file content
+      sftp.readFile(filePath, (readErr, data) => {
+        if (readErr) {
+          fileLogger.error("File read failed for download:", readErr);
+          return res.status(500).json({ error: `Failed to read file: ${readErr.message}` });
+        }
+
+        // Convert to base64 for safe transport
+        const base64Content = data.toString('base64');
+        const fileName = filePath.split('/').pop() || 'download';
+
+        fileLogger.success("File downloaded successfully", {
+          operation: "file_download",
+          sessionId,
+          filePath,
+          fileName,
+          fileSize: stats.size,
+          hostId,
+          userId,
+        });
+
+        res.json({
+          content: base64Content,
+          fileName: fileName,
+          size: stats.size,
+          mimeType: getMimeType(fileName),
+          path: filePath,
+        });
+      });
+    });
+  });
+});
+
+// Helper function to determine MIME type based on file extension
+function getMimeType(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    'txt': 'text/plain',
+    'json': 'application/json',
+    'js': 'text/javascript',
+    'html': 'text/html',
+    'css': 'text/css',
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'gif': 'image/gif',
+    'pdf': 'application/pdf',
+    'zip': 'application/zip',
+    'tar': 'application/x-tar',
+    'gz': 'application/gzip',
+  };
+  return mimeTypes[ext || ''] || 'application/octet-stream';
+}
+
 process.on("SIGINT", () => {
   Object.keys(sshSessions).forEach(cleanupSession);
   process.exit(0);

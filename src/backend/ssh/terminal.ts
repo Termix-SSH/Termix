@@ -4,6 +4,7 @@ import { db } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
+import { EncryptedDBOperations } from "../utils/encrypted-db-operations.js";
 
 const wss = new WebSocketServer({ port: 8082 });
 
@@ -174,18 +175,38 @@ wss.on("connection", (ws: WebSocket) => {
       }
     }, 60000);
 
+    sshLogger.debug(`Terminal SSH setup`, {
+      operation: 'terminal_ssh',
+      hostId: id,
+      ip,
+      authType,
+      hasPassword: !!password,
+      passwordLength: password?.length || 0,
+      hasCredentialId: !!credentialId
+    });
+
+    if (password) {
+      sshLogger.debug(`Password preview: "${password.substring(0, 15)}..."`, {
+        operation: 'terminal_ssh_password'
+      });
+    } else {
+      sshLogger.debug(`No password provided`, {
+        operation: 'terminal_ssh_password'
+      });
+    }
+
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     if (credentialId && id && hostConfig.userId) {
       try {
-        const credentials = await db
-          .select()
-          .from(sshCredentials)
-          .where(
+        const credentials = await EncryptedDBOperations.select(
+          db.select().from(sshCredentials).where(
             and(
               eq(sshCredentials.id, credentialId),
               eq(sshCredentials.userId, hostConfig.userId),
             ),
-          );
+          ),
+          'ssh_credentials'
+        );
 
         if (credentials.length > 0) {
           const credential = credentials[0];

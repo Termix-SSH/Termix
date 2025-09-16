@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import {
   Upload,
+  Download,
   FilePlus,
   FolderPlus,
   Trash2,
@@ -27,12 +28,14 @@ export function FileManagerOperations({
 }: FileManagerOperationsProps) {
   const { t } = useTranslation();
   const [showUpload, setShowUpload] = useState(false);
+  const [showDownload, setShowDownload] = useState(false);
   const [showCreateFile, setShowCreateFile] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showRename, setShowRename] = useState(false);
 
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [downloadPath, setDownloadPath] = useState("");
   const [newFileName, setNewFileName] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
   const [deletePath, setDeletePath] = useState("");
@@ -148,6 +151,66 @@ export function FileManagerOperations({
       toast.dismiss(loadingToast);
       onError(
         error?.response?.data?.error || t("fileManager.failedToCreateFile"),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!downloadPath.trim() || !sshSessionId) return;
+
+    setIsLoading(true);
+
+    const { toast } = await import("sonner");
+    const fileName = downloadPath.split('/').pop() || 'download';
+    const loadingToast = toast.loading(
+      t("fileManager.downloadingFile", { name: fileName }),
+    );
+
+    try {
+      const { downloadSSHFile } = await import("@/ui/main-axios.ts");
+
+      const response = await downloadSSHFile(
+        sshSessionId,
+        downloadPath.trim(),
+      );
+
+      toast.dismiss(loadingToast);
+
+      if (response?.content) {
+        // Convert base64 to blob and trigger download
+        const byteCharacters = atob(response.content);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: response.mimeType || 'application/octet-stream' });
+
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = response.fileName || fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        onSuccess(
+          t("fileManager.fileDownloadedSuccessfully", { name: response.fileName || fileName }),
+        );
+      } else {
+        onError(t("fileManager.noFileContent"));
+      }
+
+      setShowDownload(false);
+      setDownloadPath("");
+    } catch (error: any) {
+      toast.dismiss(loadingToast);
+      onError(
+        error?.response?.data?.error || t("fileManager.failedToDownloadFile"),
       );
     } finally {
       setIsLoading(false);
@@ -344,7 +407,7 @@ export function FileManagerOperations({
 
   return (
     <div ref={containerRef} className="p-4 space-y-4">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -355,6 +418,18 @@ export function FileManagerOperations({
           <Upload className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")} />
           {showTextLabels && (
             <span className="truncate">{t("fileManager.uploadFile")}</span>
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowDownload(true)}
+          className="h-10 bg-dark-bg border-2 border-dark-border hover:border-dark-border-hover hover:bg-dark-hover"
+          title={t("fileManager.downloadFile")}
+        >
+          <Download className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")} />
+          {showTextLabels && (
+            <span className="truncate">{t("fileManager.downloadFile")}</span>
           )}
         </Button>
         <Button
@@ -397,7 +472,7 @@ export function FileManagerOperations({
           variant="outline"
           size="sm"
           onClick={() => setShowDelete(true)}
-          className="h-10 bg-dark-bg border-2 border-dark-border hover:border-dark-border-hover hover:bg-dark-hover col-span-2"
+          className="h-10 bg-dark-bg border-2 border-dark-border hover:border-dark-border-hover hover:bg-dark-hover col-span-3"
           title={t("fileManager.deleteItem")}
         >
           <Trash2 className={cn("w-4 h-4", showTextLabels ? "mr-2" : "")} />
@@ -506,6 +581,64 @@ export function FileManagerOperations({
               <Button
                 variant="outline"
                 onClick={() => setShowUpload(false)}
+                disabled={isLoading}
+                className="w-full text-sm h-9"
+              >
+                {t("common.cancel")}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {showDownload && (
+        <Card className="bg-dark-bg border-2 border-dark-border p-3 sm:p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+                <Download className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+                <span className="break-words">
+                  {t("fileManager.downloadFile")}
+                </span>
+              </h3>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDownload(false)}
+              className="h-8 w-8 p-0 flex-shrink-0 ml-2"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-white mb-2 block">
+                {t("fileManager.filePath")}
+              </label>
+              <Input
+                value={downloadPath}
+                onChange={(e) => setDownloadPath(e.target.value)}
+                placeholder={t("placeholders.fullPath")}
+                className="bg-dark-bg-button border-2 border-dark-border-hover text-white text-sm"
+                onKeyDown={(e) => e.key === "Enter" && handleDownload()}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleDownload}
+                disabled={!downloadPath.trim() || isLoading}
+                className="w-full text-sm h-9"
+              >
+                {isLoading
+                  ? t("fileManager.downloading")
+                  : t("fileManager.downloadFile")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowDownload(false)}
                 disabled={isLoading}
                 className="w-full text-sm h-9"
               >

@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { Card } from "@/components/ui/card.tsx";
-import { Folder, File, Trash2, Pin } from "lucide-react";
+import { Folder, File, Trash2, Pin, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface SSHConnection {
@@ -32,6 +32,7 @@ interface FileManagerLeftSidebarVileViewerProps {
   onOpenFile: (file: FileItem) => void;
   onOpenFolder: (folder: FileItem) => void;
   onStarFile: (file: FileItem) => void;
+  onDownloadFile?: (file: FileItem) => void;
   onDeleteFile: (file: FileItem) => void;
   isLoading?: boolean;
   error?: string;
@@ -47,6 +48,7 @@ export function FileManagerLeftSidebarFileViewer({
   onOpenFile,
   onOpenFolder,
   onStarFile,
+  onDownloadFile,
   onDeleteFile,
   isLoading,
   error,
@@ -104,6 +106,17 @@ export function FileManagerLeftSidebarFileViewer({
                       className={`w-4 h-4 ${item.isStarred ? "text-yellow-400" : "text-muted-foreground"}`}
                     />
                   </Button>
+                  {item.type === "file" && onDownloadFile && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => onDownloadFile(item)}
+                      title={t("fileManager.downloadFile")}
+                    >
+                      <Download className="w-4 h-4 text-blue-400" />
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     variant="ghost"

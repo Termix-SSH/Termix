@@ -210,9 +210,9 @@ router.post(
     }
 
     try {
-      const result = await db.insert(sshData).values(sshDataObj).returning();
+      const result = await EncryptedDBOperations.insert(sshData, 'ssh_data', sshDataObj);
 
-      if (result.length === 0) {
+      if (!result) {
         sshLogger.warn("No host returned after creation", {
           operation: "host_create",
           userId,
@@ -223,7 +223,7 @@ router.post(
         return res.status(500).json({ error: "Failed to create host" });
       }
 
-      const createdHost = result[0];
+      const createdHost = result;
       const baseHost = {
         ...createdHost,
         tags:
@@ -401,15 +401,17 @@ router.put(
     }
 
     try {
-      await db
-        .update(sshData)
-        .set(sshDataObj)
-        .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+      await EncryptedDBOperations.update(
+        sshData,
+        'ssh_data',
+        and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
+        sshDataObj
+      );
 
-      const updatedHosts = await db
-        .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+      const updatedHosts = await EncryptedDBOperations.select(
+        db.select().from(sshData).where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId))),
+        'ssh_data'
+      );
 
       if (updatedHosts.length === 0) {
         sshLogger.warn("Updated host not found after update", {
@@ -482,10 +484,10 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Invalid userId" });
   }
   try {
-    const data = await db
-      .select()
-      .from(sshData)
-      .where(eq(sshData.userId, userId));
+    const data = await EncryptedDBOperations.select(
+      db.select().from(sshData).where(eq(sshData.userId, userId)),
+      'ssh_data'
+    );
 
     const result = await Promise.all(
       data.map(async (row: any) => {
@@ -1102,14 +1104,15 @@ router.put(
     }
 
     try {
-      const updatedHosts = await db
-        .update(sshData)
-        .set({
+      const updatedHosts = await EncryptedDBOperations.update(
+        sshData,
+        'ssh_data',
+        and(eq(sshData.userId, userId), eq(sshData.folder, oldName)),
+        {
           folder: newName,
           updatedAt: new Date().toISOString(),
-        })
-        .where(and(eq(sshData.userId, userId), eq(sshData.folder, oldName)))
-        .returning();
+        }
+      );
 
       const updatedCredentials = await db
         .update(sshCredentials)
@@ -1249,7 +1252,7 @@ router.post(
           updatedAt: new Date().toISOString(),
         };
 
-        await db.insert(sshData).values(sshDataObj);
+        await EncryptedDBOperations.insert(sshData, 'ssh_data', sshDataObj);
         results.success++;
       } catch (error) {
         results.failed++;

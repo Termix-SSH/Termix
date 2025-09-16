@@ -1050,6 +1050,25 @@ export async function uploadSSHFile(
   }
 }
 
+export async function downloadSSHFile(
+  sessionId: string,
+  filePath: string,
+  hostId?: number,
+  userId?: string,
+): Promise<any> {
+  try {
+    const response = await fileManagerApi.post("/ssh/downloadFile", {
+      sessionId,
+      path: filePath,
+      hostId,
+      userId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "download SSH file");
+  }
+}
+
 export async function createSSHFile(
   sessionId: string,
   path: string,
