@@ -231,6 +231,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     if (!sshSessionId) return;
 
     try {
+      // 确保SSH连接有效
+      await ensureSSHConnection();
+
       const targetPath = currentPath.endsWith('/')
         ? `${currentPath}${file.name}`
         : `${currentPath}/${file.name}`;
@@ -239,7 +242,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       toast.success(t("fileManager.fileUploadedSuccessfully", { name: file.name }));
       loadDirectory(currentPath);
     } catch (error: any) {
-      toast.error(t("fileManager.failedToUploadFile"));
+      if (error.message?.includes('connection') || error.message?.includes('established')) {
+        toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
+      } else {
+        toast.error(t("fileManager.failedToUploadFile"));
+      }
       console.error("Upload failed:", error);
     }
   }
@@ -248,6 +255,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     if (!sshSessionId) return;
 
     try {
+      // 确保SSH连接有效
+      await ensureSSHConnection();
+
       const response = await downloadSSHFile(sshSessionId, file.path);
 
       if (response?.content) {
@@ -272,7 +282,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         toast.success(t("fileManager.fileDownloadedSuccessfully", { name: file.name }));
       }
     } catch (error: any) {
-      toast.error(t("fileManager.failedToDownloadFile"));
+      if (error.message?.includes('connection') || error.message?.includes('established')) {
+        toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
+      } else {
+        toast.error(t("fileManager.failedToDownloadFile"));
+      }
       console.error("Download failed:", error);
     }
   }
@@ -281,6 +295,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     if (!sshSessionId || files.length === 0) return;
 
     try {
+      // 确保SSH连接有效
+      await ensureSSHConnection();
+
       for (const file of files) {
         await deleteSSHItem(sshSessionId, file.path);
       }
@@ -288,7 +305,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       loadDirectory(currentPath);
       clearSelection();
     } catch (error: any) {
-      toast.error(t("fileManager.failedToDeleteItems"));
+      if (error.message?.includes('connection') || error.message?.includes('established')) {
+        toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
+      } else {
+        toast.error(t("fileManager.failedToDeleteItems"));
+      }
       console.error("Delete failed:", error);
     }
   }
@@ -302,6 +323,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       : `${currentPath}/${defaultName}`;
 
     try {
+      // 确保SSH连接有效
+      await ensureSSHConnection();
+
       await createSSHFolder(sshSessionId, folderPath);
 
       // 重新加载目录
@@ -316,7 +340,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       setEditingFile(newFolder);
       setIsCreatingNewFile(true);
     } catch (error: any) {
-      toast.error(t("fileManager.failedToCreateFolder"));
+      if (error.message?.includes('connection') || error.message?.includes('established')) {
+        toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
+      } else {
+        toast.error(t("fileManager.failedToCreateFolder"));
+      }
       console.error("Create folder failed:", error);
     }
   }
@@ -330,6 +358,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       : `${currentPath}/${defaultName}`;
 
     try {
+      // 确保SSH连接有效
+      await ensureSSHConnection();
+
       await createSSHFile(sshSessionId, filePath, "");
 
       // 重新加载目录
@@ -345,7 +376,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       setEditingFile(newFile);
       setIsCreatingNewFile(true);
     } catch (error: any) {
-      toast.error(t("fileManager.failedToCreateFile"));
+      if (error.message?.includes('connection') || error.message?.includes('established')) {
+        toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
+      } else {
+        toast.error(t("fileManager.failedToCreateFile"));
+      }
       console.error("Create file failed:", error);
     }
   }
@@ -425,6 +460,38 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     setEditingFile(file);
   }
 
+  // 确保SSH连接有效
+  async function ensureSSHConnection() {
+    if (!sshSessionId || !currentHost) return;
+
+    try {
+      const status = await getSSHStatus(sshSessionId);
+      console.log('SSH connection status:', status);
+
+      if (!status.connected) {
+        console.log('SSH not connected, attempting to reconnect...');
+
+        await connectSSH(sshSessionId, {
+          hostId: currentHost.id,
+          ip: currentHost.ip,
+          port: currentHost.port,
+          username: currentHost.username,
+          password: currentHost.password,
+          sshKey: currentHost.key,
+          keyPassword: currentHost.keyPassword,
+          authType: currentHost.authType,
+          credentialId: currentHost.credentialId,
+          userId: currentHost.userId
+        });
+
+        console.log('SSH reconnection successful');
+      }
+    } catch (error) {
+      console.log('SSH connection check/reconnect failed:', error);
+      throw error;
+    }
+  }
+
   // 处理重命名确认
   async function handleRenameConfirm(file: FileItem, newName: string) {
     if (!sshSessionId) return;
@@ -433,11 +500,18 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     const newPath = file.path.replace(file.name, newName);
 
     try {
+      // 确保SSH连接有效
+      await ensureSSHConnection();
+
       await renameSSHItem(sshSessionId, oldPath, newPath);
       toast.success(t("fileManager.itemRenamedSuccessfully", { name: newName }));
       loadDirectory(currentPath);
     } catch (error: any) {
-      toast.error(t("fileManager.failedToRenameItem"));
+      if (error.message?.includes('connection') || error.message?.includes('established')) {
+        toast.error(`SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`);
+      } else {
+        toast.error(t("fileManager.failedToRenameItem"));
+      }
       console.error("Rename failed:", error);
     }
   }
