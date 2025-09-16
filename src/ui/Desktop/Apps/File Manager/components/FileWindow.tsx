@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DraggableWindow } from './DraggableWindow';
 import { FileViewer } from './FileViewer';
 import { useWindowManager } from './WindowManager';
-import { downloadSSHFile, readSSHFile, writeSSHFile } from '@/ui/main-axios';
+import { downloadSSHFile, readSSHFile, writeSSHFile, getSSHStatus, connectSSH } from '@/ui/main-axios';
 import { toast } from 'sonner';
 
 interface FileItem {
@@ -16,10 +16,25 @@ interface FileItem {
   group?: string;
 }
 
+interface SSHHost {
+  id: number;
+  name: string;
+  ip: string;
+  port: number;
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  authType: 'password' | 'key';
+  credentialId?: number;
+  userId?: number;
+}
+
 interface FileWindowProps {
   windowId: string;
   file: FileItem;
   sshSessionId: string;
+  sshHost: SSHHost;
   initialX?: number;
   initialY?: number;
 }
@@ -28,6 +43,7 @@ export function FileWindow({
   windowId,
   file,
   sshSessionId,
+  sshHost,
   initialX = 100,
   initialY = 100
 }: FileWindowProps) {
@@ -39,6 +55,39 @@ export function FileWindow({
 
   const currentWindow = windows.find(w => w.id === windowId);
 
+  // 确保SSH连接有效
+  const ensureSSHConnection = async () => {
+    try {
+      // 首先检查SSH连接状态
+      const status = await getSSHStatus(sshSessionId);
+      console.log('SSH connection status:', status);
+
+      if (!status.connected) {
+        console.log('SSH not connected, attempting to reconnect...');
+
+        // 重新建立连接
+        await connectSSH(sshSessionId, {
+          hostId: sshHost.id,
+          ip: sshHost.ip,
+          port: sshHost.port,
+          username: sshHost.username,
+          password: sshHost.password,
+          sshKey: sshHost.key,
+          keyPassword: sshHost.keyPassword,
+          authType: sshHost.authType,
+          credentialId: sshHost.credentialId,
+          userId: sshHost.userId
+        });
+
+        console.log('SSH reconnection successful');
+      }
+    } catch (error) {
+      console.log('SSH connection check/reconnect failed:', error);
+      // 即使连接失败也尝试继续，让具体的API调用报错
+      throw error;
+    }
+  };
+
   // 加载文件内容
   useEffect(() => {
     const loadFileContent = async () => {
@@ -46,6 +95,10 @@ export function FileWindow({
 
       try {
         setIsLoading(true);
+
+        // 确保SSH连接有效
+        await ensureSSHConnection();
+
         const response = await readSSHFile(sshSessionId, file.path);
         setContent(response.content || '');
 
@@ -57,28 +110,46 @@ export function FileWindow({
         ];
 
         const extension = file.name.split('.').pop()?.toLowerCase();
-        setIsEditable(editableExtensions.includes(extension || ''));
+        const hasNoExtension = !file.name.includes('.') || file.name.startsWith('.');
+        // 已知可编辑扩展名或无后缀文件默认可编辑（按文本处理）
+        setIsEditable(editableExtensions.includes(extension || '') || hasNoExtension);
       } catch (error: any) {
         console.error('Failed to load file:', error);
-        toast.error(`Failed to load file: ${error.message || 'Unknown error'}`);
+
+        // 如果是连接错误，提供更明确的错误信息
+        if (error.message?.includes('connection') || error.message?.includes('established')) {
+          toast.error(`SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`);
+        } else {
+          toast.error(`Failed to load file: ${error.message || 'Unknown error'}`);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     loadFileContent();
-  }, [file, sshSessionId]);
+  }, [file, sshSessionId, sshHost]);
 
   // 保存文件
   const handleSave = async (newContent: string) => {
     try {
       setIsLoading(true);
+
+      // 确保SSH连接有效
+      await ensureSSHConnection();
+
       await writeSSHFile(sshSessionId, file.path, newContent);
       setContent(newContent);
       toast.success('File saved successfully');
     } catch (error: any) {
       console.error('Failed to save file:', error);
-      toast.error(`Failed to save file: ${error.message || 'Unknown error'}`);
+
+      // 如果是连接错误，提供更明确的错误信息
+      if (error.message?.includes('connection') || error.message?.includes('established')) {
+        toast.error(`SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`);
+      } else {
+        toast.error(`Failed to save file: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -87,6 +158,9 @@ export function FileWindow({
   // 下载文件
   const handleDownload = async () => {
     try {
+      // 确保SSH连接有效
+      await ensureSSHConnection();
+
       const response = await downloadSSHFile(sshSessionId, file.path);
 
       if (response?.content) {
@@ -112,7 +186,13 @@ export function FileWindow({
       }
     } catch (error: any) {
       console.error('Failed to download file:', error);
-      toast.error(`Failed to download file: ${error.message || 'Unknown error'}`);
+
+      // 如果是连接错误，提供更明确的错误信息
+      if (error.message?.includes('connection') || error.message?.includes('established')) {
+        toast.error(`SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`);
+      } else {
+        toast.error(`Failed to download file: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -158,6 +238,7 @@ export function FileWindow({
         content={content}
         isLoading={isLoading}
         isEditable={isEditable}
+        onContentChange={(newContent) => setContent(newContent)}
         onSave={handleSave}
         onDownload={handleDownload}
       />

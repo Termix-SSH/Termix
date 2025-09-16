@@ -350,6 +350,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           windowId={windowId}
           file={file}
           sshSessionId={sshSessionId}
+          sshHost={currentHost}
           initialX={offsetX}
           initialY={offsetY}
         />
