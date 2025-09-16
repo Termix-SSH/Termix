@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DraggableWindow } from './DraggableWindow';
 import { FileViewer } from './FileViewer';
 import { useWindowManager } from './WindowManager';
@@ -52,6 +52,8 @@ export function FileWindow({
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
+  const [pendingContent, setPendingContent] = useState<string>('');
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentWindow = windows.find(w => w.id === windowId);
 
@@ -100,7 +102,15 @@ export function FileWindow({
         await ensureSSHConnection();
 
         const response = await readSSHFile(sshSessionId, file.path);
-        setContent(response.content || '');
+        const fileContent = response.content || '';
+        setContent(fileContent);
+        setPendingContent(fileContent); // 初始化待保存内容
+
+        // 如果文件大小未知，根据内容计算大小
+        if (!file.size) {
+          const contentSize = new Blob([fileContent]).size;
+          file.size = contentSize;
+        }
 
         // 根据文件类型决定是否可编辑
         const editableExtensions = [
@@ -140,6 +150,14 @@ export function FileWindow({
 
       await writeSSHFile(sshSessionId, file.path, newContent);
       setContent(newContent);
+      setPendingContent(''); // 清除待保存内容
+
+      // 清除自动保存定时器
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+
       toast.success('File saved successfully');
     } catch (error: any) {
       console.error('Failed to save file:', error);
@@ -154,6 +172,37 @@ export function FileWindow({
       setIsLoading(false);
     }
   };
+
+  // 处理内容变更 - 设置1分钟自动保存
+  const handleContentChange = (newContent: string) => {
+    setPendingContent(newContent);
+
+    // 清除之前的定时器
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // 设置新的1分钟自动保存定时器
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        console.log('Auto-saving file...');
+        await handleSave(newContent);
+        toast.success('File auto-saved');
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        toast.error('Auto-save failed');
+      }
+    }, 60000); // 1分钟 = 60000毫秒
+  };
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
 
   // 下载文件
   const handleDownload = async () => {
@@ -235,11 +284,12 @@ export function FileWindow({
     >
       <FileViewer
         file={file}
-        content={content}
+        content={pendingContent || content}
+        savedContent={content}
         isLoading={isLoading}
         isEditable={isEditable}
-        onContentChange={(newContent) => setContent(newContent)}
-        onSave={handleSave}
+        onContentChange={handleContentChange}
+        onSave={(newContent) => handleSave(newContent)}
         onDownload={handleDownload}
       />
     </DraggableWindow>

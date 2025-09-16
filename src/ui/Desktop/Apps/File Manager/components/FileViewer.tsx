@@ -9,9 +9,16 @@ import {
   Code,
   AlertCircle,
   Download,
-  Save
+  Save,
+  RotateCcw,
+  Search,
+  X,
+  ChevronUp,
+  ChevronDown,
+  Replace
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface FileItem {
   name: string;
@@ -27,6 +34,7 @@ interface FileItem {
 interface FileViewerProps {
   file: FileItem;
   content?: string;
+  savedContent?: string;
   isLoading?: boolean;
   isEditable?: boolean;
   onContentChange?: (content: string) => void;
@@ -70,6 +78,7 @@ function formatFileSize(bytes?: number): string {
 export function FileViewer({
   file,
   content = '',
+  savedContent = '',
   isLoading = false,
   isEditable = false,
   onContentChange,
@@ -77,9 +86,16 @@ export function FileViewer({
   onDownload
 }: FileViewerProps) {
   const [editedContent, setEditedContent] = useState(content);
+  const [originalContent, setOriginalContent] = useState(savedContent || content);
   const [hasChanges, setHasChanges] = useState(false);
   const [showLargeFileWarning, setShowLargeFileWarning] = useState(false);
   const [forceShowAsText, setForceShowAsText] = useState(false);
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [showReplacePanel, setShowReplacePanel] = useState(false);
+  const [searchMatches, setSearchMatches] = useState<{ start: number; end: number }[]>([]);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
 
   const fileTypeInfo = getFileType(file.name);
 
@@ -100,7 +116,11 @@ export function FileViewer({
   // 同步外部内容更改
   useEffect(() => {
     setEditedContent(content);
-    setHasChanges(false);
+    // 只有在savedContent更新时才更新originalContent
+    if (savedContent) {
+      setOriginalContent(savedContent);
+    }
+    setHasChanges(content !== (savedContent || content));
 
     // 如果是未知文件类型且文件较大，显示警告
     if (fileTypeInfo.type === 'unknown' && isLargeFile && !forceShowAsText) {
@@ -108,19 +128,137 @@ export function FileViewer({
     } else {
       setShowLargeFileWarning(false);
     }
-  }, [content, fileTypeInfo.type, isLargeFile, forceShowAsText]);
+  }, [content, savedContent, fileTypeInfo.type, isLargeFile, forceShowAsText]);
 
   // 处理内容更改
   const handleContentChange = (newContent: string) => {
     setEditedContent(newContent);
-    setHasChanges(newContent !== content);
+    setHasChanges(newContent !== originalContent);
     onContentChange?.(newContent);
   };
 
   // 保存文件
   const handleSave = () => {
     onSave?.(editedContent);
+    // 注意：不在这里更新originalContent，因为它会通过savedContent prop更新
+  };
+
+  // 复原文件
+  const handleRevert = () => {
+    setEditedContent(originalContent);
     setHasChanges(false);
+    onContentChange?.(originalContent);
+  };
+
+  // 搜索匹配功能
+  const findMatches = (text: string) => {
+    if (!text) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      return;
+    }
+
+    const matches: { start: number; end: number }[] = [];
+    const regex = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    let match;
+
+    while ((match = regex.exec(editedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length
+      });
+      // 避免无限循环
+      if (match.index === regex.lastIndex) regex.lastIndex++;
+    }
+
+    setSearchMatches(matches);
+    setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
+  };
+
+  // 搜索导航
+  const goToNextMatch = () => {
+    if (searchMatches.length === 0) return;
+    setCurrentMatchIndex((prev) => (prev + 1) % searchMatches.length);
+  };
+
+  const goToPrevMatch = () => {
+    if (searchMatches.length === 0) return;
+    setCurrentMatchIndex((prev) => (prev - 1 + searchMatches.length) % searchMatches.length);
+  };
+
+  // 替换功能
+  const handleFindReplace = (findText: string, replaceWithText: string, replaceAll: boolean = false) => {
+    if (!findText) return;
+
+    let newContent = editedContent;
+    if (replaceAll) {
+      newContent = newContent.replace(new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replaceWithText);
+    } else if (currentMatchIndex >= 0 && searchMatches[currentMatchIndex]) {
+      // 替换当前匹配项
+      const match = searchMatches[currentMatchIndex];
+      newContent = editedContent.substring(0, match.start) +
+                   replaceWithText +
+                   editedContent.substring(match.end);
+    }
+
+    setEditedContent(newContent);
+    setHasChanges(newContent !== originalContent);
+    onContentChange?.(newContent);
+
+    // 重新搜索以更新匹配项
+    setTimeout(() => findMatches(findText), 0);
+  };
+
+  const handleFind = () => {
+    setShowSearchPanel(true);
+    setShowReplacePanel(false);
+  };
+
+  const handleReplace = () => {
+    setShowSearchPanel(true);
+    setShowReplacePanel(true);
+  };
+
+  // 渲染带高亮的文本
+  const renderHighlightedText = (text: string) => {
+    if (!searchText || searchMatches.length === 0) {
+      return text;
+    }
+
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    searchMatches.forEach((match, index) => {
+      // 添加匹配前的文本
+      if (match.start > lastIndex) {
+        parts.push(text.substring(lastIndex, match.start));
+      }
+
+      // 添加高亮的匹配文本
+      const isCurrentMatch = index === currentMatchIndex;
+      parts.push(
+        <span
+          key={`match-${index}`}
+          className={cn(
+            "font-semibold",
+            isCurrentMatch
+              ? "text-orange-500"
+              : "text-blue-600"
+          )}
+        >
+          {text.substring(match.start, match.end)}
+        </span>
+      );
+
+      lastIndex = match.end;
+    });
+
+    // 添加最后的文本
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts;
   };
 
   // 处理用户确认打开大文件
@@ -167,16 +305,49 @@ export function FileViewer({
           </div>
 
           <div className="flex items-center gap-2">
+            {isEditable && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleFind}
+                  className="flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  Find
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReplace}
+                  className="flex items-center gap-2"
+                >
+                  <Replace className="w-4 h-4" />
+                  Replace
+                </Button>
+              </>
+            )}
             {hasChanges && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleSave}
-                className="flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Save
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRevert}
+                  className="flex items-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Revert
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleSave}
+                  className="flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Save
+                </Button>
+              </>
             )}
             {onDownload && (
               <Button
@@ -193,8 +364,87 @@ export function FileViewer({
         </div>
       </div>
 
+      {/* 搜索和替换面板 */}
+      {showSearchPanel && (
+        <div className="flex-shrink-0 bg-muted/30 border-b border-border p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Input
+              placeholder="Find..."
+              value={searchText}
+              onChange={(e) => {
+                setSearchText(e.target.value);
+                findMatches(e.target.value);
+              }}
+              className="w-48 h-8"
+            />
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goToPrevMatch}
+                disabled={searchMatches.length === 0}
+              >
+                <ChevronUp className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goToNextMatch}
+                disabled={searchMatches.length === 0}
+              >
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+              <span className="text-xs text-muted-foreground min-w-[3rem]">
+                {searchMatches.length > 0
+                  ? `${currentMatchIndex + 1}/${searchMatches.length}`
+                  : searchText ? '0/0' : ''
+                }
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowSearchPanel(false);
+                setSearchText('');
+                setSearchMatches([]);
+                setCurrentMatchIndex(-1);
+              }}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          {showReplacePanel && (
+            <div className="flex items-center gap-2 mb-2">
+              <Input
+                placeholder="Replace with..."
+                value={replaceText}
+                onChange={(e) => setReplaceText(e.target.value)}
+                className="w-48 h-8"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleFindReplace(searchText, replaceText, false)}
+                disabled={!searchText}
+              >
+                Replace
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleFindReplace(searchText, replaceText, true)}
+                disabled={!searchText}
+              >
+                Replace All
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 文件内容 */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden">
         {/* 大文件警告对话框 */}
         {showLargeFileWarning && (
           <div className="h-full flex items-center justify-center bg-background">
@@ -270,25 +520,41 @@ export function FileViewer({
 
         {/* 文本和代码文件预览 */}
         {shouldShowAsText && !showLargeFileWarning && (
-          <div className="h-full">
+          <div className="h-full flex flex-col">
             {isEditable ? (
-              <textarea
-                value={editedContent}
-                onChange={(e) => handleContentChange(e.target.value)}
-                className={cn(
-                  "w-full h-full p-4 border-none resize-none outline-none",
-                  "font-mono text-sm bg-background text-foreground",
-                  fileTypeInfo.type === 'code' && "bg-muted text-foreground"
+              <div className="relative h-full">
+                {/* 高亮背景层 */}
+                {searchText && (
+                  <div
+                    className={cn(
+                      "absolute inset-0 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto pointer-events-none",
+                      "text-transparent z-0",
+                      fileTypeInfo.type === 'code' && "bg-muted"
+                    )}
+                  >
+                    {renderHighlightedText(editedContent)}
+                  </div>
                 )}
-                placeholder="Start typing..."
-                spellCheck={false}
-              />
+                {/* 编辑器文本区域 */}
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  className={cn(
+                    "relative w-full h-full p-4 border-none resize-none outline-none z-10",
+                    "font-mono text-sm overflow-auto",
+                    searchText ? "bg-transparent text-foreground" : "bg-background text-foreground",
+                    fileTypeInfo.type === 'code' && !searchText && "bg-muted text-foreground"
+                  )}
+                  placeholder="Start typing..."
+                  spellCheck={false}
+                />
+              </div>
             ) : (
               <div className={cn(
-                "h-full p-4 font-mono text-sm whitespace-pre-wrap",
+                "h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto",
                 fileTypeInfo.type === 'code' ? "bg-muted text-foreground" : "bg-background text-foreground"
               )}>
-                {content || 'File is empty'}
+                {content ? renderHighlightedText(content) : 'File is empty'}
               </div>
             )}
           </div>
