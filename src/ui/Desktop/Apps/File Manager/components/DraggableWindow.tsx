@@ -150,7 +150,7 @@ export function DraggableWindow({
     <div
       ref={windowRef}
       className={cn(
-        "absolute bg-white border border-gray-300 rounded-lg shadow-2xl",
+        "absolute bg-card border border-border rounded-lg shadow-2xl",
         "select-none overflow-hidden",
         isMaximized ? "inset-0" : ""
       )}
@@ -168,8 +168,8 @@ export function DraggableWindow({
         ref={titleBarRef}
         className={cn(
           "flex items-center justify-between px-3 py-2",
-          "bg-gradient-to-r from-blue-500 to-blue-600 text-white",
-          "border-b border-gray-300 cursor-grab active:cursor-grabbing"
+          "bg-muted/50 text-foreground border-b border-border",
+          "cursor-grab active:cursor-grabbing"
         )}
         onMouseDown={handleMouseDown}
         onDoubleClick={handleTitleDoubleClick}
@@ -181,7 +181,7 @@ export function DraggableWindow({
         <div className="flex items-center gap-1">
           {onMinimize && (
             <button
-              className="w-8 h-6 flex items-center justify-center rounded hover:bg-white/20 transition-colors"
+              className="w-8 h-6 flex items-center justify-center rounded hover:bg-accent transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 onMinimize();
@@ -194,7 +194,7 @@ export function DraggableWindow({
 
           {onMaximize && (
             <button
-              className="w-8 h-6 flex items-center justify-center rounded hover:bg-white/20 transition-colors"
+              className="w-8 h-6 flex items-center justify-center rounded hover:bg-accent transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 onMaximize();
@@ -210,7 +210,7 @@ export function DraggableWindow({
           )}
 
           <button
-            className="w-8 h-6 flex items-center justify-center rounded hover:bg-red-500 transition-colors"
+            className="w-8 h-6 flex items-center justify-center rounded hover:bg-destructive hover:text-destructive-foreground transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               onClose();

@@ -146,20 +146,20 @@ export function FileViewer({
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-background">
       {/* 文件信息头部 */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4">
+      <div className="flex-shrink-0 bg-card border-b border-border p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={cn("p-2 rounded-lg bg-gray-100", fileTypeInfo.color)}>
+            <div className={cn("p-2 rounded-lg bg-muted", fileTypeInfo.color)}>
               {fileTypeInfo.icon}
             </div>
             <div>
-              <h3 className="font-medium text-gray-900">{file.name}</h3>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <h3 className="font-medium text-foreground">{file.name}</h3>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{formatFileSize(file.size)}</span>
                 {file.modified && <span>Modified: {file.modified}</span>}
-                <span className={cn("px-2 py-1 rounded-full text-xs", fileTypeInfo.color, "bg-gray-100")}>
+                <span className={cn("px-2 py-1 rounded-full text-xs", fileTypeInfo.color, "bg-muted")}>
                   {fileTypeInfo.type.toUpperCase()}
                 </span>
               </div>
@@ -197,13 +197,13 @@ export function FileViewer({
       <div className="flex-1 overflow-auto">
         {/* 大文件警告对话框 */}
         {showLargeFileWarning && (
-          <div className="h-full flex items-center justify-center bg-gray-50">
-            <div className="bg-white border border-orange-200 rounded-lg p-6 max-w-md mx-4 shadow-lg">
+          <div className="h-full flex items-center justify-center bg-background">
+            <div className="bg-card border border-orange-200 rounded-lg p-6 max-w-md mx-4 shadow-lg">
               <div className="flex items-start gap-3 mb-4">
                 <AlertCircle className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Large File Warning</h3>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <h3 className="font-medium text-foreground mb-2">Large File Warning</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
                     This file is {formatFileSize(file.size)} in size, which may cause performance issues when opened as text.
                   </p>
                   {isTooLarge ? (
@@ -213,7 +213,7 @@ export function FileViewer({
                       </p>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Do you want to continue opening this file as text? This may slow down your browser.
                     </p>
                   )}
@@ -277,8 +277,8 @@ export function FileViewer({
                 onChange={(e) => handleContentChange(e.target.value)}
                 className={cn(
                   "w-full h-full p-4 border-none resize-none outline-none",
-                  "font-mono text-sm bg-white",
-                  fileTypeInfo.type === 'code' && "bg-gray-900 text-gray-100"
+                  "font-mono text-sm bg-background text-foreground",
+                  fileTypeInfo.type === 'code' && "bg-muted text-foreground"
                 )}
                 placeholder="Start typing..."
                 spellCheck={false}
@@ -286,7 +286,7 @@ export function FileViewer({
             ) : (
               <div className={cn(
                 "h-full p-4 font-mono text-sm whitespace-pre-wrap",
-                fileTypeInfo.type === 'code' ? "bg-gray-900 text-gray-100" : "bg-white text-gray-900"
+                fileTypeInfo.type === 'code' ? "bg-muted text-foreground" : "bg-background text-foreground"
               )}>
                 {content || 'File is empty'}
               </div>
@@ -328,8 +328,8 @@ export function FileViewer({
         {/* 未知文件类型 - 只在不能显示为文本且没有警告时显示 */}
         {fileTypeInfo.type === 'unknown' && !shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <AlertCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <div className="text-center text-muted-foreground">
+              <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
               <h3 className="text-lg font-medium mb-2">Cannot preview this file type</h3>
               <p className="text-sm mb-4">
                 This file type is not supported for preview. You can download it to view in an external application.
@@ -350,7 +350,7 @@ export function FileViewer({
       </div>
 
       {/* 底部状态栏 */}
-      <div className="flex-shrink-0 bg-gray-100 border-t border-gray-200 px-4 py-2 text-xs text-gray-600">
+      <div className="flex-shrink-0 bg-muted/50 border-t border-border px-4 py-2 text-xs text-muted-foreground">
         <div className="flex justify-between items-center">
           <span>{file.path}</span>
           {hasChanges && (
