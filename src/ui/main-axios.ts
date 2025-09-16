@@ -1178,6 +1178,29 @@ export async function renameSSHItem(
     return response.data;
   } catch (error) {
     handleApiError(error, "rename SSH item");
+    throw error;
+  }
+}
+
+export async function moveSSHItem(
+  sessionId: string,
+  oldPath: string,
+  newPath: string,
+  hostId?: number,
+  userId?: string,
+): Promise<any> {
+  try {
+    const response = await fileManagerApi.put("/ssh/moveItem", {
+      sessionId,
+      oldPath,
+      newPath,
+      hostId,
+      userId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "move SSH item");
+    throw error;
   }
 }
 

@@ -436,6 +436,7 @@ export function FileViewer({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* 编辑工具栏 - 直接显示，无需切换 */}
             {isEditable && (
               <>
                 <Button
@@ -705,7 +706,7 @@ export function FileViewer({
                         {renderHighlightedText(editedContent)}
                       </div>
                     ) : (
-                      // 没有搜索时显示可编辑的textarea
+                      // 直接显示可编辑的textarea
                       <textarea
                         value={editedContent}
                         onChange={(e) => handleContentChange(e.target.value)}
@@ -716,8 +717,9 @@ export function FileViewer({
                     )}
                   </div>
                 ) : (
+                  // 只有非可编辑文件（媒体文件）才显示为只读
                   <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
-                    {content ? renderHighlightedText(content) : 'File is empty'}
+                    {editedContent || content || 'File is empty'}
                   </div>
                 )}
               </div>

@@ -1418,6 +1418,117 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
   });
 });
 
+// New API for moving files/folders across directories (for cut operation)
+app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
+  const { sessionId, oldPath, newPath, hostId, userId } = req.body;
+  const sshConn = sshSessions[sessionId];
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID is required" });
+  }
+
+  if (!sshConn?.isConnected) {
+    return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!oldPath || !newPath) {
+    return res
+      .status(400)
+      .json({ error: "Old path and new path are required" });
+  }
+
+  sshConn.lastActive = Date.now();
+
+  const escapedOldPath = oldPath.replace(/'/g, "'\"'\"'");
+  const escapedNewPath = newPath.replace(/'/g, "'\"'\"'");
+
+  const moveCommand = `mv '${escapedOldPath}' '${escapedNewPath}' && echo "SUCCESS" && exit 0`;
+
+  sshConn.client.exec(moveCommand, (err, stream) => {
+    if (err) {
+      fileLogger.error("SSH moveItem error:", err);
+      if (!res.headersSent) {
+        return res.status(500).json({ error: err.message });
+      }
+      return;
+    }
+
+    let outputData = "";
+    let errorData = "";
+
+    stream.on("data", (chunk: Buffer) => {
+      outputData += chunk.toString();
+    });
+
+    stream.stderr.on("data", (chunk: Buffer) => {
+      errorData += chunk.toString();
+
+      if (chunk.toString().includes("Permission denied")) {
+        fileLogger.error(`Permission denied moving: ${oldPath}`);
+        if (!res.headersSent) {
+          return res.status(403).json({
+            error: `Permission denied: Cannot move ${oldPath}. Check file permissions.`,
+            toast: {
+              type: "error",
+              message: `Permission denied: Cannot move ${oldPath}. Check file permissions.`,
+            },
+          });
+        }
+        return;
+      }
+    });
+
+    stream.on("close", (code) => {
+      if (outputData.includes("SUCCESS")) {
+        if (!res.headersSent) {
+          res.json({
+            message: "Item moved successfully",
+            oldPath,
+            newPath,
+            toast: {
+              type: "success",
+              message: `Item moved: ${oldPath} -> ${newPath}`,
+            },
+          });
+        }
+        return;
+      }
+
+      if (code !== 0) {
+        fileLogger.error(
+          `SSH moveItem command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+        );
+        if (!res.headersSent) {
+          return res.status(500).json({
+            error: `Command failed: ${errorData}`,
+            toast: { type: "error", message: `Move failed: ${errorData}` },
+          });
+        }
+        return;
+      }
+
+      if (!res.headersSent) {
+        res.json({
+          message: "Item moved successfully",
+          oldPath,
+          newPath,
+          toast: {
+            type: "success",
+            message: `Item moved: ${oldPath} -> ${newPath}`,
+          },
+        });
+      }
+    });
+
+    stream.on("error", (streamErr) => {
+      fileLogger.error("SSH moveItem stream error:", streamErr);
+      if (!res.headersSent) {
+        res.status(500).json({ error: `Stream error: ${streamErr.message}` });
+      }
+    });
+  });
+});
+
 app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
   const {
     sessionId,
@@ -1541,7 +1652,34 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
     // Extract source name
     const sourceName = sourcePath.split('/').pop() || 'copied_item';
 
-    // Skip file existence check to avoid SSH hanging - just use timestamp for uniqueness
+    // First check if source file exists
+    const escapedSourceForCheck = sourcePath.replace(/'/g, "'\"'\"'");
+    const checkExistsCommand = `test -e '${escapedSourceForCheck}'`;
+    const checkExists = await new Promise<boolean>((resolve) => {
+      sshConn.client.exec(checkExistsCommand, (err, stream) => {
+        if (err) {
+          fileLogger.error("File existence check error:", err);
+          resolve(false);
+          return;
+        }
+
+        stream.on("close", (code) => {
+          fileLogger.info("File existence check completed", { sourcePath, exists: code === 0 });
+          resolve(code === 0);
+        });
+
+        stream.on("error", () => resolve(false));
+      });
+    });
+
+    if (!checkExists) {
+      return res.status(404).json({
+        error: `Source file not found: ${sourcePath}`,
+        toast: { type: "error", message: `Source file not found: ${sourceName}` }
+      });
+    }
+
+    // Use timestamp for uniqueness
     const timestamp = Date.now().toString().slice(-8);
     const nameWithoutExt = sourceName.includes('.')
       ? sourceName.substring(0, sourceName.lastIndexOf('.'))
@@ -1621,11 +1759,28 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
         fileLogger.info("Copy command completed", { code, errorData, hasError: errorData.length > 0 });
 
         if (code !== 0) {
-          fileLogger.error(`SSH copyItem command failed with code ${code}: ${errorData}`);
+          const fullErrorInfo = errorData || stdoutData || 'No error message available';
+          fileLogger.error(`SSH copyItem command failed with code ${code}`, {
+            operation: "file_copy_failed",
+            sessionId,
+            sourcePath,
+            targetPath,
+            command: copyCommand,
+            exitCode: code,
+            errorData,
+            stdoutData,
+            fullErrorInfo
+          });
           if (!res.headersSent) {
             return res.status(500).json({
-              error: `Copy failed: ${errorData}`,
-              toast: { type: "error", message: `Copy failed: ${errorData}` }
+              error: `Copy failed: ${fullErrorInfo}`,
+              toast: { type: "error", message: `Copy failed: ${fullErrorInfo}` },
+              debug: {
+                sourcePath,
+                targetPath,
+                exitCode: code,
+                command: copyCommand
+              }
             });
           }
           return;

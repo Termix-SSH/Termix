@@ -37,6 +37,7 @@ interface FileWindowProps {
   sshHost: SSHHost;
   initialX?: number;
   initialY?: number;
+  // readOnly参数已移除，由FileViewer内部根据文件类型决定
 }
 
 export function FileWindow({
@@ -112,17 +113,23 @@ export function FileWindow({
           file.size = contentSize;
         }
 
-        // 根据文件类型决定是否可编辑
-        const editableExtensions = [
-          'txt', 'md', 'js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'cs',
-          'php', 'rb', 'go', 'rs', 'html', 'css', 'scss', 'less', 'json', 'xml',
-          'yaml', 'yml', 'toml', 'ini', 'conf', 'sh', 'bat', 'ps1'
+        // 根据文件类型决定是否可编辑：除了媒体文件，其他都可编辑
+        const mediaExtensions = [
+          // 图片文件
+          'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico',
+          // 音频文件
+          'mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'wma',
+          // 视频文件
+          'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v',
+          // 压缩文件
+          'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz',
+          // 二进制文件
+          'exe', 'dll', 'so', 'dylib', 'bin', 'iso'
         ];
 
         const extension = file.name.split('.').pop()?.toLowerCase();
-        const hasNoExtension = !file.name.includes('.') || file.name.startsWith('.');
-        // 已知可编辑扩展名或无后缀文件默认可编辑（按文本处理）
-        setIsEditable(editableExtensions.includes(extension || '') || hasNoExtension);
+        // 只有媒体文件和二进制文件不可编辑，其他所有文件都可编辑
+        setIsEditable(!mediaExtensions.includes(extension || ''));
       } catch (error: any) {
         console.error('Failed to load file:', error);
 
@@ -293,7 +300,7 @@ export function FileWindow({
         content={pendingContent || content}
         savedContent={content}
         isLoading={isLoading}
-        isEditable={isEditable}
+        isEditable={isEditable} // 移除强制只读模式，由FileViewer内部控制
         onContentChange={handleContentChange}
         onSave={(newContent) => handleSave(newContent)}
         onDownload={handleDownload}

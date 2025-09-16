@@ -30,6 +30,7 @@ import {
   deleteSSHItem,
   copySSHItem,
   renameSSHItem,
+  moveSSHItem,
   connectSSH,
   getSSHStatus,
   identifySSHSymlink
@@ -76,9 +77,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
   // 撤销历史
   interface UndoAction {
-    type: 'delete' | 'paste' | 'rename' | 'create';
+    type: 'copy' | 'cut' | 'delete';
     description: string;
-    data: any;
+    data: {
+      operation: 'copy' | 'cut';
+      copiedFiles?: { originalPath: string; targetPath: string; targetName: string }[];
+      deletedFiles?: { path: string; name: string }[];
+      targetDirectory?: string;
+    };
     timestamp: number;
   }
 
@@ -305,6 +311,25 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           currentHost?.userId?.toString()
         );
       }
+
+      // 记录删除历史（虽然无法真正撤销）
+      const deletedFiles = files.map(file => ({
+        path: file.path,
+        name: file.name
+      }));
+
+      const undoAction: UndoAction = {
+        type: 'delete',
+        description: `删除了 ${files.length} 个项目`,
+        data: {
+          operation: 'cut', // Placeholder
+          deletedFiles,
+          targetDirectory: currentPath
+        },
+        timestamp: Date.now()
+      };
+      setUndoHistory(prev => [...prev.slice(-9), undoAction]);
+
       toast.success(t("fileManager.itemsDeletedSuccessfully", { count: files.length }));
       loadDirectory(currentPath);
       clearSelection();
@@ -440,7 +465,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   };
 
-  async function handleFileOpen(file: FileItem) {
+  async function handleFileOpen(file: FileItem, editMode: boolean = false) {
     if (file.type === 'directory') {
       setCurrentPath(file.path);
     } else if (file.type === 'link') {
@@ -458,6 +483,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       const offsetX = 120 + (windowCount * 30);
       const offsetY = 120 + (windowCount * 30);
 
+      const windowTitle = file.name; // 移除模式标识，由FileViewer内部控制
+
       // 创建窗口组件工厂函数
       const createWindowComponent = (windowId: string) => (
         <FileWindow
@@ -471,7 +498,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       );
 
       openWindow({
-        title: file.name,
+        title: windowTitle,
         x: offsetX,
         y: offsetY,
         width: 800,
@@ -481,6 +508,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         component: createWindowComponent
       });
     }
+  }
+
+  // 专门的文件编辑函数
+  function handleFileEdit(file: FileItem) {
+    handleFileOpen(file, true);
+  }
+
+  // 专门的文件查看函数（只读）
+  function handleFileView(file: FileItem) {
+    handleFileOpen(file, false);
   }
 
   function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
@@ -540,16 +577,18 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
             copiedItems.push(result.uniqueName || file.name);
             successCount++;
           } else {
-            // 剪切操作：移动文件
-            const newPath = currentPath.endsWith('/')
+            // 剪切操作：移动文件到目标目录
+            const targetPath = currentPath.endsWith('/')
               ? `${currentPath}${file.name}`
               : `${currentPath}/${file.name}`;
 
-            if (file.path !== newPath) {
-              await renameSSHItem(
+            // 只有当目标路径与原路径不同时才移动
+            if (file.path !== targetPath) {
+              // 使用专门的 moveSSHItem API 进行跨目录移动
+              await moveSSHItem(
                 sshSessionId,
                 file.path,
-                newPath,
+                targetPath,
                 currentHost?.id,
                 currentHost?.userId?.toString()
               );
@@ -564,13 +603,49 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
       // 记录撤销历史
       if (successCount > 0) {
-        const undoAction: UndoAction = {
-          type: 'paste',
-          description: `移动了 ${successCount} 个项目`,
-          data: { files: files.slice(0, successCount), operation, targetPath: currentPath },
-          timestamp: Date.now()
-        };
-        setUndoHistory(prev => [...prev.slice(-9), undoAction]); // 保持最多10个撤销记录
+        if (operation === 'copy') {
+          const copiedFiles = files.slice(0, successCount).map((file, index) => ({
+            originalPath: file.path,
+            targetPath: `${currentPath}/${copiedItems[index] || file.name}`,
+            targetName: copiedItems[index] || file.name
+          }));
+
+          const undoAction: UndoAction = {
+            type: 'copy',
+            description: `复制了 ${successCount} 个项目`,
+            data: {
+              operation: 'copy',
+              copiedFiles,
+              targetDirectory: currentPath
+            },
+            timestamp: Date.now()
+          };
+          setUndoHistory(prev => [...prev.slice(-9), undoAction]); // 保持最多10个撤销记录
+        } else if (operation === 'cut') {
+          // 剪切操作：记录移动信息，撤销时可以移回原位置
+          const movedFiles = files.slice(0, successCount).map(file => {
+            const targetPath = currentPath.endsWith('/')
+              ? `${currentPath}${file.name}`
+              : `${currentPath}/${file.name}`;
+            return {
+              originalPath: file.path,
+              targetPath: targetPath,
+              targetName: file.name
+            };
+          });
+
+          const undoAction: UndoAction = {
+            type: 'cut',
+            description: `移动了 ${successCount} 个项目`,
+            data: {
+              operation: 'cut',
+              copiedFiles: movedFiles, // 复用copiedFiles字段存储移动信息
+              targetDirectory: currentPath
+            },
+            timestamp: Date.now()
+          };
+          setUndoHistory(prev => [...prev.slice(-9), undoAction]);
+        }
       }
 
       // 显示成功提示
@@ -606,7 +681,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
-  function handleUndo() {
+  async function handleUndo() {
     if (undoHistory.length === 0) {
       toast.info("没有可撤销的操作");
       return;
@@ -614,27 +689,100 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
     const lastAction = undoHistory[undoHistory.length - 1];
 
-    // 移除最后一个撤销记录
-    setUndoHistory(prev => prev.slice(0, -1));
+    try {
+      await ensureSSHConnection();
 
-    toast.success(`已撤销：${lastAction.description}`);
+      // 根据不同操作类型执行撤销逻辑
+      switch (lastAction.type) {
+        case 'copy':
+          // 复制操作的撤销：删除复制的目标文件
+          if (lastAction.data.copiedFiles) {
+            let successCount = 0;
+            for (const copiedFile of lastAction.data.copiedFiles) {
+              try {
+                const isDirectory = files.find(f => f.path === copiedFile.targetPath)?.type === 'directory';
+                await deleteSSHItem(
+                  sshSessionId!,
+                  copiedFile.targetPath,
+                  isDirectory,
+                  currentHost?.id,
+                  currentHost?.userId?.toString()
+                );
+                successCount++;
+              } catch (error: any) {
+                console.error(`Failed to delete copied file ${copiedFile.targetName}:`, error);
+                toast.error(`删除复制文件 ${copiedFile.targetName} 失败: ${error.message}`);
+              }
+            }
 
-    // 根据不同操作类型执行撤销逻辑
-    switch (lastAction.type) {
-      case 'paste':
-        // 粘贴操作的撤销：删除粘贴的文件或移回原位置
-        toast.info("撤销粘贴操作需要手动处理");
-        break;
-      case 'delete':
-        // 删除操作的撤销：恢复删除的文件
-        toast.info("删除操作暂时无法撤销");
-        break;
-      default:
-        toast.info("该操作暂时无法撤销");
+            if (successCount > 0) {
+              // 移除最后一个撤销记录
+              setUndoHistory(prev => prev.slice(0, -1));
+              toast.success(`已撤销复制操作：删除了 ${successCount} 个复制的文件`);
+            } else {
+              toast.error("撤销失败：无法删除任何复制的文件");
+              return;
+            }
+          } else {
+            toast.error("撤销失败：找不到复制的文件信息");
+            return;
+          }
+          break;
+
+        case 'cut':
+          // 剪切操作的撤销：将文件移回原位置
+          if (lastAction.data.copiedFiles) {
+            let successCount = 0;
+            for (const movedFile of lastAction.data.copiedFiles) {
+              try {
+                // 将文件从当前位置移回原位置
+                await moveSSHItem(
+                  sshSessionId!,
+                  movedFile.targetPath, // 当前位置（目标路径）
+                  movedFile.originalPath, // 移回原位置
+                  currentHost?.id,
+                  currentHost?.userId?.toString()
+                );
+                successCount++;
+              } catch (error: any) {
+                console.error(`Failed to move back file ${movedFile.targetName}:`, error);
+                toast.error(`移回文件 ${movedFile.targetName} 失败: ${error.message}`);
+              }
+            }
+
+            if (successCount > 0) {
+              // 移除最后一个撤销记录
+              setUndoHistory(prev => prev.slice(0, -1));
+              toast.success(`已撤销移动操作：移回了 ${successCount} 个文件到原位置`);
+            } else {
+              toast.error("撤销失败：无法移回任何文件");
+              return;
+            }
+          } else {
+            toast.error("撤销失败：找不到移动的文件信息");
+            return;
+          }
+          break;
+
+        case 'delete':
+          // 删除操作无法真正撤销（文件已从服务器删除）
+          toast.info("删除操作无法撤销：文件已从服务器永久删除");
+          // 仍然移除历史记录，因为用户已经知道了这个限制
+          setUndoHistory(prev => prev.slice(0, -1));
+          return;
+
+        default:
+          toast.error("不支持撤销此类操作");
+          return;
+      }
+
+      // 刷新文件列表
+      loadDirectory(currentPath);
+
+    } catch (error: any) {
+      toast.error(`撤销操作失败: ${error.message || 'Unknown error'}`);
+      console.error("Undo failed:", error);
     }
-
-    // 刷新文件列表
-    loadDirectory(currentPath);
   }
 
   function handleRenameFile(file: FileItem) {
