@@ -876,8 +876,10 @@ export function AdminSettings({
                           <div className="mt-1">
                             {encryptionStatus.migration?.migrationCompleted ? (
                               <span className="text-green-600">✓ {t("admin.migrationCompleted")}</span>
-                            ) : (
+                            ) : encryptionStatus.migration?.migrationRequired ? (
                               <span className="text-yellow-600">⚠ {t("admin.migrationRequired")}</span>
+                            ) : (
+                              <span className="text-gray-600">— No migration needed</span>
                             )}
                           </div>
                         </div>
@@ -913,7 +915,7 @@ export function AdminSettings({
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          {!encryptionStatus.migration?.migrationCompleted && (
+                          {encryptionStatus.migration?.migrationRequired && (
                             <div className="space-y-3">
                               <h4 className="font-medium">{t("admin.migrateExistingData")}</h4>
                               <p className="text-sm text-muted-foreground">

@@ -5,7 +5,7 @@ import { EncryptionKeyManager } from './encryption-key-manager.js';
 import { databaseLogger } from './logger.js';
 import { db } from '../database/db/index.js';
 import { settings } from '../database/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 interface MigrationConfig {
   masterPassword?: string;
@@ -281,22 +281,91 @@ class EncryptionMigration {
   static async checkMigrationStatus(): Promise<{
     isEncryptionEnabled: boolean;
     migrationCompleted: boolean;
+    migrationRequired: boolean;
     migrationDate?: string;
   }> {
     try {
       const encryptionEnabled = await db.select().from(settings).where(eq(settings.key, 'encryption_enabled'));
       const migrationCompleted = await db.select().from(settings).where(eq(settings.key, 'encryption_migration_completed'));
 
+      const isEncryptionEnabled = encryptionEnabled.length > 0 && encryptionEnabled[0].value === 'true';
+      const isMigrationCompleted = migrationCompleted.length > 0;
+
+      // Check if migration is actually required by looking for unencrypted sensitive data
+      const migrationRequired = await this.checkIfMigrationRequired();
+
       return {
-        isEncryptionEnabled: encryptionEnabled.length > 0 && encryptionEnabled[0].value === 'true',
-        migrationCompleted: migrationCompleted.length > 0,
-        migrationDate: migrationCompleted.length > 0 ? migrationCompleted[0].value : undefined
+        isEncryptionEnabled,
+        migrationCompleted: isMigrationCompleted,
+        migrationRequired,
+        migrationDate: isMigrationCompleted ? migrationCompleted[0].value : undefined
       };
     } catch (error) {
       databaseLogger.error('Failed to check migration status', error, {
         operation: 'status_check_failed'
       });
       throw error;
+    }
+  }
+
+  static async checkIfMigrationRequired(): Promise<boolean> {
+    try {
+      // Import table schemas
+      const { sshData, sshCredentials } = await import('../database/db/schema.js');
+
+      // Check if there's any unencrypted sensitive data in ssh_data
+      const sshDataCount = await db.select({ count: sql<number>`count(*)` }).from(sshData);
+      if (sshDataCount[0].count > 0) {
+        // Sample a few records to check if they contain unencrypted data
+        const sampleData = await db.select().from(sshData).limit(5);
+        for (const record of sampleData) {
+          if (record.password && !this.looksEncrypted(record.password)) {
+            return true; // Found unencrypted password
+          }
+          if (record.key && !this.looksEncrypted(record.key)) {
+            return true; // Found unencrypted key
+          }
+        }
+      }
+
+      // Check if there's any unencrypted sensitive data in ssh_credentials
+      const credentialsCount = await db.select({ count: sql<number>`count(*)` }).from(sshCredentials);
+      if (credentialsCount[0].count > 0) {
+        const sampleCredentials = await db.select().from(sshCredentials).limit(5);
+        for (const record of sampleCredentials) {
+          if (record.password && !this.looksEncrypted(record.password)) {
+            return true; // Found unencrypted password
+          }
+          if (record.privateKey && !this.looksEncrypted(record.privateKey)) {
+            return true; // Found unencrypted private key
+          }
+          if (record.keyPassword && !this.looksEncrypted(record.keyPassword)) {
+            return true; // Found unencrypted key password
+          }
+        }
+      }
+
+      return false; // No unencrypted sensitive data found
+    } catch (error) {
+      databaseLogger.warn('Failed to check if migration required, assuming required', {
+        operation: 'migration_check_failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return true; // If we can't check, assume migration is required for safety
+    }
+  }
+
+  private static looksEncrypted(data: string): boolean {
+    if (!data) return true; // Empty data doesn't need encryption
+
+    try {
+      // Check if it looks like our encrypted format: {"data":"...","iv":"...","tag":"..."}
+      const parsed = JSON.parse(data);
+      return !!(parsed.data && parsed.iv && parsed.tag);
+    } catch {
+      // If it's not JSON, check if it's a reasonable length for encrypted data
+      // Encrypted data is typically much longer than plaintext
+      return data.length > 100 && data.includes('='); // Base64-like characteristics
     }
   }
 }
