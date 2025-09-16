@@ -43,6 +43,10 @@ interface FileManagerGridProps {
   onUpload?: (files: FileList) => void;
   onContextMenu?: (event: React.MouseEvent, file?: FileItem) => void;
   viewMode?: 'grid' | 'list';
+  onRename?: (file: FileItem, newName: string) => void;
+  editingFile?: FileItem | null;
+  onStartEdit?: (file: FileItem) => void;
+  onCancelEdit?: () => void;
 }
 
 const getFileIcon = (fileName: string, isDirectory: boolean, viewMode: 'grid' | 'list' = 'grid') => {
@@ -129,12 +133,55 @@ export function FileManagerGrid({
   onRefresh,
   onUpload,
   onContextMenu,
-  viewMode = 'grid'
+  viewMode = 'grid',
+  onRename,
+  editingFile,
+  onStartEdit,
+  onCancelEdit
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
+  const [editingName, setEditingName] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  // 开始编辑时设置初始名称
+  useEffect(() => {
+    if (editingFile) {
+      setEditingName(editingFile.name);
+      // 延迟聚焦以确保DOM已更新
+      setTimeout(() => {
+        editInputRef.current?.focus();
+        editInputRef.current?.select();
+      }, 0);
+    }
+  }, [editingFile]);
+
+  // 处理编辑确认
+  const handleEditConfirm = () => {
+    if (editingFile && onRename && editingName.trim() && editingName !== editingFile.name) {
+      onRename(editingFile, editingName.trim());
+    }
+    onCancelEdit?.();
+  };
+
+  // 处理编辑取消
+  const handleEditCancel = () => {
+    setEditingName('');
+    onCancelEdit?.();
+  };
+
+  // 处理输入框按键
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleEditConfirm();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleEditCancel();
+    }
+  };
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -480,9 +527,32 @@ export function FileManagerGrid({
 
                     {/* 文件名 */}
                     <div className="w-full">
-                      <p className="text-xs text-white truncate" title={file.name}>
-                        {file.name}
-                      </p>
+                      {editingFile?.path === file.path ? (
+                        <input
+                          ref={editInputRef}
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={handleEditKeyDown}
+                          onBlur={handleEditConfirm}
+                          className="w-full text-xs bg-white text-black px-1 py-0.5 rounded border-2 border-blue-500 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <p
+                          className="text-xs text-white truncate cursor-pointer"
+                          title={file.name}
+                          onClick={(e) => {
+                            // 阻止文件选择事件
+                            if (onStartEdit) {
+                              e.stopPropagation();
+                              onStartEdit(file);
+                            }
+                          }}
+                        >
+                          {file.name}
+                        </p>
+                      )}
                       {file.size && file.type === 'file' && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatFileSize(file.size)}
@@ -522,9 +592,32 @@ export function FileManagerGrid({
 
                   {/* 文件信息 */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate" title={file.name}>
-                      {file.name}
-                    </p>
+                    {editingFile?.path === file.path ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={handleEditKeyDown}
+                        onBlur={handleEditConfirm}
+                        className="w-full text-sm bg-white text-black px-2 py-1 rounded border-2 border-blue-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <p
+                        className="text-sm text-white truncate cursor-pointer"
+                        title={file.name}
+                        onClick={(e) => {
+                          // 阻止文件选择事件
+                          if (onStartEdit) {
+                            e.stopPropagation();
+                            onStartEdit(file);
+                          }
+                        }}
+                      >
+                        {file.name}
+                      </p>
+                    )}
                     {file.modified && (
                       <p className="text-xs text-muted-foreground">
                         {file.modified}

@@ -82,6 +82,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     operation: 'copy' | 'cut';
   } | null>(null);
 
+  // 编辑状态
+  const [editingFile, setEditingFile] = useState<FileItem | null>(null);
+  const [isCreatingNewFile, setIsCreatingNewFile] = useState(false);
+
   // Hooks
   const {
     selectedFiles,
@@ -292,17 +296,25 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   async function handleCreateNewFolder() {
     if (!sshSessionId) return;
 
-    const folderName = prompt(t("fileManager.enterFolderName"));
-    if (!folderName) return;
+    const defaultName = "New Folder";
+    const folderPath = currentPath.endsWith('/')
+      ? `${currentPath}${defaultName}`
+      : `${currentPath}/${defaultName}`;
 
     try {
-      const folderPath = currentPath.endsWith('/')
-        ? `${currentPath}${folderName}`
-        : `${currentPath}/${folderName}`;
-
       await createSSHFolder(sshSessionId, folderPath);
-      toast.success(t("fileManager.folderCreatedSuccessfully", { name: folderName }));
-      loadDirectory(currentPath);
+
+      // 重新加载目录
+      await loadDirectory(currentPath);
+
+      // 找到新创建的文件夹并开始编辑
+      const newFolder: FileItem = {
+        name: defaultName,
+        type: 'directory',
+        path: folderPath
+      };
+      setEditingFile(newFolder);
+      setIsCreatingNewFile(true);
     } catch (error: any) {
       toast.error(t("fileManager.failedToCreateFolder"));
       console.error("Create folder failed:", error);
@@ -312,17 +324,26 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   async function handleCreateNewFile() {
     if (!sshSessionId) return;
 
-    const fileName = prompt(t("fileManager.enterFileName"));
-    if (!fileName) return;
+    const defaultName = "New File.txt";
+    const filePath = currentPath.endsWith('/')
+      ? `${currentPath}${defaultName}`
+      : `${currentPath}/${defaultName}`;
 
     try {
-      const filePath = currentPath.endsWith('/')
-        ? `${currentPath}${fileName}`
-        : `${currentPath}/${fileName}`;
-
       await createSSHFile(sshSessionId, filePath, "");
-      toast.success(t("fileManager.fileCreatedSuccessfully", { name: fileName }));
-      loadDirectory(currentPath);
+
+      // 重新加载目录
+      await loadDirectory(currentPath);
+
+      // 找到新创建的文件并开始编辑
+      const newFile: FileItem = {
+        name: defaultName,
+        type: 'file',
+        path: filePath,
+        size: 0
+      };
+      setEditingFile(newFile);
+      setIsCreatingNewFile(true);
     } catch (error: any) {
       toast.error(t("fileManager.failedToCreateFile"));
       console.error("Create file failed:", error);
@@ -401,13 +422,39 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   }
 
   function handleRenameFile(file: FileItem) {
+    setEditingFile(file);
+  }
+
+  // 处理重命名确认
+  async function handleRenameConfirm(file: FileItem, newName: string) {
     if (!sshSessionId) return;
 
-    const newName = prompt(t("fileManager.enterNewName"), file.name);
-    if (!newName || newName === file.name) return;
+    const oldPath = file.path;
+    const newPath = file.path.replace(file.name, newName);
 
-    // TODO: 实现重命名功能
-    toast.info("重命名功能正在开发中...");
+    try {
+      await renameSSHItem(sshSessionId, oldPath, newPath);
+      toast.success(t("fileManager.itemRenamedSuccessfully", { name: newName }));
+      loadDirectory(currentPath);
+    } catch (error: any) {
+      toast.error(t("fileManager.failedToRenameItem"));
+      console.error("Rename failed:", error);
+    }
+  }
+
+  // 开始编辑文件名
+  function handleStartEdit(file: FileItem) {
+    setEditingFile(file);
+  }
+
+  // 取消编辑
+  function handleCancelEdit() {
+    if (isCreatingNewFile && editingFile) {
+      // 如果是新建文件/文件夹且取消了编辑，删除刚创建的项目
+      handleDeleteFiles([editingFile]);
+      setIsCreatingNewFile(false);
+    }
+    setEditingFile(null);
   }
 
   // 过滤文件
@@ -540,6 +587,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           onUpload={handleFilesDropped}
           onContextMenu={handleContextMenu}
           viewMode={viewMode}
+          onRename={handleRenameConfirm}
+          editingFile={editingFile}
+          onStartEdit={handleStartEdit}
+          onCancelEdit={handleCancelEdit}
         />
 
         {/* 右键菜单 */}
