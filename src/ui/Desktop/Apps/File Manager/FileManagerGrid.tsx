@@ -13,7 +13,9 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal
+  MoreHorizontal,
+  RefreshCw,
+  ArrowUp
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -133,6 +135,49 @@ export function FileManagerGrid({
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  // 导航历史管理
+  const [navigationHistory, setNavigationHistory] = useState<string[]>([currentPath]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  // 更新导航历史
+  useEffect(() => {
+    const lastPath = navigationHistory[historyIndex];
+    if (currentPath !== lastPath) {
+      const newHistory = navigationHistory.slice(0, historyIndex + 1);
+      newHistory.push(currentPath);
+      setNavigationHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+    }
+  }, [currentPath]);
+
+  // 导航函数
+  const goBack = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      onPathChange(navigationHistory[newIndex]);
+    }
+  };
+
+  const goForward = () => {
+    if (historyIndex < navigationHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      onPathChange(navigationHistory[newIndex]);
+    }
+  };
+
+  const goUp = () => {
+    const parts = currentPath.split('/').filter(Boolean);
+    if (parts.length > 0) {
+      parts.pop();
+      const parentPath = '/' + parts.join('/');
+      onPathChange(parentPath);
+    } else if (currentPath !== '/') {
+      onPathChange('/');
+    }
+  };
 
   // 路径导航
   const pathParts = currentPath.split('/').filter(Boolean);
@@ -296,32 +341,44 @@ export function FileManagerGrid({
         {/* 导航按钮 */}
         <div className="flex items-center gap-1 p-2 border-b border-dark-border">
           <button
-            onClick={() => window.history.back()}
-            className="p-1 rounded hover:bg-dark-hover"
-            title="后退"
+            onClick={goBack}
+            disabled={historyIndex <= 0}
+            className={cn(
+              "p-1 rounded hover:bg-dark-hover",
+              historyIndex <= 0 && "opacity-50 cursor-not-allowed"
+            )}
+            title={t("common.back")}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
-            onClick={() => window.history.forward()}
-            className="p-1 rounded hover:bg-dark-hover"
-            title="前进"
+            onClick={goForward}
+            disabled={historyIndex >= navigationHistory.length - 1}
+            className={cn(
+              "p-1 rounded hover:bg-dark-hover",
+              historyIndex >= navigationHistory.length - 1 && "opacity-50 cursor-not-allowed"
+            )}
+            title={t("common.forward")}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
-            onClick={() => onPathChange(files.find(f => f.name === '..')?.path || '/')}
-            className="p-1 rounded hover:bg-dark-hover"
-            title="上级目录"
+            onClick={goUp}
+            disabled={currentPath === '/'}
+            className={cn(
+              "p-1 rounded hover:bg-dark-hover",
+              currentPath === '/' && "opacity-50 cursor-not-allowed"
+            )}
+            title={t("fileManager.parentDirectory")}
           >
-            ↑
+            <ArrowUp className="w-4 h-4" />
           </button>
           <button
             onClick={onRefresh}
             className="p-1 rounded hover:bg-dark-hover"
-            title="刷新"
+            title={t("common.refresh")}
           >
-            <Download className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
 
