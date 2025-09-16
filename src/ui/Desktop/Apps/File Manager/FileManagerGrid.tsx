@@ -69,11 +69,11 @@ const getFileIcon = (file: FileItem, viewMode: 'grid' | 'list' = 'grid') => {
   const iconClass = viewMode === 'grid' ? "w-8 h-8" : "w-6 h-6";
 
   if (file.type === 'directory') {
-    return <Folder className={`${iconClass} text-blue-400`} />;
+    return <Folder className={`${iconClass} text-muted-foreground`} />;
   }
 
   if (file.type === 'link') {
-    return <FileSymlink className={`${iconClass} text-cyan-400`} />;
+    return <FileSymlink className={`${iconClass} text-muted-foreground`} />;
   }
 
   const ext = file.name.split('.').pop()?.toLowerCase();
@@ -82,30 +82,30 @@ const getFileIcon = (file: FileItem, viewMode: 'grid' | 'list' = 'grid') => {
     case 'txt':
     case 'md':
     case 'readme':
-      return <FileText className={`${iconClass} text-gray-400`} />;
+      return <FileText className={`${iconClass} text-muted-foreground`} />;
     case 'png':
     case 'jpg':
     case 'jpeg':
     case 'gif':
     case 'bmp':
     case 'svg':
-      return <FileImage className={`${iconClass} text-green-400`} />;
+      return <FileImage className={`${iconClass} text-muted-foreground`} />;
     case 'mp4':
     case 'avi':
     case 'mkv':
     case 'mov':
-      return <FileVideo className={`${iconClass} text-purple-400`} />;
+      return <FileVideo className={`${iconClass} text-muted-foreground`} />;
     case 'mp3':
     case 'wav':
     case 'flac':
     case 'ogg':
-      return <FileAudio className={`${iconClass} text-pink-400`} />;
+      return <FileAudio className={`${iconClass} text-muted-foreground`} />;
     case 'zip':
     case 'tar':
     case 'gz':
     case 'rar':
     case '7z':
-      return <Archive className={`${iconClass} text-orange-400`} />;
+      return <Archive className={`${iconClass} text-muted-foreground`} />;
     case 'js':
     case 'ts':
     case 'jsx':
@@ -119,7 +119,7 @@ const getFileIcon = (file: FileItem, viewMode: 'grid' | 'list' = 'grid') => {
     case 'rb':
     case 'go':
     case 'rs':
-      return <Code className={`${iconClass} text-yellow-400`} />;
+      return <Code className={`${iconClass} text-muted-foreground`} />;
     case 'json':
     case 'xml':
     case 'yaml':
@@ -128,9 +128,9 @@ const getFileIcon = (file: FileItem, viewMode: 'grid' | 'list' = 'grid') => {
     case 'ini':
     case 'conf':
     case 'config':
-      return <Settings className={`${iconClass} text-cyan-400`} />;
+      return <Settings className={`${iconClass} text-muted-foreground`} />;
     default:
-      return <File className={`${iconClass} text-gray-400`} />;
+      return <File className={`${iconClass} text-muted-foreground`} />;
   }
 };
 
@@ -613,7 +613,7 @@ export function FileManagerGrid({
         <div className="flex items-center px-3 py-2 text-sm">
           <button
             onClick={() => navigateToPath(-1)}
-            className="hover:text-blue-400 hover:underline mr-1"
+            className="hover:text-primary hover:underline mr-1"
           >
             /
           </button>
@@ -621,7 +621,7 @@ export function FileManagerGrid({
             <React.Fragment key={index}>
               <button
                 onClick={() => navigateToPath(index)}
-                className="hover:text-blue-400 hover:underline"
+                className="hover:text-primary hover:underline"
               >
                 {part}
               </button>
@@ -656,8 +656,8 @@ export function FileManagerGrid({
           {isDragging && (
             <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 backdrop-blur-sm z-10 pointer-events-none">
               <div className="text-center">
-                <Download className="w-12 h-12 mx-auto mb-2 text-blue-500" />
-                <p className="text-lg font-medium text-blue-500">
+                <Download className="w-12 h-12 mx-auto mb-2 text-primary" />
+                <p className="text-lg font-medium text-primary">
                   {t("fileManager.dragFilesToUpload")}
                 </p>
               </div>
@@ -693,8 +693,8 @@ export function FileManagerGrid({
                   data-file-path={file.path}
                   className={cn(
                     "group p-3 rounded-lg cursor-pointer transition-all",
-                    "hover:bg-dark-hover border-2 border-transparent",
-                    isSelected && "bg-blue-500/20 border-blue-500"
+                    "hover:bg-accent hover:text-accent-foreground border-2 border-transparent",
+                    isSelected && "bg-primary/20 border-primary"
                   )}
                   title={`${file.name} - Selected: ${isSelected} - SelectedCount: ${selectedFiles.length}`}
                   onClick={(e) => handleFileClick(file, e)}
@@ -721,7 +721,7 @@ export function FileManagerGrid({
                           onKeyDown={handleEditKeyDown}
                           onBlur={handleEditConfirm}
                           className={cn(
-                            "max-w-[120px] min-w-[60px] w-fit rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none",
+                            "max-w-[120px] min-w-[60px] w-fit rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none",
                             "text-center text-foreground placeholder:text-muted-foreground",
                             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]"
                           )}
@@ -729,7 +729,7 @@ export function FileManagerGrid({
                         />
                       ) : (
                         <p
-                          className="text-xs text-white truncate cursor-pointer hover:bg-white/10 px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full text-center"
+                          className="text-xs text-foreground truncate cursor-pointer hover:bg-accent px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full text-center"
                           title={`${file.name} (点击重命名)`}
                           onClick={(e) => {
                             // 阻止文件选择事件
@@ -748,7 +748,7 @@ export function FileManagerGrid({
                         </p>
                       )}
                       {file.type === 'link' && file.linkTarget && (
-                        <p className="text-xs text-cyan-400 mt-1 truncate max-w-full" title={file.linkTarget}>
+                        <p className="text-xs text-primary mt-1 truncate max-w-full" title={file.linkTarget}>
                           → {file.linkTarget}
                         </p>
                       )}
@@ -770,8 +770,8 @@ export function FileManagerGrid({
                   data-file-path={file.path}
                   className={cn(
                     "flex items-center gap-3 p-2 rounded cursor-pointer transition-all",
-                    "hover:bg-dark-hover",
-                    isSelected && "bg-blue-500/20"
+                    "hover:bg-accent hover:text-accent-foreground",
+                    isSelected && "bg-primary/20"
                   )}
                   onClick={(e) => handleFileClick(file, e)}
                   onContextMenu={(e) => {
@@ -796,7 +796,7 @@ export function FileManagerGrid({
                         onKeyDown={handleEditKeyDown}
                         onBlur={handleEditConfirm}
                         className={cn(
-                          "flex-1 min-w-0 max-w-[200px] rounded-md border border-input bg-background px-2 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none",
+                          "flex-1 min-w-0 max-w-[200px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none",
                           "text-foreground placeholder:text-muted-foreground",
                           "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]"
                         )}
@@ -804,7 +804,7 @@ export function FileManagerGrid({
                       />
                     ) : (
                       <p
-                        className="text-sm text-white truncate cursor-pointer hover:bg-white/10 px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full"
+                        className="text-sm text-foreground truncate cursor-pointer hover:bg-accent px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full"
                         title={`${file.name} (点击重命名)`}
                         onClick={(e) => {
                           // 阻止文件选择事件
@@ -818,7 +818,7 @@ export function FileManagerGrid({
                       </p>
                     )}
                     {file.type === 'link' && file.linkTarget && (
-                      <p className="text-xs text-cyan-400 truncate" title={file.linkTarget}>
+                      <p className="text-xs text-primary truncate" title={file.linkTarget}>
                         → {file.linkTarget}
                       </p>
                     )}
@@ -855,7 +855,7 @@ export function FileManagerGrid({
         {/* 框选矩形 */}
         {isSelecting && selectionRect && (
           <div
-            className="absolute pointer-events-none border-2 border-blue-500 bg-blue-500/10 z-50"
+            className="absolute pointer-events-none border-2 border-primary bg-primary/10 z-50"
             style={{
               left: selectionRect.x,
               top: selectionRect.y,

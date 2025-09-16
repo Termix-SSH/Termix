@@ -443,33 +443,87 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
   sshConn.lastActive = Date.now();
 
+  // First check file size to prevent loading huge files
+  const MAX_READ_SIZE = 10 * 1024 * 1024; // 10MB - same as frontend limit
   const escapedPath = filePath.replace(/'/g, "'\"'\"'");
-  sshConn.client.exec(`cat '${escapedPath}'`, (err, stream) => {
-    if (err) {
-      fileLogger.error("SSH readFile error:", err);
-      return res.status(500).json({ error: err.message });
+
+  // Get file size first
+  sshConn.client.exec(`stat -c%s '${escapedPath}' 2>/dev/null || wc -c < '${escapedPath}'`, (sizeErr, sizeStream) => {
+    if (sizeErr) {
+      fileLogger.error("SSH file size check error:", sizeErr);
+      return res.status(500).json({ error: sizeErr.message });
     }
 
-    let data = "";
-    let errorData = "";
+    let sizeData = "";
+    let sizeErrorData = "";
 
-    stream.on("data", (chunk: Buffer) => {
-      data += chunk.toString();
+    sizeStream.on("data", (chunk: Buffer) => {
+      sizeData += chunk.toString();
     });
 
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
+    sizeStream.stderr.on("data", (chunk: Buffer) => {
+      sizeErrorData += chunk.toString();
     });
 
-    stream.on("close", (code) => {
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        return res.status(500).json({ error: `Command failed: ${errorData}` });
+    sizeStream.on("close", (sizeCode) => {
+      if (sizeCode !== 0) {
+        fileLogger.error(`File size check failed: ${sizeErrorData}`);
+        return res.status(500).json({ error: `Cannot check file size: ${sizeErrorData}` });
       }
 
-      res.json({ content: data, path: filePath });
+      const fileSize = parseInt(sizeData.trim(), 10);
+
+      if (isNaN(fileSize)) {
+        fileLogger.error("Invalid file size response:", sizeData);
+        return res.status(500).json({ error: "Cannot determine file size" });
+      }
+
+      // Check if file is too large
+      if (fileSize > MAX_READ_SIZE) {
+        fileLogger.warn("File too large for reading", {
+          operation: "file_read",
+          sessionId,
+          filePath,
+          fileSize,
+          maxSize: MAX_READ_SIZE,
+        });
+        return res.status(400).json({
+          error: `File too large to open in editor. Maximum size is ${MAX_READ_SIZE / 1024 / 1024}MB, file is ${(fileSize / 1024 / 1024).toFixed(2)}MB. Use download instead.`,
+          fileSize,
+          maxSize: MAX_READ_SIZE,
+          tooLarge: true
+        });
+      }
+
+      // File size is acceptable, proceed with reading
+      sshConn.client.exec(`cat '${escapedPath}'`, (err, stream) => {
+        if (err) {
+          fileLogger.error("SSH readFile error:", err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        let data = "";
+        let errorData = "";
+
+        stream.on("data", (chunk: Buffer) => {
+          data += chunk.toString();
+        });
+
+        stream.stderr.on("data", (chunk: Buffer) => {
+          errorData += chunk.toString();
+        });
+
+        stream.on("close", (code) => {
+          if (code !== 0) {
+            fileLogger.error(
+              `SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+            );
+            return res.status(500).json({ error: `Command failed: ${errorData}` });
+          }
+
+          res.json({ content: data, path: filePath });
+        });
+      });
     });
   });
 });

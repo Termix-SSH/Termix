@@ -126,11 +126,17 @@ export function FileWindow({
       } catch (error: any) {
         console.error('Failed to load file:', error);
 
-        // 如果是连接错误，提供更明确的错误信息
-        if (error.message?.includes('connection') || error.message?.includes('established')) {
+        // 检查是否是大文件错误
+        const errorData = error?.response?.data;
+        if (errorData?.tooLarge) {
+          toast.error(`File too large: ${errorData.error}`, {
+            duration: 10000, // 10 seconds for important message
+          });
+        } else if (error.message?.includes('connection') || error.message?.includes('established')) {
+          // 如果是连接错误，提供更明确的错误信息
           toast.error(`SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`);
         } else {
-          toast.error(`Failed to load file: ${error.message || 'Unknown error'}`);
+          toast.error(`Failed to load file: ${error.message || errorData?.error || 'Unknown error'}`);
         }
       } finally {
         setIsLoading(false);

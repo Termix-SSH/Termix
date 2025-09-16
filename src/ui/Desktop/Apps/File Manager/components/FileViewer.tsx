@@ -579,17 +579,17 @@ export function FileViewer({
         {/* 大文件警告对话框 */}
         {showLargeFileWarning && (
           <div className="h-full flex items-center justify-center bg-background">
-            <div className="bg-card border border-orange-200 rounded-lg p-6 max-w-md mx-4 shadow-lg">
+            <div className="bg-card border border-destructive/30 rounded-lg p-6 max-w-md mx-4 shadow-lg">
               <div className="flex items-start gap-3 mb-4">
-                <AlertCircle className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-6 h-6 text-destructive flex-shrink-0 mt-0.5" />
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Large File Warning</h3>
                   <p className="text-sm text-muted-foreground mb-3">
                     This file is {formatFileSize(file.size)} in size, which may cause performance issues when opened as text.
                   </p>
                   {isTooLarge ? (
-                    <div className="bg-red-50 border border-red-200 rounded p-3 mb-4">
-                      <p className="text-sm text-red-700 font-medium">
+                    <div className="bg-destructive/10 border border-destructive/30 rounded p-3 mb-4">
+                      <p className="text-sm text-destructive font-medium">
                         File is too large (&gt; 10MB) and cannot be opened as text for security reasons.
                       </p>
                     </div>
