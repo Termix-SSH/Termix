@@ -240,10 +240,10 @@ export function FileViewer({
         <span
           key={`match-${index}`}
           className={cn(
-            "font-semibold",
+            "font-bold",
             isCurrentMatch
-              ? "text-orange-500"
-              : "text-blue-600"
+              ? "text-red-600 bg-yellow-200"
+              : "text-blue-800 bg-blue-100"
           )}
         >
           {text.substring(match.start, match.end)}
@@ -522,32 +522,29 @@ export function FileViewer({
         {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
             {isEditable ? (
-              <div className="relative h-full">
-                {/* 高亮背景层 */}
-                {searchText && (
-                  <div
-                    className={cn(
-                      "absolute inset-0 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto pointer-events-none",
-                      "text-transparent z-0",
-                      fileTypeInfo.type === 'code' && "bg-muted"
-                    )}
-                  >
+              <div className="h-full">
+                {searchText && searchMatches.length > 0 ? (
+                  // 当有搜索结果时，显示只读的高亮文本
+                  <div className={cn(
+                    "h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto",
+                    fileTypeInfo.type === 'code' ? "bg-muted text-foreground" : "bg-background text-foreground"
+                  )}>
                     {renderHighlightedText(editedContent)}
                   </div>
+                ) : (
+                  // 没有搜索时显示可编辑的textarea
+                  <textarea
+                    value={editedContent}
+                    onChange={(e) => handleContentChange(e.target.value)}
+                    className={cn(
+                      "w-full h-full p-4 border-none resize-none outline-none",
+                      "font-mono text-sm overflow-auto bg-background text-foreground",
+                      fileTypeInfo.type === 'code' && "bg-muted text-foreground"
+                    )}
+                    placeholder="Start typing..."
+                    spellCheck={false}
+                  />
                 )}
-                {/* 编辑器文本区域 */}
-                <textarea
-                  value={editedContent}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  className={cn(
-                    "relative w-full h-full p-4 border-none resize-none outline-none z-10",
-                    "font-mono text-sm overflow-auto",
-                    searchText ? "bg-transparent text-foreground" : "bg-background text-foreground",
-                    fileTypeInfo.type === 'code' && !searchText && "bg-muted text-foreground"
-                  )}
-                  placeholder="Start typing..."
-                  spellCheck={false}
-                />
               </div>
             ) : (
               <div className={cn(
