@@ -19,7 +19,8 @@ import {
   ArrowUp,
   FileSymlink,
   Move,
-  GitCompare
+  GitCompare,
+  Edit
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
@@ -350,6 +351,10 @@ export function FileManagerGrid({
   const [navigationHistory, setNavigationHistory] = useState<string[]>([currentPath]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
+  // 路径编辑状态
+  const [isEditingPath, setIsEditingPath] = useState(false);
+  const [editPathValue, setEditPathValue] = useState(currentPath);
+
   // 更新导航历史
   useEffect(() => {
     const lastPath = navigationHistory[historyIndex];
@@ -399,6 +404,44 @@ export function FileManagerGrid({
       onPathChange(newPath);
     }
   };
+
+  // 路径编辑功能
+  const startEditingPath = () => {
+    setEditPathValue(currentPath);
+    setIsEditingPath(true);
+  };
+
+  const cancelEditingPath = () => {
+    setIsEditingPath(false);
+    setEditPathValue(currentPath);
+  };
+
+  const confirmEditingPath = () => {
+    const trimmedPath = editPathValue.trim();
+    if (trimmedPath) {
+      // 确保路径以 / 开头
+      const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : '/' + trimmedPath;
+      onPathChange(normalizedPath);
+    }
+    setIsEditingPath(false);
+  };
+
+  const handlePathInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmEditingPath();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEditingPath();
+    }
+  };
+
+  // 同步editPathValue与currentPath
+  useEffect(() => {
+    if (!isEditingPath) {
+      setEditPathValue(currentPath);
+    }
+  }, [currentPath, isEditingPath]);
 
   // 拖放处理 - 区分内部文件拖拽和外部文件上传
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -846,25 +889,68 @@ export function FileManagerGrid({
 
         {/* 面包屑导航 */}
         <div className="flex items-center px-3 py-2 text-sm">
-          <button
-            onClick={() => navigateToPath(-1)}
-            className="hover:text-primary hover:underline mr-1"
-          >
-            /
-          </button>
-          {pathParts.map((part, index) => (
-            <React.Fragment key={index}>
+          {isEditingPath ? (
+            // 编辑模式：路径输入框
+            <div className="flex-1 flex items-center gap-2">
+              <input
+                type="text"
+                value={editPathValue}
+                onChange={(e) => setEditPathValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmEditingPath();
+                  } else if (e.key === 'Escape') {
+                    cancelEditingPath();
+                  }
+                }}
+                className="flex-1 px-2 py-1 bg-dark-hover border border-dark-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="输入路径..."
+                autoFocus
+              />
               <button
-                onClick={() => navigateToPath(index)}
-                className="hover:text-primary hover:underline"
+                onClick={confirmEditingPath}
+                className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/80"
               >
-                {part}
+                确认
               </button>
-              {index < pathParts.length - 1 && (
-                <span className="mx-1 text-muted-foreground">/</span>
-              )}
-            </React.Fragment>
-          ))}
+              <button
+                onClick={cancelEditingPath}
+                className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs hover:bg-secondary/80"
+              >
+                取消
+              </button>
+            </div>
+          ) : (
+            // 查看模式：面包屑导航
+            <>
+              <button
+                onClick={() => navigateToPath(-1)}
+                className="hover:text-primary hover:underline mr-1"
+              >
+                /
+              </button>
+              {pathParts.map((part, index) => (
+                <React.Fragment key={index}>
+                  <button
+                    onClick={() => navigateToPath(index)}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {part}
+                  </button>
+                  {index < pathParts.length - 1 && (
+                    <span className="mx-1 text-muted-foreground">/</span>
+                  )}
+                </React.Fragment>
+              ))}
+              <button
+                onClick={startEditingPath}
+                className="ml-2 p-1 rounded hover:bg-dark-hover opacity-60 hover:opacity-100"
+                title="编辑路径"
+              >
+                <Edit className="w-3 h-3" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
