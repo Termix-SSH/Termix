@@ -1,5 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
+import multer from "multer";
 import userRoutes from "./routes/users.js";
 import sshRoutes from "./routes/ssh.js";
 import alertRoutes from "./routes/alerts.js";
@@ -12,6 +13,9 @@ import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
 import { DatabaseEncryption } from "../utils/database-encryption.js";
 import { EncryptionMigration } from "../utils/encryption-migration.js";
+import { DatabaseMigration } from "../utils/database-migration.js";
+import { DatabaseSQLiteExport } from "../utils/database-sqlite-export.js";
+import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 
 const app = express();
 app.use(
@@ -26,6 +30,33 @@ app.use(
     ],
   }),
 );
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    // Preserve original filename with timestamp prefix to avoid conflicts
+    const timestamp = Date.now();
+    cb(null, `${timestamp}-${file.originalname}`);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow SQLite files
+    if (file.originalname.endsWith('.termix-export.sqlite') || file.originalname.endsWith('.sqlite')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .termix-export.sqlite files are allowed'));
+    }
+  }
+});
 
 interface CacheEntry {
   data: any;
@@ -362,6 +393,231 @@ app.post("/encryption/regenerate", async (req, res) => {
   }
 });
 
+// Database migration and backup endpoints
+app.post("/database/export", async (req, res) => {
+  try {
+    const { customPath } = req.body;
+
+    apiLogger.info("Starting SQLite database export via API", {
+      operation: "database_sqlite_export_api",
+      customPath: !!customPath
+    });
+
+    const exportPath = await DatabaseSQLiteExport.exportDatabase(customPath);
+
+    res.json({
+      success: true,
+      message: "Database exported successfully as SQLite",
+      exportPath,
+      size: fs.statSync(exportPath).size,
+      format: "sqlite"
+    });
+  } catch (error) {
+    apiLogger.error("SQLite database export failed", error, {
+      operation: "database_sqlite_export_api_failed"
+    });
+    res.status(500).json({
+      error: "SQLite database export failed",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+app.post("/database/import", upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const { backupCurrent = "true" } = req.body;
+    const backupCurrentBool = backupCurrent === "true";
+    const importPath = req.file.path;
+
+    apiLogger.info("Starting SQLite database import via API (additive mode)", {
+      operation: "database_sqlite_import_api",
+      importPath,
+      originalName: req.file.originalname,
+      fileSize: req.file.size,
+      mode: "additive",
+      backupCurrent: backupCurrentBool
+    });
+
+    // Validate export file first
+    // Check file extension using original filename
+    if (!req.file.originalname.endsWith('.termix-export.sqlite')) {
+      // Clean up uploaded file
+      fs.unlinkSync(importPath);
+      return res.status(400).json({
+        error: "Invalid SQLite export file",
+        details: ["File must have .termix-export.sqlite extension"]
+      });
+    }
+
+    const validation = DatabaseSQLiteExport.validateExportFile(importPath);
+    if (!validation.valid) {
+      // Clean up uploaded file
+      fs.unlinkSync(importPath);
+      return res.status(400).json({
+        error: "Invalid SQLite export file",
+        details: validation.errors
+      });
+    }
+
+    const result = await DatabaseSQLiteExport.importDatabase(importPath, {
+      replaceExisting: false, // Always use additive mode
+      backupCurrent: backupCurrentBool
+    });
+
+    // Clean up uploaded file
+    fs.unlinkSync(importPath);
+
+    res.json({
+      success: result.success,
+      message: result.success ? "SQLite database imported successfully" : "SQLite database import completed with errors",
+      imported: result.imported,
+      errors: result.errors,
+      warnings: result.warnings,
+      format: "sqlite"
+    });
+  } catch (error) {
+    // Clean up uploaded file if it exists
+    if (req.file?.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        apiLogger.warn("Failed to clean up uploaded file", {
+          operation: "file_cleanup_failed",
+          filePath: req.file.path,
+          error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error'
+        });
+      }
+    }
+
+    apiLogger.error("SQLite database import failed", error, {
+      operation: "database_sqlite_import_api_failed"
+    });
+    res.status(500).json({
+      error: "SQLite database import failed",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+app.get("/database/export/:exportPath/info", async (req, res) => {
+  try {
+    const { exportPath } = req.params;
+    const decodedPath = decodeURIComponent(exportPath);
+
+    const validation = DatabaseSQLiteExport.validateExportFile(decodedPath);
+    if (!validation.valid) {
+      return res.status(400).json({
+        error: "Invalid SQLite export file",
+        details: validation.errors
+      });
+    }
+
+    res.json({
+      valid: true,
+      metadata: validation.metadata,
+      format: "sqlite"
+    });
+  } catch (error) {
+    apiLogger.error("Failed to get SQLite export info", error, {
+      operation: "sqlite_export_info_failed"
+    });
+    res.status(500).json({ error: "Failed to get SQLite export information" });
+  }
+});
+
+app.post("/database/backup", async (req, res) => {
+  try {
+    const { customPath } = req.body;
+
+    apiLogger.info("Creating encrypted database backup via API", {
+      operation: "database_backup_api"
+    });
+
+    // Import required modules
+    const { databasePaths, getMemoryDatabaseBuffer } = await import("./db/index.js");
+
+    // Get current in-memory database as buffer
+    const dbBuffer = getMemoryDatabaseBuffer();
+
+    // Create backup directory
+    const backupDir = customPath || path.join(databasePaths.directory, 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    // Generate backup filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `database-backup-${timestamp}.sqlite.encrypted`;
+    const backupPath = path.join(backupDir, backupFileName);
+
+    // Create encrypted backup directly from memory buffer
+    DatabaseFileEncryption.encryptDatabaseFromBuffer(dbBuffer, backupPath);
+
+    res.json({
+      success: true,
+      message: "Encrypted backup created successfully",
+      backupPath,
+      size: fs.statSync(backupPath).size
+    });
+  } catch (error) {
+    apiLogger.error("Database backup failed", error, {
+      operation: "database_backup_api_failed"
+    });
+    res.status(500).json({
+      error: "Database backup failed",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+app.post("/database/restore", async (req, res) => {
+  try {
+    const { backupPath, targetPath } = req.body;
+
+    if (!backupPath) {
+      return res.status(400).json({ error: "Backup path is required" });
+    }
+
+    apiLogger.info("Restoring database from backup via API", {
+      operation: "database_restore_api",
+      backupPath
+    });
+
+    // Validate backup file
+    if (!DatabaseFileEncryption.isEncryptedDatabaseFile(backupPath)) {
+      return res.status(400).json({ error: "Invalid encrypted backup file" });
+    }
+
+    // Check hardware compatibility
+    if (!DatabaseFileEncryption.validateHardwareCompatibility(backupPath)) {
+      return res.status(400).json({
+        error: "Hardware fingerprint mismatch",
+        message: "This backup was created on different hardware and cannot be restored"
+      });
+    }
+
+    const restoredPath = DatabaseFileEncryption.restoreFromEncryptedBackup(backupPath, targetPath);
+
+    res.json({
+      success: true,
+      message: "Database restored successfully",
+      restoredPath
+    });
+  } catch (error) {
+    apiLogger.error("Database restore failed", error, {
+      operation: "database_restore_api_failed"
+    });
+    res.status(500).json({
+      error: "Database restore failed",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 app.use("/users", userRoutes);
 app.use("/ssh", sshRoutes);
 app.use("/alerts", alertRoutes);
@@ -420,6 +676,12 @@ async function initializeEncryption() {
 }
 
 app.listen(PORT, async () => {
+  // Ensure uploads directory exists
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
   await initializeEncryption();
 
   databaseLogger.success(`Database API server started on port ${PORT}`, {
@@ -437,6 +699,11 @@ app.listen(PORT, async () => {
       "/encryption/initialize",
       "/encryption/migrate",
       "/encryption/regenerate",
+      "/database/export",
+      "/database/import",
+      "/database/export/:exportPath/info",
+      "/database/backup",
+      "/database/restore",
     ],
   });
 });

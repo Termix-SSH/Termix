@@ -1,8 +1,6 @@
 import crypto from 'crypto';
-import os from 'os';
-import fs from 'fs';
-import path from 'path';
 import { databaseLogger } from './logger.js';
+import { HardwareFingerprint } from './hardware-fingerprint.js';
 
 interface ProtectedKeyData {
   data: string;
@@ -19,64 +17,22 @@ class MasterKeyProtection {
 
   private static generateDeviceFingerprint(): string {
     try {
-      const features = [
-        os.hostname(),
-        os.platform(),
-        os.arch(),
-        process.cwd(),
-        this.getFileSystemFingerprint(),
-        this.getNetworkFingerprint()
-      ];
+      const fingerprint = HardwareFingerprint.generate();
 
-      const fingerprint = crypto.createHash('sha256')
-        .update(features.join('|'))
-        .digest('hex');
-
-      databaseLogger.debug('Generated device fingerprint', {
-        operation: 'fingerprint_generation',
+      databaseLogger.debug('Generated hardware fingerprint', {
+        operation: 'hardware_fingerprint_generation',
         fingerprintPrefix: fingerprint.substring(0, 8)
       });
 
       return fingerprint;
     } catch (error) {
-      databaseLogger.error('Failed to generate device fingerprint', error, {
-        operation: 'fingerprint_generation_failed'
+      databaseLogger.error('Failed to generate hardware fingerprint', error, {
+        operation: 'hardware_fingerprint_generation_failed'
       });
-      throw new Error('Device fingerprint generation failed');
+      throw new Error('Hardware fingerprint generation failed');
     }
   }
 
-  private static getFileSystemFingerprint(): string {
-    try {
-      const stat = fs.statSync(process.cwd());
-      return `${stat.ino}-${stat.dev}`;
-    } catch {
-      return 'fs-unknown';
-    }
-  }
-
-  private static getNetworkFingerprint(): string {
-    try {
-      const networkInterfaces = os.networkInterfaces();
-      const macAddresses = [];
-
-      for (const interfaceName in networkInterfaces) {
-        const interfaces = networkInterfaces[interfaceName];
-        if (interfaces) {
-          for (const iface of interfaces) {
-            if (!iface.internal && iface.mac && iface.mac !== '00:00:00:00:00:00') {
-              macAddresses.push(iface.mac);
-            }
-          }
-        }
-      }
-
-      // 使用第一个有效的MAC地址，如果没有则使用fallback
-      return macAddresses.length > 0 ? macAddresses.sort()[0] : 'no-mac-found';
-    } catch {
-      return 'network-unknown';
-    }
-  }
 
 
   private static deriveKEK(): Buffer {
@@ -91,7 +47,7 @@ class MasterKeyProtection {
       'sha256'
     );
 
-    databaseLogger.debug('Derived KEK from device fingerprint', {
+    databaseLogger.debug('Derived KEK from hardware fingerprint', {
       operation: 'kek_derivation',
       iterations: this.KEK_ITERATIONS
     });
@@ -123,7 +79,7 @@ class MasterKeyProtection {
 
       const result = JSON.stringify(protectedData);
 
-      databaseLogger.info('Master key encrypted with device KEK', {
+      databaseLogger.info('Master key encrypted with hardware KEK', {
         operation: 'master_key_encryption',
         version: this.VERSION,
         fingerprintPrefix: protectedData.fingerprint
@@ -152,12 +108,12 @@ class MasterKeyProtection {
 
       const currentFingerprint = this.generateDeviceFingerprint().substring(0, 16);
       if (protectedData.fingerprint !== currentFingerprint) {
-        databaseLogger.warn('Device fingerprint mismatch detected', {
+        databaseLogger.warn('Hardware fingerprint mismatch detected', {
           operation: 'master_key_decryption',
           expected: protectedData.fingerprint,
           current: currentFingerprint
         });
-        throw new Error('Device fingerprint mismatch - key was encrypted on different machine');
+        throw new Error('Hardware fingerprint mismatch - key was encrypted on different hardware');
       }
 
       const kek = this.deriveKEK();
