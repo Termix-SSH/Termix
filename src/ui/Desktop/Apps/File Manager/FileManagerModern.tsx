@@ -45,6 +45,7 @@ import {
   addFolderShortcut,
   getPinnedFiles
 } from "@/ui/main-axios.ts";
+import type { SidebarItem } from "./FileManagerSidebar";
 
 
 interface FileManagerModernProps {
@@ -1309,6 +1310,19 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
+  // 处理侧边栏文件打开
+  async function handleSidebarFileOpen(sidebarItem: SidebarItem) {
+    // 将SidebarItem转换为FileItem格式
+    const file: FileItem = {
+      name: sidebarItem.name,
+      path: sidebarItem.path,
+      type: 'file' // recent和pinned都是文件类型
+    };
+
+    // 调用常规的文件打开处理
+    await handleFileOpen(file);
+  }
+
   // 处理文件打开
   async function handleFileOpen(file: FileItem) {
     if (file.type === 'directory') {
@@ -1481,12 +1495,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       {/* 主内容区域 */}
       <div className="flex-1 flex" {...dragHandlers}>
         {/* 左侧边栏 */}
-        <div className="w-64 flex-shrink-0">
+        <div className="w-64 flex-shrink-0 h-full">
           <FileManagerSidebar
             currentHost={currentHost}
             currentPath={currentPath}
             onPathChange={setCurrentPath}
             onLoadDirectory={loadDirectory}
+            onFileOpen={handleSidebarFileOpen}
             sshSessionId={sshSessionId}
             refreshTrigger={sidebarRefreshTrigger}
           />

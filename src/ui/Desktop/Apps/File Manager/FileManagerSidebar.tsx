@@ -19,7 +19,7 @@ import {
   listSSHFiles
 } from "@/ui/main-axios.ts";
 
-interface SidebarItem {
+export interface SidebarItem {
   id: string;
   name: string;
   path: string;
@@ -34,6 +34,7 @@ interface FileManagerSidebarProps {
   currentPath: string;
   onPathChange: (path: string) => void;
   onLoadDirectory?: (path: string) => void;
+  onFileOpen?: (file: SidebarItem) => void; // 新增：处理文件打开
   sshSessionId?: string;
   refreshTrigger?: number; // 用于触发数据刷新
 }
@@ -43,6 +44,7 @@ export function FileManagerSidebar({
   currentPath,
   onPathChange,
   onLoadDirectory,
+  onFileOpen,
   sshSessionId,
   refreshTrigger
 }: FileManagerSidebarProps) {
@@ -51,7 +53,7 @@ export function FileManagerSidebar({
   const [pinnedItems, setPinnedItems] = useState<SidebarItem[]>([]);
   const [shortcuts, setShortcuts] = useState<SidebarItem[]>([]);
   const [directoryTree, setDirectoryTree] = useState<SidebarItem[]>([]);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['/']));
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
 
   // 加载快捷功能数据
   useEffect(() => {
@@ -113,7 +115,10 @@ export function FileManagerSidebar({
 
     try {
       // 加载根目录
-      const rootFiles = await listSSHFiles(sshSessionId, '/');
+      const response = await listSSHFiles(sshSessionId, '/');
+
+      // listSSHFiles 现在总是返回 {files: Array, path: string} 格式
+      const rootFiles = response.files || [];
       const rootFolders = rootFiles.filter((item: any) => item.type === 'directory');
 
       const rootTreeItems = rootFolders.map((folder: any) => ({
@@ -154,8 +159,20 @@ export function FileManagerSidebar({
   const handleItemClick = (item: SidebarItem) => {
     if (item.type === 'folder') {
       toggleFolder(item.id, item.path);
+      onPathChange(item.path);
+    } else if (item.type === 'recent' || item.type === 'pinned') {
+      // 对于文件类型，调用文件打开回调
+      if (onFileOpen) {
+        onFileOpen(item);
+      } else {
+        // 如果没有文件打开回调，切换到文件所在目录
+        const directory = item.path.substring(0, item.path.lastIndexOf('/')) || '/';
+        onPathChange(directory);
+      }
+    } else if (item.type === 'shortcut') {
+      // 文件夹快捷方式直接切换到目录
+      onPathChange(item.path);
     }
-    onPathChange(item.path);
   };
 
   const toggleFolder = async (folderId: string, folderPath?: string) => {
@@ -169,7 +186,10 @@ export function FileManagerSidebar({
       // 按需加载子目录
       if (sshSessionId && folderPath && folderPath !== '/') {
         try {
-          const subFiles = await listSSHFiles(sshSessionId, folderPath);
+          const subResponse = await listSSHFiles(sshSessionId, folderPath);
+
+          // listSSHFiles 现在总是返回 {files: Array, path: string} 格式
+          const subFiles = subResponse.files || [];
           const subFolders = subFiles.filter((item: any) => item.type === 'directory');
 
           const subTreeItems = subFolders.map((folder: any) => ({
@@ -271,7 +291,7 @@ export function FileManagerSidebar({
 
   return (
     <div className="h-full flex flex-col bg-dark-bg border-r border-dark-border">
-      <div className="flex-1 overflow-y-auto p-2 space-y-4">
+      <div className="flex-1 overflow-y-auto thin-scrollbar p-2 space-y-4">
         {/* 快捷功能区域 */}
         {renderSection(t("fileManager.recent"), <Clock className="w-3 h-3" />, recentItems)}
         {renderSection(t("fileManager.pinned"), <Star className="w-3 h-3" />, pinnedItems)}

@@ -958,14 +958,15 @@ export async function getSSHStatus(
 export async function listSSHFiles(
   sessionId: string,
   path: string,
-): Promise<any[]> {
+): Promise<{files: any[], path: string}> {
   try {
     const response = await fileManagerApi.get("/ssh/listFiles", {
       params: { sessionId, path },
     });
-    return response.data || [];
+    return response.data || {files: [], path};
   } catch (error) {
     handleApiError(error, "list SSH files");
+    return {files: [], path}; // 确保总是返回正确格式
   }
 }
 
