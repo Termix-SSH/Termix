@@ -291,7 +291,8 @@ export function FileManagerSidebar({
 
   return (
     <div className="h-full flex flex-col bg-dark-bg border-r border-dark-border">
-      <div className="flex-1 overflow-y-auto thin-scrollbar p-2 space-y-4">
+      <div className="flex-1 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-y-auto thin-scrollbar p-2 space-y-4">
         {/* 快捷功能区域 */}
         {renderSection(t("fileManager.recent"), <Clock className="w-3 h-3" />, recentItems)}
         {renderSection(t("fileManager.pinned"), <Star className="w-3 h-3" />, pinnedItems)}
@@ -306,6 +307,7 @@ export function FileManagerSidebar({
           <div className="mt-2">
             {directoryTree.map((item) => renderSidebarItem(item))}
           </div>
+        </div>
         </div>
       </div>
     </div>
