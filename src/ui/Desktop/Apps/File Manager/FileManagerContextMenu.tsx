@@ -262,10 +262,10 @@ export function FileManagerContextMenu({
       menuItems.push({
         icon: <ExternalLink className="w-4 h-4" />,
         label: isMultipleFiles
-          ? `保存 ${files.length} 个文件到系统`
-          : "保存到系统",
+          ? t("fileManager.saveFilesToSystem", { count: files.length })
+          : t("fileManager.saveToSystem"),
         action: () => onDragToDesktop(),
-        shortcut: isModernBrowser ? "选择位置保存" : "下载到默认位置"
+        shortcut: isModernBrowser ? t("fileManager.selectLocationToSave") : t("fileManager.downloadToDefaultLocation")
       });
     }
 
@@ -276,13 +276,13 @@ export function FileManagerContextMenu({
       if (isCurrentlyPinned && onUnpinFile) {
         menuItems.push({
           icon: <Star className="w-4 h-4 fill-yellow-400" />,
-          label: "取消固定",
+          label: t("fileManager.unpinFile"),
           action: () => onUnpinFile(files[0])
         });
       } else if (!isCurrentlyPinned && onPinFile) {
         menuItems.push({
           icon: <Star className="w-4 h-4" />,
-          label: "固定文件",
+          label: t("fileManager.pinFile"),
           action: () => onPinFile(files[0])
         });
       }
@@ -292,7 +292,7 @@ export function FileManagerContextMenu({
     if (isSingleFile && files[0].type === 'directory' && onAddShortcut) {
       menuItems.push({
         icon: <Bookmark className="w-4 h-4" />,
-        label: "添加到快捷方式",
+        label: t("fileManager.addToShortcuts"),
         action: () => onAddShortcut(files[0].path)
       });
     }

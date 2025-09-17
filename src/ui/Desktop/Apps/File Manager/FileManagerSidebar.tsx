@@ -134,10 +134,10 @@ export function FileManagerSidebar({
     try {
       await removeRecentFile(currentHost.id, item.path);
       loadQuickAccessData(); // 重新加载数据
-      toast.success(`已从最近访问中移除"${item.name}"`);
+      toast.success(t("fileManager.removedFromRecentFiles", { name: item.name }));
     } catch (error) {
       console.error('Failed to remove recent file:', error);
-      toast.error('移除失败');
+      toast.error(t("fileManager.removeFailed"));
     }
   };
 
@@ -147,10 +147,10 @@ export function FileManagerSidebar({
     try {
       await removePinnedFile(currentHost.id, item.path);
       loadQuickAccessData(); // 重新加载数据
-      toast.success(`已取消固定"${item.name}"`);
+      toast.success(t("fileManager.unpinnedSuccessfully", { name: item.name }));
     } catch (error) {
       console.error('Failed to unpin file:', error);
-      toast.error('取消固定失败');
+      toast.error(t("fileManager.unpinFailed"));
     }
   };
 
@@ -160,10 +160,10 @@ export function FileManagerSidebar({
     try {
       await removeFolderShortcut(currentHost.id, item.path);
       loadQuickAccessData(); // 重新加载数据
-      toast.success(`已移除快捷方式"${item.name}"`);
+      toast.success(t("fileManager.removedShortcut", { name: item.name }));
     } catch (error) {
       console.error('Failed to remove shortcut:', error);
-      toast.error('移除快捷方式失败');
+      toast.error(t("fileManager.removeShortcutFailed"));
     }
   };
 
@@ -176,10 +176,10 @@ export function FileManagerSidebar({
         recentItems.map(item => removeRecentFile(currentHost.id, item.path))
       );
       loadQuickAccessData(); // 重新加载数据
-      toast.success(`已清除所有最近访问记录`);
+      toast.success(t("fileManager.clearedAllRecentFiles"));
     } catch (error) {
       console.error('Failed to clear recent files:', error);
-      toast.error('清除失败');
+      toast.error(t("fileManager.clearFailed"));
     }
   };
 
@@ -463,7 +463,7 @@ export function FileManagerSidebar({
                   }}
                 >
                   <Clock className="w-4 h-4" />
-                  <span>从最近访问中移除</span>
+                  <span>{t("fileManager.removeFromRecentFiles")}</span>
                 </button>
                 {recentItems.length > 1 && (
                   <>
@@ -476,7 +476,7 @@ export function FileManagerSidebar({
                       }}
                     >
                       <Clock className="w-4 h-4" />
-                      <span>清除所有最近访问</span>
+                      <span>{t("fileManager.clearAllRecentFiles")}</span>
                     </button>
                   </>
                 )}
@@ -492,7 +492,7 @@ export function FileManagerSidebar({
                 }}
               >
                 <Star className="w-4 h-4" />
-                <span>取消固定</span>
+                <span>{t("fileManager.unpinFile")}</span>
               </button>
             )}
 
@@ -505,7 +505,7 @@ export function FileManagerSidebar({
                 }}
               >
                 <Bookmark className="w-4 h-4" />
-                <span>移除快捷方式</span>
+                <span>{t("fileManager.removeShortcut")}</span>
               </button>
             )}
           </div>
