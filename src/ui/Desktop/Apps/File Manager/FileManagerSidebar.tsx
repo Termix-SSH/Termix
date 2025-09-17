@@ -16,8 +16,12 @@ import {
   getRecentFiles,
   getPinnedFiles,
   getFolderShortcuts,
-  listSSHFiles
+  listSSHFiles,
+  removeRecentFile,
+  removePinnedFile,
+  removeFolderShortcut
 } from "@/ui/main-axios.ts";
+import { toast } from "sonner";
 
 export interface SidebarItem {
   id: string;
@@ -54,6 +58,19 @@ export function FileManagerSidebar({
   const [shortcuts, setShortcuts] = useState<SidebarItem[]>([]);
   const [directoryTree, setDirectoryTree] = useState<SidebarItem[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
+
+  // 右键菜单状态
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    isVisible: boolean;
+    item: SidebarItem | null;
+  }>({
+    x: 0,
+    y: 0,
+    isVisible: false,
+    item: null
+  });
 
   // 加载快捷功能数据
   useEffect(() => {
@@ -109,6 +126,111 @@ export function FileManagerSidebar({
       setShortcuts([]);
     }
   };
+
+  // 删除功能实现
+  const handleRemoveRecentFile = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+
+    try {
+      await removeRecentFile(currentHost.id, item.path);
+      loadQuickAccessData(); // 重新加载数据
+      toast.success(`已从最近访问中移除"${item.name}"`);
+    } catch (error) {
+      console.error('Failed to remove recent file:', error);
+      toast.error('移除失败');
+    }
+  };
+
+  const handleUnpinFile = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+
+    try {
+      await removePinnedFile(currentHost.id, item.path);
+      loadQuickAccessData(); // 重新加载数据
+      toast.success(`已取消固定"${item.name}"`);
+    } catch (error) {
+      console.error('Failed to unpin file:', error);
+      toast.error('取消固定失败');
+    }
+  };
+
+  const handleRemoveShortcut = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+
+    try {
+      await removeFolderShortcut(currentHost.id, item.path);
+      loadQuickAccessData(); // 重新加载数据
+      toast.success(`已移除快捷方式"${item.name}"`);
+    } catch (error) {
+      console.error('Failed to remove shortcut:', error);
+      toast.error('移除快捷方式失败');
+    }
+  };
+
+  const handleClearAllRecent = async () => {
+    if (!currentHost?.id || recentItems.length === 0) return;
+
+    try {
+      // 批量删除所有recent文件
+      await Promise.all(
+        recentItems.map(item => removeRecentFile(currentHost.id, item.path))
+      );
+      loadQuickAccessData(); // 重新加载数据
+      toast.success(`已清除所有最近访问记录`);
+    } catch (error) {
+      console.error('Failed to clear recent files:', error);
+      toast.error('清除失败');
+    }
+  };
+
+  // 右键菜单处理
+  const handleContextMenu = (e: React.MouseEvent, item: SidebarItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      isVisible: true,
+      item
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(prev => ({ ...prev, isVisible: false, item: null }));
+  };
+
+  // 点击外部关闭菜单
+  useEffect(() => {
+    if (!contextMenu.isVisible) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      const menuElement = document.querySelector('[data-sidebar-context-menu]');
+
+      if (!menuElement?.contains(target)) {
+        closeContextMenu();
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeContextMenu();
+      }
+    };
+
+    // 延迟添加监听器，避免立即触发
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }, 50);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [contextMenu.isVisible]);
 
   const loadDirectoryTree = async () => {
     if (!sshSessionId) return;
@@ -238,6 +360,12 @@ export function FileManagerSidebar({
           )}
           style={{ paddingLeft: `${8 + level * 16}px` }}
           onClick={() => handleItemClick(item)}
+          onContextMenu={(e) => {
+            // 只有快捷功能项才需要右键菜单
+            if (item.type === 'recent' || item.type === 'pinned' || item.type === 'shortcut') {
+              handleContextMenu(e, item);
+            }
+          }}
         >
           {item.type === 'folder' && (
             <button
@@ -290,26 +418,99 @@ export function FileManagerSidebar({
   };
 
   return (
-    <div className="h-full flex flex-col bg-dark-bg border-r border-dark-border">
-      <div className="flex-1 relative overflow-hidden">
-        <div className="absolute inset-0 overflow-y-auto thin-scrollbar p-2 space-y-4">
-        {/* 快捷功能区域 */}
-        {renderSection(t("fileManager.recent"), <Clock className="w-3 h-3" />, recentItems)}
-        {renderSection(t("fileManager.pinned"), <Star className="w-3 h-3" />, pinnedItems)}
-        {renderSection(t("fileManager.folderShortcuts"), <Bookmark className="w-3 h-3" />, shortcuts)}
+    <>
+      <div className="h-full flex flex-col bg-dark-bg border-r border-dark-border">
+        <div className="flex-1 relative overflow-hidden">
+          <div className="absolute inset-0 overflow-y-auto thin-scrollbar p-2 space-y-4">
+          {/* 快捷功能区域 */}
+          {renderSection(t("fileManager.recent"), <Clock className="w-3 h-3" />, recentItems)}
+          {renderSection(t("fileManager.pinned"), <Star className="w-3 h-3" />, pinnedItems)}
+          {renderSection(t("fileManager.folderShortcuts"), <Bookmark className="w-3 h-3" />, shortcuts)}
 
-        {/* 目录树 */}
-        <div className="border-t border-dark-border pt-4">
-          <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            <Folder className="w-3 h-3" />
-            {t("fileManager.directories")}
+          {/* 目录树 */}
+          <div className="border-t border-dark-border pt-4">
+            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <Folder className="w-3 h-3" />
+              {t("fileManager.directories")}
+            </div>
+            <div className="mt-2">
+              {directoryTree.map((item) => renderSidebarItem(item))}
+            </div>
           </div>
-          <div className="mt-2">
-            {directoryTree.map((item) => renderSidebarItem(item))}
           </div>
-        </div>
         </div>
       </div>
-    </div>
+
+      {/* 右键菜单 */}
+      {contextMenu.isVisible && contextMenu.item && (
+        <>
+          <div className="fixed inset-0 z-40" />
+          <div
+            data-sidebar-context-menu
+            className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl py-1 min-w-[160px] z-50"
+            style={{
+              left: contextMenu.x,
+              top: contextMenu.y
+            }}
+          >
+            {contextMenu.item.type === 'recent' && (
+              <>
+                <button
+                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white"
+                  onClick={() => {
+                    handleRemoveRecentFile(contextMenu.item!);
+                    closeContextMenu();
+                  }}
+                >
+                  <Clock className="w-4 h-4" />
+                  <span>从最近访问中移除</span>
+                </button>
+                {recentItems.length > 1 && (
+                  <>
+                    <div className="border-t border-dark-border my-1" />
+                    <button
+                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-red-400 hover:bg-red-500/10"
+                      onClick={() => {
+                        handleClearAllRecent();
+                        closeContextMenu();
+                      }}
+                    >
+                      <Clock className="w-4 h-4" />
+                      <span>清除所有最近访问</span>
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+
+            {contextMenu.item.type === 'pinned' && (
+              <button
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white"
+                onClick={() => {
+                  handleUnpinFile(contextMenu.item!);
+                  closeContextMenu();
+                }}
+              >
+                <Star className="w-4 h-4" />
+                <span>取消固定</span>
+              </button>
+            )}
+
+            {contextMenu.item.type === 'shortcut' && (
+              <button
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white"
+                onClick={() => {
+                  handleRemoveShortcut(contextMenu.item!);
+                  closeContextMenu();
+                }}
+              >
+                <Bookmark className="w-4 h-4" />
+                <span>移除快捷方式</span>
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </>
   );
 }
