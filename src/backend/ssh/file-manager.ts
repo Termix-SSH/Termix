@@ -5,6 +5,7 @@ import { db } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
+import { EncryptedDBOperations } from "../utils/encrypted-db-operations.js";
 
 // 可执行文件检测工具函数
 function isExecutableFile(permissions: string, fileName: string): boolean {
@@ -104,56 +105,47 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
   if (credentialId && hostId && userId) {
     try {
-      const credentials = await db
-        .select()
-        .from(sshCredentials)
-        .where(
+      const credentials = await EncryptedDBOperations.select(
+        db.select().from(sshCredentials).where(
           and(
             eq(sshCredentials.id, credentialId),
             eq(sshCredentials.userId, userId),
           ),
-        );
+        ),
+        'ssh_credentials'
+      );
 
       if (credentials.length > 0) {
         const credential = credentials[0];
         resolvedCredentials = {
           password: credential.password,
-          sshKey: credential.key,
+          sshKey: credential.privateKey || credential.key, // prefer new privateKey field
           keyPassword: credential.keyPassword,
           authType: credential.authType,
         };
       } else {
-        fileLogger.warn("No credentials found in database for file manager", {
-          operation: "file_connect",
-          sessionId,
+        fileLogger.warn(`No credentials found for host ${hostId}`, {
+          operation: "ssh_credentials",
           hostId,
           credentialId,
           userId,
         });
       }
     } catch (error) {
-      fileLogger.warn(
-        "Failed to resolve credentials from database for file manager",
-        {
-          operation: "file_connect",
-          sessionId,
-          hostId,
-          credentialId,
-          error: error instanceof Error ? error.message : "Unknown error",
-        },
-      );
-    }
-  } else if (credentialId && hostId) {
-    fileLogger.warn(
-      "Missing userId for credential resolution in file manager",
-      {
-        operation: "file_connect",
-        sessionId,
+      fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
+        operation: "ssh_credentials",
         hostId,
         credentialId,
-        hasUserId: !!userId,
-      },
-    );
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  } else if (credentialId && hostId) {
+    fileLogger.warn("Missing userId for credential resolution in file manager", {
+      operation: "ssh_credentials",
+      hostId,
+      credentialId,
+      hasUserId: !!userId,
+    });
   }
 
   const config: any = {
