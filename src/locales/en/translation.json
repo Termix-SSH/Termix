@@ -726,7 +726,10 @@
     "terminalWithPath": "Terminal - {{host}}:{{path}}",
     "runningFile": "Running - {{file}}",
     "onlyRunExecutableFiles": "Can only run executable files",
-    "noHostSelected": "No host selected"
+    "noHostSelected": "No host selected",
+    "starred": "Starred",
+    "shortcuts": "Shortcuts",
+    "directories": "Directories"
   },
   "tunnels": {
     "title": "SSH Tunnels",

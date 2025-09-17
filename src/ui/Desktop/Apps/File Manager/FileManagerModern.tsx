@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { FileManagerGrid } from "./FileManagerGrid";
+import { FileManagerSidebar } from "./FileManagerSidebar";
 import { FileManagerContextMenu } from "./FileManagerContextMenu";
 import { useFileSelection } from "./hooks/useFileSelection";
 import { useDragAndDrop } from "./hooks/useDragAndDrop";
@@ -37,7 +38,12 @@ import {
   moveSSHItem,
   connectSSH,
   getSSHStatus,
-  identifySSHSymlink
+  identifySSHSymlink,
+  addRecentFile,
+  addPinnedFile,
+  removePinnedFile,
+  addFolderShortcut,
+  getPinnedFiles
 } from "@/ui/main-axios.ts";
 
 
@@ -59,6 +65,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   const [sshSessionId, setSshSessionId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
+  const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -1222,6 +1230,130 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     toast.success(t("fileManager.runningFile", { file: file.name }));
   }
 
+  // 加载固定文件列表
+  async function loadPinnedFiles() {
+    if (!currentHost?.id) return;
+
+    try {
+      const pinnedData = await getPinnedFiles(currentHost.id);
+      const pinnedPaths = new Set(pinnedData.map((item: any) => item.path));
+      setPinnedFiles(pinnedPaths);
+    } catch (error) {
+      console.error('Failed to load pinned files:', error);
+    }
+  }
+
+  // PIN文件
+  async function handlePinFile(file: FileItem) {
+    if (!currentHost?.id) return;
+
+    try {
+      await addPinnedFile(currentHost.id, file.path, file.name);
+      setPinnedFiles(prev => new Set([...prev, file.path]));
+      setSidebarRefreshTrigger(prev => prev + 1); // 触发侧边栏刷新
+      toast.success(`文件"${file.name}"已固定`);
+    } catch (error) {
+      console.error('Failed to pin file:', error);
+      toast.error('固定文件失败');
+    }
+  }
+
+  // UNPIN文件
+  async function handleUnpinFile(file: FileItem) {
+    if (!currentHost?.id) return;
+
+    try {
+      await removePinnedFile(currentHost.id, file.path);
+      setPinnedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(file.path);
+        return newSet;
+      });
+      setSidebarRefreshTrigger(prev => prev + 1); // 触发侧边栏刷新
+      toast.success(`文件"${file.name}"已取消固定`);
+    } catch (error) {
+      console.error('Failed to unpin file:', error);
+      toast.error('取消固定失败');
+    }
+  }
+
+  // 添加文件夹快捷方式
+  async function handleAddShortcut(path: string) {
+    if (!currentHost?.id) return;
+
+    try {
+      const folderName = path.split('/').pop() || path;
+      await addFolderShortcut(currentHost.id, path, folderName);
+      setSidebarRefreshTrigger(prev => prev + 1); // 触发侧边栏刷新
+      toast.success(`文件夹快捷方式"${folderName}"已添加`);
+    } catch (error) {
+      console.error('Failed to add shortcut:', error);
+      toast.error('添加快捷方式失败');
+    }
+  }
+
+  // 检查文件是否已固定
+  function isPinnedFile(file: FileItem): boolean {
+    return pinnedFiles.has(file.path);
+  }
+
+  // 记录最近访问的文件
+  async function recordRecentFile(file: FileItem) {
+    if (!currentHost?.id || file.type === 'directory') return;
+
+    try {
+      await addRecentFile(currentHost.id, file.path, file.name);
+      setSidebarRefreshTrigger(prev => prev + 1); // 触发侧边栏刷新
+    } catch (error) {
+      console.error('Failed to record recent file:', error);
+    }
+  }
+
+  // 处理文件打开
+  async function handleFileOpen(file: FileItem) {
+    if (file.type === 'directory') {
+      // 如果是目录，切换到该目录
+      setCurrentPath(file.path);
+    } else {
+      // 如果是文件，记录到最近访问并打开文件窗口
+      await recordRecentFile(file);
+
+      // 创建文件窗口
+      const windowCount = Date.now() % 10;
+      const offsetX = 100 + (windowCount * 30);
+      const offsetY = 100 + (windowCount * 30);
+
+      const createFileWindow = (windowId: string) => (
+        <FileWindow
+          windowId={windowId}
+          file={file}
+          sshHost={currentHost!}
+          sshSessionId={sshSessionId!}
+          initialX={offsetX}
+          initialY={offsetY}
+        />
+      );
+
+      openWindow({
+        title: file.name,
+        x: offsetX,
+        y: offsetY,
+        width: 800,
+        height: 600,
+        isMaximized: false,
+        isMinimized: false,
+        component: createFileWindow
+      });
+    }
+  }
+
+  // 加载固定文件列表（当主机或连接改变时）
+  useEffect(() => {
+    if (currentHost?.id) {
+      loadPinnedFiles();
+    }
+  }, [currentHost?.id]);
+
   // 过滤文件并添加新建的临时项目
   let filteredFiles = files.filter(file =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1347,8 +1479,22 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       </div>
 
       {/* 主内容区域 */}
-      <div className="flex-1 relative" {...dragHandlers}>
-        <FileManagerGrid
+      <div className="flex-1 flex" {...dragHandlers}>
+        {/* 左侧边栏 */}
+        <div className="w-64 flex-shrink-0">
+          <FileManagerSidebar
+            currentHost={currentHost}
+            currentPath={currentPath}
+            onPathChange={setCurrentPath}
+            onLoadDirectory={loadDirectory}
+            sshSessionId={sshSessionId}
+            refreshTrigger={sidebarRefreshTrigger}
+          />
+        </div>
+
+        {/* 右侧文件网格 */}
+        <div className="flex-1 relative">
+          <FileManagerGrid
           files={filteredFiles}
           selectedFiles={selectedFiles}
           onFileSelect={() => {}} // 不再需要这个回调，使用onSelectionChange
@@ -1407,8 +1553,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           onDragToDesktop={() => handleDragToDesktop(contextMenu.files)}
           onOpenTerminal={(path) => handleOpenTerminal(path)}
           onRunExecutable={(file) => handleRunExecutable(file)}
+          onPinFile={handlePinFile}
+          onUnpinFile={handleUnpinFile}
+          onAddShortcut={handleAddShortcut}
+          isPinned={isPinnedFile}
           currentPath={currentPath}
         />
+        </div>
 
       </div>
     </div>

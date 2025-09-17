@@ -16,7 +16,9 @@ import {
   Share,
   ExternalLink,
   Terminal,
-  Play
+  Play,
+  Star,
+  Bookmark
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -54,6 +56,10 @@ interface ContextMenuProps {
   onDragToDesktop?: () => void;
   onOpenTerminal?: (path: string) => void;
   onRunExecutable?: (file: FileItem) => void;
+  onPinFile?: (file: FileItem) => void;
+  onUnpinFile?: (file: FileItem) => void;
+  onAddShortcut?: (path: string) => void;
+  isPinned?: (file: FileItem) => boolean;
   currentPath?: string;
 }
 
@@ -89,6 +95,10 @@ export function FileManagerContextMenu({
   onDragToDesktop,
   onOpenTerminal,
   onRunExecutable,
+  onPinFile,
+  onUnpinFile,
+  onAddShortcut,
+  isPinned,
   currentPath
 }: ContextMenuProps) {
   const { t } = useTranslation();
@@ -256,6 +266,34 @@ export function FileManagerContextMenu({
           : "保存到系统",
         action: () => onDragToDesktop(),
         shortcut: isModernBrowser ? "选择位置保存" : "下载到默认位置"
+      });
+    }
+
+    // PIN/UNPIN 功能 - 仅对单个文件显示
+    if (isSingleFile && files[0].type === 'file') {
+      const isCurrentlyPinned = isPinned ? isPinned(files[0]) : false;
+
+      if (isCurrentlyPinned && onUnpinFile) {
+        menuItems.push({
+          icon: <Star className="w-4 h-4 fill-yellow-400" />,
+          label: "取消固定",
+          action: () => onUnpinFile(files[0])
+        });
+      } else if (!isCurrentlyPinned && onPinFile) {
+        menuItems.push({
+          icon: <Star className="w-4 h-4" />,
+          label: "固定文件",
+          action: () => onPinFile(files[0])
+        });
+      }
+    }
+
+    // 添加文件夹快捷方式 - 仅对单个文件夹显示
+    if (isSingleFile && files[0].type === 'directory' && onAddShortcut) {
+      menuItems.push({
+        icon: <Bookmark className="w-4 h-4" />,
+        label: "添加到快捷方式",
+        action: () => onAddShortcut(files[0].path)
       });
     }
 

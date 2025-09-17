@@ -733,7 +733,10 @@
     "sshStatusCheckTimeout": "SSH 状态检查超时",
     "sshReconnectionTimeout": "SSH 重新连接超时",
     "saveOperationTimeout": "保存操作超时",
-    "cannotSaveFile": "无法保存文件"
+    "cannotSaveFile": "无法保存文件",
+    "starred": "收藏",
+    "shortcuts": "快捷方式",
+    "directories": "目录"
   },
   "tunnels": {
     "title": "SSH 隧道",
