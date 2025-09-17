@@ -80,7 +80,45 @@ export function FileManagerOperations({
     );
 
     try {
-      const content = await uploadFile.text();
+      // 读取文件内容 - 支持文本和二进制文件
+      const content = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error);
+
+        // 检查文件类型，决定读取方式
+        const isTextFile = uploadFile.type.startsWith('text/') ||
+                          uploadFile.type === 'application/json' ||
+                          uploadFile.type === 'application/javascript' ||
+                          uploadFile.type === 'application/xml' ||
+                          uploadFile.name.match(/\.(txt|json|js|ts|jsx|tsx|css|html|htm|xml|yaml|yml|md|py|java|c|cpp|h|sh|bat|ps1)$/i);
+
+        if (isTextFile) {
+          reader.onload = () => {
+            if (reader.result) {
+              resolve(reader.result as string);
+            } else {
+              reject(new Error('Failed to read text file content'));
+            }
+          };
+          reader.readAsText(uploadFile);
+        } else {
+          reader.onload = () => {
+            if (reader.result instanceof ArrayBuffer) {
+              const bytes = new Uint8Array(reader.result);
+              let binary = '';
+              for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              const base64 = btoa(binary);
+              resolve(base64);
+            } else {
+              reject(new Error('Failed to read binary file'));
+            }
+          };
+          reader.readAsArrayBuffer(uploadFile);
+        }
+      });
+
       const { uploadSSHFile } = await import("@/ui/main-axios.ts");
 
       const response = await uploadSSHFile(

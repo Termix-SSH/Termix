@@ -298,11 +298,53 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       // 确保SSH连接有效
       await ensureSSHConnection();
 
-      const targetPath = currentPath.endsWith('/')
-        ? `${currentPath}${file.name}`
-        : `${currentPath}/${file.name}`;
+      // 读取文件内容
+      const fileContent = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error);
 
-      await uploadSSHFile(sshSessionId, targetPath, file);
+        // 检查文件类型，决定读取方式
+        const isTextFile = file.type.startsWith('text/') ||
+                          file.type === 'application/json' ||
+                          file.type === 'application/javascript' ||
+                          file.type === 'application/xml' ||
+                          file.name.match(/\.(txt|json|js|ts|jsx|tsx|css|html|htm|xml|yaml|yml|md|py|java|c|cpp|h|sh|bat|ps1)$/i);
+
+        if (isTextFile) {
+          reader.onload = () => {
+            if (reader.result) {
+              resolve(reader.result as string);
+            } else {
+              reject(new Error('Failed to read text file content'));
+            }
+          };
+          reader.readAsText(file);
+        } else {
+          reader.onload = () => {
+            if (reader.result instanceof ArrayBuffer) {
+              const bytes = new Uint8Array(reader.result);
+              let binary = '';
+              for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              const base64 = btoa(binary);
+              resolve(base64);
+            } else {
+              reject(new Error('Failed to read binary file'));
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        }
+      });
+
+      await uploadSSHFile(
+        sshSessionId,
+        currentPath,
+        file.name,
+        fileContent,
+        currentHost?.id,
+        undefined // userId - will be handled by backend
+      );
       toast.success(t("fileManager.fileUploadedSuccessfully", { name: file.name }));
       loadDirectory(currentPath);
     } catch (error: any) {
