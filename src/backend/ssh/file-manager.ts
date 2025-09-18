@@ -85,7 +85,14 @@ function cleanupSession(sessionId: string) {
 function scheduleSessionCleanup(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
+    // Clear existing timeout
     if (session.timeout) clearTimeout(session.timeout);
+
+    // Set new timeout for 10 minutes of inactivity
+    session.timeout = setTimeout(() => {
+      fileLogger.info(`Cleaning up inactive SSH session: ${sessionId}`);
+      cleanupSession(sessionId);
+    }, 10 * 60 * 1000); // 10 minutes
   }
 }
 
@@ -176,9 +183,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     host: ip,
     port: port || 22,
     username,
-    readyTimeout: 0,
+    readyTimeout: 60000,
     keepaliveInterval: 30000,
-    keepaliveCountMax: 0,
+    keepaliveCountMax: 3,
     algorithms: {
       kex: [
         "diffie-hellman-group14-sha256",
@@ -259,6 +266,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       isConnected: true,
       lastActive: Date.now(),
     };
+    scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
   });
 
