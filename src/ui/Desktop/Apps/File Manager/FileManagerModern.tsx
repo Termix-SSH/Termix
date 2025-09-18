@@ -65,7 +65,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sshSessionId, setSshSessionId] = useState<string | null>(null);
+  const [currentRequestId, setCurrentRequestId] = useState<number>(0);
+  const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
@@ -144,7 +147,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   // 文件列表更新
   useEffect(() => {
     if (sshSessionId) {
-      loadDirectory(currentPath);
+      handleRefreshDirectory();
     }
   }, [sshSessionId, currentPath]);
 
@@ -226,59 +229,60 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       return;
     }
 
+    // Generate unique request ID to prevent race conditions
+    const requestId = Date.now();
+    setCurrentRequestId(requestId);
+    setIsLoading(true);
+
     try {
-      setIsLoading(true);
-      console.log("Loading directory:", path, "with session ID:", sshSessionId);
+      console.log(`[${requestId}] Loading directory:`, path);
 
-      // 首先检查SSH连接状态
-      try {
-        const status = await getSSHStatus(sshSessionId);
-        console.log("SSH connection status:", status);
+      const response = await listSSHFiles(sshSessionId, path);
 
-        if (!status.connected) {
-          console.log("SSH not connected, attempting to reconnect...");
-          await initializeSSHConnection();
-          return; // 重连后会触发useEffect重新加载目录
-        }
-      } catch (statusError) {
-        console.log("Failed to get SSH status, attempting to reconnect...");
-        await initializeSSHConnection();
+      // Only process response if this is still the latest request
+      if (requestId !== currentRequestId) {
+        console.log(`[${requestId}] Request outdated, ignoring response`);
         return;
       }
 
-      const response = await listSSHFiles(sshSessionId, path);
-      console.log("Directory response from backend:", response);
+      console.log(`[${requestId}] Directory response received:`, response);
 
-      // 处理新的返回格式 { files: FileItem[], path: string }
       const files = Array.isArray(response) ? response : response?.files || [];
-      console.log("Directory contents loaded:", files.length, "items");
-      console.log(
-        "Files with sizes:",
-        files.map((f) => ({ name: f.name, size: f.size, type: f.type })),
-      );
-
       setFiles(files);
       clearSelection();
-    } catch (error: any) {
-      console.error("Failed to load directory:", error);
 
-      // 如果是连接错误，尝试重连
-      if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
-      ) {
-        console.log("Connection error detected, attempting to reconnect...");
-        await initializeSSHConnection();
-      } else {
-        toast.error(
-          t("fileManager.failedToLoadDirectory") +
-            ": " +
-            (error.message || error),
-        );
+      console.log(`[${requestId}] Directory loaded successfully:`, files.length, "items");
+    } catch (error: any) {
+      // Only handle error if this is still the latest request
+      if (requestId !== currentRequestId) {
+        console.log(`[${requestId}] Request outdated, ignoring error`);
+        return;
       }
+
+      console.error(`[${requestId}] Failed to load directory:`, error);
+      toast.error(
+        t("fileManager.failedToLoadDirectory") + ": " + (error.message || error)
+      );
     } finally {
-      setIsLoading(false);
+      // Only clear loading if this is still the latest request
+      if (requestId === currentRequestId) {
+        setIsLoading(false);
+      }
     }
+  }
+
+  // 防抖刷新函数 - 防止疯狂点击
+  function handleRefreshDirectory() {
+    const now = Date.now();
+    const DEBOUNCE_MS = 500; // 500ms防抖
+
+    if (now - lastRefreshTime < DEBOUNCE_MS) {
+      console.log("Refresh ignored - too frequent");
+      return;
+    }
+
+    setLastRefreshTime(now);
+    loadDirectory(currentPath);
   }
 
   function handleFilesDropped(fileList: FileList) {
@@ -352,7 +356,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       toast.success(
         t("fileManager.fileUploadedSuccessfully", { name: file.name }),
       );
-      loadDirectory(currentPath);
+      handleRefreshDirectory();
     } catch (error: any) {
       if (
         error.message?.includes("connection") ||
@@ -455,7 +459,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       toast.success(
         t("fileManager.itemsDeletedSuccessfully", { count: files.length }),
       );
-      loadDirectory(currentPath);
+      handleRefreshDirectory();
       clearSelection();
     } catch (error: any) {
       if (
@@ -807,7 +811,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       }
 
       // 刷新文件列表
-      loadDirectory(currentPath);
+      handleRefreshDirectory();
       clearSelection();
 
       // 清空剪贴板（剪切操作后，复制操作保留剪贴板内容）
@@ -931,7 +935,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       }
 
       // 刷新文件列表
-      loadDirectory(currentPath);
+      handleRefreshDirectory();
     } catch (error: any) {
       toast.error(`撤销操作失败: ${error.message || "Unknown error"}`);
       console.error("Undo failed:", error);
@@ -942,16 +946,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     setEditingFile(file);
   }
 
-  // 确保SSH连接有效
+  // 确保SSH连接有效 - 简化版本，防止并发重连
   async function ensureSSHConnection() {
-    if (!sshSessionId || !currentHost) return;
+    if (!sshSessionId || !currentHost || isReconnecting) return;
 
     try {
       const status = await getSSHStatus(sshSessionId);
-      console.log("SSH connection status:", status);
 
-      if (!status.connected) {
-        console.log("SSH not connected, attempting to reconnect...");
+      if (!status.connected && !isReconnecting) {
+        setIsReconnecting(true);
+        console.log("SSH disconnected, reconnecting...");
 
         await connectSSH(sshSessionId, {
           hostId: currentHost.id,
@@ -969,8 +973,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         console.log("SSH reconnection successful");
       }
     } catch (error) {
-      console.log("SSH connection check/reconnect failed:", error);
+      console.log("SSH reconnection failed:", error);
       throw error;
+    } finally {
+      setIsReconnecting(false);
     }
   }
 
@@ -1041,7 +1047,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
       // 清除编辑状态
       setEditingFile(null);
-      loadDirectory(currentPath);
+      handleRefreshDirectory();
     } catch (error: any) {
       console.error("Rename failed with error:", {
         error,
@@ -1177,7 +1183,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         toast.success(
           `成功移动了 ${successCount} 个项目到 ${targetFolder.name}`,
         );
-        loadDirectory(currentPath);
+        handleRefreshDirectory();
         clearSelection(); // 清除选中状态
       }
     } catch (error: any) {
@@ -1602,7 +1608,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => loadDirectory(currentPath)}
+              onClick={handleRefreshDirectory}
               className="h-9"
             >
               <RefreshCw className="w-4 h-4" />
@@ -1637,7 +1643,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
             currentPath={currentPath}
             isLoading={isLoading}
             onPathChange={setCurrentPath}
-            onRefresh={() => loadDirectory(currentPath)}
+            onRefresh={handleRefreshDirectory}
             onUpload={handleFilesDropped}
             onDownload={(files) => files.forEach(handleDownloadFile)}
             onContextMenu={handleContextMenu}
@@ -1684,7 +1690,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
             }}
             onNewFolder={handleCreateNewFolder}
             onNewFile={handleCreateNewFile}
-            onRefresh={() => loadDirectory(currentPath)}
+            onRefresh={handleRefreshDirectory}
             hasClipboard={!!clipboard}
             onDragToDesktop={() => handleDragToDesktop(contextMenu.files)}
             onOpenTerminal={(path) => handleOpenTerminal(path)}
