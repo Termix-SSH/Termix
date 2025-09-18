@@ -576,8 +576,6 @@
     "upload": "上传",
     "authentication": "认证方式",
     "password": "密码",
-    "requirePassword": "要求密码",
-    "requirePasswordDescription": "禁用时，可以在不输入密码的情况下保存会话",
     "key": "密钥",
     "credential": "凭证",
     "selectCredential": "选择凭证",

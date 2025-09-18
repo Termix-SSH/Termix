@@ -576,8 +576,6 @@
     "upload": "Upload",
     "authentication": "Authentication",
     "password": "Password",
-    "requirePassword": "Require Password",
-    "requirePasswordDescription": "When disabled, sessions can be saved without entering a password",
     "key": "Key",
     "credential": "Credential",
     "selectCredential": "Select Credential",

@@ -45,9 +45,6 @@ export const sshData = sqliteTable("ssh_data", {
   authType: text("auth_type").notNull(),
 
   password: text("password"),
-  requirePassword: integer("require_password", { mode: "boolean" })
-    .notNull()
-    .default(true),
   key: text("key", { length: 8192 }),
   keyPassword: text("key_password"),
   keyType: text("key_type"),

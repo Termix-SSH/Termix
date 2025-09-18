@@ -126,7 +126,6 @@ class DatabaseSQLiteExport {
               pin INTEGER NOT NULL DEFAULT 0,
               auth_type TEXT NOT NULL,
               password TEXT,
-              require_password INTEGER NOT NULL DEFAULT 1,
               key TEXT,
               key_password TEXT,
               key_type TEXT,
@@ -225,7 +224,6 @@ class DatabaseSQLiteExport {
               const fieldMappings: Record<string, string> = {
                 userId: "user_id",
                 authType: "auth_type",
-                requirePassword: "require_password",
                 keyPassword: "key_password",
                 keyType: "key_type",
                 credentialId: "credential_id",
@@ -464,7 +462,6 @@ class DatabaseSQLiteExport {
               const columnToFieldMappings: Record<string, string> = {
                 user_id: "userId",
                 auth_type: "authType",
-                require_password: "requirePassword",
                 key_password: "keyPassword",
                 key_type: "keyType",
                 credential_id: "credentialId",
