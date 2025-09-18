@@ -104,7 +104,7 @@
     "@types/react-dom": "^19.1.6",
     "@types/ssh2": "^1.15.5",
     "@types/ws": "^8.18.1",
-    "@vitejs/plugin-react-swc": "^3.10.2",
+    "@vitejs/plugin-react-swc": "^4.1.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
     "electron": "^38.0.0",
