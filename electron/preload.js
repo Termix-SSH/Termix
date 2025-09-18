@@ -26,13 +26,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ================== 拖拽API ==================
 
   // 创建临时文件用于拖拽
-  createTempFile: (fileData) => ipcRenderer.invoke("create-temp-file", fileData),
+  createTempFile: (fileData) =>
+    ipcRenderer.invoke("create-temp-file", fileData),
 
   // 创建临时文件夹用于拖拽
-  createTempFolder: (folderData) => ipcRenderer.invoke("create-temp-folder", folderData),
+  createTempFolder: (folderData) =>
+    ipcRenderer.invoke("create-temp-folder", folderData),
 
   // 开始拖拽到桌面
-  startDragToDesktop: (dragData) => ipcRenderer.invoke("start-drag-to-desktop", dragData),
+  startDragToDesktop: (dragData) =>
+    ipcRenderer.invoke("start-drag-to-desktop", dragData),
 
   // 清理临时文件
   cleanupTempFile: (tempId) => ipcRenderer.invoke("cleanup-temp-file", tempId),

@@ -86,18 +86,21 @@ export function FileManagerOperations({
         reader.onerror = () => reject(reader.error);
 
         // 检查文件类型，决定读取方式
-        const isTextFile = uploadFile.type.startsWith('text/') ||
-                          uploadFile.type === 'application/json' ||
-                          uploadFile.type === 'application/javascript' ||
-                          uploadFile.type === 'application/xml' ||
-                          uploadFile.name.match(/\.(txt|json|js|ts|jsx|tsx|css|html|htm|xml|yaml|yml|md|py|java|c|cpp|h|sh|bat|ps1)$/i);
+        const isTextFile =
+          uploadFile.type.startsWith("text/") ||
+          uploadFile.type === "application/json" ||
+          uploadFile.type === "application/javascript" ||
+          uploadFile.type === "application/xml" ||
+          uploadFile.name.match(
+            /\.(txt|json|js|ts|jsx|tsx|css|html|htm|xml|yaml|yml|md|py|java|c|cpp|h|sh|bat|ps1)$/i,
+          );
 
         if (isTextFile) {
           reader.onload = () => {
             if (reader.result) {
               resolve(reader.result as string);
             } else {
-              reject(new Error('Failed to read text file content'));
+              reject(new Error("Failed to read text file content"));
             }
           };
           reader.readAsText(uploadFile);
@@ -105,14 +108,14 @@ export function FileManagerOperations({
           reader.onload = () => {
             if (reader.result instanceof ArrayBuffer) {
               const bytes = new Uint8Array(reader.result);
-              let binary = '';
+              let binary = "";
               for (let i = 0; i < bytes.byteLength; i++) {
                 binary += String.fromCharCode(bytes[i]);
               }
               const base64 = btoa(binary);
               resolve(base64);
             } else {
-              reject(new Error('Failed to read binary file'));
+              reject(new Error("Failed to read binary file"));
             }
           };
           reader.readAsArrayBuffer(uploadFile);
@@ -201,7 +204,7 @@ export function FileManagerOperations({
     setIsLoading(true);
 
     const { toast } = await import("sonner");
-    const fileName = downloadPath.split('/').pop() || 'download';
+    const fileName = downloadPath.split("/").pop() || "download";
     const loadingToast = toast.loading(
       t("fileManager.downloadingFile", { name: fileName }),
     );
@@ -209,10 +212,7 @@ export function FileManagerOperations({
     try {
       const { downloadSSHFile } = await import("@/ui/main-axios.ts");
 
-      const response = await downloadSSHFile(
-        sshSessionId,
-        downloadPath.trim(),
-      );
+      const response = await downloadSSHFile(sshSessionId, downloadPath.trim());
 
       toast.dismiss(loadingToast);
 
@@ -224,11 +224,13 @@ export function FileManagerOperations({
           byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: response.mimeType || 'application/octet-stream' });
+        const blob = new Blob([byteArray], {
+          type: response.mimeType || "application/octet-stream",
+        });
 
         // Create download link
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
         link.download = response.fileName || fileName;
         document.body.appendChild(link);
@@ -237,7 +239,9 @@ export function FileManagerOperations({
         URL.revokeObjectURL(url);
 
         onSuccess(
-          t("fileManager.fileDownloadedSuccessfully", { name: response.fileName || fileName }),
+          t("fileManager.fileDownloadedSuccessfully", {
+            name: response.fileName || fileName,
+          }),
         );
       } else {
         onError(t("fileManager.noFileContent"));

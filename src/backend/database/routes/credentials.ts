@@ -6,53 +6,68 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { authLogger } from "../../utils/logger.js";
 import { EncryptedDBOperations } from "../../utils/encrypted-db-operations.js";
-import { parseSSHKey, parsePublicKey, detectKeyType, validateKeyPair } from "../../utils/ssh-key-utils.js";
+import {
+  parseSSHKey,
+  parsePublicKey,
+  detectKeyType,
+  validateKeyPair,
+} from "../../utils/ssh-key-utils.js";
 import crypto from "crypto";
 import ssh2Pkg from "ssh2";
 const { utils: ssh2Utils, Client } = ssh2Pkg;
 
 // Direct SSH key generation with ssh2 - the right way
-function generateSSHKeyPair(keyType: string, keySize?: number, passphrase?: string): { success: boolean; privateKey?: string; publicKey?: string; error?: string } {
-  console.log('Generating SSH key pair with ssh2:', keyType);
+function generateSSHKeyPair(
+  keyType: string,
+  keySize?: number,
+  passphrase?: string,
+): {
+  success: boolean;
+  privateKey?: string;
+  publicKey?: string;
+  error?: string;
+} {
+  console.log("Generating SSH key pair with ssh2:", keyType);
 
   try {
     // Convert our keyType to ssh2 format
     let ssh2Type = keyType;
     const options: any = {};
 
-    if (keyType === 'ssh-rsa') {
-      ssh2Type = 'rsa';
+    if (keyType === "ssh-rsa") {
+      ssh2Type = "rsa";
       options.bits = keySize || 2048;
-    } else if (keyType === 'ssh-ed25519') {
-      ssh2Type = 'ed25519';
-    } else if (keyType === 'ecdsa-sha2-nistp256') {
-      ssh2Type = 'ecdsa';
+    } else if (keyType === "ssh-ed25519") {
+      ssh2Type = "ed25519";
+    } else if (keyType === "ecdsa-sha2-nistp256") {
+      ssh2Type = "ecdsa";
       options.bits = 256; // ECDSA P-256 uses 256 bits
     }
 
     // Add passphrase protection if provided
     if (passphrase && passphrase.trim()) {
       options.passphrase = passphrase;
-      options.cipher = 'aes128-cbc'; // Default cipher for encrypted private keys
+      options.cipher = "aes128-cbc"; // Default cipher for encrypted private keys
     }
 
     // Use ssh2's native key generation
     const keyPair = ssh2Utils.generateKeyPairSync(ssh2Type as any, options);
 
-    console.log('SSH key pair generated successfully!');
-    console.log('Private key length:', keyPair.private.length);
-    console.log('Public key preview:', keyPair.public.substring(0, 50) + '...');
+    console.log("SSH key pair generated successfully!");
+    console.log("Private key length:", keyPair.private.length);
+    console.log("Public key preview:", keyPair.public.substring(0, 50) + "...");
 
     return {
       success: true,
       privateKey: keyPair.private,
-      publicKey: keyPair.public
+      publicKey: keyPair.public,
     };
   } catch (error) {
-    console.error('SSH key generation failed:', error);
+    console.error("SSH key generation failed:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'SSH key generation failed'
+      error:
+        error instanceof Error ? error.message : "SSH key generation failed",
     };
   }
 }
@@ -171,7 +186,7 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
           error: keyInfo.error,
         });
         return res.status(400).json({
-          error: `Invalid SSH key: ${keyInfo.error}`
+          error: `Invalid SSH key: ${keyInfo.error}`,
         });
       }
     }
@@ -195,11 +210,11 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
       lastUsed: null,
     };
 
-    const created = await EncryptedDBOperations.insert(
+    const created = (await EncryptedDBOperations.insert(
       sshCredentials,
-      'ssh_credentials',
-      credentialData
-    ) as typeof credentialData & { id: number };
+      "ssh_credentials",
+      credentialData,
+    )) as typeof credentialData & { id: number };
 
     authLogger.success(
       `SSH credential created: ${name} (${authType}) by user ${userId}`,
@@ -240,8 +255,12 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
 
   try {
     const credentials = await EncryptedDBOperations.select(
-      db.select().from(sshCredentials).where(eq(sshCredentials.userId, userId)).orderBy(desc(sshCredentials.updatedAt)),
-      'ssh_credentials'
+      db
+        .select()
+        .from(sshCredentials)
+        .where(eq(sshCredentials.userId, userId))
+        .orderBy(desc(sshCredentials.updatedAt)),
+      "ssh_credentials",
     );
 
     res.json(credentials.map((cred) => formatCredentialOutput(cred)));
@@ -297,11 +316,16 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
 
   try {
     const credentials = await EncryptedDBOperations.select(
-      db.select().from(sshCredentials).where(and(
-        eq(sshCredentials.id, parseInt(id)),
-        eq(sshCredentials.userId, userId),
-      )),
-      'ssh_credentials'
+      db
+        .select()
+        .from(sshCredentials)
+        .where(
+          and(
+            eq(sshCredentials.id, parseInt(id)),
+            eq(sshCredentials.userId, userId),
+          ),
+        ),
+      "ssh_credentials",
     );
 
     if (credentials.length === 0) {
@@ -400,7 +424,7 @@ router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
             error: keyInfo.error,
           });
           return res.status(400).json({
-            error: `Invalid SSH key: ${keyInfo.error}`
+            error: `Invalid SSH key: ${keyInfo.error}`,
           });
         }
         updateFields.privateKey = keyInfo.privateKey;
@@ -414,8 +438,11 @@ router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
 
     if (Object.keys(updateFields).length === 0) {
       const existing = await EncryptedDBOperations.select(
-        db.select().from(sshCredentials).where(eq(sshCredentials.id, parseInt(id))),
-        'ssh_credentials'
+        db
+          .select()
+          .from(sshCredentials)
+          .where(eq(sshCredentials.id, parseInt(id))),
+        "ssh_credentials",
       );
 
       return res.json(formatCredentialOutput(existing[0]));
@@ -423,17 +450,20 @@ router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
 
     await EncryptedDBOperations.update(
       sshCredentials,
-      'ssh_credentials',
+      "ssh_credentials",
       and(
         eq(sshCredentials.id, parseInt(id)),
         eq(sshCredentials.userId, userId),
       ),
-      updateFields
+      updateFields,
     );
 
     const updated = await EncryptedDBOperations.select(
-      db.select().from(sshCredentials).where(eq(sshCredentials.id, parseInt(id))),
-      'ssh_credentials'
+      db
+        .select()
+        .from(sshCredentials)
+        .where(eq(sshCredentials.id, parseInt(id))),
+      "ssh_credentials",
     );
 
     const credential = updated[0];
@@ -757,371 +787,442 @@ router.put(
 
 // Detect SSH key type endpoint
 // POST /credentials/detect-key-type
-router.post("/detect-key-type", authenticateJWT, async (req: Request, res: Response) => {
-  const { privateKey, keyPassword } = req.body;
+router.post(
+  "/detect-key-type",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const { privateKey, keyPassword } = req.body;
 
-  console.log("=== Key Detection API Called ===");
-  console.log("Request body keys:", Object.keys(req.body));
-  console.log("Private key provided:", !!privateKey);
-  console.log("Private key type:", typeof privateKey);
+    console.log("=== Key Detection API Called ===");
+    console.log("Request body keys:", Object.keys(req.body));
+    console.log("Private key provided:", !!privateKey);
+    console.log("Private key type:", typeof privateKey);
 
-  if (!privateKey || typeof privateKey !== "string") {
-    console.log("Invalid private key provided");
-    return res.status(400).json({ error: "Private key is required" });
-  }
+    if (!privateKey || typeof privateKey !== "string") {
+      console.log("Invalid private key provided");
+      return res.status(400).json({ error: "Private key is required" });
+    }
 
-  try {
-    console.log("Calling parseSSHKey...");
-    const keyInfo = parseSSHKey(privateKey, keyPassword);
-    console.log("parseSSHKey result:", keyInfo);
+    try {
+      console.log("Calling parseSSHKey...");
+      const keyInfo = parseSSHKey(privateKey, keyPassword);
+      console.log("parseSSHKey result:", keyInfo);
 
-    const response = {
-      success: keyInfo.success,
-      keyType: keyInfo.keyType,
-      detectedKeyType: keyInfo.keyType,
-      hasPublicKey: !!keyInfo.publicKey,
-      error: keyInfo.error || null
-    };
+      const response = {
+        success: keyInfo.success,
+        keyType: keyInfo.keyType,
+        detectedKeyType: keyInfo.keyType,
+        hasPublicKey: !!keyInfo.publicKey,
+        error: keyInfo.error || null,
+      };
 
-    console.log("Sending response:", response);
-    res.json(response);
-  } catch (error) {
-    console.error("Exception in detect-key-type endpoint:", error);
-    authLogger.error("Failed to detect key type", error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Failed to detect key type"
-    });
-  }
-});
+      console.log("Sending response:", response);
+      res.json(response);
+    } catch (error) {
+      console.error("Exception in detect-key-type endpoint:", error);
+      authLogger.error("Failed to detect key type", error);
+      res.status(500).json({
+        error:
+          error instanceof Error ? error.message : "Failed to detect key type",
+      });
+    }
+  },
+);
 
 // Detect SSH public key type endpoint
 // POST /credentials/detect-public-key-type
-router.post("/detect-public-key-type", authenticateJWT, async (req: Request, res: Response) => {
-  const { publicKey } = req.body;
+router.post(
+  "/detect-public-key-type",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const { publicKey } = req.body;
 
-  console.log("=== Public Key Detection API Called ===");
-  console.log("Request body keys:", Object.keys(req.body));
-  console.log("Public key provided:", !!publicKey);
-  console.log("Public key type:", typeof publicKey);
+    console.log("=== Public Key Detection API Called ===");
+    console.log("Request body keys:", Object.keys(req.body));
+    console.log("Public key provided:", !!publicKey);
+    console.log("Public key type:", typeof publicKey);
 
-  if (!publicKey || typeof publicKey !== "string") {
-    console.log("Invalid public key provided");
-    return res.status(400).json({ error: "Public key is required" });
-  }
+    if (!publicKey || typeof publicKey !== "string") {
+      console.log("Invalid public key provided");
+      return res.status(400).json({ error: "Public key is required" });
+    }
 
-  try {
-    console.log("Calling parsePublicKey...");
-    const keyInfo = parsePublicKey(publicKey);
-    console.log("parsePublicKey result:", keyInfo);
+    try {
+      console.log("Calling parsePublicKey...");
+      const keyInfo = parsePublicKey(publicKey);
+      console.log("parsePublicKey result:", keyInfo);
 
-    const response = {
-      success: keyInfo.success,
-      keyType: keyInfo.keyType,
-      detectedKeyType: keyInfo.keyType,
-      error: keyInfo.error || null
-    };
+      const response = {
+        success: keyInfo.success,
+        keyType: keyInfo.keyType,
+        detectedKeyType: keyInfo.keyType,
+        error: keyInfo.error || null,
+      };
 
-    console.log("Sending response:", response);
-    res.json(response);
-  } catch (error) {
-    console.error("Exception in detect-public-key-type endpoint:", error);
-    authLogger.error("Failed to detect public key type", error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Failed to detect public key type"
-    });
-  }
-});
+      console.log("Sending response:", response);
+      res.json(response);
+    } catch (error) {
+      console.error("Exception in detect-public-key-type endpoint:", error);
+      authLogger.error("Failed to detect public key type", error);
+      res.status(500).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to detect public key type",
+      });
+    }
+  },
+);
 
 // Validate SSH key pair endpoint
 // POST /credentials/validate-key-pair
-router.post("/validate-key-pair", authenticateJWT, async (req: Request, res: Response) => {
-  const { privateKey, publicKey, keyPassword } = req.body;
+router.post(
+  "/validate-key-pair",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const { privateKey, publicKey, keyPassword } = req.body;
 
-  console.log("=== Key Pair Validation API Called ===");
-  console.log("Request body keys:", Object.keys(req.body));
-  console.log("Private key provided:", !!privateKey);
-  console.log("Public key provided:", !!publicKey);
+    console.log("=== Key Pair Validation API Called ===");
+    console.log("Request body keys:", Object.keys(req.body));
+    console.log("Private key provided:", !!privateKey);
+    console.log("Public key provided:", !!publicKey);
 
-  if (!privateKey || typeof privateKey !== "string") {
-    console.log("Invalid private key provided");
-    return res.status(400).json({ error: "Private key is required" });
-  }
+    if (!privateKey || typeof privateKey !== "string") {
+      console.log("Invalid private key provided");
+      return res.status(400).json({ error: "Private key is required" });
+    }
 
-  if (!publicKey || typeof publicKey !== "string") {
-    console.log("Invalid public key provided");
-    return res.status(400).json({ error: "Public key is required" });
-  }
+    if (!publicKey || typeof publicKey !== "string") {
+      console.log("Invalid public key provided");
+      return res.status(400).json({ error: "Public key is required" });
+    }
 
-  try {
-    console.log("Calling validateKeyPair...");
-    const validationResult = validateKeyPair(privateKey, publicKey, keyPassword);
-    console.log("validateKeyPair result:", validationResult);
+    try {
+      console.log("Calling validateKeyPair...");
+      const validationResult = validateKeyPair(
+        privateKey,
+        publicKey,
+        keyPassword,
+      );
+      console.log("validateKeyPair result:", validationResult);
 
-    const response = {
-      isValid: validationResult.isValid,
-      privateKeyType: validationResult.privateKeyType,
-      publicKeyType: validationResult.publicKeyType,
-      generatedPublicKey: validationResult.generatedPublicKey,
-      error: validationResult.error || null
-    };
+      const response = {
+        isValid: validationResult.isValid,
+        privateKeyType: validationResult.privateKeyType,
+        publicKeyType: validationResult.publicKeyType,
+        generatedPublicKey: validationResult.generatedPublicKey,
+        error: validationResult.error || null,
+      };
 
-    console.log("Sending response:", response);
-    res.json(response);
-  } catch (error) {
-    console.error("Exception in validate-key-pair endpoint:", error);
-    authLogger.error("Failed to validate key pair", error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Failed to validate key pair"
-    });
-  }
-});
+      console.log("Sending response:", response);
+      res.json(response);
+    } catch (error) {
+      console.error("Exception in validate-key-pair endpoint:", error);
+      authLogger.error("Failed to validate key pair", error);
+      res.status(500).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to validate key pair",
+      });
+    }
+  },
+);
 
 // Generate new SSH key pair endpoint
 // POST /credentials/generate-key-pair
-router.post("/generate-key-pair", authenticateJWT, async (req: Request, res: Response) => {
-  const { keyType = 'ssh-ed25519', keySize = 2048, passphrase } = req.body;
+router.post(
+  "/generate-key-pair",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const { keyType = "ssh-ed25519", keySize = 2048, passphrase } = req.body;
 
-  console.log("=== Generate Key Pair API Called ===");
-  console.log("Key type:", keyType);
-  console.log("Key size:", keySize);
-  console.log("Has passphrase:", !!passphrase);
+    console.log("=== Generate Key Pair API Called ===");
+    console.log("Key type:", keyType);
+    console.log("Key size:", keySize);
+    console.log("Has passphrase:", !!passphrase);
 
-  try {
-    // Generate SSH keys directly with ssh2
-    const result = generateSSHKeyPair(keyType, keySize, passphrase);
+    try {
+      // Generate SSH keys directly with ssh2
+      const result = generateSSHKeyPair(keyType, keySize, passphrase);
 
-    if (result.success && result.privateKey && result.publicKey) {
-      const response = {
-        success: true,
-        privateKey: result.privateKey,
-        publicKey: result.publicKey,
-        keyType: keyType,
-        format: 'ssh',
-        algorithm: keyType,
-        keySize: keyType === 'ssh-rsa' ? keySize : undefined,
-        curve: keyType === 'ecdsa-sha2-nistp256' ? 'nistp256' : undefined
-      };
+      if (result.success && result.privateKey && result.publicKey) {
+        const response = {
+          success: true,
+          privateKey: result.privateKey,
+          publicKey: result.publicKey,
+          keyType: keyType,
+          format: "ssh",
+          algorithm: keyType,
+          keySize: keyType === "ssh-rsa" ? keySize : undefined,
+          curve: keyType === "ecdsa-sha2-nistp256" ? "nistp256" : undefined,
+        };
 
-      console.log("SSH key pair generated successfully:", keyType);
-      res.json(response);
-    } else {
-      console.error("SSH key generation failed:", result.error);
+        console.log("SSH key pair generated successfully:", keyType);
+        res.json(response);
+      } else {
+        console.error("SSH key generation failed:", result.error);
+        res.status(500).json({
+          success: false,
+          error: result.error || "Failed to generate SSH key pair",
+        });
+      }
+    } catch (error) {
+      console.error("Exception in generate-key-pair endpoint:", error);
+      authLogger.error("Failed to generate key pair", error);
       res.status(500).json({
         success: false,
-        error: result.error || "Failed to generate SSH key pair"
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate key pair",
       });
     }
-  } catch (error) {
-    console.error("Exception in generate-key-pair endpoint:", error);
-    authLogger.error("Failed to generate key pair", error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to generate key pair"
-    });
-  }
-});
+  },
+);
 
 // Generate public key from private key endpoint
 // POST /credentials/generate-public-key
-router.post("/generate-public-key", authenticateJWT, async (req: Request, res: Response) => {
-  const { privateKey, keyPassword } = req.body;
+router.post(
+  "/generate-public-key",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const { privateKey, keyPassword } = req.body;
 
-  console.log("=== Generate Public Key API Called ===");
-  console.log("Request body keys:", Object.keys(req.body));
-  console.log("Private key provided:", !!privateKey);
-  console.log("Private key type:", typeof privateKey);
+    console.log("=== Generate Public Key API Called ===");
+    console.log("Request body keys:", Object.keys(req.body));
+    console.log("Private key provided:", !!privateKey);
+    console.log("Private key type:", typeof privateKey);
 
-  if (!privateKey || typeof privateKey !== "string") {
-    console.log("Invalid private key provided");
-    return res.status(400).json({ error: "Private key is required" });
-  }
+    if (!privateKey || typeof privateKey !== "string") {
+      console.log("Invalid private key provided");
+      return res.status(400).json({ error: "Private key is required" });
+    }
 
-  try {
-    console.log("Using Node.js crypto to generate public key from private key...");
-    console.log("Private key length:", privateKey.length);
-    console.log("Private key first 100 chars:", privateKey.substring(0, 100));
-
-    // First try to create private key object from the input
-    let privateKeyObj;
-    let parseAttempts = [];
-
-    // Attempt 1: Direct parsing with passphrase
     try {
-      privateKeyObj = crypto.createPrivateKey({
-        key: privateKey,
-        passphrase: keyPassword
-      });
-      console.log("Successfully parsed with passphrase method");
-    } catch (error) {
-      parseAttempts.push(`Method 1 (with passphrase): ${error.message}`);
-    }
+      console.log(
+        "Using Node.js crypto to generate public key from private key...",
+      );
+      console.log("Private key length:", privateKey.length);
+      console.log("Private key first 100 chars:", privateKey.substring(0, 100));
 
-    // Attempt 2: Direct parsing without passphrase
-    if (!privateKeyObj) {
-      try {
-        privateKeyObj = crypto.createPrivateKey(privateKey);
-        console.log("Successfully parsed without passphrase");
-      } catch (error) {
-        parseAttempts.push(`Method 2 (without passphrase): ${error.message}`);
-      }
-    }
+      // First try to create private key object from the input
+      let privateKeyObj;
+      let parseAttempts = [];
 
-    // Attempt 3: Try with explicit format specification
-    if (!privateKeyObj) {
+      // Attempt 1: Direct parsing with passphrase
       try {
         privateKeyObj = crypto.createPrivateKey({
           key: privateKey,
-          format: 'pem',
-          type: 'pkcs8'
+          passphrase: keyPassword,
         });
-        console.log("Successfully parsed as PKCS#8");
+        console.log("Successfully parsed with passphrase method");
       } catch (error) {
-        parseAttempts.push(`Method 3 (PKCS#8): ${error.message}`);
+        parseAttempts.push(`Method 1 (with passphrase): ${error.message}`);
       }
-    }
 
-    // Attempt 4: Try as PKCS#1 RSA
-    if (!privateKeyObj && privateKey.includes('-----BEGIN RSA PRIVATE KEY-----')) {
-      try {
-        privateKeyObj = crypto.createPrivateKey({
-          key: privateKey,
-          format: 'pem',
-          type: 'pkcs1'
-        });
-        console.log("Successfully parsed as PKCS#1 RSA");
-      } catch (error) {
-        parseAttempts.push(`Method 4 (PKCS#1): ${error.message}`);
-      }
-    }
-
-    // Attempt 5: Try as SEC1 EC
-    if (!privateKeyObj && privateKey.includes('-----BEGIN EC PRIVATE KEY-----')) {
-      try {
-        privateKeyObj = crypto.createPrivateKey({
-          key: privateKey,
-          format: 'pem',
-          type: 'sec1'
-        });
-        console.log("Successfully parsed as SEC1 EC");
-      } catch (error) {
-        parseAttempts.push(`Method 5 (SEC1): ${error.message}`);
-      }
-    }
-
-    // Final attempt: Try using ssh2 as fallback
-    if (!privateKeyObj) {
-      console.log("Attempting fallback to parseSSHKey function...");
-      try {
-        const keyInfo = parseSSHKey(privateKey, keyPassword);
-        console.log("parseSSHKey fallback result:", keyInfo);
-
-        if (keyInfo.success && keyInfo.publicKey) {
-          // Ensure SSH2 fallback also returns proper string
-          const publicKeyString = String(keyInfo.publicKey);
-          console.log("SSH2 fallback public key type:", typeof publicKeyString);
-          console.log("SSH2 fallback public key length:", publicKeyString.length);
-
-          return res.json({
-            success: true,
-            publicKey: publicKeyString,
-            keyType: keyInfo.keyType
-          });
-        } else {
-          parseAttempts.push(`SSH2 fallback: ${keyInfo.error || 'No public key generated'}`);
+      // Attempt 2: Direct parsing without passphrase
+      if (!privateKeyObj) {
+        try {
+          privateKeyObj = crypto.createPrivateKey(privateKey);
+          console.log("Successfully parsed without passphrase");
+        } catch (error) {
+          parseAttempts.push(`Method 2 (without passphrase): ${error.message}`);
         }
-      } catch (error) {
-        parseAttempts.push(`SSH2 fallback exception: ${error.message}`);
       }
-    }
 
-    if (!privateKeyObj) {
-      console.error("All parsing attempts failed:", parseAttempts);
-      return res.status(400).json({
+      // Attempt 3: Try with explicit format specification
+      if (!privateKeyObj) {
+        try {
+          privateKeyObj = crypto.createPrivateKey({
+            key: privateKey,
+            format: "pem",
+            type: "pkcs8",
+          });
+          console.log("Successfully parsed as PKCS#8");
+        } catch (error) {
+          parseAttempts.push(`Method 3 (PKCS#8): ${error.message}`);
+        }
+      }
+
+      // Attempt 4: Try as PKCS#1 RSA
+      if (
+        !privateKeyObj &&
+        privateKey.includes("-----BEGIN RSA PRIVATE KEY-----")
+      ) {
+        try {
+          privateKeyObj = crypto.createPrivateKey({
+            key: privateKey,
+            format: "pem",
+            type: "pkcs1",
+          });
+          console.log("Successfully parsed as PKCS#1 RSA");
+        } catch (error) {
+          parseAttempts.push(`Method 4 (PKCS#1): ${error.message}`);
+        }
+      }
+
+      // Attempt 5: Try as SEC1 EC
+      if (
+        !privateKeyObj &&
+        privateKey.includes("-----BEGIN EC PRIVATE KEY-----")
+      ) {
+        try {
+          privateKeyObj = crypto.createPrivateKey({
+            key: privateKey,
+            format: "pem",
+            type: "sec1",
+          });
+          console.log("Successfully parsed as SEC1 EC");
+        } catch (error) {
+          parseAttempts.push(`Method 5 (SEC1): ${error.message}`);
+        }
+      }
+
+      // Final attempt: Try using ssh2 as fallback
+      if (!privateKeyObj) {
+        console.log("Attempting fallback to parseSSHKey function...");
+        try {
+          const keyInfo = parseSSHKey(privateKey, keyPassword);
+          console.log("parseSSHKey fallback result:", keyInfo);
+
+          if (keyInfo.success && keyInfo.publicKey) {
+            // Ensure SSH2 fallback also returns proper string
+            const publicKeyString = String(keyInfo.publicKey);
+            console.log(
+              "SSH2 fallback public key type:",
+              typeof publicKeyString,
+            );
+            console.log(
+              "SSH2 fallback public key length:",
+              publicKeyString.length,
+            );
+
+            return res.json({
+              success: true,
+              publicKey: publicKeyString,
+              keyType: keyInfo.keyType,
+            });
+          } else {
+            parseAttempts.push(
+              `SSH2 fallback: ${keyInfo.error || "No public key generated"}`,
+            );
+          }
+        } catch (error) {
+          parseAttempts.push(`SSH2 fallback exception: ${error.message}`);
+        }
+      }
+
+      if (!privateKeyObj) {
+        console.error("All parsing attempts failed:", parseAttempts);
+        return res.status(400).json({
+          success: false,
+          error: "Unable to parse private key. Tried multiple formats.",
+          details: parseAttempts,
+        });
+      }
+
+      // Generate public key from private key
+      const publicKeyObj = crypto.createPublicKey(privateKeyObj);
+      const publicKeyPem = publicKeyObj.export({
+        type: "spki",
+        format: "pem",
+      });
+
+      // Debug: Check what we're actually generating
+      console.log("Generated public key type:", typeof publicKeyPem);
+      console.log(
+        "Generated public key is Buffer:",
+        Buffer.isBuffer(publicKeyPem),
+      );
+
+      // Ensure publicKeyPem is a string
+      const publicKeyString =
+        typeof publicKeyPem === "string"
+          ? publicKeyPem
+          : publicKeyPem.toString("utf8");
+
+      console.log("Public key string length:", publicKeyString.length);
+      console.log(
+        "Generated public key first 100 chars:",
+        publicKeyString.substring(0, 100),
+      );
+      console.log("Public key is string:", typeof publicKeyString === "string");
+      console.log(
+        "Public key contains PEM header:",
+        publicKeyString.includes("-----BEGIN PUBLIC KEY-----"),
+      );
+
+      // Detect key type from the private key object
+      let keyType = "unknown";
+      const asymmetricKeyType = privateKeyObj.asymmetricKeyType;
+
+      if (asymmetricKeyType === "rsa") {
+        keyType = "ssh-rsa";
+      } else if (asymmetricKeyType === "ed25519") {
+        keyType = "ssh-ed25519";
+      } else if (asymmetricKeyType === "ec") {
+        // For EC keys, we need to check the curve
+        keyType = "ecdsa-sha2-nistp256"; // Default assumption for P-256
+      }
+
+      // Use ssh2 to generate SSH format public key
+      let finalPublicKey = publicKeyString; // PEM fallback
+      let formatType = "pem";
+
+      try {
+        const ssh2PrivateKey = ssh2Utils.parseKey(privateKey, keyPassword);
+        if (!(ssh2PrivateKey instanceof Error)) {
+          const publicKeyBuffer = ssh2PrivateKey.getPublicSSH();
+          const base64Data = publicKeyBuffer.toString("base64");
+          finalPublicKey = `${keyType} ${base64Data}`;
+          formatType = "ssh";
+          console.log("SSH format public key generated!");
+        } else {
+          console.warn("ssh2 parsing failed, using PEM format");
+        }
+      } catch (sshError) {
+        console.warn("ssh2 failed, using PEM format");
+      }
+
+      const response = {
+        success: true,
+        publicKey: finalPublicKey,
+        keyType: keyType,
+        format: formatType,
+      };
+
+      console.log("Final response publicKey type:", typeof response.publicKey);
+      console.log("Final response publicKey format:", response.format);
+      console.log(
+        "Final response publicKey length:",
+        response.publicKey.length,
+      );
+      console.log(
+        "Public key generated successfully using crypto module:",
+        keyType,
+      );
+
+      res.json(response);
+    } catch (error) {
+      console.error("Exception in generate-public-key endpoint:", error);
+      authLogger.error("Failed to generate public key", error);
+      res.status(500).json({
         success: false,
-        error: "Unable to parse private key. Tried multiple formats.",
-        details: parseAttempts
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate public key",
       });
     }
-
-    // Generate public key from private key
-    const publicKeyObj = crypto.createPublicKey(privateKeyObj);
-    const publicKeyPem = publicKeyObj.export({
-      type: 'spki',
-      format: 'pem'
-    });
-
-    // Debug: Check what we're actually generating
-    console.log("Generated public key type:", typeof publicKeyPem);
-    console.log("Generated public key is Buffer:", Buffer.isBuffer(publicKeyPem));
-
-    // Ensure publicKeyPem is a string
-    const publicKeyString = typeof publicKeyPem === 'string' ? publicKeyPem : publicKeyPem.toString('utf8');
-
-    console.log("Public key string length:", publicKeyString.length);
-    console.log("Generated public key first 100 chars:", publicKeyString.substring(0, 100));
-    console.log("Public key is string:", typeof publicKeyString === 'string');
-    console.log("Public key contains PEM header:", publicKeyString.includes('-----BEGIN PUBLIC KEY-----'));
-
-    // Detect key type from the private key object
-    let keyType = 'unknown';
-    const asymmetricKeyType = privateKeyObj.asymmetricKeyType;
-
-    if (asymmetricKeyType === 'rsa') {
-      keyType = 'ssh-rsa';
-    } else if (asymmetricKeyType === 'ed25519') {
-      keyType = 'ssh-ed25519';
-    } else if (asymmetricKeyType === 'ec') {
-      // For EC keys, we need to check the curve
-      keyType = 'ecdsa-sha2-nistp256'; // Default assumption for P-256
-    }
-
-    // Use ssh2 to generate SSH format public key
-    let finalPublicKey = publicKeyString; // PEM fallback
-    let formatType = 'pem';
-
-    try {
-      const ssh2PrivateKey = ssh2Utils.parseKey(privateKey, keyPassword);
-      if (!(ssh2PrivateKey instanceof Error)) {
-        const publicKeyBuffer = ssh2PrivateKey.getPublicSSH();
-        const base64Data = publicKeyBuffer.toString('base64');
-        finalPublicKey = `${keyType} ${base64Data}`;
-        formatType = 'ssh';
-        console.log("SSH format public key generated!");
-      } else {
-        console.warn("ssh2 parsing failed, using PEM format");
-      }
-    } catch (sshError) {
-      console.warn("ssh2 failed, using PEM format");
-    }
-
-    const response = {
-      success: true,
-      publicKey: finalPublicKey,
-      keyType: keyType,
-      format: formatType
-    };
-
-    console.log("Final response publicKey type:", typeof response.publicKey);
-    console.log("Final response publicKey format:", response.format);
-    console.log("Final response publicKey length:", response.publicKey.length);
-    console.log("Public key generated successfully using crypto module:", keyType);
-
-    res.json(response);
-  } catch (error) {
-    console.error("Exception in generate-public-key endpoint:", error);
-    authLogger.error("Failed to generate public key", error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to generate public key"
-    });
-  }
-});
+  },
+);
 
 // SSH Key Deployment Function
 async function deploySSHKeyToHost(
   hostConfig: any,
   publicKey: string,
-  credentialData: any
+  credentialData: any,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   return new Promise((resolve) => {
     const conn = new Client();
@@ -1133,16 +1234,16 @@ async function deploySSHKeyToHost(
       resolve({ success: false, error: "Connection timeout" });
     }, 30000);
 
-    conn.on('ready', async () => {
+    conn.on("ready", async () => {
       clearTimeout(connectionTimeout);
 
       try {
         // Step 1: Create ~/.ssh directory if it doesn't exist
         await new Promise<void>((resolveCmd, rejectCmd) => {
-          conn.exec('mkdir -p ~/.ssh && chmod 700 ~/.ssh', (err, stream) => {
+          conn.exec("mkdir -p ~/.ssh && chmod 700 ~/.ssh", (err, stream) => {
             if (err) return rejectCmd(err);
 
-            stream.on('close', (code) => {
+            stream.on("close", (code) => {
               if (code === 0) {
                 resolveCmd();
               } else {
@@ -1153,16 +1254,21 @@ async function deploySSHKeyToHost(
         });
 
         // Step 2: Check if public key already exists
-        const keyExists = await new Promise<boolean>((resolveCheck, rejectCheck) => {
-          const keyPattern = publicKey.split(' ')[1]; // Get the key part without algorithm
-          conn.exec(`grep -q "${keyPattern}" ~/.ssh/authorized_keys 2>/dev/null`, (err, stream) => {
-            if (err) return rejectCheck(err);
+        const keyExists = await new Promise<boolean>(
+          (resolveCheck, rejectCheck) => {
+            const keyPattern = publicKey.split(" ")[1]; // Get the key part without algorithm
+            conn.exec(
+              `grep -q "${keyPattern}" ~/.ssh/authorized_keys 2>/dev/null`,
+              (err, stream) => {
+                if (err) return rejectCheck(err);
 
-            stream.on('close', (code) => {
-              resolveCheck(code === 0); // code 0 means key found
-            });
-          });
-        });
+                stream.on("close", (code) => {
+                  resolveCheck(code === 0); // code 0 means key found
+                });
+              },
+            );
+          },
+        );
 
         if (keyExists) {
           conn.end();
@@ -1173,48 +1279,61 @@ async function deploySSHKeyToHost(
         // Step 3: Add public key to authorized_keys
         await new Promise<void>((resolveAdd, rejectAdd) => {
           const escapedKey = publicKey.replace(/'/g, "'\\''");
-          conn.exec(`echo '${escapedKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`, (err, stream) => {
-            if (err) return rejectAdd(err);
+          conn.exec(
+            `echo '${escapedKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
+            (err, stream) => {
+              if (err) return rejectAdd(err);
 
-            stream.on('close', (code) => {
-              if (code === 0) {
-                resolveAdd();
-              } else {
-                rejectAdd(new Error(`Key deployment failed with code ${code}`));
-              }
-            });
-          });
+              stream.on("close", (code) => {
+                if (code === 0) {
+                  resolveAdd();
+                } else {
+                  rejectAdd(
+                    new Error(`Key deployment failed with code ${code}`),
+                  );
+                }
+              });
+            },
+          );
         });
 
         // Step 4: Verify deployment
-        const verifySuccess = await new Promise<boolean>((resolveVerify, rejectVerify) => {
-          const keyPattern = publicKey.split(' ')[1];
-          conn.exec(`grep -q "${keyPattern}" ~/.ssh/authorized_keys`, (err, stream) => {
-            if (err) return rejectVerify(err);
+        const verifySuccess = await new Promise<boolean>(
+          (resolveVerify, rejectVerify) => {
+            const keyPattern = publicKey.split(" ")[1];
+            conn.exec(
+              `grep -q "${keyPattern}" ~/.ssh/authorized_keys`,
+              (err, stream) => {
+                if (err) return rejectVerify(err);
 
-            stream.on('close', (code) => {
-              resolveVerify(code === 0);
-            });
-          });
-        });
+                stream.on("close", (code) => {
+                  resolveVerify(code === 0);
+                });
+              },
+            );
+          },
+        );
 
         conn.end();
 
         if (verifySuccess) {
           resolve({ success: true, message: "SSH key deployed successfully" });
         } else {
-          resolve({ success: false, error: "Key deployment verification failed" });
+          resolve({
+            success: false,
+            error: "Key deployment verification failed",
+          });
         }
       } catch (error) {
         conn.end();
         resolve({
           success: false,
-          error: error instanceof Error ? error.message : "Deployment failed"
+          error: error instanceof Error ? error.message : "Deployment failed",
         });
       }
     });
 
-    conn.on('error', (err) => {
+    conn.on("error", (err) => {
       clearTimeout(connectionTimeout);
       resolve({ success: false, error: err.message });
     });
@@ -1227,15 +1346,18 @@ async function deploySSHKeyToHost(
         username: hostConfig.username,
       };
 
-      if (hostConfig.authType === 'password' && hostConfig.password) {
+      if (hostConfig.authType === "password" && hostConfig.password) {
         connectionConfig.password = hostConfig.password;
-      } else if (hostConfig.authType === 'key' && hostConfig.privateKey) {
+      } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
         connectionConfig.privateKey = hostConfig.privateKey;
         if (hostConfig.keyPassword) {
           connectionConfig.passphrase = hostConfig.keyPassword;
         }
       } else {
-        resolve({ success: false, error: "Invalid authentication configuration" });
+        resolve({
+          success: false,
+          error: "Invalid authentication configuration",
+        });
         return;
       }
 
@@ -1244,7 +1366,7 @@ async function deploySSHKeyToHost(
       clearTimeout(connectionTimeout);
       resolve({
         success: false,
-        error: error instanceof Error ? error.message : "Connection failed"
+        error: error instanceof Error ? error.message : "Connection failed",
       });
     }
   });
@@ -1252,145 +1374,149 @@ async function deploySSHKeyToHost(
 
 // Deploy SSH Key to Host endpoint
 // POST /credentials/:id/deploy-to-host
-router.post("/:id/deploy-to-host", authenticateJWT, async (req: Request, res: Response) => {
-  const credentialId = parseInt(req.params.id);
-  const { targetHostId } = req.body;
+router.post(
+  "/:id/deploy-to-host",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const credentialId = parseInt(req.params.id);
+    const { targetHostId } = req.body;
 
-
-  if (!credentialId || !targetHostId) {
-    return res.status(400).json({
-      success: false,
-      error: "Credential ID and target host ID are required"
-    });
-  }
-
-  try {
-    // Get credential details
-    const credential = await db
-      .select()
-      .from(sshCredentials)
-      .where(eq(sshCredentials.id, credentialId))
-      .limit(1);
-
-    if (!credential || credential.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Credential not found"
-      });
-    }
-
-    const credData = credential[0];
-
-    // Only support key-based credentials for deployment
-    if (credData.authType !== 'key') {
+    if (!credentialId || !targetHostId) {
       return res.status(400).json({
         success: false,
-        error: "Only SSH key-based credentials can be deployed"
+        error: "Credential ID and target host ID are required",
       });
     }
 
-    if (!credData.publicKey) {
-      return res.status(400).json({
-        success: false,
-        error: "Public key is required for deployment"
-      });
-    }
-
-    // Get target host details
-    const targetHost = await db
-      .select()
-      .from(sshData)
-      .where(eq(sshData.id, targetHostId))
-      .limit(1);
-
-    if (!targetHost || targetHost.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Target host not found"
-      });
-    }
-
-    const hostData = targetHost[0];
-
-    // Prepare host configuration for connection
-    let hostConfig = {
-      ip: hostData.ip,
-      port: hostData.port,
-      username: hostData.username,
-      authType: hostData.authType,
-      password: hostData.password,
-      privateKey: hostData.key,
-      keyPassword: hostData.keyPassword
-    };
-
-    // If host uses credential authentication, resolve the credential
-    if (hostData.authType === 'credential' && hostData.credentialId) {
-      const hostCredential = await db
+    try {
+      // Get credential details
+      const credential = await db
         .select()
         .from(sshCredentials)
-        .where(eq(sshCredentials.id, hostData.credentialId))
+        .where(eq(sshCredentials.id, credentialId))
         .limit(1);
 
-      if (hostCredential && hostCredential.length > 0) {
-        const cred = hostCredential[0];
-
-        // Update hostConfig with credential data
-        hostConfig.authType = cred.authType;
-        hostConfig.username = cred.username; // Use credential's username
-
-        if (cred.authType === 'password') {
-          hostConfig.password = cred.password;
-        } else if (cred.authType === 'key') {
-          hostConfig.privateKey = cred.privateKey || cred.key; // Try both fields
-          hostConfig.keyPassword = cred.keyPassword;
-        }
-      } else {
-        return res.status(400).json({
+      if (!credential || credential.length === 0) {
+        return res.status(404).json({
           success: false,
-          error: "Host credential not found"
+          error: "Credential not found",
         });
       }
-    }
 
-    // Deploy the SSH key
-    const deployResult = await deploySSHKeyToHost(
-      hostConfig,
-      credData.publicKey,
-      credData
-    );
+      const credData = credential[0];
 
-    if (deployResult.success) {
-      // Log successful deployment
-      authLogger.info(`SSH key deployed successfully`, {
-        credentialId,
-        targetHostId,
-        operation: "deploy_ssh_key"
-      });
+      // Only support key-based credentials for deployment
+      if (credData.authType !== "key") {
+        return res.status(400).json({
+          success: false,
+          error: "Only SSH key-based credentials can be deployed",
+        });
+      }
 
-      res.json({
-        success: true,
-        message: deployResult.message || "SSH key deployed successfully"
-      });
-    } else {
-      authLogger.error(`SSH key deployment failed`, {
-        credentialId,
-        targetHostId,
-        error: deployResult.error,
-        operation: "deploy_ssh_key"
-      });
+      if (!credData.publicKey) {
+        return res.status(400).json({
+          success: false,
+          error: "Public key is required for deployment",
+        });
+      }
 
+      // Get target host details
+      const targetHost = await db
+        .select()
+        .from(sshData)
+        .where(eq(sshData.id, targetHostId))
+        .limit(1);
+
+      if (!targetHost || targetHost.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "Target host not found",
+        });
+      }
+
+      const hostData = targetHost[0];
+
+      // Prepare host configuration for connection
+      let hostConfig = {
+        ip: hostData.ip,
+        port: hostData.port,
+        username: hostData.username,
+        authType: hostData.authType,
+        password: hostData.password,
+        privateKey: hostData.key,
+        keyPassword: hostData.keyPassword,
+      };
+
+      // If host uses credential authentication, resolve the credential
+      if (hostData.authType === "credential" && hostData.credentialId) {
+        const hostCredential = await db
+          .select()
+          .from(sshCredentials)
+          .where(eq(sshCredentials.id, hostData.credentialId))
+          .limit(1);
+
+        if (hostCredential && hostCredential.length > 0) {
+          const cred = hostCredential[0];
+
+          // Update hostConfig with credential data
+          hostConfig.authType = cred.authType;
+          hostConfig.username = cred.username; // Use credential's username
+
+          if (cred.authType === "password") {
+            hostConfig.password = cred.password;
+          } else if (cred.authType === "key") {
+            hostConfig.privateKey = cred.privateKey || cred.key; // Try both fields
+            hostConfig.keyPassword = cred.keyPassword;
+          }
+        } else {
+          return res.status(400).json({
+            success: false,
+            error: "Host credential not found",
+          });
+        }
+      }
+
+      // Deploy the SSH key
+      const deployResult = await deploySSHKeyToHost(
+        hostConfig,
+        credData.publicKey,
+        credData,
+      );
+
+      if (deployResult.success) {
+        // Log successful deployment
+        authLogger.info(`SSH key deployed successfully`, {
+          credentialId,
+          targetHostId,
+          operation: "deploy_ssh_key",
+        });
+
+        res.json({
+          success: true,
+          message: deployResult.message || "SSH key deployed successfully",
+        });
+      } else {
+        authLogger.error(`SSH key deployment failed`, {
+          credentialId,
+          targetHostId,
+          error: deployResult.error,
+          operation: "deploy_ssh_key",
+        });
+
+        res.status(500).json({
+          success: false,
+          error: deployResult.error || "Deployment failed",
+        });
+      }
+    } catch (error) {
+      authLogger.error("Failed to deploy SSH key", error);
       res.status(500).json({
         success: false,
-        error: deployResult.error || "Deployment failed"
+        error:
+          error instanceof Error ? error.message : "Failed to deploy SSH key",
       });
     }
-  } catch (error) {
-    authLogger.error("Failed to deploy SSH key", error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to deploy SSH key"
-    });
-  }
-});
+  },
+);
 
 export default router;

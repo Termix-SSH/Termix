@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 
 interface FileItem {
   name: string;
@@ -16,10 +16,10 @@ export function useFileSelection() {
 
   const selectFile = useCallback((file: FileItem, multiSelect = false) => {
     if (multiSelect) {
-      setSelectedFiles(prev => {
-        const isSelected = prev.some(f => f.path === file.path);
+      setSelectedFiles((prev) => {
+        const isSelected = prev.some((f) => f.path === file.path);
         if (isSelected) {
-          return prev.filter(f => f.path !== file.path);
+          return prev.filter((f) => f.path !== file.path);
         } else {
           return [...prev, file];
         }
@@ -29,17 +29,20 @@ export function useFileSelection() {
     }
   }, []);
 
-  const selectRange = useCallback((files: FileItem[], startFile: FileItem, endFile: FileItem) => {
-    const startIndex = files.findIndex(f => f.path === startFile.path);
-    const endIndex = files.findIndex(f => f.path === endFile.path);
+  const selectRange = useCallback(
+    (files: FileItem[], startFile: FileItem, endFile: FileItem) => {
+      const startIndex = files.findIndex((f) => f.path === startFile.path);
+      const endIndex = files.findIndex((f) => f.path === endFile.path);
 
-    if (startIndex !== -1 && endIndex !== -1) {
-      const start = Math.min(startIndex, endIndex);
-      const end = Math.max(startIndex, endIndex);
-      const rangeFiles = files.slice(start, end + 1);
-      setSelectedFiles(rangeFiles);
-    }
-  }, []);
+      if (startIndex !== -1 && endIndex !== -1) {
+        const start = Math.min(startIndex, endIndex);
+        const end = Math.max(startIndex, endIndex);
+        const rangeFiles = files.slice(start, end + 1);
+        setSelectedFiles(rangeFiles);
+      }
+    },
+    [],
+  );
 
   const selectAll = useCallback((files: FileItem[]) => {
     setSelectedFiles([...files]);
@@ -50,26 +53,32 @@ export function useFileSelection() {
   }, []);
 
   const toggleSelection = useCallback((file: FileItem) => {
-    setSelectedFiles(prev => {
-      const isSelected = prev.some(f => f.path === file.path);
+    setSelectedFiles((prev) => {
+      const isSelected = prev.some((f) => f.path === file.path);
       if (isSelected) {
-        return prev.filter(f => f.path !== file.path);
+        return prev.filter((f) => f.path !== file.path);
       } else {
         return [...prev, file];
       }
     });
   }, []);
 
-  const isSelected = useCallback((file: FileItem) => {
-    return selectedFiles.some(f => f.path === file.path);
-  }, [selectedFiles]);
+  const isSelected = useCallback(
+    (file: FileItem) => {
+      return selectedFiles.some((f) => f.path === file.path);
+    },
+    [selectedFiles],
+  );
 
   const getSelectedCount = useCallback(() => {
     return selectedFiles.length;
   }, [selectedFiles]);
 
   const setSelection = useCallback((files: FileItem[]) => {
-    console.log('Setting selection to:', files.map(f => f.name));
+    console.log(
+      "Setting selection to:",
+      files.map((f) => f.name),
+    );
     setSelectedFiles(files);
   }, []);
 
@@ -82,6 +91,6 @@ export function useFileSelection() {
     toggleSelection,
     isSelected,
     getSelectedCount,
-    setSelection
+    setSelection,
   };
 }

@@ -34,13 +34,13 @@ app.use(
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
     // Preserve original filename with timestamp prefix to avoid conflicts
     const timestamp = Date.now();
     cb(null, `${timestamp}-${file.originalname}`);
-  }
+  },
 });
 
 const upload = multer({
@@ -50,12 +50,15 @@ const upload = multer({
   },
   fileFilter: (req, file, cb) => {
     // Allow SQLite files
-    if (file.originalname.endsWith('.termix-export.sqlite') || file.originalname.endsWith('.sqlite')) {
+    if (
+      file.originalname.endsWith(".termix-export.sqlite") ||
+      file.originalname.endsWith(".sqlite")
+    ) {
       cb(null, true);
     } else {
-      cb(new Error('Only .termix-export.sqlite files are allowed'));
+      cb(new Error("Only .termix-export.sqlite files are allowed"));
     }
-  }
+  },
 });
 
 interface CacheEntry {
@@ -295,11 +298,11 @@ app.get("/encryption/status", async (req, res) => {
 
     res.json({
       encryption: detailedStatus,
-      migration: migrationStatus
+      migration: migrationStatus,
     });
   } catch (error) {
     apiLogger.error("Failed to get encryption status", error, {
-      operation: "encryption_status"
+      operation: "encryption_status",
     });
     res.status(500).json({ error: "Failed to get encryption status" });
   }
@@ -307,24 +310,26 @@ app.get("/encryption/status", async (req, res) => {
 
 app.post("/encryption/initialize", async (req, res) => {
   try {
-    const { EncryptionKeyManager } = await import("../utils/encryption-key-manager.js");
+    const { EncryptionKeyManager } = await import(
+      "../utils/encryption-key-manager.js"
+    );
     const keyManager = EncryptionKeyManager.getInstance();
 
     const newKey = await keyManager.generateNewKey();
     await DatabaseEncryption.initialize({ masterPassword: newKey });
 
     apiLogger.info("Encryption initialized via API", {
-      operation: "encryption_init_api"
+      operation: "encryption_init_api",
     });
 
     res.json({
       success: true,
       message: "Encryption initialized successfully",
-      keyPreview: newKey.substring(0, 8) + "..."
+      keyPreview: newKey.substring(0, 8) + "...",
     });
   } catch (error) {
     apiLogger.error("Failed to initialize encryption", error, {
-      operation: "encryption_init_api_failed"
+      operation: "encryption_init_api_failed",
     });
     res.status(500).json({ error: "Failed to initialize encryption" });
   }
@@ -336,38 +341,38 @@ app.post("/encryption/migrate", async (req, res) => {
 
     const migration = new EncryptionMigration({
       dryRun,
-      backupEnabled: true
+      backupEnabled: true,
     });
 
     if (dryRun) {
       apiLogger.info("Starting encryption migration (dry run)", {
-        operation: "encryption_migrate_dry_run"
+        operation: "encryption_migrate_dry_run",
       });
 
       res.json({
         success: true,
         message: "Dry run mode - no changes made",
-        dryRun: true
+        dryRun: true,
       });
     } else {
       apiLogger.info("Starting encryption migration", {
-        operation: "encryption_migrate"
+        operation: "encryption_migrate",
       });
 
       await migration.runMigration();
 
       res.json({
         success: true,
-        message: "Migration completed successfully"
+        message: "Migration completed successfully",
       });
     }
   } catch (error) {
     apiLogger.error("Migration failed", error, {
-      operation: "encryption_migrate_failed"
+      operation: "encryption_migrate_failed",
     });
     res.status(500).json({
       error: "Migration failed",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
@@ -377,17 +382,17 @@ app.post("/encryption/regenerate", async (req, res) => {
     await DatabaseEncryption.reinitializeWithNewKey();
 
     apiLogger.warn("Encryption key regenerated via API", {
-      operation: "encryption_regenerate_api"
+      operation: "encryption_regenerate_api",
     });
 
     res.json({
       success: true,
       message: "New encryption key generated",
-      warning: "All encrypted data must be re-encrypted"
+      warning: "All encrypted data must be re-encrypted",
     });
   } catch (error) {
     apiLogger.error("Failed to regenerate encryption key", error, {
-      operation: "encryption_regenerate_failed"
+      operation: "encryption_regenerate_failed",
     });
     res.status(500).json({ error: "Failed to regenerate encryption key" });
   }
@@ -400,7 +405,7 @@ app.post("/database/export", async (req, res) => {
 
     apiLogger.info("Starting SQLite database export via API", {
       operation: "database_sqlite_export_api",
-      customPath: !!customPath
+      customPath: !!customPath,
     });
 
     const exportPath = await DatabaseSQLiteExport.exportDatabase(customPath);
@@ -410,20 +415,20 @@ app.post("/database/export", async (req, res) => {
       message: "Database exported successfully as SQLite",
       exportPath,
       size: fs.statSync(exportPath).size,
-      format: "sqlite"
+      format: "sqlite",
     });
   } catch (error) {
     apiLogger.error("SQLite database export failed", error, {
-      operation: "database_sqlite_export_api_failed"
+      operation: "database_sqlite_export_api_failed",
     });
     res.status(500).json({
       error: "SQLite database export failed",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
 
-app.post("/database/import", upload.single('file'), async (req, res) => {
+app.post("/database/import", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
@@ -439,17 +444,17 @@ app.post("/database/import", upload.single('file'), async (req, res) => {
       originalName: req.file.originalname,
       fileSize: req.file.size,
       mode: "additive",
-      backupCurrent: backupCurrentBool
+      backupCurrent: backupCurrentBool,
     });
 
     // Validate export file first
     // Check file extension using original filename
-    if (!req.file.originalname.endsWith('.termix-export.sqlite')) {
+    if (!req.file.originalname.endsWith(".termix-export.sqlite")) {
       // Clean up uploaded file
       fs.unlinkSync(importPath);
       return res.status(400).json({
         error: "Invalid SQLite export file",
-        details: ["File must have .termix-export.sqlite extension"]
+        details: ["File must have .termix-export.sqlite extension"],
       });
     }
 
@@ -459,13 +464,13 @@ app.post("/database/import", upload.single('file'), async (req, res) => {
       fs.unlinkSync(importPath);
       return res.status(400).json({
         error: "Invalid SQLite export file",
-        details: validation.errors
+        details: validation.errors,
       });
     }
 
     const result = await DatabaseSQLiteExport.importDatabase(importPath, {
       replaceExisting: false, // Always use additive mode
-      backupCurrent: backupCurrentBool
+      backupCurrent: backupCurrentBool,
     });
 
     // Clean up uploaded file
@@ -473,11 +478,13 @@ app.post("/database/import", upload.single('file'), async (req, res) => {
 
     res.json({
       success: result.success,
-      message: result.success ? "SQLite database imported successfully" : "SQLite database import completed with errors",
+      message: result.success
+        ? "SQLite database imported successfully"
+        : "SQLite database import completed with errors",
       imported: result.imported,
       errors: result.errors,
       warnings: result.warnings,
-      format: "sqlite"
+      format: "sqlite",
     });
   } catch (error) {
     // Clean up uploaded file if it exists
@@ -488,17 +495,20 @@ app.post("/database/import", upload.single('file'), async (req, res) => {
         apiLogger.warn("Failed to clean up uploaded file", {
           operation: "file_cleanup_failed",
           filePath: req.file.path,
-          error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error'
+          error:
+            cleanupError instanceof Error
+              ? cleanupError.message
+              : "Unknown error",
         });
       }
     }
 
     apiLogger.error("SQLite database import failed", error, {
-      operation: "database_sqlite_import_api_failed"
+      operation: "database_sqlite_import_api_failed",
     });
     res.status(500).json({
       error: "SQLite database import failed",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
@@ -512,18 +522,18 @@ app.get("/database/export/:exportPath/info", async (req, res) => {
     if (!validation.valid) {
       return res.status(400).json({
         error: "Invalid SQLite export file",
-        details: validation.errors
+        details: validation.errors,
       });
     }
 
     res.json({
       valid: true,
       metadata: validation.metadata,
-      format: "sqlite"
+      format: "sqlite",
     });
   } catch (error) {
     apiLogger.error("Failed to get SQLite export info", error, {
-      operation: "sqlite_export_info_failed"
+      operation: "sqlite_export_info_failed",
     });
     res.status(500).json({ error: "Failed to get SQLite export information" });
   }
@@ -534,23 +544,26 @@ app.post("/database/backup", async (req, res) => {
     const { customPath } = req.body;
 
     apiLogger.info("Creating encrypted database backup via API", {
-      operation: "database_backup_api"
+      operation: "database_backup_api",
     });
 
     // Import required modules
-    const { databasePaths, getMemoryDatabaseBuffer } = await import("./db/index.js");
+    const { databasePaths, getMemoryDatabaseBuffer } = await import(
+      "./db/index.js"
+    );
 
     // Get current in-memory database as buffer
     const dbBuffer = getMemoryDatabaseBuffer();
 
     // Create backup directory
-    const backupDir = customPath || path.join(databasePaths.directory, 'backups');
+    const backupDir =
+      customPath || path.join(databasePaths.directory, "backups");
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
 
     // Generate backup filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupFileName = `database-backup-${timestamp}.sqlite.encrypted`;
     const backupPath = path.join(backupDir, backupFileName);
 
@@ -561,15 +574,15 @@ app.post("/database/backup", async (req, res) => {
       success: true,
       message: "Encrypted backup created successfully",
       backupPath,
-      size: fs.statSync(backupPath).size
+      size: fs.statSync(backupPath).size,
     });
   } catch (error) {
     apiLogger.error("Database backup failed", error, {
-      operation: "database_backup_api_failed"
+      operation: "database_backup_api_failed",
     });
     res.status(500).json({
       error: "Database backup failed",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
@@ -584,7 +597,7 @@ app.post("/database/restore", async (req, res) => {
 
     apiLogger.info("Restoring database from backup via API", {
       operation: "database_restore_api",
-      backupPath
+      backupPath,
     });
 
     // Validate backup file
@@ -596,24 +609,28 @@ app.post("/database/restore", async (req, res) => {
     if (!DatabaseFileEncryption.validateHardwareCompatibility(backupPath)) {
       return res.status(400).json({
         error: "Hardware fingerprint mismatch",
-        message: "This backup was created on different hardware and cannot be restored"
+        message:
+          "This backup was created on different hardware and cannot be restored",
       });
     }
 
-    const restoredPath = DatabaseFileEncryption.restoreFromEncryptedBackup(backupPath, targetPath);
+    const restoredPath = DatabaseFileEncryption.restoreFromEncryptedBackup(
+      backupPath,
+      targetPath,
+    );
 
     res.json({
       success: true,
       message: "Database restored successfully",
-      restoredPath
+      restoredPath,
     });
   } catch (error) {
     apiLogger.error("Database restore failed", error, {
-      operation: "database_restore_api_failed"
+      operation: "database_restore_api_failed",
     });
     res.status(500).json({
       error: "Database restore failed",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
@@ -645,13 +662,13 @@ const PORT = 8081;
 async function initializeEncryption() {
   try {
     databaseLogger.info("Initializing database encryption...", {
-      operation: "encryption_init"
+      operation: "encryption_init",
     });
 
     await DatabaseEncryption.initialize({
-      encryptionEnabled: process.env.ENCRYPTION_ENABLED !== 'false',
-      forceEncryption: process.env.FORCE_ENCRYPTION === 'true',
-      migrateOnAccess: process.env.MIGRATE_ON_ACCESS !== 'false'
+      encryptionEnabled: process.env.ENCRYPTION_ENABLED !== "false",
+      forceEncryption: process.env.FORCE_ENCRYPTION === "true",
+      migrateOnAccess: process.env.MIGRATE_ON_ACCESS !== "false",
     });
 
     const status = await DatabaseEncryption.getDetailedStatus();
@@ -660,24 +677,28 @@ async function initializeEncryption() {
         operation: "encryption_init_complete",
         enabled: status.enabled,
         keyId: status.key.keyId,
-        hasStoredKey: status.key.hasKey
+        hasStoredKey: status.key.hasKey,
       });
     } else {
-      databaseLogger.error("Database encryption configuration invalid", undefined, {
-        operation: "encryption_init_failed",
-        status
-      });
+      databaseLogger.error(
+        "Database encryption configuration invalid",
+        undefined,
+        {
+          operation: "encryption_init_failed",
+          status,
+        },
+      );
     }
   } catch (error) {
     databaseLogger.error("Failed to initialize database encryption", error, {
-      operation: "encryption_init_error"
+      operation: "encryption_init_error",
     });
   }
 }
 
 app.listen(PORT, async () => {
   // Ensure uploads directory exists
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }

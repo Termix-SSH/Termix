@@ -32,7 +32,14 @@ import "dotenv/config";
 
     systemLogger.success("All backend services initialized successfully", {
       operation: "startup_complete",
-      services: ["database", "encryption", "terminal", "tunnel", "file_manager", "stats"],
+      services: [
+        "database",
+        "encryption",
+        "terminal",
+        "tunnel",
+        "file_manager",
+        "stats",
+      ],
       version: version,
     });
 

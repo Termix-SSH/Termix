@@ -26,7 +26,14 @@ interface SSHTerminalProps {
 }
 
 export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
-  { hostConfig, isVisible, splitScreen = false, onClose, initialPath, executeCommand },
+  {
+    hostConfig,
+    isVisible,
+    splitScreen = false,
+    onClose,
+    initialPath,
+    executeCommand,
+  },
   ref,
 ) {
   const { t } = useTranslation();
@@ -458,8 +465,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     // Add macOS-specific keyboard event handling for special characters
     const handleMacKeyboard = (e: KeyboardEvent) => {
       // Detect macOS
-      const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
-                      navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+      const isMacOS =
+        navigator.platform.toUpperCase().indexOf("MAC") >= 0 ||
+        navigator.userAgent.toUpperCase().indexOf("MAC") >= 0;
 
       if (!isMacOS) return;
 
@@ -468,18 +476,18 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         // Use both e.key and e.code to handle different keyboard layouts
         const keyMappings: { [key: string]: string } = {
           // Using e.key values
-          '7': '|',  // Option+7 = pipe symbol
-          '2': '€',  // Option+2 = euro symbol
-          '8': '[',  // Option+8 = left bracket
-          '9': ']',  // Option+9 = right bracket
-          'l': '@',  // Option+L = at symbol
-          'L': '@',  // Option+L = at symbol (uppercase)
+          "7": "|", // Option+7 = pipe symbol
+          "2": "€", // Option+2 = euro symbol
+          "8": "[", // Option+8 = left bracket
+          "9": "]", // Option+9 = right bracket
+          l: "@", // Option+L = at symbol
+          L: "@", // Option+L = at symbol (uppercase)
           // Using e.code values as fallback
-          'Digit7': '|',  // Option+7 = pipe symbol
-          'Digit2': '€',  // Option+2 = euro symbol
-          'Digit8': '[',  // Option+8 = left bracket
-          'Digit9': ']',  // Option+9 = right bracket
-          'KeyL': '@',    // Option+L = at symbol
+          Digit7: "|", // Option+7 = pipe symbol
+          Digit2: "€", // Option+2 = euro symbol
+          Digit8: "[", // Option+8 = left bracket
+          Digit9: "]", // Option+9 = right bracket
+          KeyL: "@", // Option+L = at symbol
         };
 
         const char = keyMappings[e.key] || keyMappings[e.code];
@@ -489,7 +497,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
           // Send the character directly to the terminal
           if (webSocketRef.current?.readyState === 1) {
-            webSocketRef.current.send(JSON.stringify({ type: "input", data: char }));
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: char }),
+            );
           }
           return false;
         }

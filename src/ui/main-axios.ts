@@ -958,15 +958,15 @@ export async function getSSHStatus(
 export async function listSSHFiles(
   sessionId: string,
   path: string,
-): Promise<{files: any[], path: string}> {
+): Promise<{ files: any[]; path: string }> {
   try {
     const response = await fileManagerApi.get("/ssh/listFiles", {
       params: { sessionId, path },
     });
-    return response.data || {files: [], path};
+    return response.data || { files: [], path };
   } catch (error) {
     handleApiError(error, "list SSH files");
-    return {files: [], path}; // 确保总是返回正确格式
+    return { files: [], path }; // 确保总是返回正确格式
   }
 }
 
@@ -1145,15 +1145,19 @@ export async function copySSHItem(
   userId?: string,
 ): Promise<any> {
   try {
-    const response = await fileManagerApi.post("/ssh/copyItem", {
-      sessionId,
-      sourcePath,
-      targetDir,
-      hostId,
-      userId,
-    }, {
-      timeout: 60000, // 60秒超时，因为文件复制可能需要更长时间
-    });
+    const response = await fileManagerApi.post(
+      "/ssh/copyItem",
+      {
+        sessionId,
+        sourcePath,
+        targetDir,
+        hostId,
+        userId,
+      },
+      {
+        timeout: 60000, // 60秒超时，因为文件复制可能需要更长时间
+      },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "copy SSH item");
@@ -1213,7 +1217,7 @@ export async function moveSSHItem(
 export async function getRecentFiles(hostId: number): Promise<any> {
   try {
     const response = await authApi.get("/ssh/file_manager/recent", {
-      params: { hostId }
+      params: { hostId },
     });
     return response.data;
   } catch (error) {
@@ -1225,13 +1229,13 @@ export async function getRecentFiles(hostId: number): Promise<any> {
 export async function addRecentFile(
   hostId: number,
   path: string,
-  name?: string
+  name?: string,
 ): Promise<any> {
   try {
     const response = await authApi.post("/ssh/file_manager/recent", {
       hostId,
       path,
-      name
+      name,
     });
     return response.data;
   } catch (error) {
@@ -1242,11 +1246,11 @@ export async function addRecentFile(
 
 export async function removeRecentFile(
   hostId: number,
-  path: string
+  path: string,
 ): Promise<any> {
   try {
     const response = await authApi.delete("/ssh/file_manager/recent", {
-      data: { hostId, path }
+      data: { hostId, path },
     });
     return response.data;
   } catch (error) {
@@ -1259,7 +1263,7 @@ export async function removeRecentFile(
 export async function getPinnedFiles(hostId: number): Promise<any> {
   try {
     const response = await authApi.get("/ssh/file_manager/pinned", {
-      params: { hostId }
+      params: { hostId },
     });
     return response.data;
   } catch (error) {
@@ -1271,13 +1275,13 @@ export async function getPinnedFiles(hostId: number): Promise<any> {
 export async function addPinnedFile(
   hostId: number,
   path: string,
-  name?: string
+  name?: string,
 ): Promise<any> {
   try {
     const response = await authApi.post("/ssh/file_manager/pinned", {
       hostId,
       path,
-      name
+      name,
     });
     return response.data;
   } catch (error) {
@@ -1288,11 +1292,11 @@ export async function addPinnedFile(
 
 export async function removePinnedFile(
   hostId: number,
-  path: string
+  path: string,
 ): Promise<any> {
   try {
     const response = await authApi.delete("/ssh/file_manager/pinned", {
-      data: { hostId, path }
+      data: { hostId, path },
     });
     return response.data;
   } catch (error) {
@@ -1305,7 +1309,7 @@ export async function removePinnedFile(
 export async function getFolderShortcuts(hostId: number): Promise<any> {
   try {
     const response = await authApi.get("/ssh/file_manager/shortcuts", {
-      params: { hostId }
+      params: { hostId },
     });
     return response.data;
   } catch (error) {
@@ -1317,13 +1321,13 @@ export async function getFolderShortcuts(hostId: number): Promise<any> {
 export async function addFolderShortcut(
   hostId: number,
   path: string,
-  name?: string
+  name?: string,
 ): Promise<any> {
   try {
     const response = await authApi.post("/ssh/file_manager/shortcuts", {
       hostId,
       path,
-      name
+      name,
     });
     return response.data;
   } catch (error) {
@@ -1334,11 +1338,11 @@ export async function addFolderShortcut(
 
 export async function removeFolderShortcut(
   hostId: number,
-  path: string
+  path: string,
 ): Promise<any> {
   try {
     const response = await authApi.delete("/ssh/file_manager/shortcuts", {
-      data: { hostId, path }
+      data: { hostId, path },
     });
     return response.data;
   } catch (error) {
@@ -1905,9 +1909,7 @@ export async function detectKeyType(
   }
 }
 
-export async function detectPublicKeyType(
-  publicKey: string,
-): Promise<any> {
+export async function detectPublicKeyType(publicKey: string): Promise<any> {
   try {
     const response = await authApi.post("/credentials/detect-public-key-type", {
       publicKey,
@@ -1951,7 +1953,7 @@ export async function generatePublicKeyFromPrivate(
 }
 
 export async function generateKeyPair(
-  keyType: 'ssh-ed25519' | 'ssh-rsa' | 'ecdsa-sha2-nistp256',
+  keyType: "ssh-ed25519" | "ssh-rsa" | "ecdsa-sha2-nistp256",
   keySize?: number,
   passphrase?: string,
 ): Promise<any> {
@@ -1974,7 +1976,7 @@ export async function deployCredentialToHost(
   try {
     const response = await authApi.post(
       `/credentials/${credentialId}/deploy-to-host`,
-      { targetHostId }
+      { targetHostId },
     );
     return response.data;
   } catch (error) {

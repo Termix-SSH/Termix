@@ -208,12 +208,12 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   };
 
   const handleClone = (host: SSHHost) => {
-    if(onEditHost) {
-      const clonedHost = {...host};
+    if (onEditHost) {
+      const clonedHost = { ...host };
       delete clonedHost.id;
       onEditHost(clonedHost);
     }
-  }
+  };
 
   const handleRemoveFromFolder = async (host: SSHHost) => {
     confirmWithToast(

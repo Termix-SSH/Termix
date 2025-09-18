@@ -309,7 +309,7 @@ async function fetchAllHosts(): Promise<SSHHostWithCredentials[]> {
   try {
     const hosts = await EncryptedDBOperations.select(
       db.select().from(sshData),
-      'ssh_data'
+      "ssh_data",
     );
 
     const hostsWithCredentials: SSHHostWithCredentials[] = [];
@@ -339,7 +339,7 @@ async function fetchHostById(
   try {
     const hosts = await EncryptedDBOperations.select(
       db.select().from(sshData).where(eq(sshData.id, id)),
-      'ssh_data'
+      "ssh_data",
     );
 
     if (hosts.length === 0) {
@@ -358,17 +358,6 @@ async function resolveHostCredentials(
   host: any,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    statsLogger.debug(`Resolving credentials for host ${host.id}`, {
-      operation: 'credential_resolve',
-      hostId: host.id,
-      authType: host.authType,
-      credentialId: host.credentialId,
-      hasPassword: !!host.password,
-      hasKey: !!host.key,
-      passwordLength: host.password?.length || 0,
-      keyLength: host.key?.length || 0
-    });
-
     const baseHost: any = {
       id: host.id,
       name: host.name,
@@ -399,24 +388,32 @@ async function resolveHostCredentials(
     if (host.credentialId) {
       try {
         const credentials = await EncryptedDBOperations.select(
-          db.select().from(sshCredentials).where(and(
-            eq(sshCredentials.id, host.credentialId),
-            eq(sshCredentials.userId, host.userId),
-          )),
-          'ssh_credentials'
+          db
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, host.credentialId),
+                eq(sshCredentials.userId, host.userId),
+              ),
+            ),
+          "ssh_credentials",
         );
 
         if (credentials.length > 0) {
           const credential = credentials[0];
-          statsLogger.debug(`Using credential ${credential.id} for host ${host.id}`, {
-            operation: 'credential_resolve',
-            credentialId: credential.id,
-            authType: credential.authType,
-            hasPassword: !!credential.password,
-            hasKey: !!credential.key,
-            passwordLength: credential.password?.length || 0,
-            keyLength: credential.key?.length || 0
-          });
+          statsLogger.debug(
+            `Using credential ${credential.id} for host ${host.id}`,
+            {
+              operation: "credential_resolve",
+              credentialId: credential.id,
+              authType: credential.authType,
+              hasPassword: !!credential.password,
+              hasKey: !!credential.key,
+              passwordLength: credential.password?.length || 0,
+              keyLength: credential.key?.length || 0,
+            },
+          );
 
           baseHost.credentialId = credential.id;
           baseHost.username = credential.username;
@@ -435,9 +432,6 @@ async function resolveHostCredentials(
             baseHost.keyType = credential.keyType;
           }
         } else {
-          statsLogger.warn(
-            `Credential ${host.credentialId} not found for host ${host.id}, using legacy data`,
-          );
           addLegacyCredentials(baseHost, host);
         }
       } catch (error) {
@@ -447,24 +441,8 @@ async function resolveHostCredentials(
         addLegacyCredentials(baseHost, host);
       }
     } else {
-      statsLogger.debug(`Using legacy credentials for host ${host.id}`, {
-        operation: 'credential_resolve',
-        hasPassword: !!host.password,
-        hasKey: !!host.key,
-        passwordLength: host.password?.length || 0,
-        keyLength: host.key?.length || 0
-      });
       addLegacyCredentials(baseHost, host);
     }
-
-    statsLogger.debug(`Final resolved host ${host.id}`, {
-      operation: 'credential_resolve',
-      authType: baseHost.authType,
-      hasPassword: !!baseHost.password,
-      hasKey: !!baseHost.key,
-      passwordLength: baseHost.password?.length || 0,
-      keyLength: baseHost.key?.length || 0
-    });
 
     return baseHost;
   } catch (error) {
@@ -484,7 +462,7 @@ function addLegacyCredentials(baseHost: any, host: any): void {
 
 function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
   statsLogger.debug(`Building SSH config for host ${host.ip}`, {
-    operation: 'ssh_config',
+    operation: "ssh_config",
     authType: host.authType,
     hasPassword: !!host.password,
     hasKey: !!host.key,
@@ -492,7 +470,9 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     passwordLength: host.password?.length || 0,
     keyLength: host.key?.length || 0,
     passwordType: typeof host.password,
-    passwordRaw: host.password ? JSON.stringify(host.password.substring(0, 20)) : null
+    passwordRaw: host.password
+      ? JSON.stringify(host.password.substring(0, 20))
+      : null,
   });
 
   const base: ConnectConfig = {
@@ -508,12 +488,12 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
       throw new Error(`No password available for host ${host.ip}`);
     }
     statsLogger.debug(`Using password auth for ${host.ip}`, {
-      operation: 'ssh_config',
+      operation: "ssh_config",
       passwordLength: host.password.length,
       passwordFirst3: host.password.substring(0, 3),
       passwordLast3: host.password.substring(host.password.length - 3),
       passwordType: typeof host.password,
-      passwordIsString: typeof host.password === 'string'
+      passwordIsString: typeof host.password === "string",
     });
     (base as any).password = host.password;
   } else if (host.authType === "key") {
@@ -522,9 +502,9 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     }
 
     statsLogger.debug(`Using key auth for ${host.ip}`, {
-      operation: 'ssh_config',
-      keyPreview: host.key.substring(0, Math.min(50, host.key.length)) + '...',
-      hasPassphrase: !!host.keyPassword
+      operation: "ssh_config",
+      keyPreview: host.key.substring(0, Math.min(50, host.key.length)) + "...",
+      hasPassphrase: !!host.keyPassword,
     });
 
     try {

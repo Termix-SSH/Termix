@@ -178,22 +178,22 @@ wss.on("connection", (ws: WebSocket) => {
     }, 60000);
 
     sshLogger.debug(`Terminal SSH setup`, {
-      operation: 'terminal_ssh',
+      operation: "terminal_ssh",
       hostId: id,
       ip,
       authType,
       hasPassword: !!password,
       passwordLength: password?.length || 0,
-      hasCredentialId: !!credentialId
+      hasCredentialId: !!credentialId,
     });
 
     if (password) {
       sshLogger.debug(`Password preview: "${password.substring(0, 15)}..."`, {
-        operation: 'terminal_ssh_password'
+        operation: "terminal_ssh_password",
       });
     } else {
       sshLogger.debug(`No password provided`, {
-        operation: 'terminal_ssh_password'
+        operation: "terminal_ssh_password",
       });
     }
 
@@ -201,13 +201,16 @@ wss.on("connection", (ws: WebSocket) => {
     if (credentialId && id && hostConfig.userId) {
       try {
         const credentials = await EncryptedDBOperations.select(
-          db.select().from(sshCredentials).where(
-            and(
-              eq(sshCredentials.id, credentialId),
-              eq(sshCredentials.userId, hostConfig.userId),
+          db
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, credentialId),
+                eq(sshCredentials.userId, hostConfig.userId),
+              ),
             ),
-          ),
-          'ssh_credentials'
+          "ssh_credentials",
         );
 
         if (credentials.length > 0) {

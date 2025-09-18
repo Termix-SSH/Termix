@@ -326,31 +326,31 @@ const tempFiles = new Map(); // 存储临时文件路径映射
 // 创建临时文件
 ipcMain.handle("create-temp-file", async (event, fileData) => {
   try {
-    const { fileName, content, encoding = 'base64' } = fileData;
+    const { fileName, content, encoding = "base64" } = fileData;
 
     // 创建临时目录
-    const tempDir = path.join(os.tmpdir(), 'termix-drag-files');
+    const tempDir = path.join(os.tmpdir(), "termix-drag-files");
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
     // 生成临时文件路径
-    const tempId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const tempId = Date.now() + "-" + Math.random().toString(36).substr(2, 9);
     const tempFilePath = path.join(tempDir, `${tempId}-${fileName}`);
 
     // 写入文件内容
-    if (encoding === 'base64') {
-      const buffer = Buffer.from(content, 'base64');
+    if (encoding === "base64") {
+      const buffer = Buffer.from(content, "base64");
       fs.writeFileSync(tempFilePath, buffer);
     } else {
-      fs.writeFileSync(tempFilePath, content, 'utf8');
+      fs.writeFileSync(tempFilePath, content, "utf8");
     }
 
     // 记录临时文件
     tempFiles.set(tempId, {
       path: tempFilePath,
       fileName: fileName,
-      createdAt: Date.now()
+      createdAt: Date.now(),
     });
 
     console.log(`Created temp file: ${tempFilePath}`);
@@ -375,7 +375,7 @@ ipcMain.handle("start-drag-to-desktop", async (event, { tempId, fileName }) => {
 
     mainWindow.webContents.startDrag({
       file: tempFile.path,
-      icon: iconExists ? iconPath : undefined
+      icon: iconExists ? iconPath : undefined,
     });
 
     console.log(`Started drag for: ${tempFile.path}`);
@@ -431,12 +431,12 @@ ipcMain.handle("create-temp-folder", async (event, folderData) => {
     const { folderName, files } = folderData;
 
     // 创建临时目录
-    const tempDir = path.join(os.tmpdir(), 'termix-drag-folders');
+    const tempDir = path.join(os.tmpdir(), "termix-drag-folders");
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    const tempId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const tempId = Date.now() + "-" + Math.random().toString(36).substr(2, 9);
     const tempFolderPath = path.join(tempDir, `${tempId}-${folderName}`);
 
     // 递归创建文件夹结构
@@ -451,11 +451,11 @@ ipcMain.handle("create-temp-folder", async (event, folderData) => {
         }
 
         // 写入文件
-        if (file.encoding === 'base64') {
-          const buffer = Buffer.from(file.content, 'base64');
+        if (file.encoding === "base64") {
+          const buffer = Buffer.from(file.content, "base64");
           fs.writeFileSync(fullPath, buffer);
         } else {
-          fs.writeFileSync(fullPath, file.content, 'utf8');
+          fs.writeFileSync(fullPath, file.content, "utf8");
         }
       }
     };
@@ -468,7 +468,7 @@ ipcMain.handle("create-temp-folder", async (event, folderData) => {
       path: tempFolderPath,
       fileName: folderName,
       createdAt: Date.now(),
-      isFolder: true
+      isFolder: true,
     });
 
     console.log(`Created temp folder: ${tempFolderPath}`);

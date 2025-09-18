@@ -1,8 +1,8 @@
-import React from 'react';
-import { DraggableWindow } from './DraggableWindow';
-import { DiffViewer } from './DiffViewer';
-import { useWindowManager } from './WindowManager';
-import type { FileItem, SSHHost } from '../../../../types/index.js';
+import React from "react";
+import { DraggableWindow } from "./DraggableWindow";
+import { DiffViewer } from "./DiffViewer";
+import { useWindowManager } from "./WindowManager";
+import type { FileItem, SSHHost } from "../../../../types/index.js";
 
 interface DiffWindowProps {
   windowId: string;
@@ -21,11 +21,12 @@ export function DiffWindow({
   sshSessionId,
   sshHost,
   initialX = 150,
-  initialY = 100
+  initialY = 100,
 }: DiffWindowProps) {
-  const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } = useWindowManager();
+  const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } =
+    useWindowManager();
 
-  const currentWindow = windows.find(w => w.id === windowId);
+  const currentWindow = windows.find((w) => w.id === windowId);
 
   // 窗口操作处理
   const handleClose = () => {

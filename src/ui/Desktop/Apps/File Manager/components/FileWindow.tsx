@@ -1,9 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { DraggableWindow } from './DraggableWindow';
-import { FileViewer } from './FileViewer';
-import { useWindowManager } from './WindowManager';
-import { downloadSSHFile, readSSHFile, writeSSHFile, getSSHStatus, connectSSH } from '@/ui/main-axios';
-import { toast } from 'sonner';
+import React, { useState, useEffect, useRef } from "react";
+import { DraggableWindow } from "./DraggableWindow";
+import { FileViewer } from "./FileViewer";
+import { useWindowManager } from "./WindowManager";
+import {
+  downloadSSHFile,
+  readSSHFile,
+  writeSSHFile,
+  getSSHStatus,
+  connectSSH,
+} from "@/ui/main-axios";
+import { toast } from "sonner";
 
 interface FileItem {
   name: string;
@@ -25,7 +31,7 @@ interface SSHHost {
   password?: string;
   key?: string;
   keyPassword?: string;
-  authType: 'password' | 'key';
+  authType: "password" | "key";
   credentialId?: number;
   userId?: number;
 }
@@ -46,27 +52,34 @@ export function FileWindow({
   sshSessionId,
   sshHost,
   initialX = 100,
-  initialY = 100
+  initialY = 100,
 }: FileWindowProps) {
-  const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, updateWindow, windows } = useWindowManager();
+  const {
+    closeWindow,
+    minimizeWindow,
+    maximizeWindow,
+    focusWindow,
+    updateWindow,
+    windows,
+  } = useWindowManager();
 
-  const [content, setContent] = useState<string>('');
+  const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
-  const [pendingContent, setPendingContent] = useState<string>('');
+  const [pendingContent, setPendingContent] = useState<string>("");
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const currentWindow = windows.find(w => w.id === windowId);
+  const currentWindow = windows.find((w) => w.id === windowId);
 
   // 确保SSH连接有效
   const ensureSSHConnection = async () => {
     try {
       // 首先检查SSH连接状态
       const status = await getSSHStatus(sshSessionId);
-      console.log('SSH connection status:', status);
+      console.log("SSH connection status:", status);
 
       if (!status.connected) {
-        console.log('SSH not connected, attempting to reconnect...');
+        console.log("SSH not connected, attempting to reconnect...");
 
         // 重新建立连接
         await connectSSH(sshSessionId, {
@@ -79,13 +92,13 @@ export function FileWindow({
           keyPassword: sshHost.keyPassword,
           authType: sshHost.authType,
           credentialId: sshHost.credentialId,
-          userId: sshHost.userId
+          userId: sshHost.userId,
         });
 
-        console.log('SSH reconnection successful');
+        console.log("SSH reconnection successful");
       }
     } catch (error) {
-      console.log('SSH connection check/reconnect failed:', error);
+      console.log("SSH connection check/reconnect failed:", error);
       // 即使连接失败也尝试继续，让具体的API调用报错
       throw error;
     }
@@ -94,7 +107,7 @@ export function FileWindow({
   // 加载文件内容
   useEffect(() => {
     const loadFileContent = async () => {
-      if (file.type !== 'file') return;
+      if (file.type !== "file") return;
 
       try {
         setIsLoading(true);
@@ -103,7 +116,7 @@ export function FileWindow({
         await ensureSSHConnection();
 
         const response = await readSSHFile(sshSessionId, file.path);
-        const fileContent = response.content || '';
+        const fileContent = response.content || "";
         setContent(fileContent);
         setPendingContent(fileContent); // 初始化待保存内容
 
@@ -116,22 +129,54 @@ export function FileWindow({
         // 根据文件类型决定是否可编辑：除了媒体文件，其他都可编辑
         const mediaExtensions = [
           // 图片文件
-          'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico',
+          "jpg",
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "svg",
+          "webp",
+          "tiff",
+          "ico",
           // 音频文件
-          'mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'wma',
+          "mp3",
+          "wav",
+          "ogg",
+          "aac",
+          "flac",
+          "m4a",
+          "wma",
           // 视频文件
-          'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v',
+          "mp4",
+          "avi",
+          "mov",
+          "wmv",
+          "flv",
+          "mkv",
+          "webm",
+          "m4v",
           // 压缩文件
-          'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz',
+          "zip",
+          "rar",
+          "7z",
+          "tar",
+          "gz",
+          "bz2",
+          "xz",
           // 二进制文件
-          'exe', 'dll', 'so', 'dylib', 'bin', 'iso'
+          "exe",
+          "dll",
+          "so",
+          "dylib",
+          "bin",
+          "iso",
         ];
 
-        const extension = file.name.split('.').pop()?.toLowerCase();
+        const extension = file.name.split(".").pop()?.toLowerCase();
         // 只有媒体文件和二进制文件不可编辑，其他所有文件都可编辑
-        setIsEditable(!mediaExtensions.includes(extension || ''));
+        setIsEditable(!mediaExtensions.includes(extension || ""));
       } catch (error: any) {
-        console.error('Failed to load file:', error);
+        console.error("Failed to load file:", error);
 
         // 检查是否是大文件错误
         const errorData = error?.response?.data;
@@ -139,11 +184,18 @@ export function FileWindow({
           toast.error(`File too large: ${errorData.error}`, {
             duration: 10000, // 10 seconds for important message
           });
-        } else if (error.message?.includes('connection') || error.message?.includes('established')) {
+        } else if (
+          error.message?.includes("connection") ||
+          error.message?.includes("established")
+        ) {
           // 如果是连接错误，提供更明确的错误信息
-          toast.error(`SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`);
+          toast.error(
+            `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
+          );
         } else {
-          toast.error(`Failed to load file: ${error.message || errorData?.error || 'Unknown error'}`);
+          toast.error(
+            `Failed to load file: ${error.message || errorData?.error || "Unknown error"}`,
+          );
         }
       } finally {
         setIsLoading(false);
@@ -163,7 +215,7 @@ export function FileWindow({
 
       await writeSSHFile(sshSessionId, file.path, newContent);
       setContent(newContent);
-      setPendingContent(''); // 清除待保存内容
+      setPendingContent(""); // 清除待保存内容
 
       // 清除自动保存定时器
       if (autoSaveTimerRef.current) {
@@ -171,15 +223,20 @@ export function FileWindow({
         autoSaveTimerRef.current = null;
       }
 
-      toast.success('File saved successfully');
+      toast.success("File saved successfully");
     } catch (error: any) {
-      console.error('Failed to save file:', error);
+      console.error("Failed to save file:", error);
 
       // 如果是连接错误，提供更明确的错误信息
-      if (error.message?.includes('connection') || error.message?.includes('established')) {
-        toast.error(`SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`);
+      if (
+        error.message?.includes("connection") ||
+        error.message?.includes("established")
+      ) {
+        toast.error(
+          `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
+        );
       } else {
-        toast.error(`Failed to save file: ${error.message || 'Unknown error'}`);
+        toast.error(`Failed to save file: ${error.message || "Unknown error"}`);
       }
     } finally {
       setIsLoading(false);
@@ -198,12 +255,12 @@ export function FileWindow({
     // 设置新的1分钟自动保存定时器
     autoSaveTimerRef.current = setTimeout(async () => {
       try {
-        console.log('Auto-saving file...');
+        console.log("Auto-saving file...");
         await handleSave(newContent);
-        toast.success('File auto-saved');
+        toast.success("File auto-saved");
       } catch (error) {
-        console.error('Auto-save failed:', error);
-        toast.error('Auto-save failed');
+        console.error("Auto-save failed:", error);
+        toast.error("Auto-save failed");
       }
     }, 60000); // 1分钟 = 60000毫秒
   };
@@ -233,10 +290,12 @@ export function FileWindow({
           byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: response.mimeType || 'application/octet-stream' });
+        const blob = new Blob([byteArray], {
+          type: response.mimeType || "application/octet-stream",
+        });
 
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
         link.download = response.fileName || file.name;
         document.body.appendChild(link);
@@ -244,16 +303,23 @@ export function FileWindow({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success('File downloaded successfully');
+        toast.success("File downloaded successfully");
       }
     } catch (error: any) {
-      console.error('Failed to download file:', error);
+      console.error("Failed to download file:", error);
 
       // 如果是连接错误，提供更明确的错误信息
-      if (error.message?.includes('connection') || error.message?.includes('established')) {
-        toast.error(`SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`);
+      if (
+        error.message?.includes("connection") ||
+        error.message?.includes("established")
+      ) {
+        toast.error(
+          `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
+        );
       } else {
-        toast.error(`Failed to download file: ${error.message || 'Unknown error'}`);
+        toast.error(
+          `Failed to download file: ${error.message || "Unknown error"}`,
+        );
       }
     }
   };

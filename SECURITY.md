@@ -9,17 +9,20 @@ Termix implements AES-256-GCM encryption for sensitive data stored in the databa
 The following database fields are automatically encrypted:
 
 **Users Table:**
+
 - `password_hash` - User password hashes
 - `client_secret` - OIDC client secrets
 - `totp_secret` - 2FA authentication seeds
 - `totp_backup_codes` - 2FA backup codes
 
 **SSH Data Table:**
+
 - `password` - SSH connection passwords
 - `key` - SSH private keys
 - `keyPassword` - SSH private key passphrases
 
 **SSH Credentials Table:**
+
 - `password` - Stored SSH passwords
 - `privateKey` - SSH private keys
 - `keyPassword` - SSH private key passphrases
@@ -34,6 +37,7 @@ DB_ENCRYPTION_KEY=your-very-strong-encryption-key-32-chars-minimum
 ```
 
 **⚠️ CRITICAL:** The encryption key must be:
+
 - At least 16 characters long (32+ recommended)
 - Cryptographically random
 - Unique per installation
@@ -190,16 +194,19 @@ Monitor logs for encryption-related events:
 #### Common Issues
 
 **1. "Decryption failed" errors**
+
 - Verify `DB_ENCRYPTION_KEY` is correct
 - Check if database was corrupted
 - Restore from backup if necessary
 
 **2. Performance issues**
+
 - Encryption adds ~1ms per operation
 - Consider disabling `MIGRATE_ON_ACCESS` after migration
 - Monitor CPU usage during large migrations
 
 **3. Key rotation**
+
 ```bash
 # Generate new key
 NEW_KEY=$(openssl rand -hex 32)
@@ -220,11 +227,13 @@ This encryption implementation helps meet requirements for:
 ### Security Limitations
 
 **What this protects against:**
+
 - Database file theft
 - Disk access by unauthorized users
 - Data breaches from file system access
 
 **What this does NOT protect against:**
+
 - Application-level vulnerabilities
 - Memory dumps while application is running
 - Attacks against the running application
@@ -251,6 +260,7 @@ This encryption implementation helps meet requirements for:
 ### Support
 
 For security-related questions:
+
 - Open issue: [GitHub Issues](https://github.com/LukeGus/Termix/issues)
 - Discord: [Termix Community](https://discord.gg/jVQGdvHDrf)
 

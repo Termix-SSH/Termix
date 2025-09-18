@@ -9,13 +9,13 @@
 ## Installation
 
 1. Clone the repository:
-    ```sh
-    git clone https://github.com/LukeGus/Termix
-    ```
+   ```sh
+   git clone https://github.com/LukeGus/Termix
+   ```
 2. Install the dependencies:
-    ```sh
-    npm install
-    ```
+   ```sh
+   npm install
+   ```
 
 ## Running the development server
 
@@ -33,18 +33,18 @@ This will start the backend and the frontend Vite server. You can access Termix 
 1. **Fork the repository**: Click the "Fork" button at the top right of
    the [repository page](https://github.com/LukeGus/Termix).
 2. **Create a new branch**:
-    ```sh
-    git checkout -b feature/my-new-feature
-    ```
+   ```sh
+   git checkout -b feature/my-new-feature
+   ```
 3. **Make your changes**: Implement your feature, fix, or improvement.
 4. **Commit your changes**:
-    ```sh
-    git commit -m "Feature request my new feature"
-    ```
+   ```sh
+   git commit -m "Feature request my new feature"
+   ```
 5. **Push to your fork**:
-    ```sh
-    git push origin feature/my-feature-request
-    ```
+   ```sh
+   git push origin feature/my-feature-request
+   ```
 6. **Open a pull request**: Go to the original repository and create a PR with a clear description.
 
 ## Guidelines
@@ -61,7 +61,7 @@ This will start the backend and the frontend Vite server. You can access Termix 
 ### Background Colors
 
 | CSS Variable                  | Color Value | Usage                       | Description                              |
-|-------------------------------|-------------|-----------------------------|------------------------------------------|
+| ----------------------------- | ----------- | --------------------------- | ---------------------------------------- |
 | `--color-dark-bg`             | `#18181b`   | Main dark background        | Primary dark background color            |
 | `--color-dark-bg-darker`      | `#0e0e10`   | Darker backgrounds          | Darker variant for panels and containers |
 | `--color-dark-bg-darkest`     | `#09090b`   | Darkest backgrounds         | Darkest background (terminal)            |
@@ -73,7 +73,7 @@ This will start the backend and the frontend Vite server. You can access Termix 
 ### Element-Specific Backgrounds
 
 | CSS Variable             | Color Value | Usage              | Description                                   |
-|--------------------------|-------------|--------------------|-----------------------------------------------|
+| ------------------------ | ----------- | ------------------ | --------------------------------------------- |
 | `--color-dark-bg-input`  | `#222225`   | Input fields       | Background for input fields and form elements |
 | `--color-dark-bg-button` | `#23232a`   | Button backgrounds | Background for buttons and clickable elements |
 | `--color-dark-bg-active` | `#1d1d1f`   | Active states      | Background for active/selected elements       |
@@ -82,7 +82,7 @@ This will start the backend and the frontend Vite server. You can access Termix 
 ### Border Colors
 
 | CSS Variable                 | Color Value | Usage           | Description                              |
-|------------------------------|-------------|-----------------|------------------------------------------|
+| ---------------------------- | ----------- | --------------- | ---------------------------------------- |
 | `--color-dark-border`        | `#303032`   | Default borders | Standard border color                    |
 | `--color-dark-border-active` | `#2d2d30`   | Active borders  | Border color for active elements         |
 | `--color-dark-border-hover`  | `#434345`   | Hover borders   | Border color on hover states             |
@@ -93,7 +93,7 @@ This will start the backend and the frontend Vite server. You can access Termix 
 ### Interactive States
 
 | CSS Variable             | Color Value | Usage             | Description                                   |
-|--------------------------|-------------|-------------------|-----------------------------------------------|
+| ------------------------ | ----------- | ----------------- | --------------------------------------------- |
 | `--color-dark-hover`     | `#2d2d30`   | Hover states      | Background color for hover effects            |
 | `--color-dark-active`    | `#2a2a2c`   | Active states     | Background color for active elements          |
 | `--color-dark-pressed`   | `#1a1a1c`   | Pressed states    | Background color for pressed/clicked elements |

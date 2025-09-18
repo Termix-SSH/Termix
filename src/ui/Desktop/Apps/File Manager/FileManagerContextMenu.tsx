@@ -18,7 +18,7 @@ import {
   Terminal,
   Play,
   Star,
-  Bookmark
+  Bookmark,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -99,7 +99,7 @@ export function FileManagerContextMenu({
   onUnpinFile,
   onAddShortcut,
   isPinned,
-  currentPath
+  currentPath,
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
@@ -138,7 +138,7 @@ export function FileManagerContextMenu({
       const handleClickOutside = (event: MouseEvent) => {
         // 检查点击是否在菜单内部
         const target = event.target as Element;
-        const menuElement = document.querySelector('[data-context-menu]');
+        const menuElement = document.querySelector("[data-context-menu]");
 
         if (!menuElement?.contains(target)) {
           onClose();
@@ -153,7 +153,7 @@ export function FileManagerContextMenu({
 
       // 键盘支持
       const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
+        if (event.key === "Escape") {
           event.preventDefault();
           onClose();
         }
@@ -169,19 +169,19 @@ export function FileManagerContextMenu({
         onClose();
       };
 
-      document.addEventListener('mousedown', handleClickOutside, true);
-      document.addEventListener('contextmenu', handleRightClick);
-      document.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('blur', handleBlur);
-      window.addEventListener('scroll', handleScroll, true);
+      document.addEventListener("mousedown", handleClickOutside, true);
+      document.addEventListener("contextmenu", handleRightClick);
+      document.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("blur", handleBlur);
+      window.addEventListener("scroll", handleScroll, true);
 
       // 设置清理函数
       cleanupFn = () => {
-        document.removeEventListener('mousedown', handleClickOutside, true);
-        document.removeEventListener('contextmenu', handleRightClick);
-        document.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('blur', handleBlur);
-        window.removeEventListener('scroll', handleScroll, true);
+        document.removeEventListener("mousedown", handleClickOutside, true);
+        document.removeEventListener("contextmenu", handleRightClick);
+        document.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("blur", handleBlur);
+        window.removeEventListener("scroll", handleScroll, true);
       };
     }, 50); // 50ms延迟，确保不会捕获到触发菜单的点击
 
@@ -198,9 +198,11 @@ export function FileManagerContextMenu({
   const isFileContext = files.length > 0;
   const isSingleFile = files.length === 1;
   const isMultipleFiles = files.length > 1;
-  const hasFiles = files.some(f => f.type === 'file');
-  const hasDirectories = files.some(f => f.type === 'directory');
-  const hasExecutableFiles = files.some(f => f.type === 'file' && f.executable);
+  const hasFiles = files.some((f) => f.type === "file");
+  const hasDirectories = files.some((f) => f.type === "directory");
+  const hasExecutableFiles = files.some(
+    (f) => f.type === "file" && f.executable,
+  );
 
   // 构建菜单项
   const menuItems: MenuItem[] = [];
@@ -211,14 +213,19 @@ export function FileManagerContextMenu({
     // 打开终端功能 - 支持文件和文件夹
     if (onOpenTerminal) {
       const targetPath = isSingleFile
-        ? (files[0].type === 'directory' ? files[0].path : files[0].path.substring(0, files[0].path.lastIndexOf('/')))
-        : files[0].path.substring(0, files[0].path.lastIndexOf('/'));
+        ? files[0].type === "directory"
+          ? files[0].path
+          : files[0].path.substring(0, files[0].path.lastIndexOf("/"))
+        : files[0].path.substring(0, files[0].path.lastIndexOf("/"));
 
       menuItems.push({
         icon: <Terminal className="w-4 h-4" />,
-        label: files[0].type === 'directory' ? t("fileManager.openTerminalInFolder") : t("fileManager.openTerminalInFileLocation"),
+        label:
+          files[0].type === "directory"
+            ? t("fileManager.openTerminalInFolder")
+            : t("fileManager.openTerminalInFileLocation"),
         action: () => onOpenTerminal(targetPath),
-        shortcut: "Ctrl+T"
+        shortcut: "Ctrl+T",
       });
     }
 
@@ -228,23 +235,29 @@ export function FileManagerContextMenu({
         icon: <Play className="w-4 h-4" />,
         label: t("fileManager.run"),
         action: () => onRunExecutable(files[0]),
-        shortcut: "Enter"
+        shortcut: "Enter",
       });
     }
 
-    if ((onOpenTerminal || (isSingleFile && hasExecutableFiles && onRunExecutable))) {
+    // 添加分隔符（如果有上述功能）
+    if (
+      onOpenTerminal ||
+      (isSingleFile && hasExecutableFiles && onRunExecutable)
+    ) {
       menuItems.push({ separator: true } as MenuItem);
     }
 
+    // 预览功能
     if (hasFiles && onPreview) {
       menuItems.push({
         icon: <Eye className="w-4 h-4" />,
         label: t("fileManager.preview"),
         action: () => onPreview(files[0]),
-        disabled: !isSingleFile || files[0].type !== 'file'
+        disabled: !isSingleFile || files[0].type !== "file",
       });
     }
 
+    // 下载功能
     if (hasFiles && onDownload) {
       menuItems.push({
         icon: <Download className="w-4 h-4" />,
@@ -252,62 +265,75 @@ export function FileManagerContextMenu({
           ? t("fileManager.downloadFiles", { count: files.length })
           : t("fileManager.downloadFile"),
         action: () => onDownload(files),
-        shortcut: "Ctrl+D"
+        shortcut: "Ctrl+D",
       });
     }
 
     // 拖拽到桌面菜单项（支持浏览器和桌面应用）
     if (hasFiles && onDragToDesktop) {
-      const isModernBrowser = 'showSaveFilePicker' in window;
+      const isModernBrowser = "showSaveFilePicker" in window;
       menuItems.push({
         icon: <ExternalLink className="w-4 h-4" />,
         label: isMultipleFiles
           ? t("fileManager.saveFilesToSystem", { count: files.length })
           : t("fileManager.saveToSystem"),
         action: () => onDragToDesktop(),
-        shortcut: isModernBrowser ? t("fileManager.selectLocationToSave") : t("fileManager.downloadToDefaultLocation")
+        shortcut: isModernBrowser
+          ? t("fileManager.selectLocationToSave")
+          : t("fileManager.downloadToDefaultLocation"),
       });
     }
 
     // PIN/UNPIN 功能 - 仅对单个文件显示
-    if (isSingleFile && files[0].type === 'file') {
+    if (isSingleFile && files[0].type === "file") {
       const isCurrentlyPinned = isPinned ? isPinned(files[0]) : false;
 
       if (isCurrentlyPinned && onUnpinFile) {
         menuItems.push({
           icon: <Star className="w-4 h-4 fill-yellow-400" />,
           label: t("fileManager.unpinFile"),
-          action: () => onUnpinFile(files[0])
+          action: () => onUnpinFile(files[0]),
         });
       } else if (!isCurrentlyPinned && onPinFile) {
         menuItems.push({
           icon: <Star className="w-4 h-4" />,
           label: t("fileManager.pinFile"),
-          action: () => onPinFile(files[0])
+          action: () => onPinFile(files[0]),
         });
       }
     }
 
     // 添加文件夹快捷方式 - 仅对单个文件夹显示
-    if (isSingleFile && files[0].type === 'directory' && onAddShortcut) {
+    if (isSingleFile && files[0].type === "directory" && onAddShortcut) {
       menuItems.push({
         icon: <Bookmark className="w-4 h-4" />,
         label: t("fileManager.addToShortcuts"),
-        action: () => onAddShortcut(files[0].path)
+        action: () => onAddShortcut(files[0].path),
       });
     }
 
-    menuItems.push({ separator: true } as MenuItem);
+    // 添加分隔符（如果有上述功能）
+    if (
+      (hasFiles && (onPreview || onDownload || onDragToDesktop)) ||
+      (isSingleFile &&
+        files[0].type === "file" &&
+        (onPinFile || onUnpinFile)) ||
+      (isSingleFile && files[0].type === "directory" && onAddShortcut)
+    ) {
+      menuItems.push({ separator: true } as MenuItem);
+    }
 
+    // 重命名功能
     if (isSingleFile && onRename) {
       menuItems.push({
         icon: <Edit3 className="w-4 h-4" />,
         label: t("fileManager.rename"),
         action: () => onRename(files[0]),
-        shortcut: "F2"
+        shortcut: "F2",
       });
     }
 
+    // 复制功能
     if (onCopy) {
       menuItems.push({
         icon: <Copy className="w-4 h-4" />,
@@ -315,10 +341,11 @@ export function FileManagerContextMenu({
           ? t("fileManager.copyFiles", { count: files.length })
           : t("fileManager.copy"),
         action: () => onCopy(files),
-        shortcut: "Ctrl+C"
+        shortcut: "Ctrl+C",
       });
     }
 
+    // 剪切功能
     if (onCut) {
       menuItems.push({
         icon: <Scissors className="w-4 h-4" />,
@@ -326,12 +353,16 @@ export function FileManagerContextMenu({
           ? t("fileManager.cutFiles", { count: files.length })
           : t("fileManager.cut"),
         action: () => onCut(files),
-        shortcut: "Ctrl+X"
+        shortcut: "Ctrl+X",
       });
     }
 
-    menuItems.push({ separator: true } as MenuItem);
+    // 添加分隔符（如果有编辑功能）
+    if ((isSingleFile && onRename) || onCopy || onCut) {
+      menuItems.push({ separator: true } as MenuItem);
+    }
 
+    // 删除功能
     if (onDelete) {
       menuItems.push({
         icon: <Trash2 className="w-4 h-4" />,
@@ -340,17 +371,21 @@ export function FileManagerContextMenu({
           : t("fileManager.delete"),
         action: () => onDelete(files),
         shortcut: "Delete",
-        danger: true
+        danger: true,
       });
     }
 
-    menuItems.push({ separator: true } as MenuItem);
+    // 添加分隔符（如果有删除功能）
+    if (onDelete) {
+      menuItems.push({ separator: true } as MenuItem);
+    }
 
+    // 属性功能
     if (isSingleFile && onProperties) {
       menuItems.push({
         icon: <Info className="w-4 h-4" />,
         label: t("fileManager.properties"),
-        action: () => onProperties(files[0])
+        action: () => onProperties(files[0]),
       });
     }
   } else {
@@ -362,61 +397,92 @@ export function FileManagerContextMenu({
         icon: <Terminal className="w-4 h-4" />,
         label: t("fileManager.openTerminalHere"),
         action: () => onOpenTerminal(currentPath),
-        shortcut: "Ctrl+T"
+        shortcut: "Ctrl+T",
       });
-
-      menuItems.push({ separator: true } as MenuItem);
     }
 
+    // 上传功能
     if (onUpload) {
       menuItems.push({
         icon: <Upload className="w-4 h-4" />,
         label: t("fileManager.uploadFile"),
         action: onUpload,
-        shortcut: "Ctrl+U"
+        shortcut: "Ctrl+U",
       });
     }
 
-    menuItems.push({ separator: true } as MenuItem);
+    // 添加分隔符（如果有终端或上传功能）
+    if ((onOpenTerminal && currentPath) || onUpload) {
+      menuItems.push({ separator: true } as MenuItem);
+    }
 
+    // 新建文件夹
     if (onNewFolder) {
       menuItems.push({
         icon: <FolderPlus className="w-4 h-4" />,
         label: t("fileManager.newFolder"),
         action: onNewFolder,
-        shortcut: "Ctrl+Shift+N"
+        shortcut: "Ctrl+Shift+N",
       });
     }
 
+    // 新建文件
     if (onNewFile) {
       menuItems.push({
         icon: <FilePlus className="w-4 h-4" />,
         label: t("fileManager.newFile"),
         action: onNewFile,
-        shortcut: "Ctrl+N"
+        shortcut: "Ctrl+N",
       });
     }
 
-    menuItems.push({ separator: true } as MenuItem);
+    // 添加分隔符（如果有新建功能）
+    if (onNewFolder || onNewFile) {
+      menuItems.push({ separator: true } as MenuItem);
+    }
 
+    // 刷新功能
     if (onRefresh) {
       menuItems.push({
         icon: <RefreshCw className="w-4 h-4" />,
         label: t("fileManager.refresh"),
         action: onRefresh,
-        shortcut: "F5"
+        shortcut: "F5",
       });
     }
 
+    // 粘贴功能
     if (hasClipboard && onPaste) {
       menuItems.push({
         icon: <Clipboard className="w-4 h-4" />,
         label: t("fileManager.paste"),
         action: onPaste,
-        shortcut: "Ctrl+V"
+        shortcut: "Ctrl+V",
       });
     }
   }
+
+  // 过滤掉连续的分隔符
+  const filteredMenuItems = menuItems.filter((item, index) => {
+    if (!item.separator) return true;
+
+    // 如果是分隔符，检查前一个和后一个是否也是分隔符
+    const prevItem = index > 0 ? menuItems[index - 1] : null;
+    const nextItem = index < menuItems.length - 1 ? menuItems[index + 1] : null;
+
+    // 如果前一个或后一个是分隔符，则过滤掉当前分隔符
+    if (prevItem?.separator || nextItem?.separator) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // 移除开头和结尾的分隔符
+  const finalMenuItems = filteredMenuItems.filter((item, index) => {
+    if (!item.separator) return true;
+    return index > 0 && index < filteredMenuItems.length - 1;
+  });
 
   return (
     <>
@@ -426,18 +492,18 @@ export function FileManagerContextMenu({
       {/* 菜单本体 */}
       <div
         data-context-menu
-        className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl py-1 min-w-[180px] max-w-[250px] z-50"
+        className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-50 overflow-hidden"
         style={{
           left: menuPosition.x,
-          top: menuPosition.y
+          top: menuPosition.y,
         }}
       >
-        {menuItems.map((item, index) => {
+        {finalMenuItems.map((item, index) => {
           if (item.separator) {
             return (
               <div
                 key={`separator-${index}`}
-                className="border-t border-dark-border my-1"
+                className="border-t border-dark-border"
               />
             );
           }
@@ -448,8 +514,9 @@ export function FileManagerContextMenu({
               className={cn(
                 "w-full px-3 py-2 text-left text-sm flex items-center justify-between",
                 "hover:bg-dark-hover transition-colors",
+                "first:rounded-t-lg last:rounded-b-lg",
                 item.disabled && "opacity-50 cursor-not-allowed",
-                item.danger && "text-red-400 hover:bg-red-500/10"
+                item.danger && "text-red-400 hover:bg-red-500/10",
               )}
               onClick={() => {
                 if (!item.disabled) {
@@ -459,12 +526,12 @@ export function FileManagerContextMenu({
               }}
               disabled={item.disabled}
             >
-              <div className="flex items-center gap-3">
-                {item.icon}
-                <span>{item.label}</span>
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex-shrink-0">{item.icon}</div>
+                <span className="flex-1">{item.label}</span>
               </div>
               {item.shortcut && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
                   {item.shortcut}
                 </span>
               )}

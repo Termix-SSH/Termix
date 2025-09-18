@@ -383,12 +383,12 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
 
     try {
       // Extract just the symlink path (before the " -> " if present)
-      const symlinkPath = item.path.includes(" -> ") 
-        ? item.path.split(" -> ")[0] 
+      const symlinkPath = item.path.includes(" -> ")
+        ? item.path.split(" -> ")[0]
         : item.path;
-      
+
       let currentSessionId = sshSessionId;
-      
+
       // Check SSH connection status and reconnect if needed
       if (currentSessionId) {
         try {
@@ -421,9 +421,12 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
           throw new Error(t("fileManager.failedToConnectSSH"));
         }
       }
-      
-      const symlinkInfo = await identifySSHSymlink(currentSessionId, symlinkPath);
-      
+
+      const symlinkInfo = await identifySSHSymlink(
+        currentSessionId,
+        symlinkPath,
+      );
+
       if (symlinkInfo.type === "directory") {
         // If symlink points to a directory, navigate to it
         handlePathChange(symlinkInfo.target);
@@ -438,9 +441,9 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
       }
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.error || 
-        error?.message ||
-        t("fileManager.failedToResolveSymlink"),
+        error?.response?.data?.error ||
+          error?.message ||
+          t("fileManager.failedToResolveSymlink"),
       );
     }
   };
@@ -569,13 +572,13 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                       (item.type === "directory"
                                         ? handlePathChange(item.path)
                                         : item.type === "link"
-                                        ? handleSymlinkClick(item)
-                                        : onOpenFile({
-                                            name: item.name,
-                                            path: item.path,
-                                            isSSH: item.isSSH,
-                                            sshSessionId: item.sshSessionId,
-                                          }))
+                                          ? handleSymlinkClick(item)
+                                          : onOpenFile({
+                                              name: item.name,
+                                              path: item.path,
+                                              isSSH: item.isSSH,
+                                              sshSessionId: item.sshSessionId,
+                                            }))
                                     }
                                   >
                                     {item.type === "directory" ? (
@@ -590,7 +593,7 @@ const FileManagerLeftSidebar = forwardRef(function FileManagerSidebar(
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1">
-                                    {(item.type === "file") && (
+                                    {item.type === "file" && (
                                       <Button
                                         size="icon"
                                         variant="ghost"

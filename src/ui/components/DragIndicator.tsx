@@ -1,13 +1,13 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { cn } from "@/lib/utils";
 import {
   Download,
   FileDown,
   FolderDown,
   Loader2,
   CheckCircle,
-  AlertCircle
-} from 'lucide-react';
+  AlertCircle,
+} from "lucide-react";
 
 interface DragIndicatorProps {
   isVisible: boolean;
@@ -28,7 +28,7 @@ export function DragIndicator({
   fileName,
   fileCount = 1,
   error,
-  className
+  className,
 }: DragIndicatorProps) {
   if (!isVisible) return null;
 
@@ -58,14 +58,14 @@ export function DragIndicator({
     }
 
     if (isDragging) {
-      return `正在拖拽${fileName ? ` ${fileName}` : ''}到桌面...`;
+      return `正在拖拽${fileName ? ` ${fileName}` : ""}到桌面...`;
     }
 
     if (isDownloading) {
-      return `正在准备拖拽${fileName ? ` ${fileName}` : ''}...`;
+      return `正在准备拖拽${fileName ? ` ${fileName}` : ""}...`;
     }
 
-    return `准备拖拽${fileCount > 1 ? ` ${fileCount} 个文件` : fileName ? ` ${fileName}` : ''}`;
+    return `准备拖拽${fileCount > 1 ? ` ${fileCount} 个文件` : fileName ? ` ${fileName}` : ""}`;
   };
 
   return (
@@ -75,29 +75,31 @@ export function DragIndicator({
         "bg-dark-bg border border-dark-border rounded-lg shadow-lg",
         "p-4 transition-all duration-300 ease-in-out",
         isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full",
-        className
+        className,
       )}
     >
       <div className="flex items-start gap-3">
         {/* 图标 */}
-        <div className="flex-shrink-0 mt-0.5">
-          {getIcon()}
-        </div>
+        <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
 
         {/* 内容 */}
         <div className="flex-1 min-w-0">
           {/* 标题 */}
           <div className="text-sm font-medium text-foreground mb-2">
-            {fileCount > 1 ? '批量拖拽到桌面' : '拖拽到桌面'}
+            {fileCount > 1 ? "批量拖拽到桌面" : "拖拽到桌面"}
           </div>
 
           {/* 状态文字 */}
-          <div className={cn(
-            "text-xs mb-3",
-            error ? "text-red-500" :
-            isDragging ? "text-green-500" :
-            "text-muted-foreground"
-          )}>
+          <div
+            className={cn(
+              "text-xs mb-3",
+              error
+                ? "text-red-500"
+                : isDragging
+                  ? "text-green-500"
+                  : "text-muted-foreground",
+            )}
+          >
             {getStatusText()}
           </div>
 
@@ -107,7 +109,7 @@ export function DragIndicator({
               <div
                 className={cn(
                   "h-2 rounded-full transition-all duration-300",
-                  isDragging ? "bg-green-500" : "bg-blue-500"
+                  isDragging ? "bg-green-500" : "bg-blue-500",
                 )}
                 style={{ width: `${Math.max(5, progress)}%` }}
               />

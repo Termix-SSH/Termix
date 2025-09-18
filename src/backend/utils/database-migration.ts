@@ -1,13 +1,23 @@
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import { DatabaseFileEncryption } from './database-file-encryption.js';
-import { DatabaseEncryption } from './database-encryption.js';
-import { FieldEncryption } from './encryption.js';
-import { HardwareFingerprint } from './hardware-fingerprint.js';
-import { databaseLogger } from './logger.js';
-import { db, databasePaths } from '../database/db/index.js';
-import { users, sshData, sshCredentials, settings, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts, sshCredentialUsage } from '../database/db/schema.js';
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+import { DatabaseFileEncryption } from "./database-file-encryption.js";
+import { DatabaseEncryption } from "./database-encryption.js";
+import { FieldEncryption } from "./encryption.js";
+import { HardwareFingerprint } from "./hardware-fingerprint.js";
+import { databaseLogger } from "./logger.js";
+import { db, databasePaths } from "../database/db/index.js";
+import {
+  users,
+  sshData,
+  sshCredentials,
+  settings,
+  fileManagerRecent,
+  fileManagerPinned,
+  fileManagerShortcuts,
+  dismissedAlerts,
+  sshCredentialUsage,
+} from "../database/db/schema.js";
 
 interface ExportMetadata {
   version: string;
@@ -41,8 +51,8 @@ interface ImportResult {
  * Handles both field-level and file-level encryption/decryption during migration
  */
 class DatabaseMigration {
-  private static readonly VERSION = 'v1';
-  private static readonly EXPORT_FILE_EXTENSION = '.termix-export.json';
+  private static readonly VERSION = "v1";
+  private static readonly EXPORT_FILE_EXTENSION = ".termix-export.json";
 
   /**
    * Export database for migration
@@ -53,28 +63,48 @@ class DatabaseMigration {
     const timestamp = new Date().toISOString();
     const defaultExportPath = path.join(
       databasePaths.directory,
-      `termix-export-${timestamp.replace(/[:.]/g, '-')}${this.EXPORT_FILE_EXTENSION}`
+      `termix-export-${timestamp.replace(/[:.]/g, "-")}${this.EXPORT_FILE_EXTENSION}`,
     );
     const actualExportPath = exportPath || defaultExportPath;
 
     try {
-      databaseLogger.info('Starting database export for migration', {
-        operation: 'database_export',
+      databaseLogger.info("Starting database export for migration", {
+        operation: "database_export",
         exportId,
-        exportPath: actualExportPath
+        exportPath: actualExportPath,
       });
 
       // Define tables to export and their encryption status
       const tablesToExport = [
-        { name: 'users', table: users, hasEncryption: true },
-        { name: 'ssh_data', table: sshData, hasEncryption: true },
-        { name: 'ssh_credentials', table: sshCredentials, hasEncryption: true },
-        { name: 'settings', table: settings, hasEncryption: false },
-        { name: 'file_manager_recent', table: fileManagerRecent, hasEncryption: false },
-        { name: 'file_manager_pinned', table: fileManagerPinned, hasEncryption: false },
-        { name: 'file_manager_shortcuts', table: fileManagerShortcuts, hasEncryption: false },
-        { name: 'dismissed_alerts', table: dismissedAlerts, hasEncryption: false },
-        { name: 'ssh_credential_usage', table: sshCredentialUsage, hasEncryption: false }
+        { name: "users", table: users, hasEncryption: true },
+        { name: "ssh_data", table: sshData, hasEncryption: true },
+        { name: "ssh_credentials", table: sshCredentials, hasEncryption: true },
+        { name: "settings", table: settings, hasEncryption: false },
+        {
+          name: "file_manager_recent",
+          table: fileManagerRecent,
+          hasEncryption: false,
+        },
+        {
+          name: "file_manager_pinned",
+          table: fileManagerPinned,
+          hasEncryption: false,
+        },
+        {
+          name: "file_manager_shortcuts",
+          table: fileManagerShortcuts,
+          hasEncryption: false,
+        },
+        {
+          name: "dismissed_alerts",
+          table: dismissedAlerts,
+          hasEncryption: false,
+        },
+        {
+          name: "ssh_credential_usage",
+          table: sshCredentialUsage,
+          hasEncryption: false,
+        },
       ];
 
       const exportData: MigrationExport = {
@@ -82,12 +112,15 @@ class DatabaseMigration {
           version: this.VERSION,
           exportedAt: timestamp,
           exportId,
-          sourceHardwareFingerprint: HardwareFingerprint.generate().substring(0, 16),
+          sourceHardwareFingerprint: HardwareFingerprint.generate().substring(
+            0,
+            16,
+          ),
           tableCount: 0,
           recordCount: 0,
-          encryptedFields: []
+          encryptedFields: [],
         },
-        data: {}
+        data: {},
       };
 
       let totalRecords = 0;
@@ -96,9 +129,9 @@ class DatabaseMigration {
       for (const tableInfo of tablesToExport) {
         try {
           databaseLogger.debug(`Exporting table: ${tableInfo.name}`, {
-            operation: 'table_export',
+            operation: "table_export",
             table: tableInfo.name,
-            hasEncryption: tableInfo.hasEncryption
+            hasEncryption: tableInfo.hasEncryption,
           });
 
           // Query all records from the table
@@ -107,16 +140,20 @@ class DatabaseMigration {
           // Decrypt encrypted fields if necessary
           let processedRecords = records;
           if (tableInfo.hasEncryption && records.length > 0) {
-            processedRecords = records.map(record => {
+            processedRecords = records.map((record) => {
               try {
                 return DatabaseEncryption.decryptRecord(tableInfo.name, record);
               } catch (error) {
-                databaseLogger.warn(`Failed to decrypt record in ${tableInfo.name}`, {
-                  operation: 'export_decrypt_warning',
-                  table: tableInfo.name,
-                  recordId: (record as any).id,
-                  error: error instanceof Error ? error.message : 'Unknown error'
-                });
+                databaseLogger.warn(
+                  `Failed to decrypt record in ${tableInfo.name}`,
+                  {
+                    operation: "export_decrypt_warning",
+                    table: tableInfo.name,
+                    recordId: (record as any).id,
+                    error:
+                      error instanceof Error ? error.message : "Unknown error",
+                  },
+                );
                 // Return original record if decryption fails
                 return record;
               }
@@ -126,7 +163,9 @@ class DatabaseMigration {
             if (records.length > 0) {
               const sampleRecord = records[0];
               for (const fieldName of Object.keys(sampleRecord)) {
-                if (FieldEncryption.shouldEncryptField(tableInfo.name, fieldName)) {
+                if (
+                  FieldEncryption.shouldEncryptField(tableInfo.name, fieldName)
+                ) {
                   const fieldKey = `${tableInfo.name}.${fieldName}`;
                   if (!exportData.metadata.encryptedFields.includes(fieldKey)) {
                     exportData.metadata.encryptedFields.push(fieldKey);
@@ -140,15 +179,19 @@ class DatabaseMigration {
           totalRecords += processedRecords.length;
 
           databaseLogger.debug(`Table ${tableInfo.name} exported`, {
-            operation: 'table_export_complete',
+            operation: "table_export_complete",
             table: tableInfo.name,
-            recordCount: processedRecords.length
+            recordCount: processedRecords.length,
           });
         } catch (error) {
-          databaseLogger.error(`Failed to export table ${tableInfo.name}`, error, {
-            operation: 'table_export_failed',
-            table: tableInfo.name
-          });
+          databaseLogger.error(
+            `Failed to export table ${tableInfo.name}`,
+            error,
+            {
+              operation: "table_export_failed",
+              table: tableInfo.name,
+            },
+          );
           throw error;
         }
       }
@@ -159,25 +202,27 @@ class DatabaseMigration {
 
       // Write export file
       const exportContent = JSON.stringify(exportData, null, 2);
-      fs.writeFileSync(actualExportPath, exportContent, 'utf8');
+      fs.writeFileSync(actualExportPath, exportContent, "utf8");
 
-      databaseLogger.success('Database export completed successfully', {
-        operation: 'database_export_complete',
+      databaseLogger.success("Database export completed successfully", {
+        operation: "database_export_complete",
         exportId,
         exportPath: actualExportPath,
         tableCount: exportData.metadata.tableCount,
         recordCount: exportData.metadata.recordCount,
-        fileSize: exportContent.length
+        fileSize: exportContent.length,
       });
 
       return actualExportPath;
     } catch (error) {
-      databaseLogger.error('Database export failed', error, {
-        operation: 'database_export_failed',
+      databaseLogger.error("Database export failed", error, {
+        operation: "database_export_failed",
         exportId,
-        exportPath: actualExportPath
+        exportPath: actualExportPath,
       });
-      throw new Error(`Database export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Database export failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -185,10 +230,13 @@ class DatabaseMigration {
    * Import database from migration export
    * Re-encrypts fields for the current hardware
    */
-  static async importDatabase(importPath: string, options: {
-    replaceExisting?: boolean;
-    backupCurrent?: boolean;
-  } = {}): Promise<ImportResult> {
+  static async importDatabase(
+    importPath: string,
+    options: {
+      replaceExisting?: boolean;
+      backupCurrent?: boolean;
+    } = {},
+  ): Promise<ImportResult> {
     const { replaceExisting = false, backupCurrent = true } = options;
 
     if (!fs.existsSync(importPath)) {
@@ -196,43 +244,45 @@ class DatabaseMigration {
     }
 
     try {
-      databaseLogger.info('Starting database import from migration export', {
-        operation: 'database_import',
+      databaseLogger.info("Starting database import from migration export", {
+        operation: "database_import",
         importPath,
         replaceExisting,
-        backupCurrent
+        backupCurrent,
       });
 
       // Read and validate export file
-      const exportContent = fs.readFileSync(importPath, 'utf8');
+      const exportContent = fs.readFileSync(importPath, "utf8");
       const exportData: MigrationExport = JSON.parse(exportContent);
 
       // Validate export format
       if (exportData.metadata.version !== this.VERSION) {
-        throw new Error(`Unsupported export version: ${exportData.metadata.version}`);
+        throw new Error(
+          `Unsupported export version: ${exportData.metadata.version}`,
+        );
       }
 
       const result: ImportResult = {
         success: false,
         imported: { tables: 0, records: 0 },
         errors: [],
-        warnings: []
+        warnings: [],
       };
 
       // Create backup if requested
       if (backupCurrent) {
         try {
           const backupPath = await this.createCurrentDatabaseBackup();
-          databaseLogger.info('Current database backed up before import', {
-            operation: 'import_backup',
-            backupPath
+          databaseLogger.info("Current database backed up before import", {
+            operation: "import_backup",
+            backupPath,
           });
         } catch (error) {
-          const warningMsg = `Failed to create backup: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          const warningMsg = `Failed to create backup: ${error instanceof Error ? error.message : "Unknown error"}`;
           result.warnings.push(warningMsg);
-          databaseLogger.warn('Failed to create pre-import backup', {
-            operation: 'import_backup_failed',
-            error: warningMsg
+          databaseLogger.warn("Failed to create pre-import backup", {
+            operation: "import_backup_failed",
+            error: warningMsg,
           });
         }
       }
@@ -241,9 +291,9 @@ class DatabaseMigration {
       for (const [tableName, tableData] of Object.entries(exportData.data)) {
         try {
           databaseLogger.debug(`Importing table: ${tableName}`, {
-            operation: 'table_import',
+            operation: "table_import",
             table: tableName,
-            recordCount: tableData.length
+            recordCount: tableData.length,
           });
 
           if (replaceExisting) {
@@ -252,8 +302,8 @@ class DatabaseMigration {
             if (tableSchema) {
               await db.delete(tableSchema);
               databaseLogger.debug(`Cleared existing data from ${tableName}`, {
-                operation: 'table_clear',
-                table: tableName
+                operation: "table_clear",
+                table: tableName,
               });
             }
           }
@@ -262,7 +312,10 @@ class DatabaseMigration {
           for (const record of tableData) {
             try {
               // Re-encrypt sensitive fields for current hardware
-              const processedRecord = DatabaseEncryption.encryptRecord(tableName, record);
+              const processedRecord = DatabaseEncryption.encryptRecord(
+                tableName,
+                record,
+              );
 
               // Insert record
               const tableSchema = this.getTableSchema(tableName);
@@ -270,12 +323,12 @@ class DatabaseMigration {
                 await db.insert(tableSchema).values(processedRecord);
               }
             } catch (error) {
-              const errorMsg = `Failed to import record in ${tableName}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+              const errorMsg = `Failed to import record in ${tableName}: ${error instanceof Error ? error.message : "Unknown error"}`;
               result.errors.push(errorMsg);
-              databaseLogger.error('Failed to import record', error, {
-                operation: 'record_import_failed',
+              databaseLogger.error("Failed to import record", error, {
+                operation: "record_import_failed",
                 table: tableName,
-                recordId: record.id
+                recordId: record.id,
               });
             }
           }
@@ -284,16 +337,16 @@ class DatabaseMigration {
           result.imported.records += tableData.length;
 
           databaseLogger.debug(`Table ${tableName} imported`, {
-            operation: 'table_import_complete',
+            operation: "table_import_complete",
             table: tableName,
-            recordCount: tableData.length
+            recordCount: tableData.length,
           });
         } catch (error) {
-          const errorMsg = `Failed to import table ${tableName}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          const errorMsg = `Failed to import table ${tableName}: ${error instanceof Error ? error.message : "Unknown error"}`;
           result.errors.push(errorMsg);
-          databaseLogger.error('Failed to import table', error, {
-            operation: 'table_import_failed',
-            table: tableName
+          databaseLogger.error("Failed to import table", error, {
+            operation: "table_import_failed",
+            table: tableName,
           });
         }
       }
@@ -302,31 +355,37 @@ class DatabaseMigration {
       result.success = result.errors.length === 0;
 
       if (result.success) {
-        databaseLogger.success('Database import completed successfully', {
-          operation: 'database_import_complete',
+        databaseLogger.success("Database import completed successfully", {
+          operation: "database_import_complete",
           importPath,
           tablesImported: result.imported.tables,
           recordsImported: result.imported.records,
-          warnings: result.warnings.length
+          warnings: result.warnings.length,
         });
       } else {
-        databaseLogger.error('Database import completed with errors', undefined, {
-          operation: 'database_import_partial',
-          importPath,
-          tablesImported: result.imported.tables,
-          recordsImported: result.imported.records,
-          errorCount: result.errors.length,
-          warningCount: result.warnings.length
-        });
+        databaseLogger.error(
+          "Database import completed with errors",
+          undefined,
+          {
+            operation: "database_import_partial",
+            importPath,
+            tablesImported: result.imported.tables,
+            recordsImported: result.imported.records,
+            errorCount: result.errors.length,
+            warningCount: result.warnings.length,
+          },
+        );
       }
 
       return result;
     } catch (error) {
-      databaseLogger.error('Database import failed', error, {
-        operation: 'database_import_failed',
-        importPath
+      databaseLogger.error("Database import failed", error, {
+        operation: "database_import_failed",
+        importPath,
       });
-      throw new Error(`Database import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Database import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -341,32 +400,38 @@ class DatabaseMigration {
     const result = {
       valid: false,
       metadata: undefined as ExportMetadata | undefined,
-      errors: [] as string[]
+      errors: [] as string[],
     };
 
     try {
       if (!fs.existsSync(exportPath)) {
-        result.errors.push('Export file does not exist');
+        result.errors.push("Export file does not exist");
         return result;
       }
 
-      const exportContent = fs.readFileSync(exportPath, 'utf8');
+      const exportContent = fs.readFileSync(exportPath, "utf8");
       const exportData: MigrationExport = JSON.parse(exportContent);
 
       // Validate structure
       if (!exportData.metadata || !exportData.data) {
-        result.errors.push('Invalid export file structure');
+        result.errors.push("Invalid export file structure");
         return result;
       }
 
       // Validate version
       if (exportData.metadata.version !== this.VERSION) {
-        result.errors.push(`Unsupported export version: ${exportData.metadata.version}`);
+        result.errors.push(
+          `Unsupported export version: ${exportData.metadata.version}`,
+        );
         return result;
       }
 
       // Validate required metadata fields
-      const requiredFields = ['exportedAt', 'exportId', 'sourceHardwareFingerprint'];
+      const requiredFields = [
+        "exportedAt",
+        "exportId",
+        "sourceHardwareFingerprint",
+      ];
       for (const field of requiredFields) {
         if (!exportData.metadata[field as keyof ExportMetadata]) {
           result.errors.push(`Missing required metadata field: ${field}`);
@@ -380,7 +445,9 @@ class DatabaseMigration {
 
       return result;
     } catch (error) {
-      result.errors.push(`Failed to parse export file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      result.errors.push(
+        `Failed to parse export file: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
       return result;
     }
   }
@@ -389,8 +456,8 @@ class DatabaseMigration {
    * Create backup of current database
    */
   private static async createCurrentDatabaseBackup(): Promise<string> {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path.join(databasePaths.directory, 'backups');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupDir = path.join(databasePaths.directory, "backups");
 
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
@@ -399,7 +466,7 @@ class DatabaseMigration {
     // Create encrypted backup
     const backupPath = DatabaseFileEncryption.createEncryptedBackup(
       databasePaths.main,
-      backupDir
+      backupDir,
     );
 
     return backupPath;
@@ -410,15 +477,15 @@ class DatabaseMigration {
    */
   private static getTableSchema(tableName: string) {
     const tableMap: { [key: string]: any } = {
-      'users': users,
-      'ssh_data': sshData,
-      'ssh_credentials': sshCredentials,
-      'settings': settings,
-      'file_manager_recent': fileManagerRecent,
-      'file_manager_pinned': fileManagerPinned,
-      'file_manager_shortcuts': fileManagerShortcuts,
-      'dismissed_alerts': dismissedAlerts,
-      'ssh_credential_usage': sshCredentialUsage
+      users: users,
+      ssh_data: sshData,
+      ssh_credentials: sshCredentials,
+      settings: settings,
+      file_manager_recent: fileManagerRecent,
+      file_manager_pinned: fileManagerPinned,
+      file_manager_shortcuts: fileManagerShortcuts,
+      dismissed_alerts: dismissedAlerts,
+      ssh_credential_usage: sshCredentialUsage,
     };
 
     return tableMap[tableName];

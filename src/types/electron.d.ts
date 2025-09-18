@@ -22,7 +22,7 @@ export interface ElectronAPI {
   createTempFile: (fileData: {
     fileName: string;
     content: string;
-    encoding?: 'base64' | 'utf8';
+    encoding?: "base64" | "utf8";
   }) => Promise<{
     success: boolean;
     tempId?: string;
@@ -35,7 +35,7 @@ export interface ElectronAPI {
     files: Array<{
       relativePath: string;
       content: string;
-      encoding?: 'base64' | 'utf8';
+      encoding?: "base64" | "utf8";
     }>;
   }) => Promise<{
     success: boolean;

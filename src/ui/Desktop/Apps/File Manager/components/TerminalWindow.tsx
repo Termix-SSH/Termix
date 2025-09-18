@@ -1,7 +1,7 @@
-import React from 'react';
-import { DraggableWindow } from './DraggableWindow';
-import { Terminal } from '../../Terminal/Terminal';
-import { useWindowManager } from './WindowManager';
+import React from "react";
+import { DraggableWindow } from "./DraggableWindow";
+import { Terminal } from "../../Terminal/Terminal";
+import { useWindowManager } from "./WindowManager";
 
 interface SSHHost {
   id: number;
@@ -12,7 +12,7 @@ interface SSHHost {
   password?: string;
   key?: string;
   keyPassword?: string;
-  authType: 'password' | 'key';
+  authType: "password" | "key";
   credentialId?: number;
   userId?: number;
 }
@@ -32,12 +32,13 @@ export function TerminalWindow({
   initialPath,
   initialX = 200,
   initialY = 150,
-  executeCommand
+  executeCommand,
 }: TerminalWindowProps) {
-  const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } = useWindowManager();
+  const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } =
+    useWindowManager();
 
   // 获取当前窗口状态
-  const currentWindow = windows.find(w => w.id === windowId);
+  const currentWindow = windows.find((w) => w.id === windowId);
   if (!currentWindow) {
     console.warn(`Window with id ${windowId} not found`);
     return null;
@@ -62,8 +63,8 @@ export function TerminalWindow({
   const terminalTitle = executeCommand
     ? `运行 - ${hostConfig.name}:${executeCommand}`
     : initialPath
-    ? `终端 - ${hostConfig.name}:${initialPath}`
-    : `终端 - ${hostConfig.name}`;
+      ? `终端 - ${hostConfig.name}:${initialPath}`
+      : `终端 - ${hostConfig.name}`;
 
   return (
     <DraggableWindow

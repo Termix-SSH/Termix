@@ -65,7 +65,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
   try {
     const data = await EncryptedDBOperations.select(
       db.select().from(sshData),
-      'ssh_data'
+      "ssh_data",
     );
     const result = data.map((row: any) => {
       return {
@@ -210,7 +210,11 @@ router.post(
     }
 
     try {
-      const result = await EncryptedDBOperations.insert(sshData, 'ssh_data', sshDataObj);
+      const result = await EncryptedDBOperations.insert(
+        sshData,
+        "ssh_data",
+        sshDataObj,
+      );
 
       if (!result) {
         sshLogger.warn("No host returned after creation", {
@@ -403,14 +407,19 @@ router.put(
     try {
       await EncryptedDBOperations.update(
         sshData,
-        'ssh_data',
+        "ssh_data",
         and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
-        sshDataObj
+        sshDataObj,
       );
 
       const updatedHosts = await EncryptedDBOperations.select(
-        db.select().from(sshData).where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId))),
-        'ssh_data'
+        db
+          .select()
+          .from(sshData)
+          .where(
+            and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
+          ),
+        "ssh_data",
       );
 
       if (updatedHosts.length === 0) {
@@ -486,7 +495,7 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
   try {
     const data = await EncryptedDBOperations.select(
       db.select().from(sshData).where(eq(sshData.userId, userId)),
-      'ssh_data'
+      "ssh_data",
     );
 
     const result = await Promise.all(
@@ -1106,12 +1115,12 @@ router.put(
     try {
       const updatedHosts = await EncryptedDBOperations.update(
         sshData,
-        'ssh_data',
+        "ssh_data",
         and(eq(sshData.userId, userId), eq(sshData.folder, oldName)),
         {
           folder: newName,
           updatedAt: new Date().toISOString(),
-        }
+        },
       );
 
       const updatedCredentials = await db
@@ -1252,7 +1261,7 @@ router.post(
           updatedAt: new Date().toISOString(),
         };
 
-        await EncryptedDBOperations.insert(sshData, 'ssh_data', sshDataObj);
+        await EncryptedDBOperations.insert(sshData, "ssh_data", sshDataObj);
         results.success++;
       } catch (error) {
         results.failed++;

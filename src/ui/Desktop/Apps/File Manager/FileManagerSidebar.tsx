@@ -8,10 +8,10 @@ import {
   Star,
   Clock,
   Bookmark,
-  FolderOpen
+  FolderOpen,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { SSHHost } from "../../../types/index.js";
+import type { SSHHost } from "@/types/index";
 import {
   getRecentFiles,
   getPinnedFiles,
@@ -19,7 +19,7 @@ import {
   listSSHFiles,
   removeRecentFile,
   removePinnedFile,
-  removeFolderShortcut
+  removeFolderShortcut,
 } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
 
@@ -27,7 +27,7 @@ export interface SidebarItem {
   id: string;
   name: string;
   path: string;
-  type: 'recent' | 'pinned' | 'shortcut' | 'folder';
+  type: "recent" | "pinned" | "shortcut" | "folder";
   lastAccessed?: string;
   isExpanded?: boolean;
   children?: SidebarItem[];
@@ -50,14 +50,16 @@ export function FileManagerSidebar({
   onLoadDirectory,
   onFileOpen,
   sshSessionId,
-  refreshTrigger
+  refreshTrigger,
 }: FileManagerSidebarProps) {
   const { t } = useTranslation();
   const [recentItems, setRecentItems] = useState<SidebarItem[]>([]);
   const [pinnedItems, setPinnedItems] = useState<SidebarItem[]>([]);
   const [shortcuts, setShortcuts] = useState<SidebarItem[]>([]);
   const [directoryTree, setDirectoryTree] = useState<SidebarItem[]>([]);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']));
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(["root"]),
+  );
 
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<{
@@ -69,7 +71,7 @@ export function FileManagerSidebar({
     x: 0,
     y: 0,
     isVisible: false,
-    item: null
+    item: null,
   });
 
   // 加载快捷功能数据
@@ -94,8 +96,8 @@ export function FileManagerSidebar({
         id: `recent-${item.id}`,
         name: item.name,
         path: item.path,
-        type: 'recent' as const,
-        lastAccessed: item.lastOpened
+        type: "recent" as const,
+        lastAccessed: item.lastOpened,
       }));
       setRecentItems(recentItems);
 
@@ -105,7 +107,7 @@ export function FileManagerSidebar({
         id: `pinned-${item.id}`,
         name: item.name,
         path: item.path,
-        type: 'pinned' as const
+        type: "pinned" as const,
       }));
       setPinnedItems(pinnedItems);
 
@@ -115,11 +117,11 @@ export function FileManagerSidebar({
         id: `shortcut-${item.id}`,
         name: item.name,
         path: item.path,
-        type: 'shortcut' as const
+        type: "shortcut" as const,
       }));
       setShortcuts(shortcutItems);
     } catch (error) {
-      console.error('Failed to load quick access data:', error);
+      console.error("Failed to load quick access data:", error);
       // 如果加载失败，保持空数组
       setRecentItems([]);
       setPinnedItems([]);
@@ -134,9 +136,11 @@ export function FileManagerSidebar({
     try {
       await removeRecentFile(currentHost.id, item.path);
       loadQuickAccessData(); // 重新加载数据
-      toast.success(t("fileManager.removedFromRecentFiles", { name: item.name }));
+      toast.success(
+        t("fileManager.removedFromRecentFiles", { name: item.name }),
+      );
     } catch (error) {
-      console.error('Failed to remove recent file:', error);
+      console.error("Failed to remove recent file:", error);
       toast.error(t("fileManager.removeFailed"));
     }
   };
@@ -149,7 +153,7 @@ export function FileManagerSidebar({
       loadQuickAccessData(); // 重新加载数据
       toast.success(t("fileManager.unpinnedSuccessfully", { name: item.name }));
     } catch (error) {
-      console.error('Failed to unpin file:', error);
+      console.error("Failed to unpin file:", error);
       toast.error(t("fileManager.unpinFailed"));
     }
   };
@@ -162,7 +166,7 @@ export function FileManagerSidebar({
       loadQuickAccessData(); // 重新加载数据
       toast.success(t("fileManager.removedShortcut", { name: item.name }));
     } catch (error) {
-      console.error('Failed to remove shortcut:', error);
+      console.error("Failed to remove shortcut:", error);
       toast.error(t("fileManager.removeShortcutFailed"));
     }
   };
@@ -173,12 +177,12 @@ export function FileManagerSidebar({
     try {
       // 批量删除所有recent文件
       await Promise.all(
-        recentItems.map(item => removeRecentFile(currentHost.id, item.path))
+        recentItems.map((item) => removeRecentFile(currentHost.id, item.path)),
       );
       loadQuickAccessData(); // 重新加载数据
       toast.success(t("fileManager.clearedAllRecentFiles"));
     } catch (error) {
-      console.error('Failed to clear recent files:', error);
+      console.error("Failed to clear recent files:", error);
       toast.error(t("fileManager.clearFailed"));
     }
   };
@@ -192,12 +196,12 @@ export function FileManagerSidebar({
       x: e.clientX,
       y: e.clientY,
       isVisible: true,
-      item
+      item,
     });
   };
 
   const closeContextMenu = () => {
-    setContextMenu(prev => ({ ...prev, isVisible: false, item: null }));
+    setContextMenu((prev) => ({ ...prev, isVisible: false, item: null }));
   };
 
   // 点击外部关闭菜单
@@ -206,7 +210,7 @@ export function FileManagerSidebar({
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      const menuElement = document.querySelector('[data-sidebar-context-menu]');
+      const menuElement = document.querySelector("[data-sidebar-context-menu]");
 
       if (!menuElement?.contains(target)) {
         closeContextMenu();
@@ -214,21 +218,21 @@ export function FileManagerSidebar({
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         closeContextMenu();
       }
     };
 
     // 延迟添加监听器，避免立即触发
     const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
     }, 50);
 
     return () => {
       clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [contextMenu.isVisible]);
 
@@ -237,61 +241,64 @@ export function FileManagerSidebar({
 
     try {
       // 加载根目录
-      const response = await listSSHFiles(sshSessionId, '/');
+      const response = await listSSHFiles(sshSessionId, "/");
 
       // listSSHFiles 现在总是返回 {files: Array, path: string} 格式
       const rootFiles = response.files || [];
-      const rootFolders = rootFiles.filter((item: any) => item.type === 'directory');
+      const rootFolders = rootFiles.filter(
+        (item: any) => item.type === "directory",
+      );
 
       const rootTreeItems = rootFolders.map((folder: any) => ({
         id: `folder-${folder.name}`,
         name: folder.name,
         path: folder.path,
-        type: 'folder' as const,
+        type: "folder" as const,
         isExpanded: false,
-        children: [] // 子目录将按需加载
+        children: [], // 子目录将按需加载
       }));
 
       setDirectoryTree([
         {
-          id: 'root',
-          name: '/',
-          path: '/',
-          type: 'folder' as const,
+          id: "root",
+          name: "/",
+          path: "/",
+          type: "folder" as const,
           isExpanded: true,
-          children: rootTreeItems
-        }
+          children: rootTreeItems,
+        },
       ]);
     } catch (error) {
-      console.error('Failed to load directory tree:', error);
+      console.error("Failed to load directory tree:", error);
       // 如果加载失败，显示简单的根目录
       setDirectoryTree([
         {
-          id: 'root',
-          name: '/',
-          path: '/',
-          type: 'folder' as const,
+          id: "root",
+          name: "/",
+          path: "/",
+          type: "folder" as const,
           isExpanded: false,
-          children: []
-        }
+          children: [],
+        },
       ]);
     }
   };
 
   const handleItemClick = (item: SidebarItem) => {
-    if (item.type === 'folder') {
+    if (item.type === "folder") {
       toggleFolder(item.id, item.path);
       onPathChange(item.path);
-    } else if (item.type === 'recent' || item.type === 'pinned') {
+    } else if (item.type === "recent" || item.type === "pinned") {
       // 对于文件类型，调用文件打开回调
       if (onFileOpen) {
         onFileOpen(item);
       } else {
         // 如果没有文件打开回调，切换到文件所在目录
-        const directory = item.path.substring(0, item.path.lastIndexOf('/')) || '/';
+        const directory =
+          item.path.substring(0, item.path.lastIndexOf("/")) || "/";
         onPathChange(directory);
       }
-    } else if (item.type === 'shortcut') {
+    } else if (item.type === "shortcut") {
       // 文件夹快捷方式直接切换到目录
       onPathChange(item.path);
     }
@@ -306,27 +313,29 @@ export function FileManagerSidebar({
       newExpanded.add(folderId);
 
       // 按需加载子目录
-      if (sshSessionId && folderPath && folderPath !== '/') {
+      if (sshSessionId && folderPath && folderPath !== "/") {
         try {
           const subResponse = await listSSHFiles(sshSessionId, folderPath);
 
           // listSSHFiles 现在总是返回 {files: Array, path: string} 格式
           const subFiles = subResponse.files || [];
-          const subFolders = subFiles.filter((item: any) => item.type === 'directory');
+          const subFolders = subFiles.filter(
+            (item: any) => item.type === "directory",
+          );
 
           const subTreeItems = subFolders.map((folder: any) => ({
-            id: `folder-${folder.path.replace(/\//g, '-')}`,
+            id: `folder-${folder.path.replace(/\//g, "-")}`,
             name: folder.name,
             path: folder.path,
-            type: 'folder' as const,
+            type: "folder" as const,
             isExpanded: false,
-            children: []
+            children: [],
           }));
 
           // 更新目录树，为当前文件夹添加子目录
-          setDirectoryTree(prevTree => {
+          setDirectoryTree((prevTree) => {
             const updateChildren = (items: SidebarItem[]): SidebarItem[] => {
-              return items.map(item => {
+              return items.map((item) => {
                 if (item.id === folderId) {
                   return { ...item, children: subTreeItems };
                 } else if (item.children) {
@@ -338,7 +347,7 @@ export function FileManagerSidebar({
             return updateChildren(prevTree);
           });
         } catch (error) {
-          console.error('Failed to load subdirectory:', error);
+          console.error("Failed to load subdirectory:", error);
         }
       }
     }
@@ -354,20 +363,24 @@ export function FileManagerSidebar({
       <div key={item.id}>
         <div
           className={cn(
-            "flex items-center gap-2 px-2 py-1 text-sm cursor-pointer hover:bg-dark-hover rounded",
+            "flex items-center gap-2 py-1.5 text-sm cursor-pointer hover:bg-dark-hover rounded",
             isActive && "bg-primary/20 text-primary",
-            "text-white"
+            "text-white",
           )}
-          style={{ paddingLeft: `${8 + level * 16}px` }}
+          style={{ paddingLeft: `${12 + level * 16}px`, paddingRight: "12px" }}
           onClick={() => handleItemClick(item)}
           onContextMenu={(e) => {
             // 只有快捷功能项才需要右键菜单
-            if (item.type === 'recent' || item.type === 'pinned' || item.type === 'shortcut') {
+            if (
+              item.type === "recent" ||
+              item.type === "pinned" ||
+              item.type === "shortcut"
+            ) {
               handleContextMenu(e, item);
             }
           }}
         >
-          {item.type === 'folder' && (
+          {item.type === "folder" && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -383,8 +396,12 @@ export function FileManagerSidebar({
             </button>
           )}
 
-          {item.type === 'folder' ? (
-            isExpanded ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />
+          {item.type === "folder" ? (
+            isExpanded ? (
+              <FolderOpen className="w-4 h-4" />
+            ) : (
+              <Folder className="w-4 h-4" />
+            )
           ) : (
             <File className="w-4 h-4" />
           )}
@@ -392,7 +409,7 @@ export function FileManagerSidebar({
           <span className="truncate">{item.name}</span>
         </div>
 
-        {item.type === 'folder' && isExpanded && item.children && (
+        {item.type === "folder" && isExpanded && item.children && (
           <div>
             {item.children.map((child) => renderSidebarItem(child, level + 1))}
           </div>
@@ -401,12 +418,16 @@ export function FileManagerSidebar({
     );
   };
 
-  const renderSection = (title: string, icon: React.ReactNode, items: SidebarItem[]) => {
+  const renderSection = (
+    title: string,
+    icon: React.ReactNode,
+    items: SidebarItem[],
+  ) => {
     if (items.length === 0) return null;
 
     return (
-      <div className="mb-4">
-        <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <div className="mb-5">
+        <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {icon}
           {title}
         </div>
@@ -417,26 +438,46 @@ export function FileManagerSidebar({
     );
   };
 
+  // Check if there are any quick access items
+  const hasQuickAccessItems =
+    recentItems.length > 0 || pinnedItems.length > 0 || shortcuts.length > 0;
+
   return (
     <>
       <div className="h-full flex flex-col bg-dark-bg border-r border-dark-border">
         <div className="flex-1 relative overflow-hidden">
-          <div className="absolute inset-0 overflow-y-auto thin-scrollbar p-2 space-y-4">
-          {/* 快捷功能区域 */}
-          {renderSection(t("fileManager.recent"), <Clock className="w-3 h-3" />, recentItems)}
-          {renderSection(t("fileManager.pinned"), <Star className="w-3 h-3" />, pinnedItems)}
-          {renderSection(t("fileManager.folderShortcuts"), <Bookmark className="w-3 h-3" />, shortcuts)}
+          <div className="absolute inset-1.5 overflow-y-auto thin-scrollbar space-y-4">
+            {/* 快捷功能区域 */}
+            {renderSection(
+              t("fileManager.recent"),
+              <Clock className="w-3 h-3" />,
+              recentItems,
+            )}
+            {renderSection(
+              t("fileManager.pinned"),
+              <Star className="w-3 h-3" />,
+              pinnedItems,
+            )}
+            {renderSection(
+              t("fileManager.folderShortcuts"),
+              <Bookmark className="w-3 h-3" />,
+              shortcuts,
+            )}
 
-          {/* 目录树 */}
-          <div className="border-t border-dark-border pt-4">
-            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              <Folder className="w-3 h-3" />
-              {t("fileManager.directories")}
+            {/* 目录树 */}
+            <div
+              className={cn(
+                hasQuickAccessItems && "pt-4 border-t border-dark-border",
+              )}
+            >
+              <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <Folder className="w-3 h-3" />
+                {t("fileManager.directories")}
+              </div>
+              <div className="mt-2">
+                {directoryTree.map((item) => renderSidebarItem(item))}
+              </div>
             </div>
-            <div className="mt-2">
-              {directoryTree.map((item) => renderSidebarItem(item))}
-            </div>
-          </div>
           </div>
         </div>
       </div>
@@ -447,65 +488,79 @@ export function FileManagerSidebar({
           <div className="fixed inset-0 z-40" />
           <div
             data-sidebar-context-menu
-            className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl py-1 min-w-[160px] z-50"
+            className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[160px] z-50 overflow-hidden"
             style={{
               left: contextMenu.x,
-              top: contextMenu.y
+              top: contextMenu.y,
             }}
           >
-            {contextMenu.item.type === 'recent' && (
+            {contextMenu.item.type === "recent" && (
               <>
                 <button
-                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white"
+                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white first:rounded-t-lg last:rounded-b-lg"
                   onClick={() => {
                     handleRemoveRecentFile(contextMenu.item!);
                     closeContextMenu();
                   }}
                 >
-                  <Clock className="w-4 h-4" />
-                  <span>{t("fileManager.removeFromRecentFiles")}</span>
+                  <div className="flex-shrink-0">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <span className="flex-1">
+                    {t("fileManager.removeFromRecentFiles")}
+                  </span>
                 </button>
                 {recentItems.length > 1 && (
                   <>
-                    <div className="border-t border-dark-border my-1" />
+                    <div className="border-t border-dark-border" />
                     <button
-                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-red-400 hover:bg-red-500/10"
+                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-red-400 hover:bg-red-500/10 first:rounded-t-lg last:rounded-b-lg"
                       onClick={() => {
                         handleClearAllRecent();
                         closeContextMenu();
                       }}
                     >
-                      <Clock className="w-4 h-4" />
-                      <span>{t("fileManager.clearAllRecentFiles")}</span>
+                      <div className="flex-shrink-0">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <span className="flex-1">
+                        {t("fileManager.clearAllRecentFiles")}
+                      </span>
                     </button>
                   </>
                 )}
               </>
             )}
 
-            {contextMenu.item.type === 'pinned' && (
+            {contextMenu.item.type === "pinned" && (
               <button
-                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white"
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white first:rounded-t-lg last:rounded-b-lg"
                 onClick={() => {
                   handleUnpinFile(contextMenu.item!);
                   closeContextMenu();
                 }}
               >
-                <Star className="w-4 h-4" />
-                <span>{t("fileManager.unpinFile")}</span>
+                <div className="flex-shrink-0">
+                  <Star className="w-4 h-4" />
+                </div>
+                <span className="flex-1">{t("fileManager.unpinFile")}</span>
               </button>
             )}
 
-            {contextMenu.item.type === 'shortcut' && (
+            {contextMenu.item.type === "shortcut" && (
               <button
-                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white"
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white first:rounded-t-lg last:rounded-b-lg"
                 onClick={() => {
                   handleRemoveShortcut(contextMenu.item!);
                   closeContextMenu();
                 }}
               >
-                <Bookmark className="w-4 h-4" />
-                <span>{t("fileManager.removeShortcut")}</span>
+                <div className="flex-shrink-0">
+                  <Bookmark className="w-4 h-4" />
+                </div>
+                <span className="flex-1">
+                  {t("fileManager.removeShortcut")}
+                </span>
               </button>
             )}
           </div>

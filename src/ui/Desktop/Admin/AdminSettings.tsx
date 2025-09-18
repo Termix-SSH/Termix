@@ -21,7 +21,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.tsx";
-import { Shield, Trash2, Users, Database, Key, Lock, Download, Upload, HardDrive, FileArchive } from "lucide-react";
+import {
+  Shield,
+  Trash2,
+  Users,
+  Database,
+  Key,
+  Lock,
+  Download,
+  Upload,
+  HardDrive,
+  FileArchive,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -280,9 +291,9 @@ export function AdminSettings({
 
       const response = await fetch(apiUrl, {
         headers: {
-          "Authorization": `Bearer ${jwt}`,
-          "Content-Type": "application/json"
-        }
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {
@@ -305,8 +316,8 @@ export function AdminSettings({
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${jwt}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -326,7 +337,9 @@ export function AdminSettings({
 
   const handleMigrateData = async (dryRun: boolean = false) => {
     setMigrationLoading(true);
-    setMigrationProgress(dryRun ? t("admin.runningVerification") : t("admin.startingMigration"));
+    setMigrationProgress(
+      dryRun ? t("admin.runningVerification") : t("admin.startingMigration"),
+    );
 
     try {
       const jwt = getCookie("jwt");
@@ -337,8 +350,8 @@ export function AdminSettings({
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${jwt}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ dryRun }),
       });
@@ -357,7 +370,9 @@ export function AdminSettings({
         throw new Error("Migration failed");
       }
     } catch (err) {
-      toast.error(dryRun ? t("admin.verificationFailed") : t("admin.migrationFailed"));
+      toast.error(
+        dryRun ? t("admin.verificationFailed") : t("admin.migrationFailed"),
+      );
       setMigrationProgress("Failed");
     } finally {
       setMigrationLoading(false);
@@ -377,10 +392,10 @@ export function AdminSettings({
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${jwt}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({}),
       });
 
       if (response.ok) {
@@ -412,15 +427,15 @@ export function AdminSettings({
 
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append('file', importFile);
-      formData.append('backupCurrent', 'true');
+      formData.append("file", importFile);
+      formData.append("backupCurrent", "true");
 
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${jwt}`,
+          Authorization: `Bearer ${jwt}`,
         },
-        body: formData
+        body: formData,
       });
 
       if (response.ok) {
@@ -430,7 +445,9 @@ export function AdminSettings({
           setImportFile(null);
           await fetchEncryptionStatus(); // Refresh status
         } else {
-          toast.error(`${t("admin.databaseImportFailed")}: ${result.errors?.join(", ") || "Unknown error"}`);
+          toast.error(
+            `${t("admin.databaseImportFailed")}: ${result.errors?.join(", ") || "Unknown error"}`,
+          );
         }
       } else {
         throw new Error("Import failed");
@@ -453,10 +470,10 @@ export function AdminSettings({
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${jwt}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({}),
       });
 
       if (response.ok) {
@@ -519,7 +536,7 @@ export function AdminSettings({
               </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-2">
                 <Database className="h-4 w-4" />
-{t("admin.databaseSecurity")}
+                {t("admin.databaseSecurity")}
               </TabsTrigger>
             </TabsList>
 
@@ -911,7 +928,9 @@ export function AdminSettings({
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <Database className="h-5 w-5" />
-                  <h3 className="text-lg font-semibold">{t("admin.databaseSecurity")}</h3>
+                  <h3 className="text-lg font-semibold">
+                    {t("admin.databaseSecurity")}
+                  </h3>
                 </div>
 
                 {encryptionStatus && (
@@ -926,11 +945,19 @@ export function AdminSettings({
                             <Key className="h-4 w-4 text-yellow-500" />
                           )}
                           <div>
-                            <div className="text-sm font-medium">{t("admin.encryptionStatus")}</div>
-                            <div className={`text-xs ${
-                              encryptionStatus.encryption?.enabled ? 'text-green-500' : 'text-yellow-500'
-                            }`}>
-                              {encryptionStatus.encryption?.enabled ? t("admin.enabled") : t("admin.disabled")}
+                            <div className="text-sm font-medium">
+                              {t("admin.encryptionStatus")}
+                            </div>
+                            <div
+                              className={`text-xs ${
+                                encryptionStatus.encryption?.enabled
+                                  ? "text-green-500"
+                                  : "text-yellow-500"
+                              }`}
+                            >
+                              {encryptionStatus.encryption?.enabled
+                                ? t("admin.enabled")
+                                : t("admin.disabled")}
                             </div>
                           </div>
                         </div>
@@ -940,11 +967,19 @@ export function AdminSettings({
                         <div className="flex items-center gap-2">
                           <Shield className="h-4 w-4 text-blue-500" />
                           <div>
-                            <div className="text-sm font-medium">{t("admin.keyProtection")}</div>
-                            <div className={`text-xs ${
-                              encryptionStatus.encryption?.key?.kekProtected ? 'text-green-500' : 'text-yellow-500'
-                            }`}>
-                              {encryptionStatus.encryption?.key?.kekProtected ? t("admin.active") : t("admin.legacy")}
+                            <div className="text-sm font-medium">
+                              {t("admin.keyProtection")}
+                            </div>
+                            <div
+                              className={`text-xs ${
+                                encryptionStatus.encryption?.key?.kekProtected
+                                  ? "text-green-500"
+                                  : "text-yellow-500"
+                              }`}
+                            >
+                              {encryptionStatus.encryption?.key?.kekProtected
+                                ? t("admin.active")
+                                : t("admin.legacy")}
                             </div>
                           </div>
                         </div>
@@ -954,14 +989,19 @@ export function AdminSettings({
                         <div className="flex items-center gap-2">
                           <Database className="h-4 w-4 text-purple-500" />
                           <div>
-                            <div className="text-sm font-medium">{t("admin.dataStatus")}</div>
-                            <div className={`text-xs ${
-                              encryptionStatus.migration?.migrationCompleted
-                                ? 'text-green-500'
-                                : encryptionStatus.migration?.migrationRequired
-                                  ? 'text-yellow-500'
-                                  : 'text-muted-foreground'
-                            }`}>
+                            <div className="text-sm font-medium">
+                              {t("admin.dataStatus")}
+                            </div>
+                            <div
+                              className={`text-xs ${
+                                encryptionStatus.migration?.migrationCompleted
+                                  ? "text-green-500"
+                                  : encryptionStatus.migration
+                                        ?.migrationRequired
+                                    ? "text-yellow-500"
+                                    : "text-muted-foreground"
+                              }`}
+                            >
                               {encryptionStatus.migration?.migrationCompleted
                                 ? t("admin.encrypted")
                                 : encryptionStatus.migration?.migrationRequired
@@ -980,14 +1020,18 @@ export function AdminSettings({
                           <div className="space-y-3">
                             <div className="flex items-center gap-2">
                               <Shield className="h-4 w-4 text-blue-500" />
-                              <h4 className="font-medium">{t("admin.initializeEncryption")}</h4>
+                              <h4 className="font-medium">
+                                {t("admin.initializeEncryption")}
+                              </h4>
                             </div>
                             <Button
                               onClick={handleInitializeEncryption}
                               disabled={encryptionLoading}
                               className="w-full"
                             >
-                              {encryptionLoading ? t("admin.initializing") : t("admin.initialize")}
+                              {encryptionLoading
+                                ? t("admin.initializing")
+                                : t("admin.initialize")}
                             </Button>
                           </div>
                         </div>
@@ -998,10 +1042,14 @@ export function AdminSettings({
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
                                   <Database className="h-4 w-4 text-yellow-500" />
-                                  <h4 className="font-medium">{t("admin.migrateData")}</h4>
+                                  <h4 className="font-medium">
+                                    {t("admin.migrateData")}
+                                  </h4>
                                 </div>
                                 {migrationProgress && (
-                                  <div className="text-sm text-blue-600">{migrationProgress}</div>
+                                  <div className="text-sm text-blue-600">
+                                    {migrationProgress}
+                                  </div>
                                 )}
                                 <div className="flex gap-2">
                                   <Button
@@ -1019,7 +1067,9 @@ export function AdminSettings({
                                     size="sm"
                                     className="flex-1"
                                   >
-                                    {migrationLoading ? t("admin.migrating") : t("admin.migrate")}
+                                    {migrationLoading
+                                      ? t("admin.migrating")
+                                      : t("admin.migrate")}
                                   </Button>
                                 </div>
                               </div>
@@ -1030,7 +1080,9 @@ export function AdminSettings({
                             <div className="space-y-3">
                               <div className="flex items-center gap-2">
                                 <Database className="h-4 w-4 text-blue-500" />
-                                <h4 className="font-medium">{t("admin.backup")}</h4>
+                                <h4 className="font-medium">
+                                  {t("admin.backup")}
+                                </h4>
                               </div>
                               <Button
                                 onClick={handleCreateBackup}
@@ -1038,11 +1090,15 @@ export function AdminSettings({
                                 variant="outline"
                                 className="w-full"
                               >
-                                {backupLoading ? t("admin.creatingBackup") : t("admin.createBackup")}
+                                {backupLoading
+                                  ? t("admin.creatingBackup")
+                                  : t("admin.createBackup")}
                               </Button>
                               {backupPath && (
                                 <div className="p-2 bg-muted rounded border">
-                                  <div className="text-xs font-mono break-all">{backupPath}</div>
+                                  <div className="text-xs font-mono break-all">
+                                    {backupPath}
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -1054,7 +1110,9 @@ export function AdminSettings({
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
                             <Upload className="h-4 w-4 text-green-500" />
-                            <h4 className="font-medium">{t("admin.exportImport")}</h4>
+                            <h4 className="font-medium">
+                              {t("admin.exportImport")}
+                            </h4>
                           </div>
                           <div className="space-y-2">
                             <Button
@@ -1064,11 +1122,15 @@ export function AdminSettings({
                               size="sm"
                               className="w-full"
                             >
-                              {exportLoading ? t("admin.exporting") : t("admin.export")}
+                              {exportLoading
+                                ? t("admin.exporting")
+                                : t("admin.export")}
                             </Button>
                             {exportPath && (
                               <div className="p-2 bg-muted rounded border">
-                                <div className="text-xs font-mono break-all">{exportPath}</div>
+                                <div className="text-xs font-mono break-all">
+                                  {exportPath}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1076,7 +1138,9 @@ export function AdminSettings({
                             <input
                               type="file"
                               accept=".sqlite,.termix-export.sqlite,.db"
-                              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                              onChange={(e) =>
+                                setImportFile(e.target.files?.[0] || null)
+                              }
                               className="block w-full text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted file:text-foreground"
                             />
                             <Button
@@ -1086,7 +1150,9 @@ export function AdminSettings({
                               size="sm"
                               className="w-full"
                             >
-                              {importLoading ? t("admin.importing") : t("admin.import")}
+                              {importLoading
+                                ? t("admin.importing")
+                                : t("admin.import")}
                             </Button>
                           </div>
                         </div>
@@ -1097,7 +1163,9 @@ export function AdminSettings({
 
                 {!encryptionStatus && (
                   <div className="text-center py-8">
-                    <div className="text-muted-foreground">{t("admin.loadingEncryptionStatus")}</div>
+                    <div className="text-muted-foreground">
+                      {t("admin.loadingEncryptionStatus")}
+                    </div>
                   </div>
                 )}
               </div>

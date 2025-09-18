@@ -11,10 +11,5 @@ export function FileManager({
   initialHost?: SSHHost | null;
   onClose?: () => void;
 }): React.ReactElement {
-  return (
-    <FileManagerModern
-      initialHost={initialHost}
-      onClose={onClose}
-    />
-  );
+  return <FileManagerModern initialHost={initialHost} onClose={onClose} />;
 }

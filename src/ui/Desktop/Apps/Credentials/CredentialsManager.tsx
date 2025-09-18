@@ -86,7 +86,8 @@ export function CredentialsManager({
   const [editingFolderName, setEditingFolderName] = useState("");
   const [operationLoading, setOperationLoading] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
-  const [deployingCredential, setDeployingCredential] = useState<Credential | null>(null);
+  const [deployingCredential, setDeployingCredential] =
+    useState<Credential | null>(null);
   const [availableHosts, setAvailableHosts] = useState<any[]>([]);
   const [selectedHostId, setSelectedHostId] = useState<string>("");
   const [deployLoading, setDeployLoading] = useState(false);
@@ -102,7 +103,7 @@ export function CredentialsManager({
       const hosts = await getSSHHosts();
       setAvailableHosts(hosts);
     } catch (err) {
-      console.error('Failed to fetch hosts:', err);
+      console.error("Failed to fetch hosts:", err);
     }
   };
 
@@ -126,7 +127,7 @@ export function CredentialsManager({
   };
 
   const handleDeploy = (credential: Credential) => {
-    if (credential.authType !== 'key') {
+    if (credential.authType !== "key") {
       toast.error("Only SSH key-based credentials can be deployed");
       return;
     }
@@ -149,7 +150,7 @@ export function CredentialsManager({
     try {
       const result = await deployCredentialToHost(
         deployingCredential.id,
-        parseInt(selectedHostId)
+        parseInt(selectedHostId),
       );
 
       if (result.success) {
@@ -161,7 +162,7 @@ export function CredentialsManager({
         toast.error(result.error || "Deployment failed");
       }
     } catch (error) {
-      console.error('Deployment error:', error);
+      console.error("Deployment error:", error);
       toast.error("Failed to deploy SSH key");
     } finally {
       setDeployLoading(false);
@@ -655,7 +656,7 @@ export function CredentialsManager({
                                           <p>Edit credential</p>
                                         </TooltipContent>
                                       </Tooltip>
-                                      {credential.authType === 'key' && (
+                                      {credential.authType === "key" && (
                                         <Tooltip>
                                           <TooltipTrigger asChild>
                                             <Button
@@ -816,9 +817,12 @@ export function CredentialsManager({
                       <User className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
                     </div>
                     <div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">Name</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Name
+                      </div>
                       <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                        {deployingCredential.name || deployingCredential.username}
+                        {deployingCredential.name ||
+                          deployingCredential.username}
                       </div>
                     </div>
                   </div>
@@ -827,7 +831,9 @@ export function CredentialsManager({
                       <User className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
                     </div>
                     <div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">Username</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Username
+                      </div>
                       <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
                         {deployingCredential.username}
                       </div>
@@ -838,9 +844,11 @@ export function CredentialsManager({
                       <Key className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
                     </div>
                     <div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">Key Type</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Key Type
+                      </div>
                       <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                        {deployingCredential.keyType || 'SSH Key'}
+                        {deployingCredential.keyType || "SSH Key"}
                       </div>
                     </div>
                   </div>
@@ -887,8 +895,9 @@ export function CredentialsManager({
                 <div className="text-sm text-blue-800 dark:text-blue-200">
                   <p className="font-medium mb-1">Deployment Process</p>
                   <p className="text-blue-700 dark:text-blue-300">
-                    This will safely add the public key to the target host's ~/.ssh/authorized_keys file
-                    without overwriting existing keys. The operation is reversible.
+                    This will safely add the public key to the target host's
+                    ~/.ssh/authorized_keys file without overwriting existing
+                    keys. The operation is reversible.
                   </p>
                 </div>
               </div>

@@ -208,7 +208,10 @@ export function HostManagerEditor({
     })
     .superRefine((data, ctx) => {
       if (data.authType === "password") {
-        if (data.requirePassword && (!data.password || data.password.trim() === "")) {
+        if (
+          data.requirePassword &&
+          (!data.password || data.password.trim() === "")
+        ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: t("hosts.passwordRequired"),
@@ -425,7 +428,11 @@ export function HostManagerEditor({
       submitData.keyType = null;
 
       if (data.authType === "credential") {
-        if (data.credentialId === "existing_credential" && editingHost && editingHost.id) {
+        if (
+          data.credentialId === "existing_credential" &&
+          editingHost &&
+          editingHost.id
+        ) {
           delete submitData.credentialId;
         } else {
           submitData.credentialId = data.credentialId;
@@ -1521,7 +1528,11 @@ export function HostManagerEditor({
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
             <Button className="translate-y-2" type="submit" variant="outline">
-              {editingHost ? editingHost.id ? t("hosts.updateHost") : t("hosts.cloneHost") : t("hosts.addHost")}
+              {editingHost
+                ? editingHost.id
+                  ? t("hosts.updateHost")
+                  : t("hosts.cloneHost")
+                : t("hosts.addHost")}
             </Button>
           </footer>
         </form>

@@ -17,12 +17,12 @@ if (!fs.existsSync(dbDir)) {
 }
 
 // Database file encryption configuration
-const enableFileEncryption = process.env.DB_FILE_ENCRYPTION !== 'false';
+const enableFileEncryption = process.env.DB_FILE_ENCRYPTION !== "false";
 const dbPath = path.join(dataDir, "db.sqlite");
 const encryptedDbPath = `${dbPath}.encrypted`;
 
 // Initialize database with file encryption support
-let actualDbPath = ':memory:';  // Always use memory database
+let actualDbPath = ":memory:"; // Always use memory database
 let memoryDatabase: Database.Database;
 let isNewDatabase = false;
 
@@ -30,55 +30,54 @@ if (enableFileEncryption) {
   try {
     // Check if encrypted database exists
     if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
-      databaseLogger.info('Found encrypted database file, loading into memory...', {
-        operation: 'db_memory_load',
-        encryptedPath: encryptedDbPath
-      });
+      databaseLogger.info(
+        "Found encrypted database file, loading into memory...",
+        {
+          operation: "db_memory_load",
+          encryptedPath: encryptedDbPath,
+        },
+      );
 
       // Validate hardware compatibility
-      if (!DatabaseFileEncryption.validateHardwareCompatibility(encryptedDbPath)) {
-        databaseLogger.error('Hardware fingerprint mismatch for encrypted database', {
-          operation: 'db_decrypt_failed',
-          reason: 'hardware_mismatch'
-        });
-        throw new Error('Cannot decrypt database: hardware fingerprint mismatch');
+      if (
+        !DatabaseFileEncryption.validateHardwareCompatibility(encryptedDbPath)
+      ) {
+        databaseLogger.error(
+          "Hardware fingerprint mismatch for encrypted database",
+          {
+            operation: "db_decrypt_failed",
+            reason: "hardware_mismatch",
+          },
+        );
+        throw new Error(
+          "Cannot decrypt database: hardware fingerprint mismatch",
+        );
       }
 
       // Decrypt database content to memory buffer
-      const decryptedBuffer = DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
+      const decryptedBuffer =
+        DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
 
       // Create in-memory database from decrypted buffer
       memoryDatabase = new Database(decryptedBuffer);
-
-      databaseLogger.success('Existing database loaded into memory successfully', {
-        operation: 'db_memory_load_success',
-        bufferSize: decryptedBuffer.length,
-        inMemory: true
-      });
     } else {
-      // No encrypted database exists - create new in-memory database
-      databaseLogger.info('No encrypted database found, creating new in-memory database', {
-        operation: 'db_memory_create_new'
-      });
-
-      memoryDatabase = new Database(':memory:');
+      memoryDatabase = new Database(":memory:");
       isNewDatabase = true;
 
       // Check if there's an old unencrypted database to migrate
       if (fs.existsSync(dbPath)) {
-        databaseLogger.info('Found existing unencrypted database, will migrate to memory', {
-          operation: 'db_migrate_to_memory',
-          oldPath: dbPath
-        });
-
         // Load old database and copy its content to memory database
         const oldDb = new Database(dbPath, { readonly: true });
 
         // Get all table schemas and data from old database
-        const tables = oldDb.prepare(`
+        const tables = oldDb
+          .prepare(
+            `
           SELECT name, sql FROM sqlite_master
           WHERE type='table' AND name NOT LIKE 'sqlite_%'
-        `).all() as { name: string; sql: string }[];
+        `,
+          )
+          .all() as { name: string; sql: string }[];
 
         // Create tables in memory database
         for (const table of tables) {
@@ -90,13 +89,13 @@ if (enableFileEncryption) {
           const rows = oldDb.prepare(`SELECT * FROM ${table.name}`).all();
           if (rows.length > 0) {
             const columns = Object.keys(rows[0]);
-            const placeholders = columns.map(() => '?').join(', ');
+            const placeholders = columns.map(() => "?").join(", ");
             const insertStmt = memoryDatabase.prepare(
-              `INSERT INTO ${table.name} (${columns.join(', ')}) VALUES (${placeholders})`
+              `INSERT INTO ${table.name} (${columns.join(", ")}) VALUES (${placeholders})`,
             );
 
             for (const row of rows) {
-              const values = columns.map(col => (row as any)[col]);
+              const values = columns.map((col) => (row as any)[col]);
               insertStmt.run(values);
             }
           }
@@ -104,48 +103,36 @@ if (enableFileEncryption) {
 
         oldDb.close();
 
-        databaseLogger.success('Migrated existing database to memory', {
-          operation: 'db_migrate_to_memory_success'
-        });
         isNewDatabase = false;
       } else {
-        databaseLogger.success('Created new in-memory database', {
-          operation: 'db_memory_create_success'
-        });
       }
     }
   } catch (error) {
-    databaseLogger.error('Failed to initialize memory database', error, {
-      operation: 'db_memory_init_failed'
+    databaseLogger.error("Failed to initialize memory database", error, {
+      operation: "db_memory_init_failed",
     });
 
     // If file encryption is critical, fail fast
-    if (process.env.DB_FILE_ENCRYPTION_REQUIRED === 'true') {
+    if (process.env.DB_FILE_ENCRYPTION_REQUIRED === "true") {
       throw error;
     }
 
-    // Create fallback in-memory database
-    databaseLogger.warn('Creating fallback in-memory database', {
-      operation: 'db_memory_fallback'
-    });
-    memoryDatabase = new Database(':memory:');
+    memoryDatabase = new Database(":memory:");
     isNewDatabase = true;
   }
 } else {
-  // File encryption disabled - still use memory for consistency
-  databaseLogger.info('File encryption disabled, using in-memory database', {
-    operation: 'db_memory_no_encryption'
-  });
-  memoryDatabase = new Database(':memory:');
+  memoryDatabase = new Database(":memory:");
   isNewDatabase = true;
 }
 
 databaseLogger.info(`Initializing SQLite database`, {
   operation: "db_init",
   path: actualDbPath,
-  encrypted: enableFileEncryption && DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
+  encrypted:
+    enableFileEncryption &&
+    DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
   inMemory: true,
-  isNewDatabase
+  isNewDatabase,
 });
 
 const sqlite = memoryDatabase;
@@ -415,13 +402,7 @@ const initializeDatabase = async (): Promise<void> => {
           "INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')",
         )
         .run();
-      databaseLogger.success("Default settings initialized", {
-        operation: "db_init",
-      });
     } else {
-      databaseLogger.debug("Default settings already exist", {
-        operation: "db_init",
-      });
     }
   } catch (e) {
     databaseLogger.warn("Could not initialize default settings", {
@@ -442,14 +423,14 @@ async function saveMemoryDatabaseToFile() {
     // Encrypt and save to file
     DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, encryptedDbPath);
 
-    databaseLogger.debug('In-memory database saved to encrypted file', {
-      operation: 'memory_db_save',
+    databaseLogger.debug("In-memory database saved to encrypted file", {
+      operation: "memory_db_save",
       bufferSize: buffer.length,
-      encryptedPath: encryptedDbPath
+      encryptedPath: encryptedDbPath,
     });
   } catch (error) {
-    databaseLogger.error('Failed to save in-memory database', error, {
-      operation: 'memory_db_save_failed'
+    databaseLogger.error("Failed to save in-memory database", error, {
+      operation: "memory_db_save_failed",
     });
   }
 }
@@ -461,39 +442,55 @@ async function handlePostInitFileEncryption() {
   try {
     // Clean up any existing unencrypted database files
     if (fs.existsSync(dbPath)) {
-      databaseLogger.warn('Found unencrypted database file, removing for security', {
-        operation: 'db_security_cleanup_existing',
-        removingPath: dbPath
-      });
+      databaseLogger.warn(
+        "Found unencrypted database file, removing for security",
+        {
+          operation: "db_security_cleanup_existing",
+          removingPath: dbPath,
+        },
+      );
 
       try {
         fs.unlinkSync(dbPath);
-        databaseLogger.success('Unencrypted database file removed for security', {
-          operation: 'db_security_cleanup_complete',
-          removedPath: dbPath
-        });
+        databaseLogger.success(
+          "Unencrypted database file removed for security",
+          {
+            operation: "db_security_cleanup_complete",
+            removedPath: dbPath,
+          },
+        );
       } catch (error) {
-        databaseLogger.warn('Could not remove unencrypted database file (may be locked)', {
-          operation: 'db_security_cleanup_deferred',
-          path: dbPath,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
+        databaseLogger.warn(
+          "Could not remove unencrypted database file (may be locked)",
+          {
+            operation: "db_security_cleanup_deferred",
+            path: dbPath,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+        );
 
         // Try again after a short delay
         setTimeout(() => {
           try {
             if (fs.existsSync(dbPath)) {
               fs.unlinkSync(dbPath);
-              databaseLogger.success('Delayed cleanup: unencrypted database file removed', {
-                operation: 'db_security_cleanup_delayed_success',
-                removedPath: dbPath
-              });
+              databaseLogger.success(
+                "Delayed cleanup: unencrypted database file removed",
+                {
+                  operation: "db_security_cleanup_delayed_success",
+                  removedPath: dbPath,
+                },
+              );
             }
           } catch (delayedError) {
-            databaseLogger.error('Failed to remove unencrypted database file even after delay', delayedError, {
-              operation: 'db_security_cleanup_delayed_failed',
-              path: dbPath
-            });
+            databaseLogger.error(
+              "Failed to remove unencrypted database file even after delay",
+              delayedError,
+              {
+                operation: "db_security_cleanup_delayed_failed",
+                path: dbPath,
+              },
+            );
           }
         }, 2000);
       }
@@ -506,16 +503,15 @@ async function handlePostInitFileEncryption() {
 
       // Set up periodic saves every 5 minutes
       setInterval(saveMemoryDatabaseToFile, 5 * 60 * 1000);
-
-      databaseLogger.info('Periodic in-memory database saves configured', {
-        operation: 'memory_db_autosave_setup',
-        intervalMinutes: 5
-      });
     }
   } catch (error) {
-    databaseLogger.error('Failed to handle database file encryption/cleanup', error, {
-      operation: 'db_encrypt_cleanup_failed'
-    });
+    databaseLogger.error(
+      "Failed to handle database file encryption/cleanup",
+      error,
+      {
+        operation: "db_encrypt_cleanup_failed",
+      },
+    );
 
     // Don't fail the entire initialization for this
   }
@@ -533,7 +529,9 @@ initializeDatabase()
 databaseLogger.success("Database connection established", {
   operation: "db_init",
   path: actualDbPath,
-  hasEncryptedBackup: enableFileEncryption && DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)
+  hasEncryptedBackup:
+    enableFileEncryption &&
+    DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
 });
 
 // Cleanup function for database and temporary files
@@ -542,13 +540,14 @@ async function cleanupDatabase() {
   if (memoryDatabase) {
     try {
       await saveMemoryDatabaseToFile();
-      databaseLogger.info('In-memory database saved before shutdown', {
-        operation: 'shutdown_save'
-      });
     } catch (error) {
-      databaseLogger.error('Failed to save in-memory database before shutdown', error, {
-        operation: 'shutdown_save_failed'
-      });
+      databaseLogger.error(
+        "Failed to save in-memory database before shutdown",
+        error,
+        {
+          operation: "shutdown_save_failed",
+        },
+      );
     }
   }
 
@@ -556,20 +555,20 @@ async function cleanupDatabase() {
   try {
     if (sqlite) {
       sqlite.close();
-      databaseLogger.debug('Database connection closed', {
-        operation: 'db_close'
+      databaseLogger.debug("Database connection closed", {
+        operation: "db_close",
       });
     }
   } catch (error) {
-    databaseLogger.warn('Error closing database connection', {
-      operation: 'db_close_error',
-      error: error instanceof Error ? error.message : 'Unknown error'
+    databaseLogger.warn("Error closing database connection", {
+      operation: "db_close_error",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 
   // Clean up temp directory
   try {
-    const tempDir = path.join(dataDir, '.temp');
+    const tempDir = path.join(dataDir, ".temp");
     if (fs.existsSync(tempDir)) {
       const files = fs.readdirSync(tempDir);
       for (const file of files) {
@@ -582,8 +581,8 @@ async function cleanupDatabase() {
 
       try {
         fs.rmdirSync(tempDir);
-        databaseLogger.debug('Temp directory cleaned up', {
-          operation: 'temp_dir_cleanup'
+        databaseLogger.debug("Temp directory cleaned up", {
+          operation: "temp_dir_cleanup",
         });
       } catch {
         // Ignore directory removal errors
@@ -595,7 +594,7 @@ async function cleanupDatabase() {
 }
 
 // Register cleanup handlers
-process.on('exit', () => {
+process.on("exit", () => {
   // Synchronous cleanup only for exit event
   if (sqlite) {
     try {
@@ -604,17 +603,17 @@ process.on('exit', () => {
   }
 });
 
-process.on('SIGINT', async () => {
-  databaseLogger.info('Received SIGINT, cleaning up...', {
-    operation: 'shutdown'
+process.on("SIGINT", async () => {
+  databaseLogger.info("Received SIGINT, cleaning up...", {
+    operation: "shutdown",
   });
   await cleanupDatabase();
   process.exit(0);
 });
 
-process.on('SIGTERM', async () => {
-  databaseLogger.info('Received SIGTERM, cleaning up...', {
-    operation: 'shutdown'
+process.on("SIGTERM", async () => {
+  databaseLogger.info("Received SIGTERM, cleaning up...", {
+    operation: "shutdown",
   });
   await cleanupDatabase();
   process.exit(0);
@@ -628,29 +627,33 @@ export const databasePaths = {
   main: actualDbPath,
   encrypted: encryptedDbPath,
   directory: dbDir,
-  inMemory: true
+  inMemory: true,
 };
 
 // Memory database buffer function
 function getMemoryDatabaseBuffer(): Buffer {
   if (!memoryDatabase) {
-    throw new Error('Memory database not initialized');
+    throw new Error("Memory database not initialized");
   }
 
   try {
     // Export in-memory database to buffer
     const buffer = memoryDatabase.serialize();
 
-    databaseLogger.debug('Memory database serialized to buffer', {
-      operation: 'memory_db_serialize',
-      bufferSize: buffer.length
+    databaseLogger.debug("Memory database serialized to buffer", {
+      operation: "memory_db_serialize",
+      bufferSize: buffer.length,
     });
 
     return buffer;
   } catch (error) {
-    databaseLogger.error('Failed to serialize memory database to buffer', error, {
-      operation: 'memory_db_serialize_failed'
-    });
+    databaseLogger.error(
+      "Failed to serialize memory database to buffer",
+      error,
+      {
+        operation: "memory_db_serialize_failed",
+      },
+    );
     throw error;
   }
 }
