@@ -52,6 +52,14 @@ interface FileManagerModernProps {
   onClose?: () => void;
 }
 
+// Linus式数据结构：创建意图与实际文件完全分离
+interface CreateIntent {
+  id: string;
+  type: 'file' | 'directory';
+  defaultName: string;
+  currentName: string;
+}
+
 // 内部组件，使用窗口管理器
 function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   const { openWindow } = useWindowManager();
@@ -111,9 +119,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
   const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
 
-  // 编辑状态
+  // Linus式状态：创建意图与文件编辑分离
+  const [createIntent, setCreateIntent] = useState<CreateIntent | null>(null);
   const [editingFile, setEditingFile] = useState<FileItem | null>(null);
-  const [isCreatingNewFile, setIsCreatingNewFile] = useState(false);
 
   // Hooks
   const { selectedFiles, selectFile, selectAll, clearSelection, setSelection } =
@@ -476,43 +484,27 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
+  // Linus式创建：纯粹的意图，无副作用
   function handleCreateNewFolder() {
-    const baseName = "NewFolder";
-    const uniqueName = generateUniqueName(baseName, "directory");
-    const folderPath = currentPath.endsWith("/")
-      ? `${currentPath}${uniqueName}`
-      : `${currentPath}/${uniqueName}`;
-
-    // 直接进入编辑模式，使用唯一名字
-    const newFolder: FileItem = {
-      name: uniqueName,
-      type: "directory",
-      path: folderPath,
-    };
-
-    console.log("Starting edit for new folder with unique name:", newFolder);
-    setEditingFile(newFolder);
-    setIsCreatingNewFile(true);
+    const defaultName = generateUniqueName("NewFolder", "directory");
+    setCreateIntent({
+      id: Date.now().toString(),
+      type: 'directory',
+      defaultName,
+      currentName: defaultName
+    });
+    console.log("Create folder intent:", defaultName);
   }
 
   function handleCreateNewFile() {
-    const baseName = "NewFile.txt";
-    const uniqueName = generateUniqueName(baseName, "file");
-    const filePath = currentPath.endsWith("/")
-      ? `${currentPath}${uniqueName}`
-      : `${currentPath}/${uniqueName}`;
-
-    // 直接进入编辑模式，使用唯一名字
-    const newFile: FileItem = {
-      name: uniqueName,
-      type: "file",
-      path: filePath,
-      size: 0,
-    };
-
-    console.log("Starting edit for new file with unique name:", newFile);
-    setEditingFile(newFile);
-    setIsCreatingNewFile(true);
+    const defaultName = generateUniqueName("NewFile.txt", "file");
+    setCreateIntent({
+      id: Date.now().toString(),
+      type: 'file',
+      defaultName,
+      currentName: defaultName
+    });
+    console.log("Create file intent:", defaultName);
   }
 
   // Handle symlink resolution
@@ -980,92 +972,76 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
-  // 处理重命名/创建确认
+  // Linus式创建确认：纯粹的创建，无混杂逻辑
+  async function handleConfirmCreate(name: string) {
+    if (!createIntent || !sshSessionId) return;
+
+    try {
+      await ensureSSHConnection();
+
+      console.log(`Creating ${createIntent.type}:`, name);
+
+      if (createIntent.type === "file") {
+        await createSSHFile(
+          sshSessionId,
+          currentPath,
+          name,
+          "",
+          currentHost?.id,
+          currentHost?.userId?.toString(),
+        );
+        toast.success(t("fileManager.fileCreatedSuccessfully", { name }));
+      } else {
+        await createSSHFolder(
+          sshSessionId,
+          currentPath,
+          name,
+          currentHost?.id,
+          currentHost?.userId?.toString(),
+        );
+        toast.success(t("fileManager.folderCreatedSuccessfully", { name }));
+      }
+
+      setCreateIntent(null);  // 清理意图
+      handleRefreshDirectory();
+    } catch (error: any) {
+      console.error("Create failed:", error);
+      toast.error(t("fileManager.failedToCreateItem"));
+    }
+  }
+
+  // Linus式取消：零副作用
+  function handleCancelCreate() {
+    setCreateIntent(null);  // 就这么简单！
+    console.log("Create cancelled - no side effects");
+  }
+
+  // 纯粹的重命名确认：只处理真实文件
   async function handleRenameConfirm(file: FileItem, newName: string) {
     if (!sshSessionId) return;
 
     try {
-      // 确保SSH连接有效
       await ensureSSHConnection();
 
-      if (isCreatingNewFile) {
-        // 新建项目：直接创建最终名字
-        console.log("Creating new item:", {
-          type: file.type,
-          name: newName,
-          path: currentPath,
-          hostId: currentHost?.id,
-          userId: currentHost?.userId,
-        });
+      console.log("Renaming existing item:", {
+        from: file.path,
+        to: newName,
+      });
 
-        if (file.type === "file") {
-          await createSSHFile(
-            sshSessionId,
-            currentPath,
-            newName,
-            "",
-            currentHost?.id,
-            currentHost?.userId?.toString(),
-          );
-          toast.success(
-            t("fileManager.fileCreatedSuccessfully", { name: newName }),
-          );
-        } else if (file.type === "directory") {
-          await createSSHFolder(
-            sshSessionId,
-            currentPath,
-            newName,
-            currentHost?.id,
-            currentHost?.userId?.toString(),
-          );
-          toast.success(
-            t("fileManager.folderCreatedSuccessfully", { name: newName }),
-          );
-        }
+      await renameSSHItem(
+        sshSessionId,
+        file.path,
+        newName,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
 
-        setIsCreatingNewFile(false);
-      } else {
-        // 现有项目：重命名
-        console.log("Renaming existing item:", {
-          from: file.path,
-          to: newName,
-          hostId: currentHost?.id,
-          userId: currentHost?.userId,
-        });
-
-        await renameSSHItem(
-          sshSessionId,
-          file.path,
-          newName,
-          currentHost?.id,
-          currentHost?.userId?.toString(),
-        );
-        toast.success(
-          t("fileManager.itemRenamedSuccessfully", { name: newName }),
-        );
-      }
-
-      // 清除编辑状态
+      toast.success(t("fileManager.itemRenamedSuccessfully", { name: newName }));
       setEditingFile(null);
       handleRefreshDirectory();
     } catch (error: any) {
-      console.error("Rename failed with error:", {
-        error,
-        oldPath,
-        newName,
-        message: error.message,
-      });
-
-      if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
-      ) {
-        toast.error(
-          `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
-        );
-      } else {
-        toast.error(t("fileManager.failedToRenameItem"));
-      }
+      console.error("Rename failed:", error);
+      toast.error(t("fileManager.failedToRenameItem"));
     }
   }
 
@@ -1074,18 +1050,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     setEditingFile(file);
   }
 
-  // 取消编辑（现在也会保留项目）
-  async function handleCancelEdit() {
-    if (isCreatingNewFile && editingFile) {
-      // 取消时也使用默认名字创建项目
-      console.log(
-        "Creating item with default name on cancel:",
-        editingFile.name,
-      );
-      await handleRenameConfirm(editingFile, editingFile.name);
-    } else {
-      setEditingFile(null);
-    }
+  // Linus式取消编辑：纯粹的取消，无副作用
+  function handleCancelEdit() {
+    setEditingFile(null);  // 简洁优雅
+    console.log("Edit cancelled - no side effects");
   }
 
   // 生成唯一名字（处理重名冲突）
@@ -1492,22 +1460,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }, [currentHost?.id]);
 
-  // 过滤文件并添加新建的临时项目
-  let filteredFiles = files.filter((file) =>
+  // Linus式数据分离：只过滤真实文件
+  const filteredFiles = files.filter((file) =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-
-  // 如果正在创建新项目，将其添加到列表中
-  if (isCreatingNewFile && editingFile) {
-    // 检查是否已经存在同名项目，避免重复
-    const exists = filteredFiles.some((f) => f.path === editingFile.path);
-    if (
-      !exists &&
-      editingFile.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      filteredFiles = [editingFile, ...filteredFiles]; // 将新项目放在前面
-    }
-  }
 
   if (!currentHost) {
     return (
@@ -1661,6 +1617,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
             onFileDiff={handleFileDiff}
             onSystemDragStart={handleFileDragStart}
             onSystemDragEnd={handleFileDragEnd}
+            createIntent={createIntent}
+            onConfirmCreate={handleConfirmCreate}
+            onCancelCreate={handleCancelCreate}
           />
 
           {/* 右键菜单 */}

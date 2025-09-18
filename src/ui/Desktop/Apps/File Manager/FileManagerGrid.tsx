@@ -25,6 +25,14 @@ import {
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
 
+// Linus式数据结构：创建意图与实际文件分离
+interface CreateIntent {
+  id: string;
+  type: 'file' | 'directory';
+  defaultName: string;
+  currentName: string;
+}
+
 // 格式化文件大小
 function formatFileSize(bytes?: number): string {
   // 处理未定义或null的情况
@@ -84,6 +92,10 @@ interface FileManagerGridProps {
   onFileDiff?: (file1: FileItem, file2: FileItem) => void;
   onSystemDragStart?: (files: FileItem[]) => void;
   onSystemDragEnd?: (e: DragEvent) => void;
+  // Linus式创建意图props
+  createIntent?: CreateIntent | null;
+  onConfirmCreate?: (name: string) => void;
+  onCancelCreate?: () => void;
 }
 
 const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
@@ -182,6 +194,9 @@ export function FileManagerGrid({
   onFileDiff,
   onSystemDragStart,
   onSystemDragEnd,
+  createIntent,
+  onConfirmCreate,
+  onCancelCreate,
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -1108,6 +1123,14 @@ export function FileManagerGrid({
             </div>
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+              {/* Linus式创建意图UI - 纯粹分离 */}
+              {createIntent && (
+                <CreateIntentGridItem
+                  intent={createIntent}
+                  onConfirm={onConfirmCreate}
+                  onCancel={onCancelCreate}
+                />
+              )}
               {files.map((file) => {
                 const isSelected = selectedFiles.some(
                   (f) => f.path === file.path,
@@ -1218,6 +1241,14 @@ export function FileManagerGrid({
           ) : (
             /* 列表视图 */
             <div className="space-y-1">
+              {/* Linus式创建意图UI - 列表视图 */}
+              {createIntent && (
+                <CreateIntentListItem
+                  intent={createIntent}
+                  onConfirm={onConfirmCreate}
+                  onCancel={onCancelCreate}
+                />
+              )}
               {files.map((file) => {
                 const isSelected = selectedFiles.some(
                   (f) => f.path === file.path,
@@ -1392,6 +1423,110 @@ export function FileManagerGrid({
             </div>
           </div>
         )}
+    </div>
+  );
+}
+
+// Linus式创建意图组件：Grid视图
+function CreateIntentGridItem({
+  intent,
+  onConfirm,
+  onCancel,
+}: {
+  intent: CreateIntent;
+  onConfirm?: (name: string) => void;
+  onCancel?: () => void;
+}) {
+  const [inputName, setInputName] = useState(intent.currentName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onConfirm?.(inputName.trim());
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel?.();
+    }
+  };
+
+  return (
+    <div className="group p-3 rounded-lg border-2 border-dashed border-primary bg-primary/10 transition-all">
+      <div className="flex flex-col items-center text-center">
+        <div className="mb-2">
+          {intent.type === 'directory' ? (
+            <Folder className="w-8 h-8 text-primary" />
+          ) : (
+            <File className="w-8 h-8 text-primary" />
+          )}
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputName}
+          onChange={(e) => setInputName(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => onConfirm?.(inputName.trim())}
+          className="w-full max-w-[120px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-center text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
+          placeholder={intent.type === 'directory' ? 'Folder name' : 'File name'}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Linus式创建意图组件：List视图
+function CreateIntentListItem({
+  intent,
+  onConfirm,
+  onCancel,
+}: {
+  intent: CreateIntent;
+  onConfirm?: (name: string) => void;
+  onCancel?: () => void;
+}) {
+  const [inputName, setInputName] = useState(intent.currentName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onConfirm?.(inputName.trim());
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel?.();
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3 p-2 rounded border-2 border-dashed border-primary bg-primary/10 transition-all">
+      <div className="flex-shrink-0">
+        {intent.type === 'directory' ? (
+          <Folder className="w-6 h-6 text-primary" />
+        ) : (
+          <File className="w-6 h-6 text-primary" />
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputName}
+        onChange={(e) => setInputName(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => onConfirm?.(inputName.trim())}
+        className="flex-1 min-w-0 max-w-[200px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
+        placeholder={intent.type === 'directory' ? 'Folder name' : 'File name'}
+      />
     </div>
   );
 }
