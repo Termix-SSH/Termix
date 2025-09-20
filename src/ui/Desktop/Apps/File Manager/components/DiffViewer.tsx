@@ -139,11 +139,11 @@ export function DiffViewer({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success(`文件下载成功: ${file.name}`);
+        toast.success(t("fileManager.downloadFileSuccess", { name: file.name }));
       }
     } catch (error: any) {
       console.error("Failed to download file:", error);
-      toast.error(`下载失败: ${error.message || "未知错误"}`);
+      toast.error(t("fileManager.downloadFileFailed") + ": " + (error.message || t("fileManager.unknownError")));
     }
   };
 

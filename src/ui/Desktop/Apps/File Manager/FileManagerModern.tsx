@@ -130,7 +130,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   const { isDragging, dragHandlers } = useDragAndDrop({
     onFilesDropped: handleFilesDropped,
     onError: (error) => toast.error(error),
-    maxFileSize: 100, // 100MB
+    maxFileSize: 5120, // 5GB - support large files like SSH tools should
   });
 
   // 拖拽到桌面功能
@@ -792,13 +792,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
           if (hasRenamed) {
             toast.success(
-              `已${operationText} ${successCount} 个项目，部分文件已自动重命名避免冲突`,
+              t("fileManager.operationCompletedSuccessfully", { operation: operationText, count: successCount }),
             );
           } else {
-            toast.success(`已${operationText} ${successCount} 个项目`);
+            toast.success(t("fileManager.operationCompleted", { operation: operationText, count: successCount }));
           }
         } else {
-          toast.success(`已${operationText} ${successCount} 个项目`);
+          toast.success(t("fileManager.operationCompleted", { operation: operationText, count: successCount }));
         }
       }
 
@@ -811,13 +811,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         setClipboard(null);
       }
     } catch (error: any) {
-      toast.error(`粘贴失败: ${error.message || "Unknown error"}`);
+      toast.error(`${t("fileManager.pasteFailed")}: ${error.message || t("fileManager.unknownError")}`);
     }
   }
 
   async function handleUndo() {
     if (undoHistory.length === 0) {
-      toast.info("没有可撤销的操作");
+      toast.info(t("fileManager.noUndoableActions"));
       return;
     }
 
@@ -860,14 +860,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
               // 移除最后一个撤销记录
               setUndoHistory((prev) => prev.slice(0, -1));
               toast.success(
-                `已撤销复制操作：删除了 ${successCount} 个复制的文件`,
+                t("fileManager.undoCopySuccess", { count: successCount }),
               );
             } else {
-              toast.error("撤销失败：无法删除任何复制的文件");
+              toast.error(t("fileManager.undoCopyFailedDelete"));
               return;
             }
           } else {
-            toast.error("撤销失败：找不到复制的文件信息");
+            toast.error(t("fileManager.undoCopyFailedNoInfo"));
             return;
           }
           break;
@@ -902,34 +902,34 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
               // 移除最后一个撤销记录
               setUndoHistory((prev) => prev.slice(0, -1));
               toast.success(
-                `已撤销移动操作：移回了 ${successCount} 个文件到原位置`,
+                t("fileManager.undoMoveSuccess", { count: successCount }),
               );
             } else {
-              toast.error("撤销失败：无法移回任何文件");
+              toast.error(t("fileManager.undoMoveFailedMove"));
               return;
             }
           } else {
-            toast.error("撤销失败：找不到移动的文件信息");
+            toast.error(t("fileManager.undoMoveFailedNoInfo"));
             return;
           }
           break;
 
         case "delete":
           // 删除操作无法真正撤销（文件已从服务器删除）
-          toast.info("删除操作无法撤销：文件已从服务器永久删除");
+          toast.info(t("fileManager.undoDeleteNotSupported"));
           // 仍然移除历史记录，因为用户已经知道了这个限制
           setUndoHistory((prev) => prev.slice(0, -1));
           return;
 
         default:
-          toast.error("不支持撤销此类操作");
+          toast.error(t("fileManager.undoTypeNotSupported"));
           return;
       }
 
       // 刷新文件列表
       handleRefreshDirectory();
     } catch (error: any) {
-      toast.error(`撤销操作失败: ${error.message || "Unknown error"}`);
+      toast.error(`${t("fileManager.undoOperationFailed")}: ${error.message || t("fileManager.unknownError")}`);
       console.error("Undo failed:", error);
     }
   }
@@ -1117,7 +1117,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           }
         } catch (error: any) {
           console.error(`Failed to move file ${file.name}:`, error);
-          toast.error(`移动 ${file.name} 失败: ${error.message}`);
+          toast.error(t("fileManager.moveFileFailed", { name: file.name }) + ": " + error.message);
         }
       }
 
@@ -1156,14 +1156,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       }
     } catch (error: any) {
       console.error("Drag move operation failed:", error);
-      toast.error(`移动操作失败: ${error.message}`);
+      toast.error(t("fileManager.moveOperationFailed") + ": " + error.message);
     }
   }
 
   // 拖拽处理：文件拖到文件 = diff对比操作
   function handleFileDiff(file1: FileItem, file2: FileItem) {
     if (file1.type !== "file" || file2.type !== "file") {
-      toast.error("只能对比两个文件");
+      toast.error(t("fileManager.canOnlyCompareFiles"));
       return;
     }
 
@@ -1202,7 +1202,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       zIndex: Date.now(),
     });
 
-    toast.success(`正在对比文件: ${file1.name} 与 ${file2.name}`);
+    toast.success(t("fileManager.comparingFiles", { file1: file1.name, file2: file2.name }));
   }
 
   // 拖拽到桌面处理函数
@@ -1234,7 +1234,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       }
     } catch (error: any) {
       console.error("拖拽到桌面失败:", error);
-      toast.error(`拖拽失败: ${error.message || "未知错误"}`);
+      toast.error(t("fileManager.dragFailed") + ": " + (error.message || t("fileManager.unknownError")));
     }
   }
 
@@ -1344,10 +1344,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       await addPinnedFile(currentHost.id, file.path, file.name);
       setPinnedFiles((prev) => new Set([...prev, file.path]));
       setSidebarRefreshTrigger((prev) => prev + 1); // 触发侧边栏刷新
-      toast.success(`文件"${file.name}"已固定`);
+      toast.success(t("fileManager.filePinnedSuccessfully", { name: file.name }));
     } catch (error) {
       console.error("Failed to pin file:", error);
-      toast.error("固定文件失败");
+      toast.error(t("fileManager.pinFileFailed"));
     }
   }
 
@@ -1363,10 +1363,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         return newSet;
       });
       setSidebarRefreshTrigger((prev) => prev + 1); // 触发侧边栏刷新
-      toast.success(`文件"${file.name}"已取消固定`);
+      toast.success(t("fileManager.fileUnpinnedSuccessfully", { name: file.name }));
     } catch (error) {
       console.error("Failed to unpin file:", error);
-      toast.error("取消固定失败");
+      toast.error(t("fileManager.unpinFileFailed"));
     }
   }
 
@@ -1378,10 +1378,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       const folderName = path.split("/").pop() || path;
       await addFolderShortcut(currentHost.id, path, folderName);
       setSidebarRefreshTrigger((prev) => prev + 1); // 触发侧边栏刷新
-      toast.success(`文件夹快捷方式"${folderName}"已添加`);
+      toast.success(t("fileManager.shortcutAddedSuccessfully", { name: folderName }));
     } catch (error) {
       console.error("Failed to add shortcut:", error);
-      toast.error("添加快捷方式失败");
+      toast.error(t("fileManager.addShortcutFailed"));
     }
   }
 
@@ -1613,6 +1613,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
             onCut={handleCutFiles}
             onPaste={handlePasteFiles}
             onUndo={handleUndo}
+            hasClipboard={!!clipboard}
             onFileDrop={handleFileDrop}
             onFileDiff={handleFileDiff}
             onSystemDragStart={handleFileDragStart}

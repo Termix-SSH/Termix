@@ -58,9 +58,9 @@ app.use(
     ],
   }),
 );
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ limit: "100mb", extended: true }));
-app.use(express.raw({ limit: "200mb", type: "application/octet-stream" }));
+app.use(express.json({ limit: "1gb" }));
+app.use(express.urlencoded({ limit: "1gb", extended: true }));
+app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
 
 interface SSHSession {
   client: SSHClient;
@@ -492,8 +492,8 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
   sshConn.lastActive = Date.now();
 
-  // First check file size to prevent loading huge files
-  const MAX_READ_SIZE = 10 * 1024 * 1024; // 10MB - same as frontend limit
+  // Support large file reading - increased limit for better compatibility
+  const MAX_READ_SIZE = 500 * 1024 * 1024; // 500MB - much more reasonable limit
   const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
   // Get file size first
@@ -1641,8 +1641,8 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
           .json({ error: "Cannot download directories or special files" });
       }
 
-      // Check file size (limit to 100MB for safety)
-      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+      // Support large file downloads - increased limit for better compatibility
+      const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB - reasonable for SSH file operations
       if (stats.size > MAX_FILE_SIZE) {
         fileLogger.warn("File too large for download", {
           operation: "file_download",

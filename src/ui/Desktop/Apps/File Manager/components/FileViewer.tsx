@@ -294,9 +294,9 @@ export function FileViewer({
 
   const fileTypeInfo = getFileType(file.name);
 
-  // 文件大小限制 (1MB for warning, 10MB for hard limit)
-  const WARNING_SIZE = 1024 * 1024; // 1MB
-  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+  // 文件大小限制 - 移除硬限制，支持大文件处理
+  const WARNING_SIZE = 50 * 1024 * 1024; // 50MB 警告
+  const MAX_SIZE = Number.MAX_SAFE_INTEGER; // 移除硬限制
 
   // 检查是否应该显示为文本
   const shouldShowAsText =
@@ -580,7 +580,7 @@ export function FileViewer({
         <div className="flex-shrink-0 bg-muted/30 border-b border-border p-3">
           <div className="flex items-center gap-2 mb-2">
             <Input
-              placeholder="Find..."
+              placeholder={t("fileManager.find")}
               value={searchText}
               onChange={(e) => {
                 setSearchText(e.target.value);
@@ -629,7 +629,7 @@ export function FileViewer({
           {showReplacePanel && (
             <div className="flex items-center gap-2 mb-2">
               <Input
-                placeholder="Replace with..."
+                placeholder={t("fileManager.replaceWith")}
                 value={replaceText}
                 onChange={(e) => setReplaceText(e.target.value)}
                 className="w-48 h-8"
@@ -805,7 +805,7 @@ export function FileViewer({
                         value={editedContent}
                         onChange={(e) => handleContentChange(e.target.value)}
                         className="w-full h-full p-4 border-none resize-none outline-none font-mono text-sm overflow-auto bg-background text-foreground"
-                        placeholder="Start typing..."
+                        placeholder={t("fileManager.startTyping")}
                         spellCheck={false}
                       />
                     )}

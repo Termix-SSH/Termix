@@ -221,7 +221,7 @@ export function DraggableWindow({
                 e.stopPropagation();
                 onMinimize();
               }}
-              title="最小化"
+              title={t("common.minimize")}
             >
               <Minus className="w-4 h-4" />
             </button>
@@ -250,7 +250,7 @@ export function DraggableWindow({
               e.stopPropagation();
               onClose();
             }}
-            title="关闭"
+            title={t("common.close")}
           >
             <X className="w-4 h-4" />
           </button>

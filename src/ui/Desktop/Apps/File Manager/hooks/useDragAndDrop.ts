@@ -16,7 +16,7 @@ interface UseDragAndDropProps {
 export function useDragAndDrop({
   onFilesDropped,
   onError,
-  maxFileSize = 100, // 100MB default
+  maxFileSize = 5120, // 5GB default - much more reasonable
   allowedTypes = [], // empty means all types allowed
 }: UseDragAndDropProps) {
   const [state, setState] = useState<DragAndDropState>({

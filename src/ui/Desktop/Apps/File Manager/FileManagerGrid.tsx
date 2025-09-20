@@ -92,6 +92,7 @@ interface FileManagerGridProps {
   onFileDiff?: (file1: FileItem, file2: FileItem) => void;
   onSystemDragStart?: (files: FileItem[]) => void;
   onSystemDragEnd?: (e: DragEvent) => void;
+  hasClipboard?: boolean;
   // Linus式创建意图props
   createIntent?: CreateIntent | null;
   onConfirmCreate?: (name: string) => void;
@@ -194,6 +195,7 @@ export function FileManagerGrid({
   onFileDiff,
   onSystemDragStart,
   onSystemDragEnd,
+  hasClipboard,
   createIntent,
   onConfirmCreate,
   onCancelCreate,
@@ -894,7 +896,7 @@ export function FileManagerGrid({
           break;
         case "v":
         case "V":
-          if ((event.ctrlKey || event.metaKey) && onPaste) {
+          if ((event.ctrlKey || event.metaKey) && onPaste && hasClipboard) {
             event.preventDefault();
             onPaste();
           }
@@ -1016,20 +1018,20 @@ export function FileManagerGrid({
                   }
                 }}
                 className="flex-1 px-2 py-1 bg-dark-hover border border-dark-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="输入路径..."
+                placeholder={t("fileManager.enterPath")}
                 autoFocus
               />
               <button
                 onClick={confirmEditingPath}
                 className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/80"
               >
-                确认
+                {t("fileManager.confirm")}
               </button>
               <button
                 onClick={cancelEditingPath}
                 className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs hover:bg-secondary/80"
               >
-                取消
+                {t("fileManager.cancel")}
               </button>
             </div>
           ) : (
@@ -1057,7 +1059,7 @@ export function FileManagerGrid({
               <button
                 onClick={startEditingPath}
                 className="ml-2 p-1 rounded hover:bg-dark-hover opacity-60 hover:opacity-100"
-                title="编辑路径"
+                title={t("fileManager.editPath")}
               >
                 <Edit className="w-3 h-3" />
               </button>
@@ -1473,7 +1475,7 @@ function CreateIntentGridItem({
           onKeyDown={handleKeyDown}
           onBlur={() => onConfirm?.(inputName.trim())}
           className="w-full max-w-[120px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-center text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
-          placeholder={intent.type === 'directory' ? 'Folder name' : 'File name'}
+          placeholder={intent.type === 'directory' ? t('fileManager.folderName') : t('fileManager.fileName')}
         />
       </div>
     </div>

@@ -223,7 +223,7 @@ export function FileWindow({
         autoSaveTimerRef.current = null;
       }
 
-      toast.success("File saved successfully");
+      toast.success(t("fileManager.fileSavedSuccessfully"));
     } catch (error: any) {
       console.error("Failed to save file:", error);
 
@@ -236,7 +236,7 @@ export function FileWindow({
           `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
         );
       } else {
-        toast.error(`Failed to save file: ${error.message || "Unknown error"}`);
+        toast.error(`${t("fileManager.failedToSaveFile")}: ${error.message || t("fileManager.unknownError")}`);
       }
     } finally {
       setIsLoading(false);
@@ -257,10 +257,10 @@ export function FileWindow({
       try {
         console.log("Auto-saving file...");
         await handleSave(newContent);
-        toast.success("File auto-saved");
+        toast.success(t("fileManager.fileAutoSaved"));
       } catch (error) {
         console.error("Auto-save failed:", error);
-        toast.error("Auto-save failed");
+        toast.error(t("fileManager.autoSaveFailed"));
       }
     }, 60000); // 1分钟 = 60000毫秒
   };
@@ -303,7 +303,7 @@ export function FileWindow({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success("File downloaded successfully");
+        toast.success(t("fileManager.fileDownloadedSuccessfully"));
       }
     } catch (error: any) {
       console.error("Failed to download file:", error);

@@ -103,10 +103,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     [terminal],
   );
 
-  useEffect(() => {
-    window.addEventListener("resize", handleWindowResize);
-    return () => window.removeEventListener("resize", handleWindowResize);
-  }, []);
+  // Resize handling optimized to avoid conflicts - Linus principle: eliminate duplicate complexity
 
   function handleWindowResize() {
     if (!isVisibleRef.current) return;
@@ -215,7 +212,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         fitAddonRef.current?.fit();
         if (terminal) scheduleNotify(terminal.cols, terminal.rows);
         hardRefresh();
-      }, 100);
+      }, 150); // Increased debounce for better stability
     });
 
     resizeObserver.observe(xtermRef.current);
@@ -224,15 +221,15 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       (document as any).fonts?.ready instanceof Promise
         ? (document as any).fonts.ready
         : Promise.resolve();
+    // Show terminal immediately - better UX for mobile
+    setVisible(true);
+
     readyFonts.then(() => {
+      // Reduced delay - Linus principle: eliminate unnecessary waiting
       setTimeout(() => {
         fitAddon.fit();
-        setTimeout(() => {
-          fitAddon.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-          hardRefresh();
-          setVisible(true);
-        }, 0);
+        if (terminal) scheduleNotify(terminal.cols, terminal.rows);
+        hardRefresh();
 
         const cols = terminal.cols;
         const rows = terminal.rows;
@@ -263,7 +260,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         wasDisconnectedBySSH.current = false;
 
         setupWebSocketListeners(ws, cols, rows);
-      }, 300);
+      }, 100); // Reduced from 300ms to 100ms
     });
 
     return () => {
