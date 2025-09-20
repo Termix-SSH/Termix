@@ -18,9 +18,9 @@ import "dotenv/config";
       operation: "startup",
     });
 
-    // Initialize database encryption before other services
+    // Initialize database encryption in deferred mode (without password)
     await DatabaseEncryption.initialize();
-    systemLogger.info("Database encryption initialized", {
+    systemLogger.info("Database encryption initialized in deferred mode", {
       operation: "encryption_init",
     });
 

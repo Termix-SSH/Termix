@@ -14,21 +14,21 @@ class DatabaseEncryption {
 
   static async initialize(config: Partial<EncryptionContext> = {}) {
     const keyManager = EncryptionKeyManager.getInstance();
-    const masterPassword =
-      config.masterPassword || (await keyManager.initializeKey(config.masterPassword));
+
+    // Generate random master key for encryption
+    const masterPassword = await keyManager.initializeKey();
 
     this.context = {
       masterPassword,
       encryptionEnabled: config.encryptionEnabled ?? true,
       forceEncryption: config.forceEncryption ?? false,
-      migrateOnAccess: config.migrateOnAccess ?? true,
+      migrateOnAccess: config.migrateOnAccess ?? false,
     };
 
-    databaseLogger.info("Database encryption initialized", {
+    databaseLogger.info("Database encryption initialized with random keys", {
       operation: "encryption_init",
       enabled: this.context.encryptionEnabled,
       forceEncryption: this.context.forceEncryption,
-      dynamicKey: !config.masterPassword,
     });
   }
 
@@ -46,40 +46,22 @@ class DatabaseEncryption {
     if (!context.encryptionEnabled) return record;
 
     const encryptedRecord = { ...record };
-    let hasEncryption = false;
+    const masterKey = Buffer.from(context.masterPassword, 'hex');
+    const recordId = record.id || 'temp-' + Date.now(); // Use record ID or temp ID
 
     for (const [fieldName, value] of Object.entries(record)) {
       if (FieldEncryption.shouldEncryptField(tableName, fieldName) && value) {
         try {
-          const fieldKey = FieldEncryption.getFieldKey(
-            context.masterPassword,
-            `${tableName}.${fieldName}`,
-          );
           encryptedRecord[fieldName] = FieldEncryption.encryptField(
             value as string,
-            fieldKey,
+            masterKey,
+            recordId,
+            fieldName
           );
-          hasEncryption = true;
         } catch (error) {
-          databaseLogger.error(
-            `Failed to encrypt field ${tableName}.${fieldName}`,
-            error,
-            {
-              operation: "field_encryption",
-              table: tableName,
-              field: fieldName,
-            },
-          );
-          throw error;
+          throw new Error(`Failed to encrypt ${tableName}.${fieldName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
-    }
-
-    if (hasEncryption) {
-      databaseLogger.debug(`Encrypted sensitive fields for ${tableName}`, {
-        operation: "record_encryption",
-        table: tableName,
-      });
     }
 
     return encryptedRecord;
@@ -90,59 +72,34 @@ class DatabaseEncryption {
     if (!record) return record;
 
     const decryptedRecord = { ...record };
-    let hasDecryption = false;
-    let needsMigration = false;
+    const masterKey = Buffer.from(context.masterPassword, 'hex');
+    const recordId = record.id;
 
     for (const [fieldName, value] of Object.entries(record)) {
       if (FieldEncryption.shouldEncryptField(tableName, fieldName) && value) {
         try {
-          const fieldKey = FieldEncryption.getFieldKey(
-            context.masterPassword,
-            `${tableName}.${fieldName}`,
-          );
-
           if (FieldEncryption.isEncrypted(value as string)) {
             decryptedRecord[fieldName] = FieldEncryption.decryptField(
               value as string,
-              fieldKey,
+              masterKey,
+              recordId,
+              fieldName
             );
-            hasDecryption = true;
-          } else if (context.encryptionEnabled && !context.forceEncryption) {
-            decryptedRecord[fieldName] = value;
-            needsMigration = context.migrateOnAccess;
-          } else if (context.forceEncryption) {
-            databaseLogger.warn(
-              `Unencrypted field detected in force encryption mode`,
-              {
-                operation: "decryption_warning",
-                table: tableName,
-                field: fieldName,
-              },
-            );
+          } else {
+            // Plain text - keep as is or fail based on policy
+            if (context.forceEncryption) {
+              throw new Error(`Unencrypted field detected: ${tableName}.${fieldName}`);
+            }
             decryptedRecord[fieldName] = value;
           }
         } catch (error) {
-          databaseLogger.error(
-            `Failed to decrypt field ${tableName}.${fieldName}`,
-            error,
-            {
-              operation: "field_decryption",
-              table: tableName,
-              field: fieldName,
-            },
-          );
-
           if (context.forceEncryption) {
             throw error;
           } else {
-            decryptedRecord[fieldName] = value;
+            decryptedRecord[fieldName] = value; // Fallback to plain text
           }
         }
       }
-    }
-
-    if (needsMigration) {
-      this.scheduleFieldMigration(tableName, record);
     }
 
     return decryptedRecord;
@@ -153,87 +110,21 @@ class DatabaseEncryption {
     return records.map((record) => this.decryptRecord(tableName, record));
   }
 
-  private static scheduleFieldMigration(tableName: string, record: any) {
-    setTimeout(async () => {
-      try {
-        await this.migrateRecord(tableName, record);
-      } catch (error) {
-        databaseLogger.error(
-          `Failed to migrate record ${tableName}:${record.id}`,
-          error,
-          {
-            operation: "migration_failed",
-            table: tableName,
-            recordId: record.id,
-          },
-        );
-      }
-    }, 1000);
-  }
-
-  static async migrateRecord(tableName: string, record: any): Promise<any> {
-    const context = this.getContext();
-    if (!context.encryptionEnabled || !context.migrateOnAccess) return record;
-
-    let needsUpdate = false;
-    const updatedRecord = { ...record };
-
-    for (const [fieldName, value] of Object.entries(record)) {
-      if (
-        FieldEncryption.shouldEncryptField(tableName, fieldName) &&
-        value &&
-        !FieldEncryption.isEncrypted(value as string)
-      ) {
-        try {
-          const fieldKey = FieldEncryption.getFieldKey(
-            context.masterPassword,
-            `${tableName}.${fieldName}`,
-          );
-          updatedRecord[fieldName] = FieldEncryption.encryptField(
-            value as string,
-            fieldKey,
-          );
-          needsUpdate = true;
-        } catch (error) {
-          databaseLogger.error(
-            `Failed to migrate field ${tableName}.${fieldName}`,
-            error,
-            {
-              operation: "field_migration",
-              table: tableName,
-              field: fieldName,
-              recordId: record.id,
-            },
-          );
-          throw error;
-        }
-      }
-    }
-
-    return updatedRecord;
-  }
+  // Migration logic removed - no more complex backward compatibility
 
   static validateConfiguration(): boolean {
     try {
       const context = this.getContext();
       const testData = "test-encryption-data";
-      const testKey = FieldEncryption.getFieldKey(
-        context.masterPassword,
-        "test",
-      );
+      const masterKey = Buffer.from(context.masterPassword, 'hex');
+      const testRecordId = "test-record";
+      const testField = "test-field";
 
-      const encrypted = FieldEncryption.encryptField(testData, testKey);
-      const decrypted = FieldEncryption.decryptField(encrypted, testKey);
+      const encrypted = FieldEncryption.encryptField(testData, masterKey, testRecordId, testField);
+      const decrypted = FieldEncryption.decryptField(encrypted, masterKey, testRecordId, testField);
 
       return decrypted === testData;
-    } catch (error) {
-      databaseLogger.error(
-        "Encryption configuration validation failed",
-        error,
-        {
-          operation: "config_validation",
-        },
-      );
+    } catch {
       return false;
     }
   }
@@ -274,12 +165,7 @@ class DatabaseEncryption {
     const newKey = await keyManager.regenerateKey();
 
     this.context = null;
-    await this.initialize({ masterPassword: newKey });
-
-    databaseLogger.warn("Database encryption reinitialized with new key", {
-      operation: "encryption_reinit",
-      requiresMigration: true,
-    });
+    await this.initialize();
   }
 }
 

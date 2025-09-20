@@ -148,81 +148,9 @@ class EncryptedDBOperations {
     }
   }
 
+  // Migration removed - no more backward compatibility
   static async migrateExistingRecords(tableName: TableName): Promise<number> {
-    let migratedCount = 0;
-
-    try {
-      databaseLogger.info(`Starting encryption migration for ${tableName}`, {
-        operation: "migration_start",
-        table: tableName,
-      });
-
-      let table: SQLiteTable<any>;
-      let records: any[];
-
-      switch (tableName) {
-        case "users":
-          const { users } = await import("../database/db/schema.js");
-          table = users;
-          records = await db.select().from(users);
-          break;
-        case "ssh_data":
-          const { sshData } = await import("../database/db/schema.js");
-          table = sshData;
-          records = await db.select().from(sshData);
-          break;
-        case "ssh_credentials":
-          const { sshCredentials } = await import("../database/db/schema.js");
-          table = sshCredentials;
-          records = await db.select().from(sshCredentials);
-          break;
-        default:
-          throw new Error(`Unknown table: ${tableName}`);
-      }
-
-      for (const record of records) {
-        try {
-          const migratedRecord = await DatabaseEncryption.migrateRecord(
-            tableName,
-            record,
-          );
-
-          if (JSON.stringify(migratedRecord) !== JSON.stringify(record)) {
-            const { eq } = await import("drizzle-orm");
-            await db
-              .update(table)
-              .set(migratedRecord)
-              .where(eq((table as any).id, record.id));
-            migratedCount++;
-          }
-        } catch (error) {
-          databaseLogger.error(
-            `Failed to migrate record ${record.id} in ${tableName}`,
-            error,
-            {
-              operation: "migration_record_failed",
-              table: tableName,
-              recordId: record.id,
-            },
-          );
-        }
-      }
-
-      databaseLogger.success(`Migration completed for ${tableName}`, {
-        operation: "migration_complete",
-        table: tableName,
-        migratedCount,
-        totalRecords: records.length,
-      });
-
-      return migratedCount;
-    } catch (error) {
-      databaseLogger.error(`Migration failed for ${tableName}`, error, {
-        operation: "migration_failed",
-        table: tableName,
-      });
-      throw error;
-    }
+    return 0; // No migration needed
   }
 
   static async healthCheck(): Promise<boolean> {

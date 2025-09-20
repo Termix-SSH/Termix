@@ -3,7 +3,6 @@ import { db } from "../database/db/index.js";
 import { settings } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
-import { MasterKeyProtection } from "./master-key-protection.js";
 
 interface EncryptionKeyInfo {
   hasKey: boolean;
@@ -17,7 +16,6 @@ class EncryptionKeyManager {
   private currentKey: string | null = null;
   private keyInfo: EncryptionKeyInfo | null = null;
   private jwtSecret: string | null = null;
-  private userPassword: string | null = null;
 
   private constructor() {}
 
@@ -28,93 +26,24 @@ class EncryptionKeyManager {
     return this.instance;
   }
 
+  // Simple base64 encoding - no user password protection
   private encodeKey(key: string): string {
-    if (!this.userPassword) {
-      throw new Error("User password not set - call initializeKey() first");
-    }
-    return MasterKeyProtection.encryptMasterKey(key, this.userPassword);
+    return Buffer.from(key, 'hex').toString('base64');
   }
 
   private decodeKey(encodedKey: string): string {
-    if (!this.userPassword) {
-      throw new Error("User password not set - call initializeKey() first");
-    }
-
-    if (MasterKeyProtection.isProtectedKey(encodedKey)) {
-      try {
-        return MasterKeyProtection.decryptMasterKey(encodedKey, this.userPassword);
-      } catch (error) {
-        // If decryption fails, it might be a v1 (hardware-based) key
-        databaseLogger.error("Failed to decrypt protected key", error, {
-          operation: "key_decryption_failed",
-        });
-        throw new Error(
-          "Failed to decrypt encryption key. If this is a legacy installation, please regenerate encryption keys."
-        );
-      }
-    }
-
-    databaseLogger.warn(
-      "Found legacy base64-encoded key, migrating to password protection",
-      {
-        operation: "key_migration_legacy",
-      },
-    );
-    const buffer = Buffer.from(encodedKey, "base64");
-    return buffer.toString("hex");
+    return Buffer.from(encodedKey, 'base64').toString('hex');
   }
 
-  async initializeKey(userPassword?: string): Promise<string> {
-    try {
-      // Generate a default password if none provided (for backward compatibility)
-      if (!userPassword) {
-        const environmentKey = process.env.DB_ENCRYPTION_KEY;
-        if (environmentKey && environmentKey !== "default-key-change-me") {
-          userPassword = environmentKey;
-          databaseLogger.info("Using encryption key from environment variable as user password", {
-            operation: "key_init",
-            source: "environment",
-          });
-        } else {
-          // Generate a random password for new installations
-          userPassword = crypto.randomBytes(32).toString("hex");
-          databaseLogger.warn("Generated random user password for encryption", {
-            operation: "key_init",
-            generated: true,
-          });
-        }
-      }
-
-      this.userPassword = userPassword;
-
-      let existingKey = await this.getStoredKey();
-
-      if (existingKey) {
-        databaseLogger.success("Found existing encryption key", {
-          operation: "key_init",
-          hasKey: true,
-        });
-        this.currentKey = existingKey;
-        return existingKey;
-      }
-
-      const newKey = await this.generateNewKey();
-      databaseLogger.warn(
-        "Generated new encryption key - PLEASE BACKUP YOUR PASSWORD",
-        {
-          operation: "key_init",
-          generated: true,
-          keyPreview: newKey.substring(0, 8) + "...",
-        },
-      );
-
-      return newKey;
-    } catch (error) {
-      databaseLogger.error("Failed to initialize encryption key", error, {
-        operation: "key_init_failed",
-      });
-      throw error;
+  // Initialize random encryption key - no user password needed
+  async initializeKey(): Promise<string> {
+    let existingKey = await this.getStoredKey();
+    if (existingKey) {
+      this.currentKey = existingKey;
+      return existingKey;
     }
+
+    return await this.generateNewKey();
   }
 
   async generateNewKey(): Promise<string> {
@@ -206,17 +135,7 @@ class EncryptionKeyManager {
         return null;
       }
 
-      const encodedData = result[0].value;
-      let keyData;
-
-      try {
-        keyData = JSON.parse(encodedData);
-      } catch {
-        databaseLogger.warn("Found legacy base64-encoded key data, migrating", {
-          operation: "key_data_migration_legacy",
-        });
-        keyData = JSON.parse(Buffer.from(encodedData, "base64").toString());
-      }
+      const keyData = JSON.parse(result[0].value);
 
       this.keyInfo = {
         hasKey: true,
@@ -225,21 +144,8 @@ class EncryptionKeyManager {
         algorithm: keyData.algorithm,
       };
 
-      const decodedKey = this.decodeKey(keyData.key);
-
-      if (!MasterKeyProtection.isProtectedKey(keyData.key)) {
-        databaseLogger.info("Auto-migrating legacy key to KEK protection", {
-          operation: "key_auto_migration",
-          keyId: keyData.keyId,
-        });
-        await this.storeKey(decodedKey, keyData.keyId);
-      }
-
-      return decodedKey;
-    } catch (error) {
-      databaseLogger.error("Failed to retrieve stored encryption key", error, {
-        operation: "key_retrieve_failed",
-      });
+      return this.decodeKey(keyData.key);
+    } catch {
       return null;
     }
   }
@@ -342,23 +248,12 @@ class EncryptionKeyManager {
       algorithm: keyInfo.algorithm,
       initialized: this.isInitialized(),
       kekProtected,
-      kekValid: kekProtected && this.userPassword ? MasterKeyProtection.validateProtection(this.userPassword) : false,
+      kekValid: false, // No KEK protection - simple random keys
     };
   }
 
   private async isKEKProtected(): Promise<boolean> {
-    try {
-      const result = await db
-        .select()
-        .from(settings)
-        .where(eq(settings.key, "db_encryption_key"));
-      if (result.length === 0) return false;
-
-      const keyData = JSON.parse(result[0].value);
-      return MasterKeyProtection.isProtectedKey(keyData.key);
-    } catch {
-      return false;
-    }
+    return false; // No KEK protection - simple random keys
   }
 
   async getJWTSecret(): Promise<string> {
@@ -480,33 +375,9 @@ class EncryptionKeyManager {
         return null;
       }
 
-      const encodedData = result[0].value;
-      let secretData;
-
-      try {
-        secretData = JSON.parse(encodedData);
-      } catch {
-        databaseLogger.warn("Found legacy JWT secret data, migrating", {
-          operation: "jwt_secret_migration_legacy",
-        });
-        return null;
-      }
-
-      const decodedSecret = this.decodeKey(secretData.secret);
-
-      if (!MasterKeyProtection.isProtectedKey(secretData.secret)) {
-        databaseLogger.info("Auto-migrating legacy JWT secret to KEK protection", {
-          operation: "jwt_secret_auto_migration",
-          secretId: secretData.secretId,
-        });
-        await this.storeJWTSecret(decodedSecret, secretData.secretId);
-      }
-
-      return decodedSecret;
-    } catch (error) {
-      databaseLogger.error("Failed to retrieve stored JWT secret", error, {
-        operation: "jwt_secret_retrieve_failed",
-      });
+      const secretData = JSON.parse(result[0].value);
+      return this.decodeKey(secretData.secret);
+    } catch {
       return null;
     }
   }

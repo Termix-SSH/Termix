@@ -379,6 +379,7 @@ app.post("/encryption/migrate", async (req, res) => {
 
 app.post("/encryption/regenerate", async (req, res) => {
   try {
+    // Regenerate random encryption keys
     await DatabaseEncryption.reinitializeWithNewKey();
 
     apiLogger.warn("Encryption key regenerated via API", {

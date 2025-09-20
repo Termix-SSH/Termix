@@ -68,21 +68,10 @@ class EncryptionMigration {
     const keyManager = EncryptionKeyManager.getInstance();
 
     if (!this.config.masterPassword) {
-      // Try to get current key from KEK manager
-      try {
-        const currentKey = keyManager.getCurrentKey();
-        if (!currentKey) {
-          // Initialize key if not available
-          const initializedKey = await keyManager.initializeKey();
-          this.config.masterPassword = initializedKey;
-        } else {
-          this.config.masterPassword = currentKey;
-        }
-      } catch (error) {
-        throw new Error(
-          "Failed to retrieve encryption key from KEK manager. Please ensure encryption is properly initialized.",
-        );
-      }
+      // Migration disabled - no more backward compatibility
+      throw new Error(
+        "Migration disabled. Legacy encryption migration is no longer supported. Please use current encryption system.",
+      );
     }
 
     // Validate key strength
@@ -279,18 +268,9 @@ class EncryptionMigration {
   }
 
   private async performTestEncryption(): Promise<boolean> {
+    // Migration disabled - no backward compatibility
     try {
-      const { FieldEncryption } = await import("./encryption.js");
-      const testData = `test-data-${Date.now()}`;
-      const testKey = FieldEncryption.getFieldKey(
-        this.config.masterPassword!,
-        "test",
-      );
-
-      const encrypted = FieldEncryption.encryptField(testData, testKey);
-      const decrypted = FieldEncryption.decryptField(encrypted, testKey);
-
-      return decrypted === testData;
+      return true; // Skip old encryption test
     } catch {
       return false;
     }
