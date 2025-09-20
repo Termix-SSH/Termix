@@ -629,14 +629,7 @@ app.post("/database/restore", async (req, res) => {
       return res.status(400).json({ error: "Invalid encrypted backup file" });
     }
 
-    // Check hardware compatibility
-    if (!DatabaseFileEncryption.validateHardwareCompatibility(backupPath)) {
-      return res.status(400).json({
-        error: "Hardware fingerprint mismatch",
-        message:
-          "This backup was created on different hardware and cannot be restored",
-      });
-    }
+    // Hardware compatibility check removed - no longer required
 
     const restoredPath = DatabaseFileEncryption.restoreFromEncryptedBackup(
       backupPath,

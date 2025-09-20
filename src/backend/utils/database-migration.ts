@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { DatabaseFileEncryption } from "./database-file-encryption.js";
 import { DatabaseEncryption } from "./database-encryption.js";
 import { FieldEncryption } from "./encryption.js";
-import { HardwareFingerprint } from "./hardware-fingerprint.js";
+// Hardware fingerprint removed - using fixed identifier
 import { databaseLogger } from "./logger.js";
 import { db, databasePaths } from "../database/db/index.js";
 import {
@@ -23,7 +23,7 @@ interface ExportMetadata {
   version: string;
   exportedAt: string;
   exportId: string;
-  sourceHardwareFingerprint: string;
+  sourceIdentifier: string; // Changed from hardware fingerprint
   tableCount: number;
   recordCount: number;
   encryptedFields: string[];
@@ -112,10 +112,7 @@ class DatabaseMigration {
           version: this.VERSION,
           exportedAt: timestamp,
           exportId,
-          sourceHardwareFingerprint: HardwareFingerprint.generate().substring(
-            0,
-            16,
-          ),
+          sourceIdentifier: "termix-migration-v1", // Fixed identifier
           tableCount: 0,
           recordCount: 0,
           encryptedFields: [],
@@ -430,7 +427,7 @@ class DatabaseMigration {
       const requiredFields = [
         "exportedAt",
         "exportId",
-        "sourceHardwareFingerprint",
+        "sourceIdentifier",
       ];
       for (const field of requiredFields) {
         if (!exportData.metadata[field as keyof ExportMetadata]) {

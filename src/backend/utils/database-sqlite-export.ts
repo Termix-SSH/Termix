@@ -6,7 +6,7 @@ import { sql, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { DatabaseEncryption } from "./database-encryption.js";
 import { FieldEncryption } from "./encryption.js";
-import { HardwareFingerprint } from "./hardware-fingerprint.js";
+// Hardware fingerprint removed - using fixed identifier
 import { databaseLogger } from "./logger.js";
 import { databasePaths, db, sqliteInstance } from "../database/db/index.js";
 import { sshData, sshCredentials, users } from "../database/db/schema.js";
@@ -15,7 +15,7 @@ interface ExportMetadata {
   version: string;
   exportedAt: string;
   exportId: string;
-  sourceHardwareFingerprint: string;
+  sourceIdentifier: string; // Changed from hardware fingerprint to fixed identifier
   tableCount: number;
   recordCount: number;
   encryptedFields: string[];
@@ -73,10 +73,7 @@ class DatabaseSQLiteExport {
         version: this.VERSION,
         exportedAt: timestamp,
         exportId,
-        sourceHardwareFingerprint: HardwareFingerprint.generate().substring(
-          0,
-          16,
-        ),
+        sourceIdentifier: "termix-export-v1", // Fixed identifier instead of hardware fingerprint
         tableCount: 0,
         recordCount: 0,
         encryptedFields: [],

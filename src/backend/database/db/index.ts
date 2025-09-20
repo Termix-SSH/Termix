@@ -38,21 +38,7 @@ if (enableFileEncryption) {
         },
       );
 
-      // Validate hardware compatibility
-      if (
-        !DatabaseFileEncryption.validateHardwareCompatibility(encryptedDbPath)
-      ) {
-        databaseLogger.error(
-          "Hardware fingerprint mismatch for encrypted database",
-          {
-            operation: "db_decrypt_failed",
-            reason: "hardware_mismatch",
-          },
-        );
-        throw new Error(
-          "Cannot decrypt database: hardware fingerprint mismatch",
-        );
-      }
+      // Hardware compatibility check removed - using fixed seed encryption
 
       // Decrypt database content to memory buffer
       const decryptedBuffer =

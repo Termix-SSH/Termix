@@ -1,7 +1,6 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import { HardwareFingerprint } from "./hardware-fingerprint.js";
 import { databaseLogger } from "./logger.js";
 
 interface EncryptedFileMetadata {
@@ -25,13 +24,14 @@ class DatabaseFileEncryption {
   private static readonly METADATA_FILE_SUFFIX = ".meta";
 
   /**
-   * Generate file encryption key from hardware fingerprint
+   * Generate file encryption key from fixed seed (no hardware dependency)
    */
   private static generateFileEncryptionKey(salt: Buffer): Buffer {
-    const hardwareFingerprint = HardwareFingerprint.generate();
+    // Use fixed seed for file encryption - simpler and more reliable than hardware fingerprint
+    const fixedSeed = process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
 
     const key = crypto.pbkdf2Sync(
-      hardwareFingerprint,
+      fixedSeed,
       salt,
       this.KEY_ITERATIONS,
       32, // 256 bits for AES-256
@@ -61,7 +61,7 @@ class DatabaseFileEncryption {
         iv: iv.toString("hex"),
         tag: tag.toString("hex"),
         version: this.VERSION,
-        fingerprint: HardwareFingerprint.generate().substring(0, 16),
+        fingerprint: "termix-v1-file", // Fixed identifier instead of hardware fingerprint
         salt: salt.toString("hex"),
         algorithm: this.ALGORITHM,
       };
@@ -117,7 +117,7 @@ class DatabaseFileEncryption {
         iv: iv.toString("hex"),
         tag: tag.toString("hex"),
         version: this.VERSION,
-        fingerprint: HardwareFingerprint.generate().substring(0, 16),
+        fingerprint: "termix-v1-file", // Fixed identifier instead of hardware fingerprint
         salt: salt.toString("hex"),
         algorithm: this.ALGORITHM,
       };
@@ -173,16 +173,7 @@ class DatabaseFileEncryption {
         throw new Error(`Unsupported encryption version: ${metadata.version}`);
       }
 
-      // Validate hardware fingerprint
-      const currentFingerprint = HardwareFingerprint.generate().substring(
-        0,
-        16,
-      );
-      if (metadata.fingerprint !== currentFingerprint) {
-        throw new Error(
-          "Hardware fingerprint mismatch - database was encrypted on different hardware",
-        );
-      }
+      // Hardware fingerprint validation removed - no longer required
 
       // Read encrypted data
       const encryptedData = fs.readFileSync(encryptedPath);
@@ -247,21 +238,7 @@ class DatabaseFileEncryption {
         throw new Error(`Unsupported encryption version: ${metadata.version}`);
       }
 
-      // Validate hardware fingerprint
-      const currentFingerprint = HardwareFingerprint.generate().substring(
-        0,
-        16,
-      );
-      if (metadata.fingerprint !== currentFingerprint) {
-        databaseLogger.warn("Hardware fingerprint mismatch for database file", {
-          operation: "database_file_decryption",
-          expected: metadata.fingerprint,
-          current: currentFingerprint,
-        });
-        throw new Error(
-          "Hardware fingerprint mismatch - database was encrypted on different hardware",
-        );
-      }
+      // Hardware fingerprint validation removed - no longer required
 
       // Read encrypted data
       const encryptedData = fs.readFileSync(encryptedPath);
@@ -350,16 +327,13 @@ class DatabaseFileEncryption {
       const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
 
       const fileStats = fs.statSync(encryptedPath);
-      const currentFingerprint = HardwareFingerprint.generate().substring(
-        0,
-        16,
-      );
+      const currentFingerprint = "termix-v1-file"; // Fixed identifier
 
       return {
         version: metadata.version,
         algorithm: metadata.algorithm,
         fingerprint: metadata.fingerprint,
-        isCurrentHardware: metadata.fingerprint === currentFingerprint,
+        isCurrentHardware: true, // Hardware validation removed
         fileSize: fileStats.size,
       };
     } catch {
@@ -442,14 +416,10 @@ class DatabaseFileEncryption {
 
   /**
    * Validate hardware compatibility for encrypted file
+   * Always returns true - hardware validation removed
    */
   static validateHardwareCompatibility(encryptedPath: string): boolean {
-    try {
-      const info = this.getEncryptedFileInfo(encryptedPath);
-      return info?.isCurrentHardware ?? false;
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   /**
