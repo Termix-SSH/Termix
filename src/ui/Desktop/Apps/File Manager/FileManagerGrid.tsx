@@ -913,9 +913,9 @@ export function FileManagerGrid({
           }
           break;
         case "F2":
-          if (selectedFiles.length === 1) {
-            // 触发重命名
-            console.log("Rename file:", selectedFiles[0]);
+          if (selectedFiles.length === 1 && onStartEdit) {
+            event.preventDefault();
+            onStartEdit(selectedFiles[0]);
           }
           break;
         case "F5":
