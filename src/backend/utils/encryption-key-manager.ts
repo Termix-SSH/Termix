@@ -16,6 +16,7 @@ class EncryptionKeyManager {
   private static instance: EncryptionKeyManager;
   private currentKey: string | null = null;
   private keyInfo: EncryptionKeyInfo | null = null;
+  private jwtSecret: string | null = null;
 
   private constructor() {}
 
@@ -346,6 +347,171 @@ class EncryptionKeyManager {
     } catch {
       return false;
     }
+  }
+
+  async getJWTSecret(): Promise<string> {
+    if (this.jwtSecret) {
+      return this.jwtSecret;
+    }
+
+    try {
+      let existingSecret = await this.getStoredJWTSecret();
+
+      if (existingSecret) {
+        databaseLogger.success("Found existing JWT secret", {
+          operation: "jwt_secret_init",
+          hasSecret: true,
+        });
+        this.jwtSecret = existingSecret;
+        return existingSecret;
+      }
+
+      const newSecret = await this.generateJWTSecret();
+      databaseLogger.success("Generated new JWT secret", {
+        operation: "jwt_secret_generated",
+        secretLength: newSecret.length,
+      });
+
+      return newSecret;
+    } catch (error) {
+      databaseLogger.error("Failed to initialize JWT secret", error, {
+        operation: "jwt_secret_init_failed",
+      });
+      throw new Error("JWT secret initialization failed - cannot start server");
+    }
+  }
+
+  private async generateJWTSecret(): Promise<string> {
+    const newSecret = crypto.randomBytes(64).toString("hex");
+    const secretId = crypto.randomBytes(8).toString("hex");
+
+    await this.storeJWTSecret(newSecret, secretId);
+    this.jwtSecret = newSecret;
+
+    databaseLogger.success("Generated secure JWT secret", {
+      operation: "jwt_secret_generated",
+      secretId,
+      secretLength: newSecret.length,
+    });
+
+    return newSecret;
+  }
+
+  private async storeJWTSecret(secret: string, secretId?: string): Promise<void> {
+    const now = new Date().toISOString();
+    const id = secretId || crypto.randomBytes(8).toString("hex");
+
+    const secretData = {
+      secret: this.encodeKey(secret),
+      secretId: id,
+      createdAt: now,
+      algorithm: "aes-256-gcm",
+    };
+
+    const encodedData = JSON.stringify(secretData);
+
+    try {
+      const existing = await db
+        .select()
+        .from(settings)
+        .where(eq(settings.key, "jwt_secret"));
+
+      if (existing.length > 0) {
+        await db
+          .update(settings)
+          .set({ value: encodedData })
+          .where(eq(settings.key, "jwt_secret"));
+      } else {
+        await db.insert(settings).values({
+          key: "jwt_secret",
+          value: encodedData,
+        });
+      }
+
+      const existingCreated = await db
+        .select()
+        .from(settings)
+        .where(eq(settings.key, "jwt_secret_created"));
+
+      if (existingCreated.length > 0) {
+        await db
+          .update(settings)
+          .set({ value: now })
+          .where(eq(settings.key, "jwt_secret_created"));
+      } else {
+        await db.insert(settings).values({
+          key: "jwt_secret_created",
+          value: now,
+        });
+      }
+
+      databaseLogger.success("JWT secret stored securely", {
+        operation: "jwt_secret_stored",
+        secretId: id,
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to store JWT secret", error, {
+        operation: "jwt_secret_store_failed",
+      });
+      throw error;
+    }
+  }
+
+  private async getStoredJWTSecret(): Promise<string | null> {
+    try {
+      const result = await db
+        .select()
+        .from(settings)
+        .where(eq(settings.key, "jwt_secret"));
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      const encodedData = result[0].value;
+      let secretData;
+
+      try {
+        secretData = JSON.parse(encodedData);
+      } catch {
+        databaseLogger.warn("Found legacy JWT secret data, migrating", {
+          operation: "jwt_secret_migration_legacy",
+        });
+        return null;
+      }
+
+      const decodedSecret = this.decodeKey(secretData.secret);
+
+      if (!MasterKeyProtection.isProtectedKey(secretData.secret)) {
+        databaseLogger.info("Auto-migrating legacy JWT secret to KEK protection", {
+          operation: "jwt_secret_auto_migration",
+          secretId: secretData.secretId,
+        });
+        await this.storeJWTSecret(decodedSecret, secretData.secretId);
+      }
+
+      return decodedSecret;
+    } catch (error) {
+      databaseLogger.error("Failed to retrieve stored JWT secret", error, {
+        operation: "jwt_secret_retrieve_failed",
+      });
+      return null;
+    }
+  }
+
+  async regenerateJWTSecret(): Promise<string> {
+    databaseLogger.warn("Regenerating JWT secret - ALL ACTIVE TOKENS WILL BE INVALIDATED", {
+      operation: "jwt_secret_regenerate",
+    });
+
+    const newSecret = await this.generateJWTSecret();
+
+    databaseLogger.success("JWT secret regenerated successfully", {
+      operation: "jwt_secret_regenerated",
+      warning: "All existing JWT tokens are now invalid",
+    });
+
+    return newSecret;
   }
 }
 

@@ -34,6 +34,7 @@ class EncryptionTest {
       },
       { name: "Error Handling", test: () => this.testErrorHandling() },
       { name: "Performance Test", test: () => this.testPerformance() },
+      { name: "JWT Secret Management", test: () => this.testJWTSecretManagement() },
     ];
 
     let passedTests = 0;
@@ -265,6 +266,41 @@ class EncryptionTest {
         "   ⚠️  Warning: Encryption operations are slower than expected",
       );
     }
+  }
+
+  private async testJWTSecretManagement(): Promise<void> {
+    const { EncryptionKeyManager } = await import("./encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+
+    // Test JWT secret generation and retrieval
+    const jwtSecret1 = await keyManager.getJWTSecret();
+    if (!jwtSecret1 || jwtSecret1.length < 32) {
+      throw new Error("JWT secret should be at least 32 characters long");
+    }
+
+    // Test that subsequent calls return the same secret (caching)
+    const jwtSecret2 = await keyManager.getJWTSecret();
+    if (jwtSecret1 !== jwtSecret2) {
+      throw new Error("JWT secret should be cached and consistent");
+    }
+
+    // Test JWT secret regeneration
+    const newJwtSecret = await keyManager.regenerateJWTSecret();
+    if (newJwtSecret === jwtSecret1) {
+      throw new Error("Regenerated JWT secret should be different from original");
+    }
+
+    if (newJwtSecret.length !== 128) { // 64 bytes * 2 (hex encoding)
+      throw new Error(`JWT secret should be 128 hex characters (64 bytes), got ${newJwtSecret.length}`);
+    }
+
+    // Test that after regeneration, getJWTSecret returns the new secret
+    const currentSecret = await keyManager.getJWTSecret();
+    if (currentSecret !== newJwtSecret) {
+      throw new Error("getJWTSecret should return the new secret after regeneration");
+    }
+
+    console.log("   ✅ JWT secret generation, caching, and regeneration working correctly");
   }
 
   static async validateProduction(): Promise<boolean> {

@@ -130,7 +130,7 @@ interface JWTPayload {
 }
 
 // JWT authentication middleware
-function authenticateJWT(req: Request, res: Response, next: NextFunction) {
+async function authenticateJWT(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     authLogger.warn("Missing or invalid Authorization header", {
@@ -143,8 +143,12 @@ function authenticateJWT(req: Request, res: Response, next: NextFunction) {
       .json({ error: "Missing or invalid Authorization header" });
   }
   const token = authHeader.split(" ")[1];
-  const jwtSecret = process.env.JWT_SECRET || "secret";
+
   try {
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
+
     const payload = jwt.verify(token, jwtSecret) as JWTPayload;
     (req as any).userId = payload.userId;
     next();
@@ -693,7 +697,9 @@ router.get("/oidc/callback", async (req, res) => {
 
     const userRecord = user[0];
 
-    const jwtSecret = process.env.JWT_SECRET || "secret";
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
     const token = jwt.sign({ userId: userRecord.id }, jwtSecret, {
       expiresIn: "50d",
     });
@@ -775,7 +781,9 @@ router.post("/login", async (req, res) => {
       });
       return res.status(401).json({ error: "Incorrect password" });
     }
-    const jwtSecret = process.env.JWT_SECRET || "secret";
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
     const token = jwt.sign({ userId: userRecord.id }, jwtSecret, {
       expiresIn: "50d",
     });
@@ -1245,9 +1253,11 @@ router.post("/totp/verify-login", async (req, res) => {
     return res.status(400).json({ error: "Token and TOTP code are required" });
   }
 
-  const jwtSecret = process.env.JWT_SECRET || "secret";
-
   try {
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
+
     const decoded = jwt.verify(temp_token, jwtSecret) as any;
     if (!decoded.pending_totp) {
       return res.status(401).json({ error: "Invalid temporary token" });

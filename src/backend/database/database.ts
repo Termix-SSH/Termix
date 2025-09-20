@@ -398,6 +398,29 @@ app.post("/encryption/regenerate", async (req, res) => {
   }
 });
 
+app.post("/encryption/regenerate-jwt", async (req, res) => {
+  try {
+    const { EncryptionKeyManager } = await import("../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    await keyManager.regenerateJWTSecret();
+
+    apiLogger.warn("JWT secret regenerated via API", {
+      operation: "jwt_secret_regenerate_api",
+    });
+
+    res.json({
+      success: true,
+      message: "New JWT secret generated",
+      warning: "All existing JWT tokens are now invalid - users must re-authenticate",
+    });
+  } catch (error) {
+    apiLogger.error("Failed to regenerate JWT secret", error, {
+      operation: "jwt_secret_regenerate_failed",
+    });
+    res.status(500).json({ error: "Failed to regenerate JWT secret" });
+  }
+});
+
 // Database migration and backup endpoints
 app.post("/database/export", async (req, res) => {
   try {
@@ -689,10 +712,20 @@ async function initializeEncryption() {
         },
       );
     }
+
+    // Initialize JWT secret using the same encryption infrastructure
+    const { EncryptionKeyManager } = await import("../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    await keyManager.getJWTSecret();
+
+    databaseLogger.success("JWT secret initialized successfully", {
+      operation: "jwt_secret_init_complete",
+    });
   } catch (error) {
     databaseLogger.error("Failed to initialize database encryption", error, {
       operation: "encryption_init_error",
     });
+    throw error; // JWT secret is critical for API functionality
   }
 }
 

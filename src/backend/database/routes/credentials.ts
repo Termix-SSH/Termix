@@ -84,7 +84,7 @@ function isNonEmptyString(val: any): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
-function authenticateJWT(req: Request, res: Response, next: NextFunction) {
+async function authenticateJWT(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     authLogger.warn("Missing or invalid Authorization header");
@@ -93,8 +93,12 @@ function authenticateJWT(req: Request, res: Response, next: NextFunction) {
       .json({ error: "Missing or invalid Authorization header" });
   }
   const token = authHeader.split(" ")[1];
-  const jwtSecret = process.env.JWT_SECRET || "secret";
+
   try {
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
+
     const payload = jwt.verify(token, jwtSecret) as JWTPayload;
     (req as any).userId = payload.userId;
     next();
