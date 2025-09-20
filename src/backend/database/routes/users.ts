@@ -218,11 +218,14 @@ router.post("/create", async (req, res) => {
         .get();
       isFirstUser = ((countResult as any)?.count || 0) === 0;
     } catch (e) {
-      isFirstUser = true;
-      authLogger.warn("Failed to check user count, assuming first user", {
+      // SECURITY: Database error - fail secure, don't guess permissions
+      authLogger.error("Database error during user count check - rejecting request", {
         operation: "user_create",
         username,
         error: e,
+      });
+      return res.status(500).json({
+        error: "Database unavailable - cannot create user safely"
       });
     }
 
@@ -664,7 +667,13 @@ router.get("/oidc/callback", async (req, res) => {
           .get();
         isFirstUser = ((countResult as any)?.count || 0) === 0;
       } catch (e) {
-        isFirstUser = true;
+        // SECURITY: Database error during OIDC user creation - fail secure
+        authLogger.error("Database error during OIDC user count check", {
+          operation: "oidc_user_create",
+          oidc_identifier: identifier,
+          error: e,
+        });
+        throw new Error("Database unavailable - cannot create OIDC user safely");
       }
 
       const id = nanoid();
