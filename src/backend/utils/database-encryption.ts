@@ -15,7 +15,7 @@ class DatabaseEncryption {
   static async initialize(config: Partial<EncryptionContext> = {}) {
     const keyManager = EncryptionKeyManager.getInstance();
     const masterPassword =
-      config.masterPassword || (await keyManager.initializeKey());
+      config.masterPassword || (await keyManager.initializeKey(config.masterPassword));
 
     this.context = {
       masterPassword,

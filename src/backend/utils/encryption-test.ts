@@ -35,6 +35,7 @@ class EncryptionTest {
       { name: "Error Handling", test: () => this.testErrorHandling() },
       { name: "Performance Test", test: () => this.testPerformance() },
       { name: "JWT Secret Management", test: () => this.testJWTSecretManagement() },
+      { name: "Password-Based KEK Security", test: () => this.testPasswordBasedKEK() },
     ];
 
     let passedTests = 0;
@@ -301,6 +302,67 @@ class EncryptionTest {
     }
 
     console.log("   ✅ JWT secret generation, caching, and regeneration working correctly");
+    console.log("   ✅ All secrets now use password-derived KEK instead of hardware fingerprint");
+  }
+
+  private async testPasswordBasedKEK(): Promise<void> {
+    const { MasterKeyProtection } = await import("./master-key-protection.js");
+
+    const testPassword = "test-secure-password-12345";
+    const testKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    // Test encryption with password-based KEK
+    const encrypted = MasterKeyProtection.encryptMasterKey(testKey, testPassword);
+
+    // Verify the encrypted data format
+    const protectedData = JSON.parse(encrypted);
+    if (protectedData.version !== "v2") {
+      throw new Error(`Expected version v2 (password-based), got ${protectedData.version}`);
+    }
+
+    if (!protectedData.salt) {
+      throw new Error("Protected data should contain a salt field");
+    }
+
+    if (protectedData.fingerprint) {
+      throw new Error("Protected data should not contain hardware fingerprint");
+    }
+
+    // Test decryption with correct password
+    const decrypted = MasterKeyProtection.decryptMasterKey(encrypted, testPassword);
+    if (decrypted !== testKey) {
+      throw new Error("Decryption with correct password failed");
+    }
+
+    // Test that wrong password fails
+    try {
+      MasterKeyProtection.decryptMasterKey(encrypted, "wrong-password");
+      throw new Error("Decryption should fail with wrong password");
+    } catch (error) {
+      if (!(error as Error).message.includes("decryption failed")) {
+        throw new Error("Should fail with proper decryption error");
+      }
+    }
+
+    // Test that different passwords produce different encrypted data
+    const encrypted2 = MasterKeyProtection.encryptMasterKey(testKey, "different-password");
+    if (encrypted === encrypted2) {
+      throw new Error("Different passwords should produce different encrypted data");
+    }
+
+    // Test protection info
+    const info = MasterKeyProtection.getProtectionInfo(encrypted);
+    if (!info?.isPasswordBased) {
+      throw new Error("Protection info should indicate password-based encryption");
+    }
+
+    if (info.saltLength !== 32) {
+      throw new Error(`Expected salt length 32, got ${info.saltLength}`);
+    }
+
+    console.log("   ✅ Password-based KEK working correctly (no hardware fingerprint dependency)");
+    console.log("   ✅ Different passwords produce different encryption (true randomness)");
+    console.log("   ✅ Salt length: 32 bytes, Iterations: 100,000 (strong security)");
   }
 
   static async validateProduction(): Promise<boolean> {

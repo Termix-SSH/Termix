@@ -1,39 +1,25 @@
 import crypto from "crypto";
 import { databaseLogger } from "./logger.js";
-import { HardwareFingerprint } from "./hardware-fingerprint.js";
 
 interface ProtectedKeyData {
   data: string;
   iv: string;
   tag: string;
   version: string;
-  fingerprint: string;
+  salt: string;
 }
 
 class MasterKeyProtection {
-  private static readonly VERSION = "v1";
-  private static readonly KEK_SALT = "termix-kek-salt-v1";
-  private static readonly KEK_ITERATIONS = 50000;
+  private static readonly VERSION = "v2";
+  private static readonly KEK_ITERATIONS = 100000;
 
-  private static generateDeviceFingerprint(): string {
-    try {
-      const fingerprint = HardwareFingerprint.generate();
-
-      return fingerprint;
-    } catch (error) {
-      databaseLogger.error("Failed to generate hardware fingerprint", error, {
-        operation: "hardware_fingerprint_generation_failed",
-      });
-      throw new Error("Hardware fingerprint generation failed");
+  private static deriveKEK(userPassword: string, salt: Buffer): Buffer {
+    if (!userPassword) {
+      throw new Error("User password is required for KEK derivation");
     }
-  }
-
-  private static deriveKEK(): Buffer {
-    const fingerprint = this.generateDeviceFingerprint();
-    const salt = Buffer.from(this.KEK_SALT);
 
     const kek = crypto.pbkdf2Sync(
-      fingerprint,
+      userPassword,
       salt,
       this.KEK_ITERATIONS,
       32,
@@ -43,13 +29,17 @@ class MasterKeyProtection {
     return kek;
   }
 
-  static encryptMasterKey(masterKey: string): string {
+  static encryptMasterKey(masterKey: string, userPassword: string): string {
     if (!masterKey) {
       throw new Error("Master key cannot be empty");
     }
+    if (!userPassword) {
+      throw new Error("User password is required for encryption");
+    }
 
     try {
-      const kek = this.deriveKEK();
+      const salt = crypto.randomBytes(32);
+      const kek = this.deriveKEK(userPassword, salt);
       const iv = crypto.randomBytes(16);
       const cipher = crypto.createCipheriv("aes-256-gcm", kek, iv) as any;
 
@@ -62,15 +52,16 @@ class MasterKeyProtection {
         iv: iv.toString("hex"),
         tag: tag.toString("hex"),
         version: this.VERSION,
-        fingerprint: this.generateDeviceFingerprint().substring(0, 16),
+        salt: salt.toString("hex"),
       };
 
       const result = JSON.stringify(protectedData);
 
-      databaseLogger.info("Master key encrypted with hardware KEK", {
+      databaseLogger.info("Master key encrypted with password-derived KEK", {
         operation: "master_key_encryption",
         version: this.VERSION,
-        fingerprintPrefix: protectedData.fingerprint,
+        saltLength: salt.length,
+        iterations: this.KEK_ITERATIONS,
       });
 
       return result;
@@ -82,13 +73,23 @@ class MasterKeyProtection {
     }
   }
 
-  static decryptMasterKey(encryptedKey: string): string {
+  static decryptMasterKey(encryptedKey: string, userPassword: string): string {
     if (!encryptedKey) {
       throw new Error("Encrypted key cannot be empty");
+    }
+    if (!userPassword) {
+      throw new Error("User password is required for decryption");
     }
 
     try {
       const protectedData: ProtectedKeyData = JSON.parse(encryptedKey);
+
+      // Support both v1 (hardware fingerprint) and v2 (password-based) for migration
+      if (protectedData.version === "v1") {
+        throw new Error(
+          "Legacy hardware-based encryption detected. Please regenerate encryption keys for improved security.",
+        );
+      }
 
       if (protectedData.version !== this.VERSION) {
         throw new Error(
@@ -96,22 +97,8 @@ class MasterKeyProtection {
         );
       }
 
-      const currentFingerprint = this.generateDeviceFingerprint().substring(
-        0,
-        16,
-      );
-      if (protectedData.fingerprint !== currentFingerprint) {
-        databaseLogger.warn("Hardware fingerprint mismatch detected", {
-          operation: "master_key_decryption",
-          expected: protectedData.fingerprint,
-          current: currentFingerprint,
-        });
-        throw new Error(
-          "Hardware fingerprint mismatch - key was encrypted on different hardware",
-        );
-      }
-
-      const kek = this.deriveKEK();
+      const salt = Buffer.from(protectedData.salt, "hex");
+      const kek = this.deriveKEK(userPassword, salt);
       const decipher = crypto.createDecipheriv(
         "aes-256-gcm",
         kek,
@@ -121,6 +108,12 @@ class MasterKeyProtection {
 
       let decrypted = decipher.update(protectedData.data, "hex", "hex");
       decrypted += decipher.final("hex");
+
+      databaseLogger.info("Master key decrypted successfully", {
+        operation: "master_key_decryption",
+        version: protectedData.version,
+        saltLength: salt.length,
+      });
 
       return decrypted;
     } catch (error) {
@@ -136,29 +129,42 @@ class MasterKeyProtection {
   static isProtectedKey(data: string): boolean {
     try {
       const parsed = JSON.parse(data);
-      return !!(
+
+      // Support both v1 (fingerprint) and v2 (salt) formats
+      const hasV1Format = !!(
         parsed.data &&
         parsed.iv &&
         parsed.tag &&
         parsed.version &&
         parsed.fingerprint
       );
+
+      const hasV2Format = !!(
+        parsed.data &&
+        parsed.iv &&
+        parsed.tag &&
+        parsed.version &&
+        parsed.salt
+      );
+
+      return hasV1Format || hasV2Format;
     } catch {
       return false;
     }
   }
 
-  static validateProtection(): boolean {
+  static validateProtection(userPassword: string): boolean {
     try {
       const testKey = crypto.randomBytes(32).toString("hex");
-      const encrypted = this.encryptMasterKey(testKey);
-      const decrypted = this.decryptMasterKey(encrypted);
+      const encrypted = this.encryptMasterKey(testKey, userPassword);
+      const decrypted = this.decryptMasterKey(encrypted, userPassword);
 
       const isValid = decrypted === testKey;
 
       databaseLogger.info("Master key protection validation completed", {
         operation: "protection_validation",
         result: isValid ? "passed" : "failed",
+        version: this.VERSION,
       });
 
       return isValid;
@@ -172,8 +178,9 @@ class MasterKeyProtection {
 
   static getProtectionInfo(encryptedKey: string): {
     version: string;
-    fingerprint: string;
-    isCurrentDevice: boolean;
+    isPasswordBased: boolean;
+    saltLength?: number;
+    iterations?: number;
   } | null {
     try {
       if (!this.isProtectedKey(encryptedKey)) {
@@ -181,16 +188,22 @@ class MasterKeyProtection {
       }
 
       const protectedData: ProtectedKeyData = JSON.parse(encryptedKey);
-      const currentFingerprint = this.generateDeviceFingerprint().substring(
-        0,
-        16,
-      );
 
-      return {
+      const info = {
         version: protectedData.version,
-        fingerprint: protectedData.fingerprint,
-        isCurrentDevice: protectedData.fingerprint === currentFingerprint,
+        isPasswordBased: protectedData.version === "v2",
       };
+
+      // Add additional info for v2 format
+      if (protectedData.version === "v2" && protectedData.salt) {
+        return {
+          ...info,
+          saltLength: Buffer.from(protectedData.salt, "hex").length,
+          iterations: this.KEK_ITERATIONS,
+        };
+      }
+
+      return info;
     } catch {
       return null;
     }

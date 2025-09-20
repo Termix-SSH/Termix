@@ -17,6 +17,7 @@ class EncryptionKeyManager {
   private currentKey: string | null = null;
   private keyInfo: EncryptionKeyInfo | null = null;
   private jwtSecret: string | null = null;
+  private userPassword: string | null = null;
 
   private constructor() {}
 
@@ -28,16 +29,33 @@ class EncryptionKeyManager {
   }
 
   private encodeKey(key: string): string {
-    return MasterKeyProtection.encryptMasterKey(key);
+    if (!this.userPassword) {
+      throw new Error("User password not set - call initializeKey() first");
+    }
+    return MasterKeyProtection.encryptMasterKey(key, this.userPassword);
   }
 
   private decodeKey(encodedKey: string): string {
+    if (!this.userPassword) {
+      throw new Error("User password not set - call initializeKey() first");
+    }
+
     if (MasterKeyProtection.isProtectedKey(encodedKey)) {
-      return MasterKeyProtection.decryptMasterKey(encodedKey);
+      try {
+        return MasterKeyProtection.decryptMasterKey(encodedKey, this.userPassword);
+      } catch (error) {
+        // If decryption fails, it might be a v1 (hardware-based) key
+        databaseLogger.error("Failed to decrypt protected key", error, {
+          operation: "key_decryption_failed",
+        });
+        throw new Error(
+          "Failed to decrypt encryption key. If this is a legacy installation, please regenerate encryption keys."
+        );
+      }
     }
 
     databaseLogger.warn(
-      "Found legacy base64-encoded key, migrating to KEK protection",
+      "Found legacy base64-encoded key, migrating to password protection",
       {
         operation: "key_migration_legacy",
       },
@@ -46,8 +64,29 @@ class EncryptionKeyManager {
     return buffer.toString("hex");
   }
 
-  async initializeKey(): Promise<string> {
+  async initializeKey(userPassword?: string): Promise<string> {
     try {
+      // Generate a default password if none provided (for backward compatibility)
+      if (!userPassword) {
+        const environmentKey = process.env.DB_ENCRYPTION_KEY;
+        if (environmentKey && environmentKey !== "default-key-change-me") {
+          userPassword = environmentKey;
+          databaseLogger.info("Using encryption key from environment variable as user password", {
+            operation: "key_init",
+            source: "environment",
+          });
+        } else {
+          // Generate a random password for new installations
+          userPassword = crypto.randomBytes(32).toString("hex");
+          databaseLogger.warn("Generated random user password for encryption", {
+            operation: "key_init",
+            generated: true,
+          });
+        }
+      }
+
+      this.userPassword = userPassword;
+
       let existingKey = await this.getStoredKey();
 
       if (existingKey) {
@@ -59,36 +98,9 @@ class EncryptionKeyManager {
         return existingKey;
       }
 
-      const environmentKey = process.env.DB_ENCRYPTION_KEY;
-      if (environmentKey && environmentKey !== "default-key-change-me") {
-        if (!this.validateKeyStrength(environmentKey)) {
-          databaseLogger.error(
-            "Environment encryption key is too weak",
-            undefined,
-            {
-              operation: "key_init",
-              source: "environment",
-              keyLength: environmentKey.length,
-            },
-          );
-          throw new Error(
-            "DB_ENCRYPTION_KEY is too weak. Must be at least 32 characters with good entropy.",
-          );
-        }
-
-        databaseLogger.info("Using encryption key from environment variable", {
-          operation: "key_init",
-          source: "environment",
-        });
-
-        await this.storeKey(environmentKey);
-        this.currentKey = environmentKey;
-        return environmentKey;
-      }
-
       const newKey = await this.generateNewKey();
       databaseLogger.warn(
-        "Generated new encryption key - PLEASE BACKUP THIS KEY",
+        "Generated new encryption key - PLEASE BACKUP YOUR PASSWORD",
         {
           operation: "key_init",
           generated: true,
@@ -330,7 +342,7 @@ class EncryptionKeyManager {
       algorithm: keyInfo.algorithm,
       initialized: this.isInitialized(),
       kekProtected,
-      kekValid: kekProtected ? MasterKeyProtection.validateProtection() : false,
+      kekValid: kekProtected && this.userPassword ? MasterKeyProtection.validateProtection(this.userPassword) : false,
     };
   }
 
