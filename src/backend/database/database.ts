@@ -14,6 +14,8 @@ import { databaseLogger, apiLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
+import { UserDataExport } from "../utils/user-data-export.js";
+import { UserDataImport } from "../utils/user-data-import.js";
 
 const app = express();
 app.use(
@@ -391,52 +393,261 @@ app.post("/encryption/regenerate-jwt", async (req, res) => {
   }
 });
 
-// Database export endpoint - DISABLED in V2 (needs reimplementation)
+// User data export endpoint - V2 KEK-DEK compatible
 app.post("/database/export", async (req, res) => {
-  apiLogger.warn("Database export endpoint called but disabled in current architecture", {
-    operation: "database_export_disabled",
-  });
+  try {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing Authorization header" });
+    }
 
-  res.status(503).json({
-    error: "Database export temporarily disabled during V2 security upgrade",
-    message: "This feature will be reimplemented with proper user-level encryption support",
-  });
+    const token = authHeader.split(" ")[1];
+    const authManager = AuthManager.getInstance();
+    const payload = await authManager.verifyJWTToken(token);
+
+    if (!payload) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const userId = payload.userId;
+    const { format = 'encrypted', scope = 'user_data', includeCredentials = true, password } = req.body;
+
+    // 对于明文导出，需要解锁用户数据
+    if (format === 'plaintext') {
+      if (!password) {
+        return res.status(400).json({
+          error: "Password required for plaintext export",
+          code: "PASSWORD_REQUIRED"
+        });
+      }
+
+      const unlocked = await authManager.authenticateUser(userId, password);
+      if (!unlocked) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+    }
+
+    apiLogger.info("Exporting user data", {
+      operation: "user_data_export_api",
+      userId,
+      format,
+      scope,
+      includeCredentials,
+    });
+
+    const exportData = await UserDataExport.exportUserData(userId, {
+      format,
+      scope,
+      includeCredentials,
+    });
+
+    // 生成导出文件名
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `termix-export-${exportData.username}-${timestamp}.json`;
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.json(exportData);
+
+    apiLogger.success("User data exported successfully", {
+      operation: "user_data_export_api_success",
+      userId,
+      totalRecords: exportData.metadata.totalRecords,
+      format,
+    });
+  } catch (error) {
+    apiLogger.error("User data export failed", error, {
+      operation: "user_data_export_api_failed",
+    });
+    res.status(500).json({
+      error: "Failed to export user data",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 });
 
-// Database import endpoint - DISABLED (needs reimplementation with user-level encryption)
+// User data import endpoint - V2 KEK-DEK compatible
 app.post("/database/import", upload.single("file"), async (req, res) => {
-  // Clean up uploaded file if it exists
-  if (req.file?.path) {
+  try {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader?.startsWith("Bearer ")) {
+      // Clean up uploaded file
+      if (req.file?.path) {
+        try { fs.unlinkSync(req.file.path); } catch {}
+      }
+      return res.status(401).json({ error: "Missing Authorization header" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const authManager = AuthManager.getInstance();
+    const payload = await authManager.verifyJWTToken(token);
+
+    if (!payload) {
+      // Clean up uploaded file
+      if (req.file?.path) {
+        try { fs.unlinkSync(req.file.path); } catch {}
+      }
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const userId = payload.userId;
+    const { replaceExisting = false, skipCredentials = false, skipFileManagerData = false, dryRun = false, password } = req.body;
+
+    apiLogger.info("Importing user data", {
+      operation: "user_data_import_api",
+      userId,
+      filename: req.file.originalname,
+      replaceExisting,
+      skipCredentials,
+      skipFileManagerData,
+      dryRun,
+    });
+
+    // 读取上传的文件
+    const fileContent = fs.readFileSync(req.file.path, 'utf8');
+
+    // 清理上传的临时文件
     try {
       fs.unlinkSync(req.file.path);
     } catch (cleanupError) {
-      apiLogger.warn("Failed to clean up uploaded file during disabled endpoint call", {
-        operation: "file_cleanup_disabled_endpoint",
+      apiLogger.warn("Failed to clean up uploaded file", {
+        operation: "file_cleanup_warning",
         filePath: req.file.path,
       });
     }
+
+    // 解析导入数据
+    let importData;
+    try {
+      importData = JSON.parse(fileContent);
+    } catch (parseError) {
+      return res.status(400).json({ error: "Invalid JSON format in uploaded file" });
+    }
+
+    // 如果导入数据是加密的，需要解锁用户数据
+    if (importData.metadata?.encrypted) {
+      if (!password) {
+        return res.status(400).json({
+          error: "Password required for encrypted import",
+          code: "PASSWORD_REQUIRED"
+        });
+      }
+
+      const unlocked = await authManager.authenticateUser(userId, password);
+      if (!unlocked) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+    }
+
+    // 执行导入
+    const result = await UserDataImport.importUserData(userId, importData, {
+      replaceExisting: replaceExisting === 'true' || replaceExisting === true,
+      skipCredentials: skipCredentials === 'true' || skipCredentials === true,
+      skipFileManagerData: skipFileManagerData === 'true' || skipFileManagerData === true,
+      dryRun: dryRun === 'true' || dryRun === true,
+    });
+
+    if (result.success) {
+      apiLogger.success("User data imported successfully", {
+        operation: "user_data_import_api_success",
+        userId,
+        ...result.summary,
+      });
+      res.json({
+        success: true,
+        message: dryRun ? "Import validation completed" : "Data imported successfully",
+        summary: result.summary,
+        dryRun: result.dryRun,
+      });
+    } else {
+      apiLogger.warn("User data import completed with errors", {
+        operation: "user_data_import_api_partial",
+        userId,
+        errors: result.summary.errors,
+      });
+      res.status(207).json({
+        success: false,
+        message: "Import completed with errors",
+        summary: result.summary,
+        dryRun: result.dryRun,
+      });
+    }
+  } catch (error) {
+    // Clean up uploaded file on error
+    if (req.file?.path) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+    }
+
+    apiLogger.error("User data import failed", error, {
+      operation: "user_data_import_api_failed",
+    });
+    res.status(500).json({
+      error: "Failed to import user data",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
   }
-
-  apiLogger.warn("Database import endpoint called but disabled in current architecture", {
-    operation: "database_import_disabled",
-  });
-
-  res.status(503).json({
-    error: "Database import temporarily disabled during security upgrade",
-    message: "This feature will be reimplemented with proper user-level encryption support",
-  });
 });
 
-// Database export info endpoint - DISABLED (needs reimplementation with user-level encryption)
-app.get("/database/export/:exportPath/info", async (req, res) => {
-  apiLogger.warn("Database export info endpoint called but disabled in current architecture", {
-    operation: "database_export_info_disabled",
-  });
+// Export preview endpoint - validate export data without downloading
+app.post("/database/export/preview", async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing Authorization header" });
+    }
 
-  res.status(503).json({
-    error: "Database export info temporarily disabled during V2 security upgrade",
-    message: "This feature will be reimplemented with proper user-level encryption support",
-  });
+    const token = authHeader.split(" ")[1];
+    const authManager = AuthManager.getInstance();
+    const payload = await authManager.verifyJWTToken(token);
+
+    if (!payload) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const userId = payload.userId;
+    const { format = 'encrypted', scope = 'user_data', includeCredentials = true } = req.body;
+
+    apiLogger.info("Generating export preview", {
+      operation: "export_preview_api",
+      userId,
+      format,
+      scope,
+      includeCredentials,
+    });
+
+    // 生成导出数据但不解密敏感字段
+    const exportData = await UserDataExport.exportUserData(userId, {
+      format: 'encrypted', // 始终加密预览
+      scope,
+      includeCredentials,
+    });
+
+    const stats = UserDataExport.getExportStats(exportData);
+
+    res.json({
+      preview: true,
+      stats,
+      estimatedSize: JSON.stringify(exportData).length,
+    });
+
+    apiLogger.success("Export preview generated", {
+      operation: "export_preview_api_success",
+      userId,
+      totalRecords: stats.totalRecords,
+    });
+  } catch (error) {
+    apiLogger.error("Export preview failed", error, {
+      operation: "export_preview_api_failed",
+    });
+    res.status(500).json({
+      error: "Failed to generate export preview",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 });
 
 app.post("/database/backup", async (req, res) => {

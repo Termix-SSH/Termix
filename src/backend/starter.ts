@@ -15,8 +15,62 @@ import "dotenv/config";
       version: version,
     });
 
+    // 生产环境安全检查
+    if (process.env.NODE_ENV === 'production') {
+      systemLogger.info("Running production environment security checks...", {
+        operation: "security_checks",
+      });
+
+      const securityIssues: string[] = [];
+
+      // 检查系统主密钥
+      if (!process.env.SYSTEM_MASTER_KEY) {
+        securityIssues.push("SYSTEM_MASTER_KEY environment variable is required in production");
+      } else if (process.env.SYSTEM_MASTER_KEY.length < 64) {
+        securityIssues.push("SYSTEM_MASTER_KEY should be at least 64 characters in production");
+      }
+
+      // 检查数据库文件加密
+      if (process.env.DB_FILE_ENCRYPTION === 'false') {
+        securityIssues.push("Database file encryption should be enabled in production");
+      }
+
+      // 检查JWT移密
+      if (!process.env.JWT_SECRET) {
+        systemLogger.info("JWT_SECRET not set - will use encrypted storage", {
+          operation: "security_checks",
+          note: "Using encrypted JWT storage"
+        });
+      }
+
+      // 检查CORS配置警告
+      systemLogger.warn("Production deployment detected - ensure CORS is properly configured", {
+        operation: "security_checks",
+        warning: "Verify frontend domain whitelist"
+      });
+
+      if (securityIssues.length > 0) {
+        systemLogger.error("SECURITY ISSUES DETECTED IN PRODUCTION:", {
+          operation: "security_checks_failed",
+          issues: securityIssues,
+        });
+        for (const issue of securityIssues) {
+          systemLogger.error(`- ${issue}`, { operation: "security_issue" });
+        }
+        systemLogger.error("Fix these issues before running in production!", {
+          operation: "security_checks_failed",
+        });
+        process.exit(1);
+      }
+
+      systemLogger.success("Production security checks passed", {
+        operation: "security_checks_complete",
+      });
+    }
+
     systemLogger.info("Initializing backend services...", {
       operation: "startup",
+      environment: process.env.NODE_ENV || "development",
     });
 
     // Initialize simplified authentication system
