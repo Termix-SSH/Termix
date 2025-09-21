@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { databaseLogger } from "../../utils/logger.js";
 import { DatabaseFileEncryption } from "../../utils/database-file-encryption.js";
+import { SystemCrypto } from "../../utils/system-crypto.js";
 
 const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
@@ -25,105 +26,116 @@ const encryptedDbPath = `${dbPath}.encrypted`;
 let actualDbPath = ":memory:"; // Always use memory database
 let memoryDatabase: Database.Database;
 let isNewDatabase = false;
+let sqlite: Database.Database; // Module-level sqlite instance
 
-if (enableFileEncryption) {
-  try {
-    // Check if encrypted database exists
-    if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
-      databaseLogger.info(
-        "Found encrypted database file, loading into memory...",
-        {
-          operation: "db_memory_load",
-          encryptedPath: encryptedDbPath,
-        },
-      );
+// Async initialization function to handle SystemCrypto and DatabaseFileEncryption
+async function initializeDatabaseAsync(): Promise<void> {
+  // Initialize SystemCrypto database key first
+  const systemCrypto = SystemCrypto.getInstance();
+  await systemCrypto.initializeDatabaseKey();
 
-      // Hardware compatibility check removed - using fixed seed encryption
+  if (enableFileEncryption) {
+    try {
+      // Check if encrypted database exists
+      if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
+        databaseLogger.info(
+          "Found encrypted database file, loading into memory...",
+          {
+            operation: "db_memory_load",
+            encryptedPath: encryptedDbPath,
+          },
+        );
 
-      // Decrypt database content to memory buffer
-      const decryptedBuffer =
-        DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
+        // Decrypt database content to memory buffer (now async)
+        const decryptedBuffer =
+          await DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
 
-      // Create in-memory database from decrypted buffer
-      memoryDatabase = new Database(decryptedBuffer);
-    } else {
-      memoryDatabase = new Database(":memory:");
-      isNewDatabase = true;
+        // Create in-memory database from decrypted buffer
+        memoryDatabase = new Database(decryptedBuffer);
+      } else {
+        memoryDatabase = new Database(":memory:");
+        isNewDatabase = true;
 
-      // Check if there's an old unencrypted database to migrate
-      if (fs.existsSync(dbPath)) {
-        // Load old database and copy its content to memory database
-        const oldDb = new Database(dbPath, { readonly: true });
+        // Check if there's an old unencrypted database to migrate
+        if (fs.existsSync(dbPath)) {
+          // Load old database and copy its content to memory database
+          const oldDb = new Database(dbPath, { readonly: true });
 
-        // Get all table schemas and data from old database
-        const tables = oldDb
-          .prepare(
-            `
-          SELECT name, sql FROM sqlite_master
-          WHERE type='table' AND name NOT LIKE 'sqlite_%'
-        `,
-          )
-          .all() as { name: string; sql: string }[];
+          // Get all table schemas and data from old database
+          const tables = oldDb
+            .prepare(
+              `
+            SELECT name, sql FROM sqlite_master
+            WHERE type='table' AND name NOT LIKE 'sqlite_%'
+          `,
+            )
+            .all() as { name: string; sql: string }[];
 
-        // Create tables in memory database
-        for (const table of tables) {
-          memoryDatabase.exec(table.sql);
-        }
+          // Create tables in memory database
+          for (const table of tables) {
+            memoryDatabase.exec(table.sql);
+          }
 
-        // Copy data for each table
-        for (const table of tables) {
-          const rows = oldDb.prepare(`SELECT * FROM ${table.name}`).all();
-          if (rows.length > 0) {
-            const columns = Object.keys(rows[0]);
-            const placeholders = columns.map(() => "?").join(", ");
-            const insertStmt = memoryDatabase.prepare(
-              `INSERT INTO ${table.name} (${columns.join(", ")}) VALUES (${placeholders})`,
-            );
+          // Copy data for each table
+          for (const table of tables) {
+            const rows = oldDb.prepare(`SELECT * FROM ${table.name}`).all();
+            if (rows.length > 0) {
+              const columns = Object.keys(rows[0]);
+              const placeholders = columns.map(() => "?").join(", ");
+              const insertStmt = memoryDatabase.prepare(
+                `INSERT INTO ${table.name} (${columns.join(", ")}) VALUES (${placeholders})`,
+              );
 
-            for (const row of rows) {
-              const values = columns.map((col) => (row as any)[col]);
-              insertStmt.run(values);
+              for (const row of rows) {
+                const values = columns.map((col) => (row as any)[col]);
+                insertStmt.run(values);
+              }
             }
           }
+
+          oldDb.close();
+
+          isNewDatabase = false;
         }
-
-        oldDb.close();
-
-        isNewDatabase = false;
-      } else {
       }
-    }
-  } catch (error) {
-    databaseLogger.error("Failed to initialize memory database", error, {
-      operation: "db_memory_init_failed",
-    });
+    } catch (error) {
+      databaseLogger.error("Failed to initialize memory database", error, {
+        operation: "db_memory_init_failed",
+      });
 
-    // If file encryption is critical, fail fast
-    if (process.env.DB_FILE_ENCRYPTION_REQUIRED === "true") {
-      throw error;
-    }
+      // If file encryption is critical, fail fast
+      if (process.env.DB_FILE_ENCRYPTION_REQUIRED === "true") {
+        throw error;
+      }
 
+      memoryDatabase = new Database(":memory:");
+      isNewDatabase = true;
+    }
+  } else {
     memoryDatabase = new Database(":memory:");
     isNewDatabase = true;
   }
-} else {
-  memoryDatabase = new Database(":memory:");
-  isNewDatabase = true;
 }
 
-databaseLogger.info(`Initializing SQLite database`, {
-  operation: "db_init",
-  path: actualDbPath,
-  encrypted:
-    enableFileEncryption &&
-    DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
-  inMemory: true,
-  isNewDatabase,
-});
+// Main async initialization function that combines database setup with schema creation
+async function initializeCompleteDatabase(): Promise<void> {
+  // First initialize the database and SystemCrypto
+  await initializeDatabaseAsync();
 
-const sqlite = memoryDatabase;
+  databaseLogger.info(`Initializing SQLite database`, {
+    operation: "db_init",
+    path: actualDbPath,
+    encrypted:
+      enableFileEncryption &&
+      DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
+    inMemory: true,
+    isNewDatabase,
+  });
 
-sqlite.exec(`
+  // Create module-level sqlite instance after database is initialized
+  sqlite = memoryDatabase;
+
+  sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -243,6 +255,33 @@ sqlite.exec(`
         FOREIGN KEY (user_id) REFERENCES users (id)
     );
 `);
+
+  // Run schema migrations
+  migrateSchema();
+
+  // Initialize default settings
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
+      .get();
+    if (!row) {
+      databaseLogger.info("Initializing default settings", {
+        operation: "db_init",
+        setting: "allow_registration",
+      });
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')",
+        )
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize default settings", {
+      operation: "db_init",
+      error: e,
+    });
+  }
+}
 
 const addColumnIfNotExists = (
   table: string,
@@ -366,33 +405,6 @@ const migrateSchema = () => {
   });
 };
 
-const initializeDatabase = async (): Promise<void> => {
-  migrateSchema();
-
-  try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
-      .get();
-    if (!row) {
-      databaseLogger.info("Initializing default settings", {
-        operation: "db_init",
-        setting: "allow_registration",
-      });
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')",
-        )
-        .run();
-    } else {
-    }
-  } catch (e) {
-    databaseLogger.warn("Could not initialize default settings", {
-      operation: "db_init",
-      error: e,
-    });
-  }
-};
-
 // Function to save in-memory database to encrypted file
 async function saveMemoryDatabaseToFile() {
   if (!memoryDatabase || !enableFileEncryption) return;
@@ -401,8 +413,8 @@ async function saveMemoryDatabaseToFile() {
     // Export in-memory database to buffer
     const buffer = memoryDatabase.serialize();
 
-    // Encrypt and save to file
-    DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, encryptedDbPath);
+    // Encrypt and save to file (now async)
+    await DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, encryptedDbPath);
 
     databaseLogger.debug("In-memory database saved to encrypted file", {
       operation: "memory_db_save",
@@ -498,7 +510,7 @@ async function handlePostInitFileEncryption() {
   }
 }
 
-initializeDatabase()
+initializeCompleteDatabase()
   .then(() => handlePostInitFileEncryption())
   .catch((error) => {
     databaseLogger.error("Failed to initialize database", error, {

@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
 
 /**
- * SystemCrypto - Open source friendly JWT key management
+ * SystemCrypto - Open source friendly system key management
  *
  * Linus principles:
  * - Remove complex "system master key" layer - doesn't solve real threats
@@ -18,10 +18,13 @@ import { databaseLogger } from "./logger.js";
 class SystemCrypto {
   private static instance: SystemCrypto;
   private jwtSecret: string | null = null;
+  private databaseKey: Buffer | null = null;
 
   // Storage path configuration
   private static readonly JWT_SECRET_FILE = path.join(process.cwd(), '.termix', 'jwt.key');
   private static readonly JWT_SECRET_DB_KEY = 'system_jwt_secret';
+  private static readonly DATABASE_KEY_FILE = path.join(process.cwd(), '.termix', 'db.key');
+  private static readonly DATABASE_KEY_DB_KEY = 'system_database_key';
 
   private constructor() {}
 
@@ -93,6 +96,58 @@ class SystemCrypto {
       await this.initializeJWTSecret();
     }
     return this.jwtSecret!;
+  }
+
+  /**
+   * Initialize database encryption key - same pattern as JWT but for database file encryption
+   */
+  async initializeDatabaseKey(): Promise<void> {
+    try {
+      databaseLogger.info("Initializing database encryption key", {
+        operation: "db_key_init",
+      });
+
+      // 1. Environment variable priority (production best practice)
+      const envKey = process.env.DATABASE_KEY;
+      if (envKey && envKey.length >= 64) {
+        this.databaseKey = Buffer.from(envKey, 'hex');
+        databaseLogger.info("✅ Using database key from environment variable", {
+          operation: "db_key_env_loaded",
+          source: "environment"
+        });
+        return;
+      }
+
+      // 2. Check filesystem storage
+      const fileKey = await this.loadDatabaseKeyFromFile();
+      if (fileKey) {
+        this.databaseKey = fileKey;
+        databaseLogger.info("✅ Loaded database key from file", {
+          operation: "db_key_file_loaded",
+          source: "file"
+        });
+        return;
+      }
+
+      // 3. Generate new key and persist (NO database storage to avoid circular dependency)
+      await this.generateAndStoreDatabaseKey();
+
+    } catch (error) {
+      databaseLogger.error("Failed to initialize database key", error, {
+        operation: "db_key_init_failed",
+      });
+      throw new Error("Database key initialization failed");
+    }
+  }
+
+  /**
+   * Get database encryption key
+   */
+  async getDatabaseKey(): Promise<Buffer> {
+    if (!this.databaseKey) {
+      await this.initializeDatabaseKey();
+    }
+    return this.databaseKey!;
   }
 
   /**
@@ -168,7 +223,77 @@ class SystemCrypto {
     return null;
   }
 
-  // ===== Database storage methods =====
+  // ===== Database key generation and storage methods =====
+
+  /**
+   * Generate new database key and persist to file storage only
+   * (avoid circular dependency with database)
+   */
+  private async generateAndStoreDatabaseKey(): Promise<void> {
+    const newKey = crypto.randomBytes(32); // 256-bit key for AES-256
+    const instanceId = crypto.randomBytes(8).toString('hex');
+
+    databaseLogger.info("🔑 Generating new database encryption key for this Termix instance", {
+      operation: "db_key_generate",
+      instanceId
+    });
+
+    // Only try file storage (no database storage to avoid circular dependency)
+    try {
+      await this.saveDatabaseKeyToFile(newKey);
+      databaseLogger.info("✅ Database key saved to file", {
+        operation: "db_key_file_saved",
+        path: SystemCrypto.DATABASE_KEY_FILE
+      });
+    } catch (fileError) {
+      databaseLogger.error("❌ Failed to save database key to file", {
+        operation: "db_key_file_save_failed",
+        error: fileError instanceof Error ? fileError.message : "Unknown error",
+        note: "Database encryption cannot work without persistent key storage"
+      });
+      throw new Error("Database key file storage is required for database encryption");
+    }
+
+    this.databaseKey = newKey;
+
+    databaseLogger.success("🔐 This Termix instance now has a unique database encryption key", {
+      operation: "db_key_generated_success",
+      instanceId,
+      note: "Database file is now encrypted at rest"
+    });
+  }
+
+  /**
+   * Save database key to file (binary format)
+   */
+  private async saveDatabaseKeyToFile(key: Buffer): Promise<void> {
+    const dir = path.dirname(SystemCrypto.DATABASE_KEY_FILE);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(SystemCrypto.DATABASE_KEY_FILE, key.toString('hex'), {
+      mode: 0o600 // Only owner can read/write
+    });
+  }
+
+  /**
+   * Load database key from file
+   */
+  private async loadDatabaseKeyFromFile(): Promise<Buffer | null> {
+    try {
+      const keyHex = await fs.readFile(SystemCrypto.DATABASE_KEY_FILE, 'utf8');
+      if (keyHex.trim().length >= 64) { // 32 bytes = 64 hex chars
+        return Buffer.from(keyHex.trim(), 'hex');
+      }
+      databaseLogger.warn("Database key file exists but too short", {
+        operation: "db_key_file_invalid",
+        length: keyHex.length
+      });
+    } catch (error) {
+      // File doesn't exist or can't be read, this is normal
+    }
+    return null;
+  }
+
+  // ===== JWT Database storage methods =====
 
   /**
    * Save key to database (plaintext storage, don't pretend encryption helps)

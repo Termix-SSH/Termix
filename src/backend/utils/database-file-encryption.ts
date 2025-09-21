@@ -2,54 +2,44 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
+import { SystemCrypto } from "./system-crypto.js";
 
 interface EncryptedFileMetadata {
   iv: string;
   tag: string;
   version: string;
   fingerprint: string;
-  salt: string;
   algorithm: string;
+  keySource?: string; // Track where the key comes from (SystemCrypto) - v2 only
+  salt?: string; // Legacy v1 format only
 }
 
 /**
  * Database file encryption - encrypts the entire SQLite database file at rest
- * This provides an additional security layer on top of field-level encryption
+ * Uses SystemCrypto for key management - no more fixed seed garbage!
+ *
+ * Linus principles applied:
+ * - Remove hardcoded keys security disaster
+ * - Use SystemCrypto instance keys for proper per-instance security
+ * - Simple and direct, no complex key derivation
  */
 class DatabaseFileEncryption {
-  private static readonly VERSION = "v1";
+  private static readonly VERSION = "v2";
   private static readonly ALGORITHM = "aes-256-gcm";
-  private static readonly KEY_ITERATIONS = 100000;
   private static readonly ENCRYPTED_FILE_SUFFIX = ".encrypted";
   private static readonly METADATA_FILE_SUFFIX = ".meta";
-
-  /**
-   * Generate file encryption key from fixed seed (no hardware dependency)
-   */
-  private static generateFileEncryptionKey(salt: Buffer): Buffer {
-    // Use fixed seed for file encryption - simpler and more reliable than hardware fingerprint
-    const fixedSeed = process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
-
-    const key = crypto.pbkdf2Sync(
-      fixedSeed,
-      salt,
-      this.KEY_ITERATIONS,
-      32, // 256 bits for AES-256
-      "sha256",
-    );
-
-    return key;
-  }
+  private static systemCrypto = SystemCrypto.getInstance();
 
   /**
    * Encrypt database from buffer (for in-memory databases)
    */
-  static encryptDatabaseFromBuffer(buffer: Buffer, targetPath: string): string {
+  static async encryptDatabaseFromBuffer(buffer: Buffer, targetPath: string): Promise<string> {
     try {
+      // Get database key from SystemCrypto (no more fixed seed garbage!)
+      const key = await this.systemCrypto.getDatabaseKey();
+
       // Generate encryption components
-      const salt = crypto.randomBytes(32);
       const iv = crypto.randomBytes(16);
-      const key = this.generateFileEncryptionKey(salt);
 
       // Encrypt the buffer
       const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv) as any;
@@ -61,9 +51,9 @@ class DatabaseFileEncryption {
         iv: iv.toString("hex"),
         tag: tag.toString("hex"),
         version: this.VERSION,
-        fingerprint: "termix-v1-file", // Fixed identifier instead of hardware fingerprint
-        salt: salt.toString("hex"),
+        fingerprint: "termix-v2-systemcrypto", // SystemCrypto managed key
         algorithm: this.ALGORITHM,
+        keySource: "SystemCrypto",
       };
 
       // Write encrypted file and metadata
@@ -86,7 +76,7 @@ class DatabaseFileEncryption {
   /**
    * Encrypt database file
    */
-  static encryptDatabaseFile(sourcePath: string, targetPath?: string): string {
+  static async encryptDatabaseFile(sourcePath: string, targetPath?: string): Promise<string> {
     if (!fs.existsSync(sourcePath)) {
       throw new Error(`Source database file does not exist: ${sourcePath}`);
     }
@@ -99,10 +89,11 @@ class DatabaseFileEncryption {
       // Read source file
       const sourceData = fs.readFileSync(sourcePath);
 
+      // Get database key from SystemCrypto (no more fixed seed garbage!)
+      const key = await this.systemCrypto.getDatabaseKey();
+
       // Generate encryption components
-      const salt = crypto.randomBytes(32);
       const iv = crypto.randomBytes(16);
-      const key = this.generateFileEncryptionKey(salt);
 
       // Encrypt the file
       const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv) as any;
@@ -117,9 +108,9 @@ class DatabaseFileEncryption {
         iv: iv.toString("hex"),
         tag: tag.toString("hex"),
         version: this.VERSION,
-        fingerprint: "termix-v1-file", // Fixed identifier instead of hardware fingerprint
-        salt: salt.toString("hex"),
+        fingerprint: "termix-v2-systemcrypto", // SystemCrypto managed key
         algorithm: this.ALGORITHM,
+        keySource: "SystemCrypto",
       };
 
       // Write encrypted file and metadata
@@ -151,7 +142,7 @@ class DatabaseFileEncryption {
   /**
    * Decrypt database file to buffer (for in-memory usage)
    */
-  static decryptDatabaseToBuffer(encryptedPath: string): Buffer {
+  static async decryptDatabaseToBuffer(encryptedPath: string): Promise<Buffer> {
     if (!fs.existsSync(encryptedPath)) {
       throw new Error(
         `Encrypted database file does not exist: ${encryptedPath}`,
@@ -168,19 +159,29 @@ class DatabaseFileEncryption {
       const metadataContent = fs.readFileSync(metadataPath, "utf8");
       const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
 
-      // Validate metadata version
-      if (metadata.version !== this.VERSION) {
-        throw new Error(`Unsupported encryption version: ${metadata.version}`);
-      }
-
-      // Hardware fingerprint validation removed - no longer required
-
       // Read encrypted data
       const encryptedData = fs.readFileSync(encryptedPath);
 
-      // Generate decryption key
-      const salt = Buffer.from(metadata.salt, "hex");
-      const key = this.generateFileEncryptionKey(salt);
+      // Get decryption key based on version
+      let key: Buffer;
+      if (metadata.version === "v2") {
+        // New v2 format: use SystemCrypto key
+        key = await this.systemCrypto.getDatabaseKey();
+      } else if (metadata.version === "v1") {
+        // Legacy v1 format: use deprecated salt-based key derivation
+        databaseLogger.warn("Decrypting legacy v1 encrypted database - consider upgrading", {
+          operation: "decrypt_legacy_v1",
+          path: encryptedPath
+        });
+        if (!metadata.salt) {
+          throw new Error("v1 encrypted file missing required salt field");
+        }
+        const salt = Buffer.from(metadata.salt, "hex");
+        const fixedSeed = process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
+        key = crypto.pbkdf2Sync(fixedSeed, salt, 100000, 32, "sha256");
+      } else {
+        throw new Error(`Unsupported encryption version: ${metadata.version}`);
+      }
 
       // Decrypt to buffer
       const decipher = crypto.createDecipheriv(
@@ -210,10 +211,10 @@ class DatabaseFileEncryption {
   /**
    * Decrypt database file
    */
-  static decryptDatabaseFile(
+  static async decryptDatabaseFile(
     encryptedPath: string,
     targetPath?: string,
-  ): string {
+  ): Promise<string> {
     if (!fs.existsSync(encryptedPath)) {
       throw new Error(
         `Encrypted database file does not exist: ${encryptedPath}`,
@@ -233,19 +234,29 @@ class DatabaseFileEncryption {
       const metadataContent = fs.readFileSync(metadataPath, "utf8");
       const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
 
-      // Validate metadata version
-      if (metadata.version !== this.VERSION) {
-        throw new Error(`Unsupported encryption version: ${metadata.version}`);
-      }
-
-      // Hardware fingerprint validation removed - no longer required
-
       // Read encrypted data
       const encryptedData = fs.readFileSync(encryptedPath);
 
-      // Generate decryption key
-      const salt = Buffer.from(metadata.salt, "hex");
-      const key = this.generateFileEncryptionKey(salt);
+      // Get decryption key based on version
+      let key: Buffer;
+      if (metadata.version === "v2") {
+        // New v2 format: use SystemCrypto key
+        key = await this.systemCrypto.getDatabaseKey();
+      } else if (metadata.version === "v1") {
+        // Legacy v1 format: use deprecated salt-based key derivation
+        databaseLogger.warn("Decrypting legacy v1 encrypted database - consider upgrading", {
+          operation: "decrypt_legacy_v1",
+          path: encryptedPath
+        });
+        if (!metadata.salt) {
+          throw new Error("v1 encrypted file missing required salt field");
+        }
+        const salt = Buffer.from(metadata.salt, "hex");
+        const fixedSeed = process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
+        key = crypto.pbkdf2Sync(fixedSeed, salt, 100000, 32, "sha256");
+      } else {
+        throw new Error(`Unsupported encryption version: ${metadata.version}`);
+      }
 
       // Decrypt the file
       const decipher = crypto.createDecipheriv(
@@ -344,10 +355,10 @@ class DatabaseFileEncryption {
   /**
    * Securely backup database by creating encrypted copy
    */
-  static createEncryptedBackup(
+  static async createEncryptedBackup(
     databasePath: string,
     backupDir: string,
-  ): string {
+  ): Promise<string> {
     if (!fs.existsSync(databasePath)) {
       throw new Error(`Database file does not exist: ${databasePath}`);
     }
@@ -363,7 +374,7 @@ class DatabaseFileEncryption {
     const backupPath = path.join(backupDir, backupFileName);
 
     try {
-      const encryptedPath = this.encryptDatabaseFile(databasePath, backupPath);
+      const encryptedPath = await this.encryptDatabaseFile(databasePath, backupPath);
 
       databaseLogger.info("Encrypted database backup created", {
         operation: "database_backup",
@@ -386,16 +397,16 @@ class DatabaseFileEncryption {
   /**
    * Restore database from encrypted backup
    */
-  static restoreFromEncryptedBackup(
+  static async restoreFromEncryptedBackup(
     backupPath: string,
     targetPath: string,
-  ): string {
+  ): Promise<string> {
     if (!this.isEncryptedDatabaseFile(backupPath)) {
       throw new Error("Invalid encrypted backup file");
     }
 
     try {
-      const restoredPath = this.decryptDatabaseFile(backupPath, targetPath);
+      const restoredPath = await this.decryptDatabaseFile(backupPath, targetPath);
 
       databaseLogger.info("Database restored from encrypted backup", {
         operation: "database_restore",

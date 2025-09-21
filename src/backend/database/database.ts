@@ -679,7 +679,7 @@ app.post("/database/backup", async (req, res) => {
     const backupPath = path.join(backupDir, backupFileName);
 
     // Create encrypted backup directly from memory buffer
-    DatabaseFileEncryption.encryptDatabaseFromBuffer(dbBuffer, backupPath);
+    await DatabaseFileEncryption.encryptDatabaseFromBuffer(dbBuffer, backupPath);
 
     res.json({
       success: true,
@@ -718,7 +718,7 @@ app.post("/database/restore", async (req, res) => {
 
     // Hardware compatibility check removed - no longer required
 
-    const restoredPath = DatabaseFileEncryption.restoreFromEncryptedBackup(
+    const restoredPath = await DatabaseFileEncryption.restoreFromEncryptedBackup(
       backupPath,
       targetPath,
     );
