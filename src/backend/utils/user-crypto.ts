@@ -337,33 +337,61 @@ class UserCrypto {
     return decrypted;
   }
 
-  // 数据库操作方法（简化实现）
+  // 数据库操作方法
   private async storeKEKSalt(userId: string, kekSalt: KEKSalt): Promise<void> {
-    // 实现省略，与原版本相同
+    const key = `user_kek_salt_${userId}`;
+    const value = JSON.stringify(kekSalt);
+
+    const existing = await db.select().from(settings).where(eq(settings.key, key));
+
+    if (existing.length > 0) {
+      await db.update(settings).set({ value }).where(eq(settings.key, key));
+    } else {
+      await db.insert(settings).values({ key, value });
+    }
   }
 
   private async getKEKSalt(userId: string): Promise<KEKSalt | null> {
-    // 实现省略，与原版本相同
-    return null;
-  }
+    try {
+      const key = `user_kek_salt_${userId}`;
+      const result = await db.select().from(settings).where(eq(settings.key, key));
 
-  private getKEKSaltSync(userId: string): KEKSalt | null {
-    // 同步版本，用于just-in-time推导
-    return null;
+      if (result.length === 0) {
+        return null;
+      }
+
+      return JSON.parse(result[0].value);
+    } catch (error) {
+      return null;
+    }
   }
 
   private async storeEncryptedDEK(userId: string, encryptedDEK: EncryptedDEK): Promise<void> {
-    // 实现省略，与原版本相同
+    const key = `user_encrypted_dek_${userId}`;
+    const value = JSON.stringify(encryptedDEK);
+
+    const existing = await db.select().from(settings).where(eq(settings.key, key));
+
+    if (existing.length > 0) {
+      await db.update(settings).set({ value }).where(eq(settings.key, key));
+    } else {
+      await db.insert(settings).values({ key, value });
+    }
   }
 
   private async getEncryptedDEK(userId: string): Promise<EncryptedDEK | null> {
-    // 实现省略，与原版本相同
-    return null;
-  }
+    try {
+      const key = `user_encrypted_dek_${userId}`;
+      const result = await db.select().from(settings).where(eq(settings.key, key));
 
-  private getEncryptedDEKSync(userId: string): EncryptedDEK | null {
-    // 同步版本，用于just-in-time推导
-    return null;
+      if (result.length === 0) {
+        return null;
+      }
+
+      return JSON.parse(result[0].value);
+    } catch (error) {
+      return null;
+    }
   }
 }
 

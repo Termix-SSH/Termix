@@ -1,25 +1,27 @@
 import crypto from "crypto";
+import path from "path";
+import { promises as fs } from "fs";
 import { db } from "../database/db/index.js";
 import { settings } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
 
 /**
- * SystemCrypto - 系统级密钥管理
+ * SystemCrypto - 开源友好的JWT密钥管理
  *
  * Linus原则：
- * - JWT密钥必须加密存储，不是base64编码
- * - 使用系统级主密钥保护JWT密钥
- * - 如果攻击者getshell了，至少JWT密钥不是明文
- * - 简单直接，不需要外部依赖
+ * - 删除复杂的"系统主密钥"层 - 不解决真实威胁
+ * - 删除硬编码默认密钥 - 开源软件的安全灾难
+ * - 首次启动自动生成 - 每个实例独立安全
+ * - 简单直接，专注真正的安全边界
  */
 class SystemCrypto {
   private static instance: SystemCrypto;
   private jwtSecret: string | null = null;
 
-  // 系统主密钥 - 在生产环境中应该从安全的地方获取
-  private static readonly SYSTEM_MASTER_KEY = this.getSystemMasterKey();
-  private static readonly ALGORITHM = "aes-256-gcm";
+  // 存储路径配置
+  private static readonly JWT_SECRET_FILE = path.join(process.cwd(), '.termix', 'jwt.key');
+  private static readonly JWT_SECRET_DB_KEY = 'system_jwt_secret';
 
   private constructor() {}
 
@@ -31,57 +33,50 @@ class SystemCrypto {
   }
 
   /**
-   * 获取系统主密钥 - 简单直接
-   *
-   * 两种选择：
-   * 1. 环境变量 SYSTEM_MASTER_KEY (生产环境必须)
-   * 2. 固定密钥 (开发环境，会警告)
-   *
-   * 删除了硬件指纹垃圾 - 容器化环境下不可靠
-   */
-  private static getSystemMasterKey(): Buffer {
-    // 1. 环境变量 (生产环境)
-    const envKey = process.env.SYSTEM_MASTER_KEY;
-    if (envKey && envKey.length >= 32) {
-      databaseLogger.info("Using system master key from environment", {
-        operation: "system_key_env"
-      });
-      return Buffer.from(envKey, 'hex');
-    }
-
-    // 2. 开发环境固定密钥
-    databaseLogger.warn("Using default system master key - NOT SECURE FOR PRODUCTION", {
-      operation: "system_key_default",
-      warning: "Set SYSTEM_MASTER_KEY environment variable in production"
-    });
-
-    // 固定但足够长的开发密钥
-    const devKey = "termix-development-master-key-not-for-production-use-32-bytes";
-    return crypto.createHash('sha256').update(devKey).digest();
-  }
-
-  /**
-   * 初始化JWT密钥
+   * 初始化JWT密钥 - 开源友好的方式
    */
   async initializeJWTSecret(): Promise<void> {
     try {
-      databaseLogger.info("Initializing encrypted JWT secret", {
+      databaseLogger.info("Initializing JWT secret", {
         operation: "jwt_init",
       });
 
-      const existingSecret = await this.getStoredJWTSecret();
-      if (existingSecret) {
-        this.jwtSecret = existingSecret;
-        databaseLogger.success("JWT secret loaded and decrypted", {
-          operation: "jwt_loaded",
+      // 1. 环境变量优先（生产环境最佳实践）
+      const envSecret = process.env.JWT_SECRET;
+      if (envSecret && envSecret.length >= 64) {
+        this.jwtSecret = envSecret;
+        databaseLogger.info("✅ Using JWT secret from environment variable", {
+          operation: "jwt_env_loaded",
+          source: "environment"
         });
-      } else {
-        const newSecret = await this.generateJWTSecret();
-        this.jwtSecret = newSecret;
-        databaseLogger.success("New encrypted JWT secret generated", {
-          operation: "jwt_generated",
-        });
+        return;
       }
+
+      // 2. 检查文件系统存储
+      const fileSecret = await this.loadSecretFromFile();
+      if (fileSecret) {
+        this.jwtSecret = fileSecret;
+        databaseLogger.info("✅ Loaded JWT secret from file", {
+          operation: "jwt_file_loaded",
+          source: "file"
+        });
+        return;
+      }
+
+      // 3. 检查数据库存储
+      const dbSecret = await this.loadSecretFromDB();
+      if (dbSecret) {
+        this.jwtSecret = dbSecret;
+        databaseLogger.info("✅ Loaded JWT secret from database", {
+          operation: "jwt_db_loaded",
+          source: "database"
+        });
+        return;
+      }
+
+      // 4. 生成新密钥并持久化
+      await this.generateAndStoreSecret();
+
     } catch (error) {
       databaseLogger.error("Failed to initialize JWT secret", error, {
         operation: "jwt_init_failed",
@@ -101,67 +96,120 @@ class SystemCrypto {
   }
 
   /**
-   * 生成新的JWT密钥并加密存储
+   * 生成新密钥并持久化存储
    */
-  private async generateJWTSecret(): Promise<string> {
-    const secret = crypto.randomBytes(64).toString("hex");
-    const secretId = crypto.randomBytes(8).toString("hex");
+  private async generateAndStoreSecret(): Promise<void> {
+    const newSecret = crypto.randomBytes(32).toString('hex');
+    const instanceId = crypto.randomBytes(8).toString('hex');
 
-    // 加密JWT密钥
-    const encryptedSecret = this.encryptSecret(secret);
+    databaseLogger.info("🔑 Generating new JWT secret for this Termix instance", {
+      operation: "jwt_generate",
+      instanceId
+    });
 
+    // 尝试文件存储（优先，因为更快且不依赖数据库）
+    try {
+      await this.saveSecretToFile(newSecret);
+      databaseLogger.info("✅ JWT secret saved to file", {
+        operation: "jwt_file_saved",
+        path: SystemCrypto.JWT_SECRET_FILE
+      });
+    } catch (fileError) {
+      databaseLogger.warn("⚠️  Cannot save to file, using database storage", {
+        operation: "jwt_file_save_failed",
+        error: fileError instanceof Error ? fileError.message : "Unknown error"
+      });
+
+      // 文件存储失败，使用数据库
+      await this.saveSecretToDB(newSecret, instanceId);
+      databaseLogger.info("✅ JWT secret saved to database", {
+        operation: "jwt_db_saved"
+      });
+    }
+
+    this.jwtSecret = newSecret;
+
+    databaseLogger.success("🔐 This Termix instance now has a unique JWT secret", {
+      operation: "jwt_generated_success",
+      instanceId,
+      note: "All tokens from previous sessions are invalidated"
+    });
+  }
+
+  // ===== 文件存储方法 =====
+
+  /**
+   * 保存密钥到文件
+   */
+  private async saveSecretToFile(secret: string): Promise<void> {
+    const dir = path.dirname(SystemCrypto.JWT_SECRET_FILE);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(SystemCrypto.JWT_SECRET_FILE, secret, {
+      mode: 0o600 // 只有owner可读写
+    });
+  }
+
+  /**
+   * 从文件加载密钥
+   */
+  private async loadSecretFromFile(): Promise<string | null> {
+    try {
+      const secret = await fs.readFile(SystemCrypto.JWT_SECRET_FILE, 'utf8');
+      if (secret.trim().length >= 64) {
+        return secret.trim();
+      }
+      databaseLogger.warn("JWT secret file exists but too short", {
+        operation: "jwt_file_invalid",
+        length: secret.length
+      });
+    } catch (error) {
+      // 文件不存在或无法读取，这是正常的
+    }
+    return null;
+  }
+
+  // ===== 数据库存储方法 =====
+
+  /**
+   * 保存密钥到数据库（明文存储，不假装加密有用）
+   */
+  private async saveSecretToDB(secret: string, instanceId: string): Promise<void> {
     const secretData = {
-      encrypted: encryptedSecret,
-      secretId,
-      createdAt: new Date().toISOString(),
-      algorithm: "HS256",
-      encryption: SystemCrypto.ALGORITHM,
+      secret,
+      generatedAt: new Date().toISOString(),
+      instanceId,
+      algorithm: "HS256"
     };
 
-    try {
-      const existing = await db
-        .select()
-        .from(settings)
-        .where(eq(settings.key, "system_jwt_secret"));
+    const existing = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, SystemCrypto.JWT_SECRET_DB_KEY));
 
-      const encodedData = JSON.stringify(secretData);
+    const encodedData = JSON.stringify(secretData);
 
-      if (existing.length > 0) {
-        await db
-          .update(settings)
-          .set({ value: encodedData })
-          .where(eq(settings.key, "system_jwt_secret"));
-      } else {
-        await db.insert(settings).values({
-          key: "system_jwt_secret",
-          value: encodedData,
-        });
-      }
-
-      databaseLogger.info("Encrypted JWT secret stored", {
-        operation: "jwt_stored",
-        secretId,
-        encryption: SystemCrypto.ALGORITHM,
+    if (existing.length > 0) {
+      await db
+        .update(settings)
+        .set({ value: encodedData })
+        .where(eq(settings.key, SystemCrypto.JWT_SECRET_DB_KEY));
+    } else {
+      await db.insert(settings).values({
+        key: SystemCrypto.JWT_SECRET_DB_KEY,
+        value: encodedData,
       });
-
-      return secret;
-    } catch (error) {
-      databaseLogger.error("Failed to store encrypted JWT secret", error, {
-        operation: "jwt_store_failed",
-      });
-      throw error;
     }
   }
 
   /**
-   * 从数据库读取并解密JWT密钥
+   * 从数据库加载密钥
    */
-  private async getStoredJWTSecret(): Promise<string | null> {
+  private async loadSecretFromDB(): Promise<string | null> {
     try {
       const result = await db
         .select()
         .from(settings)
-        .where(eq(settings.key, "system_jwt_secret"));
+        .where(eq(settings.key, SystemCrypto.JWT_SECRET_DB_KEY));
 
       if (result.length === 0) {
         return null;
@@ -169,19 +217,20 @@ class SystemCrypto {
 
       const secretData = JSON.parse(result[0].value);
 
-      // 只支持加密格式 - 删除了Legacy兼容垃圾
-      if (!secretData.encrypted) {
-        databaseLogger.error("Found unencrypted JWT secret - not supported", {
-          operation: "jwt_unencrypted_rejected",
-          action: "DELETE old secret and restart server"
+      // 检查密钥有效性
+      if (!secretData.secret || secretData.secret.length < 64) {
+        databaseLogger.warn("Invalid JWT secret in database", {
+          operation: "jwt_db_invalid",
+          hasSecret: !!secretData.secret,
+          length: secretData.secret?.length || 0
         });
         return null;
       }
 
-      return this.decryptSecret(secretData.encrypted);
+      return secretData.secret;
     } catch (error) {
-      databaseLogger.warn("Failed to load stored JWT secret", {
-        operation: "jwt_load_failed",
+      databaseLogger.warn("Failed to load JWT secret from database", {
+        operation: "jwt_db_load_failed",
         error: error instanceof Error ? error.message : "Unknown error",
       });
       return null;
@@ -189,58 +238,21 @@ class SystemCrypto {
   }
 
   /**
-   * 加密密钥
-   */
-  private encryptSecret(plaintext: string): object {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(SystemCrypto.ALGORITHM, SystemCrypto.SYSTEM_MASTER_KEY, iv);
-
-    let encrypted = cipher.update(plaintext, "utf8", "hex");
-    encrypted += cipher.final("hex");
-    const tag = cipher.getAuthTag();
-
-    return {
-      data: encrypted,
-      iv: iv.toString("hex"),
-      tag: tag.toString("hex"),
-    };
-  }
-
-  /**
-   * 解密密钥
-   */
-  private decryptSecret(encryptedData: any): string {
-    const decipher = crypto.createDecipheriv(
-      SystemCrypto.ALGORITHM,
-      SystemCrypto.SYSTEM_MASTER_KEY,
-      Buffer.from(encryptedData.iv, "hex")
-    );
-
-    decipher.setAuthTag(Buffer.from(encryptedData.tag, "hex"));
-
-    let decrypted = decipher.update(encryptedData.data, "hex", "utf8");
-    decrypted += decipher.final("utf8");
-
-    return decrypted;
-  }
-
-  /**
-   * 重新生成JWT密钥
+   * 重新生成JWT密钥（管理功能）
    */
   async regenerateJWTSecret(): Promise<string> {
-    databaseLogger.warn("Regenerating JWT secret - ALL TOKENS WILL BE INVALIDATED", {
+    databaseLogger.warn("🔄 Regenerating JWT secret - ALL TOKENS WILL BE INVALIDATED", {
       operation: "jwt_regenerate",
     });
 
-    const newSecret = await this.generateJWTSecret();
-    this.jwtSecret = newSecret;
+    await this.generateAndStoreSecret();
 
-    databaseLogger.success("JWT secret regenerated and encrypted", {
+    databaseLogger.success("JWT secret regenerated successfully", {
       operation: "jwt_regenerated",
       warning: "All existing JWT tokens are now invalid",
     });
 
-    return newSecret;
+    return this.jwtSecret!;
   }
 
   /**
@@ -269,49 +281,58 @@ class SystemCrypto {
   }
 
   /**
-   * 获取系统密钥状态
+   * 获取JWT密钥状态（简化版本）
    */
   async getSystemKeyStatus() {
     const isValid = await this.validateJWTSecret();
     const hasSecret = this.jwtSecret !== null;
 
+    // 检查文件存储
+    let hasFileStorage = false;
+    try {
+      await fs.access(SystemCrypto.JWT_SECRET_FILE);
+      hasFileStorage = true;
+    } catch {
+      // 文件不存在
+    }
+
+    // 检查数据库存储
+    let hasDBStorage = false;
+    let dbInfo = null;
     try {
       const result = await db
         .select()
         .from(settings)
-        .where(eq(settings.key, "system_jwt_secret"));
+        .where(eq(settings.key, SystemCrypto.JWT_SECRET_DB_KEY));
 
-      const hasStored = result.length > 0;
-      let createdAt = null;
-      let secretId = null;
-      let isEncrypted = false;
-
-      if (hasStored) {
+      if (result.length > 0) {
+        hasDBStorage = true;
         const secretData = JSON.parse(result[0].value);
-        createdAt = secretData.createdAt;
-        secretId = secretData.secretId;
-        isEncrypted = !!secretData.encrypted;
+        dbInfo = {
+          generatedAt: secretData.generatedAt,
+          instanceId: secretData.instanceId,
+          algorithm: secretData.algorithm
+        };
       }
-
-      return {
-        hasSecret,
-        hasStored,
-        isValid,
-        isEncrypted,
-        createdAt,
-        secretId,
-        algorithm: "HS256",
-        encryption: SystemCrypto.ALGORITHM,
-      };
     } catch (error) {
-      return {
-        hasSecret,
-        hasStored: false,
-        isValid: false,
-        isEncrypted: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      // 数据库读取失败
     }
+
+    // 检查环境变量
+    const hasEnvVar = !!(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 64);
+
+    return {
+      hasSecret,
+      isValid,
+      storage: {
+        environment: hasEnvVar,
+        file: hasFileStorage,
+        database: hasDBStorage
+      },
+      dbInfo,
+      algorithm: "HS256",
+      note: "Using simplified key management without encryption layers"
+    };
   }
 }
 
