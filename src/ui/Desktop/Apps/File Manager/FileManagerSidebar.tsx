@@ -38,9 +38,9 @@ interface FileManagerSidebarProps {
   currentPath: string;
   onPathChange: (path: string) => void;
   onLoadDirectory?: (path: string) => void;
-  onFileOpen?: (file: SidebarItem) => void; // 新增：处理文件打开
+  onFileOpen?: (file: SidebarItem) => void; // Added: handle file opening
   sshSessionId?: string;
-  refreshTrigger?: number; // 用于触发数据刷新
+  refreshTrigger?: number; // Used to trigger data refresh
 }
 
 export function FileManagerSidebar({
@@ -61,7 +61,7 @@ export function FileManagerSidebar({
     new Set(["root"]),
   );
 
-  // 右键菜单状态
+  // Right-click menu state
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -74,12 +74,12 @@ export function FileManagerSidebar({
     item: null,
   });
 
-  // 加载快捷功能数据
+  // Load quick access data
   useEffect(() => {
     loadQuickAccessData();
   }, [currentHost, refreshTrigger]);
 
-  // 加载目录树（依赖sshSessionId）
+  // Load directory tree (depends on sshSessionId)
   useEffect(() => {
     if (sshSessionId) {
       loadDirectoryTree();
@@ -90,7 +90,7 @@ export function FileManagerSidebar({
     if (!currentHost?.id) return;
 
     try {
-      // 加载最近访问文件（限制5个）
+      // Load recent files (limit to 5)
       const recentData = await getRecentFiles(currentHost.id);
       const recentItems = recentData.slice(0, 5).map((item: any) => ({
         id: `recent-${item.id}`,
@@ -101,7 +101,7 @@ export function FileManagerSidebar({
       }));
       setRecentItems(recentItems);
 
-      // 加载固定文件
+      // Load pinned files
       const pinnedData = await getPinnedFiles(currentHost.id);
       const pinnedItems = pinnedData.map((item: any) => ({
         id: `pinned-${item.id}`,
@@ -111,7 +111,7 @@ export function FileManagerSidebar({
       }));
       setPinnedItems(pinnedItems);
 
-      // 加载文件夹快捷方式
+      // Load folder shortcuts
       const shortcutData = await getFolderShortcuts(currentHost.id);
       const shortcutItems = shortcutData.map((item: any) => ({
         id: `shortcut-${item.id}`,
@@ -122,20 +122,20 @@ export function FileManagerSidebar({
       setShortcuts(shortcutItems);
     } catch (error) {
       console.error("Failed to load quick access data:", error);
-      // 如果加载失败，保持空数组
+      // If loading fails, keep empty arrays
       setRecentItems([]);
       setPinnedItems([]);
       setShortcuts([]);
     }
   };
 
-  // 删除功能实现
+  // Delete functionality implementation
   const handleRemoveRecentFile = async (item: SidebarItem) => {
     if (!currentHost?.id) return;
 
     try {
       await removeRecentFile(currentHost.id, item.path);
-      loadQuickAccessData(); // 重新加载数据
+      loadQuickAccessData(); // Reload data
       toast.success(
         t("fileManager.removedFromRecentFiles", { name: item.name }),
       );
@@ -150,7 +150,7 @@ export function FileManagerSidebar({
 
     try {
       await removePinnedFile(currentHost.id, item.path);
-      loadQuickAccessData(); // 重新加载数据
+      loadQuickAccessData(); // Reload data
       toast.success(t("fileManager.unpinnedSuccessfully", { name: item.name }));
     } catch (error) {
       console.error("Failed to unpin file:", error);
@@ -163,7 +163,7 @@ export function FileManagerSidebar({
 
     try {
       await removeFolderShortcut(currentHost.id, item.path);
-      loadQuickAccessData(); // 重新加载数据
+      loadQuickAccessData(); // Reload data
       toast.success(t("fileManager.removedShortcut", { name: item.name }));
     } catch (error) {
       console.error("Failed to remove shortcut:", error);
@@ -175,11 +175,11 @@ export function FileManagerSidebar({
     if (!currentHost?.id || recentItems.length === 0) return;
 
     try {
-      // 批量删除所有recent文件
+      // Batch delete all recent files
       await Promise.all(
         recentItems.map((item) => removeRecentFile(currentHost.id, item.path)),
       );
-      loadQuickAccessData(); // 重新加载数据
+      loadQuickAccessData(); // Reload data
       toast.success(t("fileManager.clearedAllRecentFiles"));
     } catch (error) {
       console.error("Failed to clear recent files:", error);
@@ -187,7 +187,7 @@ export function FileManagerSidebar({
     }
   };
 
-  // 右键菜单处理
+  // Right-click menu handling
   const handleContextMenu = (e: React.MouseEvent, item: SidebarItem) => {
     e.preventDefault();
     e.stopPropagation();
@@ -204,7 +204,7 @@ export function FileManagerSidebar({
     setContextMenu((prev) => ({ ...prev, isVisible: false, item: null }));
   };
 
-  // 点击外部关闭菜单
+  // Click outside to close menu
   useEffect(() => {
     if (!contextMenu.isVisible) return;
 
@@ -223,7 +223,7 @@ export function FileManagerSidebar({
       }
     };
 
-    // 延迟添加监听器，避免立即触发
+    // Delay adding listeners to avoid immediate trigger
     const timeoutId = setTimeout(() => {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleKeyDown);
@@ -240,10 +240,10 @@ export function FileManagerSidebar({
     if (!sshSessionId) return;
 
     try {
-      // 加载根目录
+      // Load root directory
       const response = await listSSHFiles(sshSessionId, "/");
 
-      // listSSHFiles 现在总是返回 {files: Array, path: string} 格式
+      // listSSHFiles now always returns {files: Array, path: string} format
       const rootFiles = response.files || [];
       const rootFolders = rootFiles.filter(
         (item: any) => item.type === "directory",
@@ -255,7 +255,7 @@ export function FileManagerSidebar({
         path: folder.path,
         type: "folder" as const,
         isExpanded: false,
-        children: [], // 子目录将按需加载
+        children: [], // Subdirectories will be loaded on demand
       }));
 
       setDirectoryTree([
@@ -270,7 +270,7 @@ export function FileManagerSidebar({
       ]);
     } catch (error) {
       console.error("Failed to load directory tree:", error);
-      // 如果加载失败，显示简单的根目录
+      // If loading fails, show simple root directory
       setDirectoryTree([
         {
           id: "root",
@@ -289,17 +289,17 @@ export function FileManagerSidebar({
       toggleFolder(item.id, item.path);
       onPathChange(item.path);
     } else if (item.type === "recent" || item.type === "pinned") {
-      // 对于文件类型，调用文件打开回调
+      // For file types, call file open callback
       if (onFileOpen) {
         onFileOpen(item);
       } else {
-        // 如果没有文件打开回调，切换到文件所在目录
+        // If no file open callback, switch to file directory
         const directory =
           item.path.substring(0, item.path.lastIndexOf("/")) || "/";
         onPathChange(directory);
       }
     } else if (item.type === "shortcut") {
-      // 文件夹快捷方式直接切换到目录
+      // Folder shortcuts directly switch to directory
       onPathChange(item.path);
     }
   };
@@ -312,12 +312,12 @@ export function FileManagerSidebar({
     } else {
       newExpanded.add(folderId);
 
-      // 按需加载子目录
+      // Load subdirectories on demand
       if (sshSessionId && folderPath && folderPath !== "/") {
         try {
           const subResponse = await listSSHFiles(sshSessionId, folderPath);
 
-          // listSSHFiles 现在总是返回 {files: Array, path: string} 格式
+          // listSSHFiles now always returns {files: Array, path: string} format
           const subFiles = subResponse.files || [];
           const subFolders = subFiles.filter(
             (item: any) => item.type === "directory",
@@ -332,7 +332,7 @@ export function FileManagerSidebar({
             children: [],
           }));
 
-          // 更新目录树，为当前文件夹添加子目录
+          // Update directory tree, add subdirectories for current folder
           setDirectoryTree((prevTree) => {
             const updateChildren = (items: SidebarItem[]): SidebarItem[] => {
               return items.map((item) => {
@@ -370,7 +370,7 @@ export function FileManagerSidebar({
           style={{ paddingLeft: `${12 + level * 16}px`, paddingRight: "12px" }}
           onClick={() => handleItemClick(item)}
           onContextMenu={(e) => {
-            // 只有快捷功能项才需要右键菜单
+            // Only quick access items need right-click menu
             if (
               item.type === "recent" ||
               item.type === "pinned" ||
@@ -447,7 +447,7 @@ export function FileManagerSidebar({
       <div className="h-full flex flex-col bg-dark-bg border-r border-dark-border">
         <div className="flex-1 relative overflow-hidden">
           <div className="absolute inset-1.5 overflow-y-auto thin-scrollbar space-y-4">
-            {/* 快捷功能区域 */}
+            {/* Quick access area */}
             {renderSection(
               t("fileManager.recent"),
               <Clock className="w-3 h-3" />,
@@ -464,7 +464,7 @@ export function FileManagerSidebar({
               shortcuts,
             )}
 
-            {/* 目录树 */}
+            {/* Directory tree */}
             <div
               className={cn(
                 hasQuickAccessItems && "pt-4 border-t border-dark-border",
@@ -482,7 +482,7 @@ export function FileManagerSidebar({
         </div>
       </div>
 
-      {/* 右键菜单 */}
+      {/* Right-click menu */}
       {contextMenu.isVisible && contextMenu.item && (
         <>
           <div className="fixed inset-0 z-40" />

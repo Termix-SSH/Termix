@@ -73,12 +73,12 @@ interface FileViewerProps {
   onDownload?: () => void;
 }
 
-// 获取编程语言的官方图标
+// Get official icon for programming languages
 function getLanguageIcon(filename: string): React.ReactNode {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   const baseName = filename.toLowerCase();
 
-  // 特殊文件名处理
+  // Special filename handling
   if (["dockerfile"].includes(baseName)) {
     return <SiDocker className="w-6 h-6 text-blue-400" />;
   }
@@ -124,7 +124,7 @@ function getLanguageIcon(filename: string): React.ReactNode {
   return iconMap[ext] || <Code className="w-6 h-6 text-yellow-500" />;
 }
 
-// 获取文件类型和图标
+// Get file type and icon
 function getFileType(filename: string): {
   type: string;
   icon: React.ReactNode;
@@ -209,17 +209,17 @@ function getFileType(filename: string): {
   }
 }
 
-// 获取CodeMirror语言扩展
+// Get CodeMirror language extension
 function getLanguageExtension(filename: string) {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   const baseName = filename.toLowerCase();
 
-  // 特殊文件名处理
+  // Special filename handling
   if (["dockerfile", "makefile", "rakefile", "gemfile"].includes(baseName)) {
     return loadLanguage(baseName);
   }
 
-  // 根据扩展名映射
+  // Map by file extension
   const langMap: Record<string, string> = {
     js: "javascript",
     jsx: "jsx",
@@ -258,7 +258,7 @@ function getLanguageExtension(filename: string) {
   return language ? loadLanguage(language) : null;
 }
 
-// 格式化文件大小
+// Format file size
 function formatFileSize(bytes?: number): string {
   if (!bytes) return "Unknown size";
   const sizes = ["B", "KB", "MB", "GB"];
@@ -294,31 +294,31 @@ export function FileViewer({
 
   const fileTypeInfo = getFileType(file.name);
 
-  // 文件大小限制 - 移除硬限制，支持大文件处理
-  const WARNING_SIZE = 50 * 1024 * 1024; // 50MB 警告
-  const MAX_SIZE = Number.MAX_SAFE_INTEGER; // 移除硬限制
+  // File size limits - remove hard limits, support large file handling
+  const WARNING_SIZE = 50 * 1024 * 1024; // 50MB warning
+  const MAX_SIZE = Number.MAX_SAFE_INTEGER; // Remove hard limits
 
-  // 检查是否应该显示为文本
+  // Check if should display as text
   const shouldShowAsText =
     fileTypeInfo.type === "text" ||
     fileTypeInfo.type === "code" ||
     (fileTypeInfo.type === "unknown" &&
       (forceShowAsText || !file.size || file.size <= WARNING_SIZE));
 
-  // 检查文件是否过大
+  // Check if file is too large
   const isLargeFile = file.size && file.size > WARNING_SIZE;
   const isTooLarge = file.size && file.size > MAX_SIZE;
 
-  // 同步外部内容更改
+  // Sync external content changes
   useEffect(() => {
     setEditedContent(content);
-    // 只有在savedContent更新时才更新originalContent
+    // Only update originalContent when savedContent is updated
     if (savedContent) {
       setOriginalContent(savedContent);
     }
     setHasChanges(content !== (savedContent || content));
 
-    // 如果是未知文件类型且文件较大，显示警告
+    // If unknown file type and file is large, show warning
     if (fileTypeInfo.type === "unknown" && isLargeFile && !forceShowAsText) {
       setShowLargeFileWarning(true);
     } else {
@@ -326,27 +326,27 @@ export function FileViewer({
     }
   }, [content, savedContent, fileTypeInfo.type, isLargeFile, forceShowAsText]);
 
-  // 处理内容更改
+  // Handle content changes
   const handleContentChange = (newContent: string) => {
     setEditedContent(newContent);
     setHasChanges(newContent !== originalContent);
     onContentChange?.(newContent);
   };
 
-  // 保存文件
+  // Save file
   const handleSave = () => {
     onSave?.(editedContent);
-    // 注意：不在这里更新originalContent，因为它会通过savedContent prop更新
+    // Note: Don't update originalContent here, as it will be updated via savedContent prop
   };
 
-  // 复原文件
+  // Revert file
   const handleRevert = () => {
     setEditedContent(originalContent);
     setHasChanges(false);
     onContentChange?.(originalContent);
   };
 
-  // 搜索匹配功能
+  // Search matching functionality
   const findMatches = (text: string) => {
     if (!text) {
       setSearchMatches([]);
@@ -363,7 +363,7 @@ export function FileViewer({
         start: match.index,
         end: match.index + match[0].length,
       });
-      // 避免无限循环
+      // Avoid infinite loop
       if (match.index === regex.lastIndex) regex.lastIndex++;
     }
 
@@ -371,7 +371,7 @@ export function FileViewer({
     setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
   };
 
-  // 搜索导航
+  // Search navigation
   const goToNextMatch = () => {
     if (searchMatches.length === 0) return;
     setCurrentMatchIndex((prev) => (prev + 1) % searchMatches.length);
@@ -384,7 +384,7 @@ export function FileViewer({
     );
   };
 
-  // 替换功能
+  // Replace functionality
   const handleFindReplace = (
     findText: string,
     replaceWithText: string,
@@ -399,7 +399,7 @@ export function FileViewer({
         replaceWithText,
       );
     } else if (currentMatchIndex >= 0 && searchMatches[currentMatchIndex]) {
-      // 替换当前匹配项
+      // Replace current match
       const match = searchMatches[currentMatchIndex];
       newContent =
         editedContent.substring(0, match.start) +
@@ -411,7 +411,7 @@ export function FileViewer({
     setHasChanges(newContent !== originalContent);
     onContentChange?.(newContent);
 
-    // 重新搜索以更新匹配项
+    // Re-search to update matches
     setTimeout(() => findMatches(findText), 0);
   };
 
@@ -425,7 +425,7 @@ export function FileViewer({
     setShowReplacePanel(true);
   };
 
-  // 渲染带高亮的文本
+  // Render highlighted text
   const renderHighlightedText = (text: string) => {
     if (!searchText || searchMatches.length === 0) {
       return text;
@@ -435,12 +435,12 @@ export function FileViewer({
     let lastIndex = 0;
 
     searchMatches.forEach((match, index) => {
-      // 添加匹配前的文本
+      // Add text before match
       if (match.start > lastIndex) {
         parts.push(text.substring(lastIndex, match.start));
       }
 
-      // 添加高亮的匹配文本
+      // Add highlighted match text
       const isCurrentMatch = index === currentMatchIndex;
       parts.push(
         <span
@@ -459,7 +459,7 @@ export function FileViewer({
       lastIndex = match.end;
     });
 
-    // 添加最后的文本
+    // Add final text
     if (lastIndex < text.length) {
       parts.push(text.substring(lastIndex));
     }
@@ -467,13 +467,13 @@ export function FileViewer({
     return parts;
   };
 
-  // 处理用户确认打开大文件
+  // Handle user confirmation to open large file
   const handleConfirmOpenAsText = () => {
     setForceShowAsText(true);
     setShowLargeFileWarning(false);
   };
 
-  // 处理用户拒绝打开大文件
+  // Handle user rejection to open large file
   const handleCancelOpenAsText = () => {
     setShowLargeFileWarning(false);
   };
@@ -491,7 +491,7 @@ export function FileViewer({
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* 文件信息头部 */}
+      {/* File info header */}
       <div className="flex-shrink-0 bg-card border-b border-border p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -517,7 +517,7 @@ export function FileViewer({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* 编辑工具栏 - 直接显示，无需切换 */}
+            {/* Edit toolbar - display directly, no toggle needed */}
             {isEditable && (
               <>
                 <Button
@@ -575,7 +575,7 @@ export function FileViewer({
         </div>
       </div>
 
-      {/* 搜索和替换面板 */}
+      {/* Search and replace panel */}
       {showSearchPanel && (
         <div className="flex-shrink-0 bg-muted/30 border-b border-border p-3">
           <div className="flex items-center gap-2 mb-2">
@@ -657,9 +657,9 @@ export function FileViewer({
         </div>
       )}
 
-      {/* 文件内容 */}
+      {/* File content */}
       <div className="flex-1 overflow-hidden">
-        {/* 大文件警告对话框 */}
+        {/* Large file warning dialog */}
         {showLargeFileWarning && (
           <div className="h-full flex items-center justify-center bg-background">
             <div className="bg-card border border-destructive/30 rounded-lg p-6 max-w-md mx-4 shadow-lg">
@@ -722,7 +722,7 @@ export function FileViewer({
           </div>
         )}
 
-        {/* 图片预览 */}
+        {/* Image preview */}
         {fileTypeInfo.type === "image" && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
             <img
@@ -737,16 +737,16 @@ export function FileViewer({
           </div>
         )}
 
-        {/* 文本和代码文件预览 */}
+        {/* Text and code file preview */}
         {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
             {fileTypeInfo.type === "code" ? (
-              // 代码文件使用CodeMirror
+              // Code files use CodeMirror
               <div className="h-full">
                 {searchText && searchMatches.length > 0 ? (
-                  // 当有搜索结果时，显示只读的高亮文本（带行号）
+                  // When there are search results, show read-only highlighted text (with line numbers)
                   <div className="h-full flex bg-muted">
-                    {/* 行号列 */}
+                    {/* Line number column */}
                     <div className="flex-shrink-0 bg-muted border-r border-border px-2 py-4 text-xs text-muted-foreground font-mono select-none">
                       {editedContent.split("\n").map((_, index) => (
                         <div
@@ -757,13 +757,13 @@ export function FileViewer({
                         </div>
                       ))}
                     </div>
-                    {/* 代码内容 */}
+                    {/* Code content */}
                     <div className="flex-1 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto text-foreground">
                       {renderHighlightedText(editedContent)}
                     </div>
                   </div>
                 ) : (
-                  // 没有搜索时显示CodeMirror编辑器
+                  // Show CodeMirror editor when no search
                   <CodeMirror
                     value={editedContent}
                     onChange={(value) => handleContentChange(value)}
@@ -790,17 +790,17 @@ export function FileViewer({
                 )}
               </div>
             ) : (
-              // 普通文本文件
+              // Plain text files
               <div className="h-full">
                 {isEditable ? (
                   <div className="h-full">
                     {searchText && searchMatches.length > 0 ? (
-                      // 当有搜索结果时，显示只读的高亮文本
+                      // When there are search results, show read-only highlighted text
                       <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
                         {renderHighlightedText(editedContent)}
                       </div>
                     ) : (
-                      // 直接显示可编辑的textarea
+                      // Directly show editable textarea
                       <textarea
                         value={editedContent}
                         onChange={(e) => handleContentChange(e.target.value)}
@@ -811,7 +811,7 @@ export function FileViewer({
                     )}
                   </div>
                 ) : (
-                  // 只有非可编辑文件（媒体文件）才显示为只读
+                  // Only show as read-only for non-editable files (media files)
                   <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
                     {editedContent || content || "File is empty"}
                   </div>
@@ -821,7 +821,7 @@ export function FileViewer({
           </div>
         )}
 
-        {/* 视频文件预览 */}
+        {/* Video file preview */}
         {fileTypeInfo.type === "video" && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
             <video
@@ -834,7 +834,7 @@ export function FileViewer({
           </div>
         )}
 
-        {/* 音频文件预览 */}
+        {/* Audio file preview */}
         {fileTypeInfo.type === "audio" && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
             <div className="text-center">
@@ -857,7 +857,7 @@ export function FileViewer({
           </div>
         )}
 
-        {/* 未知文件类型 - 只在不能显示为文本且没有警告时显示 */}
+        {/* Unknown file type - only show when cannot display as text and no warning */}
         {fileTypeInfo.type === "unknown" &&
           !shouldShowAsText &&
           !showLargeFileWarning && (
@@ -886,7 +886,7 @@ export function FileViewer({
           )}
       </div>
 
-      {/* 底部状态栏 */}
+      {/* Bottom status bar */}
       <div className="flex-shrink-0 bg-muted/50 border-t border-border px-4 py-2 text-xs text-muted-foreground">
         <div className="flex justify-between items-center">
           <span>{file.path}</span>

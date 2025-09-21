@@ -52,7 +52,7 @@ interface FileManagerModernProps {
   onClose?: () => void;
 }
 
-// Linus式数据结构：创建意图与实际文件完全分离
+// Linus-style data structure: creation intent completely separated from actual files
 interface CreateIntent {
   id: string;
   type: 'file' | 'directory';
@@ -60,7 +60,7 @@ interface CreateIntent {
   currentName: string;
 }
 
-// 内部组件，使用窗口管理器
+// Internal component, uses window manager
 function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   const { openWindow } = useWindowManager();
   const { t } = useTranslation();
@@ -94,13 +94,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     files: [],
   });
 
-  // 操作状态
+  // Operation state
   const [clipboard, setClipboard] = useState<{
     files: FileItem[];
     operation: "copy" | "cut";
   } | null>(null);
 
-  // 撤销历史
+  // Undo history
   interface UndoAction {
     type: "copy" | "cut" | "delete";
     description: string;
@@ -119,7 +119,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
   const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
 
-  // Linus式状态：创建意图与文件编辑分离
+  // Linus-style state: creation intent separated from file editing
   const [createIntent, setCreateIntent] = useState<CreateIntent | null>(null);
   const [editingFile, setEditingFile] = useState<FileItem | null>(null);
 
@@ -133,43 +133,43 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     maxFileSize: 5120, // 5GB - support large files like SSH tools should
   });
 
-  // 拖拽到桌面功能
+  // Drag to desktop functionality
   const dragToDesktop = useDragToDesktop({
     sshSessionId: sshSessionId || "",
     sshHost: currentHost!,
   });
 
-  // 系统级拖拽到桌面功能（新方案）
+  // System-level drag to desktop functionality (new approach)
   const systemDrag = useDragToSystemDesktop({
     sshSessionId: sshSessionId || "",
     sshHost: currentHost!,
   });
 
-  // 初始化SSH连接
+  // Initialize SSH connection
   useEffect(() => {
     if (currentHost) {
       initializeSSHConnection();
     }
   }, [currentHost]);
 
-  // 文件列表更新
+  // File list update
   useEffect(() => {
     if (sshSessionId) {
       handleRefreshDirectory();
     }
   }, [sshSessionId, currentPath]);
 
-  // 文件拖拽到外部处理
+  // Handle file drag to external
   const handleFileDragStart = useCallback(
     (files: FileItem[]) => {
-      // 记录当前拖拽的文件
+      // Record currently dragged files
       systemDrag.startDragToSystem(files, {
         enableToast: true,
         onSuccess: () => {
           clearSelection();
         },
         onError: (error) => {
-          console.error("拖拽失败:", error);
+          console.error("Drag failed:", error);
         },
       });
     },
@@ -178,7 +178,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
   const handleFileDragEnd = useCallback(
     (e: DragEvent) => {
-      // 检查是否拖拽到窗口外
+      // Check if dragged outside window
       const margin = 50;
       const isOutside =
         e.clientX < margin ||
@@ -187,12 +187,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         e.clientY > window.innerHeight - margin;
 
       if (isOutside) {
-        // 延迟执行，避免与其他事件冲突
+        // Delay execution to avoid conflicts with other events
         setTimeout(() => {
           systemDrag.handleDragEnd(e);
         }, 100);
       } else {
-        // 取消拖拽
+        // Cancel drag
         systemDrag.cancelDragToSystem();
       }
     },
@@ -279,10 +279,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
-  // 防抖刷新函数 - 防止疯狂点击
+  // Debounced refresh function - prevent excessive clicking
   function handleRefreshDirectory() {
     const now = Date.now();
-    const DEBOUNCE_MS = 500; // 500ms防抖
+    const DEBOUNCE_MS = 500; // 500ms debounce
 
     if (now - lastRefreshTime < DEBOUNCE_MS) {
       console.log("Refresh ignored - too frequent");
@@ -311,12 +311,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       // 确保SSH连接有效
       await ensureSSHConnection();
 
-      // 读取文件内容
+      // Read file content
       const fileContent = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = () => reject(reader.error);
 
-        // 检查文件类型，决定读取方式
+        // Check file type to determine reading method
         const isTextFile =
           file.type.startsWith("text/") ||
           file.type === "application/json" ||
@@ -390,7 +390,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       const response = await downloadSSHFile(sshSessionId, file.path);
 
       if (response?.content) {
-        // 转换为blob并触发下载
+        // Convert to blob and trigger download
         const byteCharacters = atob(response.content);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -446,7 +446,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         );
       }
 
-      // 记录删除历史（虽然无法真正撤销）
+      // Record deletion history (although cannot truly undo)
       const deletedFiles = files.map((file) => ({
         path: file.path,
         name: file.name,
@@ -454,7 +454,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
       const undoAction: UndoAction = {
         type: "delete",
-        description: `删除了 ${files.length} 个项目`,
+        description: t("fileManager.deletedItems", { count: files.length }),
         data: {
           operation: "cut", // Placeholder
           deletedFiles,
@@ -484,7 +484,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
-  // Linus式创建：纯粹的意图，无副作用
+  // Linus-style creation: pure intent, no side effects
   function handleCreateNewFolder() {
     const defaultName = generateUniqueName("NewFolder", "directory");
     setCreateIntent({
@@ -543,22 +543,22 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       const symlinkInfo = await identifySSHSymlink(currentSessionId, file.path);
 
       if (symlinkInfo.type === "directory") {
-        // 如果软链接指向目录，导航到它
+        // If symlink points to directory, navigate to it
         setCurrentPath(symlinkInfo.target);
       } else if (symlinkInfo.type === "file") {
-        // 如果软链接指向文件，打开文件
-        // 计算窗口位置（稍微错开）
+        // If symlink points to file, open file
+        // Calculate window position (slightly offset)
         const windowCount = Date.now() % 10;
         const offsetX = 120 + windowCount * 30;
         const offsetY = 120 + windowCount * 30;
 
-        // 创建目标文件对象
+        // Create target file object
         const targetFile: FileItem = {
           ...file,
           path: symlinkInfo.target,
         };
 
-        // 创建窗口组件工厂函数
+        // Create window component factory function
         const createWindowComponent = (windowId: string) => (
           <FileWindow
             windowId={windowId}
@@ -594,21 +594,21 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     if (file.type === "directory") {
       setCurrentPath(file.path);
     } else if (file.type === "link") {
-      // 处理软链接
+      // Handle symlinks
       await handleSymlinkClick(file);
     } else {
-      // 在新窗口中打开文件
+      // Open file in new window
       if (!sshSessionId) {
         toast.error(t("fileManager.noSSHConnection"));
         return;
       }
 
       // 计算窗口位置（稍微错开）
-      const windowCount = Date.now() % 10; // 简单的偏移计算
+      const windowCount = Date.now() % 10; // Simple offset calculation
       const offsetX = 120 + windowCount * 30;
       const offsetY = 120 + windowCount * 30;
 
-      const windowTitle = file.name; // 移除模式标识，由FileViewer内部控制
+      const windowTitle = file.name; // Remove mode identifier, controlled internally by FileViewer
 
       // 创建窗口组件工厂函数
       const createWindowComponent = (windowId: string) => (
@@ -635,12 +635,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
-  // 专门的文件编辑函数
+  // Dedicated file editing function
   function handleFileEdit(file: FileItem) {
     handleFileOpen(file, true);
   }
 
-  // 专门的文件查看函数（只读）
+  // Dedicated file viewing function (read-only)
   function handleFileView(file: FileItem) {
     handleFileOpen(file, false);
   }
@@ -648,8 +648,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
     event.preventDefault();
 
-    // 如果右键点击的文件已经在选中列表中，使用所有选中的文件
-    // 如果右键点击的文件不在选中列表中，只使用这一个文件
+    // If right-clicked file is already in selection list, use all selected files
+    // If right-clicked file is not in selection list, use only this file
     let files: FileItem[];
     if (file) {
       const isFileSelected = selectedFiles.some((f) => f.path === file.path);
@@ -688,14 +688,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
       const { files, operation } = clipboard;
 
-      // 处理复制和剪切操作
+      // Handle copy and cut operations
       let successCount = 0;
       const copiedItems: string[] = [];
 
       for (const file of files) {
         try {
           if (operation === "copy") {
-            // 复制操作：调用复制API
+            // Copy operation: call copy API
             const result = await copySSHItem(
               sshSessionId,
               file.path,
@@ -706,7 +706,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
             copiedItems.push(result.uniqueName || file.name);
             successCount++;
           } else {
-            // 剪切操作：移动文件到目标目录
+            // Cut operation: move files to target directory
             const targetPath = currentPath.endsWith("/")
               ? `${currentPath}${file.name}`
               : `${currentPath}/${file.name}`;

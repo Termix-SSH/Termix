@@ -35,13 +35,13 @@ export function WindowManager({ children }: WindowManagerProps) {
   const nextZIndex = useRef(1000);
   const windowCounter = useRef(0);
 
-  // 打开新窗口
+  // Open new window
   const openWindow = useCallback(
     (windowData: Omit<WindowInstance, "id" | "zIndex">) => {
       const id = `window-${++windowCounter.current}`;
       const zIndex = ++nextZIndex.current;
 
-      // 计算偏移位置，避免窗口完全重叠
+      // Calculate offset position to avoid windows completely overlapping
       const offset = (windows.length % 5) * 30;
       const adjustedX = windowData.x + offset;
       const adjustedY = windowData.y + offset;
@@ -60,12 +60,12 @@ export function WindowManager({ children }: WindowManagerProps) {
     [windows.length],
   );
 
-  // 关闭窗口
+  // Close window
   const closeWindow = useCallback((id: string) => {
     setWindows((prev) => prev.filter((w) => w.id !== id));
   }, []);
 
-  // 最小化窗口
+  // Minimize window
   const minimizeWindow = useCallback((id: string) => {
     setWindows((prev) =>
       prev.map((w) =>
@@ -74,7 +74,7 @@ export function WindowManager({ children }: WindowManagerProps) {
     );
   }, []);
 
-  // 最大化/还原窗口
+  // Maximize/restore window
   const maximizeWindow = useCallback((id: string) => {
     setWindows((prev) =>
       prev.map((w) =>
@@ -83,7 +83,7 @@ export function WindowManager({ children }: WindowManagerProps) {
     );
   }, []);
 
-  // 聚焦窗口 (置于顶层)
+  // Focus window (bring to top)
   const focusWindow = useCallback((id: string) => {
     setWindows((prev) => {
       const targetWindow = prev.find((w) => w.id === id);
@@ -94,7 +94,7 @@ export function WindowManager({ children }: WindowManagerProps) {
     });
   }, []);
 
-  // 更新窗口属性
+  // Update window properties
   const updateWindow = useCallback(
     (id: string, updates: Partial<WindowInstance>) => {
       setWindows((prev) =>
@@ -117,7 +117,7 @@ export function WindowManager({ children }: WindowManagerProps) {
   return (
     <WindowManagerContext.Provider value={contextValue}>
       {children}
-      {/* 渲染所有窗口 */}
+      {/* Render all windows */}
       <div className="window-container">
         {windows.map((window) => (
           <div key={window.id}>

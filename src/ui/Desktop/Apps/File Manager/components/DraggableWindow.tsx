@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Minus, Square, X, Maximize2, Minimize2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface DraggableWindowProps {
   title: string;
@@ -35,7 +36,8 @@ export function DraggableWindow({
   zIndex = 1000,
   onFocus,
 }: DraggableWindowProps) {
-  // 窗口状态
+  const { t } = useTranslation();
+  // Window state
   const [position, setPosition] = useState({ x: initialX, y: initialY });
   const [size, setSize] = useState({
     width: initialWidth,
@@ -45,19 +47,19 @@ export function DraggableWindow({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string>("");
 
-  // 拖拽开始位置
+  // Drag start position
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
 
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
 
-  // 处理窗口焦点
+  // Handle window focus
   const handleWindowClick = useCallback(() => {
     onFocus?.();
   }, [onFocus]);
 
-  // 拖拽处理
+  // Drag handling
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (isMaximized) return;
@@ -85,7 +87,7 @@ export function DraggableWindow({
           y: Math.max(
             0,
             Math.min(window.innerHeight - 40, windowStart.y + deltaY),
-          ), // 保持标题栏可见
+          ), // Keep title bar visible
         });
       }
 
@@ -143,7 +145,7 @@ export function DraggableWindow({
     setResizeDirection("");
   }, []);
 
-  // 调整大小处理
+  // Resize handling
   const handleResizeStart = useCallback(
     (e: React.MouseEvent, direction: string) => {
       if (isMaximized) return;
@@ -159,7 +161,7 @@ export function DraggableWindow({
     [isMaximized, size, onFocus],
   );
 
-  // 全局事件监听
+  // Global event listeners
   useEffect(() => {
     if (isDragging || isResizing) {
       document.addEventListener("mousemove", handleMouseMove);
@@ -176,7 +178,7 @@ export function DraggableWindow({
     }
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  // 双击标题栏最大化/还原
+  // Double-click title bar to maximize/restore
   const handleTitleDoubleClick = useCallback(() => {
     onMaximize?.();
   }, [onMaximize]);
@@ -198,7 +200,7 @@ export function DraggableWindow({
       }}
       onClick={handleWindowClick}
     >
-      {/* 标题栏 */}
+      {/* Title bar */}
       <div
         ref={titleBarRef}
         className={cn(
@@ -234,7 +236,7 @@ export function DraggableWindow({
                 e.stopPropagation();
                 onMaximize();
               }}
-              title={isMaximized ? "还原" : "最大化"}
+              title={isMaximized ? t("common.restore") : t("common.maximize")}
             >
               {isMaximized ? (
                 <Minimize2 className="w-4 h-4" />
@@ -257,7 +259,7 @@ export function DraggableWindow({
         </div>
       </div>
 
-      {/* 窗口内容 */}
+      {/* Window content */}
       <div
         className="flex-1 overflow-auto"
         style={{ height: "calc(100% - 40px)" }}
@@ -265,10 +267,10 @@ export function DraggableWindow({
         {children}
       </div>
 
-      {/* 调整大小边框 - 只在非最大化时显示 */}
+      {/* Resize borders - only show when not maximized */}
       {!isMaximized && (
         <>
-          {/* 边缘调整 */}
+          {/* Edge resize */}
           <div
             className="absolute top-0 left-0 right-0 h-1 cursor-n-resize"
             onMouseDown={(e) => handleResizeStart(e, "top")}
@@ -286,7 +288,7 @@ export function DraggableWindow({
             onMouseDown={(e) => handleResizeStart(e, "right")}
           />
 
-          {/* 角落调整 */}
+          {/* Corner resize */}
           <div
             className="absolute top-0 left-0 w-2 h-2 cursor-nw-resize"
             onMouseDown={(e) => handleResizeStart(e, "top-left")}

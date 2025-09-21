@@ -25,7 +25,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
 
-// Linus式数据结构：创建意图与实际文件分离
+// Linus-style data structure: separate creation intent from actual files
 interface CreateIntent {
   id: string;
   type: 'file' | 'directory';
@@ -33,12 +33,12 @@ interface CreateIntent {
   currentName: string;
 }
 
-// 格式化文件大小
+// Format file size
 function formatFileSize(bytes?: number): string {
-  // 处理未定义或null的情况
+  // Handle undefined or null cases
   if (bytes === undefined || bytes === null) return "-";
 
-  // 0字节的文件显示为 "0 B"
+  // Display 0-byte files as "0 B"
   if (bytes === 0) return "0 B";
 
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -50,7 +50,7 @@ function formatFileSize(bytes?: number): string {
     unitIndex++;
   }
 
-  // 对于小于10的数值显示一位小数，大于10的显示整数
+  // Display one decimal place for values less than 10, integers for values greater than 10
   const formattedSize =
     size < 10 && unitIndex > 0 ? size.toFixed(1) : Math.round(size).toString();
 
@@ -93,7 +93,7 @@ interface FileManagerGridProps {
   onSystemDragStart?: (files: FileItem[]) => void;
   onSystemDragEnd?: (e: DragEvent) => void;
   hasClipboard?: boolean;
-  // Linus式创建意图props
+  // Linus-style creation intent props
   createIntent?: CreateIntent | null;
   onConfirmCreate?: (name: string) => void;
   onCancelCreate?: () => void;
@@ -204,14 +204,14 @@ export function FileManagerGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const [editingName, setEditingName] = useState("");
 
-  // 统一拖拽状态管理
+  // Unified drag state management
   const [dragState, setDragState] = useState<DragState>({
     type: "none",
     files: [],
     counter: 0,
   });
 
-  // 全局鼠标移动监听 - 用于拖拽tooltip跟随
+  // Global mouse move listener - for drag tooltip following
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (dragState.type === "internal" && dragState.files.length > 0) {
@@ -231,11 +231,11 @@ export function FileManagerGrid({
 
   const editInputRef = useRef<HTMLInputElement>(null);
 
-  // 开始编辑时设置初始名称
+  // Set initial name when starting edit
   useEffect(() => {
     if (editingFile) {
       setEditingName(editingFile.name);
-      // 延迟聚焦以确保DOM已更新
+      // Delay focus to ensure DOM is updated
       setTimeout(() => {
         editInputRef.current?.focus();
         editInputRef.current?.select();
@@ -243,7 +243,7 @@ export function FileManagerGrid({
     }
   }, [editingFile]);
 
-  // 处理编辑确认
+  // Handle edit confirmation
   const handleEditConfirm = () => {
     if (
       editingFile &&
@@ -256,13 +256,13 @@ export function FileManagerGrid({
     onCancelEdit?.();
   };
 
-  // 处理编辑取消
+  // Handle edit cancellation
   const handleEditCancel = () => {
     setEditingName("");
     onCancelEdit?.();
   };
 
-  // 处理输入框按键
+  // Handle input key events
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -273,9 +273,9 @@ export function FileManagerGrid({
     }
   };
 
-  // 文件拖拽处理函数
+  // File drag handling function
   const handleFileDragStart = (e: React.DragEvent, file: FileItem) => {
-    // 如果拖拽的文件已选中，则拖拽所有选中的文件
+    // If dragged file is selected, drag all selected files
     const filesToDrag = selectedFiles.includes(file) ? selectedFiles : [file];
 
     setDragState({
@@ -285,14 +285,14 @@ export function FileManagerGrid({
       mousePosition: { x: e.clientX, y: e.clientY },
     });
 
-    // 设置拖拽数据，添加内部拖拽标识
+    // Set drag data, add internal drag identifier
     const dragData = {
       type: "internal_files",
       files: filesToDrag.map((f) => f.path),
     };
     e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
 
-    // 触发系统级拖拽开始
+    // Trigger system-level drag start
     onSystemDragStart?.(filesToDrag);
     e.dataTransfer.effectAllowed = "move";
   };
@@ -301,7 +301,7 @@ export function FileManagerGrid({
     e.preventDefault();
     e.stopPropagation();
 
-    // 只有拖拽到不同文件且不是被拖拽的文件时才设置目标
+    // Only set target when dragging to different file and not being dragged file
     if (
       dragState.type === "internal" &&
       !dragState.files.some((f) => f.path === targetFile.path)
@@ -315,7 +315,7 @@ export function FileManagerGrid({
     e.preventDefault();
     e.stopPropagation();
 
-    // 清除拖拽目标高亮
+    // Clear drag target highlight
     if (dragState.target?.path === targetFile.path) {
       setDragState((prev) => ({ ...prev, target: undefined }));
     }
@@ -330,7 +330,7 @@ export function FileManagerGrid({
       return;
     }
 
-    // 检查是否拖拽到自身
+    // Check if dragging to self
     const isDroppingOnSelf = dragState.files.some(
       (f) => f.path === targetFile.path,
     );
@@ -340,13 +340,13 @@ export function FileManagerGrid({
       return;
     }
 
-    // 判断拖拽行为：
-    // 1. 文件/文件夹 拖拽到 文件夹 = 移动操作
-    // 2. 单个文件 拖拽到 单个文件 = diff对比
-    // 3. 其他情况 = 无效操作
+    // Determine drag behavior:
+    // 1. File/folder drag to folder = move operation
+    // 2. Single file drag to single file = diff comparison
+    // 3. Other cases = invalid operation
 
     if (targetFile.type === "directory") {
-      // 移动操作
+      // Move operation
       console.log(
         "Moving files to directory:",
         dragState.files.map((f) => f.name),
@@ -359,7 +359,7 @@ export function FileManagerGrid({
       dragState.files.length === 1 &&
       dragState.files[0].type === "file"
     ) {
-      // diff对比操作
+      // Diff comparison operation
       console.log(
         "Comparing files:",
         dragState.files[0].name,
@@ -368,7 +368,7 @@ export function FileManagerGrid({
       );
       onFileDiff?.(dragState.files[0], targetFile);
     } else {
-      // 无效操作，给用户提示
+      // Invalid operation, notify user
       console.log("Invalid drag operation");
     }
 
@@ -378,7 +378,7 @@ export function FileManagerGrid({
   const handleFileDragEnd = (e: React.DragEvent) => {
     setDragState({ type: "none", files: [], counter: 0 });
 
-    // 触发系统级拖拽结束检测
+    // Trigger system-level drag end detection
     onSystemDragEnd?.(e.nativeEvent);
   };
 
@@ -395,17 +395,17 @@ export function FileManagerGrid({
   } | null>(null);
   const [justFinishedSelecting, setJustFinishedSelecting] = useState(false);
 
-  // 导航历史管理
+  // Navigation history management
   const [navigationHistory, setNavigationHistory] = useState<string[]>([
     currentPath,
   ]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
-  // 路径编辑状态
+  // Path editing state
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [editPathValue, setEditPathValue] = useState(currentPath);
 
-  // 更新导航历史
+  // Update navigation history
   useEffect(() => {
     const lastPath = navigationHistory[historyIndex];
     if (currentPath !== lastPath) {
@@ -416,7 +416,7 @@ export function FileManagerGrid({
     }
   }, [currentPath]);
 
-  // 导航函数
+  // Navigation functions
   const goBack = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
@@ -444,7 +444,7 @@ export function FileManagerGrid({
     }
   };
 
-  // 路径导航
+  // Path navigation
   const pathParts = currentPath.split("/").filter(Boolean);
   const navigateToPath = (index: number) => {
     if (index === -1) {
@@ -455,7 +455,7 @@ export function FileManagerGrid({
     }
   };
 
-  // 路径编辑功能
+  // Path editing functionality
   const startEditingPath = () => {
     setEditPathValue(currentPath);
     setIsEditingPath(true);
@@ -469,7 +469,7 @@ export function FileManagerGrid({
   const confirmEditingPath = () => {
     const trimmedPath = editPathValue.trim();
     if (trimmedPath) {
-      // 确保路径以 / 开头
+      // Ensure path starts with /
       const normalizedPath = trimmedPath.startsWith("/")
         ? trimmedPath
         : "/" + trimmedPath;
@@ -488,24 +488,24 @@ export function FileManagerGrid({
     }
   };
 
-  // 同步editPathValue与currentPath
+  // Sync editPathValue with currentPath
   useEffect(() => {
     if (!isEditingPath) {
       setEditPathValue(currentPath);
     }
   }, [currentPath, isEditingPath]);
 
-  // 拖放处理 - 区分内部文件拖拽和外部文件上传
+  // Drag and drop handling - distinguish internal file drag and external file upload
   const handleDragEnter = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // 检查是否是内部文件拖拽
+      // Check if it's internal file drag
       const isInternalDrag = dragState.type === "internal";
 
       if (!isInternalDrag) {
-        // 只有外部文件拖拽才显示上传提示
+        // Only show upload prompt for external file drag
         setDragState((prev) => ({
           ...prev,
           type: "external",
@@ -524,7 +524,7 @@ export function FileManagerGrid({
       e.preventDefault();
       e.stopPropagation();
 
-      // 检查是否是内部文件拖拽
+      // Check if it's internal file drag
       const isInternalDrag = dragState.type === "internal";
 
       if (!isInternalDrag && dragState.type === "external") {
@@ -546,11 +546,11 @@ export function FileManagerGrid({
       e.preventDefault();
       e.stopPropagation();
 
-      // 检查是否是内部文件拖拽
+      // Check if it's internal file drag
       const isInternalDrag = dragState.type === "internal";
 
       if (isInternalDrag) {
-        // 更新鼠标位置
+        // Update mouse position
         setDragState((prev) => ({
           ...prev,
           mousePosition: { x: e.clientX, y: e.clientY },
@@ -563,15 +563,15 @@ export function FileManagerGrid({
     [dragState.type],
   );
 
-  // 滚轮事件处理，确保滚动正常工作
+  // Mouse wheel event handling, ensure scrolling works normally
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    // 不阻止默认滚动行为，让浏览器自己处理滚动
+    // Don't prevent default scroll behavior, let browser handle scrolling
     e.stopPropagation();
   }, []);
 
-  // 框选功能实现
+  // Box selection functionality implementation
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // 只在空白区域开始框选，避免干扰文件点击
+    // Only start box selection in empty area, avoid interfering with file clicks
     if (e.target === e.currentTarget && e.button === 0) {
       e.preventDefault();
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -582,7 +582,7 @@ export function FileManagerGrid({
       setSelectionStart({ x: startX, y: startY });
       setSelectionRect({ x: startX, y: startY, width: 0, height: 0 });
 
-      // 重置刚完成框选的标志，准备新的框选
+      // Reset flag for just completed selection, prepare for new selection
       setJustFinishedSelecting(false);
     }
   }, []);
@@ -601,7 +601,7 @@ export function FileManagerGrid({
 
         setSelectionRect({ x, y, width, height });
 
-        // 检测与文件项的交集，进行实时选择
+        // Detect intersection with file items, perform real-time selection
         if (gridRef.current) {
           const fileElements =
             gridRef.current.querySelectorAll("[data-file-path]");
@@ -611,7 +611,7 @@ export function FileManagerGrid({
             const elementRect = element.getBoundingClientRect();
             const containerRect = gridRef.current!.getBoundingClientRect();
 
-            // 简化坐标计算 - 直接使用相对于容器的坐标
+            // Simplify coordinate calculation - directly use coordinates relative to container
             const relativeElementRect = {
               left: elementRect.left - containerRect.left,
               top: elementRect.top - containerRect.top,
@@ -619,7 +619,7 @@ export function FileManagerGrid({
               bottom: elementRect.bottom - containerRect.top,
             };
 
-            // 选择框坐标
+            // Selection box coordinates
             const selectionBox = {
               left: x,
               top: y,
@@ -627,7 +627,7 @@ export function FileManagerGrid({
               bottom: y + height,
             };
 
-            // 检查是否相交
+            // Check if intersecting
             const intersects = !(
               relativeElementRect.right < selectionBox.left ||
               relativeElementRect.left > selectionBox.right ||
@@ -646,7 +646,7 @@ export function FileManagerGrid({
 
           console.log("Total selected paths:", selectedPaths.length);
 
-          // 更新选中的文件
+          // Update selected files
           const newSelection = files.filter((file) =>
             selectedPaths.includes(file.path),
           );
@@ -668,7 +668,7 @@ export function FileManagerGrid({
         setSelectionStart(null);
         setSelectionRect(null);
 
-        // 只有当移动距离足够大时才认为是框选，否则是点击
+        // Only consider as box selection when movement distance is large enough, otherwise it's a click
         const startPos = selectionStart;
         if (startPos) {
           const rect = gridRef.current?.getBoundingClientRect();
@@ -680,13 +680,13 @@ export function FileManagerGrid({
             );
 
             if (distance > 5) {
-              // 真正的框选，设置标志防止立即清空
+              // Real box selection, set flag to prevent immediate clearing
               setJustFinishedSelecting(true);
               setTimeout(() => {
                 setJustFinishedSelecting(false);
               }, 50);
             } else {
-              // 只是点击，不设置标志，让handleGridClick正常处理
+              // Just a click, don't set flag, let handleGridClick handle normally
               setJustFinishedSelecting(false);
             }
           }
@@ -696,7 +696,7 @@ export function FileManagerGrid({
     [isSelecting, selectionStart],
   );
 
-  // 全局鼠标事件监听，确保在容器外也能结束框选
+  // Global mouse event listener, ensure box selection can end outside container
   useEffect(() => {
     const handleGlobalMouseUp = (e: MouseEvent) => {
       if (isSelecting) {
@@ -704,7 +704,7 @@ export function FileManagerGrid({
         setSelectionStart(null);
         setSelectionRect(null);
 
-        // 全局mouseup说明是拖拽框选，设置标志
+        // Global mouseup indicates drag box selection, set flag
         setJustFinishedSelecting(true);
         setTimeout(() => {
           setJustFinishedSelecting(false);
@@ -744,7 +744,7 @@ export function FileManagerGrid({
       e.stopPropagation();
 
       if (dragState.type === "internal") {
-        // 内部拖拽到空白区域：触发下载
+        // Internal drag to empty area: trigger download
         console.log(
           "Internal drag to empty area detected, triggering download",
         );
@@ -752,23 +752,23 @@ export function FileManagerGrid({
           onDownload(dragState.files);
         }
       } else if (dragState.type === "external") {
-        // 外部拖拽：处理文件上传
+        // External drag: handle file upload
         if (onUpload && e.dataTransfer.files.length > 0) {
           onUpload(e.dataTransfer.files);
         }
       }
 
-      // 重置拖拽状态
+      // Reset drag state
       setDragState({ type: "none", files: [], counter: 0 });
     },
     [onUpload, onDownload, dragState],
   );
 
-  // 文件选择处理
+  // File selection handling
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // 确保网格获得焦点以支持键盘事件
+    // Ensure grid gets focus to support keyboard events
     if (gridRef.current) {
       gridRef.current.focus();
     }
@@ -781,11 +781,11 @@ export function FileManagerGrid({
     );
 
     if (event.detail === 2) {
-      // 双击打开
+      // Double click to open
       console.log("Double click - opening file");
       onFileOpen(file);
     } else {
-      // 单击选择
+      // Single click to select
       const multiSelect = event.ctrlKey || event.metaKey;
       const rangeSelect = event.shiftKey;
 
@@ -797,7 +797,7 @@ export function FileManagerGrid({
       );
 
       if (rangeSelect && selectedFiles.length > 0) {
-        // 范围选择 (Shift+点击)
+        // Range selection (Shift+click)
         console.log("Range selection");
         const lastSelected = selectedFiles[selectedFiles.length - 1];
         const currentIndex = files.findIndex((f) => f.path === file.path);
@@ -811,7 +811,7 @@ export function FileManagerGrid({
           onSelectionChange(rangeFiles);
         }
       } else if (multiSelect) {
-        // 多选 (Ctrl+点击)
+        // Multi-selection (Ctrl+click)
         console.log("Multi selection");
         const isSelected = selectedFiles.some((f) => f.path === file.path);
         if (isSelected) {
@@ -822,21 +822,21 @@ export function FileManagerGrid({
           onSelectionChange([...selectedFiles, file]);
         }
       } else {
-        // 单选
+        // Single selection
         console.log("Single selection - should select only:", file.name);
         onSelectionChange([file]);
       }
     }
   };
 
-  // 空白区域点击取消选择
+  // Click empty area to cancel selection
   const handleGridClick = (event: React.MouseEvent) => {
-    // 确保网格获得焦点以支持键盘事件
+    // Ensure grid gets focus to support keyboard events
     if (gridRef.current) {
       gridRef.current.focus();
     }
 
-    // 如果刚完成框选，不要清空选择
+    // If just completed box selection, don't clear selection
     if (
       event.target === event.currentTarget &&
       !isSelecting &&
@@ -846,10 +846,10 @@ export function FileManagerGrid({
     }
   };
 
-  // 键盘支持
+  // Keyboard support
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // 检查是否有输入框或可编辑元素获得焦点，如果有则跳过
+      // Check if input box or editable element has focus, skip if so
       const activeElement = document.activeElement;
       if (
         activeElement &&
@@ -910,7 +910,7 @@ export function FileManagerGrid({
           break;
         case "Delete":
           if (selectedFiles.length > 0 && onDelete) {
-            // 触发删除操作
+            // Trigger delete operation
             onDelete(selectedFiles);
           }
           break;
@@ -954,9 +954,9 @@ export function FileManagerGrid({
 
   return (
     <div className="h-full flex flex-col bg-dark-bg overflow-hidden">
-      {/* 工具栏和路径导航 */}
+      {/* Toolbar and path navigation */}
       <div className="flex-shrink-0 border-b border-dark-border">
-        {/* 导航按钮 */}
+        {/* Navigation buttons */}
         <div className="flex items-center gap-1 p-2 border-b border-dark-border">
           <button
             onClick={goBack}
@@ -1001,10 +1001,10 @@ export function FileManagerGrid({
           </button>
         </div>
 
-        {/* 面包屑导航 */}
+        {/* Breadcrumb navigation */}
         <div className="flex items-center px-3 py-2 text-sm">
           {isEditingPath ? (
-            // 编辑模式：路径输入框
+            // Edit mode: path input box
             <div className="flex-1 flex items-center gap-2">
               <input
                 type="text"
@@ -1035,7 +1035,7 @@ export function FileManagerGrid({
               </button>
             </div>
           ) : (
-            // 查看模式：面包屑导航
+            // View mode: breadcrumb navigation
             <>
               <button
                 onClick={() => navigateToPath(-1)}
@@ -1068,7 +1068,7 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      {/* 主文件网格 - 滚动区域 */}
+      {/* Main file grid - scroll area */}
       <div className="flex-1 relative overflow-hidden">
         <div
           ref={gridRef}
@@ -1089,7 +1089,7 @@ export function FileManagerGrid({
           onContextMenu={(e) => onContextMenu?.(e)}
           tabIndex={0}
         >
-          {/* 拖拽提示覆盖层 */}
+          {/* Drag hint overlay */}
           {dragState.type === "external" && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 pointer-events-none animate-in fade-in-0">
               <div className="text-center p-8 bg-background/95 border-2 border-dashed border-primary rounded-lg shadow-lg">
@@ -1125,7 +1125,7 @@ export function FileManagerGrid({
             </div>
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-              {/* Linus式创建意图UI - 纯粹分离 */}
+              {/* Linus-style creation intent UI - pure separation */}
               {createIntent && (
                 <CreateIntentGridItem
                   intent={createIntent}
@@ -1138,7 +1138,7 @@ export function FileManagerGrid({
                   (f) => f.path === file.path,
                 );
 
-                // 详细调试路径比较
+                // Detailed debug path comparison
                 if (selectedFiles.length > 0) {
                   console.log(`\n=== File: ${file.name} ===`);
                   console.log(`File path: "${file.path}"`);
@@ -1184,10 +1184,10 @@ export function FileManagerGrid({
                     onDragEnd={handleFileDragEnd}
                   >
                     <div className="flex flex-col items-center text-center">
-                      {/* 文件图标 */}
+                      {/* File icon */}
                       <div className="mb-2">{getFileIcon(file, viewMode)}</div>
 
-                      {/* 文件名 */}
+                      {/* File name */}
                       <div className="w-full flex flex-col items-center">
                         {editingFile?.path === file.path ? (
                           <input
@@ -1207,9 +1207,9 @@ export function FileManagerGrid({
                         ) : (
                           <p
                             className="text-xs text-foreground truncate cursor-pointer hover:bg-accent px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full text-center"
-                            title={`${file.name} (点击重命名)`}
+                            title={`${file.name} (click to rename)`}
                             onClick={(e) => {
-                              // 阻止文件选择事件
+                              // Prevent file selection event
                               if (onStartEdit) {
                                 e.stopPropagation();
                                 onStartEdit(file);
@@ -1241,9 +1241,9 @@ export function FileManagerGrid({
               })}
             </div>
           ) : (
-            /* 列表视图 */
+            /* List view */
             <div className="space-y-1">
-              {/* Linus式创建意图UI - 列表视图 */}
+              {/* Linus-style creation intent UI - list view */}
               {createIntent && (
                 <CreateIntentListItem
                   intent={createIntent}
@@ -1282,12 +1282,12 @@ export function FileManagerGrid({
                     onDrop={(e) => handleFileDrop(e, file)}
                     onDragEnd={handleFileDragEnd}
                   >
-                    {/* 文件图标 */}
+                    {/* File icon */}
                     <div className="flex-shrink-0">
                       {getFileIcon(file, viewMode)}
                     </div>
 
-                    {/* 文件信息 */}
+                    {/* File info */}
                     <div className="flex-1 min-w-0">
                       {editingFile?.path === file.path ? (
                         <input
@@ -1307,7 +1307,7 @@ export function FileManagerGrid({
                       ) : (
                         <p
                           className="text-sm text-foreground truncate cursor-pointer hover:bg-accent px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full"
-                          title={`${file.name} (点击重命名)`}
+                          title={`${file.name} (click to rename)`}
                           onClick={(e) => {
                             // 阻止文件选择事件
                             if (onStartEdit) {
@@ -1334,7 +1334,7 @@ export function FileManagerGrid({
                       )}
                     </div>
 
-                    {/* 文件大小 */}
+                    {/* File size */}
                     <div className="flex-shrink-0 text-right">
                       {file.type === "file" &&
                         file.size !== undefined &&
@@ -1345,7 +1345,7 @@ export function FileManagerGrid({
                         )}
                     </div>
 
-                    {/* 权限信息 */}
+                    {/* Permission info */}
                     <div className="flex-shrink-0 text-right w-20">
                       {file.permissions && (
                         <p className="text-xs text-muted-foreground font-mono">
@@ -1359,7 +1359,7 @@ export function FileManagerGrid({
             </div>
           )}
 
-          {/* 框选矩形 */}
+          {/* Selection rectangle */}
           {isSelecting && selectionRect && (
             <div
               className="absolute pointer-events-none border-2 border-primary bg-primary/10 z-50"
@@ -1374,7 +1374,7 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      {/* 状态栏 */}
+      {/* Status bar */}
       <div className="flex-shrink-0 border-t border-dark-border px-4 py-2 text-xs text-muted-foreground">
         <div className="flex justify-between items-center">
           <span>{t("fileManager.itemCount", { count: files.length })}</span>
@@ -1386,7 +1386,7 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      {/* 拖拽跟随tooltip */}
+      {/* Drag following tooltip */}
       {dragState.type === "internal" &&
         dragState.files.length > 0 &&
         dragState.mousePosition && (
@@ -1403,14 +1403,14 @@ export function FileManagerGrid({
                   <>
                     <Move className="w-4 h-4 text-blue-500" />
                     <span className="text-sm font-medium text-foreground">
-                      移动到 {dragState.target.name}
+                      Move to {dragState.target.name}
                     </span>
                   </>
                 ) : (
                   <>
                     <GitCompare className="w-4 h-4 text-purple-500" />
                     <span className="text-sm font-medium text-foreground">
-                      与 {dragState.target.name} 进行diff对比
+                      Diff compare with {dragState.target.name}
                     </span>
                   </>
                 )
@@ -1418,7 +1418,7 @@ export function FileManagerGrid({
                 <>
                   <Download className="w-4 h-4 text-green-500" />
                   <span className="text-sm font-medium text-foreground">
-                    拖到窗口外下载 ({dragState.files.length} 个文件)
+                    Drag outside window to download ({dragState.files.length} files)
                   </span>
                 </>
               )}
@@ -1429,7 +1429,7 @@ export function FileManagerGrid({
   );
 }
 
-// Linus式创建意图组件：Grid视图
+// Linus-style creation intent component: Grid view
 function CreateIntentGridItem({
   intent,
   onConfirm,
@@ -1482,7 +1482,7 @@ function CreateIntentGridItem({
   );
 }
 
-// Linus式创建意图组件：List视图
+// Linus-style creation intent component: List view
 function CreateIntentListItem({
   intent,
   onConfirm,
