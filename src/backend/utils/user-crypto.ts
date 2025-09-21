@@ -20,36 +20,36 @@ interface EncryptedDEK {
 }
 
 interface UserSession {
-  dataKey: Buffer;        // 直接存储DEK，删除just-in-time幻想
+  dataKey: Buffer;        // Store DEK directly, delete just-in-time fantasy
   lastActivity: number;
   expiresAt: number;
 }
 
 /**
- * UserCrypto - 简单直接的用户加密
+ * UserCrypto - Simple direct user encryption
  *
- * Linus原则：
- * - 删除just-in-time幻想，直接缓存DEK
- * - 合理的2小时超时，不是5分钟的用户体验灾难
- * - 简单可工作的实现，不是理论上完美的垃圾
- * - 服务器重启后session失效（这是合理的）
+ * Linus principles:
+ * - Delete just-in-time fantasy, cache DEK directly
+ * - Reasonable 2-hour timeout, not 5-minute user experience disaster
+ * - Simple working implementation, not theoretically perfect garbage
+ * - Server restart invalidates sessions (this is reasonable)
  */
 class UserCrypto {
   private static instance: UserCrypto;
   private userSessions: Map<string, UserSession> = new Map();
 
-  // 配置常量 - 合理的超时设置
+  // Configuration constants - reasonable timeout settings
   private static readonly PBKDF2_ITERATIONS = 100000;
   private static readonly KEK_LENGTH = 32;
   private static readonly DEK_LENGTH = 32;
-  private static readonly SESSION_DURATION = 2 * 60 * 60 * 1000; // 2小时，合理的用户体验
-  private static readonly MAX_INACTIVITY = 30 * 60 * 1000;       // 30分钟，不是1分钟的灾难
+  private static readonly SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours, reasonable user experience
+  private static readonly MAX_INACTIVITY = 30 * 60 * 1000;       // 30 minutes, not 1-minute disaster
 
   private constructor() {
-    // 合理的清理间隔
+    // Reasonable cleanup interval
     setInterval(() => {
       this.cleanupExpiredSessions();
-    }, 5 * 60 * 1000); // 每5分钟清理一次，不是30秒
+    }, 5 * 60 * 1000); // Clean every 5 minutes, not 30 seconds
   }
 
   static getInstance(): UserCrypto {
@@ -60,7 +60,7 @@ class UserCrypto {
   }
 
   /**
-   * 用户注册：生成KEK salt和DEK
+   * User registration: generate KEK salt and DEK
    */
   async setupUserEncryption(userId: string, password: string): Promise<void> {
     const kekSalt = await this.generateKEKSalt();
@@ -71,7 +71,7 @@ class UserCrypto {
     const encryptedDEK = this.encryptDEK(DEK, KEK);
     await this.storeEncryptedDEK(userId, encryptedDEK);
 
-    // 立即清理临时密钥
+    // Immediately clean temporary keys
     KEK.fill(0);
     DEK.fill(0);
 
@@ -82,12 +82,12 @@ class UserCrypto {
   }
 
   /**
-   * 用户认证：验证密码并缓存DEK
-   * 删除了just-in-time幻想，直接工作
+   * User authentication: validate password and cache DEK
+   * Deleted just-in-time fantasy, works directly
    */
   async authenticateUser(userId: string, password: string): Promise<boolean> {
     try {
-      // 验证密码并解密DEK
+      // Validate password and decrypt DEK
       const kekSalt = await this.getKEKSalt(userId);
       if (!kekSalt) return false;
 
@@ -99,24 +99,24 @@ class UserCrypto {
       }
 
       const DEK = this.decryptDEK(encryptedDEK, KEK);
-      KEK.fill(0); // 立即清理KEK
+      KEK.fill(0); // Immediately clean KEK
 
-      // 创建用户会话，直接缓存DEK
+      // Create user session, cache DEK directly
       const now = Date.now();
 
-      // 清理旧会话
+      // Clean old session
       const oldSession = this.userSessions.get(userId);
       if (oldSession) {
         oldSession.dataKey.fill(0);
       }
 
       this.userSessions.set(userId, {
-        dataKey: Buffer.from(DEK), // 复制DEK
+        dataKey: Buffer.from(DEK), // Copy DEK
         lastActivity: now,
         expiresAt: now + UserCrypto.SESSION_DURATION,
       });
 
-      DEK.fill(0); // 清理临时DEK
+      DEK.fill(0); // Clean temporary DEK
 
       databaseLogger.success("User authenticated and DEK cached", {
         operation: "user_crypto_auth",
@@ -136,8 +136,8 @@ class UserCrypto {
   }
 
   /**
-   * 获取用户数据密钥 - 简单直接从缓存返回
-   * 删除了just-in-time推导垃圾
+   * Get user data key - simple direct return from cache
+   * Deleted just-in-time derivation garbage
    */
   getUserDataKey(userId: string): Buffer | null {
     const session = this.userSessions.get(userId);
@@ -147,7 +147,7 @@ class UserCrypto {
 
     const now = Date.now();
 
-    // 检查会话是否过期
+    // Check if session has expired
     if (now > session.expiresAt) {
       this.userSessions.delete(userId);
       session.dataKey.fill(0);
@@ -158,7 +158,7 @@ class UserCrypto {
       return null;
     }
 
-    // 检查是否超过最大不活跃时间
+    // Check if max inactivity time exceeded
     if (now - session.lastActivity > UserCrypto.MAX_INACTIVITY) {
       this.userSessions.delete(userId);
       session.dataKey.fill(0);
@@ -169,19 +169,19 @@ class UserCrypto {
       return null;
     }
 
-    // 更新最后活动时间
+    // Update last activity time
     session.lastActivity = now;
     return session.dataKey;
   }
 
 
   /**
-   * 用户登出：清理会话
+   * User logout: clear session
    */
   logoutUser(userId: string): void {
     const session = this.userSessions.get(userId);
     if (session) {
-      session.dataKey.fill(0); // 安全清理密钥
+      session.dataKey.fill(0); // Securely clear key
       this.userSessions.delete(userId);
     }
     databaseLogger.info("User logged out", {
@@ -191,22 +191,22 @@ class UserCrypto {
   }
 
   /**
-   * 检查用户是否已解锁
+   * Check if user is unlocked
    */
   isUserUnlocked(userId: string): boolean {
     return this.getUserDataKey(userId) !== null;
   }
 
   /**
-   * 修改用户密码
+   * Change user password
    */
   async changeUserPassword(userId: string, oldPassword: string, newPassword: string): Promise<boolean> {
     try {
-      // 验证旧密码
+      // Validate old password
       const isValid = await this.validatePassword(userId, oldPassword);
       if (!isValid) return false;
 
-      // 获取当前DEK
+      // Get current DEK
       const kekSalt = await this.getKEKSalt(userId);
       if (!kekSalt) return false;
 
@@ -216,21 +216,21 @@ class UserCrypto {
 
       const DEK = this.decryptDEK(encryptedDEK, oldKEK);
 
-      // 生成新的KEK salt和加密DEK
+      // Generate new KEK salt and encrypt DEK
       const newKekSalt = await this.generateKEKSalt();
       const newKEK = this.deriveKEK(newPassword, newKekSalt);
       const newEncryptedDEK = this.encryptDEK(DEK, newKEK);
 
-      // 存储新的salt和encrypted DEK
+      // Store new salt and encrypted DEK
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      // 清理所有临时密钥
+      // Clean all temporary keys
       oldKEK.fill(0);
       newKEK.fill(0);
       DEK.fill(0);
 
-      // 清理用户会话，要求重新登录
+      // Clean user session, require re-login
       this.logoutUser(userId);
 
       return true;
@@ -239,7 +239,7 @@ class UserCrypto {
     }
   }
 
-  // ===== 私有方法 =====
+  // ===== Private methods =====
 
   private async validatePassword(userId: string, password: string): Promise<boolean> {
     try {
@@ -252,7 +252,7 @@ class UserCrypto {
 
       const DEK = this.decryptDEK(encryptedDEK, KEK);
 
-      // 清理临时密钥
+      // Clean temporary keys
       KEK.fill(0);
       DEK.fill(0);
 
@@ -268,7 +268,7 @@ class UserCrypto {
 
     for (const [userId, session] of this.userSessions.entries()) {
       if (now > session.expiresAt || now - session.lastActivity > UserCrypto.MAX_INACTIVITY) {
-        session.dataKey.fill(0); // 安全清理密钥
+        session.dataKey.fill(0); // Securely clear key
         expiredUsers.push(userId);
       }
     }
@@ -285,7 +285,7 @@ class UserCrypto {
     }
   }
 
-  // ===== 数据库操作和加密方法（简化版本） =====
+  // ===== Database operations and encryption methods (simplified version) =====
 
   private async generateKEKSalt(): Promise<KEKSalt> {
     return {
@@ -337,7 +337,7 @@ class UserCrypto {
     return decrypted;
   }
 
-  // 数据库操作方法
+  // Database operation methods
   private async storeKEKSalt(userId: string, kekSalt: KEKSalt): Promise<void> {
     const key = `user_kek_salt_${userId}`;
     const value = JSON.stringify(kekSalt);

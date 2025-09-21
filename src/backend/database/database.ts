@@ -412,7 +412,7 @@ app.post("/database/export", async (req, res) => {
     const userId = payload.userId;
     const { format = 'encrypted', scope = 'user_data', includeCredentials = true, password } = req.body;
 
-    // 对于明文导出，需要解锁用户数据
+    // For plaintext export, need to unlock user data
     if (format === 'plaintext') {
       if (!password) {
         return res.status(400).json({
@@ -441,7 +441,7 @@ app.post("/database/export", async (req, res) => {
       includeCredentials,
     });
 
-    // 生成导出文件名
+    // Generate export filename
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const filename = `termix-export-${exportData.username}-${timestamp}.json`;
 
@@ -507,10 +507,10 @@ app.post("/database/import", upload.single("file"), async (req, res) => {
       dryRun,
     });
 
-    // 读取上传的文件
+    // Read uploaded file
     const fileContent = fs.readFileSync(req.file.path, 'utf8');
 
-    // 清理上传的临时文件
+    // Clean up uploaded temporary file
     try {
       fs.unlinkSync(req.file.path);
     } catch (cleanupError) {
@@ -520,7 +520,7 @@ app.post("/database/import", upload.single("file"), async (req, res) => {
       });
     }
 
-    // 解析导入数据
+    // Parse import data
     let importData;
     try {
       importData = JSON.parse(fileContent);
@@ -528,7 +528,7 @@ app.post("/database/import", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Invalid JSON format in uploaded file" });
     }
 
-    // 如果导入数据是加密的，需要解锁用户数据
+    // If import data is encrypted, need to unlock user data
     if (importData.metadata?.encrypted) {
       if (!password) {
         return res.status(400).json({
@@ -543,7 +543,7 @@ app.post("/database/import", upload.single("file"), async (req, res) => {
       }
     }
 
-    // 执行导入
+    // Execute import
     const result = await UserDataImport.importUserData(userId, importData, {
       replaceExisting: replaceExisting === 'true' || replaceExisting === true,
       skipCredentials: skipCredentials === 'true' || skipCredentials === true,
@@ -619,9 +619,9 @@ app.post("/database/export/preview", async (req, res) => {
       includeCredentials,
     });
 
-    // 生成导出数据但不解密敏感字段
+    // Generate export data but don't decrypt sensitive fields
     const exportData = await UserDataExport.exportUserData(userId, {
-      format: 'encrypted', // 始终加密预览
+      format: 'encrypted', // Always encrypt preview
       scope,
       includeCredentials,
     });

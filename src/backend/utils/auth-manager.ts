@@ -23,14 +23,14 @@ interface JWTPayload {
 }
 
 /**
- * AuthManager - 简化的认证管理器
+ * AuthManager - Simplified authentication manager
  *
- * 职责：
- * - JWT生成和验证
- * - 认证中间件
- * - 用户登录登出
+ * Responsibilities:
+ * - JWT generation and validation
+ * - Authentication middleware
+ * - User login/logout
  *
- * 不再有两层session - 直接使用UserKeyManager
+ * No more two-layer sessions - use UserKeyManager directly
  */
 class AuthManager {
   private static instance: AuthManager;
@@ -50,7 +50,7 @@ class AuthManager {
   }
 
   /**
-   * 初始化认证系统
+   * Initialize authentication system
    */
   async initialize(): Promise<void> {
     await this.systemCrypto.initializeJWTSecret();
@@ -60,21 +60,21 @@ class AuthManager {
   }
 
   /**
-   * 用户注册
+   * User registration
    */
   async registerUser(userId: string, password: string): Promise<void> {
     await this.userCrypto.setupUserEncryption(userId, password);
   }
 
   /**
-   * 用户登录 - 使用UserCrypto
+   * User login - use UserCrypto
    */
   async authenticateUser(userId: string, password: string): Promise<boolean> {
     return await this.userCrypto.authenticateUser(userId, password);
   }
 
   /**
-   * 生成JWT Token
+   * Generate JWT Token
    */
   async generateJWTToken(
     userId: string,
@@ -93,7 +93,7 @@ class AuthManager {
   }
 
   /**
-   * 验证JWT Token
+   * Verify JWT Token
    */
   async verifyJWTToken(token: string): Promise<JWTPayload | null> {
     try {
@@ -105,7 +105,7 @@ class AuthManager {
   }
 
   /**
-   * 认证中间件
+   * Authentication middleware
    */
   createAuthMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
@@ -128,7 +128,7 @@ class AuthManager {
   }
 
   /**
-   * 数据访问中间件 - 要求用户已解锁数据
+   * Data access middleware - requires user to have unlocked data
    */
   createDataAccessMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
@@ -151,28 +151,28 @@ class AuthManager {
   }
 
   /**
-   * 用户登出
+   * User logout
    */
   logoutUser(userId: string): void {
     this.userCrypto.logoutUser(userId);
   }
 
   /**
-   * 获取用户数据密钥
+   * Get user data key
    */
   getUserDataKey(userId: string): Buffer | null {
     return this.userCrypto.getUserDataKey(userId);
   }
 
   /**
-   * 检查用户是否已解锁
+   * Check if user is unlocked
    */
   isUserUnlocked(userId: string): boolean {
     return this.userCrypto.isUserUnlocked(userId);
   }
 
   /**
-   * 修改用户密码
+   * Change user password
    */
   async changeUserPassword(userId: string, oldPassword: string, newPassword: string): Promise<boolean> {
     return await this.userCrypto.changeUserPassword(userId, oldPassword, newPassword);

@@ -8,13 +8,13 @@ interface EncryptedData {
 }
 
 /**
- * FieldCrypto - 简单直接的字段加密
+ * FieldCrypto - Simple direct field encryption
  *
- * Linus原则：
- * - 没有特殊情况
- * - 没有兼容性检查
- * - 数据要么加密，要么失败
- * - 不存在"legacy data"概念
+ * Linus principles:
+ * - No special cases
+ * - No compatibility checks
+ * - Data is either encrypted or fails
+ * - No "legacy data" concept
  */
 class FieldCrypto {
   private static readonly ALGORITHM = "aes-256-gcm";
@@ -22,7 +22,7 @@ class FieldCrypto {
   private static readonly IV_LENGTH = 16;
   private static readonly SALT_LENGTH = 32;
 
-  // 需要加密的字段 - 简单的映射，没有复杂逻辑
+  // Fields requiring encryption - simple mapping, no complex logic
   private static readonly ENCRYPTED_FIELDS = {
     users: new Set(["password_hash", "client_secret", "totp_secret", "totp_backup_codes", "oidc_identifier"]),
     ssh_data: new Set(["password", "key", "keyPassword"]),
@@ -30,7 +30,7 @@ class FieldCrypto {
   };
 
   /**
-   * 加密字段 - 没有特殊情况
+   * Encrypt field - no special cases
    */
   static encryptField(plaintext: string, masterKey: Buffer, recordId: string, fieldName: string): string {
     if (!plaintext) return "";
@@ -57,7 +57,7 @@ class FieldCrypto {
   }
 
   /**
-   * 解密字段 - 要么成功，要么失败，没有第三种情况
+   * Decrypt field - either succeeds or fails, no third option
    */
   static decryptField(encryptedValue: string, masterKey: Buffer, recordId: string, fieldName: string): string {
     if (!encryptedValue) return "";
@@ -77,7 +77,7 @@ class FieldCrypto {
   }
 
   /**
-   * 检查字段是否需要加密 - 简单查表，没有复杂逻辑
+   * Check if field needs encryption - simple table lookup, no complex logic
    */
   static shouldEncryptField(tableName: string, fieldName: string): boolean {
     const fields = this.ENCRYPTED_FIELDS[tableName as keyof typeof this.ENCRYPTED_FIELDS];

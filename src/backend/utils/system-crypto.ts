@@ -7,19 +7,19 @@ import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
 
 /**
- * SystemCrypto - 开源友好的JWT密钥管理
+ * SystemCrypto - Open source friendly JWT key management
  *
- * Linus原则：
- * - 删除复杂的"系统主密钥"层 - 不解决真实威胁
- * - 删除硬编码默认密钥 - 开源软件的安全灾难
- * - 首次启动自动生成 - 每个实例独立安全
- * - 简单直接，专注真正的安全边界
+ * Linus principles:
+ * - Remove complex "system master key" layer - doesn't solve real threats
+ * - Remove hardcoded default keys - security disaster for open source software
+ * - Auto-generate on first startup - each instance independently secure
+ * - Simple and direct, focus on real security boundaries
  */
 class SystemCrypto {
   private static instance: SystemCrypto;
   private jwtSecret: string | null = null;
 
-  // 存储路径配置
+  // Storage path configuration
   private static readonly JWT_SECRET_FILE = path.join(process.cwd(), '.termix', 'jwt.key');
   private static readonly JWT_SECRET_DB_KEY = 'system_jwt_secret';
 
@@ -33,7 +33,7 @@ class SystemCrypto {
   }
 
   /**
-   * 初始化JWT密钥 - 开源友好的方式
+   * Initialize JWT secret - open source friendly way
    */
   async initializeJWTSecret(): Promise<void> {
     try {
@@ -41,7 +41,7 @@ class SystemCrypto {
         operation: "jwt_init",
       });
 
-      // 1. 环境变量优先（生产环境最佳实践）
+      // 1. Environment variable priority (production best practice)
       const envSecret = process.env.JWT_SECRET;
       if (envSecret && envSecret.length >= 64) {
         this.jwtSecret = envSecret;
@@ -52,7 +52,7 @@ class SystemCrypto {
         return;
       }
 
-      // 2. 检查文件系统存储
+      // 2. Check filesystem storage
       const fileSecret = await this.loadSecretFromFile();
       if (fileSecret) {
         this.jwtSecret = fileSecret;
@@ -63,7 +63,7 @@ class SystemCrypto {
         return;
       }
 
-      // 3. 检查数据库存储
+      // 3. Check database storage
       const dbSecret = await this.loadSecretFromDB();
       if (dbSecret) {
         this.jwtSecret = dbSecret;
@@ -74,7 +74,7 @@ class SystemCrypto {
         return;
       }
 
-      // 4. 生成新密钥并持久化
+      // 4. Generate new key and persist
       await this.generateAndStoreSecret();
 
     } catch (error) {
@@ -86,7 +86,7 @@ class SystemCrypto {
   }
 
   /**
-   * 获取JWT密钥
+   * Get JWT secret
    */
   async getJWTSecret(): Promise<string> {
     if (!this.jwtSecret) {
@@ -96,7 +96,7 @@ class SystemCrypto {
   }
 
   /**
-   * 生成新密钥并持久化存储
+   * Generate new key and persist storage
    */
   private async generateAndStoreSecret(): Promise<void> {
     const newSecret = crypto.randomBytes(32).toString('hex');
@@ -107,7 +107,7 @@ class SystemCrypto {
       instanceId
     });
 
-    // 尝试文件存储（优先，因为更快且不依赖数据库）
+    // Try file storage (priority, faster and doesn't depend on database)
     try {
       await this.saveSecretToFile(newSecret);
       databaseLogger.info("✅ JWT secret saved to file", {
@@ -120,7 +120,7 @@ class SystemCrypto {
         error: fileError instanceof Error ? fileError.message : "Unknown error"
       });
 
-      // 文件存储失败，使用数据库
+      // File storage failed, use database
       await this.saveSecretToDB(newSecret, instanceId);
       databaseLogger.info("✅ JWT secret saved to database", {
         operation: "jwt_db_saved"
@@ -136,21 +136,21 @@ class SystemCrypto {
     });
   }
 
-  // ===== 文件存储方法 =====
+  // ===== File storage methods =====
 
   /**
-   * 保存密钥到文件
+   * Save key to file
    */
   private async saveSecretToFile(secret: string): Promise<void> {
     const dir = path.dirname(SystemCrypto.JWT_SECRET_FILE);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(SystemCrypto.JWT_SECRET_FILE, secret, {
-      mode: 0o600 // 只有owner可读写
+      mode: 0o600 // Only owner can read/write
     });
   }
 
   /**
-   * 从文件加载密钥
+   * Load key from file
    */
   private async loadSecretFromFile(): Promise<string | null> {
     try {
@@ -163,15 +163,15 @@ class SystemCrypto {
         length: secret.length
       });
     } catch (error) {
-      // 文件不存在或无法读取，这是正常的
+      // File doesn't exist or can't be read, this is normal
     }
     return null;
   }
 
-  // ===== 数据库存储方法 =====
+  // ===== Database storage methods =====
 
   /**
-   * 保存密钥到数据库（明文存储，不假装加密有用）
+   * Save key to database (plaintext storage, don't pretend encryption helps)
    */
   private async saveSecretToDB(secret: string, instanceId: string): Promise<void> {
     const secretData = {
@@ -202,7 +202,7 @@ class SystemCrypto {
   }
 
   /**
-   * 从数据库加载密钥
+   * Load key from database
    */
   private async loadSecretFromDB(): Promise<string | null> {
     try {
@@ -217,7 +217,7 @@ class SystemCrypto {
 
       const secretData = JSON.parse(result[0].value);
 
-      // 检查密钥有效性
+      // Check key validity
       if (!secretData.secret || secretData.secret.length < 64) {
         databaseLogger.warn("Invalid JWT secret in database", {
           operation: "jwt_db_invalid",
@@ -238,7 +238,7 @@ class SystemCrypto {
   }
 
   /**
-   * 重新生成JWT密钥（管理功能）
+   * Regenerate JWT secret (admin function)
    */
   async regenerateJWTSecret(): Promise<string> {
     databaseLogger.warn("🔄 Regenerating JWT secret - ALL TOKENS WILL BE INVALIDATED", {
@@ -256,7 +256,7 @@ class SystemCrypto {
   }
 
   /**
-   * 验证JWT密钥系统
+   * Validate JWT secret system
    */
   async validateJWTSecret(): Promise<boolean> {
     try {
@@ -265,7 +265,7 @@ class SystemCrypto {
         return false;
       }
 
-      // 测试JWT操作
+      // Test JWT operations
       const jwt = await import("jsonwebtoken");
       const testPayload = { test: true, timestamp: Date.now() };
       const token = jwt.default.sign(testPayload, secret, { expiresIn: "1s" });
@@ -281,22 +281,22 @@ class SystemCrypto {
   }
 
   /**
-   * 获取JWT密钥状态（简化版本）
+   * Get JWT key status (simplified version)
    */
   async getSystemKeyStatus() {
     const isValid = await this.validateJWTSecret();
     const hasSecret = this.jwtSecret !== null;
 
-    // 检查文件存储
+    // Check file storage
     let hasFileStorage = false;
     try {
       await fs.access(SystemCrypto.JWT_SECRET_FILE);
       hasFileStorage = true;
     } catch {
-      // 文件不存在
+      // File doesn't exist
     }
 
-    // 检查数据库存储
+    // Check database storage
     let hasDBStorage = false;
     let dbInfo = null;
     try {
@@ -315,10 +315,10 @@ class SystemCrypto {
         };
       }
     } catch (error) {
-      // 数据库读取失败
+      // Database read failed
     }
 
-    // 检查环境变量
+    // Check environment variable
     const hasEnvVar = !!(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 64);
 
     return {

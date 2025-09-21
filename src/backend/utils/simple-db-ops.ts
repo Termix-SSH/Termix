@@ -6,17 +6,17 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 type TableName = "users" | "ssh_data" | "ssh_credentials";
 
 /**
- * SimpleDBOps - 简化的加密数据库操作
+ * SimpleDBOps - Simplified encrypted database operations
  *
- * Linus式简化：
- * - 删除所有复杂的抽象层
- * - 直接的CRUD操作
- * - 自动加密/解密
- * - 没有特殊情况处理
+ * Linus-style simplification:
+ * - Remove all complex abstraction layers
+ * - Direct CRUD operations
+ * - Automatic encryption/decryption
+ * - No special case handling
  */
 class SimpleDBOps {
   /**
-   * 插入加密记录
+   * Insert encrypted record
    */
   static async insert<T extends Record<string, any>>(
     table: SQLiteTable<any>,
@@ -24,18 +24,18 @@ class SimpleDBOps {
     data: T,
     userId: string,
   ): Promise<T> {
-    // 验证用户访问权限
+    // Verify user access permissions
     if (!DataCrypto.canUserAccessData(userId)) {
       throw new Error(`User ${userId} data not unlocked`);
     }
 
-    // 加密数据
+    // Encrypt data
     const encryptedData = DataCrypto.encryptRecordForUser(tableName, data, userId);
 
-    // 插入数据库
+    // Insert into database
     const result = await db.insert(table).values(encryptedData).returning();
 
-    // 解密返回结果
+    // Decrypt return result
     const decryptedResult = DataCrypto.decryptRecordForUser(
       tableName,
       result[0],
@@ -53,22 +53,22 @@ class SimpleDBOps {
   }
 
   /**
-   * 查询多条记录
+   * Query multiple records
    */
   static async select<T extends Record<string, any>>(
     query: any,
     tableName: TableName,
     userId: string,
   ): Promise<T[]> {
-    // 验证用户访问权限
+    // Verify user access permissions
     if (!DataCrypto.canUserAccessData(userId)) {
       throw new Error(`User ${userId} data not unlocked`);
     }
 
-    // 执行查询
+    // Execute query
     const results = await query;
 
-    // 解密结果
+    // Decrypt results
     const decryptedResults = DataCrypto.decryptRecordsForUser(
       tableName,
       results,
@@ -86,23 +86,23 @@ class SimpleDBOps {
   }
 
   /**
-   * 查询单条记录
+   * Query single record
    */
   static async selectOne<T extends Record<string, any>>(
     query: any,
     tableName: TableName,
     userId: string,
   ): Promise<T | undefined> {
-    // 验证用户访问权限
+    // Verify user access permissions
     if (!DataCrypto.canUserAccessData(userId)) {
       throw new Error(`User ${userId} data not unlocked`);
     }
 
-    // 执行查询
+    // Execute query
     const result = await query;
     if (!result) return undefined;
 
-    // 解密结果
+    // Decrypt results
     const decryptedResult = DataCrypto.decryptRecordForUser(
       tableName,
       result,
@@ -120,7 +120,7 @@ class SimpleDBOps {
   }
 
   /**
-   * 更新记录
+   * Update record
    */
   static async update<T extends Record<string, any>>(
     table: SQLiteTable<any>,
@@ -129,22 +129,22 @@ class SimpleDBOps {
     data: Partial<T>,
     userId: string,
   ): Promise<T[]> {
-    // 验证用户访问权限
+    // Verify user access permissions
     if (!DataCrypto.canUserAccessData(userId)) {
       throw new Error(`User ${userId} data not unlocked`);
     }
 
-    // 加密更新数据
+    // Encrypt update data
     const encryptedData = DataCrypto.encryptRecordForUser(tableName, data, userId);
 
-    // 执行更新
+    // Execute update
     const result = await db
       .update(table)
       .set(encryptedData)
       .where(where)
       .returning();
 
-    // 解密返回数据
+    // Decrypt return data
     const decryptedResults = DataCrypto.decryptRecordsForUser(
       tableName,
       result,
@@ -162,7 +162,7 @@ class SimpleDBOps {
   }
 
   /**
-   * 删除记录
+   * Delete record
    */
   static async delete(
     table: SQLiteTable<any>,
@@ -183,18 +183,18 @@ class SimpleDBOps {
   }
 
   /**
-   * 健康检查
+   * Health check
    */
   static async healthCheck(userId: string): Promise<boolean> {
     return DataCrypto.canUserAccessData(userId);
   }
 
   /**
-   * 特殊方法：返回加密数据（用于自动启动等场景）
-   * 不解密，直接返回加密状态的数据
+   * Special method: return encrypted data (for auto-start scenarios)
+   * No decryption, return data in encrypted state directly
    */
   static async selectEncrypted(query: any, tableName: TableName): Promise<any[]> {
-    // 直接执行查询，不进行解密
+    // Execute query directly, no decryption
     const results = await query;
 
     databaseLogger.debug(`Selected ${results.length} encrypted records from ${tableName}`, {

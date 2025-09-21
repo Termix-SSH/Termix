@@ -28,19 +28,19 @@ interface UserExportData {
 }
 
 /**
- * UserDataExport - 用户级数据导入导出
+ * UserDataExport - User-level data import/export
  *
- * Linus原则：
- * - 用户拥有自己的数据，应该能自由导出
- * - 简单直接，没有复杂的权限检查
- * - 支持加密和明文两种格式
- * - 不破坏现有系统架构
+ * Linus principles:
+ * - Users own their data and should be able to export freely
+ * - Simple and direct, no complex permission checks
+ * - Support both encrypted and plaintext formats
+ * - Don't break existing system architecture
  */
 class UserDataExport {
   private static readonly EXPORT_VERSION = "v2.0";
 
   /**
-   * 导出用户数据
+   * Export user data
    */
   static async exportUserData(
     userId: string,
@@ -61,7 +61,7 @@ class UserDataExport {
         includeCredentials,
       });
 
-      // 验证用户存在
+      // Verify user exists
       const user = await db.select().from(users).where(eq(users.id, userId));
       if (!user || user.length === 0) {
         throw new Error(`User not found: ${userId}`);
@@ -69,7 +69,7 @@ class UserDataExport {
 
       const userRecord = user[0];
 
-      // 获取用户数据密钥（如果需要解密）
+      // Get user data key (if decryption needed)
       let userDataKey: Buffer | null = null;
       if (format === 'plaintext') {
         userDataKey = DataCrypto.getUserDataKey(userId);
@@ -78,13 +78,13 @@ class UserDataExport {
         }
       }
 
-      // 导出SSH主机配置
+      // Export SSH host configurations
       const sshHosts = await db.select().from(sshData).where(eq(sshData.userId, userId));
       const processedSshHosts = format === 'plaintext' && userDataKey
         ? sshHosts.map(host => DataCrypto.decryptRecord("ssh_data", host, userId, userDataKey!))
         : sshHosts;
 
-      // 导出SSH凭据（如果包含）
+      // Export SSH credentials (if included)
       let sshCredentialsData: any[] = [];
       if (includeCredentials) {
         const credentials = await db.select().from(sshCredentials).where(eq(sshCredentials.userId, userId));
@@ -93,17 +93,17 @@ class UserDataExport {
           : credentials;
       }
 
-      // 导出文件管理器数据
+      // Export file manager data
       const [recentFiles, pinnedFiles, shortcuts] = await Promise.all([
         db.select().from(fileManagerRecent).where(eq(fileManagerRecent.userId, userId)),
         db.select().from(fileManagerPinned).where(eq(fileManagerPinned.userId, userId)),
         db.select().from(fileManagerShortcuts).where(eq(fileManagerShortcuts.userId, userId)),
       ]);
 
-      // 导出已忽略的警告
+      // Export dismissed alerts
       const alerts = await db.select().from(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
 
-      // 构建导出数据
+      // Build export data
       const exportData: UserExportData = {
         version: this.EXPORT_VERSION,
         exportedAt: new Date().toISOString(),
@@ -148,7 +148,7 @@ class UserDataExport {
   }
 
   /**
-   * 导出为JSON字符串
+   * Export as JSON string
    */
   static async exportUserDataToJSON(
     userId: string,
@@ -165,7 +165,7 @@ class UserDataExport {
   }
 
   /**
-   * 验证导出数据格式
+   * Validate export data format
    */
   static validateExportData(data: any): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
@@ -191,7 +191,7 @@ class UserDataExport {
       errors.push("Missing or invalid metadata field");
     }
 
-    // 检查必需的数据字段
+    // Check required data fields
     if (data.userData) {
       const requiredFields = ['sshHosts', 'sshCredentials', 'fileManagerData', 'dismissedAlerts'];
       for (const field of requiredFields) {
@@ -214,7 +214,7 @@ class UserDataExport {
   }
 
   /**
-   * 获取导出数据统计信息
+   * Get export data statistics
    */
   static getExportStats(data: UserExportData): {
     version: string;

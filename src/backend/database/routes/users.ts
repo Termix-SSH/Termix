@@ -336,10 +336,10 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         scopes: scopes || "openid email profile",
       };
 
-      // 对敏感配置进行加密存储
+      // Encrypt sensitive configuration for storage
       let encryptedConfig;
       try {
-        // 使用管理员的数据密钥加密OIDC配置
+        // Use admin's data key to encrypt OIDC configuration
         const adminDataKey = DataCrypto.getUserDataKey(userId);
         if (adminDataKey) {
           encryptedConfig = DataCrypto.encryptRecord("settings", config, userId, adminDataKey);
@@ -348,10 +348,10 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
             userId,
           });
         } else {
-          // 如果管理员数据未解锁，只加密client_secret
+          // If admin data not unlocked, only encrypt client_secret
           encryptedConfig = {
             ...config,
-            client_secret: `encrypted:${Buffer.from(client_secret).toString('base64')}`, // 简单的base64编码
+            client_secret: `encrypted:${Buffer.from(client_secret).toString('base64')}`, // Simple base64 encoding
           };
           authLogger.warn("OIDC configuration stored with basic encoding - admin should re-save with password", {
             operation: "oidc_config_basic_encoding",
@@ -422,10 +422,10 @@ router.get("/oidc-config", async (req, res) => {
 
     let config = JSON.parse((row as any).value);
 
-    // 解密或解码client_secret用于显示
+    // Decrypt or decode client_secret for display
     if (config.client_secret) {
       if (config.client_secret.startsWith('encrypted:')) {
-        // 需要管理员权限解密
+        // Requires admin permission to decrypt
         const authHeader = req.headers["authorization"];
         if (authHeader?.startsWith("Bearer ")) {
           const token = authHeader.split(" ")[1];
@@ -442,7 +442,7 @@ router.get("/oidc-config", async (req, res) => {
                 if (adminDataKey) {
                   config = DataCrypto.decryptRecord("settings", config, userId, adminDataKey);
                 } else {
-                  // 管理员数据未解锁，隐藏client_secret
+                  // Admin data not unlocked, hide client_secret
                   config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
                 }
               } catch (decryptError) {
@@ -462,7 +462,7 @@ router.get("/oidc-config", async (req, res) => {
           config.client_secret = "[ENCRYPTED - AUTH REQUIRED]";
         }
       } else if (config.client_secret.startsWith('encoded:')) {
-        // base64解码
+        // base64 decode
         try {
           const decoded = Buffer.from(config.client_secret.substring(8), 'base64').toString('utf8');
           config.client_secret = decoded;
@@ -470,7 +470,7 @@ router.get("/oidc-config", async (req, res) => {
           config.client_secret = "[ENCODING ERROR]";
         }
       }
-      // 否则是明文，直接返回
+      // Otherwise plaintext, return directly
     }
 
     res.json(config);

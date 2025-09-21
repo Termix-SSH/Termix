@@ -15,7 +15,7 @@ import "dotenv/config";
       version: version,
     });
 
-    // 生产环境安全检查
+    // Production environment security checks
     if (process.env.NODE_ENV === 'production') {
       systemLogger.info("Running production environment security checks...", {
         operation: "security_checks",
@@ -23,19 +23,19 @@ import "dotenv/config";
 
       const securityIssues: string[] = [];
 
-      // 检查系统主密钥
+      // Check system master key
       if (!process.env.SYSTEM_MASTER_KEY) {
         securityIssues.push("SYSTEM_MASTER_KEY environment variable is required in production");
       } else if (process.env.SYSTEM_MASTER_KEY.length < 64) {
         securityIssues.push("SYSTEM_MASTER_KEY should be at least 64 characters in production");
       }
 
-      // 检查数据库文件加密
+      // Check database file encryption
       if (process.env.DB_FILE_ENCRYPTION === 'false') {
         securityIssues.push("Database file encryption should be enabled in production");
       }
 
-      // 检查JWT移密
+      // Check JWT secret
       if (!process.env.JWT_SECRET) {
         systemLogger.info("JWT_SECRET not set - will use encrypted storage", {
           operation: "security_checks",
@@ -43,7 +43,7 @@ import "dotenv/config";
         });
       }
 
-      // 检查CORS配置警告
+      // Check CORS configuration warning
       systemLogger.warn("Production deployment detected - ensure CORS is properly configured", {
         operation: "security_checks",
         warning: "Verify frontend domain whitelist"

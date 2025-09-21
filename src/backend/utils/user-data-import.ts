@@ -27,18 +27,18 @@ interface ImportResult {
 }
 
 /**
- * UserDataImport - 用户数据导入
+ * UserDataImport - User data import
  *
- * Linus原则：
- * - 导入不应该破坏现有数据（除非明确要求）
- * - 支持dry-run模式验证
- * - 处理ID冲突的简单策略：重新生成
- * - 错误处理要明确，不能静默失败
+ * Linus principles:
+ * - Import should not break existing data (unless explicitly requested)
+ * - Support dry-run mode for validation
+ * - Simple strategy for ID conflicts: regenerate
+ * - Error handling must be explicit, no silent failures
  */
 class UserDataImport {
 
   /**
-   * 导入用户数据
+   * Import user data
    */
   static async importUserData(
     targetUserId: string,
@@ -64,19 +64,19 @@ class UserDataImport {
         skipFileManagerData,
       });
 
-      // 验证目标用户存在
+      // Verify target user exists
       const targetUser = await db.select().from(users).where(eq(users.id, targetUserId));
       if (!targetUser || targetUser.length === 0) {
         throw new Error(`Target user not found: ${targetUserId}`);
       }
 
-      // 验证导出数据格式
+      // Validate export data format
       const validation = UserDataExport.validateExportData(exportData);
       if (!validation.valid) {
         throw new Error(`Invalid export data: ${validation.errors.join(', ')}`);
       }
 
-      // 验证用户数据已解锁（如果数据是加密的）
+      // Verify user data is unlocked (if data is encrypted)
       let userDataKey: Buffer | null = null;
       if (exportData.metadata.encrypted) {
         userDataKey = DataCrypto.getUserDataKey(targetUserId);
@@ -98,7 +98,7 @@ class UserDataImport {
         dryRun,
       };
 
-      // 导入SSH主机配置
+      // Import SSH host configurations
       if (exportData.userData.sshHosts && exportData.userData.sshHosts.length > 0) {
         const importStats = await this.importSshHosts(
           targetUserId,
@@ -110,7 +110,7 @@ class UserDataImport {
         result.summary.errors.push(...importStats.errors);
       }
 
-      // 导入SSH凭据
+      // Import SSH credentials
       if (!skipCredentials && exportData.userData.sshCredentials && exportData.userData.sshCredentials.length > 0) {
         const importStats = await this.importSshCredentials(
           targetUserId,
@@ -122,7 +122,7 @@ class UserDataImport {
         result.summary.errors.push(...importStats.errors);
       }
 
-      // 导入文件管理器数据
+      // Import file manager data
       if (!skipFileManagerData && exportData.userData.fileManagerData) {
         const importStats = await this.importFileManagerData(
           targetUserId,
@@ -134,7 +134,7 @@ class UserDataImport {
         result.summary.errors.push(...importStats.errors);
       }
 
-      // 导入忽略的警告
+      // Import dismissed alerts
       if (exportData.userData.dismissedAlerts && exportData.userData.dismissedAlerts.length > 0) {
         const importStats = await this.importDismissedAlerts(
           targetUserId,
@@ -167,7 +167,7 @@ class UserDataImport {
   }
 
   /**
-   * 导入SSH主机配置
+   * Import SSH host configurations
    */
   private static async importSshHosts(
     targetUserId: string,
@@ -185,16 +185,16 @@ class UserDataImport {
           continue;
         }
 
-        // 重新生成ID避免冲突
+        // Regenerate ID to avoid conflicts
         const newHostData = {
           ...host,
-          id: undefined, // 让数据库自动生成
+          id: undefined, // Let database auto-generate
           userId: targetUserId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        // 如果数据需要重新加密
+        // If data needs re-encryption
         let processedHostData = newHostData;
         if (options.userDataKey) {
           processedHostData = DataCrypto.encryptRecord("ssh_data", newHostData, targetUserId, options.userDataKey);
@@ -212,7 +212,7 @@ class UserDataImport {
   }
 
   /**
-   * 导入SSH凭据
+   * Import SSH credentials
    */
   private static async importSshCredentials(
     targetUserId: string,
@@ -230,18 +230,18 @@ class UserDataImport {
           continue;
         }
 
-        // 重新生成ID避免冲突
+        // Regenerate ID to avoid conflicts
         const newCredentialData = {
           ...credential,
-          id: undefined, // 让数据库自动生成
+          id: undefined, // Let database auto-generate
           userId: targetUserId,
-          usageCount: 0, // 重置使用计数
+          usageCount: 0, // Reset usage count
           lastUsed: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        // 如果数据需要重新加密
+        // If data needs re-encryption
         let processedCredentialData = newCredentialData;
         if (options.userDataKey) {
           processedCredentialData = DataCrypto.encryptRecord("ssh_credentials", newCredentialData, targetUserId, options.userDataKey);
@@ -259,7 +259,7 @@ class UserDataImport {
   }
 
   /**
-   * 导入文件管理器数据
+   * Import file manager data
    */
   private static async importFileManagerData(
     targetUserId: string,
@@ -271,7 +271,7 @@ class UserDataImport {
     const errors: string[] = [];
 
     try {
-      // 导入最近文件
+      // Import recent files
       if (fileManagerData.recent && Array.isArray(fileManagerData.recent)) {
         for (const item of fileManagerData.recent) {
           try {
@@ -292,7 +292,7 @@ class UserDataImport {
         }
       }
 
-      // 导入固定文件
+      // Import pinned files
       if (fileManagerData.pinned && Array.isArray(fileManagerData.pinned)) {
         for (const item of fileManagerData.pinned) {
           try {
@@ -313,7 +313,7 @@ class UserDataImport {
         }
       }
 
-      // 导入快捷方式
+      // Import shortcuts
       if (fileManagerData.shortcuts && Array.isArray(fileManagerData.shortcuts)) {
         for (const item of fileManagerData.shortcuts) {
           try {
@@ -341,7 +341,7 @@ class UserDataImport {
   }
 
   /**
-   * 导入忽略的警告
+   * Import dismissed alerts
    */
   private static async importDismissedAlerts(
     targetUserId: string,
@@ -359,7 +359,7 @@ class UserDataImport {
           continue;
         }
 
-        // 检查是否已存在相同的警告
+        // Check if alert already exists
         const existing = await db
           .select()
           .from(dismissedAlerts)
@@ -402,7 +402,7 @@ class UserDataImport {
   }
 
   /**
-   * 从JSON字符串导入
+   * Import from JSON string
    */
   static async importUserDataFromJSON(
     targetUserId: string,

@@ -3,13 +3,13 @@ import { UserCrypto } from "./user-crypto.js";
 import { databaseLogger } from "./logger.js";
 
 /**
- * DataCrypto - 简化的数据库加密
+ * DataCrypto - Simplified database encryption
  *
- * Linus原则：
- * - 删除所有"向后兼容"垃圾
- * - 删除所有特殊情况处理
- * - 数据要么正确加密，要么操作失败
- * - 没有legacy data概念
+ * Linus principles:
+ * - Remove all "backward compatibility" garbage
+ * - Remove all special case handling
+ * - Data is either properly encrypted or operation fails
+ * - No legacy data concept
  */
 class DataCrypto {
   private static userCrypto: UserCrypto;
@@ -43,12 +43,12 @@ class DataCrypto {
   }
 
   /**
-   * 解密记录 - 要么成功，要么失败
+   * Decrypt record - either succeeds or fails
    *
-   * 删除了所有的：
-   * - isEncrypted()检查
-   * - legacy data处理
-   * - "向后兼容"逻辑
+   * Removed all:
+   * - isEncrypted() checks
+   * - legacy data handling
+   * - "backward compatibility" logic
    * - migration on access
    */
   static decryptRecord(tableName: string, record: any, userId: string, userDataKey: Buffer): any {
@@ -59,8 +59,8 @@ class DataCrypto {
 
     for (const [fieldName, value] of Object.entries(record)) {
       if (FieldCrypto.shouldEncryptField(tableName, fieldName) && value) {
-        // 简单规则：敏感字段必须是加密的JSON格式
-        // 如果不是，就是数据损坏，直接失败
+        // Simple rule: sensitive fields must be encrypted JSON format
+        // If not, it's data corruption, fail directly
         decryptedRecord[fieldName] = FieldCrypto.decryptField(
           value as string,
           userDataKey,
