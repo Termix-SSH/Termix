@@ -7,13 +7,13 @@ import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 import { EncryptedDBOperations } from "../utils/encrypted-db-operations.js";
 
-// 可执行文件检测工具函数
+// Executable file detection utility function
 function isExecutableFile(permissions: string, fileName: string): boolean {
-  // 检查执行权限位 (user, group, other)
+  // Check execute permission bits (user, group, other)
   const hasExecutePermission =
     permissions[3] === "x" || permissions[6] === "x" || permissions[9] === "x";
 
-  // 常见的脚本文件扩展名
+  // Common script file extensions
   const scriptExtensions = [
     ".sh",
     ".py",
@@ -29,13 +29,13 @@ function isExecutableFile(permissions: string, fileName: string): boolean {
     fileName.toLowerCase().endsWith(ext),
   );
 
-  // 常见的编译可执行文件（无扩展名或特定扩展名）
+  // Common compiled executable files (no extension or specific extensions)
   const executableExtensions = [".bin", ".exe", ".out"];
   const hasExecutableExtension = executableExtensions.some((ext) =>
     fileName.toLowerCase().endsWith(ext),
   );
 
-  // 无扩展名且有执行权限的文件通常是可执行文件
+  // Files with no extension and execute permission are usually executable files
   const hasNoExtension = !fileName.includes(".") && hasExecutePermission;
 
   return (
@@ -141,6 +141,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             ),
           ),
         "ssh_credentials",
+        userId,
       );
 
       if (credentials.length > 0) {
@@ -359,12 +360,12 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           const group = parts[3];
           const size = parseInt(parts[4], 10);
 
-          // 日期可能占夨3个部分（月 日 时间）或者是（月 日 年）
+          // Date may occupy 3 parts (month day time) or (month day year)
           let dateStr = "";
           let nameStartIndex = 8;
 
           if (parts[5] && parts[6] && parts[7]) {
-            // 常规格式: 月 日 时间/年
+            // Regular format: month day time/year
             dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
           }
 
@@ -374,7 +375,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
 
           if (name === "." || name === "..") continue;
 
-          // 解析符号链接目标
+          // Parse symbolic link target
           let actualName = name;
           let linkTarget = undefined;
           if (isLink && name.includes(" -> ")) {
@@ -386,17 +387,17 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           files.push({
             name: actualName,
             type: isDirectory ? "directory" : isLink ? "link" : "file",
-            size: isDirectory ? undefined : size, // 目录不显示大小
+            size: isDirectory ? undefined : size, // Directories don't show size
             modified: dateStr,
             permissions,
             owner,
             group,
-            linkTarget, // 符号链接的目标
-            path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`, // 添加完整路径
+            linkTarget, // Symbolic link target
+            path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`, // Add full path
             executable:
               !isDirectory && !isLink
                 ? isExecutableFile(permissions, actualName)
-                : false, // 检测可执行文件
+                : false, // Detect executable files
           });
         }
       }
@@ -1941,7 +1942,7 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 
-// 执行可执行文件
+// Execute executable file
 app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   const { sessionId, filePath, hostId, userId } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -1965,7 +1966,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
 
   const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
-  // 检查文件是否存在且可执行
+  // Check if file exists and is executable
   const checkCommand = `test -x '${escapedPath}' && echo "EXECUTABLE" || echo "NOT_EXECUTABLE"`;
 
   sshConn.client.exec(checkCommand, (checkErr, checkStream) => {
@@ -1986,7 +1987,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
         return res.status(400).json({ error: "File is not executable" });
       }
 
-      // 执行文件
+      // Execute file
       const executeCommand = `cd "$(dirname '${escapedPath}')" && '${escapedPath}' 2>&1; echo "EXIT_CODE:$?"`;
 
       fileLogger.info("Executing file", {
@@ -2014,7 +2015,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
         });
 
         stream.on("close", (code) => {
-          // 从输出中提取退出代码
+          // Extract exit code from output
           const exitCodeMatch = output.match(/EXIT_CODE:(\d+)$/);
           const actualExitCode = exitCodeMatch
             ? parseInt(exitCodeMatch[1])

@@ -14,6 +14,8 @@ import jwt from "jsonwebtoken";
 import multer from "multer";
 import { sshLogger } from "../../utils/logger.js";
 import { EncryptedDBOperations } from "../../utils/encrypted-db-operations.js";
+import { EncryptedDBOperationsAdmin } from "../../utils/encrypted-db-operations-admin.js";
+import { SecuritySession } from "../../utils/security-session.js";
 
 const router = express.Router();
 
@@ -31,29 +33,10 @@ function isValidPort(port: any): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
-async function authenticateJWT(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    sshLogger.warn("Missing or invalid Authorization header");
-    return res
-      .status(401)
-      .json({ error: "Missing or invalid Authorization header" });
-  }
-  const token = authHeader.split(" ")[1];
-
-  try {
-    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
-    const keyManager = EncryptionKeyManager.getInstance();
-    const jwtSecret = await keyManager.getJWTSecret();
-
-    const payload = jwt.verify(token, jwtSecret) as JWTPayload;
-    (req as any).userId = payload.userId;
-    next();
-  } catch (err) {
-    sshLogger.warn("Invalid or expired token");
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
-}
+// Use SecuritySession middleware for authentication
+const securitySession = SecuritySession.getInstance();
+const authenticateJWT = securitySession.createAuthMiddleware();
+const requireDataAccess = securitySession.createDataAccessMiddleware();
 
 function isLocalhost(req: Request) {
   const ip = req.ip || req.connection?.remoteAddress;
@@ -67,7 +50,8 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
     return res.status(403).json({ error: "Forbidden" });
   }
   try {
-    const data = await EncryptedDBOperations.select(
+    // Internal endpoint - returns encrypted data (autostart will need user unlock)
+    const data = await EncryptedDBOperationsAdmin.selectEncrypted(
       db.select().from(sshData),
       "ssh_data",
     );
@@ -101,6 +85,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
 router.post(
   "/db/host",
   authenticateJWT,
+  requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
     const userId = (req as any).userId;
@@ -213,6 +198,7 @@ router.post(
         sshData,
         "ssh_data",
         sshDataObj,
+        userId,
       );
 
       if (!result) {
@@ -404,6 +390,7 @@ router.put(
         "ssh_data",
         and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
         sshDataObj,
+        userId,
       );
 
       const updatedHosts = await EncryptedDBOperations.select(
@@ -414,6 +401,7 @@ router.put(
             and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
           ),
         "ssh_data",
+        userId,
       );
 
       if (updatedHosts.length === 0) {
@@ -489,6 +477,7 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
     const data = await EncryptedDBOperations.select(
       db.select().from(sshData).where(eq(sshData.userId, userId)),
       "ssh_data",
+      userId,
     );
 
     const result = await Promise.all(
@@ -1113,6 +1102,7 @@ router.put(
           folder: newName,
           updatedAt: new Date().toISOString(),
         },
+        userId,
       );
 
       const updatedCredentials = await db
@@ -1253,7 +1243,7 @@ router.post(
           updatedAt: new Date().toISOString(),
         };
 
-        await EncryptedDBOperations.insert(sshData, "ssh_data", sshDataObj);
+        await EncryptedDBOperations.insert(sshData, "ssh_data", sshDataObj, userId);
         results.success++;
       } catch (error) {
         results.failed++;

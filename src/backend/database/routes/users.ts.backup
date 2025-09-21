@@ -16,12 +16,6 @@ import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import type { Request, Response, NextFunction } from "express";
 import { authLogger, apiLogger } from "../../utils/logger.js";
-import { SecuritySession } from "../../utils/security-session.js";
-import { UserKeyManager } from "../../utils/user-key-manager.js";
-import { SecurityMigration } from "../../utils/security-migration.js";
-
-// Get security session instance
-const securitySession = SecuritySession.getInstance();
 
 async function verifyOIDCToken(
   idToken: string,
@@ -135,11 +129,39 @@ interface JWTPayload {
   exp?: number;
 }
 
-// JWT authentication middleware - only verify JWT, no data unlock required
-const authenticateJWT = securitySession.createAuthMiddleware();
+// JWT authentication middleware
+async function authenticateJWT(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    authLogger.warn("Missing or invalid Authorization header", {
+      operation: "auth",
+      method: req.method,
+      url: req.url,
+    });
+    return res
+      .status(401)
+      .json({ error: "Missing or invalid Authorization header" });
+  }
+  const token = authHeader.split(" ")[1];
 
-// Data access middleware - requires user to have unlocked data keys
-const requireDataAccess = securitySession.createDataAccessMiddleware();
+  try {
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
+
+    const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+    (req as any).userId = payload.userId;
+    next();
+  } catch (err) {
+    authLogger.warn("Invalid or expired token", {
+      operation: "auth",
+      method: req.method,
+      url: req.url,
+      error: err,
+    });
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
 
 // Route: Create traditional user (username/password)
 // POST /users/create
@@ -228,25 +250,6 @@ router.post("/create", async (req, res) => {
       totp_enabled: false,
       totp_backup_codes: null,
     });
-
-    // Set up user data encryption (KEK-DEK architecture)
-    try {
-      await securitySession.registerUser(id, password);
-      authLogger.success("User encryption setup completed", {
-        operation: "user_encryption_setup",
-        userId: id,
-      });
-    } catch (encryptionError) {
-      // If encryption setup fails, delete user record
-      await db.delete(users).where(eq(users.id, id));
-      authLogger.error("Failed to setup user encryption, user creation rolled back", encryptionError, {
-        operation: "user_create_encryption_failed",
-        userId: id,
-      });
-      return res.status(500).json({
-        error: "Failed to setup user security - user creation cancelled"
-      });
-    }
 
     authLogger.success(
       `Traditional user created: ${username} (is_admin: ${isFirstUser})`,
@@ -703,7 +706,10 @@ router.get("/oidc/callback", async (req, res) => {
 
     const userRecord = user[0];
 
-    const token = await securitySession.generateJWTToken(userRecord.id, {
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
+    const token = jwt.sign({ userId: userRecord.id }, jwtSecret, {
       expiresIn: "50d",
     });
 
@@ -784,64 +790,24 @@ router.post("/login", async (req, res) => {
       });
       return res.status(401).json({ error: "Incorrect password" });
     }
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
+    const token = jwt.sign({ userId: userRecord.id }, jwtSecret, {
+      expiresIn: "50d",
+    });
 
-    // Check and handle user migration (from old encryption system)
-    let migrationPerformed = false;
-    try {
-      migrationPerformed = await SecurityMigration.handleUserLoginMigration(userRecord.id, password);
-      if (migrationPerformed) {
-        authLogger.success("User encryption migrated during login", {
-          operation: "login_migration_success",
-          username,
-          userId: userRecord.id,
-        });
-      }
-    } catch (migrationError) {
-      authLogger.error("Failed to migrate user during login", migrationError, {
-        operation: "login_migration_failed",
-        username,
-        userId: userRecord.id,
-      });
-      // Migration failure should not block login, but needs to be logged
-    }
-
-    // Unlock user data keys
-    const dataUnlocked = await securitySession.unlockUserData(userRecord.id, password);
-    if (!dataUnlocked) {
-      authLogger.error("Failed to unlock user data during login", undefined, {
-        operation: "user_login_data_unlock_failed",
-        username,
-        userId: userRecord.id,
-      });
-      return res.status(500).json({
-        error: "Failed to unlock user data - please contact administrator"
-      });
-    }
-
-    // TOTP handling
     if (userRecord.totp_enabled) {
-      const tempToken = await securitySession.generateJWTToken(userRecord.id, {
-        pendingTOTP: true,
-        expiresIn: "10m",
-      });
+      const tempToken = jwt.sign(
+        { userId: userRecord.id, pending_totp: true },
+        jwtSecret,
+        { expiresIn: "10m" },
+      );
       return res.json({
         requires_totp: true,
         temp_token: tempToken,
       });
     }
-
-    // Generate normal JWT token
-    const token = await securitySession.generateJWTToken(userRecord.id, {
-      expiresIn: "24h",
-    });
-
-    authLogger.success(`User logged in successfully: ${username}`, {
-      operation: "user_login_success",
-      username,
-      userId: userRecord.id,
-      dataUnlocked: true,
-    });
-
     return res.json({
       token,
       is_admin: !!userRecord.is_admin,
@@ -1297,8 +1263,12 @@ router.post("/totp/verify-login", async (req, res) => {
   }
 
   try {
-    const decoded = await securitySession.verifyJWTToken(temp_token);
-    if (!decoded || !decoded.pendingTOTP) {
+    const { EncryptionKeyManager } = await import("../../utils/encryption-key-manager.js");
+    const keyManager = EncryptionKeyManager.getInstance();
+    const jwtSecret = await keyManager.getJWTSecret();
+
+    const decoded = jwt.verify(temp_token, jwtSecret) as any;
+    if (!decoded.pending_totp) {
       return res.status(401).json({ error: "Invalid temporary token" });
     }
 
@@ -1340,7 +1310,7 @@ router.post("/totp/verify-login", async (req, res) => {
         .where(eq(users.id, userRecord.id));
     }
 
-    const token = await securitySession.generateJWTToken(userRecord.id, {
+    const token = jwt.sign({ userId: userRecord.id }, jwtSecret, {
       expiresIn: "50d",
     });
 
@@ -1652,171 +1622,6 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     } else {
       res.status(500).json({ error: "Failed to delete account" });
     }
-  }
-});
-
-// ===== New security API endpoints =====
-
-// Route: User data unlock - used when session expires
-// POST /users/unlock-data
-router.post("/unlock-data", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
-  const { password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({ error: "Password is required" });
-  }
-
-  try {
-    const unlocked = await securitySession.unlockUserData(userId, password);
-    if (unlocked) {
-      authLogger.success("User data unlocked", {
-        operation: "user_data_unlock",
-        userId,
-      });
-      res.json({
-        success: true,
-        message: "Data unlocked successfully"
-      });
-    } else {
-      authLogger.warn("Failed to unlock user data - invalid password", {
-        operation: "user_data_unlock_failed",
-        userId,
-      });
-      res.status(401).json({ error: "Invalid password" });
-    }
-  } catch (err) {
-    authLogger.error("Data unlock failed", err, {
-      operation: "user_data_unlock_error",
-      userId,
-    });
-    res.status(500).json({ error: "Failed to unlock data" });
-  }
-});
-
-// Route: Check user data unlock status
-// GET /users/data-status
-router.get("/data-status", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
-
-  try {
-    const isUnlocked = securitySession.isUserDataUnlocked(userId);
-    const userKeyManager = UserKeyManager.getInstance();
-    const sessionStatus = userKeyManager.getUserSessionStatus(userId);
-
-    res.json({
-      isUnlocked,
-      session: sessionStatus,
-    });
-  } catch (err) {
-    authLogger.error("Failed to get data status", err, {
-      operation: "data_status_error",
-      userId,
-    });
-    res.status(500).json({ error: "Failed to get data status" });
-  }
-});
-
-// Route: User logout (clear data session)
-// POST /users/logout
-router.post("/logout", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
-
-  try {
-    securitySession.logoutUser(userId);
-    authLogger.info("User logged out", {
-      operation: "user_logout",
-      userId,
-    });
-    res.json({ message: "Logged out successfully" });
-  } catch (err) {
-    authLogger.error("Logout failed", err, {
-      operation: "logout_error",
-      userId,
-    });
-    res.status(500).json({ error: "Logout failed" });
-  }
-});
-
-// Route: Change user password (re-encrypt data keys)
-// POST /users/change-password
-router.post("/change-password", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({
-      error: "Current password and new password are required"
-    });
-  }
-
-  if (newPassword.length < 8) {
-    return res.status(400).json({
-      error: "New password must be at least 8 characters long"
-    });
-  }
-
-  try {
-    // Verify current password and change
-    const success = await securitySession.changeUserPassword(
-      userId,
-      currentPassword,
-      newPassword
-    );
-
-    if (success) {
-      // Also update password hash in database
-      const saltRounds = parseInt(process.env.SALT || "10", 10);
-      const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
-      await db
-        .update(users)
-        .set({ password_hash: newPasswordHash })
-        .where(eq(users.id, userId));
-
-      authLogger.success("User password changed successfully", {
-        operation: "password_change_success",
-        userId,
-      });
-
-      res.json({
-        success: true,
-        message: "Password changed successfully"
-      });
-    } else {
-      authLogger.warn("Password change failed - invalid current password", {
-        operation: "password_change_failed",
-        userId,
-      });
-      res.status(401).json({ error: "Current password is incorrect" });
-    }
-  } catch (err) {
-    authLogger.error("Password change failed", err, {
-      operation: "password_change_error",
-      userId,
-    });
-    res.status(500).json({ error: "Failed to change password" });
-  }
-});
-
-// Route: Get security status (admin)
-// GET /users/security-status
-router.get("/security-status", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
-
-  try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].is_admin) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    const securityStatus = await securitySession.getSecurityStatus();
-    res.json(securityStatus);
-  } catch (err) {
-    authLogger.error("Failed to get security status", err, {
-      operation: "security_status_error",
-      userId,
-    });
-    res.status(500).json({ error: "Failed to get security status" });
   }
 });
 

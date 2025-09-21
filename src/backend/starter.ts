@@ -2,6 +2,7 @@
 //  node ./dist/backend/starter.js
 
 import "./database/database.js";
+import { SecuritySession } from "./utils/security-session.js";
 import { DatabaseEncryption } from "./utils/database-encryption.js";
 import { systemLogger, versionLogger } from "./utils/logger.js";
 import "dotenv/config";
@@ -18,10 +19,12 @@ import "dotenv/config";
       operation: "startup",
     });
 
-    // Initialize database encryption in deferred mode (without password)
-    await DatabaseEncryption.initialize();
-    systemLogger.info("Database encryption initialized in deferred mode", {
-      operation: "encryption_init",
+    // Initialize security system (JWT + user encryption architecture)
+    const securitySession = SecuritySession.getInstance();
+    await securitySession.initialize();
+    DatabaseEncryption.initialize();
+    systemLogger.info("Security system initialized (KEK-DEK architecture)", {
+      operation: "security_init",
     });
 
     // Load modules that depend on encryption after initialization

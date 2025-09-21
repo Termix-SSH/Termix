@@ -11,10 +11,9 @@ import fs from "fs";
 import path from "path";
 import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
+import { SecuritySession } from "../utils/security-session.js";
 import { DatabaseEncryption } from "../utils/database-encryption.js";
-import { EncryptionMigration } from "../utils/encryption-migration.js";
-import { DatabaseMigration } from "../utils/database-migration.js";
-import { DatabaseSQLiteExport } from "../utils/database-sqlite-export.js";
+import { SecurityMigration } from "../utils/security-migration.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 
 const app = express();
@@ -293,45 +292,48 @@ app.get("/releases/rss", async (req, res) => {
 
 app.get("/encryption/status", async (req, res) => {
   try {
-    const detailedStatus = await DatabaseEncryption.getDetailedStatus();
-    const migrationStatus = await EncryptionMigration.checkMigrationStatus();
+    const securitySession = SecuritySession.getInstance();
+    const securityStatus = await securitySession.getSecurityStatus();
+    const migrationStatus = await SecurityMigration.checkMigrationStatus();
 
     res.json({
-      encryption: detailedStatus,
+      security: securityStatus,
       migration: migrationStatus,
+      version: "v2-kek-dek",
     });
   } catch (error) {
-    apiLogger.error("Failed to get encryption status", error, {
-      operation: "encryption_status",
+    apiLogger.error("Failed to get security status", error, {
+      operation: "security_status",
     });
-    res.status(500).json({ error: "Failed to get encryption status" });
+    res.status(500).json({ error: "Failed to get security status" });
   }
 });
 
 app.post("/encryption/initialize", async (req, res) => {
   try {
-    const { EncryptionKeyManager } = await import(
-      "../utils/encryption-key-manager.js"
-    );
-    const keyManager = EncryptionKeyManager.getInstance();
+    const securitySession = SecuritySession.getInstance();
 
-    const newKey = await keyManager.generateNewKey();
-    await DatabaseEncryption.initialize({ masterPassword: newKey });
+    // New system auto-initializes, no manual initialization needed
+    const isValid = await securitySession.validateSecuritySystem();
+    if (!isValid) {
+      await securitySession.initialize();
+    }
 
-    apiLogger.info("Encryption initialized via API", {
-      operation: "encryption_init_api",
+    apiLogger.info("Security system initialized via API", {
+      operation: "security_init_api",
     });
 
     res.json({
       success: true,
-      message: "Encryption initialized successfully",
-      keyPreview: newKey.substring(0, 8) + "...",
+      message: "Security system initialized successfully",
+      version: "v2-kek-dek",
+      note: "User data encryption will be set up when users log in",
     });
   } catch (error) {
-    apiLogger.error("Failed to initialize encryption", error, {
-      operation: "encryption_init_api_failed",
+    apiLogger.error("Failed to initialize security system", error, {
+      operation: "security_init_api_failed",
     });
-    res.status(500).json({ error: "Failed to initialize encryption" });
+    res.status(500).json({ error: "Failed to initialize security system" });
   }
 });
 
@@ -339,7 +341,7 @@ app.post("/encryption/migrate", async (req, res) => {
   try {
     const { dryRun = false } = req.body;
 
-    const migration = new EncryptionMigration({
+    const migration = new SecurityMigration({
       dryRun,
       backupEnabled: true,
     });
@@ -379,31 +381,34 @@ app.post("/encryption/migrate", async (req, res) => {
 
 app.post("/encryption/regenerate", async (req, res) => {
   try {
-    // Regenerate random encryption keys
-    await DatabaseEncryption.reinitializeWithNewKey();
+    const securitySession = SecuritySession.getInstance();
 
-    apiLogger.warn("Encryption key regenerated via API", {
-      operation: "encryption_regenerate_api",
+    // In new system, only JWT keys can be regenerated
+    // User data keys are protected by passwords and cannot be regenerated at will
+    const newJWTSecret = await securitySession.regenerateJWTSecret();
+
+    apiLogger.warn("System JWT secret regenerated via API", {
+      operation: "jwt_regenerate_api",
     });
 
     res.json({
       success: true,
-      message: "New encryption key generated",
-      warning: "All encrypted data must be re-encrypted",
+      message: "System JWT secret regenerated",
+      warning: "All existing JWT tokens are now invalid - users must re-authenticate",
+      note: "User data encryption keys are protected by passwords and cannot be regenerated",
     });
   } catch (error) {
-    apiLogger.error("Failed to regenerate encryption key", error, {
-      operation: "encryption_regenerate_failed",
+    apiLogger.error("Failed to regenerate JWT secret", error, {
+      operation: "jwt_regenerate_failed",
     });
-    res.status(500).json({ error: "Failed to regenerate encryption key" });
+    res.status(500).json({ error: "Failed to regenerate JWT secret" });
   }
 });
 
 app.post("/encryption/regenerate-jwt", async (req, res) => {
   try {
-    const { EncryptionKeyManager } = await import("../utils/encryption-key-manager.js");
-    const keyManager = EncryptionKeyManager.getInstance();
-    await keyManager.regenerateJWTSecret();
+    const securitySession = SecuritySession.getInstance();
+    await securitySession.regenerateJWTSecret();
 
     apiLogger.warn("JWT secret regenerated via API", {
       operation: "jwt_secret_regenerate_api",
@@ -422,145 +427,52 @@ app.post("/encryption/regenerate-jwt", async (req, res) => {
   }
 });
 
-// Database migration and backup endpoints
+// Database export endpoint - DISABLED in V2 (needs reimplementation)
 app.post("/database/export", async (req, res) => {
-  try {
-    const { customPath } = req.body;
+  apiLogger.warn("Database export endpoint called but disabled in current architecture", {
+    operation: "database_export_disabled",
+  });
 
-    apiLogger.info("Starting SQLite database export via API", {
-      operation: "database_sqlite_export_api",
-      customPath: !!customPath,
-    });
-
-    const exportPath = await DatabaseSQLiteExport.exportDatabase(customPath);
-
-    res.json({
-      success: true,
-      message: "Database exported successfully as SQLite",
-      exportPath,
-      size: fs.statSync(exportPath).size,
-      format: "sqlite",
-    });
-  } catch (error) {
-    apiLogger.error("SQLite database export failed", error, {
-      operation: "database_sqlite_export_api_failed",
-    });
-    res.status(500).json({
-      error: "SQLite database export failed",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
+  res.status(503).json({
+    error: "Database export temporarily disabled during V2 security upgrade",
+    message: "This feature will be reimplemented with proper user-level encryption support",
+  });
 });
 
+// Database import endpoint - DISABLED (needs reimplementation with user-level encryption)
 app.post("/database/import", upload.single("file"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    const { backupCurrent = "true" } = req.body;
-    const backupCurrentBool = backupCurrent === "true";
-    const importPath = req.file.path;
-
-    apiLogger.info("Starting SQLite database import via API (additive mode)", {
-      operation: "database_sqlite_import_api",
-      importPath,
-      originalName: req.file.originalname,
-      fileSize: req.file.size,
-      mode: "additive",
-      backupCurrent: backupCurrentBool,
-    });
-
-    // Validate export file first
-    // Check file extension using original filename
-    if (!req.file.originalname.endsWith(".termix-export.sqlite")) {
-      // Clean up uploaded file
-      fs.unlinkSync(importPath);
-      return res.status(400).json({
-        error: "Invalid SQLite export file",
-        details: ["File must have .termix-export.sqlite extension"],
+  // Clean up uploaded file if it exists
+  if (req.file?.path) {
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (cleanupError) {
+      apiLogger.warn("Failed to clean up uploaded file during disabled endpoint call", {
+        operation: "file_cleanup_disabled_endpoint",
+        filePath: req.file.path,
       });
     }
-
-    const validation = DatabaseSQLiteExport.validateExportFile(importPath);
-    if (!validation.valid) {
-      // Clean up uploaded file
-      fs.unlinkSync(importPath);
-      return res.status(400).json({
-        error: "Invalid SQLite export file",
-        details: validation.errors,
-      });
-    }
-
-    const result = await DatabaseSQLiteExport.importDatabase(importPath, {
-      replaceExisting: false, // Always use additive mode
-      backupCurrent: backupCurrentBool,
-    });
-
-    // Clean up uploaded file
-    fs.unlinkSync(importPath);
-
-    res.json({
-      success: result.success,
-      message: result.success
-        ? "SQLite database imported successfully"
-        : "SQLite database import completed with errors",
-      imported: result.imported,
-      errors: result.errors,
-      warnings: result.warnings,
-      format: "sqlite",
-    });
-  } catch (error) {
-    // Clean up uploaded file if it exists
-    if (req.file?.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (cleanupError) {
-        apiLogger.warn("Failed to clean up uploaded file", {
-          operation: "file_cleanup_failed",
-          filePath: req.file.path,
-          error:
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : "Unknown error",
-        });
-      }
-    }
-
-    apiLogger.error("SQLite database import failed", error, {
-      operation: "database_sqlite_import_api_failed",
-    });
-    res.status(500).json({
-      error: "SQLite database import failed",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
   }
+
+  apiLogger.warn("Database import endpoint called but disabled in current architecture", {
+    operation: "database_import_disabled",
+  });
+
+  res.status(503).json({
+    error: "Database import temporarily disabled during security upgrade",
+    message: "This feature will be reimplemented with proper user-level encryption support",
+  });
 });
 
+// Database export info endpoint - DISABLED (needs reimplementation with user-level encryption)
 app.get("/database/export/:exportPath/info", async (req, res) => {
-  try {
-    const { exportPath } = req.params;
-    const decodedPath = decodeURIComponent(exportPath);
+  apiLogger.warn("Database export info endpoint called but disabled in current architecture", {
+    operation: "database_export_info_disabled",
+  });
 
-    const validation = DatabaseSQLiteExport.validateExportFile(decodedPath);
-    if (!validation.valid) {
-      return res.status(400).json({
-        error: "Invalid SQLite export file",
-        details: validation.errors,
-      });
-    }
-
-    res.json({
-      valid: true,
-      metadata: validation.metadata,
-      format: "sqlite",
-    });
-  } catch (error) {
-    apiLogger.error("Failed to get SQLite export info", error, {
-      operation: "sqlite_export_info_failed",
-    });
-    res.status(500).json({ error: "Failed to get SQLite export information" });
-  }
+  res.status(503).json({
+    error: "Database export info temporarily disabled during V2 security upgrade",
+    message: "This feature will be reimplemented with proper user-level encryption support",
+  });
 });
 
 app.post("/database/backup", async (req, res) => {
@@ -676,50 +588,47 @@ app.use(
 
 const PORT = 8081;
 
-async function initializeEncryption() {
+async function initializeSecurity() {
   try {
-    databaseLogger.info("Initializing database encryption...", {
-      operation: "encryption_init",
+    databaseLogger.info("Initializing security system (KEK-DEK architecture)...", {
+      operation: "security_init",
     });
 
-    await DatabaseEncryption.initialize({
-      encryptionEnabled: process.env.ENCRYPTION_ENABLED !== "false",
-      forceEncryption: process.env.FORCE_ENCRYPTION === "true",
-      migrateOnAccess: process.env.MIGRATE_ON_ACCESS !== "false",
-    });
+    // Initialize security session system (including JWT key management)
+    const securitySession = SecuritySession.getInstance();
+    await securitySession.initialize();
 
-    const status = await DatabaseEncryption.getDetailedStatus();
-    if (status.configValid && status.key.keyValid) {
-      databaseLogger.success("Database encryption initialized successfully", {
-        operation: "encryption_init_complete",
-        enabled: status.enabled,
-        keyId: status.key.keyId,
-        hasStoredKey: status.key.hasKey,
-      });
-    } else {
-      databaseLogger.error(
-        "Database encryption configuration invalid",
-        undefined,
-        {
-          operation: "encryption_init_failed",
-          status,
-        },
-      );
+    // Initialize database encryption (user key architecture)
+    DatabaseEncryption.initialize();
+
+    // Validate security system
+    const isValid = await securitySession.validateSecuritySystem();
+    if (!isValid) {
+      throw new Error("Security system validation failed");
     }
 
-    // Initialize JWT secret using the same encryption infrastructure
-    const { EncryptionKeyManager } = await import("../utils/encryption-key-manager.js");
-    const keyManager = EncryptionKeyManager.getInstance();
-    await keyManager.getJWTSecret();
+    const securityStatus = await securitySession.getSecurityStatus();
+    databaseLogger.success("Security system initialized successfully", {
+      operation: "security_init_complete",
+      systemStatus: securityStatus.system,
+      initialized: securityStatus.initialized,
+    });
 
-    databaseLogger.success("JWT secret initialized successfully", {
-      operation: "jwt_secret_init_complete",
+    databaseLogger.info("Security architecture: JWT (system) + KEK-DEK (users)", {
+      operation: "security_architecture_info",
+      features: [
+        "System JWT keys for authentication",
+        "User password-derived KEK for data protection",
+        "Session-based data key management",
+        "Multi-user independent encryption"
+      ],
     });
+
   } catch (error) {
-    databaseLogger.error("Failed to initialize database encryption", error, {
-      operation: "encryption_init_error",
+    databaseLogger.error("Failed to initialize security system", error, {
+      operation: "security_init_error",
     });
-    throw error; // JWT secret is critical for API functionality
+    throw error; // Security system is critical for API functionality
   }
 }
 
@@ -730,7 +639,7 @@ app.listen(PORT, async () => {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  await initializeEncryption();
+  await initializeSecurity();
 
   databaseLogger.success(`Database API server started on port ${PORT}`, {
     operation: "server_start",

@@ -211,6 +211,7 @@ wss.on("connection", (ws: WebSocket) => {
               ),
             ),
           "ssh_credentials",
+          hostConfig.userId,
         );
 
         if (credentials.length > 0) {

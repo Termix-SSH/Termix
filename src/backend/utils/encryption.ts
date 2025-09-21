@@ -32,7 +32,6 @@ class FieldEncryption {
   // Each field gets unique random salt - NO MORE SHARED KEYS
   static encryptField(plaintext: string, masterKey: Buffer, recordId: string, fieldName: string): string {
     if (!plaintext) return "";
-    if (this.isEncrypted(plaintext)) return plaintext; // Already encrypted
 
     // Generate unique salt for this specific field
     const salt = crypto.randomBytes(this.SALT_LENGTH);
@@ -61,7 +60,6 @@ class FieldEncryption {
 
   static decryptField(encryptedValue: string, masterKey: Buffer, recordId: string, fieldName: string): string {
     if (!encryptedValue) return "";
-    if (!this.isEncrypted(encryptedValue)) return encryptedValue; // Plain text
 
     try {
       const encrypted: EncryptedData = JSON.parse(encryptedValue);

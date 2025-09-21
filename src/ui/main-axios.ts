@@ -966,7 +966,7 @@ export async function listSSHFiles(
     return response.data || { files: [], path };
   } catch (error) {
     handleApiError(error, "list SSH files");
-    return { files: [], path }; // 确保总是返回正确格式
+    return { files: [], path }; // Ensure always return correct format
   }
 }
 
@@ -1155,7 +1155,7 @@ export async function copySSHItem(
         userId,
       },
       {
-        timeout: 60000, // 60秒超时，因为文件复制可能需要更长时间
+        timeout: 60000, // 60 second timeout as file copying may take longer
       },
     );
     return response.data;
