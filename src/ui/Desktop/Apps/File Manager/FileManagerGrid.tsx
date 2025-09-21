@@ -1309,7 +1309,7 @@ export function FileManagerGrid({
                           className="text-sm text-foreground truncate cursor-pointer hover:bg-accent px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full"
                           title={`${file.name} (click to rename)`}
                           onClick={(e) => {
-                            // 阻止文件选择事件
+                            // Prevent file selection event
                             if (onStartEdit) {
                               e.stopPropagation();
                               onStartEdit(file);

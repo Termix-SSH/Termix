@@ -2,6 +2,7 @@ import React from "react";
 import { DraggableWindow } from "./DraggableWindow";
 import { Terminal } from "../../Terminal/Terminal";
 import { useWindowManager } from "./WindowManager";
+import { useTranslation } from "react-i18next";
 
 interface SSHHost {
   id: number;
@@ -34,10 +35,11 @@ export function TerminalWindow({
   initialY = 150,
   executeCommand,
 }: TerminalWindowProps) {
+  const { t } = useTranslation();
   const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } =
     useWindowManager();
 
-  // 获取当前窗口状态
+  // Get current window state
   const currentWindow = windows.find((w) => w.id === windowId);
   if (!currentWindow) {
     console.warn(`Window with id ${windowId} not found`);
@@ -61,10 +63,10 @@ export function TerminalWindow({
   };
 
   const terminalTitle = executeCommand
-    ? `运行 - ${hostConfig.name}:${executeCommand}`
+    ? t("terminal.runTitle", { host: hostConfig.name, command: executeCommand })
     : initialPath
-      ? `终端 - ${hostConfig.name}:${initialPath}`
-      : `终端 - ${hostConfig.name}`;
+      ? t("terminal.terminalWithPath", { host: hostConfig.name, path: initialPath })
+      : t("terminal.terminalTitle", { host: hostConfig.name });
 
   return (
     <DraggableWindow
