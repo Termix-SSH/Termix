@@ -7,6 +7,7 @@ import {
   fileManagerPinned,
   fileManagerShortcuts,
   dismissedAlerts,
+  settings,
 } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -18,7 +19,6 @@ import type { Request, Response, NextFunction } from "express";
 import { authLogger, apiLogger } from "../../utils/logger.js";
 import { SecuritySession } from "../../utils/security-session.js";
 import { UserKeyManager } from "../../utils/user-key-manager.js";
-import { SecurityMigration } from "../../utils/security-migration.js";
 
 // Get security session instance
 const securitySession = SecuritySession.getInstance();
@@ -785,24 +785,29 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    // Check and handle user migration (from old encryption system)
-    let migrationPerformed = false;
+    // Check if legacy user needs encryption setup
     try {
-      migrationPerformed = await SecurityMigration.handleUserLoginMigration(userRecord.id, password);
-      if (migrationPerformed) {
-        authLogger.success("User encryption migrated during login", {
-          operation: "login_migration_success",
+      const kekSalt = await db
+        .select()
+        .from(settings)
+        .where(eq(settings.key, `user_kek_salt_${userRecord.id}`));
+
+      if (kekSalt.length === 0) {
+        // Legacy user first login - set up new encryption
+        await securitySession.registerUser(userRecord.id, password);
+        authLogger.success("Legacy user encryption initialized", {
+          operation: "legacy_user_setup",
           username,
           userId: userRecord.id,
         });
       }
-    } catch (migrationError) {
-      authLogger.error("Failed to migrate user during login", migrationError, {
-        operation: "login_migration_failed",
+    } catch (setupError) {
+      authLogger.error("Failed to initialize user encryption", setupError, {
+        operation: "user_encryption_setup_failed",
         username,
         userId: userRecord.id,
       });
-      // Migration failure should not block login, but needs to be logged
+      // Encryption setup failure should not block login for existing users
     }
 
     // Unlock user data keys

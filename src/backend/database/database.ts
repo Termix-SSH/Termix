@@ -13,7 +13,6 @@ import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
 import { SecuritySession } from "../utils/security-session.js";
 import { DatabaseEncryption } from "../utils/database-encryption.js";
-import { SecurityMigration } from "../utils/security-migration.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 
 const app = express();
@@ -294,11 +293,9 @@ app.get("/encryption/status", async (req, res) => {
   try {
     const securitySession = SecuritySession.getInstance();
     const securityStatus = await securitySession.getSecurityStatus();
-    const migrationStatus = await SecurityMigration.checkMigrationStatus();
 
     res.json({
       security: securityStatus,
-      migration: migrationStatus,
       version: "v2-kek-dek",
     });
   } catch (error) {
@@ -337,47 +334,6 @@ app.post("/encryption/initialize", async (req, res) => {
   }
 });
 
-app.post("/encryption/migrate", async (req, res) => {
-  try {
-    const { dryRun = false } = req.body;
-
-    const migration = new SecurityMigration({
-      dryRun,
-      backupEnabled: true,
-    });
-
-    if (dryRun) {
-      apiLogger.info("Starting encryption migration (dry run)", {
-        operation: "encryption_migrate_dry_run",
-      });
-
-      res.json({
-        success: true,
-        message: "Dry run mode - no changes made",
-        dryRun: true,
-      });
-    } else {
-      apiLogger.info("Starting encryption migration", {
-        operation: "encryption_migrate",
-      });
-
-      await migration.runMigration();
-
-      res.json({
-        success: true,
-        message: "Migration completed successfully",
-      });
-    }
-  } catch (error) {
-    apiLogger.error("Migration failed", error, {
-      operation: "encryption_migrate_failed",
-    });
-    res.status(500).json({
-      error: "Migration failed",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-});
 
 app.post("/encryption/regenerate", async (req, res) => {
   try {
@@ -654,7 +610,6 @@ app.listen(PORT, async () => {
       "/releases/rss",
       "/encryption/status",
       "/encryption/initialize",
-      "/encryption/migrate",
       "/encryption/regenerate",
       "/database/export",
       "/database/import",
