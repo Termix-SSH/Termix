@@ -839,7 +839,7 @@ export function AdminSettings({
                     <Lock className="h-4 w-4 text-green-500" />
                     <div>
                       <div className="text-sm font-medium">{t("admin.encryptionStatus")}</div>
-                      <div className="text-xs text-green-500">已启用 (v2-kek-dek)</div>
+                      <div className="text-xs text-green-500">{t("admin.encryptionEnabled")}</div>
                     </div>
                   </div>
                 </div>

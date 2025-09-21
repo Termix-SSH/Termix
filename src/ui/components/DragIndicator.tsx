@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import {
   Download,
   FileDown,
@@ -30,6 +31,8 @@ export function DragIndicator({
   error,
   className,
 }: DragIndicatorProps) {
+  const { t } = useTranslation();
+
   if (!isVisible) return null;
 
   const getIcon = () => {
@@ -54,18 +57,22 @@ export function DragIndicator({
 
   const getStatusText = () => {
     if (error) {
-      return `错误: ${error}`;
+      return t("dragIndicator.error", { error });
     }
 
     if (isDragging) {
-      return `正在拖拽${fileName ? ` ${fileName}` : ""}到桌面...`;
+      return t("dragIndicator.dragging", { fileName: fileName || "" });
     }
 
     if (isDownloading) {
-      return `正在准备拖拽${fileName ? ` ${fileName}` : ""}...`;
+      return t("dragIndicator.preparing", { fileName: fileName || "" });
     }
 
-    return `准备拖拽${fileCount > 1 ? ` ${fileCount} 个文件` : fileName ? ` ${fileName}` : ""}`;
+    if (fileCount > 1) {
+      return t("dragIndicator.readyMultiple", { count: fileCount });
+    }
+
+    return t("dragIndicator.readySingle", { fileName: fileName || "" });
   };
 
   return (
@@ -86,7 +93,7 @@ export function DragIndicator({
         <div className="flex-1 min-w-0">
           {/* Title */}
           <div className="text-sm font-medium text-foreground mb-2">
-            {fileCount > 1 ? "批量拖拽到桌面" : "拖拽到桌面"}
+            {fileCount > 1 ? t("dragIndicator.batchDrag") : t("dragIndicator.dragToDesktop")}
           </div>
 
           {/* Status text */}
@@ -127,7 +134,7 @@ export function DragIndicator({
           {isDragging && !error && (
             <div className="text-xs text-green-500 mt-2 flex items-center gap-1">
               <Download className="w-3 h-3" />
-              现在可以拖拽到桌面任意位置
+              {t("dragIndicator.canDragAnywhere")}
             </div>
           )}
         </div>

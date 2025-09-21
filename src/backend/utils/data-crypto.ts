@@ -22,7 +22,7 @@ class DataCrypto {
   }
 
   /**
-   * 加密记录 - 简单直接
+   * Encrypt record - simple and direct
    */
   static encryptRecord(tableName: string, record: any, userId: string, userDataKey: Buffer): any {
     const encryptedRecord = { ...record };
@@ -74,7 +74,7 @@ class DataCrypto {
   }
 
   /**
-   * 批量解密
+   * Batch decrypt
    */
   static decryptRecords(tableName: string, records: any[], userId: string, userDataKey: Buffer): any[] {
     if (!Array.isArray(records)) return records;
@@ -82,14 +82,14 @@ class DataCrypto {
   }
 
   /**
-   * 获取用户数据密钥
+   * Get user data key
    */
   static getUserDataKey(userId: string): Buffer | null {
     return this.userCrypto.getUserDataKey(userId);
   }
 
   /**
-   * 验证用户访问权限 - 简单直接
+   * Verify user access permissions - simple and direct
    */
   static validateUserAccess(userId: string): Buffer {
     const userDataKey = this.getUserDataKey(userId);
@@ -100,7 +100,7 @@ class DataCrypto {
   }
 
   /**
-   * 便捷方法：自动获取用户密钥并加密
+   * Convenience method: automatically get user key and encrypt
    */
   static encryptRecordForUser(tableName: string, record: any, userId: string): any {
     const userDataKey = this.validateUserAccess(userId);
@@ -108,7 +108,7 @@ class DataCrypto {
   }
 
   /**
-   * 便捷方法：自动获取用户密钥并解密
+   * Convenience method: automatically get user key and decrypt
    */
   static decryptRecordForUser(tableName: string, record: any, userId: string): any {
     const userDataKey = this.validateUserAccess(userId);
@@ -116,7 +116,7 @@ class DataCrypto {
   }
 
   /**
-   * 便捷方法：批量解密
+   * Convenience method: batch decrypt
    */
   static decryptRecordsForUser(tableName: string, records: any[], userId: string): any[] {
     const userDataKey = this.validateUserAccess(userId);
@@ -124,14 +124,14 @@ class DataCrypto {
   }
 
   /**
-   * 检查用户是否可以访问数据
+   * Check if user can access data
    */
   static canUserAccessData(userId: string): boolean {
     return this.userCrypto.isUserUnlocked(userId);
   }
 
   /**
-   * 测试加密功能
+   * Test encryption functionality
    */
   static testUserEncryption(userId: string): boolean {
     try {
