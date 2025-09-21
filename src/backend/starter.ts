@@ -2,8 +2,8 @@
 //  node ./dist/backend/starter.js
 
 import "./database/database.js";
-import { SecuritySession } from "./utils/security-session.js";
-import { DatabaseEncryption } from "./utils/database-encryption.js";
+import { AuthManager } from "./utils/auth-manager.js";
+import { DataCrypto } from "./utils/data-crypto.js";
 import { systemLogger, versionLogger } from "./utils/logger.js";
 import "dotenv/config";
 
@@ -19,10 +19,10 @@ import "dotenv/config";
       operation: "startup",
     });
 
-    // Initialize security system (JWT + user encryption architecture)
-    const securitySession = SecuritySession.getInstance();
-    await securitySession.initialize();
-    DatabaseEncryption.initialize();
+    // Initialize simplified authentication system
+    const authManager = AuthManager.getInstance();
+    await authManager.initialize();
+    DataCrypto.initialize();
     systemLogger.info("Security system initialized (KEK-DEK architecture)", {
       operation: "security_init",
     });

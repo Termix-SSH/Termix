@@ -4,7 +4,7 @@ import { db } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
-import { EncryptedDBOperations } from "../utils/encrypted-db-operations.js";
+import { SimpleDBOps } from "../utils/simple-db-ops.js";
 
 const wss = new WebSocketServer({ port: 8082 });
 
@@ -200,7 +200,7 @@ wss.on("connection", (ws: WebSocket) => {
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     if (credentialId && id && hostConfig.userId) {
       try {
-        const credentials = await EncryptedDBOperations.select(
+        const credentials = await SimpleDBOps.select(
           db
             .select()
             .from(sshCredentials)

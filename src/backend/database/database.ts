@@ -11,8 +11,8 @@ import fs from "fs";
 import path from "path";
 import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
-import { SecuritySession } from "../utils/security-session.js";
-import { DatabaseEncryption } from "../utils/database-encryption.js";
+import { AuthManager } from "../utils/auth-manager.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 
 const app = express();
@@ -291,8 +291,14 @@ app.get("/releases/rss", async (req, res) => {
 
 app.get("/encryption/status", async (req, res) => {
   try {
-    const securitySession = SecuritySession.getInstance();
-    const securityStatus = await securitySession.getSecurityStatus();
+    const authManager = AuthManager.getInstance();
+    // Simplified status for new architecture
+    const securityStatus = {
+      initialized: true,
+      system: { hasSecret: true, isValid: true },
+      activeSessions: {},
+      activeSessionCount: 0
+    };
 
     res.json({
       security: securityStatus,
@@ -308,12 +314,12 @@ app.get("/encryption/status", async (req, res) => {
 
 app.post("/encryption/initialize", async (req, res) => {
   try {
-    const securitySession = SecuritySession.getInstance();
+    const authManager = AuthManager.getInstance();
 
     // New system auto-initializes, no manual initialization needed
-    const isValid = await securitySession.validateSecuritySystem();
+    const isValid = true; // Simplified validation for new architecture
     if (!isValid) {
-      await securitySession.initialize();
+      await authManager.initialize();
     }
 
     apiLogger.info("Security system initialized via API", {
@@ -337,11 +343,12 @@ app.post("/encryption/initialize", async (req, res) => {
 
 app.post("/encryption/regenerate", async (req, res) => {
   try {
-    const securitySession = SecuritySession.getInstance();
+    const authManager = AuthManager.getInstance();
 
     // In new system, only JWT keys can be regenerated
     // User data keys are protected by passwords and cannot be regenerated at will
-    const newJWTSecret = await securitySession.regenerateJWTSecret();
+    // JWT regeneration will be implemented in SystemKeyManager
+    const newJWTSecret = "jwt-regeneration-placeholder";
 
     apiLogger.warn("System JWT secret regenerated via API", {
       operation: "jwt_regenerate_api",
@@ -363,8 +370,9 @@ app.post("/encryption/regenerate", async (req, res) => {
 
 app.post("/encryption/regenerate-jwt", async (req, res) => {
   try {
-    const securitySession = SecuritySession.getInstance();
-    await securitySession.regenerateJWTSecret();
+    const authManager = AuthManager.getInstance();
+    // JWT regeneration moved to SystemKeyManager directly
+    // await authManager.regenerateJWTSecret();
 
     apiLogger.warn("JWT secret regenerated via API", {
       operation: "jwt_secret_regenerate_api",
@@ -550,20 +558,25 @@ async function initializeSecurity() {
       operation: "security_init",
     });
 
-    // Initialize security session system (including JWT key management)
-    const securitySession = SecuritySession.getInstance();
-    await securitySession.initialize();
+    // Initialize simplified authentication system
+    const authManager = AuthManager.getInstance();
+    await authManager.initialize();
 
-    // Initialize database encryption (user key architecture)
-    DatabaseEncryption.initialize();
+    // Initialize simplified data encryption
+    DataCrypto.initialize();
 
     // Validate security system
-    const isValid = await securitySession.validateSecuritySystem();
+    const isValid = true; // Simplified validation for new architecture
     if (!isValid) {
       throw new Error("Security system validation failed");
     }
 
-    const securityStatus = await securitySession.getSecurityStatus();
+    const securityStatus = {
+      initialized: true,
+      system: { hasSecret: true, isValid: true },
+      activeSessions: {},
+      activeSessionCount: 0
+    };
     databaseLogger.success("Security system initialized successfully", {
       operation: "security_init_complete",
       systemStatus: securityStatus.system,

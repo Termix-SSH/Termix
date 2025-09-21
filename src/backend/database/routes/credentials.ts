@@ -5,8 +5,8 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { authLogger } from "../../utils/logger.js";
-import { EncryptedDBOperations } from "../../utils/encrypted-db-operations.js";
-import { SecuritySession } from "../../utils/security-session.js";
+import { SimpleDBOps } from "../../utils/simple-db-ops.js";
+import { AuthManager } from "../../utils/auth-manager.js";
 import {
   parseSSHKey,
   parsePublicKey,
@@ -85,10 +85,10 @@ function isNonEmptyString(val: any): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
-// Use SecuritySession middleware for authentication
-const securitySession = SecuritySession.getInstance();
-const authenticateJWT = securitySession.createAuthMiddleware();
-const requireDataAccess = securitySession.createDataAccessMiddleware();
+// Use AuthManager middleware for authentication
+const authManager = AuthManager.getInstance();
+const authenticateJWT = authManager.createAuthMiddleware();
+const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Create a new credential
 // POST /credentials
@@ -196,7 +196,7 @@ router.post("/", authenticateJWT, requireDataAccess, async (req: Request, res: R
       lastUsed: null,
     };
 
-    const created = (await EncryptedDBOperations.insert(
+    const created = (await SimpleDBOps.insert(
       sshCredentials,
       "ssh_credentials",
       credentialData,
@@ -241,7 +241,7 @@ router.get("/", authenticateJWT, requireDataAccess, async (req: Request, res: Re
   }
 
   try {
-    const credentials = await EncryptedDBOperations.select(
+    const credentials = await SimpleDBOps.select(
       db
         .select()
         .from(sshCredentials)
@@ -303,7 +303,7 @@ router.get("/:id", authenticateJWT, requireDataAccess, async (req: Request, res:
   }
 
   try {
-    const credentials = await EncryptedDBOperations.select(
+    const credentials = await SimpleDBOps.select(
       db
         .select()
         .from(sshCredentials)
@@ -426,7 +426,7 @@ router.put("/:id", authenticateJWT, requireDataAccess, async (req: Request, res:
     }
 
     if (Object.keys(updateFields).length === 0) {
-      const existing = await EncryptedDBOperations.select(
+      const existing = await SimpleDBOps.select(
         db
           .select()
           .from(sshCredentials)
@@ -438,7 +438,7 @@ router.put("/:id", authenticateJWT, requireDataAccess, async (req: Request, res:
       return res.json(formatCredentialOutput(existing[0]));
     }
 
-    await EncryptedDBOperations.update(
+    await SimpleDBOps.update(
       sshCredentials,
       "ssh_credentials",
       and(
@@ -449,7 +449,7 @@ router.put("/:id", authenticateJWT, requireDataAccess, async (req: Request, res:
       userId,
     );
 
-    const updated = await EncryptedDBOperations.select(
+    const updated = await SimpleDBOps.select(
       db
         .select()
         .from(sshCredentials)

@@ -5,7 +5,7 @@ import { db } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
-import { EncryptedDBOperations } from "../utils/encrypted-db-operations.js";
+import { SimpleDBOps } from "../utils/simple-db-ops.js";
 
 // Executable file detection utility function
 function isExecutableFile(permissions: string, fileName: string): boolean {
@@ -130,7 +130,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
   if (credentialId && hostId && userId) {
     try {
-      const credentials = await EncryptedDBOperations.select(
+      const credentials = await SimpleDBOps.select(
         db
           .select()
           .from(sshCredentials)

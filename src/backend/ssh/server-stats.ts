@@ -6,7 +6,7 @@ import { db } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
-import { EncryptedDBOperationsAdmin } from "../utils/encrypted-db-operations-admin.js";
+import { SimpleDBOps } from "../utils/simple-db-ops.js";
 
 interface PooledConnection {
   client: Client;
@@ -307,7 +307,7 @@ const hostStatuses: Map<number, StatusEntry> = new Map();
 
 async function fetchAllHosts(): Promise<SSHHostWithCredentials[]> {
   try {
-    const hosts = await EncryptedDBOperationsAdmin.selectEncrypted(
+    const hosts = await SimpleDBOps.selectEncrypted(
       db.select().from(sshData),
       "ssh_data",
     );
@@ -337,7 +337,7 @@ async function fetchHostById(
   id: number,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    const hosts = await EncryptedDBOperationsAdmin.selectEncrypted(
+    const hosts = await SimpleDBOps.selectEncrypted(
       db.select().from(sshData).where(eq(sshData.id, id)),
       "ssh_data",
     );
@@ -387,7 +387,7 @@ async function resolveHostCredentials(
 
     if (host.credentialId) {
       try {
-        const credentials = await EncryptedDBOperationsAdmin.selectEncrypted(
+        const credentials = await SimpleDBOps.selectEncrypted(
           db
             .select()
             .from(sshCredentials)

@@ -414,13 +414,6 @@ class DatabaseFileEncryption {
     }
   }
 
-  /**
-   * Validate hardware compatibility for encrypted file
-   * Always returns true - hardware validation removed
-   */
-  static validateHardwareCompatibility(encryptedPath: string): boolean {
-    return true;
-  }
 
   /**
    * Clean up temporary files

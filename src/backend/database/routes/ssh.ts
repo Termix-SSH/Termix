@@ -13,9 +13,8 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import { sshLogger } from "../../utils/logger.js";
-import { EncryptedDBOperations } from "../../utils/encrypted-db-operations.js";
-import { EncryptedDBOperationsAdmin } from "../../utils/encrypted-db-operations-admin.js";
-import { SecuritySession } from "../../utils/security-session.js";
+import { SimpleDBOps } from "../../utils/simple-db-ops.js";
+import { AuthManager } from "../../utils/auth-manager.js";
 
 const router = express.Router();
 
@@ -33,10 +32,10 @@ function isValidPort(port: any): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
-// Use SecuritySession middleware for authentication
-const securitySession = SecuritySession.getInstance();
-const authenticateJWT = securitySession.createAuthMiddleware();
-const requireDataAccess = securitySession.createDataAccessMiddleware();
+// Use AuthManager middleware for authentication
+const authManager = AuthManager.getInstance();
+const authenticateJWT = authManager.createAuthMiddleware();
+const requireDataAccess = authManager.createDataAccessMiddleware();
 
 function isLocalhost(req: Request) {
   const ip = req.ip || req.connection?.remoteAddress;
@@ -51,7 +50,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
   }
   try {
     // Internal endpoint - returns encrypted data (autostart will need user unlock)
-    const data = await EncryptedDBOperationsAdmin.selectEncrypted(
+    const data = await SimpleDBOps.selectEncrypted(
       db.select().from(sshData),
       "ssh_data",
     );
@@ -194,7 +193,7 @@ router.post(
     }
 
     try {
-      const result = await EncryptedDBOperations.insert(
+      const result = await SimpleDBOps.insert(
         sshData,
         "ssh_data",
         sshDataObj,
@@ -385,7 +384,7 @@ router.put(
     }
 
     try {
-      await EncryptedDBOperations.update(
+      await SimpleDBOps.update(
         sshData,
         "ssh_data",
         and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
@@ -393,7 +392,7 @@ router.put(
         userId,
       );
 
-      const updatedHosts = await EncryptedDBOperations.select(
+      const updatedHosts = await SimpleDBOps.select(
         db
           .select()
           .from(sshData)
@@ -474,7 +473,7 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Invalid userId" });
   }
   try {
-    const data = await EncryptedDBOperations.select(
+    const data = await SimpleDBOps.select(
       db.select().from(sshData).where(eq(sshData.userId, userId)),
       "ssh_data",
       userId,
@@ -1094,7 +1093,7 @@ router.put(
     }
 
     try {
-      const updatedHosts = await EncryptedDBOperations.update(
+      const updatedHosts = await SimpleDBOps.update(
         sshData,
         "ssh_data",
         and(eq(sshData.userId, userId), eq(sshData.folder, oldName)),
@@ -1243,7 +1242,7 @@ router.post(
           updatedAt: new Date().toISOString(),
         };
 
-        await EncryptedDBOperations.insert(sshData, "ssh_data", sshDataObj, userId);
+        await SimpleDBOps.insert(sshData, "ssh_data", sshDataObj, userId);
         results.success++;
       } catch (error) {
         results.failed++;
