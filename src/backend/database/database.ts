@@ -20,7 +20,16 @@ import { UserDataImport } from "../utils/user-data-import.js";
 const app = express();
 app.use(
   cors({
-    origin: "*",
+    // SECURITY: Specific origins only - no wildcard for production safety
+    origin: process.env.ALLOWED_ORIGINS ?
+      process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()) :
+      [
+        "http://localhost:3000",   // Development React
+        "http://localhost:5173",   // Development Vite
+        "http://127.0.0.1:3000",   // Local development
+        "http://127.0.0.1:5173",   // Local development
+      ],
+    credentials: true, // Enable credentials for secure cookies/auth
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",

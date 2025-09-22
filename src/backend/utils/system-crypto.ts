@@ -1,9 +1,4 @@
 import crypto from "crypto";
-import path from "path";
-import { promises as fs } from "fs";
-import { db } from "../database/db/index.js";
-import { settings } from "../database/db/schema.js";
-import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
 
 /**
@@ -20,11 +15,6 @@ class SystemCrypto {
   private jwtSecret: string | null = null;
   private databaseKey: Buffer | null = null;
 
-  // Storage path configuration
-  private static readonly JWT_SECRET_FILE = path.join(process.cwd(), '.termix', 'jwt.key');
-  private static readonly JWT_SECRET_DB_KEY = 'system_jwt_secret';
-  private static readonly DATABASE_KEY_FILE = path.join(process.cwd(), '.termix', 'db.key');
-  private static readonly DATABASE_KEY_DB_KEY = 'system_database_key';
 
   private constructor() {}
 
@@ -36,7 +26,7 @@ class SystemCrypto {
   }
 
   /**
-   * Initialize JWT secret - open source friendly way
+   * Initialize JWT secret - environment variable only
    */
   async initializeJWTSecret(): Promise<void> {
     try {
@@ -44,7 +34,7 @@ class SystemCrypto {
         operation: "jwt_init",
       });
 
-      // 1. Environment variable priority (production best practice)
+      // Check environment variable
       const envSecret = process.env.JWT_SECRET;
       if (envSecret && envSecret.length >= 64) {
         this.jwtSecret = envSecret;
@@ -55,30 +45,8 @@ class SystemCrypto {
         return;
       }
 
-      // 2. Check filesystem storage
-      const fileSecret = await this.loadSecretFromFile();
-      if (fileSecret) {
-        this.jwtSecret = fileSecret;
-        databaseLogger.info("✅ Loaded JWT secret from file", {
-          operation: "jwt_file_loaded",
-          source: "file"
-        });
-        return;
-      }
-
-      // 3. Check database storage
-      const dbSecret = await this.loadSecretFromDB();
-      if (dbSecret) {
-        this.jwtSecret = dbSecret;
-        databaseLogger.info("✅ Loaded JWT secret from database", {
-          operation: "jwt_db_loaded",
-          source: "database"
-        });
-        return;
-      }
-
-      // 4. Generate new key and persist
-      await this.generateAndStoreSecret();
+      // No environment variable - generate and guide user
+      await this.generateAndGuideUser();
 
     } catch (error) {
       databaseLogger.error("Failed to initialize JWT secret", error, {
@@ -99,7 +67,7 @@ class SystemCrypto {
   }
 
   /**
-   * Initialize database encryption key - same pattern as JWT but for database file encryption
+   * Initialize database encryption key - environment variable only
    */
   async initializeDatabaseKey(): Promise<void> {
     try {
@@ -107,7 +75,7 @@ class SystemCrypto {
         operation: "db_key_init",
       });
 
-      // 1. Environment variable priority (production best practice)
+      // Check environment variable
       const envKey = process.env.DATABASE_KEY;
       if (envKey && envKey.length >= 64) {
         this.databaseKey = Buffer.from(envKey, 'hex');
@@ -118,19 +86,8 @@ class SystemCrypto {
         return;
       }
 
-      // 2. Check filesystem storage
-      const fileKey = await this.loadDatabaseKeyFromFile();
-      if (fileKey) {
-        this.databaseKey = fileKey;
-        databaseLogger.info("✅ Loaded database key from file", {
-          operation: "db_key_file_loaded",
-          source: "file"
-        });
-        return;
-      }
-
-      // 3. Generate new key and persist (NO database storage to avoid circular dependency)
-      await this.generateAndStoreDatabaseKey();
+      // No environment variable - generate and guide user
+      await this.generateAndGuideDatabaseKey();
 
     } catch (error) {
       databaseLogger.error("Failed to initialize database key", error, {
@@ -151,234 +108,71 @@ class SystemCrypto {
   }
 
   /**
-   * Generate new key and persist storage
+   * Generate and guide user - no fallback storage
    */
-  private async generateAndStoreSecret(): Promise<void> {
+  private async generateAndGuideUser(): Promise<void> {
     const newSecret = crypto.randomBytes(32).toString('hex');
     const instanceId = crypto.randomBytes(8).toString('hex');
 
-    databaseLogger.info("🔑 Generating new JWT secret for this Termix instance", {
-      operation: "jwt_generate",
-      instanceId
-    });
-
-    // Try file storage (priority, faster and doesn't depend on database)
-    try {
-      await this.saveSecretToFile(newSecret);
-      databaseLogger.info("✅ JWT secret saved to file", {
-        operation: "jwt_file_saved",
-        path: SystemCrypto.JWT_SECRET_FILE
-      });
-    } catch (fileError) {
-      databaseLogger.warn("⚠️  Cannot save to file, using database storage", {
-        operation: "jwt_file_save_failed",
-        error: fileError instanceof Error ? fileError.message : "Unknown error"
-      });
-
-      // File storage failed, use database
-      await this.saveSecretToDB(newSecret, instanceId);
-      databaseLogger.info("✅ JWT secret saved to database", {
-        operation: "jwt_db_saved"
-      });
-    }
-
+    // Set in memory for current session
     this.jwtSecret = newSecret;
 
-    databaseLogger.success("🔐 This Termix instance now has a unique JWT secret", {
-      operation: "jwt_generated_success",
+    // Guide user to set environment variable
+    console.log("\n" + "=".repeat(80));
+    console.log("🔐 TERMIX FIRST STARTUP - JWT SECRET REQUIRED");
+    console.log("=".repeat(80));
+    console.log(`Generated JWT Secret: ${newSecret}`);
+    console.log("");
+    console.log("⚠️  REQUIRED: Set this environment variable:");
+    console.log(`   export JWT_SECRET=${newSecret}`);
+    console.log("");
+    console.log("🔄 Restart Termix after setting the environment variable");
+    console.log("=".repeat(80) + "\n");
+
+    databaseLogger.warn("⚠️  JWT secret generated for current session only", {
+      operation: "jwt_temp_generated",
       instanceId,
-      note: "All tokens from previous sessions are invalidated"
+      envVarName: "JWT_SECRET",
+      note: "Set environment variable and restart for persistent operation"
     });
   }
 
-  // ===== File storage methods =====
-
-  /**
-   * Save key to file
-   */
-  private async saveSecretToFile(secret: string): Promise<void> {
-    const dir = path.dirname(SystemCrypto.JWT_SECRET_FILE);
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(SystemCrypto.JWT_SECRET_FILE, secret, {
-      mode: 0o600 // Only owner can read/write
-    });
-  }
-
-  /**
-   * Load key from file
-   */
-  private async loadSecretFromFile(): Promise<string | null> {
-    try {
-      const secret = await fs.readFile(SystemCrypto.JWT_SECRET_FILE, 'utf8');
-      if (secret.trim().length >= 64) {
-        return secret.trim();
-      }
-      databaseLogger.warn("JWT secret file exists but too short", {
-        operation: "jwt_file_invalid",
-        length: secret.length
-      });
-    } catch (error) {
-      // File doesn't exist or can't be read, this is normal
-    }
-    return null;
-  }
 
   // ===== Database key generation and storage methods =====
 
   /**
-   * Generate new database key and persist to file storage only
-   * (avoid circular dependency with database)
+   * Generate and guide database key - no fallback storage
    */
-  private async generateAndStoreDatabaseKey(): Promise<void> {
+  private async generateAndGuideDatabaseKey(): Promise<void> {
     const newKey = crypto.randomBytes(32); // 256-bit key for AES-256
+    const newKeyHex = newKey.toString('hex');
     const instanceId = crypto.randomBytes(8).toString('hex');
 
-    databaseLogger.info("🔑 Generating new database encryption key for this Termix instance", {
-      operation: "db_key_generate",
-      instanceId
-    });
-
-    // Only try file storage (no database storage to avoid circular dependency)
-    try {
-      await this.saveDatabaseKeyToFile(newKey);
-      databaseLogger.info("✅ Database key saved to file", {
-        operation: "db_key_file_saved",
-        path: SystemCrypto.DATABASE_KEY_FILE
-      });
-    } catch (fileError) {
-      databaseLogger.error("❌ Failed to save database key to file", {
-        operation: "db_key_file_save_failed",
-        error: fileError instanceof Error ? fileError.message : "Unknown error",
-        note: "Database encryption cannot work without persistent key storage"
-      });
-      throw new Error("Database key file storage is required for database encryption");
-    }
-
+    // Set in memory for current session
     this.databaseKey = newKey;
 
-    databaseLogger.success("🔐 This Termix instance now has a unique database encryption key", {
-      operation: "db_key_generated_success",
+    // Guide user to set environment variable
+    console.log("\n" + "=".repeat(80));
+    console.log("🔒 TERMIX FIRST STARTUP - DATABASE KEY REQUIRED");
+    console.log("=".repeat(80));
+    console.log(`Generated Database Key: ${newKeyHex}`);
+    console.log("");
+    console.log("⚠️  REQUIRED: Set this environment variable:");
+    console.log(`   export DATABASE_KEY=${newKeyHex}`);
+    console.log("");
+    console.log("🔄 Restart Termix after setting the environment variable");
+    console.log("=".repeat(80) + "\n");
+
+    databaseLogger.warn("⚠️  Database key generated for current session only", {
+      operation: "db_key_temp_generated",
       instanceId,
-      note: "Database file is now encrypted at rest"
+      envVarName: "DATABASE_KEY",
+      note: "Set environment variable and restart for persistent operation"
     });
   }
 
-  /**
-   * Save database key to file (binary format)
-   */
-  private async saveDatabaseKeyToFile(key: Buffer): Promise<void> {
-    const dir = path.dirname(SystemCrypto.DATABASE_KEY_FILE);
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(SystemCrypto.DATABASE_KEY_FILE, key.toString('hex'), {
-      mode: 0o600 // Only owner can read/write
-    });
-  }
 
-  /**
-   * Load database key from file
-   */
-  private async loadDatabaseKeyFromFile(): Promise<Buffer | null> {
-    try {
-      const keyHex = await fs.readFile(SystemCrypto.DATABASE_KEY_FILE, 'utf8');
-      if (keyHex.trim().length >= 64) { // 32 bytes = 64 hex chars
-        return Buffer.from(keyHex.trim(), 'hex');
-      }
-      databaseLogger.warn("Database key file exists but too short", {
-        operation: "db_key_file_invalid",
-        length: keyHex.length
-      });
-    } catch (error) {
-      // File doesn't exist or can't be read, this is normal
-    }
-    return null;
-  }
 
-  // ===== JWT Database storage methods =====
-
-  /**
-   * Save key to database (plaintext storage, don't pretend encryption helps)
-   */
-  private async saveSecretToDB(secret: string, instanceId: string): Promise<void> {
-    const secretData = {
-      secret,
-      generatedAt: new Date().toISOString(),
-      instanceId,
-      algorithm: "HS256"
-    };
-
-    const existing = await db
-      .select()
-      .from(settings)
-      .where(eq(settings.key, SystemCrypto.JWT_SECRET_DB_KEY));
-
-    const encodedData = JSON.stringify(secretData);
-
-    if (existing.length > 0) {
-      await db
-        .update(settings)
-        .set({ value: encodedData })
-        .where(eq(settings.key, SystemCrypto.JWT_SECRET_DB_KEY));
-    } else {
-      await db.insert(settings).values({
-        key: SystemCrypto.JWT_SECRET_DB_KEY,
-        value: encodedData,
-      });
-    }
-  }
-
-  /**
-   * Load key from database
-   */
-  private async loadSecretFromDB(): Promise<string | null> {
-    try {
-      const result = await db
-        .select()
-        .from(settings)
-        .where(eq(settings.key, SystemCrypto.JWT_SECRET_DB_KEY));
-
-      if (result.length === 0) {
-        return null;
-      }
-
-      const secretData = JSON.parse(result[0].value);
-
-      // Check key validity
-      if (!secretData.secret || secretData.secret.length < 64) {
-        databaseLogger.warn("Invalid JWT secret in database", {
-          operation: "jwt_db_invalid",
-          hasSecret: !!secretData.secret,
-          length: secretData.secret?.length || 0
-        });
-        return null;
-      }
-
-      return secretData.secret;
-    } catch (error) {
-      databaseLogger.warn("Failed to load JWT secret from database", {
-        operation: "jwt_db_load_failed",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-      return null;
-    }
-  }
-
-  /**
-   * Regenerate JWT secret (admin function)
-   */
-  async regenerateJWTSecret(): Promise<string> {
-    databaseLogger.warn("🔄 Regenerating JWT secret - ALL TOKENS WILL BE INVALIDATED", {
-      operation: "jwt_regenerate",
-    });
-
-    await this.generateAndStoreSecret();
-
-    databaseLogger.success("JWT secret regenerated successfully", {
-      operation: "jwt_regenerated",
-      warning: "All existing JWT tokens are now invalid",
-    });
-
-    return this.jwtSecret!;
-  }
 
   /**
    * Validate JWT secret system
@@ -412,36 +206,6 @@ class SystemCrypto {
     const isValid = await this.validateJWTSecret();
     const hasSecret = this.jwtSecret !== null;
 
-    // Check file storage
-    let hasFileStorage = false;
-    try {
-      await fs.access(SystemCrypto.JWT_SECRET_FILE);
-      hasFileStorage = true;
-    } catch {
-      // File doesn't exist
-    }
-
-    // Check database storage
-    let hasDBStorage = false;
-    let dbInfo = null;
-    try {
-      const result = await db
-        .select()
-        .from(settings)
-        .where(eq(settings.key, SystemCrypto.JWT_SECRET_DB_KEY));
-
-      if (result.length > 0) {
-        hasDBStorage = true;
-        const secretData = JSON.parse(result[0].value);
-        dbInfo = {
-          generatedAt: secretData.generatedAt,
-          instanceId: secretData.instanceId,
-          algorithm: secretData.algorithm
-        };
-      }
-    } catch (error) {
-      // Database read failed
-    }
 
     // Check environment variable
     const hasEnvVar = !!(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 64);
@@ -450,11 +214,8 @@ class SystemCrypto {
       hasSecret,
       isValid,
       storage: {
-        environment: hasEnvVar,
-        file: hasFileStorage,
-        database: hasDBStorage
+        environment: hasEnvVar
       },
-      dbInfo,
       algorithm: "HS256",
       note: "Using simplified key management without encryption layers"
     };

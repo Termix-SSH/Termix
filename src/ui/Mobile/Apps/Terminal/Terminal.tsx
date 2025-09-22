@@ -147,7 +147,19 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       } catch (error) {}
     });
 
-    ws.addEventListener("close", () => {
+    ws.addEventListener("close", (event) => {
+      // Handle authentication errors (code 1008)
+      if (event.code === 1008) {
+        console.error("WebSocket authentication failed:", event.reason);
+        terminal.writeln(`\r\n[Authentication failed - please re-login]`);
+
+        // Clear invalid JWT token
+        localStorage.removeItem("jwt");
+
+        // Don't attempt to reconnect on auth failure
+        return;
+      }
+
       if (!wasDisconnectedBySSH.current) {
         terminal.writeln(`\r\n[${t("terminal.connectionClosed")}]`);
       }
@@ -240,7 +252,15 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             window.location.port === "5173" ||
             window.location.port === "");
 
-        const wsUrl = isDev
+        // Get JWT token for WebSocket authentication
+        const jwtToken = localStorage.getItem("jwt");
+        if (!jwtToken) {
+          console.error("No JWT token available for WebSocket connection");
+          setConnectionStatus("disconnected");
+          return;
+        }
+
+        const baseWsUrl = isDev
           ? "ws://localhost:8082"
           : isElectron()
             ? (() => {
@@ -254,6 +274,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                 return `${wsProtocol}${wsHost}/ssh/websocket/`;
               })()
             : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
+
+        // Add JWT token as query parameter for authentication
+        const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(jwtToken)}`;
 
         const ws = new WebSocket(wsUrl);
         webSocketRef.current = ws;
