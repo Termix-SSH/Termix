@@ -376,7 +376,10 @@ if (isElectron()) {
 
 function getApiUrl(path: string, defaultPort: number): string {
   if (isDev()) {
-    return `http://${apiHost}:${defaultPort}${path}`;
+    // Auto-detect HTTPS in development
+    const protocol = window.location.protocol === "https:" ? "https" : "http";
+    const sslPort = protocol === "https" ? 8443 : defaultPort;
+    return `${protocol}://${apiHost}:${sslPort}${path}`;
   } else if (isElectron()) {
     if (configuredServerUrl) {
       const baseUrl = configuredServerUrl.replace(/\/$/, "");

@@ -1,0 +1,83 @@
+# Termix Default Docker Compose Configuration
+# SSL/TLS enabled by default for secure connections
+
+version: '3.8'
+
+services:
+  termix:
+    build: .
+    ports:
+      # HTTP port (redirects to HTTPS)
+      - "${PORT:-8080}:8080"
+      # HTTPS port (default enabled)
+      - "${SSL_PORT:-8443}:8443"
+    environment:
+      # SSL Configuration (enabled by default)
+      - ENABLE_SSL=true
+      - SSL_PORT=${SSL_PORT:-8443}
+      - SSL_DOMAIN=${SSL_DOMAIN:-localhost}
+
+      # SSL Certificate paths (auto-generated inside container)
+      - SSL_CERT_PATH=/app/ssl/termix.crt
+      - SSL_KEY_PATH=/app/ssl/termix.key
+
+      # Security keys (auto-generated on first startup if not provided)
+      - JWT_SECRET=${JWT_SECRET:-}
+      - DATABASE_KEY=${DATABASE_KEY:-}
+
+      # Server configuration
+      - PORT=${PORT:-8080}
+      - NODE_ENV=${NODE_ENV:-production}
+
+      # CORS configuration (allow all origins by default)
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+
+      # Database configuration
+      - DATABASE_ENCRYPTION=${DATABASE_ENCRYPTION:-true}
+
+    volumes:
+      # Persist SSL certificates (auto-generated)
+      - ssl_certs:/app/ssl
+      # Persist database and data
+      - termix_data:/app/data
+      # Optional: Mount custom SSL certificates
+      # - ./ssl:/app/ssl:ro
+
+    # Health check for HTTPS (with fallback to HTTP)
+    healthcheck:
+      test: |
+        curl -f -k https://localhost:8443/health 2>/dev/null ||
+        curl -f http://localhost:8080/health 2>/dev/null ||
+        exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    restart: unless-stopped
+
+    # SSL is automatically configured during startup
+    # No additional scripts needed - integrated into application startup
+
+volumes:
+  ssl_certs:
+    driver: local
+  termix_data:
+    driver: local
+
+# Quick Start:
+# 1. Run: docker-compose up
+# 2. Access: https://localhost:8443 (HTTPS with auto-generated certificates)
+# 3. Alt:    http://localhost:8080  (HTTP redirects to HTTPS)
+#
+# The application will automatically:
+# - Generate SSL certificates on first startup
+# - Generate JWT and database encryption keys
+# - Enable HTTPS/WSS connections
+# - Display connection information in logs
+#
+# Optional .env file configuration:
+# SSL_PORT=8443
+# SSL_DOMAIN=yourdomain.com
+# JWT_SECRET=your_custom_jwt_secret_64_chars
+# DATABASE_KEY=your_custom_database_key_64_chars

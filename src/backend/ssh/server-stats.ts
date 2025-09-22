@@ -2,7 +2,7 @@ import express from "express";
 import net from "net";
 import cors from "cors";
 import { Client, type ConnectConfig } from "ssh2";
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
@@ -308,7 +308,7 @@ const hostStatuses: Map<number, StatusEntry> = new Map();
 async function fetchAllHosts(): Promise<SSHHostWithCredentials[]> {
   try {
     const hosts = await SimpleDBOps.selectEncrypted(
-      db.select().from(sshData),
+      getDb().select().from(sshData),
       "ssh_data",
     );
 
@@ -338,7 +338,7 @@ async function fetchHostById(
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
     const hosts = await SimpleDBOps.selectEncrypted(
-      db.select().from(sshData).where(eq(sshData.id, id)),
+      getDb().select().from(sshData).where(eq(sshData.id, id)),
       "ssh_data",
     );
 
@@ -388,7 +388,7 @@ async function resolveHostCredentials(
     if (host.credentialId) {
       try {
         const credentials = await SimpleDBOps.selectEncrypted(
-          db
+          getDb()
             .select()
             .from(sshCredentials)
             .where(

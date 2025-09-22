@@ -16,20 +16,14 @@ import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { UserDataImport } from "../utils/user-data-import.js";
+import https from "https";
+import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
 
 const app = express();
 app.use(
   cors({
-    // SECURITY: Specific origins only - no wildcard for production safety
-    origin: process.env.ALLOWED_ORIGINS ?
-      process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()) :
-      [
-        "http://localhost:3000",   // Development React
-        "http://localhost:5173",   // Development Vite
-        "http://127.0.0.1:3000",   // Local development
-        "http://127.0.0.1:5173",   // Local development
-      ],
-    credentials: true, // Enable credentials for secure cookies/auth
+    origin: "*",
+    credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -770,7 +764,8 @@ app.use(
   },
 );
 
-const PORT = 8081;
+const HTTP_PORT = 8081;
+const HTTPS_PORT = process.env.SSL_PORT || 8443;
 
 async function initializeSecurity() {
   try {
@@ -821,7 +816,7 @@ async function initializeSecurity() {
   }
 }
 
-app.listen(PORT, async () => {
+app.listen(HTTP_PORT, async () => {
   // Ensure uploads directory exists
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
@@ -830,9 +825,10 @@ app.listen(PORT, async () => {
 
   await initializeSecurity();
 
-  databaseLogger.success(`Database API server started on port ${PORT}`, {
+  databaseLogger.success(`Database API server started on HTTP port ${HTTP_PORT}`, {
     operation: "server_start",
-    port: PORT,
+    port: HTTP_PORT,
+    protocol: "HTTP",
     routes: [
       "/users",
       "/ssh",
@@ -852,3 +848,36 @@ app.listen(PORT, async () => {
     ],
   });
 });
+
+// Start HTTPS server if SSL is enabled
+const sslConfig = AutoSSLSetup.getSSLConfig();
+if (sslConfig.enabled && fs.existsSync(sslConfig.certPath) && fs.existsSync(sslConfig.keyPath)) {
+  const httpsOptions = {
+    cert: fs.readFileSync(sslConfig.certPath),
+    key: fs.readFileSync(sslConfig.keyPath)
+  };
+
+  https.createServer(httpsOptions, app).listen(HTTPS_PORT, () => {
+    databaseLogger.success(`Database API server started on HTTPS port ${HTTPS_PORT}`, {
+      operation: "server_start",
+      port: HTTPS_PORT,
+      protocol: "HTTPS",
+      domain: sslConfig.domain,
+      routes: [
+        "/users",
+        "/ssh",
+        "/alerts",
+        "/credentials",
+        "/health",
+        "/version",
+        "/releases/rss",
+        "/encryption/status",
+        "/database/export",
+        "/database/import",
+        "/database/export/:exportPath/info",
+        "/database/backup",
+        "/database/restore",
+      ],
+    });
+  });
+}

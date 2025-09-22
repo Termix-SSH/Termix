@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
 import { parse as parseUrl } from "url";
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
@@ -368,7 +368,7 @@ wss.on("connection", (ws: WebSocket, req) => {
     if (credentialId && id && hostConfig.userId) {
       try {
         const credentials = await SimpleDBOps.select(
-          db
+          getDb()
             .select()
             .from(sshCredentials)
             .where(

@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { settings } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
@@ -342,19 +342,19 @@ class UserCrypto {
     const key = `user_kek_salt_${userId}`;
     const value = JSON.stringify(kekSalt);
 
-    const existing = await db.select().from(settings).where(eq(settings.key, key));
+    const existing = await getDb().select().from(settings).where(eq(settings.key, key));
 
     if (existing.length > 0) {
-      await db.update(settings).set({ value }).where(eq(settings.key, key));
+      await getDb().update(settings).set({ value }).where(eq(settings.key, key));
     } else {
-      await db.insert(settings).values({ key, value });
+      await getDb().insert(settings).values({ key, value });
     }
   }
 
   private async getKEKSalt(userId: string): Promise<KEKSalt | null> {
     try {
       const key = `user_kek_salt_${userId}`;
-      const result = await db.select().from(settings).where(eq(settings.key, key));
+      const result = await getDb().select().from(settings).where(eq(settings.key, key));
 
       if (result.length === 0) {
         return null;
@@ -370,19 +370,19 @@ class UserCrypto {
     const key = `user_encrypted_dek_${userId}`;
     const value = JSON.stringify(encryptedDEK);
 
-    const existing = await db.select().from(settings).where(eq(settings.key, key));
+    const existing = await getDb().select().from(settings).where(eq(settings.key, key));
 
     if (existing.length > 0) {
-      await db.update(settings).set({ value }).where(eq(settings.key, key));
+      await getDb().update(settings).set({ value }).where(eq(settings.key, key));
     } else {
-      await db.insert(settings).values({ key, value });
+      await getDb().insert(settings).values({ key, value });
     }
   }
 
   private async getEncryptedDEK(userId: string): Promise<EncryptedDEK | null> {
     try {
       const key = `user_encrypted_dek_${userId}`;
-      const result = await db.select().from(settings).where(eq(settings.key, key));
+      const result = await getDb().select().from(settings).where(eq(settings.key, key));
 
       if (result.length === 0) {
         return null;

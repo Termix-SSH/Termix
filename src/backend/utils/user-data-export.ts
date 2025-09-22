@@ -1,4 +1,4 @@
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { users, sshData, sshCredentials, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { DataCrypto } from "./data-crypto.js";
@@ -62,7 +62,7 @@ class UserDataExport {
       });
 
       // Verify user exists
-      const user = await db.select().from(users).where(eq(users.id, userId));
+      const user = await getDb().select().from(users).where(eq(users.id, userId));
       if (!user || user.length === 0) {
         throw new Error(`User not found: ${userId}`);
       }
@@ -79,7 +79,7 @@ class UserDataExport {
       }
 
       // Export SSH host configurations
-      const sshHosts = await db.select().from(sshData).where(eq(sshData.userId, userId));
+      const sshHosts = await getDb().select().from(sshData).where(eq(sshData.userId, userId));
       const processedSshHosts = format === 'plaintext' && userDataKey
         ? sshHosts.map(host => DataCrypto.decryptRecord("ssh_data", host, userId, userDataKey!))
         : sshHosts;
@@ -87,7 +87,7 @@ class UserDataExport {
       // Export SSH credentials (if included)
       let sshCredentialsData: any[] = [];
       if (includeCredentials) {
-        const credentials = await db.select().from(sshCredentials).where(eq(sshCredentials.userId, userId));
+        const credentials = await getDb().select().from(sshCredentials).where(eq(sshCredentials.userId, userId));
         sshCredentialsData = format === 'plaintext' && userDataKey
           ? credentials.map(cred => DataCrypto.decryptRecord("ssh_credentials", cred, userId, userDataKey!))
           : credentials;
@@ -95,13 +95,13 @@ class UserDataExport {
 
       // Export file manager data
       const [recentFiles, pinnedFiles, shortcuts] = await Promise.all([
-        db.select().from(fileManagerRecent).where(eq(fileManagerRecent.userId, userId)),
-        db.select().from(fileManagerPinned).where(eq(fileManagerPinned.userId, userId)),
-        db.select().from(fileManagerShortcuts).where(eq(fileManagerShortcuts.userId, userId)),
+        getDb().select().from(fileManagerRecent).where(eq(fileManagerRecent.userId, userId)),
+        getDb().select().from(fileManagerPinned).where(eq(fileManagerPinned.userId, userId)),
+        getDb().select().from(fileManagerShortcuts).where(eq(fileManagerShortcuts.userId, userId)),
       ]);
 
       // Export dismissed alerts
-      const alerts = await db.select().from(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
+      const alerts = await getDb().select().from(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
 
       // Build export data
       const exportData: UserExportData = {

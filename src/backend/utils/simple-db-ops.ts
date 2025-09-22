@@ -1,4 +1,4 @@
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -33,7 +33,7 @@ class SimpleDBOps {
     const encryptedData = DataCrypto.encryptRecordForUser(tableName, data, userId);
 
     // Insert into database
-    const result = await db.insert(table).values(encryptedData).returning();
+    const result = await getDb().insert(table).values(encryptedData).returning();
 
     // Decrypt return result
     const decryptedResult = DataCrypto.decryptRecordForUser(
@@ -138,7 +138,7 @@ class SimpleDBOps {
     const encryptedData = DataCrypto.encryptRecordForUser(tableName, data, userId);
 
     // Execute update
-    const result = await db
+    const result = await getDb()
       .update(table)
       .set(encryptedData)
       .where(where)
@@ -170,7 +170,7 @@ class SimpleDBOps {
     where: any,
     userId: string,
   ): Promise<any[]> {
-    const result = await db.delete(table).where(where).returning();
+    const result = await getDb().delete(table).where(where).returning();
 
     databaseLogger.debug(`Deleted records from ${tableName}`, {
       operation: "simple_delete",

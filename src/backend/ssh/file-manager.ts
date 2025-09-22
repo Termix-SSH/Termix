@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { Client as SSHClient } from "ssh2";
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
@@ -131,7 +131,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   if (credentialId && hostId && userId) {
     try {
       const credentials = await SimpleDBOps.select(
-        db
+        getDb()
           .select()
           .from(sshCredentials)
           .where(

@@ -135,6 +135,14 @@ async function initializeCompleteDatabase(): Promise<void> {
   // Create module-level sqlite instance after database is initialized
   sqlite = memoryDatabase;
 
+  // Initialize drizzle ORM with the configured database
+  db = drizzle(sqlite, { schema });
+
+  databaseLogger.info("Database ORM initialized", {
+    operation: "drizzle_init",
+    tablesConfigured: Object.keys(schema).length
+  });
+
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -510,22 +518,25 @@ async function handlePostInitFileEncryption() {
   }
 }
 
-initializeCompleteDatabase()
-  .then(() => handlePostInitFileEncryption())
+// Export a promise that resolves when database is fully initialized
+export const databaseReady = initializeCompleteDatabase()
+  .then(async () => {
+    await handlePostInitFileEncryption();
+
+    databaseLogger.success("Database connection established", {
+      operation: "db_init",
+      path: actualDbPath,
+      hasEncryptedBackup:
+        enableFileEncryption &&
+        DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
+    });
+  })
   .catch((error) => {
     databaseLogger.error("Failed to initialize database", error, {
       operation: "db_init",
     });
     process.exit(1);
   });
-
-databaseLogger.success("Database connection established", {
-  operation: "db_init",
-  path: actualDbPath,
-  hasEncryptedBackup:
-    enableFileEncryption &&
-    DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
-});
 
 // Cleanup function for database and temporary files
 async function cleanupDatabase() {
@@ -612,9 +623,19 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
-// Export database connection and file encryption utilities
-export const db = drizzle(sqlite, { schema });
-export const sqliteInstance = sqlite; // Export underlying SQLite instance for schema queries
+// Database connection - will be initialized after database setup
+let db: ReturnType<typeof drizzle<typeof schema>>;
+
+// Export database connection getter function to avoid undefined access
+export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
+  if (!db) {
+    throw new Error("Database not initialized. Ensure databaseReady promise is awaited before accessing db.");
+  }
+  return db;
+}
+
+// Legacy export for compatibility - will throw if accessed before initialization
+export { db };
 export { DatabaseFileEncryption };
 export const databasePaths = {
   main: actualDbPath,

@@ -3,7 +3,7 @@ import cors from "cors";
 import { Client } from "ssh2";
 import { ChildProcess } from "child_process";
 import axios from "axios";
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import type {
@@ -441,7 +441,7 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.sourceCredentialId && tunnelConfig.sourceUserId) {
     try {
-      const credentials = await db
+      const credentials = await getDb()
         .select()
         .from(sshCredentials)
         .where(
@@ -487,7 +487,7 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.endpointCredentialId && tunnelConfig.endpointUserId) {
     try {
-      const credentials = await db
+      const credentials = await getDb()
         .select()
         .from(sshCredentials)
         .where(

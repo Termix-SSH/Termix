@@ -1,4 +1,4 @@
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { users, sshData, sshCredentials, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { DataCrypto } from "./data-crypto.js";
@@ -65,7 +65,7 @@ class UserDataImport {
       });
 
       // Verify target user exists
-      const targetUser = await db.select().from(users).where(eq(users.id, targetUserId));
+      const targetUser = await getDb().select().from(users).where(eq(users.id, targetUserId));
       if (!targetUser || targetUser.length === 0) {
         throw new Error(`Target user not found: ${targetUserId}`);
       }
@@ -200,7 +200,7 @@ class UserDataImport {
           processedHostData = DataCrypto.encryptRecord("ssh_data", newHostData, targetUserId, options.userDataKey);
         }
 
-        await db.insert(sshData).values(processedHostData);
+        await getDb().insert(sshData).values(processedHostData);
         imported++;
       } catch (error) {
         errors.push(`SSH host import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -247,7 +247,7 @@ class UserDataImport {
           processedCredentialData = DataCrypto.encryptRecord("ssh_credentials", newCredentialData, targetUserId, options.userDataKey);
         }
 
-        await db.insert(sshCredentials).values(processedCredentialData);
+        await getDb().insert(sshCredentials).values(processedCredentialData);
         imported++;
       } catch (error) {
         errors.push(`SSH credential import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -282,7 +282,7 @@ class UserDataImport {
                 userId: targetUserId,
                 lastOpened: new Date().toISOString(),
               };
-              await db.insert(fileManagerRecent).values(newItem);
+              await getDb().insert(fileManagerRecent).values(newItem);
             }
             imported++;
           } catch (error) {
@@ -303,7 +303,7 @@ class UserDataImport {
                 userId: targetUserId,
                 pinnedAt: new Date().toISOString(),
               };
-              await db.insert(fileManagerPinned).values(newItem);
+              await getDb().insert(fileManagerPinned).values(newItem);
             }
             imported++;
           } catch (error) {
@@ -324,7 +324,7 @@ class UserDataImport {
                 userId: targetUserId,
                 createdAt: new Date().toISOString(),
               };
-              await db.insert(fileManagerShortcuts).values(newItem);
+              await getDb().insert(fileManagerShortcuts).values(newItem);
             }
             imported++;
           } catch (error) {
@@ -360,7 +360,7 @@ class UserDataImport {
         }
 
         // Check if alert already exists
-        const existing = await db
+        const existing = await getDb()
           .select()
           .from(dismissedAlerts)
           .where(
@@ -383,12 +383,12 @@ class UserDataImport {
         };
 
         if (existing.length > 0 && options.replaceExisting) {
-          await db
+          await getDb()
             .update(dismissedAlerts)
             .set(newAlert)
             .where(eq(dismissedAlerts.id, existing[0].id));
         } else {
-          await db.insert(dismissedAlerts).values(newAlert);
+          await getDb().insert(dismissedAlerts).values(newAlert);
         }
 
         imported++;

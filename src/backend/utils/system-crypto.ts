@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import { promises as fs } from "fs";
+import path from "path";
 import { databaseLogger } from "./logger.js";
 
 /**
@@ -108,7 +110,7 @@ class SystemCrypto {
   }
 
   /**
-   * Generate and guide user - no fallback storage
+   * Generate and auto-save to .env file
    */
   private async generateAndGuideUser(): Promise<void> {
     const newSecret = crypto.randomBytes(32).toString('hex');
@@ -117,23 +119,14 @@ class SystemCrypto {
     // Set in memory for current session
     this.jwtSecret = newSecret;
 
-    // Guide user to set environment variable
-    console.log("\n" + "=".repeat(80));
-    console.log("🔐 TERMIX FIRST STARTUP - JWT SECRET REQUIRED");
-    console.log("=".repeat(80));
-    console.log(`Generated JWT Secret: ${newSecret}`);
-    console.log("");
-    console.log("⚠️  REQUIRED: Set this environment variable:");
-    console.log(`   export JWT_SECRET=${newSecret}`);
-    console.log("");
-    console.log("🔄 Restart Termix after setting the environment variable");
-    console.log("=".repeat(80) + "\n");
+    // Auto-save to .env file
+    await this.updateEnvFile("JWT_SECRET", newSecret);
 
-    databaseLogger.warn("⚠️  JWT secret generated for current session only", {
-      operation: "jwt_temp_generated",
+    databaseLogger.success("🔐 JWT secret auto-generated and saved to .env", {
+      operation: "jwt_auto_generated",
       instanceId,
       envVarName: "JWT_SECRET",
-      note: "Set environment variable and restart for persistent operation"
+      note: "Ready for use - no restart required"
     });
   }
 
@@ -141,7 +134,7 @@ class SystemCrypto {
   // ===== Database key generation and storage methods =====
 
   /**
-   * Generate and guide database key - no fallback storage
+   * Generate and auto-save database key to .env file
    */
   private async generateAndGuideDatabaseKey(): Promise<void> {
     const newKey = crypto.randomBytes(32); // 256-bit key for AES-256
@@ -151,23 +144,14 @@ class SystemCrypto {
     // Set in memory for current session
     this.databaseKey = newKey;
 
-    // Guide user to set environment variable
-    console.log("\n" + "=".repeat(80));
-    console.log("🔒 TERMIX FIRST STARTUP - DATABASE KEY REQUIRED");
-    console.log("=".repeat(80));
-    console.log(`Generated Database Key: ${newKeyHex}`);
-    console.log("");
-    console.log("⚠️  REQUIRED: Set this environment variable:");
-    console.log(`   export DATABASE_KEY=${newKeyHex}`);
-    console.log("");
-    console.log("🔄 Restart Termix after setting the environment variable");
-    console.log("=".repeat(80) + "\n");
+    // Auto-save to .env file
+    await this.updateEnvFile("DATABASE_KEY", newKeyHex);
 
-    databaseLogger.warn("⚠️  Database key generated for current session only", {
-      operation: "db_key_temp_generated",
+    databaseLogger.success("🔒 Database key auto-generated and saved to .env", {
+      operation: "db_key_auto_generated",
       instanceId,
       envVarName: "DATABASE_KEY",
-      note: "Set environment variable and restart for persistent operation"
+      note: "Ready for use - no restart required"
     });
   }
 
@@ -219,6 +203,58 @@ class SystemCrypto {
       algorithm: "HS256",
       note: "Using simplified key management without encryption layers"
     };
+  }
+
+  /**
+   * Update .env file with new environment variable
+   */
+  private async updateEnvFile(key: string, value: string): Promise<void> {
+    const envPath = path.join(process.cwd(), ".env");
+
+    try {
+      let envContent = "";
+
+      // Read existing .env file if it exists
+      try {
+        envContent = await fs.readFile(envPath, "utf8");
+      } catch {
+        // File doesn't exist, will create new one
+        envContent = "# Termix Auto-generated Configuration\n\n";
+      }
+
+      // Check if key already exists
+      const keyRegex = new RegExp(`^${key}=.*$`, "m");
+
+      if (keyRegex.test(envContent)) {
+        // Update existing key
+        envContent = envContent.replace(keyRegex, `${key}=${value}`);
+      } else {
+        // Add new key
+        if (!envContent.includes("# Security Keys")) {
+          envContent += "\n# Security Keys (Auto-generated)\n";
+        }
+        envContent += `${key}=${value}\n`;
+      }
+
+      // Write updated content
+      await fs.writeFile(envPath, envContent);
+
+      // Update process.env for current session
+      process.env[key] = value;
+
+      databaseLogger.info(`Environment variable ${key} updated in .env file`, {
+        operation: "env_file_update",
+        key,
+        path: envPath
+      });
+
+    } catch (error) {
+      databaseLogger.error(`Failed to update .env file with ${key}`, error, {
+        operation: "env_file_update_failed",
+        key
+      });
+      throw error;
+    }
   }
 }
 

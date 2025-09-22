@@ -261,7 +261,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         }
 
         const baseWsUrl = isDev
-          ? "ws://localhost:8082"
+          ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:8082`
           : isElectron()
             ? (() => {
                 const baseUrl =
