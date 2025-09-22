@@ -45,7 +45,7 @@ ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
 
-RUN npm ci --only=production --ignore-scripts --force && \
+RUN npm ci --omit=dev --ignore-scripts --force && \
     npm cache clean --force
 
 # Stage 5: Build native modules
@@ -61,7 +61,7 @@ ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
 
 # Install native modules and compile them properly
-RUN npm ci --only=production --force && \
+RUN npm ci --omit=dev --force && \
     npm rebuild better-sqlite3 bcryptjs --force && \
     npm cache clean --force
 
@@ -71,9 +71,9 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apk add --no-cache nginx gettext su-exec && \
-    mkdir -p /app/data && \
-    chown -R node:node /app/data
+RUN apk add --no-cache nginx gettext su-exec openssl && \
+    mkdir -p /app/data /app/config && \
+    chown -R node:node /app/data /app/config
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/nginx-https.conf /etc/nginx/nginx-https.conf
@@ -87,7 +87,8 @@ COPY --from=native-builder /app/node_modules /app/node_modules
 COPY --from=backend-builder /app/dist/backend ./dist/backend
 
 COPY package.json ./
-RUN chown -R node:node /app
+RUN chown -R node:node /app && \
+    chmod 755 /app/config
 
 VOLUME ["/app/data"]
 

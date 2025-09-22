@@ -1,15 +1,55 @@
 services:
   termix:
-    image: ghcr.io/lukegus/termix:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: termix
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      # HTTP port (redirects to HTTPS if SSL enabled)
+      - "${PORT:-8080}:8080"
+      # HTTPS port (when SSL is enabled)
+      - "${SSL_PORT:-8443}:8443"
     volumes:
       - termix-data:/app/data
+      - termix-config:/app/config
+      # Optional: Mount custom SSL certificates
+      # - ./ssl:/app/ssl:ro
     environment:
-      PORT: "8080"
+      # Basic configuration
+      - PORT=${PORT:-8080}
+      - NODE_ENV=${NODE_ENV:-production}
+
+      # SSL/TLS Configuration
+      - ENABLE_SSL=${ENABLE_SSL:-false}
+      - SSL_PORT=${SSL_PORT:-8443}
+      - SSL_DOMAIN=${SSL_DOMAIN:-localhost}
+      - SSL_CERT_PATH=${SSL_CERT_PATH:-/app/ssl/termix.crt}
+      - SSL_KEY_PATH=${SSL_KEY_PATH:-/app/ssl/termix.key}
+
+      # Security keys (set these for production)
+      - JWT_SECRET=${JWT_SECRET:-}
+      - DATABASE_KEY=${DATABASE_KEY:-}
+
+      # Database configuration
+      - DATABASE_ENCRYPTION=${DATABASE_ENCRYPTION:-true}
+
+      # CORS configuration
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+
+    # Health check for both HTTP and HTTPS
+    healthcheck:
+      test: |
+        curl -f -k https://localhost:8443/health 2>/dev/null ||
+        curl -f http://localhost:8080/health 2>/dev/null ||
+        exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   termix-data:
+    driver: local
+  termix-config:
     driver: local

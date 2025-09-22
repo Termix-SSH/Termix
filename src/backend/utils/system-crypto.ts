@@ -209,7 +209,12 @@ class SystemCrypto {
    * Update .env file with new environment variable
    */
   private async updateEnvFile(key: string, value: string): Promise<void> {
-    const envPath = path.join(process.cwd(), ".env");
+    // Use persistent config directory if available (Docker), otherwise use current directory
+    const configDir = process.env.NODE_ENV === 'production' &&
+                     await fs.access('/app/config').then(() => true).catch(() => false)
+                     ? '/app/config'
+                     : process.cwd();
+    const envPath = path.join(configDir, ".env");
 
     try {
       let envContent = "";

@@ -2,6 +2,9 @@
 //  node ./dist/backend/starter.js
 
 import "dotenv/config";
+import dotenv from "dotenv";
+import { promises as fs } from "fs";
+import path from "path";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
@@ -9,6 +12,22 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
 
 (async () => {
   try {
+    // Load persistent .env file from config directory if available (Docker)
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        await fs.access('/app/config/.env');
+        dotenv.config({ path: '/app/config/.env' });
+        systemLogger.info("Loaded persistent configuration from /app/config/.env", {
+          operation: "config_load"
+        });
+      } catch {
+        // Config file doesn't exist yet, will be created on first run
+        systemLogger.info("No persistent config found, will create on first run", {
+          operation: "config_init"
+        });
+      }
+    }
+
     const version = process.env.VERSION || "unknown";
     versionLogger.info(`Termix Backend starting - Version: ${version}`, {
       operation: "startup",
@@ -36,15 +55,21 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
 
       const securityIssues: string[] = [];
 
-      // Check JWT and database keys (auto-generated if missing)
+      // Check JWT and database keys (auto-generated if missing - warnings only)
       if (!process.env.JWT_SECRET) {
-        securityIssues.push("JWT_SECRET should be set as environment variable in production");
+        systemLogger.warn("JWT_SECRET not set - using auto-generated keys (consider setting for production)", {
+          operation: "security_warning",
+          note: "Auto-generated keys are secure but not persistent across deployments"
+        });
       } else if (process.env.JWT_SECRET.length < 64) {
         securityIssues.push("JWT_SECRET should be at least 64 characters in production");
       }
 
       if (!process.env.DATABASE_KEY) {
-        securityIssues.push("DATABASE_KEY should be set as environment variable in production");
+        systemLogger.warn("DATABASE_KEY not set - using auto-generated keys (consider setting for production)", {
+          operation: "security_warning",
+          note: "Auto-generated keys are secure but not persistent across deployments"
+        });
       } else if (process.env.DATABASE_KEY.length < 64) {
         securityIssues.push("DATABASE_KEY should be at least 64 characters in production");
       }
@@ -54,13 +79,6 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
         securityIssues.push("Database file encryption should be enabled in production");
       }
 
-      // Check JWT secret
-      if (!process.env.JWT_SECRET) {
-        systemLogger.info("JWT_SECRET not set - will use encrypted storage", {
-          operation: "security_checks",
-          note: "Using encrypted JWT storage"
-        });
-      }
 
       // Check CORS configuration warning
       systemLogger.warn("Production deployment detected - ensure CORS is properly configured", {
