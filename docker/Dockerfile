@@ -87,7 +87,6 @@ COPY --from=native-builder /app/node_modules /app/node_modules
 COPY --from=backend-builder /app/dist/backend ./dist/backend
 
 COPY package.json ./
-COPY .env ./.env
 RUN chown -R node:node /app
 
 VOLUME ["/app/data"]
