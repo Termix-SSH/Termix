@@ -1516,8 +1516,22 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
 
   const moveCommand = `mv '${escapedOldPath}' '${escapedNewPath}' && echo "SUCCESS" && exit 0`;
 
+  // Add timeout for move operation
+  const commandTimeout = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(408).json({
+        error: "Move operation timed out. SSH connection may be unstable.",
+        toast: {
+          type: "error",
+          message: "Move operation timed out. SSH connection may be unstable.",
+        },
+      });
+    }
+  }, 60000); // 60 second timeout for move operations
+
   sshConn.client.exec(moveCommand, (err, stream) => {
     if (err) {
+      clearTimeout(commandTimeout);
       fileLogger.error("SSH moveItem error:", err);
       if (!res.headersSent) {
         return res.status(500).json({ error: err.message });
@@ -1551,6 +1565,7 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
     });
 
     stream.on("close", (code) => {
+      clearTimeout(commandTimeout);
       if (outputData.includes("SUCCESS")) {
         if (!res.headersSent) {
           res.json({
@@ -1593,6 +1608,7 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
     });
 
     stream.on("error", (streamErr) => {
+      clearTimeout(commandTimeout);
       fileLogger.error("SSH moveItem stream error:", streamErr);
       if (!res.headersSent) {
         res.status(500).json({ error: `Stream error: ${streamErr.message}` });
@@ -1729,66 +1745,26 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
     // Extract source name
     const sourceName = sourcePath.split("/").pop() || "copied_item";
 
-    // First check if source file exists
-    const escapedSourceForCheck = sourcePath.replace(/'/g, "'\"'\"'");
-    const checkExistsCommand = `test -e '${escapedSourceForCheck}'`;
-    const checkExists = await new Promise<boolean>((resolve) => {
-      sshConn.client.exec(checkExistsCommand, (err, stream) => {
-        if (err) {
-          fileLogger.error("File existence check error:", err);
-          resolve(false);
-          return;
-        }
-
-        stream.on("close", (code) => {
-          fileLogger.info("File existence check completed", {
-            sourcePath,
-            exists: code === 0,
-          });
-          resolve(code === 0);
-        });
-
-        stream.on("error", () => resolve(false));
-      });
-    });
-
-    if (!checkExists) {
-      return res.status(404).json({
-        error: `Source file not found: ${sourcePath}`,
-        toast: {
-          type: "error",
-          message: `Source file not found: ${sourceName}`,
-        },
-      });
-    }
-
-    // Use timestamp for uniqueness
+    // Linus principle: simplify - generate unique name directly without complex checks
     const timestamp = Date.now().toString().slice(-8);
-    const nameWithoutExt = sourceName.includes(".")
-      ? sourceName.substring(0, sourceName.lastIndexOf("."))
-      : sourceName;
-    const extension = sourceName.includes(".")
-      ? sourceName.substring(sourceName.lastIndexOf("."))
-      : "";
+    const uniqueName = `${sourceName}_copy_${timestamp}`;
+    const targetPath = `${targetDir}/${uniqueName}`;
 
-    // Always use timestamp suffix to ensure uniqueness without SSH calls
-    const uniqueName = `${nameWithoutExt}_copy_${timestamp}${extension}`;
-
-    fileLogger.info("Using timestamp-based unique name", {
+    fileLogger.info("Starting copy operation", {
       originalName: sourceName,
       uniqueName,
+      sourcePath,
+      targetPath,
+      sessionId,
     });
-    const targetPath = `${targetDir}/${uniqueName}`;
 
     // Escape paths for shell commands
     const escapedSource = sourcePath.replace(/'/g, "'\"'\"'");
     const escapedTarget = targetPath.replace(/'/g, "'\"'\"'");
 
-    // Use cp with explicit flags to avoid hanging on prompts
-    // -f: force overwrite without prompting
-    // -r: recursive for directories
-    // -p: preserve timestamps, permissions
-    const copyCommand = `cp -fpr '${escapedSource}' '${escapedTarget}' 2>&1`;
+    // Linus principle: simplify - use basic cp command for reliability
+    // Just copy the file without complex flags that might cause issues
+    const copyCommand = `cp '${escapedSource}' '${escapedTarget}' && echo "COPY_SUCCESS"`;
 
     fileLogger.info("Starting file copy operation", {
       operation: "file_copy_start",
@@ -1801,7 +1777,7 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
 
     // Add timeout to prevent hanging
     const commandTimeout = setTimeout(() => {
-      fileLogger.error("Copy command timed out after 20 seconds", {
+      fileLogger.error("Copy command timed out after 60 seconds", {
         sourcePath,
         targetPath,
         command: copyCommand,
@@ -1816,7 +1792,7 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
           },
         });
       }
-    }, 20000); // 20 second timeout for better responsiveness
+    }, 60000); // 60 second timeout for large files
 
     sshConn.client.exec(copyCommand, (err, stream) => {
       if (err) {
@@ -1888,27 +1864,54 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
           return;
         }
 
-        fileLogger.success("Item copied successfully", {
-          operation: "file_copy",
-          sessionId,
-          sourcePath,
-          targetPath,
-          uniqueName,
-          hostId,
-          userId,
-        });
+        // Verify copy completion with COPY_SUCCESS marker or exit code 0
+        const copySuccessful = stdoutData.includes("COPY_SUCCESS") || code === 0;
 
-        if (!res.headersSent) {
-          res.json({
-            message: "Item copied successfully",
+        if (copySuccessful) {
+          fileLogger.success("Item copied successfully", {
+            operation: "file_copy",
+            sessionId,
             sourcePath,
             targetPath,
             uniqueName,
-            toast: {
-              type: "success",
-              message: `Successfully copied to: ${uniqueName}`,
-            },
+            hostId,
+            userId,
           });
+
+          if (!res.headersSent) {
+            res.json({
+              message: "Item copied successfully",
+              sourcePath,
+              targetPath,
+              uniqueName,
+              toast: {
+                type: "success",
+                message: `Successfully copied to: ${uniqueName}`,
+              },
+            });
+          }
+        } else {
+          fileLogger.warn("Copy completed but without success confirmation", {
+            operation: "file_copy_uncertain",
+            sessionId,
+            sourcePath,
+            targetPath,
+            code,
+            stdoutData: stdoutData.substring(0, 200),
+          });
+
+          if (!res.headersSent) {
+            res.json({
+              message: "Copy may have completed",
+              sourcePath,
+              targetPath,
+              uniqueName,
+              toast: {
+                type: "warning",
+                message: `Copy completed but verification uncertain for: ${uniqueName}`,
+              },
+            });
+          }
         }
       });
 

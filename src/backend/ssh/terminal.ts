@@ -24,50 +24,22 @@ const wss = new WebSocketServer({
       const url = parseUrl(info.req.url!, true);
       const token = url.query.token as string;
 
-      // DEBUG: Log detailed JWT verification process
-      sshLogger.debug("WebSocket JWT verification starting", {
-        operation: "websocket_jwt_debug",
-        fullUrl: info.req.url,
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-        tokenStart: token ? token.substring(0, 20) + "..." : "missing",
-        ip: info.req.socket.remoteAddress
-      });
-
       if (!token) {
         sshLogger.warn("WebSocket connection rejected: missing token", {
           operation: "websocket_auth_reject",
           reason: "missing_token",
-          origin: info.origin,
-          ip: info.req.socket.remoteAddress,
-          queryKeys: Object.keys(url.query || {})
+          ip: info.req.socket.remoteAddress
         });
         return false;
       }
 
-      // Verify JWT token
-      sshLogger.debug("Calling authManager.verifyJWTToken", {
-        operation: "websocket_jwt_verify",
-        tokenLength: token.length
-      });
-
       const payload = await authManager.verifyJWTToken(token);
-
-      sshLogger.debug("JWT verification result", {
-        operation: "websocket_jwt_result",
-        hasPayload: !!payload,
-        payloadKeys: payload ? Object.keys(payload) : [],
-        userId: payload?.userId || "none"
-      });
 
       if (!payload) {
         sshLogger.warn("WebSocket connection rejected: invalid token", {
           operation: "websocket_auth_reject",
           reason: "invalid_token",
-          origin: info.origin,
-          ip: info.req.socket.remoteAddress,
-          tokenLength: token.length,
-          tokenStart: token.substring(0, 20) + "..."
+          ip: info.req.socket.remoteAddress
         });
         return false;
       }

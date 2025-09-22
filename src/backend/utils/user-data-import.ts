@@ -185,10 +185,11 @@ class UserDataImport {
           continue;
         }
 
-        // Regenerate ID to avoid conflicts
+        // Generate temporary ID for encryption context, then remove for database insert
+        const tempId = `import-ssh-${targetUserId}-${Date.now()}-${imported}`;
         const newHostData = {
           ...host,
-          id: undefined, // Let database auto-generate
+          id: tempId, // Temporary ID for encryption context
           userId: targetUserId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -199,6 +200,9 @@ class UserDataImport {
         if (options.userDataKey) {
           processedHostData = DataCrypto.encryptRecord("ssh_data", newHostData, targetUserId, options.userDataKey);
         }
+
+        // Remove temp ID to let database auto-generate real ID
+        delete processedHostData.id;
 
         await getDb().insert(sshData).values(processedHostData);
         imported++;
@@ -230,10 +234,11 @@ class UserDataImport {
           continue;
         }
 
-        // Regenerate ID to avoid conflicts
+        // Generate temporary ID for encryption context, then remove for database insert
+        const tempCredId = `import-cred-${targetUserId}-${Date.now()}-${imported}`;
         const newCredentialData = {
           ...credential,
-          id: undefined, // Let database auto-generate
+          id: tempCredId, // Temporary ID for encryption context
           userId: targetUserId,
           usageCount: 0, // Reset usage count
           lastUsed: null,
@@ -246,6 +251,9 @@ class UserDataImport {
         if (options.userDataKey) {
           processedCredentialData = DataCrypto.encryptRecord("ssh_credentials", newCredentialData, targetUserId, options.userDataKey);
         }
+
+        // Remove temp ID to let database auto-generate real ID
+        delete processedCredentialData.id;
 
         await getDb().insert(sshCredentials).values(processedCredentialData);
         imported++;

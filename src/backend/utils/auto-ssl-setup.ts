@@ -5,12 +5,13 @@ import crypto from "crypto";
 import { systemLogger } from "./logger.js";
 
 /**
- * Auto SSL Setup - Integrated SSL certificate generation for Termix
+ * Auto SSL Setup - Optional SSL certificate generation for Termix
  *
- * Linus principle: Default secure configuration, zero user intervention needed
- * - Auto-generates SSL certificates on first startup
- * - Creates secure environment variables
- * - Enables HTTPS/WSS by default
+ * Linus principle: Simple defaults, optional security features
+ * - SSL disabled by default to avoid setup complexity
+ * - Auto-generates SSL certificates when enabled
+ * - Uses container-appropriate paths
+ * - Users can enable SSL by setting ENABLE_SSL=true
  */
 export class AutoSSLSetup {
   private static readonly SSL_DIR = path.join(process.cwd(), "ssl");
@@ -161,11 +162,16 @@ IP.2 = ::1
       operation: "ssl_env_setup"
     });
 
+    // Use container paths in production, local paths in development
+    const isProduction = process.env.NODE_ENV === "production";
+    const certPath = isProduction ? "/app/ssl/termix.crt" : this.CERT_FILE;
+    const keyPath = isProduction ? "/app/ssl/termix.key" : this.KEY_FILE;
+
     const sslEnvVars = {
-      ENABLE_SSL: "true",
+      ENABLE_SSL: "false", // Disable SSL by default to avoid setup issues
       SSL_PORT: process.env.SSL_PORT || "8443",
-      SSL_CERT_PATH: this.CERT_FILE,
-      SSL_KEY_PATH: this.KEY_FILE,
+      SSL_CERT_PATH: certPath,
+      SSL_KEY_PATH: keyPath,
       SSL_DOMAIN: "localhost"
     };
 

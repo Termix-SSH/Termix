@@ -5,6 +5,7 @@ interface EncryptedData {
   iv: string;
   tag: string;
   salt: string;
+  recordId: string; // Store the recordId used for encryption context
 }
 
 /**
@@ -51,6 +52,7 @@ class FieldCrypto {
       iv: iv.toString("hex"),
       tag: tag.toString("hex"),
       salt: salt.toString("hex"),
+      recordId: recordId, // Store recordId for consistent decryption context
     };
 
     return JSON.stringify(encryptedData);
@@ -64,7 +66,12 @@ class FieldCrypto {
 
     const encrypted: EncryptedData = JSON.parse(encryptedValue);
     const salt = Buffer.from(encrypted.salt, "hex");
-    const context = `${recordId}:${fieldName}`;
+
+    // Use ONLY the recordId that was stored during encryption
+    if (!encrypted.recordId) {
+      throw new Error(`Encrypted field missing recordId context - data corruption or legacy format not supported`);
+    }
+    const context = `${encrypted.recordId}:${fieldName}`;
     const fieldKey = Buffer.from(crypto.hkdfSync('sha256', masterKey, salt, context, this.KEY_LENGTH));
 
     const decipher = crypto.createDecipheriv(this.ALGORITHM, fieldKey, Buffer.from(encrypted.iv, "hex")) as any;

@@ -101,6 +101,16 @@ class UserCrypto {
       const DEK = this.decryptDEK(encryptedDEK, KEK);
       KEK.fill(0); // Immediately clean KEK
 
+      // Debug: Check DEK validity
+      if (!DEK || DEK.length === 0) {
+        databaseLogger.error("DEK is empty or invalid after decryption", {
+          operation: "user_crypto_auth_debug",
+          userId,
+          dekLength: DEK ? DEK.length : 0
+        });
+        return false;
+      }
+
       // Create user session, cache DEK directly
       const now = Date.now();
 
@@ -111,7 +121,7 @@ class UserCrypto {
       }
 
       this.userSessions.set(userId, {
-        dataKey: Buffer.from(DEK), // Copy DEK
+        dataKey: Buffer.from(DEK), // Create proper Buffer copy
         lastActivity: now,
         expiresAt: now + UserCrypto.SESSION_DURATION,
       });

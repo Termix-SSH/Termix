@@ -182,6 +182,17 @@ export function HomepageAuth({
       }
 
       setCookie("jwt", res.token);
+
+      // DEBUG: Verify JWT was set correctly
+      const verifyJWT = getCookie("jwt");
+      console.log("JWT Set Debug:", {
+        originalToken: res.token.substring(0, 20) + "...",
+        retrievedToken: verifyJWT ? verifyJWT.substring(0, 20) + "..." : null,
+        match: res.token === verifyJWT,
+        tokenLength: res.token.length,
+        retrievedLength: verifyJWT?.length || 0
+      });
+
       [meRes] = await Promise.all([getUserInfo()]);
 
       setInternalLoggedIn(true);

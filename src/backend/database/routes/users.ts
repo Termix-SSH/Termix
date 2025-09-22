@@ -342,7 +342,9 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         // Use admin's data key to encrypt OIDC configuration
         const adminDataKey = DataCrypto.getUserDataKey(userId);
         if (adminDataKey) {
-          encryptedConfig = DataCrypto.encryptRecord("settings", config, userId, adminDataKey);
+          // Provide stable recordId for settings objects
+          const configWithId = { ...config, id: `oidc-config-${userId}` };
+          encryptedConfig = DataCrypto.encryptRecord("settings", configWithId, userId, adminDataKey);
           authLogger.info("OIDC configuration encrypted with admin data key", {
             operation: "oidc_config_encrypt",
             userId,
@@ -440,6 +442,7 @@ router.get("/oidc-config", async (req, res) => {
               try {
                 const adminDataKey = DataCrypto.getUserDataKey(userId);
                 if (adminDataKey) {
+                  // Use same stable recordId for decryption - note: FieldCrypto will use stored recordId
                   config = DataCrypto.decryptRecord("settings", config, userId, adminDataKey);
                 } else {
                   // Admin data not unlocked, hide client_secret

@@ -24,22 +24,30 @@ class SimpleDBOps {
     data: T,
     userId: string,
   ): Promise<T> {
-    // Verify user access permissions
-    if (!DataCrypto.canUserAccessData(userId)) {
-      throw new Error(`User ${userId} data not unlocked`);
-    }
+    // Get user data key once and reuse throughout operation
+    const userDataKey = DataCrypto.validateUserAccess(userId);
 
-    // Encrypt data
-    const encryptedData = DataCrypto.encryptRecordForUser(tableName, data, userId);
+    // Generate consistent temporary ID for encryption context if record has no ID
+    const tempId = data.id || `temp-${userId}-${Date.now()}`;
+    const dataWithTempId = { ...data, id: tempId };
+
+    // Encrypt data using the locked key - recordId will be stored in encrypted fields
+    const encryptedData = DataCrypto.encryptRecord(tableName, dataWithTempId, userId, userDataKey);
+
+    // Remove temp ID if it was generated, let database assign real ID
+    if (!data.id) {
+      delete encryptedData.id;
+    }
 
     // Insert into database
     const result = await getDb().insert(table).values(encryptedData).returning();
 
-    // Decrypt return result
-    const decryptedResult = DataCrypto.decryptRecordForUser(
+    // Decrypt return result using the same key - FieldCrypto will use stored recordId
+    const decryptedResult = DataCrypto.decryptRecord(
       tableName,
       result[0],
-      userId
+      userId,
+      userDataKey
     );
 
     databaseLogger.debug(`Inserted encrypted record into ${tableName}`, {
@@ -60,19 +68,18 @@ class SimpleDBOps {
     tableName: TableName,
     userId: string,
   ): Promise<T[]> {
-    // Verify user access permissions
-    if (!DataCrypto.canUserAccessData(userId)) {
-      throw new Error(`User ${userId} data not unlocked`);
-    }
+    // Get user data key once and reuse throughout operation
+    const userDataKey = DataCrypto.validateUserAccess(userId);
 
     // Execute query
     const results = await query;
 
-    // Decrypt results
-    const decryptedResults = DataCrypto.decryptRecordsForUser(
+    // Decrypt results using locked key
+    const decryptedResults = DataCrypto.decryptRecords(
       tableName,
       results,
-      userId
+      userId,
+      userDataKey
     );
 
     databaseLogger.debug(`Selected ${decryptedResults.length} records from ${tableName}`, {
@@ -93,20 +100,19 @@ class SimpleDBOps {
     tableName: TableName,
     userId: string,
   ): Promise<T | undefined> {
-    // Verify user access permissions
-    if (!DataCrypto.canUserAccessData(userId)) {
-      throw new Error(`User ${userId} data not unlocked`);
-    }
+    // Get user data key once and reuse throughout operation
+    const userDataKey = DataCrypto.validateUserAccess(userId);
 
     // Execute query
     const result = await query;
     if (!result) return undefined;
 
-    // Decrypt results
-    const decryptedResult = DataCrypto.decryptRecordForUser(
+    // Decrypt results using locked key
+    const decryptedResult = DataCrypto.decryptRecord(
       tableName,
       result,
-      userId
+      userId,
+      userDataKey
     );
 
     databaseLogger.debug(`Selected single record from ${tableName}`, {
@@ -129,13 +135,11 @@ class SimpleDBOps {
     data: Partial<T>,
     userId: string,
   ): Promise<T[]> {
-    // Verify user access permissions
-    if (!DataCrypto.canUserAccessData(userId)) {
-      throw new Error(`User ${userId} data not unlocked`);
-    }
+    // Get user data key once and reuse throughout operation
+    const userDataKey = DataCrypto.validateUserAccess(userId);
 
-    // Encrypt update data
-    const encryptedData = DataCrypto.encryptRecordForUser(tableName, data, userId);
+    // Encrypt update data using the locked key
+    const encryptedData = DataCrypto.encryptRecord(tableName, data, userId, userDataKey);
 
     // Execute update
     const result = await getDb()
@@ -144,11 +148,12 @@ class SimpleDBOps {
       .where(where)
       .returning();
 
-    // Decrypt return data
-    const decryptedResults = DataCrypto.decryptRecordsForUser(
+    // Decrypt return data using the same key
+    const decryptedResults = DataCrypto.decryptRecords(
       tableName,
       result,
-      userId
+      userId,
+      userDataKey
     );
 
     databaseLogger.debug(`Updated records in ${tableName}`, {

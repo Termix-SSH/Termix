@@ -98,8 +98,13 @@ class AuthManager {
   async verifyJWTToken(token: string): Promise<JWTPayload | null> {
     try {
       const jwtSecret = await this.systemCrypto.getJWTSecret();
-      return jwt.verify(token, jwtSecret) as JWTPayload;
+      const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+      return payload;
     } catch (error) {
+      databaseLogger.warn("JWT verification failed", {
+        operation: "jwt_verify_failed",
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return null;
     }
   }

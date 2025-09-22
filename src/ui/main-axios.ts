@@ -123,8 +123,10 @@ export function getCookie(name: string): string | undefined {
   } else {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
-    const token =
+    const encodedToken =
       parts.length === 2 ? parts.pop()?.split(";").shift() : undefined;
+    // Decode the token since setCookie uses encodeURIComponent
+    const token = encodedToken ? decodeURIComponent(encodedToken) : undefined;
     return token;
   }
 }
@@ -1204,6 +1206,8 @@ export async function moveSSHItem(
       newPath,
       hostId,
       userId,
+    }, {
+      timeout: 60000, // 60 second timeout for move operations
     });
     return response.data;
   } catch (error) {
