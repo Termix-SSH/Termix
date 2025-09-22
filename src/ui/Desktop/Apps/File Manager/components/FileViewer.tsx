@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import {
   FileText,
   Image as ImageIcon,
@@ -276,6 +277,7 @@ export function FileViewer({
   onSave,
   onDownload,
 }: FileViewerProps) {
+  const { t } = useTranslation();
   const [editedContent, setEditedContent] = useState(content);
   const [originalContent, setOriginalContent] = useState(
     savedContent || content,

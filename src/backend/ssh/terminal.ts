@@ -24,24 +24,50 @@ const wss = new WebSocketServer({
       const url = parseUrl(info.req.url!, true);
       const token = url.query.token as string;
 
+      // DEBUG: Log detailed JWT verification process
+      sshLogger.debug("WebSocket JWT verification starting", {
+        operation: "websocket_jwt_debug",
+        fullUrl: info.req.url,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        tokenStart: token ? token.substring(0, 20) + "..." : "missing",
+        ip: info.req.socket.remoteAddress
+      });
+
       if (!token) {
         sshLogger.warn("WebSocket connection rejected: missing token", {
           operation: "websocket_auth_reject",
           reason: "missing_token",
           origin: info.origin,
-          ip: info.req.socket.remoteAddress
+          ip: info.req.socket.remoteAddress,
+          queryKeys: Object.keys(url.query || {})
         });
         return false;
       }
 
       // Verify JWT token
+      sshLogger.debug("Calling authManager.verifyJWTToken", {
+        operation: "websocket_jwt_verify",
+        tokenLength: token.length
+      });
+
       const payload = await authManager.verifyJWTToken(token);
+
+      sshLogger.debug("JWT verification result", {
+        operation: "websocket_jwt_result",
+        hasPayload: !!payload,
+        payloadKeys: payload ? Object.keys(payload) : [],
+        userId: payload?.userId || "none"
+      });
+
       if (!payload) {
         sshLogger.warn("WebSocket connection rejected: invalid token", {
           operation: "websocket_auth_reject",
           reason: "invalid_token",
           origin: info.origin,
-          ip: info.req.socket.remoteAddress
+          ip: info.req.socket.remoteAddress,
+          tokenLength: token.length,
+          tokenStart: token.substring(0, 20) + "..."
         });
         return false;
       }
@@ -70,9 +96,8 @@ const wss = new WebSocketServer({
         return false;
       }
 
-      // Attach user info to request object
-      (info.req as any).userId = payload.userId;
-      (info.req as any).userPayload = payload;
+      // Note: We don't need to attach user info to request anymore
+      // Connection handler will re-verify JWT directly from URL
 
       sshLogger.info("WebSocket connection authenticated", {
         operation: "websocket_auth_success",
@@ -97,14 +122,42 @@ sshLogger.success("SSH Terminal WebSocket server started with authentication", {
   features: ["JWT_auth", "connection_limits", "data_access_control"]
 });
 
-wss.on("connection", (ws: WebSocket, req) => {
-  // Extract authenticated user info from request
-  const userId = (req as any).userId;
-  const userPayload = (req as any).userPayload;
+wss.on("connection", async (ws: WebSocket, req) => {
+  // Linus principle: eliminate complexity - always parse JWT from URL directly
+  let userId: string | undefined;
+  let userPayload: any;
 
-  if (!userId) {
-    sshLogger.error("WebSocket connection without authentication - should not happen", {
-      operation: "websocket_security_violation",
+  try {
+    const url = parseUrl(req.url!, true);
+    const token = url.query.token as string;
+
+    if (!token) {
+      sshLogger.warn("WebSocket connection rejected: missing token in connection", {
+        operation: "websocket_connection_reject",
+        reason: "missing_token",
+        ip: req.socket.remoteAddress
+      });
+      ws.close(1008, "Authentication required");
+      return;
+    }
+
+    const payload = await authManager.verifyJWTToken(token);
+    if (!payload) {
+      sshLogger.warn("WebSocket connection rejected: invalid token in connection", {
+        operation: "websocket_connection_reject",
+        reason: "invalid_token",
+        ip: req.socket.remoteAddress
+      });
+      ws.close(1008, "Authentication required");
+      return;
+    }
+
+    userId = payload.userId;
+    userPayload = payload;
+
+  } catch (error) {
+    sshLogger.error("WebSocket JWT verification failed during connection", error, {
+      operation: "websocket_connection_auth_error",
       ip: req.socket.remoteAddress
     });
     ws.close(1008, "Authentication required");

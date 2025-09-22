@@ -73,7 +73,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sshSessionId, setSshSessionId] = useState<string | null>(null);
-  const [currentRequestId, setCurrentRequestId] = useState<number>(0);
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
@@ -231,56 +230,39 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }
 
-  async function loadDirectory(path: string) {
+  const loadDirectory = useCallback(async (path: string) => {
     if (!sshSessionId) {
       console.error("Cannot load directory: no SSH session ID");
       return;
     }
 
-    // Generate unique request ID to prevent race conditions
-    const requestId = Date.now();
-    setCurrentRequestId(requestId);
     setIsLoading(true);
 
     try {
-      console.log(`[${requestId}] Loading directory:`, path);
+      console.log("Loading directory:", path);
 
       const response = await listSSHFiles(sshSessionId, path);
 
-      // Only process response if this is still the latest request
-      if (requestId !== currentRequestId) {
-        console.log(`[${requestId}] Request outdated, ignoring response`);
-        return;
-      }
-
-      console.log(`[${requestId}] Directory response received:`, response);
+      console.log("Directory response received:", response);
 
       const files = Array.isArray(response) ? response : response?.files || [];
+
+      console.log("Directory loaded successfully:", files.length, "items");
+
       setFiles(files);
       clearSelection();
-
-      console.log(`[${requestId}] Directory loaded successfully:`, files.length, "items");
     } catch (error: any) {
-      // Only handle error if this is still the latest request
-      if (requestId !== currentRequestId) {
-        console.log(`[${requestId}] Request outdated, ignoring error`);
-        return;
-      }
-
-      console.error(`[${requestId}] Failed to load directory:`, error);
+      console.error("Failed to load directory:", error);
       toast.error(
         t("fileManager.failedToLoadDirectory") + ": " + (error.message || error)
       );
     } finally {
-      // Only clear loading if this is still the latest request
-      if (requestId === currentRequestId) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
-  }
+  }, [sshSessionId, clearSelection, t]);
 
   // Debounced refresh function - prevent excessive clicking
-  function handleRefreshDirectory() {
+  const handleRefreshDirectory = useCallback(() => {
     const now = Date.now();
     const DEBOUNCE_MS = 500; // 500ms debounce
 
@@ -291,7 +273,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
     setLastRefreshTime(now);
     loadDirectory(currentPath);
-  }
+  }, [currentPath, lastRefreshTime, loadDirectory]);
 
   function handleFilesDropped(fileList: FileList) {
     if (!sshSessionId) {
@@ -1464,6 +1446,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   const filteredFiles = files.filter((file) =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
 
   if (!currentHost) {
     return (

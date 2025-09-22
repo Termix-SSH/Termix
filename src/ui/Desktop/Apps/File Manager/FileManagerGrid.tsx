@@ -1138,24 +1138,6 @@ export function FileManagerGrid({
                   (f) => f.path === file.path,
                 );
 
-                // Detailed debug path comparison
-                if (selectedFiles.length > 0) {
-                  console.log(`\n=== File: ${file.name} ===`);
-                  console.log(`File path: "${file.path}"`);
-                  console.log(
-                    `Selected files:`,
-                    selectedFiles.map((f) => `"${f.path}"`),
-                  );
-                  console.log(
-                    `Path comparison results:`,
-                    selectedFiles.map(
-                      (f) =>
-                        `"${f.path}" === "${file.path}" -> ${f.path === file.path}`,
-                    ),
-                  );
-                  console.log(`Final isSelected: ${isSelected}`);
-                }
-
                 return (
                   <div
                     key={file.path}

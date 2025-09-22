@@ -7,6 +7,7 @@ import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { AuthManager } from "../utils/auth-manager.js";
 
 interface PooledConnection {
   client: Client;
@@ -228,6 +229,7 @@ class MetricsCache {
 const connectionPool = new SSHConnectionPool();
 const requestQueue = new RequestQueue();
 const metricsCache = new MetricsCache();
+const authManager = AuthManager.getInstance();
 
 type HostStatus = "online" | "offline";
 
@@ -303,19 +305,23 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: "1mb" }));
 
+// Add authentication middleware - Linus principle: eliminate special cases
+app.use(authManager.createAuthMiddleware());
+
 const hostStatuses: Map<number, StatusEntry> = new Map();
 
-async function fetchAllHosts(): Promise<SSHHostWithCredentials[]> {
+async function fetchAllHosts(userId: string): Promise<SSHHostWithCredentials[]> {
   try {
-    const hosts = await SimpleDBOps.selectEncrypted(
-      getDb().select().from(sshData),
+    const hosts = await SimpleDBOps.select(
+      getDb().select().from(sshData).where(eq(sshData.userId, userId)),
       "ssh_data",
+      userId,
     );
 
     const hostsWithCredentials: SSHHostWithCredentials[] = [];
     for (const host of hosts) {
       try {
-        const hostWithCreds = await resolveHostCredentials(host);
+        const hostWithCreds = await resolveHostCredentials(host, userId);
         if (hostWithCreds) {
           hostsWithCredentials.push(hostWithCreds);
         }
@@ -335,11 +341,13 @@ async function fetchAllHosts(): Promise<SSHHostWithCredentials[]> {
 
 async function fetchHostById(
   id: number,
+  userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    const hosts = await SimpleDBOps.selectEncrypted(
-      getDb().select().from(sshData).where(eq(sshData.id, id)),
+    const hosts = await SimpleDBOps.select(
+      getDb().select().from(sshData).where(and(eq(sshData.id, id), eq(sshData.userId, userId))),
       "ssh_data",
+      userId,
     );
 
     if (hosts.length === 0) {
@@ -347,7 +355,7 @@ async function fetchHostById(
     }
 
     const host = hosts[0];
-    return await resolveHostCredentials(host);
+    return await resolveHostCredentials(host, userId);
   } catch (err) {
     statsLogger.error(`Failed to fetch host ${id}`, err);
     return undefined;
@@ -356,6 +364,7 @@ async function fetchHostById(
 
 async function resolveHostCredentials(
   host: any,
+  userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
     const baseHost: any = {
@@ -387,17 +396,18 @@ async function resolveHostCredentials(
 
     if (host.credentialId) {
       try {
-        const credentials = await SimpleDBOps.selectEncrypted(
+        const credentials = await SimpleDBOps.select(
           getDb()
             .select()
             .from(sshCredentials)
             .where(
               and(
                 eq(sshCredentials.id, host.credentialId),
-                eq(sshCredentials.userId, host.userId),
+                eq(sshCredentials.userId, userId),
               ),
             ),
           "ssh_credentials",
+          userId,
         );
 
         if (credentials.length > 0) {
@@ -809,11 +819,19 @@ function tcpPing(
   });
 }
 
-async function pollStatusesOnce(): Promise<void> {
-  const hosts = await fetchAllHosts();
+async function pollStatusesOnce(userId?: string): Promise<void> {
+  if (!userId) {
+    statsLogger.warn("Skipping status poll - no authenticated user", {
+      operation: "status_poll",
+    });
+    return;
+  }
+
+  const hosts = await fetchAllHosts(userId);
   if (hosts.length === 0) {
     statsLogger.warn("No hosts retrieved for status polling", {
       operation: "status_poll",
+      userId,
     });
     return;
   }
@@ -845,8 +863,10 @@ async function pollStatusesOnce(): Promise<void> {
 }
 
 app.get("/status", async (req, res) => {
+  const userId = (req as any).userId;
+
   if (hostStatuses.size === 0) {
-    await pollStatusesOnce();
+    await pollStatusesOnce(userId);
   }
   const result: Record<number, StatusEntry> = {};
   for (const [id, entry] of hostStatuses.entries()) {
@@ -857,9 +877,10 @@ app.get("/status", async (req, res) => {
 
 app.get("/status/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
+  const userId = (req as any).userId;
 
   try {
-    const host = await fetchHostById(id);
+    const host = await fetchHostById(id, userId);
     if (!host) {
       return res.status(404).json({ error: "Host not found" });
     }
@@ -880,15 +901,17 @@ app.get("/status/:id", validateHostId, async (req, res) => {
 });
 
 app.post("/refresh", async (req, res) => {
-  await pollStatusesOnce();
+  const userId = (req as any).userId;
+  await pollStatusesOnce(userId);
   res.json({ message: "Refreshed" });
 });
 
 app.get("/metrics/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
+  const userId = (req as any).userId;
 
   try {
-    const host = await fetchHostById(id);
+    const host = await fetchHostById(id, userId);
     if (!host) {
       return res.status(404).json({ error: "Host not found" });
     }
@@ -947,11 +970,21 @@ app.listen(PORT, async () => {
     operation: "server_start",
     port: PORT,
   });
+
+  // Initialize AuthManager for JWT verification
   try {
-    await pollStatusesOnce();
+    await authManager.initialize();
+    statsLogger.info("AuthManager initialized for metrics collection", {
+      operation: "auth_init",
+    });
   } catch (err) {
-    statsLogger.error("Initial poll failed", err, {
-      operation: "initial_poll",
+    statsLogger.error("Failed to initialize AuthManager", err, {
+      operation: "auth_init_error",
     });
   }
+
+  // Skip initial poll - requires user authentication
+  statsLogger.info("Server ready - status polling will begin with first authenticated request", {
+    operation: "server_ready",
+  });
 });

@@ -6,6 +6,7 @@ import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { AuthManager } from "../utils/auth-manager.js";
 
 // Executable file detection utility function
 function isExecutableFile(permissions: string, fileName: string): boolean {
@@ -62,6 +63,10 @@ app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
 
+// Initialize AuthManager and add authentication middleware
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
+
 interface SSHSession {
   client: SSHClient;
   isConnected: boolean;
@@ -108,8 +113,18 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keyPassword,
     authType,
     credentialId,
-    userId,
   } = req.body;
+
+  // Use authenticated user ID from middleware
+  const userId = (req as any).userId;
+
+  if (!userId) {
+    fileLogger.error("SSH connection rejected: no authenticated user", {
+      operation: "file_connect_auth",
+      sessionId,
+    });
+    return res.status(401).json({ error: "Authentication required" });
+  }
 
   if (!sessionId || !ip || !username || !port) {
     fileLogger.warn("Missing SSH connection parameters for file manager", {
@@ -2052,9 +2067,21 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
 });
 
 const PORT = 8084;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   fileLogger.success("File Manager API server started", {
     operation: "server_start",
     port: PORT,
   });
+
+  // Initialize AuthManager for JWT verification
+  try {
+    await authManager.initialize();
+    fileLogger.info("AuthManager initialized for file manager", {
+      operation: "auth_init",
+    });
+  } catch (err) {
+    fileLogger.error("Failed to initialize AuthManager", err, {
+      operation: "auth_init_error",
+    });
+  }
 });
