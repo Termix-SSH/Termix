@@ -585,6 +585,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         return;
       }
 
+      // Record to recent access for regular files
+      await recordRecentFile(file);
+
       // Calculate window position (slightly offset)
       const windowCount = Date.now() % 10; // Simple offset calculation
       const offsetX = 120 + windowCount * 30;
@@ -1397,43 +1400,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     await handleFileOpen(file);
   }
 
-  // Handle file opening
-  async function handleFileOpen(file: FileItem) {
-    if (file.type === "directory") {
-      // If it's a directory, switch to that directory
-      setCurrentPath(file.path);
-    } else {
-      // If it's a file, record to recent access and open file window
-      await recordRecentFile(file);
-
-      // Create file window
-      const windowCount = Date.now() % 10;
-      const offsetX = 100 + windowCount * 30;
-      const offsetY = 100 + windowCount * 30;
-
-      const createFileWindow = (windowId: string) => (
-        <FileWindow
-          windowId={windowId}
-          file={file}
-          sshHost={currentHost!}
-          sshSessionId={sshSessionId!}
-          initialX={offsetX}
-          initialY={offsetY}
-        />
-      );
-
-      openWindow({
-        title: file.name,
-        x: offsetX,
-        y: offsetY,
-        width: 800,
-        height: 600,
-        isMaximized: false,
-        isMinimized: false,
-        component: createFileWindow,
-      });
-    }
-  }
 
   // Load pinned files list (when host or connection changes)
   useEffect(() => {
