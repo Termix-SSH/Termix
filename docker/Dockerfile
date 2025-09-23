@@ -88,7 +88,8 @@ COPY --from=backend-builder /app/dist/backend ./dist/backend
 
 COPY package.json ./
 RUN chown -R node:node /app && \
-    chmod 755 /app/config /app/ssl && \
+    chmod 755 /app/config && \
+    chmod 755 /app/ssl && \
     chmod 755 /app/data
 
 VOLUME ["/app/data"]
