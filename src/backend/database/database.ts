@@ -576,19 +576,30 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       `);
 
-      // Export current user only (exclude sensitive fields like password_hash)
+      // Export current user only (replace sensitive password_hash with placeholder)
       const userRecord = user[0];
       const insertUser = exportDb.prepare(`
-        INSERT INTO users (id, username, is_admin, is_oidc, oidc_identifier, totp_enabled)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       insertUser.run(
         userRecord.id,
         userRecord.username,
+        "[EXPORTED_USER_NO_PASSWORD]", // Replace password hash with placeholder
         userRecord.is_admin ? 1 : 0,
         userRecord.is_oidc ? 1 : 0,
         userRecord.oidc_identifier || null,
-        userRecord.totp_enabled ? 1 : 0
+        userRecord.client_id || null,
+        userRecord.client_secret || null,
+        userRecord.issuer_url || null,
+        userRecord.authorization_url || null,
+        userRecord.token_url || null,
+        userRecord.identifier_path || null,
+        userRecord.name_path || null,
+        userRecord.scopes || null,
+        userRecord.totp_secret || null,
+        userRecord.totp_enabled ? 1 : 0,
+        userRecord.totp_backup_codes || null
       );
 
       // Export SSH hosts (decrypted)
@@ -894,7 +905,7 @@ app.post("/database/import", authenticateJWT, upload.single("file"), async (req,
               autostartPassword: host.autostart_password,
               autostartKey: host.autostart_key,
               autostartKeyPassword: host.autostart_key_password,
-              credentialId: host.credential_id,
+              credentialId: null, // Reset credential references during import - user can reassign
               enableTerminal: Boolean(host.enable_terminal),
               enableTunnel: Boolean(host.enable_tunnel),
               tunnelConnections: host.tunnel_connections,

@@ -474,7 +474,11 @@
     "createBackup": "创建备份",
     "exportImport": "导出/导入",
     "export": "导出",
-    "import": "导入"
+    "import": "导入",
+    "passwordRequired": "密码为必填项",
+    "confirmExport": "确认导出",
+    "exportDescription": "将SSH主机和凭据导出为SQLite文件",
+    "importDescription": "导入SQLite文件并进行增量合并（跳过重复项）"
   },
   "hosts": {
     "title": "主机管理",

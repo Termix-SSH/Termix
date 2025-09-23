@@ -488,7 +488,11 @@
     "createBackup": "Create Backup",
     "exportImport": "Export/Import",
     "export": "Export",
-    "import": "Import"
+    "import": "Import",
+    "passwordRequired": "Password required",
+    "confirmExport": "Confirm Export",
+    "exportDescription": "Export SSH hosts and credentials as SQLite file",
+    "importDescription": "Import SQLite file with incremental merge (skips duplicates)"
   },
   "hosts": {
     "title": "Host Manager",
