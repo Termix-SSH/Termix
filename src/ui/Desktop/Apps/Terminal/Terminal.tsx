@@ -313,9 +313,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
               ? "wss://"
               : "ws://";
             const wsHost = baseUrl.replace(/^https?:\/\//, "");
-            return `${wsProtocol}${wsHost}/ssh/websocket/`;
+            return `${wsProtocol}${wsHost.replace(':8081', ':8082')}/`;
           })()
-        : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
+        : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:8082/`;
 
     // Clean up existing connection to prevent duplicates - Linus principle: eliminate complexity
     if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {
