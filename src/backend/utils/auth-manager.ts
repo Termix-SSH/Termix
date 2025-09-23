@@ -156,6 +156,53 @@ class AuthManager {
   }
 
   /**
+   * Admin middleware - requires user to be authenticated and have admin privileges
+   */
+  createAdminMiddleware() {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      const authHeader = req.headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Missing Authorization header" });
+      }
+
+      const token = authHeader.split(" ")[1];
+      const payload = await this.verifyJWTToken(token);
+
+      if (!payload) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      // Check if user is admin
+      try {
+        const { db } = await import("../database/db/index.js");
+        const { users } = await import("../database/db/schema.js");
+        const { eq } = await import("drizzle-orm");
+
+        const user = await db.select().from(users).where(eq(users.id, payload.userId));
+
+        if (!user || user.length === 0 || !user[0].is_admin) {
+          databaseLogger.warn("Non-admin user attempted to access admin endpoint", {
+            operation: "admin_access_denied",
+            userId: payload.userId,
+            endpoint: req.path,
+          });
+          return res.status(403).json({ error: "Admin access required" });
+        }
+
+        (req as any).userId = payload.userId;
+        (req as any).pendingTOTP = payload.pendingTOTP;
+        next();
+      } catch (error) {
+        databaseLogger.error("Failed to verify admin privileges", error, {
+          operation: "admin_check_failed",
+          userId: payload.userId,
+        });
+        return res.status(500).json({ error: "Failed to verify admin privileges" });
+      }
+    };
+  }
+
+  /**
    * User logout
    */
   logoutUser(userId: string): void {

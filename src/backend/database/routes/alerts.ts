@@ -4,6 +4,7 @@ import { dismissedAlerts } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import fetch from "node-fetch";
 import { authLogger } from "../../utils/logger.js";
+import { AuthManager } from "../../utils/auth-manager.js";
 
 interface CacheEntry {
   data: any;
@@ -107,31 +108,15 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
 
 const router = express.Router();
 
-// Route: Get all active alerts
+// Initialize auth middleware
+const authManager = AuthManager.getInstance();
+const authenticateJWT = authManager.createAuthMiddleware();
+
+// Route: Get alerts for the authenticated user (excluding dismissed ones)
 // GET /alerts
-router.get("/", async (req, res) => {
+router.get("/", authenticateJWT, async (req, res) => {
   try {
-    const alerts = await fetchAlertsFromGitHub();
-    res.json({
-      alerts,
-      cached: alertCache.get("termix_alerts") !== null,
-      total_count: alerts.length,
-    });
-  } catch (error) {
-    authLogger.error("Failed to get alerts", error);
-    res.status(500).json({ error: "Failed to fetch alerts" });
-  }
-});
-
-// Route: Get alerts for a specific user (excluding dismissed ones)
-// GET /alerts/user/:userId
-router.get("/user/:userId", async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    if (!userId) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
+    const userId = (req as any).userId;
 
     const allAlerts = await fetchAlertsFromGitHub();
 
@@ -144,32 +129,33 @@ router.get("/user/:userId", async (req, res) => {
       dismissedAlertRecords.map((record) => record.alertId),
     );
 
-    const userAlerts = allAlerts.filter(
+    const activeAlertsForUser = allAlerts.filter(
       (alert) => !dismissedAlertIds.has(alert.id),
     );
 
     res.json({
-      alerts: userAlerts,
-      total_count: userAlerts.length,
-      dismissed_count: dismissedAlertIds.size,
+      alerts: activeAlertsForUser,
+      cached: alertCache.get("termix_alerts") !== null,
+      total_count: activeAlertsForUser.length,
     });
   } catch (error) {
     authLogger.error("Failed to get user alerts", error);
-    res.status(500).json({ error: "Failed to fetch user alerts" });
+    res.status(500).json({ error: "Failed to fetch alerts" });
   }
 });
 
-// Route: Dismiss an alert for a user
-// POST /alerts/dismiss
-router.post("/dismiss", async (req, res) => {
-  try {
-    const { userId, alertId } = req.body;
+// Deprecated endpoint - use GET /alerts instead
 
-    if (!userId || !alertId) {
-      authLogger.warn("Missing userId or alertId in dismiss request");
-      return res
-        .status(400)
-        .json({ error: "User ID and Alert ID are required" });
+// Route: Dismiss an alert for the authenticated user
+// POST /alerts/dismiss
+router.post("/dismiss", authenticateJWT, async (req, res) => {
+  try {
+    const { alertId } = req.body;
+    const userId = (req as any).userId;
+
+    if (!alertId) {
+      authLogger.warn("Missing alertId in dismiss request", { userId });
+      return res.status(400).json({ error: "Alert ID is required" });
     }
 
     const existingDismissal = await db
@@ -201,13 +187,9 @@ router.post("/dismiss", async (req, res) => {
 
 // Route: Get dismissed alerts for a user
 // GET /alerts/dismissed/:userId
-router.get("/dismissed/:userId", async (req, res) => {
+router.get("/dismissed", authenticateJWT, async (req, res) => {
   try {
-    const { userId } = req.params;
-
-    if (!userId) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
+    const userId = (req as any).userId;
 
     const dismissedAlertRecords = await db
       .select({
@@ -227,16 +209,15 @@ router.get("/dismissed/:userId", async (req, res) => {
   }
 });
 
-// Route: Undismiss an alert for a user (remove from dismissed list)
+// Route: Undismiss an alert for the authenticated user (remove from dismissed list)
 // DELETE /alerts/dismiss
-router.delete("/dismiss", async (req, res) => {
+router.delete("/dismiss", authenticateJWT, async (req, res) => {
   try {
-    const { userId, alertId } = req.body;
+    const { alertId } = req.body;
+    const userId = (req as any).userId;
 
-    if (!userId || !alertId) {
-      return res
-        .status(400)
-        .json({ error: "User ID and Alert ID are required" });
+    if (!alertId) {
+      return res.status(400).json({ error: "Alert ID is required" });
     }
 
     const result = await db

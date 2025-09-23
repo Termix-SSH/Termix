@@ -20,6 +20,11 @@ import https from "https";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
 
 const app = express();
+
+// Initialize auth middleware
+const authManager = AuthManager.getInstance();
+const authenticateJWT = authManager.createAuthMiddleware();
+const requireAdmin = authManager.createAdminMiddleware();
 app.use(
   cors({
     origin: "*",
@@ -172,7 +177,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/version", async (req, res) => {
+app.get("/version", authenticateJWT, async (req, res) => {
   let localVersion = process.env.VERSION;
 
   if (!localVersion) {
@@ -238,7 +243,7 @@ app.get("/version", async (req, res) => {
   }
 });
 
-app.get("/releases/rss", async (req, res) => {
+app.get("/releases/rss", authenticateJWT, async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const per_page = Math.min(
@@ -294,7 +299,7 @@ app.get("/releases/rss", async (req, res) => {
   }
 });
 
-app.get("/encryption/status", async (req, res) => {
+app.get("/encryption/status", requireAdmin, async (req, res) => {
   try {
     const authManager = AuthManager.getInstance();
     // Simplified status for new architecture
@@ -317,7 +322,7 @@ app.get("/encryption/status", async (req, res) => {
   }
 });
 
-app.post("/encryption/initialize", async (req, res) => {
+app.post("/encryption/initialize", requireAdmin, async (req, res) => {
   try {
     const authManager = AuthManager.getInstance();
 
@@ -346,7 +351,7 @@ app.post("/encryption/initialize", async (req, res) => {
 });
 
 
-app.post("/encryption/regenerate", async (req, res) => {
+app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
   try {
     const authManager = AuthManager.getInstance();
 
@@ -373,7 +378,7 @@ app.post("/encryption/regenerate", async (req, res) => {
   }
 });
 
-app.post("/encryption/regenerate-jwt", async (req, res) => {
+app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
   try {
     const authManager = AuthManager.getInstance();
     // JWT regeneration moved to SystemKeyManager directly
@@ -397,22 +402,9 @@ app.post("/encryption/regenerate-jwt", async (req, res) => {
 });
 
 // User data export endpoint - V2 KEK-DEK compatible
-app.post("/database/export", async (req, res) => {
+app.post("/database/export", authenticateJWT, async (req, res) => {
   try {
-    const authHeader = req.headers["authorization"];
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Missing Authorization header" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    const authManager = AuthManager.getInstance();
-    const payload = await authManager.verifyJWTToken(token);
-
-    if (!payload) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const userId = payload.userId;
+    const userId = (req as any).userId;
     const { format = 'encrypted', scope = 'user_data', includeCredentials = true, password } = req.body;
 
     // For plaintext export, need to unlock user data
@@ -470,34 +462,13 @@ app.post("/database/export", async (req, res) => {
 });
 
 // User data import endpoint - V2 KEK-DEK compatible
-app.post("/database/import", upload.single("file"), async (req, res) => {
+app.post("/database/import", authenticateJWT, upload.single("file"), async (req, res) => {
   try {
-    const authHeader = req.headers["authorization"];
-    if (!authHeader?.startsWith("Bearer ")) {
-      // Clean up uploaded file
-      if (req.file?.path) {
-        try { fs.unlinkSync(req.file.path); } catch {}
-      }
-      return res.status(401).json({ error: "Missing Authorization header" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    const authManager = AuthManager.getInstance();
-    const payload = await authManager.verifyJWTToken(token);
-
-    if (!payload) {
-      // Clean up uploaded file
-      if (req.file?.path) {
-        try { fs.unlinkSync(req.file.path); } catch {}
-      }
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const userId = payload.userId;
+    const userId = (req as any).userId;
     const { replaceExisting = false, skipCredentials = false, skipFileManagerData = false, dryRun = false, password } = req.body;
 
     apiLogger.info("Importing user data", {
@@ -596,22 +567,9 @@ app.post("/database/import", upload.single("file"), async (req, res) => {
 });
 
 // Export preview endpoint - validate export data without downloading
-app.post("/database/export/preview", async (req, res) => {
+app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   try {
-    const authHeader = req.headers["authorization"];
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Missing Authorization header" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    const authManager = AuthManager.getInstance();
-    const payload = await authManager.verifyJWTToken(token);
-
-    if (!payload) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const userId = payload.userId;
+    const userId = (req as any).userId;
     const { format = 'encrypted', scope = 'user_data', includeCredentials = true } = req.body;
 
     apiLogger.info("Generating export preview", {
@@ -653,7 +611,7 @@ app.post("/database/export/preview", async (req, res) => {
   }
 });
 
-app.post("/database/backup", async (req, res) => {
+app.post("/database/backup", requireAdmin, async (req, res) => {
   try {
     const { customPath } = req.body;
 
@@ -701,7 +659,7 @@ app.post("/database/backup", async (req, res) => {
   }
 });
 
-app.post("/database/restore", async (req, res) => {
+app.post("/database/restore", requireAdmin, async (req, res) => {
   try {
     const { backupPath, targetPath } = req.body;
 

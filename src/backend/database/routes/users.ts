@@ -138,6 +138,7 @@ interface JWTPayload {
 
 // JWT authentication middleware - only verify JWT, no data unlock required
 const authenticateJWT = authManager.createAuthMiddleware();
+const requireAdmin = authManager.createAdminMiddleware();
 
 // Data access middleware - requires user to have unlocked data keys
 const requireDataAccess = authManager.createDataAccessMiddleware();
@@ -413,7 +414,7 @@ router.delete("/oidc-config", authenticateJWT, async (req, res) => {
 
 // Route: Get OIDC configuration
 // GET /users/oidc-config
-router.get("/oidc-config", async (req, res) => {
+router.get("/oidc-config", authenticateJWT, async (req, res) => {
   try {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
@@ -956,7 +957,7 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
 
 // Route: Count users
 // GET /users/count
-router.get("/count", async (req, res) => {
+router.get("/count", authenticateJWT, async (req, res) => {
   try {
     const countResult = db.$client
       .prepare("SELECT COUNT(*) as count FROM users")
@@ -971,7 +972,7 @@ router.get("/count", async (req, res) => {
 
 // Route: DB health check (actually queries DB)
 // GET /users/db-health
-router.get("/db-health", async (req, res) => {
+router.get("/db-health", requireAdmin, async (req, res) => {
   try {
     db.$client.prepare("SELECT 1").get();
     res.json({ status: "ok" });
@@ -983,7 +984,7 @@ router.get("/db-health", async (req, res) => {
 
 // Route: Get registration allowed status
 // GET /users/registration-allowed
-router.get("/registration-allowed", async (req, res) => {
+router.get("/registration-allowed", authenticateJWT, async (req, res) => {
   try {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
