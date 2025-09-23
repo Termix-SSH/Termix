@@ -153,6 +153,28 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
   // Track if initial directory load is done to prevent duplicate loading
   const initialLoadDoneRef = useRef(false);
+  // Track last path change to prevent rapid navigation issues
+  const lastPathChangeRef = useRef<string>("");
+  const pathChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Track current loading request to handle cancellation
+  const currentLoadingPathRef = useRef<string>("");
+
+  // Debounced directory loading for path changes
+  const debouncedLoadDirectory = useCallback((path: string) => {
+    // Clear any existing timer
+    if (pathChangeTimerRef.current) {
+      clearTimeout(pathChangeTimerRef.current);
+    }
+
+    // Set new timer for debounced loading
+    pathChangeTimerRef.current = setTimeout(() => {
+      if (path !== lastPathChangeRef.current && sshSessionId) {
+        console.log("Loading directory after path change:", path);
+        lastPathChangeRef.current = path;
+        loadDirectory(path);
+      }
+    }, 150); // 150ms debounce for path changes
+  }, [sshSessionId, loadDirectory]);
 
   // File list update - only reload when path changes, not on initial connection
   useEffect(() => {
@@ -160,11 +182,21 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       // Skip the first load since it's handled in initializeSSHConnection
       if (!initialLoadDoneRef.current) {
         initialLoadDoneRef.current = true;
+        lastPathChangeRef.current = currentPath;
         return;
       }
-      handleRefreshDirectory();
+
+      // Use debounced loading for path changes to prevent rapid clicking issues
+      debouncedLoadDirectory(currentPath);
     }
-  }, [sshSessionId, currentPath]);
+
+    // Cleanup timer on unmount or dependency change
+    return () => {
+      if (pathChangeTimerRef.current) {
+        clearTimeout(pathChangeTimerRef.current);
+      }
+    };
+  }, [sshSessionId, currentPath, debouncedLoadDirectory]);
 
   // Handle file drag to external
   const handleFileDragStart = useCallback(
@@ -261,12 +293,26 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       return;
     }
 
+    // Prevent concurrent loading requests
+    if (isLoading && currentLoadingPathRef.current !== path) {
+      console.log("Directory loading already in progress, skipping:", path);
+      return;
+    }
+
+    // Set current loading path for tracking
+    currentLoadingPathRef.current = path;
     setIsLoading(true);
 
     try {
       console.log("Loading directory:", path);
 
       const response = await listSSHFiles(sshSessionId, path);
+
+      // Check if this is still the current request (avoid race conditions)
+      if (currentLoadingPathRef.current !== path) {
+        console.log("Directory load canceled, newer request in progress:", path);
+        return;
+      }
 
       console.log("Directory response received:", response);
 
@@ -277,14 +323,21 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       setFiles(files);
       clearSelection();
     } catch (error: any) {
-      console.error("Failed to load directory:", error);
-      toast.error(
-        t("fileManager.failedToLoadDirectory") + ": " + (error.message || error)
-      );
+      // Only show error if this is still the current request
+      if (currentLoadingPathRef.current === path) {
+        console.error("Failed to load directory:", error);
+        toast.error(
+          t("fileManager.failedToLoadDirectory") + ": " + (error.message || error)
+        );
+      }
     } finally {
-      setIsLoading(false);
+      // Only clear loading if this is still the current request
+      if (currentLoadingPathRef.current === path) {
+        setIsLoading(false);
+        currentLoadingPathRef.current = "";
+      }
     }
-  }, [sshSessionId, clearSelection, t]);
+  }, [sshSessionId, isLoading, clearSelection, t]);
 
   // Debounced refresh function - prevent excessive clicking
   const handleRefreshDirectory = useCallback(() => {
