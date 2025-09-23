@@ -78,6 +78,21 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
         )
       );
 
+    console.log("=== AUTOSTART QUERY DEBUG ===");
+    console.log("Found autostart hosts count:", autostartHosts.length);
+    autostartHosts.forEach((host, index) => {
+      console.log(`Host ${index + 1}:`, {
+        id: host.id,
+        ip: host.ip,
+        username: host.username,
+        hasAutostartPassword: !!host.autostartPassword,
+        hasAutostartKey: !!host.autostartKey,
+        autostartPasswordLength: host.autostartPassword?.length || 0,
+        autostartKeyLength: host.autostartKey?.length || 0
+      });
+    });
+    console.log("=== END AUTOSTART QUERY DEBUG ===");
+
     sshLogger.info("Internal autostart endpoint accessed", {
       operation: "autostart_internal_access",
       configCount: autostartHosts.length,
@@ -91,6 +106,20 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
         ? JSON.parse(host.tunnelConnections)
         : [];
 
+      // Debug: Log what we're reading from database
+      sshLogger.info(`Autostart host from DB:`, {
+        hostId: host.id,
+        ip: host.ip,
+        username: host.username,
+        hasAutostartPassword: !!host.autostartPassword,
+        hasAutostartKey: !!host.autostartKey,
+        hasEncryptedPassword: !!host.password,
+        hasEncryptedKey: !!host.key,
+        authType: host.authType,
+        autostartPasswordLength: host.autostartPassword?.length || 0,
+        autostartKeyLength: host.autostartKey?.length || 0,
+      });
+
       return {
         id: host.id,
         userId: host.userId,
@@ -101,6 +130,10 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
         password: host.autostartPassword,
         key: host.autostartKey,
         keyPassword: host.autostartKeyPassword,
+        // Include explicit autostart fields for tunnel service
+        autostartPassword: host.autostartPassword,
+        autostartKey: host.autostartKey,
+        autostartKeyPassword: host.autostartKeyPassword,
         authType: host.authType,
         enableTunnel: true,
         tunnelConnections: tunnelConnections.filter((tunnel: any) => tunnel.autoStart),
@@ -115,6 +148,89 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
   } catch (err) {
     sshLogger.error("Failed to fetch autostart SSH data", err);
     res.status(500).json({ error: "Failed to fetch autostart SSH data" });
+  }
+});
+
+// Internal-only endpoint for all hosts - requires internal auth token (for tunnel endpointHost resolution)
+router.get("/db/host/internal/all", async (req: Request, res: Response) => {
+  try {
+    // Check for internal authentication token using SystemCrypto
+    const internalToken = req.headers["x-internal-auth-token"];
+    if (!internalToken) {
+      return res.status(401).json({ error: "Internal authentication token required" });
+    }
+
+    const systemCrypto = SystemCrypto.getInstance();
+    const expectedToken = await systemCrypto.getInternalAuthToken();
+
+    if (internalToken !== expectedToken) {
+      return res.status(401).json({ error: "Invalid internal authentication token" });
+    }
+
+    // Query all hosts for endpointHost resolution
+    const allHosts = await db.select().from(sshData);
+
+    sshLogger.info("Internal all hosts endpoint accessed", {
+      operation: "all_hosts_internal_access",
+      hostCount: allHosts.length,
+      source: req.ip,
+      userAgent: req.headers["user-agent"]
+    });
+
+    // Transform to expected format for tunnel service
+    const result = allHosts.map((host) => {
+      const tunnelConnections = host.tunnelConnections
+        ? JSON.parse(host.tunnelConnections)
+        : [];
+
+      // Debug: Log what we're reading from database for all hosts
+      sshLogger.info(`All hosts endpoint - host from DB:`, {
+        hostId: host.id,
+        ip: host.ip,
+        username: host.username,
+        hasAutostartPassword: !!host.autostartPassword,
+        hasAutostartKey: !!host.autostartKey,
+        hasEncryptedPassword: !!host.password,
+        hasEncryptedKey: !!host.key,
+        authType: host.authType,
+        autostartPasswordLength: host.autostartPassword?.length || 0,
+        autostartKeyLength: host.autostartKey?.length || 0,
+        encryptedPasswordLength: host.password?.length || 0,
+        encryptedKeyLength: host.key?.length || 0,
+      });
+
+      return {
+        id: host.id,
+        userId: host.userId,
+        name: host.name || `${host.username}@${host.ip}`,
+        ip: host.ip,
+        port: host.port,
+        username: host.username,
+        password: host.autostartPassword || host.password,
+        key: host.autostartKey || host.key,
+        keyPassword: host.autostartKeyPassword || host.keyPassword,
+        // Include autostart fields for fallback
+        autostartPassword: host.autostartPassword,
+        autostartKey: host.autostartKey,
+        autostartKeyPassword: host.autostartKeyPassword,
+        authType: host.authType,
+        keyType: host.keyType,
+        credentialId: host.credentialId,
+        enableTunnel: !!host.enableTunnel,
+        tunnelConnections: tunnelConnections,
+        pin: !!host.pin,
+        enableTerminal: !!host.enableTerminal,
+        enableFileManager: !!host.enableFileManager,
+        defaultPath: host.defaultPath,
+        createdAt: host.createdAt,
+        updatedAt: host.updatedAt,
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    sshLogger.error("Failed to fetch all hosts for internal use", err);
+    res.status(500).json({ error: "Failed to fetch all hosts" });
   }
 });
 
@@ -1362,14 +1478,114 @@ router.post(
       // Decrypt sensitive fields
       const decryptedConfig = DataCrypto.decryptRecord("ssh_data", config, userId, userDataKey);
 
-      // Update the SSH config with plaintext autostart fields
-      await db.update(sshData)
+      // Debug: Log what we're about to save
+      console.log("=== AUTOSTART DEBUG: Decrypted credentials ===");
+      console.log("sshConfigId:", sshConfigId);
+      console.log("authType:", config.authType);
+      console.log("hasPassword:", !!decryptedConfig.password);
+      console.log("hasKey:", !!decryptedConfig.key);
+      console.log("hasKeyPassword:", !!decryptedConfig.keyPassword);
+      console.log("passwordLength:", decryptedConfig.password?.length || 0);
+      console.log("keyLength:", decryptedConfig.key?.length || 0);
+      console.log("=== END AUTOSTART DEBUG ===");
+
+      // Also handle tunnel connections - populate endpoint credentials
+      let updatedTunnelConnections = config.tunnelConnections;
+      if (config.tunnelConnections) {
+        try {
+          const tunnelConnections = JSON.parse(config.tunnelConnections);
+
+          // For each tunnel connection, try to resolve endpoint credentials
+          const resolvedConnections = await Promise.all(
+            tunnelConnections.map(async (tunnel: any) => {
+              if (tunnel.autoStart && tunnel.endpointHost && !tunnel.endpointPassword && !tunnel.endpointKey) {
+                console.log("=== RESOLVING ENDPOINT CREDENTIALS ===");
+                console.log("endpointHost:", tunnel.endpointHost);
+
+                // Find endpoint host by name or username@ip
+                const endpointHosts = await db.select()
+                  .from(sshData)
+                  .where(eq(sshData.userId, userId));
+
+                const endpointHost = endpointHosts.find(h =>
+                  h.name === tunnel.endpointHost ||
+                  `${h.username}@${h.ip}` === tunnel.endpointHost
+                );
+
+                if (endpointHost) {
+                  console.log("Found endpoint host:", endpointHost.id, endpointHost.ip);
+
+                  // Decrypt endpoint host credentials
+                  const decryptedEndpoint = DataCrypto.decryptRecord("ssh_data", endpointHost, userId, userDataKey);
+
+                  console.log("Endpoint credentials:", {
+                    hasPassword: !!decryptedEndpoint.password,
+                    hasKey: !!decryptedEndpoint.key,
+                    passwordLength: decryptedEndpoint.password?.length || 0
+                  });
+
+                  // Add endpoint credentials to tunnel connection
+                  return {
+                    ...tunnel,
+                    endpointPassword: decryptedEndpoint.password || null,
+                    endpointKey: decryptedEndpoint.key || null,
+                    endpointKeyPassword: decryptedEndpoint.keyPassword || null,
+                    endpointAuthType: endpointHost.authType
+                  };
+                }
+              }
+              return tunnel;
+            })
+          );
+
+          updatedTunnelConnections = JSON.stringify(resolvedConnections);
+          console.log("=== UPDATED TUNNEL CONNECTIONS ===");
+        } catch (error) {
+          console.log("=== TUNNEL CONNECTION UPDATE FAILED ===", error);
+        }
+      }
+
+      // Update the SSH config with plaintext autostart fields and resolved tunnel connections
+      const updateResult = await db.update(sshData)
         .set({
           autostartPassword: decryptedConfig.password || null,
           autostartKey: decryptedConfig.key || null,
           autostartKeyPassword: decryptedConfig.keyPassword || null,
+          tunnelConnections: updatedTunnelConnections,
         })
         .where(eq(sshData.id, sshConfigId));
+
+      // Debug: Log update result
+      console.log("=== AUTOSTART DEBUG: Update result ===");
+      console.log("updateResult:", updateResult);
+      console.log("update completed for sshConfigId:", sshConfigId);
+      console.log("=== END UPDATE DEBUG ===");
+
+      // Force database save after autostart update
+      try {
+        await DatabaseSaveTrigger.triggerSave();
+        console.log("=== DATABASE SAVE TRIGGERED AFTER AUTOSTART ===");
+      } catch (saveError) {
+        console.log("=== DATABASE SAVE FAILED ===", saveError);
+      }
+
+      // Verify the data was actually saved
+      try {
+        const verifyQuery = await db.select()
+          .from(sshData)
+          .where(eq(sshData.id, sshConfigId));
+
+        if (verifyQuery.length > 0) {
+          const saved = verifyQuery[0];
+          console.log("=== VERIFICATION: Data actually saved ===");
+          console.log("autostartPassword exists:", !!saved.autostartPassword);
+          console.log("autostartKey exists:", !!saved.autostartKey);
+          console.log("autostartPassword length:", saved.autostartPassword?.length || 0);
+          console.log("=== END VERIFICATION ===");
+        }
+      } catch (verifyError) {
+        console.log("=== VERIFICATION FAILED ===", verifyError);
+      }
 
       sshLogger.success("AutoStart enabled successfully", {
         operation: "autostart_enabled",

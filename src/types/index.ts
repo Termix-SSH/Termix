@@ -24,6 +24,12 @@ export interface SSHHost {
   key?: string;
   keyPassword?: string;
   keyType?: string;
+
+  // Autostart plaintext credentials
+  autostartPassword?: string;
+  autostartKey?: string;
+  autostartKeyPassword?: string;
+
   credentialId?: number;
   userId?: string;
   enableTerminal: boolean;
@@ -101,6 +107,14 @@ export interface TunnelConnection {
   sourcePort: number;
   endpointPort: number;
   endpointHost: string;
+
+  // Endpoint host credentials for tunnel authentication
+  endpointPassword?: string;
+  endpointKey?: string;
+  endpointKeyPassword?: string;
+  endpointAuthType?: string;
+  endpointKeyType?: string;
+
   maxRetries: number;
   retryInterval: number;
   autoStart: boolean;
