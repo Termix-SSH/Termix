@@ -35,6 +35,8 @@ import {
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/Desktop/Apps/Credentials/CredentialSelector.tsx";
+import CodeMirror from "@uiw/react-codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
 
 interface SSHHost {
   id: number;
@@ -980,19 +982,25 @@ export function HostManagerEditor({
                             <FormItem className="mb-4">
                               <FormLabel>{t("hosts.sshPrivateKey")}</FormLabel>
                               <FormControl>
-                                <textarea
-                                  placeholder={t(
-                                    "placeholders.pastePrivateKey",
-                                  )}
-                                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                <CodeMirror
                                   value={
                                     typeof field.value === "string"
                                       ? field.value
                                       : ""
                                   }
-                                  onChange={(e) =>
-                                    field.onChange(e.target.value)
-                                  }
+                                  onChange={(value) => field.onChange(value)}
+                                  placeholder={t("placeholders.pastePrivateKey")}
+                                  theme={oneDark}
+                                  className="border border-input rounded-md"
+                                  minHeight="120px"
+                                  basicSetup={{
+                                    lineNumbers: true,
+                                    foldGutter: false,
+                                    dropCursor: false,
+                                    allowMultipleSelections: false,
+                                    highlightSelectionMatches: false,
+                                    searchKeymap: false,
+                                  }}
                                 />
                               </FormControl>
                             </FormItem>

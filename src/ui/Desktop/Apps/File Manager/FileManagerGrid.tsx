@@ -204,6 +204,8 @@ export function FileManagerGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const [editingName, setEditingName] = useState("");
 
+
+
   // Unified drag state management
   const [dragState, setDragState] = useState<DragState>({
     type: "none",
@@ -1104,7 +1106,7 @@ export function FileManagerGrid({
             </div>
           )}
 
-          {files.length === 0 ? (
+          {files.length === 0 && !createIntent ? (
             <div className="h-full flex items-center justify-center p-8">
               <div className="text-center">
                 <Folder className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />

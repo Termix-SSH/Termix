@@ -309,6 +309,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     currentLoadingPathRef.current = path;
     setIsLoading(true);
 
+    // Clear createIntent when changing directories
+    setCreateIntent(null);
+
     try {
       console.log("Loading directory:", path);
 
@@ -617,24 +620,26 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   // Linus-style creation: pure intent, no side effects
   function handleCreateNewFolder() {
     const defaultName = generateUniqueName("NewFolder", "directory");
-    setCreateIntent({
+    const newCreateIntent = {
       id: Date.now().toString(),
-      type: 'directory',
+      type: 'directory' as const,
       defaultName,
       currentName: defaultName
-    });
-    console.log("Create folder intent:", defaultName);
+    };
+
+
+    setCreateIntent(newCreateIntent);
   }
 
   function handleCreateNewFile() {
     const defaultName = generateUniqueName("NewFile.txt", "file");
-    setCreateIntent({
+    const newCreateIntent = {
       id: Date.now().toString(),
-      type: 'file',
+      type: 'file' as const,
       defaultName,
       currentName: defaultName
-    });
-    console.log("Create file intent:", defaultName);
+    };
+    setCreateIntent(newCreateIntent);
   }
 
   // Handle symlink resolution
@@ -1548,6 +1553,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     await handleFileOpen(file);
   }
 
+
+  // Clear createIntent when path changes
+  useEffect(() => {
+    setCreateIntent(null);
+  }, [currentPath]);
 
   // Load pinned files list (when host or connection changes)
   useEffect(() => {

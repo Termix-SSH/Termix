@@ -49,7 +49,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CodeMirror from "@uiw/react-codemirror";
-import { oneDark } from "@uiw/codemirror-themes";
+import { oneDark } from "@codemirror/theme-one-dark";
 import { languages, loadLanguage } from "@uiw/codemirror-extensions-langs";
 
 interface FileItem {
@@ -802,13 +802,27 @@ export function FileViewer({
                         {renderHighlightedText(editedContent)}
                       </div>
                     ) : (
-                      // Directly show editable textarea
-                      <textarea
+                      // Use CodeMirror for all text files (unified editor experience)
+                      <CodeMirror
                         value={editedContent}
-                        onChange={(e) => handleContentChange(e.target.value)}
-                        className="w-full h-full p-4 border-none resize-none outline-none font-mono text-sm overflow-auto bg-background text-foreground"
+                        onChange={(value) => handleContentChange(value)}
+                        extensions={
+                          getLanguageExtension(file.name)
+                            ? [getLanguageExtension(file.name)!]
+                            : []
+                        }
+                        theme={oneDark}
+                        editable={isEditable}
                         placeholder={t("fileManager.startTyping")}
-                        spellCheck={false}
+                        className="h-full text-sm"
+                        basicSetup={{
+                          lineNumbers: true,
+                          foldGutter: true,
+                          dropCursor: false,
+                          allowMultipleSelections: false,
+                          highlightSelectionMatches: false,
+                          searchKeymap: true,
+                        }}
                       />
                     )}
                   </div>
