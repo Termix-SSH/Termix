@@ -35,35 +35,23 @@ RUN npm rebuild better-sqlite3 --force
 
 RUN npm run build:backend
 
-# Stage 4: Production dependencies
+# Stage 4: Production dependencies with native modules
 FROM node:24-alpine AS production-deps
 WORKDIR /app
 
+RUN apk add --no-cache python3 make g++
+
 COPY package*.json ./
 
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
 
+# Install production dependencies and rebuild native modules in one stage
 RUN npm ci --omit=dev --ignore-scripts --force && \
-    npm cache clean --force
-
-# Stage 5: Build native modules
-FROM node:24-alpine AS native-builder
-WORKDIR /app
-
-RUN apk add --no-cache python3 make g++ 
-
-COPY package*.json ./
-
-ENV npm_config_target_platform=linux
-ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
-
-# Install native modules and compile them properly
-RUN npm ci --omit=dev --force && \
     npm rebuild better-sqlite3 bcryptjs --force && \
-    npm cache clean --force
+    npm cache clean --force && \
+    rm -rf ~/.npm /tmp/* /var/cache/apk/*
 
 # Stage 6: Final image
 FROM node:24-alpine
@@ -83,7 +71,7 @@ RUN chown -R nginx:nginx /usr/share/nginx/html
 
 WORKDIR /app
 
-COPY --from=native-builder /app/node_modules /app/node_modules
+COPY --from=production-deps /app/node_modules /app/node_modules
 COPY --from=backend-builder /app/dist/backend ./dist/backend
 
 COPY package.json ./
