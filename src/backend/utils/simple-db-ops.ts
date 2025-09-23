@@ -82,13 +82,6 @@ class SimpleDBOps {
       userDataKey
     );
 
-    databaseLogger.debug(`Selected ${decryptedResults.length} records from ${tableName}`, {
-      operation: "simple_select",
-      table: tableName,
-      userId,
-      recordCount: decryptedResults.length,
-    });
-
     return decryptedResults;
   }
 
@@ -177,13 +170,6 @@ class SimpleDBOps {
   ): Promise<any[]> {
     const result = await getDb().delete(table).where(where).returning();
 
-    databaseLogger.debug(`Deleted records from ${tableName}`, {
-      operation: "simple_delete",
-      table: tableName,
-      userId,
-      deletedCount: result.length,
-    });
-
     return result;
   }
 
@@ -201,12 +187,6 @@ class SimpleDBOps {
   static async selectEncrypted(query: any, tableName: TableName): Promise<any[]> {
     // Execute query directly, no decryption
     const results = await query;
-
-    databaseLogger.debug(`Selected ${results.length} encrypted records from ${tableName}`, {
-      operation: "simple_select_encrypted",
-      table: tableName,
-      recordCount: results.length,
-    });
 
     return results;
   }
