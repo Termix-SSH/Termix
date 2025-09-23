@@ -25,7 +25,7 @@ export function DiffWindow({
   initialY = 100,
 }: DiffWindowProps) {
   const { t } = useTranslation();
-  const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } =
+  const { closeWindow, maximizeWindow, focusWindow, windows } =
     useWindowManager();
 
   const currentWindow = windows.find((w) => w.id === windowId);
@@ -33,10 +33,6 @@ export function DiffWindow({
   // Window operation handling
   const handleClose = () => {
     closeWindow(windowId);
-  };
-
-  const handleMinimize = () => {
-    minimizeWindow(windowId);
   };
 
   const handleMaximize = () => {
@@ -61,7 +57,6 @@ export function DiffWindow({
       minWidth={800}
       minHeight={500}
       onClose={handleClose}
-      onMinimize={handleMinimize}
       onMaximize={handleMaximize}
       onFocus={handleFocus}
       isMaximized={currentWindow.isMaximized}

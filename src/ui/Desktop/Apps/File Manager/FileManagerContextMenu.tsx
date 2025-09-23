@@ -225,7 +225,7 @@ export function FileManagerContextMenu({
             ? t("fileManager.openTerminalInFolder")
             : t("fileManager.openTerminalInFileLocation"),
         action: () => onOpenTerminal(targetPath),
-        shortcut: "Ctrl+T",
+        shortcut: "Ctrl+Shift+T",
       });
     }
 
@@ -257,30 +257,15 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Download function
-    if (hasFiles && onDownload) {
+    // Download function - unified download that uses best available method
+    if (hasFiles && onDragToDesktop) {
       menuItems.push({
         icon: <Download className="w-4 h-4" />,
         label: isMultipleFiles
           ? t("fileManager.downloadFiles", { count: files.length })
           : t("fileManager.downloadFile"),
-        action: () => onDownload(files),
-        shortcut: "Ctrl+D",
-      });
-    }
-
-    // Drag to desktop menu item (supports browser and desktop apps)
-    if (hasFiles && onDragToDesktop) {
-      const isModernBrowser = "showSaveFilePicker" in window;
-      menuItems.push({
-        icon: <ExternalLink className="w-4 h-4" />,
-        label: isMultipleFiles
-          ? t("fileManager.saveFilesToSystem", { count: files.length })
-          : t("fileManager.saveToSystem"),
         action: () => onDragToDesktop(),
-        shortcut: isModernBrowser
-          ? t("fileManager.selectLocationToSave")
-          : t("fileManager.downloadToDefaultLocation"),
+        shortcut: "Ctrl+D",
       });
     }
 
@@ -314,7 +299,7 @@ export function FileManagerContextMenu({
 
     // Add separator (if above functions exist)
     if (
-      (hasFiles && (onPreview || onDownload || onDragToDesktop)) ||
+      (hasFiles && (onPreview || onDragToDesktop)) ||
       (isSingleFile &&
         files[0].type === "file" &&
         (onPinFile || onUnpinFile)) ||
@@ -329,7 +314,7 @@ export function FileManagerContextMenu({
         icon: <Edit3 className="w-4 h-4" />,
         label: t("fileManager.rename"),
         action: () => onRename(files[0]),
-        shortcut: "F2",
+        shortcut: "F6",
       });
     }
 
@@ -397,7 +382,7 @@ export function FileManagerContextMenu({
         icon: <Terminal className="w-4 h-4" />,
         label: t("fileManager.openTerminalHere"),
         action: () => onOpenTerminal(currentPath),
-        shortcut: "Ctrl+T",
+        shortcut: "Ctrl+Shift+T",
       });
     }
 
@@ -447,7 +432,7 @@ export function FileManagerContextMenu({
         icon: <RefreshCw className="w-4 h-4" />,
         label: t("fileManager.refresh"),
         action: onRefresh,
-        shortcut: "F5",
+        shortcut: "Ctrl+Y",
       });
     }
 
@@ -487,12 +472,12 @@ export function FileManagerContextMenu({
   return (
     <>
       {/* Transparent overlay to capture click events */}
-      <div className="fixed inset-0 z-40" />
+      <div className="fixed inset-0 z-[99990]" />
 
       {/* Menu body */}
       <div
         data-context-menu
-        className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-50 overflow-hidden"
+        className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden"
         style={{
           left: menuPosition.x,
           top: menuPosition.y,

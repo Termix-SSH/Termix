@@ -1,4 +1,4 @@
-import { getDb } from "../database/db/index.js";
+import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -41,6 +41,9 @@ class SimpleDBOps {
 
     // Insert into database
     const result = await getDb().insert(table).values(encryptedData).returning();
+
+    // Trigger database save after insert
+    DatabaseSaveTrigger.triggerSave(`insert_${tableName}`);
 
     // Decrypt return result using the same key - FieldCrypto will use stored recordId
     const decryptedResult = DataCrypto.decryptRecord(
@@ -169,6 +172,9 @@ class SimpleDBOps {
     userId: string,
   ): Promise<any[]> {
     const result = await getDb().delete(table).where(where).returning();
+
+    // Trigger database save after delete
+    DatabaseSaveTrigger.triggerSave(`delete_${tableName}`);
 
     return result;
   }

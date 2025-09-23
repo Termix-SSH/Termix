@@ -651,7 +651,10 @@
     "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
     "reconnected": "Reconnected successfully",
     "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
-    "connectionTimeout": "Connection timeout"
+    "connectionTimeout": "Connection timeout",
+    "terminalTitle": "Terminal - {{host}}",
+    "terminalWithPath": "Terminal - {{host}}:{{path}}",
+    "runTitle": "Running {{command}} - {{host}}"
   },
   "fileManager": {
     "title": "File Manager",
@@ -659,7 +662,7 @@
     "folder": "Folder",
     "connectToSsh": "Connect to SSH to use file operations",
     "uploadFile": "Upload File",
-    "downloadFile": "Download to Browser",
+    "downloadFile": "Download",
     "newFile": "New File",
     "newFolder": "New Folder",
     "rename": "Rename",

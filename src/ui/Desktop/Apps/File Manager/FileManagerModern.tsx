@@ -206,45 +206,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   // SSH keepalive timer
   const keepaliveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debounced directory loading for path changes
-  const debouncedLoadDirectory = useCallback((path: string) => {
-    // Clear any existing timer
-    if (pathChangeTimerRef.current) {
-      clearTimeout(pathChangeTimerRef.current);
-    }
-
-    // Set new timer for debounced loading
-    pathChangeTimerRef.current = setTimeout(() => {
-      if (path !== lastPathChangeRef.current && sshSessionId) {
-        console.log("Loading directory after path change:", path);
-        lastPathChangeRef.current = path;
-        loadDirectory(path);
-      }
-    }, 150); // 150ms debounce for path changes
-  }, [sshSessionId, loadDirectory]);
-
-  // File list update - only reload when path changes, not on initial connection
-  useEffect(() => {
-    if (sshSessionId && currentPath) {
-      // Skip the first load since it's handled in initializeSSHConnection
-      if (!initialLoadDoneRef.current) {
-        initialLoadDoneRef.current = true;
-        lastPathChangeRef.current = currentPath;
-        return;
-      }
-
-      // Use debounced loading for path changes to prevent rapid clicking issues
-      debouncedLoadDirectory(currentPath);
-    }
-
-    // Cleanup timer on unmount or dependency change
-    return () => {
-      if (pathChangeTimerRef.current) {
-        clearTimeout(pathChangeTimerRef.current);
-      }
-    };
-  }, [sshSessionId, currentPath, debouncedLoadDirectory]);
-
   // Handle file drag to external
   const handleFileDragStart = useCallback(
     (files: FileItem[]) => {
@@ -273,10 +234,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
         e.clientY > window.innerHeight - margin;
 
       if (isOutside) {
-        // Delay execution to avoid conflicts with other events
-        setTimeout(() => {
-          systemDrag.handleDragEnd(e);
-        }, 100);
+        // Execute immediately to preserve user gesture context
+        systemDrag.handleDragEnd(e);
       } else {
         // Cancel drag
         systemDrag.cancelDragToSystem();
@@ -386,6 +345,45 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }, [sshSessionId, isLoading, clearSelection, t]);
 
+  // Debounced directory loading for path changes
+  const debouncedLoadDirectory = useCallback((path: string) => {
+    // Clear any existing timer
+    if (pathChangeTimerRef.current) {
+      clearTimeout(pathChangeTimerRef.current);
+    }
+
+    // Set new timer for debounced loading
+    pathChangeTimerRef.current = setTimeout(() => {
+      if (path !== lastPathChangeRef.current && sshSessionId) {
+        console.log("Loading directory after path change:", path);
+        lastPathChangeRef.current = path;
+        loadDirectory(path);
+      }
+    }, 150); // 150ms debounce for path changes
+  }, [sshSessionId, loadDirectory]);
+
+  // File list update - only reload when path changes, not on initial connection
+  useEffect(() => {
+    if (sshSessionId && currentPath) {
+      // Skip the first load since it's handled in initializeSSHConnection
+      if (!initialLoadDoneRef.current) {
+        initialLoadDoneRef.current = true;
+        lastPathChangeRef.current = currentPath;
+        return;
+      }
+
+      // Use debounced loading for path changes to prevent rapid clicking issues
+      debouncedLoadDirectory(currentPath);
+    }
+
+    // Cleanup timer on unmount or dependency change
+    return () => {
+      if (pathChangeTimerRef.current) {
+        clearTimeout(pathChangeTimerRef.current);
+      }
+    };
+  }, [sshSessionId, currentPath, debouncedLoadDirectory]);
+
   // Debounced refresh function - prevent excessive clicking
   const handleRefreshDirectory = useCallback(() => {
     const now = Date.now();
@@ -399,6 +397,31 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     setLastRefreshTime(now);
     loadDirectory(currentPath);
   }, [currentPath, lastRefreshTime, loadDirectory]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if input box or editable element has focus, skip if so
+      const activeElement = document.activeElement;
+      if (
+        activeElement &&
+        (activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          activeElement.contentEditable === "true")
+      ) {
+        return;
+      }
+
+      // Handle Ctrl+Shift+T for opening terminal
+      if (event.key === "T" && event.ctrlKey && event.shiftKey) {
+        event.preventDefault();
+        handleOpenTerminal(currentPath);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [currentPath]);
 
   function handleFilesDropped(fileList: FileList) {
     if (!sshSessionId) {
@@ -1382,7 +1405,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     });
 
     toast.success(
-      t("fileManager.terminalWithPath", { host: currentHost.name, path }),
+      t("terminal.terminalWithPath", { host: currentHost.name, path }),
     );
   }
 

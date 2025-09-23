@@ -56,7 +56,6 @@ export function FileWindow({
 }: FileWindowProps) {
   const {
     closeWindow,
-    minimizeWindow,
     maximizeWindow,
     focusWindow,
     updateWindow,
@@ -329,10 +328,6 @@ export function FileWindow({
     closeWindow(windowId);
   };
 
-  const handleMinimize = () => {
-    minimizeWindow(windowId);
-  };
-
   const handleMaximize = () => {
     maximizeWindow(windowId);
   };
@@ -355,7 +350,6 @@ export function FileWindow({
       minWidth={400}
       minHeight={300}
       onClose={handleClose}
-      onMinimize={handleMinimize}
       onMaximize={handleMaximize}
       onFocus={handleFocus}
       isMaximized={currentWindow.isMaximized}

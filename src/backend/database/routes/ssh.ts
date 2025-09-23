@@ -17,6 +17,7 @@ import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
+import { DatabaseSaveTrigger } from "../db/index.js";
 
 const router = express.Router();
 
@@ -1155,6 +1156,9 @@ router.put(
           ),
         )
         .returning();
+
+      // Trigger database save after folder rename
+      DatabaseSaveTrigger.triggerSave("folder_rename");
 
       res.json({
         message: "Folder renamed successfully",

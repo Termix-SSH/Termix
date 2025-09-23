@@ -744,13 +744,10 @@ export function FileManagerGrid({
       e.stopPropagation();
 
       if (dragState.type === "internal") {
-        // Internal drag to empty area: trigger download
-        console.log(
-          "Internal drag to empty area detected, triggering download",
-        );
-        if (onDownload && dragState.files.length > 0) {
-          onDownload(dragState.files);
-        }
+        // Internal drag to empty area: just cancel the drag operation
+        console.log("Internal drag to empty area - cancelling drag operation");
+        // Do not trigger download here - system drag end will handle it if truly outside window
+        setDragState({ type: "none", files: [], counter: 0 });
       } else if (dragState.type === "external") {
         // External drag: handle file upload
         if (onUpload && e.dataTransfer.files.length > 0) {
@@ -914,15 +911,18 @@ export function FileManagerGrid({
             onDelete(selectedFiles);
           }
           break;
-        case "F2":
+        case "F6":
           if (selectedFiles.length === 1 && onStartEdit) {
             event.preventDefault();
             onStartEdit(selectedFiles[0]);
           }
           break;
-        case "F5":
-          event.preventDefault();
-          onRefresh();
+        case "y":
+        case "Y":
+          if ((event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            onRefresh();
+          }
           break;
       }
     };
@@ -1148,7 +1148,7 @@ export function FileManagerGrid({
                       "hover:bg-accent hover:text-accent-foreground border-2 border-transparent",
                       isSelected && "bg-primary/20 border-primary",
                       dragState.target?.path === file.path &&
-                        "bg-muted border-primary border-dashed",
+                        "bg-muted border-primary border-dashed relative z-10",
                       dragState.files.some((f) => f.path === file.path) &&
                         "opacity-50",
                     )}
@@ -1188,15 +1188,8 @@ export function FileManagerGrid({
                           />
                         ) : (
                           <p
-                            className="text-xs text-foreground truncate cursor-pointer hover:bg-accent px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full text-center"
-                            title={`${file.name} (click to rename)`}
-                            onClick={(e) => {
-                              // Prevent file selection event
-                              if (onStartEdit) {
-                                e.stopPropagation();
-                                onStartEdit(file);
-                              }
-                            }}
+                            className="text-xs text-foreground truncate px-1 py-0.5 rounded w-fit max-w-full text-center"
+                            title={file.name}
                           >
                             {file.name}
                           </p>
@@ -1248,7 +1241,7 @@ export function FileManagerGrid({
                       "hover:bg-accent hover:text-accent-foreground",
                       isSelected && "bg-primary/20",
                       dragState.target?.path === file.path &&
-                        "bg-muted border-primary border-dashed",
+                        "bg-muted border-primary border-dashed relative z-10",
                       dragState.files.some((f) => f.path === file.path) &&
                         "opacity-50",
                     )}
@@ -1288,15 +1281,8 @@ export function FileManagerGrid({
                         />
                       ) : (
                         <p
-                          className="text-sm text-foreground truncate cursor-pointer hover:bg-accent px-1 py-0.5 rounded transition-colors duration-150 w-fit max-w-full"
-                          title={`${file.name} (click to rename)`}
-                          onClick={(e) => {
-                            // Prevent file selection event
-                            if (onStartEdit) {
-                              e.stopPropagation();
-                              onStartEdit(file);
-                            }
-                          }}
+                          className="text-sm text-foreground truncate px-1 py-0.5 rounded w-fit max-w-full"
+                          title={file.name}
                         >
                           {file.name}
                         </p>
@@ -1373,10 +1359,10 @@ export function FileManagerGrid({
         dragState.files.length > 0 &&
         dragState.mousePosition && (
           <div
-            className="fixed z-50 pointer-events-none"
+            className="fixed z-[99999] pointer-events-none"
             style={{
-              left: dragState.mousePosition.x + 16,
-              top: dragState.mousePosition.y - 8,
+              left: dragState.mousePosition.x + 24,
+              top: dragState.mousePosition.y - 40,
             }}
           >
             <div className="bg-background border border-border rounded-md shadow-md px-3 py-2 flex items-center gap-2">

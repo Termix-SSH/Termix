@@ -130,40 +130,6 @@ export function useDragToSystemDesktop({
     return await zip.generateAsync({ type: "blob" });
   };
 
-  // Save file using File System Access API
-  const saveFileWithSystemAPI = async (blob: Blob, suggestedName: string) => {
-    try {
-      // Get last saved directory handle
-      const lastDirHandle = await getLastSaveDirectory();
-
-      const fileHandle = await (window as any).showSaveFilePicker({
-        suggestedName,
-        startIn: lastDirHandle || "desktop", // Prefer last directory, otherwise desktop
-        types: [
-          {
-            description: "Files",
-            accept: {
-              "*/*": [".txt", ".jpg", ".png", ".pdf", ".zip", ".tar", ".gz"],
-            },
-          },
-        ],
-      });
-
-      // Save current directory handle for next use
-      await saveLastDirectory(fileHandle);
-
-      const writable = await fileHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-
-      return true;
-    } catch (error: any) {
-      if (error.name === "AbortError") {
-        return false; // User cancelled
-      }
-      throw error;
-    }
-  };
 
   // Fallback solution: traditional download
   const fallbackDownload = (blob: Blob, fileName: string) => {
@@ -206,35 +172,62 @@ export function useDragToSystemDesktop({
           error: null,
         }));
 
-        let blob: Blob;
-        let fileName: string;
+        // Determine file name first (synchronously)
+        const fileName = fileList.length === 1
+          ? fileList[0].name
+          : `files_${Date.now()}.zip`;
 
+        // For File System Access API, get the file handle FIRST to preserve user gesture
+        let fileHandle: any = null;
+        if (isFileSystemAPISupported()) {
+          try {
+            fileHandle = await (window as any).showSaveFilePicker({
+              suggestedName: fileName,
+              startIn: "desktop",
+              types: [
+                {
+                  description: "Files",
+                  accept: {
+                    "*/*": [".txt", ".jpg", ".png", ".pdf", ".zip", ".tar", ".gz"],
+                  },
+                },
+              ],
+            });
+          } catch (error: any) {
+            if (error.name === "AbortError") {
+              // User cancelled
+              setState((prev) => ({
+                ...prev,
+                isDownloading: false,
+                progress: 0,
+              }));
+              return false;
+            }
+            throw error;
+          }
+        }
+
+        // Now create the blob (after getting file handle)
+        let blob: Blob;
         if (fileList.length === 1) {
           // Single file
           blob = await createFileBlob(fileList[0]);
-          fileName = fileList[0].name;
           setState((prev) => ({ ...prev, progress: 70 }));
         } else {
           // Package multiple files into ZIP
           blob = await createZipBlob(fileList);
-          fileName = `files_${Date.now()}.zip`;
           setState((prev) => ({ ...prev, progress: 70 }));
         }
 
         setState((prev) => ({ ...prev, progress: 90 }));
 
-        // Prefer File System Access API
-        if (isFileSystemAPISupported()) {
-          const saved = await saveFileWithSystemAPI(blob, fileName);
-          if (!saved) {
-            // User cancelled
-            setState((prev) => ({
-              ...prev,
-              isDownloading: false,
-              progress: 0,
-            }));
-            return false;
-          }
+        // Save the file
+        if (fileHandle) {
+          // Use File System Access API with pre-obtained handle
+          await saveLastDirectory(fileHandle);
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
         } else {
           // Fallback to traditional download
           fallbackDownload(blob, fileName);
@@ -301,10 +294,8 @@ export function useDragToSystemDesktop({
 
       // Check if dragged outside window
       if (isDraggedOutsideWindow(e)) {
-        // Delayed execution to avoid conflicts with other drag events
-        setTimeout(() => {
-          handleDragToSystem(files, options);
-        }, 100);
+        // Execute immediately to preserve user gesture context for showSaveFilePicker
+        handleDragToSystem(files, options);
       }
 
       // Clean up drag state
