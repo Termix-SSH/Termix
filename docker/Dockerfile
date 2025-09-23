@@ -72,8 +72,8 @@ ENV DATA_DIR=/app/data \
     NODE_ENV=production
 
 RUN apk add --no-cache nginx gettext su-exec openssl && \
-    mkdir -p /app/data /app/config && \
-    chown -R node:node /app/data /app/config
+    mkdir -p /app/data /app/config /app/ssl && \
+    chown -R node:node /app/data /app/config /app/ssl
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/nginx-https.conf /etc/nginx/nginx-https.conf
@@ -88,7 +88,8 @@ COPY --from=backend-builder /app/dist/backend ./dist/backend
 
 COPY package.json ./
 RUN chown -R node:node /app && \
-    chmod 755 /app/config
+    chmod 755 /app/config /app/ssl && \
+    chmod 755 /app/data
 
 VOLUME ["/app/data"]
 
