@@ -7,6 +7,7 @@ import { databaseLogger } from "../../utils/logger.js";
 import { DatabaseFileEncryption } from "../../utils/database-file-encryption.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseMigration } from "../../utils/database-migration.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 
 const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
@@ -494,25 +495,47 @@ const migrateSchema = () => {
   });
 };
 
-// Function to save in-memory database to encrypted file
+// Function to save in-memory database to file (encrypted or unencrypted fallback)
 async function saveMemoryDatabaseToFile() {
-  if (!memoryDatabase || !enableFileEncryption) return;
+  if (!memoryDatabase) return;
 
   try {
     // Export in-memory database to buffer
     const buffer = memoryDatabase.serialize();
 
-    // Encrypt and save to file (now async)
-    await DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, encryptedDbPath);
+    // Ensure data directory exists
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+      databaseLogger.info("Created data directory", {
+        operation: "data_dir_create",
+        path: dataDir,
+      });
+    }
 
-    databaseLogger.debug("In-memory database saved to encrypted file", {
-      operation: "memory_db_save",
-      bufferSize: buffer.length,
-      encryptedPath: encryptedDbPath,
-    });
+    if (enableFileEncryption) {
+      // Save as encrypted file
+      await DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, encryptedDbPath);
+
+      databaseLogger.debug("In-memory database saved to encrypted file", {
+        operation: "memory_db_save_encrypted",
+        bufferSize: buffer.length,
+        encryptedPath: encryptedDbPath,
+      });
+    } else {
+      // Fallback: save as unencrypted SQLite file to prevent data loss
+      fs.writeFileSync(dbPath, buffer);
+
+      databaseLogger.debug("In-memory database saved to unencrypted file", {
+        operation: "memory_db_save_unencrypted",
+        bufferSize: buffer.length,
+        unencryptedPath: dbPath,
+        warning: "File encryption disabled - data saved unencrypted",
+      });
+    }
   } catch (error) {
     databaseLogger.error("Failed to save in-memory database", error, {
       operation: "memory_db_save_failed",
+      enableFileEncryption,
     });
   }
 }
@@ -545,11 +568,14 @@ async function handlePostInitFileEncryption() {
 
       databaseLogger.info("Setting up periodic database saves", {
         operation: "db_periodic_save_setup",
-        interval: "5 minutes",
+        interval: "15 seconds",
       });
 
-      // Set up periodic saves every 5 minutes
-      setInterval(saveMemoryDatabaseToFile, 5 * 60 * 1000);
+      // Set up periodic saves every 15 seconds for real-time persistence
+      setInterval(saveMemoryDatabaseToFile, 15 * 1000);
+
+      // Initialize database save trigger for real-time saves
+      DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
     }
 
     // Perform migration cleanup on startup (remove old backup files)
@@ -692,6 +718,14 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   return db;
 }
 
+// Export raw SQLite instance for migrations
+export function getSqlite(): Database.Database {
+  if (!sqlite) {
+    throw new Error("SQLite not initialized. Ensure databaseReady promise is awaited before accessing sqlite.");
+  }
+  return sqlite;
+}
+
 // Legacy export for compatibility - will throw if accessed before initialization
 export { db };
 export { DatabaseFileEncryption };
@@ -732,3 +766,6 @@ function getMemoryDatabaseBuffer(): Buffer {
 
 // Export save function for manual saves and buffer access
 export { saveMemoryDatabaseToFile, getMemoryDatabaseBuffer };
+
+// Export database save trigger for real-time saves
+export { DatabaseSaveTrigger };

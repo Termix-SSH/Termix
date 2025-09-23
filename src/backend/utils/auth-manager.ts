@@ -97,11 +97,11 @@ class AuthManager {
       }
 
       // Import database connection - need to access raw SQLite for migration
-      const { getDb } = await import("../database/db/index.js");
-      const db = getDb();
+      const { getSqlite, saveMemoryDatabaseToFile, databaseReady } = await import("../database/db/index.js");
 
-      // Get the underlying SQLite instance
-      const sqlite = (db as any)._.session.db;
+      // Ensure database is fully initialized before accessing SQLite
+      await databaseReady;
+      const sqlite = getSqlite();
 
       // Perform the migration
       const migrationResult = await DataCrypto.migrateUserSensitiveFields(
@@ -111,6 +111,9 @@ class AuthManager {
       );
 
       if (migrationResult.migrated) {
+        // Save the in-memory database to disk to persist the migration
+        await saveMemoryDatabaseToFile();
+
         databaseLogger.success("Lazy encryption migration completed for user", {
           operation: "lazy_encryption_migration_success",
           userId,
