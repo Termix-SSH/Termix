@@ -1,0 +1,107 @@
+# Git and version control
+.git
+.gitignore
+
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and configuration
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+
+# Build directories (we build inside Docker)
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+
+# SSL certificates (generated at runtime)
+ssl/
+*.crt
+*.key
+*.pem
+
+# Database files (use volumes)
+*.sqlite
+*.db
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+README*.md
+CONTRIBUTING.md
+LICENSE
+*.md
+
+# Repository images and assets (not needed in container)
+repo-images/
+
+# Testing
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Uploads directory (use volumes)
+uploads/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Cache directories
+.cache/
+.npm/
+.yarn/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# ESLint cache
+.eslintcache
+
+# Prettier
+.prettierignore
+.prettierrc*
+
+# Local configuration
+.claude/
