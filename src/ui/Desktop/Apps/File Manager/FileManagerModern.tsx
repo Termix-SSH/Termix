@@ -151,9 +151,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     }
   }, [currentHost]);
 
-  // File list update
+  // Track if initial directory load is done to prevent duplicate loading
+  const initialLoadDoneRef = useRef(false);
+
+  // File list update - only reload when path changes, not on initial connection
   useEffect(() => {
-    if (sshSessionId) {
+    if (sshSessionId && currentPath) {
+      // Skip the first load since it's handled in initializeSSHConnection
+      if (!initialLoadDoneRef.current) {
+        initialLoadDoneRef.current = true;
+        return;
+      }
       handleRefreshDirectory();
     }
   }, [sshSessionId, currentPath]);
@@ -203,6 +211,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
     try {
       setIsLoading(true);
+      // Reset initial load flag for new connections
+      initialLoadDoneRef.current = false;
 
       const sessionId = currentHost.id.toString();
 
@@ -220,6 +230,21 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
       });
 
       setSshSessionId(sessionId);
+
+      // Load initial directory immediately after connection to prevent jarring transition
+      try {
+        console.log("Loading initial directory:", currentPath);
+        const response = await listSSHFiles(sessionId, currentPath);
+        const files = Array.isArray(response) ? response : response?.files || [];
+        console.log("Initial directory loaded successfully:", files.length, "items");
+        setFiles(files);
+        clearSelection();
+        // Mark initial load as completed
+        initialLoadDoneRef.current = true;
+      } catch (dirError: any) {
+        console.error("Failed to load initial directory:", dirError);
+        // Don't show error toast here as it will be handled by the useEffect retry
+      }
     } catch (error: any) {
       console.error("SSH connection failed:", error);
       toast.error(
