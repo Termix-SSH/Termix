@@ -47,9 +47,10 @@ export function DraggableWindow({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string>("");
 
-  // Drag start position
+  // Drag and resize start positions
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
+  const [sizeStart, setSizeStart] = useState({ width: 0, height: 0 });
 
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
@@ -95,31 +96,44 @@ export function DraggableWindow({
         const deltaX = e.clientX - dragStart.x;
         const deltaY = e.clientY - dragStart.y;
 
-        let newWidth = size.width;
-        let newHeight = size.height;
-        let newX = position.x;
-        let newY = position.y;
+        let newWidth = sizeStart.width;
+        let newHeight = sizeStart.height;
+        let newX = windowStart.x;
+        let newY = windowStart.y;
 
+        // Handle horizontal resizing
         if (resizeDirection.includes("right")) {
-          newWidth = Math.max(minWidth, windowStart.x + deltaX);
+          newWidth = Math.max(minWidth, sizeStart.width + deltaX);
         }
         if (resizeDirection.includes("left")) {
-          newWidth = Math.max(minWidth, size.width - deltaX);
-          newX = Math.min(
-            windowStart.x + deltaX,
-            position.x + size.width - minWidth,
-          );
+          const widthChange = -deltaX;
+          newWidth = Math.max(minWidth, sizeStart.width + widthChange);
+          // Only move position if we're actually changing size
+          if (newWidth > minWidth || widthChange > 0) {
+            newX = windowStart.x - (newWidth - sizeStart.width);
+          } else {
+            newX = windowStart.x - (minWidth - sizeStart.width);
+          }
         }
+
+        // Handle vertical resizing
         if (resizeDirection.includes("bottom")) {
-          newHeight = Math.max(minHeight, windowStart.y + deltaY);
+          newHeight = Math.max(minHeight, sizeStart.height + deltaY);
         }
         if (resizeDirection.includes("top")) {
-          newHeight = Math.max(minHeight, size.height - deltaY);
-          newY = Math.min(
-            windowStart.y + deltaY,
-            position.y + size.height - minHeight,
-          );
+          const heightChange = -deltaY;
+          newHeight = Math.max(minHeight, sizeStart.height + heightChange);
+          // Only move position if we're actually changing size
+          if (newHeight > minHeight || heightChange > 0) {
+            newY = windowStart.y - (newHeight - sizeStart.height);
+          } else {
+            newY = windowStart.y - (minHeight - sizeStart.height);
+          }
         }
+
+        // Ensure window stays within viewport
+        newX = Math.max(0, Math.min(window.innerWidth - newWidth, newX));
+        newY = Math.max(0, Math.min(window.innerHeight - newHeight, newY));
 
         setSize({ width: newWidth, height: newHeight });
         setPosition({ x: newX, y: newY });
@@ -131,6 +145,7 @@ export function DraggableWindow({
       isMaximized,
       dragStart,
       windowStart,
+      sizeStart,
       size,
       position,
       minWidth,
@@ -155,10 +170,11 @@ export function DraggableWindow({
       setIsResizing(true);
       setResizeDirection(direction);
       setDragStart({ x: e.clientX, y: e.clientY });
-      setWindowStart({ x: size.width, y: size.height });
+      setWindowStart({ x: position.x, y: position.y });
+      setSizeStart({ width: size.width, height: size.height });
       onFocus?.();
     },
-    [isMaximized, size, onFocus],
+    [isMaximized, position, size, onFocus],
   );
 
   // Global event listeners
