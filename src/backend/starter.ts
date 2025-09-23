@@ -8,6 +8,7 @@ import path from "path";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
+import { SystemCrypto } from "./utils/system-crypto.js";
 import { systemLogger, versionLogger } from "./utils/logger.js";
 
 (async () => {
@@ -74,6 +75,15 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
         securityIssues.push("DATABASE_KEY should be at least 64 characters in production");
       }
 
+      if (!process.env.INTERNAL_AUTH_TOKEN) {
+        systemLogger.warn("INTERNAL_AUTH_TOKEN not set - using auto-generated token (consider setting for production)", {
+          operation: "security_warning",
+          note: "Auto-generated tokens are secure but not persistent across deployments"
+        });
+      } else if (process.env.INTERNAL_AUTH_TOKEN.length < 32) {
+        securityIssues.push("INTERNAL_AUTH_TOKEN should be at least 32 characters in production");
+      }
+
       // Check database file encryption
       if (process.env.DB_FILE_ENCRYPTION === 'false') {
         securityIssues.push("Database file encryption should be enabled in production");
@@ -114,7 +124,14 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     const authManager = AuthManager.getInstance();
     await authManager.initialize();
     DataCrypto.initialize();
-    systemLogger.info("Security system initialized (KEK-DEK architecture)", {
+
+    // Initialize system crypto keys (JWT, Database, Internal Auth)
+    const systemCrypto = SystemCrypto.getInstance();
+    await systemCrypto.initializeJWTSecret();
+    await systemCrypto.initializeDatabaseKey();
+    await systemCrypto.initializeInternalAuthToken();
+
+    systemLogger.info("Security system initialized (KEK-DEK architecture + SystemCrypto)", {
       operation: "security_init",
     });
 

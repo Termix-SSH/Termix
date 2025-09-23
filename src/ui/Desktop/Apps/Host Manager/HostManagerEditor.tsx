@@ -30,6 +30,8 @@ import {
   getCredentials,
   getSSHHosts,
   updateSSHHost,
+  enableAutoStart,
+  disableAutoStart,
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/Desktop/Apps/Credentials/CredentialSelector.tsx";
@@ -436,20 +438,45 @@ export function HostManagerEditor({
         submitData.keyType = data.keyType;
       }
 
+      let savedHost;
       if (editingHost && editingHost.id) {
-        const updatedHost = await updateSSHHost(editingHost.id, submitData);
+        savedHost = await updateSSHHost(editingHost.id, submitData);
         toast.success(t("hosts.hostUpdatedSuccessfully", { name: data.name }));
-
-        if (onFormSubmit) {
-          onFormSubmit(updatedHost);
-        }
       } else {
-        const newHost = await createSSHHost(submitData);
+        savedHost = await createSSHHost(submitData);
         toast.success(t("hosts.hostAddedSuccessfully", { name: data.name }));
+      }
 
-        if (onFormSubmit) {
-          onFormSubmit(newHost);
+      // Handle AutoStart plaintext cache management
+      if (savedHost && savedHost.id && data.tunnelConnections) {
+        const hasAutoStartTunnels = data.tunnelConnections.some(tunnel => tunnel.autoStart);
+
+        if (hasAutoStartTunnels) {
+          // User has enabled autoStart on some tunnels
+          // Need to ensure plaintext cache exists for this host
+          try {
+            await enableAutoStart(savedHost.id);
+            console.log(`AutoStart plaintext cache enabled for SSH host ${savedHost.id}`);
+          } catch (error) {
+            console.warn(`Failed to enable AutoStart plaintext cache for SSH host ${savedHost.id}:`, error);
+            // Don't fail the whole operation if cache setup fails
+            toast.warning(t("hosts.autoStartEnableFailed", { name: data.name }));
+          }
+        } else {
+          // User has disabled autoStart on all tunnels
+          // Clean up plaintext cache for this host
+          try {
+            await disableAutoStart(savedHost.id);
+            console.log(`AutoStart plaintext cache disabled for SSH host ${savedHost.id}`);
+          } catch (error) {
+            console.warn(`Failed to disable AutoStart plaintext cache for SSH host ${savedHost.id}:`, error);
+            // Don't fail the whole operation
+          }
         }
+      }
+
+      if (onFormSubmit) {
+        onFormSubmit(savedHost);
       }
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));

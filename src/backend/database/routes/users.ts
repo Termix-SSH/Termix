@@ -412,9 +412,9 @@ router.delete("/oidc-config", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Get OIDC configuration
+// Route: Get OIDC configuration (public - needed for login page)
 // GET /users/oidc-config
-router.get("/oidc-config", authenticateJWT, async (req, res) => {
+router.get("/oidc-config", async (req, res) => {
   try {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
@@ -955,10 +955,36 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
   }
 });
 
-// Route: Count users
+// Route: Check if system requires initial setup (public - for first-time setup detection)
+// GET /users/setup-required
+router.get("/setup-required", async (req, res) => {
+  try {
+    const countResult = db.$client
+      .prepare("SELECT COUNT(*) as count FROM users")
+      .get();
+    const count = (countResult as any)?.count || 0;
+
+    res.json({
+      setup_required: count === 0,
+      // 不暴露具体用户数量，只返回是否需要初始化
+    });
+  } catch (err) {
+    authLogger.error("Failed to check setup status", err);
+    res.status(500).json({ error: "Failed to check setup status" });
+  }
+});
+
+// Route: Count users (admin only - for dashboard statistics)
 // GET /users/count
 router.get("/count", authenticateJWT, async (req, res) => {
+  const userId = (req as any).userId;
   try {
+    // 只有管理员可以查看用户统计
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user[0] || !user[0].is_admin) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
     const countResult = db.$client
       .prepare("SELECT COUNT(*) as count FROM users")
       .get();
@@ -982,9 +1008,9 @@ router.get("/db-health", requireAdmin, async (req, res) => {
   }
 });
 
-// Route: Get registration allowed status
+// Route: Get registration allowed status (public - needed for login page)
 // GET /users/registration-allowed
-router.get("/registration-allowed", authenticateJWT, async (req, res) => {
+router.get("/registration-allowed", async (req, res) => {
   try {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")

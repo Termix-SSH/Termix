@@ -16,6 +16,7 @@ class SystemCrypto {
   private static instance: SystemCrypto;
   private jwtSecret: string | null = null;
   private databaseKey: Buffer | null = null;
+  private internalAuthToken: string | null = null;
 
 
   private constructor() {}
@@ -110,6 +111,47 @@ class SystemCrypto {
   }
 
   /**
+   * Initialize internal auth token - environment variable only
+   */
+  async initializeInternalAuthToken(): Promise<void> {
+    try {
+      databaseLogger.info("Initializing internal auth token", {
+        operation: "internal_auth_init",
+      });
+
+      // Check environment variable
+      const envToken = process.env.INTERNAL_AUTH_TOKEN;
+      if (envToken && envToken.length >= 32) {
+        this.internalAuthToken = envToken;
+        databaseLogger.info("✅ Using internal auth token from environment variable", {
+          operation: "internal_auth_env_loaded",
+          source: "environment"
+        });
+        return;
+      }
+
+      // No environment variable - generate and guide user
+      await this.generateAndGuideInternalAuthToken();
+
+    } catch (error) {
+      databaseLogger.error("Failed to initialize internal auth token", error, {
+        operation: "internal_auth_init_failed",
+      });
+      throw new Error("Internal auth token initialization failed");
+    }
+  }
+
+  /**
+   * Get internal auth token
+   */
+  async getInternalAuthToken(): Promise<string> {
+    if (!this.internalAuthToken) {
+      await this.initializeInternalAuthToken();
+    }
+    return this.internalAuthToken!;
+  }
+
+  /**
    * Generate and auto-save to .env file
    */
   private async generateAndGuideUser(): Promise<void> {
@@ -151,6 +193,27 @@ class SystemCrypto {
       operation: "db_key_auto_generated",
       instanceId,
       envVarName: "DATABASE_KEY",
+      note: "Ready for use - no restart required"
+    });
+  }
+
+  /**
+   * Generate and auto-save internal auth token to .env file
+   */
+  private async generateAndGuideInternalAuthToken(): Promise<void> {
+    const newToken = crypto.randomBytes(32).toString('hex'); // 256-bit token for security
+    const instanceId = crypto.randomBytes(8).toString('hex');
+
+    // Set in memory for current session
+    this.internalAuthToken = newToken;
+
+    // Auto-save to .env file
+    await this.updateEnvFile("INTERNAL_AUTH_TOKEN", newToken);
+
+    databaseLogger.success("🔑 Internal auth token auto-generated and saved to .env", {
+      operation: "internal_auth_auto_generated",
+      instanceId,
+      envVarName: "INTERNAL_AUTH_TOKEN",
       note: "Ready for use - no restart required"
     });
   }

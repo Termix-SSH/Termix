@@ -743,6 +743,48 @@ export async function getSSHHostById(hostId: number): Promise<SSHHost> {
 }
 
 // ============================================================================
+// SSH AUTOSTART MANAGEMENT
+// ============================================================================
+
+export async function enableAutoStart(sshConfigId: number): Promise<any> {
+  try {
+    const response = await sshHostApi.post("/autostart/enable", { sshConfigId });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "enable autostart");
+  }
+}
+
+export async function disableAutoStart(sshConfigId: number): Promise<any> {
+  try {
+    const response = await sshHostApi.delete("/autostart/disable", {
+      data: { sshConfigId }
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "disable autostart");
+  }
+}
+
+export async function getAutoStartStatus(): Promise<{
+  autostart_configs: Array<{
+    sshConfigId: number;
+    host: string;
+    port: number;
+    username: string;
+    authType: string;
+  }>;
+  total_count: number;
+}> {
+  try {
+    const response = await sshHostApi.get("/autostart/status");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch autostart status");
+  }
+}
+
+// ============================================================================
 // TUNNEL MANAGEMENT
 // ============================================================================
 
@@ -1450,6 +1492,15 @@ export async function getOIDCConfig(): Promise<any> {
       error.response?.data?.error || error.message,
     );
     return null;
+  }
+}
+
+export async function getSetupRequired(): Promise<{ setup_required: boolean }> {
+  try {
+    const response = await authApi.get("/users/setup-required");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "check setup status");
   }
 }
 

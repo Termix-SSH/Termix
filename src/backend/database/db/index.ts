@@ -299,6 +299,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (host_id) REFERENCES ssh_data (id),
         FOREIGN KEY (user_id) REFERENCES users (id)
     );
+
 `);
 
   // Run schema migrations
@@ -434,6 +435,11 @@ const migrateSchema = () => {
     "credential_id",
     "INTEGER REFERENCES ssh_credentials(id)",
   );
+
+  // AutoStart plaintext columns
+  addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
 
 
   // SSH credentials table migrations for encryption support

@@ -15,6 +15,7 @@ import type {
 } from "../../types/index.js";
 import { CONNECTION_STATES } from "../../types/index.js";
 import { tunnelLogger } from "../utils/logger.js";
+import { SystemCrypto } from "../utils/system-crypto.js";
 
 const app = express();
 app.use(
@@ -1023,12 +1024,16 @@ app.post("/ssh/tunnel/cancel", (req, res) => {
 
 async function initializeAutoStartTunnels(): Promise<void> {
   try {
+    // Get internal auth token from SystemCrypto
+    const systemCrypto = SystemCrypto.getInstance();
+    const internalAuthToken = await systemCrypto.getInternalAuthToken();
+
     const response = await axios.get(
       "http://localhost:8081/ssh/db/host/internal",
       {
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Request": "1",
+          "X-Internal-Auth-Token": internalAuthToken,
         },
       },
     );
