@@ -93,11 +93,11 @@ function scheduleSessionCleanup(sessionId: string) {
     // Clear existing timeout
     if (session.timeout) clearTimeout(session.timeout);
 
-    // Set new timeout for 10 minutes of inactivity
+    // Increase timeout to 30 minutes of inactivity
     session.timeout = setTimeout(() => {
       fileLogger.info(`Cleaning up inactive SSH session: ${sessionId}`);
       cleanupSession(sessionId);
-    }, 10 * 60 * 1000); // 10 minutes
+    }, 30 * 60 * 1000); // 30 minutes - increased from 10 minutes
   }
 }
 
@@ -319,6 +319,41 @@ app.get("/ssh/file_manager/ssh/status", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const isConnected = !!sshSessions[sessionId]?.isConnected;
   res.json({ status: "success", connected: isConnected });
+});
+
+// SSH keepalive endpoint - extends session timeout and verifies connection
+app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID is required" });
+  }
+
+  const session = sshSessions[sessionId];
+
+  if (!session || !session.isConnected) {
+    return res.status(400).json({
+      error: "SSH session not found or not connected",
+      connected: false
+    });
+  }
+
+  // Update last active time and reschedule cleanup
+  session.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  fileLogger.debug(`SSH session keepalive: ${sessionId}`, {
+    operation: "ssh_keepalive",
+    sessionId,
+    lastActive: session.lastActive,
+  });
+
+  res.json({
+    status: "success",
+    connected: true,
+    message: "Session keepalive successful",
+    lastActive: session.lastActive
+  });
 });
 
 app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {

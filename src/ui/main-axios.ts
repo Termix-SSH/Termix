@@ -1002,6 +1002,17 @@ export async function getSSHStatus(
   }
 }
 
+export async function keepSSHAlive(sessionId: string): Promise<any> {
+  try {
+    const response = await fileManagerApi.post("/ssh/keepalive", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "SSH keepalive");
+  }
+}
+
 export async function listSSHFiles(
   sessionId: string,
   path: string,

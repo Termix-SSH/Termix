@@ -38,6 +38,7 @@ import {
   moveSSHItem,
   connectSSH,
   getSSHStatus,
+  keepSSHAlive,
   identifySSHSymlink,
   addRecentFile,
   addPinnedFile,
@@ -144,12 +145,56 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
     sshHost: currentHost!,
   });
 
+  // SSH keepalive function
+  const startKeepalive = useCallback(() => {
+    if (!sshSessionId) return;
+
+    // Clear existing timer
+    if (keepaliveTimerRef.current) {
+      clearInterval(keepaliveTimerRef.current);
+    }
+
+    // Send keepalive every 5 minutes (300000ms)
+    keepaliveTimerRef.current = setInterval(async () => {
+      if (sshSessionId) {
+        try {
+          await keepSSHAlive(sshSessionId);
+          console.log("SSH keepalive sent successfully");
+        } catch (error) {
+          console.error("SSH keepalive failed:", error);
+          // If keepalive fails, session might be dead - could trigger reconnect here
+        }
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+  }, [sshSessionId]);
+
+  const stopKeepalive = useCallback(() => {
+    if (keepaliveTimerRef.current) {
+      clearInterval(keepaliveTimerRef.current);
+      keepaliveTimerRef.current = null;
+    }
+  }, []);
+
   // Initialize SSH connection
   useEffect(() => {
     if (currentHost) {
       initializeSSHConnection();
     }
   }, [currentHost]);
+
+  // Start/stop keepalive based on SSH session
+  useEffect(() => {
+    if (sshSessionId) {
+      startKeepalive();
+    } else {
+      stopKeepalive();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      stopKeepalive();
+    };
+  }, [sshSessionId, startKeepalive, stopKeepalive]);
 
   // Track if initial directory load is done to prevent duplicate loading
   const initialLoadDoneRef = useRef(false);
@@ -158,6 +203,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
   const pathChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Track current loading request to handle cancellation
   const currentLoadingPathRef = useRef<string>("");
+  // SSH keepalive timer
+  const keepaliveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced directory loading for path changes
   const debouncedLoadDirectory = useCallback((path: string) => {
