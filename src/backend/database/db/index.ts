@@ -31,8 +31,22 @@ let sqlite: Database.Database; // Module-level sqlite instance
 // Async initialization function to handle SystemCrypto and DatabaseFileEncryption
 async function initializeDatabaseAsync(): Promise<void> {
   // Initialize SystemCrypto database key first
+  databaseLogger.info("Initializing SystemCrypto database key...", {
+    operation: "db_init_systemcrypto",
+    envKeyAvailable: !!process.env.DATABASE_KEY,
+    envKeyLength: process.env.DATABASE_KEY?.length || 0,
+  });
+
   const systemCrypto = SystemCrypto.getInstance();
   await systemCrypto.initializeDatabaseKey();
+
+  // Verify key is available after initialization
+  const dbKey = await systemCrypto.getDatabaseKey();
+  databaseLogger.info("SystemCrypto database key initialized", {
+    operation: "db_init_systemcrypto_complete",
+    keyLength: dbKey.length,
+    keyAvailable: !!dbKey,
+  });
 
   if (enableFileEncryption) {
     try {
@@ -43,15 +57,31 @@ async function initializeDatabaseAsync(): Promise<void> {
           {
             operation: "db_memory_load",
             encryptedPath: encryptedDbPath,
+            fileSize: fs.statSync(encryptedDbPath).size,
           },
         );
 
         // Decrypt database content to memory buffer (now async)
+        databaseLogger.info("Starting database decryption...", {
+          operation: "db_decrypt_start",
+          encryptedPath: encryptedDbPath,
+        });
+
         const decryptedBuffer =
           await DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
 
+        databaseLogger.info("Database decryption successful", {
+          operation: "db_decrypt_success",
+          decryptedSize: decryptedBuffer.length,
+          isSqlite: decryptedBuffer.slice(0, 16).toString().startsWith('SQLite format 3'),
+        });
+
         // Create in-memory database from decrypted buffer
         memoryDatabase = new Database(decryptedBuffer);
+
+        databaseLogger.info("In-memory database created from decrypted buffer", {
+          operation: "db_memory_create_success",
+        });
       } else {
         memoryDatabase = new Database(":memory:");
         isNewDatabase = true;
@@ -101,15 +131,22 @@ async function initializeDatabaseAsync(): Promise<void> {
     } catch (error) {
       databaseLogger.error("Failed to initialize memory database", error, {
         operation: "db_memory_init_failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorStack: error instanceof Error ? error.stack : undefined,
+        encryptedDbExists: DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
+        databaseKeyAvailable: !!process.env.DATABASE_KEY,
+        databaseKeyLength: process.env.DATABASE_KEY?.length || 0,
       });
 
-      // If file encryption is critical, fail fast
-      if (process.env.DB_FILE_ENCRYPTION_REQUIRED === "true") {
-        throw error;
-      }
+      // 🔥 CRITICAL: Never silently ignore database decryption failures!
+      // This causes complete data loss for users
+      console.error("🚨 DATABASE DECRYPTION FAILED - THIS IS CRITICAL!");
+      console.error("Error details:", error instanceof Error ? error.message : error);
+      console.error("Encrypted file exists:", DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath));
+      console.error("DATABASE_KEY available:", !!process.env.DATABASE_KEY);
 
-      memoryDatabase = new Database(":memory:");
-      isNewDatabase = true;
+      // Always fail fast on decryption errors - data integrity is critical
+      throw new Error(`Database decryption failed: ${error instanceof Error ? error.message : "Unknown error"}. This prevents data loss.`);
     }
   } else {
     memoryDatabase = new Database(":memory:");
