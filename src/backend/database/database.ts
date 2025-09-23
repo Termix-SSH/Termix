@@ -15,6 +15,7 @@ import { databaseLogger, apiLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
+import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { UserDataImport } from "../utils/user-data-import.js";
 import https from "https";
@@ -1309,6 +1310,155 @@ async function initializeSecurity() {
     });
     throw error; // Security system is critical for API functionality
   }
+}
+
+// Database migration status endpoint - for administrators to check migration status
+app.get("/database/migration/status", authenticateJWT, requireAdmin, async (req, res) => {
+  try {
+    const dataDir = process.env.DATA_DIR || "./db/data";
+    const migration = new DatabaseMigration(dataDir);
+    const status = migration.checkMigrationStatus();
+
+    apiLogger.info("Migration status requested", {
+      operation: "migration_status_api",
+      userId: (req as any).userId,
+    });
+
+    // Get migration-related files info
+    const dbPath = path.join(dataDir, "db.sqlite");
+    const encryptedDbPath = `${dbPath}.encrypted`;
+
+    const files = fs.readdirSync(dataDir);
+    const backupFiles = files.filter(f => f.includes('.migration-backup-'));
+    const migratedFiles = files.filter(f => f.includes('.migrated-'));
+
+    // Get file sizes
+    let unencryptedSize = 0;
+    let encryptedSize = 0;
+
+    if (status.hasUnencryptedDb) {
+      try {
+        unencryptedSize = fs.statSync(dbPath).size;
+      } catch (error) {
+        // File might be locked or deleted
+      }
+    }
+
+    if (status.hasEncryptedDb) {
+      try {
+        encryptedSize = fs.statSync(encryptedDbPath).size;
+      } catch (error) {
+        // File might not exist
+      }
+    }
+
+    res.json({
+      migrationStatus: status,
+      files: {
+        unencryptedDbSize: unencryptedSize,
+        encryptedDbSize: encryptedSize,
+        backupFiles: backupFiles.length,
+        migratedFiles: migratedFiles.length,
+      },
+      recommendations: getMigrationRecommendations(status),
+    });
+
+  } catch (error) {
+    apiLogger.error("Failed to get migration status", error, {
+      operation: "migration_status_api_failed",
+    });
+    res.status(500).json({
+      error: "Failed to get migration status",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// Database migration history endpoint - shows backup and migrated files
+app.get("/database/migration/history", authenticateJWT, requireAdmin, async (req, res) => {
+  try {
+    const dataDir = process.env.DATA_DIR || "./db/data";
+
+    apiLogger.info("Migration history requested", {
+      operation: "migration_history_api",
+      userId: (req as any).userId,
+    });
+
+    const files = fs.readdirSync(dataDir);
+
+    const backupFiles = files
+      .filter(f => f.includes('.migration-backup-'))
+      .map(f => {
+        const filePath = path.join(dataDir, f);
+        const stats = fs.statSync(filePath);
+        return {
+          name: f,
+          size: stats.size,
+          created: stats.birthtime,
+          modified: stats.mtime,
+          type: 'backup',
+        };
+      })
+      .sort((a, b) => b.modified.getTime() - a.modified.getTime());
+
+    const migratedFiles = files
+      .filter(f => f.includes('.migrated-'))
+      .map(f => {
+        const filePath = path.join(dataDir, f);
+        const stats = fs.statSync(filePath);
+        return {
+          name: f,
+          size: stats.size,
+          created: stats.birthtime,
+          modified: stats.mtime,
+          type: 'migrated',
+        };
+      })
+      .sort((a, b) => b.modified.getTime() - a.modified.getTime());
+
+    res.json({
+      files: [...backupFiles, ...migratedFiles],
+      summary: {
+        totalBackups: backupFiles.length,
+        totalMigrated: migratedFiles.length,
+        oldestBackup: backupFiles.length > 0 ? backupFiles[backupFiles.length - 1].created : null,
+        newestBackup: backupFiles.length > 0 ? backupFiles[0].created : null,
+      },
+    });
+
+  } catch (error) {
+    apiLogger.error("Failed to get migration history", error, {
+      operation: "migration_history_api_failed",
+    });
+    res.status(500).json({
+      error: "Failed to get migration history",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// Helper function to generate migration recommendations
+function getMigrationRecommendations(status: any): string[] {
+  const recommendations: string[] = [];
+
+  if (status.needsMigration) {
+    recommendations.push("Automatic migration will occur on next server restart");
+    recommendations.push("Ensure DATABASE_KEY environment variable is properly set");
+    recommendations.push("Consider manual backup before restart if desired");
+  } else if (status.hasUnencryptedDb && status.hasEncryptedDb) {
+    recommendations.push("Both encrypted and unencrypted databases found");
+    recommendations.push("This may indicate a previous migration was interrupted");
+    recommendations.push("Manual intervention may be required");
+    recommendations.push("Check logs for migration history");
+  } else if (status.hasEncryptedDb && !status.hasUnencryptedDb) {
+    recommendations.push("Database is properly encrypted");
+    recommendations.push("No action required");
+  } else if (!status.hasEncryptedDb && !status.hasUnencryptedDb) {
+    recommendations.push("Fresh installation detected");
+    recommendations.push("Database will be created encrypted on first use");
+  }
+
+  return recommendations;
 }
 
 app.listen(HTTP_PORT, async () => {

@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { UserCrypto } from "./user-crypto.js";
 import { SystemCrypto } from "./system-crypto.js";
+import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 
@@ -67,10 +68,70 @@ class AuthManager {
   }
 
   /**
-   * User login - use UserCrypto
+   * User login with lazy encryption migration
    */
   async authenticateUser(userId: string, password: string): Promise<boolean> {
-    return await this.userCrypto.authenticateUser(userId, password);
+    const authenticated = await this.userCrypto.authenticateUser(userId, password);
+
+    if (authenticated) {
+      // Trigger lazy encryption migration for user's sensitive fields
+      await this.performLazyEncryptionMigration(userId);
+    }
+
+    return authenticated;
+  }
+
+  /**
+   * Perform lazy encryption migration for user's sensitive data
+   * This runs asynchronously after successful login
+   */
+  private async performLazyEncryptionMigration(userId: string): Promise<void> {
+    try {
+      const userDataKey = this.getUserDataKey(userId);
+      if (!userDataKey) {
+        databaseLogger.warn("Cannot perform lazy encryption migration - user data key not available", {
+          operation: "lazy_encryption_migration_no_key",
+          userId,
+        });
+        return;
+      }
+
+      // Import database connection - need to access raw SQLite for migration
+      const { getDb } = await import("../database/db/index.js");
+      const db = getDb();
+
+      // Get the underlying SQLite instance
+      const sqlite = (db as any)._.session.db;
+
+      // Perform the migration
+      const migrationResult = await DataCrypto.migrateUserSensitiveFields(
+        userId,
+        userDataKey,
+        sqlite
+      );
+
+      if (migrationResult.migrated) {
+        databaseLogger.success("Lazy encryption migration completed for user", {
+          operation: "lazy_encryption_migration_success",
+          userId,
+          migratedTables: migrationResult.migratedTables,
+          migratedFieldsCount: migrationResult.migratedFieldsCount,
+        });
+      } else {
+        databaseLogger.debug("No lazy encryption migration needed for user", {
+          operation: "lazy_encryption_migration_not_needed",
+          userId,
+        });
+      }
+
+    } catch (error) {
+      // Log error but don't fail the login process
+      databaseLogger.error("Lazy encryption migration failed", error, {
+        operation: "lazy_encryption_migration_error",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 
   /**
