@@ -1421,6 +1421,7 @@ function CreateIntentGridItem({
   onConfirm?: (name: string) => void;
   onCancel?: () => void;
 }) {
+  const { t } = useTranslation();
   const [inputName, setInputName] = useState(intent.currentName);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -1474,6 +1475,7 @@ function CreateIntentListItem({
   onConfirm?: (name: string) => void;
   onCancel?: () => void;
 }) {
+  const { t } = useTranslation();
   const [inputName, setInputName] = useState(intent.currentName);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -1509,7 +1511,7 @@ function CreateIntentListItem({
         onKeyDown={handleKeyDown}
         onBlur={() => onConfirm?.(inputName.trim())}
         className="flex-1 min-w-0 max-w-[200px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
-        placeholder={intent.type === 'directory' ? 'Folder name' : 'File name'}
+        placeholder={intent.type === 'directory' ? t('fileManager.folderName') : t('fileManager.fileName')}
       />
     </div>
   );
