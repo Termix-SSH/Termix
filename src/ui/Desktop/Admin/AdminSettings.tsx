@@ -30,8 +30,6 @@ import {
   Lock,
   Download,
   Upload,
-  HardDrive,
-  FileArchive,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -99,10 +97,10 @@ export function AdminSettings({
   // Database migration state
   const [exportLoading, setExportLoading] = React.useState(false);
   const [importLoading, setImportLoading] = React.useState(false);
-  const [backupLoading, setBackupLoading] = React.useState(false);
   const [importFile, setImportFile] = React.useState<File | null>(null);
-  const [exportPath, setExportPath] = React.useState<string>("");
-  const [backupPath, setBackupPath] = React.useState<string>("");
+  const [exportPassword, setExportPassword] = React.useState("");
+  const [showPasswordInput, setShowPasswordInput] = React.useState(false);
+  const [importPassword, setImportPassword] = React.useState("");
 
   React.useEffect(() => {
     const jwt = getCookie("jwt");
@@ -282,6 +280,16 @@ export function AdminSettings({
 
   // Database export/import handlers
   const handleExportDatabase = async () => {
+    if (!showPasswordInput) {
+      setShowPasswordInput(true);
+      return;
+    }
+
+    if (!exportPassword.trim()) {
+      toast.error(t("admin.passwordRequired"));
+      return;
+    }
+
     setExportLoading(true);
     try {
       const jwt = getCookie("jwt");
@@ -295,15 +303,34 @@ export function AdminSettings({
           Authorization: `Bearer ${jwt}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ password: exportPassword }),
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setExportPath(result.exportPath);
+        // Handle file download
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('content-disposition');
+        const filename = contentDisposition?.match(/filename="([^"]+)"/)?.[1] || 'termix-export.sqlite';
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
         toast.success(t("admin.databaseExportedSuccessfully"));
+        setExportPassword("");
+        setShowPasswordInput(false);
       } else {
-        throw new Error("Export failed");
+        const error = await response.json();
+        if (error.code === "PASSWORD_REQUIRED") {
+          toast.error(t("admin.passwordRequired"));
+        } else {
+          toast.error(error.error || t("admin.databaseExportFailed"));
+        }
       }
     } catch (err) {
       toast.error(t("admin.databaseExportFailed"));
@@ -318,6 +345,11 @@ export function AdminSettings({
       return;
     }
 
+    if (!importPassword.trim()) {
+      toast.error(t("admin.passwordRequired"));
+      return;
+    }
+
     setImportLoading(true);
     try {
       const jwt = getCookie("jwt");
@@ -328,7 +360,7 @@ export function AdminSettings({
       // Create FormData for file upload
       const formData = new FormData();
       formData.append("file", importFile);
-      formData.append("backupCurrent", "true");
+      formData.append("password", importPassword);
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -341,16 +373,34 @@ export function AdminSettings({
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          toast.success(t("admin.databaseImportedSuccessfully"));
+          const summary = result.summary;
+          const imported = summary.sshHostsImported + summary.sshCredentialsImported + summary.fileManagerItemsImported + summary.dismissedAlertsImported + (summary.settingsImported || 0);
+          const skipped = summary.skippedItems;
+
+          const details = [];
+          if (summary.sshHostsImported > 0) details.push(`${summary.sshHostsImported} SSH hosts`);
+          if (summary.sshCredentialsImported > 0) details.push(`${summary.sshCredentialsImported} credentials`);
+          if (summary.fileManagerItemsImported > 0) details.push(`${summary.fileManagerItemsImported} file manager items`);
+          if (summary.dismissedAlertsImported > 0) details.push(`${summary.dismissedAlertsImported} alerts`);
+          if (summary.settingsImported > 0) details.push(`${summary.settingsImported} settings`);
+
+          toast.success(
+            `Import completed: ${imported} items imported${details.length > 0 ? ` (${details.join(', ')})` : ''}, ${skipped} items skipped`
+          );
           setImportFile(null);
-          // Status refresh not needed in v2 system
+          setImportPassword("");
         } else {
           toast.error(
-            `${t("admin.databaseImportFailed")}: ${result.errors?.join(", ") || "Unknown error"}`,
+            `${t("admin.databaseImportFailed")}: ${result.summary?.errors?.join(", ") || "Unknown error"}`,
           );
         }
       } else {
-        throw new Error("Import failed");
+        const error = await response.json();
+        if (error.code === "PASSWORD_REQUIRED") {
+          toast.error(t("admin.passwordRequired"));
+        } else {
+          toast.error(error.error || t("admin.databaseImportFailed"));
+        }
       }
     } catch (err) {
       toast.error(t("admin.databaseImportFailed"));
@@ -359,36 +409,6 @@ export function AdminSettings({
     }
   };
 
-  const handleCreateBackup = async () => {
-    setBackupLoading(true);
-    try {
-      const jwt = getCookie("jwt");
-      const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/backup`
-        : "http://localhost:8081/database/backup";
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setBackupPath(result.backupPath);
-        toast.success(t("admin.encryptedBackupCreatedSuccessfully"));
-      } else {
-        throw new Error("Backup failed");
-      }
-    } catch (err) {
-      toast.error(t("admin.backupCreationFailed"));
-    } finally {
-      setBackupLoading(false);
-    }
-  };
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
@@ -844,27 +864,56 @@ export function AdminSettings({
                   </div>
                 </div>
 
-                {/* Practical functions - export/import/backup */}
-                <div className="grid gap-3 md:grid-cols-3">
+                {/* Data management functions - export/import */}
+                <div className="grid gap-3 md:grid-cols-2">
                   <div className="p-4 border rounded bg-card">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Download className="h-4 w-4 text-blue-500" />
                         <h4 className="font-medium">{t("admin.export")}</h4>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Export SSH hosts and credentials as SQLite file
+                      </p>
+                      {showPasswordInput && (
+                        <div className="space-y-2">
+                          <Label htmlFor="export-password">Password</Label>
+                          <PasswordInput
+                            id="export-password"
+                            value={exportPassword}
+                            onChange={(e) => setExportPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleExportDatabase();
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
                       <Button
                         onClick={handleExportDatabase}
                         disabled={exportLoading}
                         className="w-full"
                       >
-                        {exportLoading ? t("admin.exporting") : t("admin.export")}
+                        {exportLoading
+                          ? t("admin.exporting")
+                          : showPasswordInput
+                            ? t("admin.confirmExport")
+                            : t("admin.export")
+                        }
                       </Button>
-                      {exportPath && (
-                        <div className="p-2 bg-muted rounded border">
-                          <div className="text-xs font-mono break-all">
-                            {exportPath}
-                          </div>
-                        </div>
+                      {showPasswordInput && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowPasswordInput(false);
+                            setExportPassword("");
+                          }}
+                          className="w-full"
+                        >
+                          Cancel
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -875,42 +924,38 @@ export function AdminSettings({
                         <Upload className="h-4 w-4 text-green-500" />
                         <h4 className="font-medium">{t("admin.import")}</h4>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Import SQLite file with incremental merge (skips duplicates)
+                      </p>
                       <input
                         type="file"
-                        accept=".sqlite,.termix-export.sqlite,.db"
+                        accept=".sqlite,.db"
                         onChange={(e) => setImportFile(e.target.files?.[0] || null)}
                         className="block w-full text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted file:text-foreground mb-2"
                       />
+                      {importFile && (
+                        <div className="space-y-2">
+                          <Label htmlFor="import-password">Password</Label>
+                          <PasswordInput
+                            id="import-password"
+                            value={importPassword}
+                            onChange={(e) => setImportPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleImportDatabase();
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
                       <Button
                         onClick={handleImportDatabase}
-                        disabled={importLoading || !importFile}
+                        disabled={importLoading || !importFile || !importPassword.trim()}
                         className="w-full"
                       >
                         {importLoading ? t("admin.importing") : t("admin.import")}
                       </Button>
-                    </div>
-                  </div>
-
-                  <div className="p-4 border rounded bg-card">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <HardDrive className="h-4 w-4 text-purple-500" />
-                        <h4 className="font-medium">{t("admin.backup")}</h4>
-                      </div>
-                      <Button
-                        onClick={handleCreateBackup}
-                        disabled={backupLoading}
-                        className="w-full"
-                      >
-                        {backupLoading ? t("admin.creatingBackup") : t("admin.createBackup")}
-                      </Button>
-                      {backupPath && (
-                        <div className="p-2 bg-muted rounded border">
-                          <div className="text-xs font-mono break-all">
-                            {backupPath}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
