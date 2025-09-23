@@ -377,6 +377,7 @@
     "overrideUserInfoUrl": "Override User Info URL (not required)",
     "databaseSecurity": "Database Security",
     "encryptionStatus": "Encryption Status",
+    "encryptionEnabled": "Encryption Enabled",
     "enabled": "Enabled",
     "disabled": "Disabled",
     "keyId": "Key ID",
