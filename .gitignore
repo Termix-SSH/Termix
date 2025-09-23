@@ -25,4 +25,5 @@ dist-ssr
 /db/
 /release/
 /.claude/
-/ssl/openssl.conf
+/ssl/
+.env
