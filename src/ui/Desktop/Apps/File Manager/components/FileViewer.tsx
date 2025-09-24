@@ -261,8 +261,8 @@ function getLanguageExtension(filename: string) {
 }
 
 // Format file size
-function formatFileSize(bytes?: number): string {
-  if (!bytes) return "Unknown size";
+function formatFileSize(bytes?: number, t?: any): string {
+  if (!bytes) return t ? t("fileManager.unknownSize") : "Unknown size";
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
@@ -504,8 +504,8 @@ export function FileViewer({
             <div>
               <h3 className="font-medium text-foreground">{file.name}</h3>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{formatFileSize(file.size)}</span>
-                {file.modified && <span>Modified: {file.modified}</span>}
+                <span>{formatFileSize(file.size, t)}</span>
+                {file.modified && <span>{t("fileManager.modified")}: {file.modified}</span>}
                 <span
                   className={cn(
                     "px-2 py-1 rounded-full text-xs",
@@ -670,11 +670,10 @@ export function FileViewer({
                 <AlertCircle className="w-6 h-6 text-destructive flex-shrink-0 mt-0.5" />
                 <div>
                   <h3 className="font-medium text-foreground mb-2">
-                    Large File Warning
+                    {t("fileManager.largeFileWarning")}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-3">
-                    This file is {formatFileSize(file.size)} in size, which may
-                    cause performance issues when opened as text.
+                    {t("fileManager.largeFileWarningDesc", { size: formatFileSize(file.size, t) })}
                   </p>
                   {isTooLarge ? (
                     <div className="bg-destructive/10 border border-destructive/30 rounded p-3 mb-4">
@@ -854,7 +853,7 @@ export function FileViewer({
                 ) : (
                   // Only show as read-only for non-editable files (media files)
                   <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
-                    {editedContent || content || "File is empty"}
+                    {editedContent || content || t("fileManager.fileIsEmpty")}
                   </div>
                 )}
               </div>

@@ -149,7 +149,10 @@
     "generateRSA": "生成 RSA",
     "keyPairGeneratedSuccessfully": "{{keyType}} 密钥对生成成功",
     "failedToGenerateKeyPair": "生成密钥对失败",
-    "generateKeyPairNote": "直接生成新的SSH密钥对。这将替换表单中的现有密钥。"
+    "generateKeyPairNote": "直接生成新的SSH密钥对。这将替换表单中的现有密钥。",
+    "invalidKey": "无效密钥",
+    "detectionError": "检测错误",
+    "unknown": "未知"
   },
   "sshTools": {
     "title": "SSH 工具",
@@ -761,6 +764,11 @@
     "filesCopiedToClipboard": "{{count}} 个项目已复制到剪贴板",
     "filesCutToClipboard": "{{count}} 个项目已剪切到剪贴板",
     "movedItems": "已移动 {{count}} 个项目",
+    "unknownSize": "未知大小",
+    "fileIsEmpty": "文件为空",
+    "modified": "修改时间",
+    "largeFileWarning": "大文件警告",
+    "largeFileWarningDesc": "此文件大小为 {{size}}，以文本形式打开可能会导致性能问题。",
     "failedToDeleteItem": "删除项目失败",
     "itemRenamedSuccessfully": "{{type}}重命名成功",
     "failedToRenameItem": "重命名项目失败",

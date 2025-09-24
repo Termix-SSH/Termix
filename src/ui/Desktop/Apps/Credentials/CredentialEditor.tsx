@@ -315,9 +315,9 @@ export function CredentialEditor({
       "ssh-dss": "DSA (SSH)",
       "rsa-sha2-256": "RSA-SHA2-256",
       "rsa-sha2-512": "RSA-SHA2-512",
-      invalid: "Invalid Key",
-      error: "Detection Error",
-      unknown: "Unknown",
+      invalid: t("credentials.invalidKey"),
+      error: t("credentials.detectionError"),
+      unknown: t("credentials.unknown"),
     };
     return keyTypeMap[keyType] || keyType;
   };

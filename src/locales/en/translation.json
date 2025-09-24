@@ -150,7 +150,10 @@
     "generateRSA": "Generate RSA",
     "keyPairGeneratedSuccessfully": "{{keyType}} key pair generated successfully",
     "failedToGenerateKeyPair": "Failed to generate key pair",
-    "generateKeyPairNote": "Generate a new SSH key pair directly. This will replace any existing keys in the form."
+    "generateKeyPairNote": "Generate a new SSH key pair directly. This will replace any existing keys in the form.",
+    "invalidKey": "Invalid Key",
+    "detectionError": "Detection Error",
+    "unknown": "Unknown"
   },
   "sshTools": {
     "title": "SSH Tools",
@@ -852,6 +855,11 @@
     "find": "Find...",
     "replaceWith": "Replace with...",
     "startTyping": "Start typing...",
+    "unknownSize": "Unknown size",
+    "fileIsEmpty": "File is empty",
+    "modified": "Modified",
+    "largeFileWarning": "Large File Warning",
+    "largeFileWarningDesc": "This file is {{size}} in size, which may cause performance issues when opened as text.",
     "fileSavedSuccessfully": "File saved successfully",
     "autoSaveFailed": "Auto-save failed",
     "fileAutoSaved": "File auto-saved",
