@@ -1149,7 +1149,7 @@ export function HostManagerEditor({
                           <code className="bg-muted px-1 rounded inline">
                             sudo apt install sshpass
                           </code>{" "}
-                          (Debian/Ubuntu) or the equivalent for your OS.
+                          {t("hosts.debianUbuntuEquivalent")}
                         </div>
                         <div className="mt-2">
                           <strong>{t("hosts.otherInstallMethods")}</strong>
@@ -1158,7 +1158,7 @@ export function HostManagerEditor({
                             <code className="bg-muted px-1 rounded inline">
                               sudo yum install sshpass
                             </code>{" "}
-                            or{" "}
+                            {t("hosts.or")}{" "}
                             <code className="bg-muted px-1 rounded inline">
                               sudo dnf install sshpass
                             </code>

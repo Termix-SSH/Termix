@@ -40,10 +40,6 @@ const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
-function isLocalhost(req: Request) {
-  const ip = req.ip || req.connection?.remoteAddress;
-  return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
-}
 
 // Internal-only endpoint for autostart - requires internal auth token
 router.get("/db/host/internal", async (req: Request, res: Response) => {

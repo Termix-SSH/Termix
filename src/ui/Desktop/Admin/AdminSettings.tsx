@@ -873,7 +873,7 @@ export function AdminSettings({
                         <h4 className="font-medium">{t("admin.export")}</h4>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Export SSH hosts and credentials as SQLite file
+                        {t("admin.exportDescription")}
                       </p>
                       {showPasswordInput && (
                         <div className="space-y-2">
@@ -925,7 +925,7 @@ export function AdminSettings({
                         <h4 className="font-medium">{t("admin.import")}</h4>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Import SQLite file with incremental merge (skips duplicates)
+                        {t("admin.importDescription")}
                       </p>
                       <input
                         type="file"

@@ -570,6 +570,8 @@
     "sshpassRequired": "Sshpass Required For Password Authentication",
     "sshpassRequiredDesc": "For password authentication in tunnels, sshpass must be installed on the system.",
     "otherInstallMethods": "Other installation methods:",
+    "debianUbuntuEquivalent": "(Debian/Ubuntu) or the equivalent for your OS.",
+    "or": "or",
     "centosRhelFedora": "CentOS/RHEL/Fedora",
     "macos": "macOS",
     "windows": "Windows",

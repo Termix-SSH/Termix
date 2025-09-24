@@ -27,6 +27,9 @@ import Database from "better-sqlite3";
 
 const app = express();
 
+// Configure trust proxy to properly detect real client IP behind reverse proxy (nginx)
+app.set('trust proxy', true);
+
 // Initialize auth middleware
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
