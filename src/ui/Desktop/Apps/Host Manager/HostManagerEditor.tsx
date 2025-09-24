@@ -37,6 +37,7 @@ import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/Desktop/Apps/Credentials/CredentialSelector.tsx";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView } from "@codemirror/view";
 
 interface SSHHost {
   id: number;
@@ -1000,7 +1001,15 @@ export function HostManagerEditor({
                                     allowMultipleSelections: false,
                                     highlightSelectionMatches: false,
                                     searchKeymap: false,
+                                    scrollPastEnd: false,
                                   }}
+                                  extensions={[
+                                    EditorView.theme({
+                                      ".cm-scroller": {
+                                        overflow: "auto",
+                                      },
+                                    }),
+                                  ]}
                                 />
                               </FormControl>
                             </FormItem>

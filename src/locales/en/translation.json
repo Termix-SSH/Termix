@@ -737,6 +737,7 @@
     "deleteFiles": "Delete {{count}} items",
     "filesCopiedToClipboard": "{{count}} items copied to clipboard",
     "filesCutToClipboard": "{{count}} items cut to clipboard",
+    "movedItems": "Moved {{count}} items",
     "failedToDeleteItem": "Failed to delete item",
     "itemRenamedSuccessfully": "{{type}} renamed successfully",
     "failedToRenameItem": "Failed to rename item",

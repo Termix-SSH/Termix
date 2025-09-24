@@ -30,6 +30,7 @@ import {
 import { useTranslation } from "react-i18next";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView } from "@codemirror/view";
 import type {
   Credential,
   CredentialEditorProps,
@@ -934,7 +935,15 @@ export function CredentialEditor({
                                     allowMultipleSelections: false,
                                     highlightSelectionMatches: false,
                                     searchKeymap: false,
+                                    scrollPastEnd: false,
                                   }}
+                                  extensions={[
+                                    EditorView.theme({
+                                      ".cm-scroller": {
+                                        overflow: "auto",
+                                      },
+                                    }),
+                                  ]}
                                 />
                               </FormControl>
                               {detectedKeyType && (
@@ -1089,7 +1098,15 @@ export function CredentialEditor({
                                     allowMultipleSelections: false,
                                     highlightSelectionMatches: false,
                                     searchKeymap: false,
+                                    scrollPastEnd: false,
                                   }}
+                                  extensions={[
+                                    EditorView.theme({
+                                      ".cm-scroller": {
+                                        overflow: "auto",
+                                      },
+                                    }),
+                                  ]}
                                 />
                               </FormControl>
                               <div className="text-xs text-muted-foreground mt-1">

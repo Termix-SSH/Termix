@@ -51,6 +51,7 @@ import { Input } from "@/components/ui/input";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { languages, loadLanguage } from "@uiw/codemirror-extensions-langs";
+import { EditorView } from "@codemirror/view";
 
 interface FileItem {
   name: string;
@@ -769,11 +770,22 @@ export function FileViewer({
                   <CodeMirror
                     value={editedContent}
                     onChange={(value) => handleContentChange(value)}
-                    extensions={
-                      getLanguageExtension(file.name)
+                    extensions={[
+                      ...(getLanguageExtension(file.name)
                         ? [getLanguageExtension(file.name)!]
-                        : []
-                    }
+                        : []),
+                      EditorView.theme({
+                        "&": {
+                          height: "100%",
+                        },
+                        ".cm-scroller": {
+                          overflow: "auto",
+                        },
+                        ".cm-editor": {
+                          height: "100%",
+                        },
+                      }),
+                    ]}
                     theme="dark"
                     basicSetup={{
                       lineNumbers: true,
@@ -785,6 +797,7 @@ export function FileViewer({
                       closeBrackets: true,
                       autocompletion: true,
                       highlightSelectionMatches: false,
+                      scrollPastEnd: false,
                     }}
                     className="h-full overflow-auto"
                     readOnly={!isEditable}
@@ -806,11 +819,22 @@ export function FileViewer({
                       <CodeMirror
                         value={editedContent}
                         onChange={(value) => handleContentChange(value)}
-                        extensions={
-                          getLanguageExtension(file.name)
+                        extensions={[
+                          ...(getLanguageExtension(file.name)
                             ? [getLanguageExtension(file.name)!]
-                            : []
-                        }
+                            : []),
+                          EditorView.theme({
+                            "&": {
+                              height: "100%",
+                            },
+                            ".cm-scroller": {
+                              overflow: "auto",
+                            },
+                            ".cm-editor": {
+                              height: "100%",
+                            },
+                          }),
+                        ]}
                         theme={oneDark}
                         editable={isEditable}
                         placeholder={t("fileManager.startTyping")}
@@ -822,6 +846,7 @@ export function FileViewer({
                           allowMultipleSelections: false,
                           highlightSelectionMatches: false,
                           searchKeymap: true,
+                          scrollPastEnd: false,
                         }}
                       />
                     )}

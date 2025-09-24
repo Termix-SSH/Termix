@@ -760,6 +760,7 @@
     "deleteFiles": "删除 {{count}} 个项目",
     "filesCopiedToClipboard": "{{count}} 个项目已复制到剪贴板",
     "filesCutToClipboard": "{{count}} 个项目已剪切到剪贴板",
+    "movedItems": "已移动 {{count}} 个项目",
     "failedToDeleteItem": "删除项目失败",
     "itemRenamedSuccessfully": "{{type}}重命名成功",
     "failedToRenameItem": "重命名项目失败",
