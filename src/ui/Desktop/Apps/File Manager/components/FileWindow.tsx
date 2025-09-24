@@ -10,6 +10,7 @@ import {
   connectSSH,
 } from "@/ui/main-axios";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface FileItem {
   name: string;
@@ -43,6 +44,7 @@ interface FileWindowProps {
   sshHost: SSHHost;
   initialX?: number;
   initialY?: number;
+  onFileNotFound?: (file: FileItem) => void; // Callback for when file is not found
   // readOnly parameter removed, determined internally by FileViewer based on file type
 }
 
@@ -53,6 +55,7 @@ export function FileWindow({
   sshHost,
   initialX = 100,
   initialY = 100,
+  onFileNotFound,
 }: FileWindowProps) {
   const {
     closeWindow,
@@ -61,6 +64,8 @@ export function FileWindow({
     updateWindow,
     windows,
   } = useWindowManager();
+
+  const { t } = useTranslation();
 
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -192,9 +197,26 @@ export function FileWindow({
             `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
           );
         } else {
-          toast.error(
-            `Failed to load file: ${error.message || errorData?.error || "Unknown error"}`,
-          );
+          // Check if file not found (common error messages from cat command)
+          const errorMessage = errorData?.error || error.message || "Unknown error";
+          const isFileNotFound =
+            errorData?.fileNotFound ||
+            error.response?.status === 404 ||
+            errorMessage.includes("No such file or directory") ||
+            errorMessage.includes("cannot access") ||
+            errorMessage.includes("not found");
+
+          if (isFileNotFound && onFileNotFound) {
+            // Notify parent component about the missing file for cleanup
+            onFileNotFound(file);
+            toast.error(t("fileManager.fileNotFoundAndRemoved", { name: file.name }));
+          } else {
+            toast.error(t("fileManager.failedToLoadFile", {
+              error: errorMessage.includes("Server error occurred") ?
+                t("fileManager.serverErrorOccurred") :
+                errorMessage
+            }));
+          }
         }
       } finally {
         setIsLoading(false);

@@ -622,9 +622,19 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
               fileLogger.error(
                 `SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
               );
+
+              // Check if it's a "file not found" error
+              const isFileNotFound =
+                errorData.includes("No such file or directory") ||
+                errorData.includes("cannot access") ||
+                errorData.includes("not found");
+
               return res
-                .status(500)
-                .json({ error: `Command failed: ${errorData}` });
+                .status(isFileNotFound ? 404 : 500)
+                .json({
+                  error: `Command failed: ${errorData}`,
+                  fileNotFound: isFileNotFound
+                });
             }
 
             res.json({ content: data, path: filePath });

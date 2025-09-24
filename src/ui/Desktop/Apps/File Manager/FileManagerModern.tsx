@@ -43,6 +43,7 @@ import {
   addRecentFile,
   addPinnedFile,
   removePinnedFile,
+  removeRecentFile,
   addFolderShortcut,
   getPinnedFiles,
 } from "@/ui/main-axios.ts";
@@ -757,6 +758,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
           sshHost={currentHost}
           initialX={offsetX}
           initialY={offsetY}
+          onFileNotFound={handleFileNotFound}
         />
       );
 
@@ -1551,6 +1553,26 @@ function FileManagerContent({ initialHost, onClose }: FileManagerModernProps) {
 
     // Call regular file opening handler
     await handleFileOpen(file);
+  }
+
+  // Handle file not found - cleanup from recent and pinned lists
+  async function handleFileNotFound(file: FileItem) {
+    if (!currentHost) return;
+
+    try {
+      // Remove from recent files
+      await removeRecentFile(currentHost.id, file.path);
+
+      // Remove from pinned files
+      await removePinnedFile(currentHost.id, file.path);
+
+      // Trigger sidebar refresh to update the UI
+      setSidebarRefreshTrigger(prev => prev + 1);
+
+      console.log(`Cleaned up missing file from recent/pinned lists: ${file.path}`);
+    } catch (error) {
+      console.error("Failed to cleanup missing file:", error);
+    }
   }
 
 
