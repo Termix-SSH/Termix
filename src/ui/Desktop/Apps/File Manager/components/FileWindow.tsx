@@ -200,16 +200,23 @@ export function FileWindow({
           // Check if file not found (common error messages from cat command)
           const errorMessage = errorData?.error || error.message || "Unknown error";
           const isFileNotFound =
+            (error as any).isFileNotFound ||
             errorData?.fileNotFound ||
             error.response?.status === 404 ||
+            errorMessage.includes("File not found") ||
             errorMessage.includes("No such file or directory") ||
             errorMessage.includes("cannot access") ||
-            errorMessage.includes("not found");
+            errorMessage.includes("not found") ||
+            errorMessage.includes("Resource not found");
 
           if (isFileNotFound && onFileNotFound) {
             // Notify parent component about the missing file for cleanup
             onFileNotFound(file);
             toast.error(t("fileManager.fileNotFoundAndRemoved", { name: file.name }));
+
+            // Close this window since the file doesn't exist
+            closeWindow(windowId);
+            return; // Exit early to prevent showing empty editor
           } else {
             toast.error(t("fileManager.failedToLoadFile", {
               error: errorMessage.includes("Server error occurred") ?

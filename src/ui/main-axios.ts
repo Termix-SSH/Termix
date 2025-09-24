@@ -1051,7 +1051,14 @@ export async function readSSHFile(
       params: { sessionId, path },
     });
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // Preserve fileNotFound information for 404 errors
+    if (error.response?.status === 404) {
+      const customError = new Error("File not found");
+      (customError as any).response = error.response;
+      (customError as any).isFileNotFound = error.response.data?.fileNotFound || true;
+      throw customError;
+    }
     handleApiError(error, "read SSH file");
   }
 }
