@@ -50,6 +50,8 @@ import { EditorView, keymap } from "@codemirror/view";
 import { searchKeymap, search } from "@codemirror/search";
 import { defaultKeymap, history, historyKeymap, toggleComment } from "@codemirror/commands";
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
+import { PhotoProvider, PhotoView } from "react-photo-view";
+import "react-photo-view/dist/react-photo-view.css";
 
 interface FileItem {
   name: string;
@@ -286,6 +288,8 @@ export function FileViewer({
   const [forceShowAsText, setForceShowAsText] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [editorFocused, setEditorFocused] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
 
   const fileTypeInfo = getFileType(file.name);
 
@@ -469,7 +473,7 @@ export function FileViewer({
       {showKeyboardShortcuts && isEditable && (
         <div className="flex-shrink-0 bg-muted/30 border-b border-border p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold">Keyboard Shortcuts</h3>
+            <h3 className="text-sm font-semibold">{t("fileManager.keyboardShortcuts")}</h3>
             <Button
               variant="ghost"
               size="sm"
@@ -481,81 +485,81 @@ export function FileViewer({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             <div className="space-y-2">
-              <h4 className="font-medium text-muted-foreground">Search & Replace</h4>
+              <h4 className="font-medium text-muted-foreground">{t("fileManager.searchAndReplace")}</h4>
               <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>Search</span>
+                  <span>{t("fileManager.search")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+F</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Replace</span>
+                  <span>{t("fileManager.replace")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+H</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Find Next</span>
+                  <span>{t("fileManager.findNext")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">F3</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Find Previous</span>
+                  <span>{t("fileManager.findPrevious")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Shift+F3</kbd>
                 </div>
               </div>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium text-muted-foreground">Editing</h4>
+              <h4 className="font-medium text-muted-foreground">{t("fileManager.editing")}</h4>
               <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>Save</span>
+                  <span>{t("fileManager.save")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+S</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Select All</span>
+                  <span>{t("fileManager.selectAll")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+A</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Undo</span>
+                  <span>{t("fileManager.undo")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Z</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Redo</span>
+                  <span>{t("fileManager.redo")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Y</kbd>
                 </div>
               </div>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium text-muted-foreground">Navigation</h4>
+              <h4 className="font-medium text-muted-foreground">{t("fileManager.navigation")}</h4>
               <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>Go to Line</span>
+                  <span>{t("fileManager.goToLine")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+G</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Move Line Up</span>
+                  <span>{t("fileManager.moveLineUp")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Alt+↑</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Move Line Down</span>
+                  <span>{t("fileManager.moveLineDown")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Alt+↓</kbd>
                 </div>
               </div>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium text-muted-foreground">Code</h4>
+              <h4 className="font-medium text-muted-foreground">{t("fileManager.code")}</h4>
               <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>Toggle Comment</span>
+                  <span>{t("fileManager.toggleComment")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+/</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Indent</span>
+                  <span>{t("fileManager.indent")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Tab</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Outdent</span>
+                  <span>{t("fileManager.outdent")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Shift+Tab</kbd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Auto Complete</span>
+                  <span>{t("fileManager.autoComplete")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Space</kbd>
                 </div>
               </div>
@@ -628,18 +632,60 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Image preview */}
+        {/* Image preview with react-photo-view */}
         {fileTypeInfo.type === "image" && !showLargeFileWarning && (
-          <div className="p-6 flex items-center justify-center h-full">
-            <img
-              src={`data:image/*;base64,${content}`}
-              alt={file.name}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-sm"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = "none";
-                // Show error message instead
-              }}
-            />
+          <div className="p-6 flex items-center justify-center h-full relative">
+            {imageLoadError ? (
+              // Error state
+              <div className="text-center text-muted-foreground">
+                <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
+                <h3 className="text-lg font-medium mb-2">
+                  {t("fileManager.imageLoadError")}
+                </h3>
+                <p className="text-sm mb-4">
+                  {file.name}
+                </p>
+                {onDownload && (
+                  <Button
+                    variant="outline"
+                    onClick={onDownload}
+                    className="flex items-center gap-2 mx-auto"
+                  >
+                    <Download className="w-4 h-4" />
+                    {t("fileManager.download")}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <PhotoProvider maskOpacity={0.7}>
+                <PhotoView src={`data:image/*;base64,${content}`}>
+                  <img
+                    src={`data:image/*;base64,${content}`}
+                    alt={file.name}
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-sm cursor-pointer hover:shadow-lg transition-shadow"
+                    style={{ maxHeight: "calc(100vh - 200px)" }}
+                    onLoad={() => {
+                      setImageLoading(false);
+                      setImageLoadError(false);
+                    }}
+                    onError={() => {
+                      setImageLoading(false);
+                      setImageLoadError(true);
+                    }}
+                  />
+                </PhotoView>
+              </PhotoProvider>
+            )}
+
+            {/* Loading state */}
+            {imageLoading && !imageLoadError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Loading image...</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
