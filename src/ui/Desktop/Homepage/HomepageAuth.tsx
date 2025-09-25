@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Label } from "@/components/ui/label.tsx";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/Desktop/User/LanguageSwitcher.tsx";
+import { toast } from "sonner";
 import {
   registerUser,
   loginUser,
@@ -124,20 +124,32 @@ export function HomepageAuth({
   }, []);
 
   useEffect(() => {
+    setDbHealthChecking(true);
     getSetupRequired()
       .then((res) => {
         if (res.setup_required) {
           setFirstUser(true);
           setTab("signup");
+          toast.info(t("auth.firstUserMessage"));
         } else {
           setFirstUser(false);
         }
         setDbError(null);
+        setDbConnectionFailed(false);
       })
       .catch(() => {
-        setDbError(t("errors.databaseConnection"));
+        setDbConnectionFailed(true);
+      })
+      .finally(() => {
+        setDbHealthChecking(false);
       });
-  }, [setDbError]);
+  }, [setDbError, t]);
+
+  useEffect(() => {
+    if (!registrationAllowed && !internalLoggedIn) {
+      toast.warning(t("messages.registrationDisabled"));
+    }
+  }, [registrationAllowed, internalLoggedIn, t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -145,7 +157,7 @@ export function HomepageAuth({
     setLoading(true);
 
     if (!localUsername.trim()) {
-      setError(t("errors.requiredField"));
+      toast.error(t("errors.requiredField"));
       setLoading(false);
       return;
     }
@@ -156,12 +168,12 @@ export function HomepageAuth({
         res = await loginUser(localUsername, password);
       } else {
         if (password !== signupConfirmPassword) {
-          setError(t("errors.passwordMismatch"));
+          toast.error(t("errors.passwordMismatch"));
           setLoading(false);
           return;
         }
         if (password.length < 6) {
-          setError(t("errors.minLength", { min: 6 }));
+          toast.error(t("errors.minLength", { min: 6 }));
           setLoading(false);
           return;
         }
@@ -199,22 +211,25 @@ export function HomepageAuth({
       setLoggedIn(true);
       setIsAdmin(!!meRes.is_admin);
       setUsername(meRes.username || null);
-      setUserId(meRes.id || null);
+      setUserId(meRes.userId || null);
       setDbError(null);
       onAuthSuccess({
         isAdmin: !!meRes.is_admin,
         username: meRes.username || null,
-        userId: meRes.id || null,
+        userId: meRes.userId || null,
       });
       setInternalLoggedIn(true);
       if (tab === "signup") {
         setSignupConfirmPassword("");
+        toast.success(t("messages.registrationSuccess"));
+      } else {
+        toast.success(t("messages.loginSuccess"));
       }
       setTotpRequired(false);
       setTotpCode("");
       setTotpTempToken("");
     } catch (err: any) {
-      setError(
+      toast.error(
         err?.response?.data?.error || err?.message || t("errors.unknownError"),
       );
       setInternalLoggedIn(false);
@@ -224,7 +239,7 @@ export function HomepageAuth({
       setUserId(null);
       setCookie("jwt", "", -1);
       if (err?.response?.data?.error?.includes("Database")) {
-        setDbError(t("errors.databaseConnection"));
+        setDbConnectionFailed(true);
       } else {
         setDbError(null);
       }
@@ -239,9 +254,9 @@ export function HomepageAuth({
     try {
       const result = await initiatePasswordReset(localUsername);
       setResetStep("verify");
-      setError(null);
+      toast.success(t("messages.resetCodeSent"));
     } catch (err: any) {
-      setError(
+      toast.error(
         err?.response?.data?.error ||
           err?.message ||
           t("errors.failedPasswordReset"),
@@ -258,9 +273,9 @@ export function HomepageAuth({
       const response = await verifyPasswordResetCode(localUsername, resetCode);
       setTempToken(response.tempToken);
       setResetStep("newPassword");
-      setError(null);
+      toast.success(t("messages.codeVerified"));
     } catch (err: any) {
-      setError(err?.response?.data?.error || t("errors.failedVerifyCode"));
+      toast.error(err?.response?.data?.error || t("errors.failedVerifyCode"));
     } finally {
       setResetLoading(false);
     }
@@ -271,13 +286,13 @@ export function HomepageAuth({
     setResetLoading(true);
 
     if (newPassword !== confirmPassword) {
-      setError(t("errors.passwordMismatch"));
+      toast.error(t("errors.passwordMismatch"));
       setResetLoading(false);
       return;
     }
 
     if (newPassword.length < 6) {
-      setError(t("errors.minLength", { min: 6 }));
+      toast.error(t("errors.minLength", { min: 6 }));
       setResetLoading(false);
       return;
     }
@@ -293,8 +308,9 @@ export function HomepageAuth({
       setError(null);
 
       setResetSuccess(true);
+      toast.success(t("messages.passwordResetSuccess"));
     } catch (err: any) {
-      setError(err?.response?.data?.error || t("errors.failedCompleteReset"));
+      toast.error(err?.response?.data?.error || t("errors.failedCompleteReset"));
     } finally {
       setResetLoading(false);
     }
@@ -319,7 +335,7 @@ export function HomepageAuth({
 
   async function handleTOTPVerification() {
     if (totpCode.length !== 6) {
-      setError(t("auth.enterCode"));
+      toast.error(t("auth.enterCode"));
       return;
     }
 
@@ -340,19 +356,20 @@ export function HomepageAuth({
       setLoggedIn(true);
       setIsAdmin(!!meRes.is_admin);
       setUsername(meRes.username || null);
-      setUserId(meRes.id || null);
+      setUserId(meRes.userId || null);
       setDbError(null);
       onAuthSuccess({
         isAdmin: !!meRes.is_admin,
         username: meRes.username || null,
-        userId: meRes.id || null,
+        userId: meRes.userId || null,
       });
       setInternalLoggedIn(true);
       setTotpRequired(false);
       setTotpCode("");
       setTotpTempToken("");
+      toast.success(t("messages.loginSuccess"));
     } catch (err: any) {
-      setError(
+      toast.error(
         err?.response?.data?.error ||
           err?.message ||
           t("errors.invalidTotpCode"),
@@ -375,7 +392,7 @@ export function HomepageAuth({
 
       window.location.replace(authUrl);
     } catch (err: any) {
-      setError(
+      toast.error(
         err?.response?.data?.error ||
           err?.message ||
           t("errors.failedOidcLogin"),
@@ -391,7 +408,7 @@ export function HomepageAuth({
     const error = urlParams.get("error");
 
     if (error) {
-      setError(`${t("errors.oidcAuthFailed")}: ${error}`);
+      toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
       setOidcLoading(false);
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
@@ -408,12 +425,12 @@ export function HomepageAuth({
           setLoggedIn(true);
           setIsAdmin(!!meRes.is_admin);
           setUsername(meRes.username || null);
-          setUserId(meRes.id || null);
+          setUserId(meRes.userId || null);
           setDbError(null);
           onAuthSuccess({
             isAdmin: !!meRes.is_admin,
             username: meRes.username || null,
-            userId: meRes.id || null,
+            userId: meRes.userId || null,
           });
           setInternalLoggedIn(true);
           window.history.replaceState(
@@ -423,7 +440,7 @@ export function HomepageAuth({
           );
         })
         .catch((err) => {
-          setError(t("errors.failedUserInfo"));
+          toast.error(t("errors.failedUserInfo"));
           setInternalLoggedIn(false);
           setLoggedIn(false);
           setIsAdmin(false);
@@ -468,6 +485,34 @@ export function HomepageAuth({
     null,
   );
   const [currentServerUrl, setCurrentServerUrl] = useState<string>("");
+  const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
+  const [dbHealthChecking, setDbHealthChecking] = useState(false);
+
+  useEffect(() => {
+    if (dbConnectionFailed) {
+      toast.error(t("errors.databaseConnection"));
+    }
+  }, [dbConnectionFailed, t]);
+
+  const retryDatabaseConnection = async () => {
+    setDbHealthChecking(true);
+    setDbConnectionFailed(false);
+    try {
+      const res = await getSetupRequired();
+      if (res.setup_required) {
+        setFirstUser(true);
+        setTab("signup");
+      } else {
+        setFirstUser(false);
+      }
+      setDbError(null);
+      toast.success(t("messages.databaseConnected"));
+    } catch (error) {
+      setDbConnectionFailed(true);
+    } finally {
+      setDbHealthChecking(false);
+    }
+  };
 
   useEffect(() => {
     const checkServerConfig = async () => {
@@ -519,42 +564,91 @@ export function HomepageAuth({
     );
   }
 
+  if (dbHealthChecking && !dbConnectionFailed) {
+    return (
+      <div
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
+        {...props}
+      >
+        <div className="flex items-center justify-center h-32">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {t("common.checkingDatabase")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (dbConnectionFailed) {
+    return (
+      <div
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
+        {...props}
+      >
+        <div className="mb-6 text-center">
+          <h2 className="text-xl font-bold mb-1">
+            {t("errors.databaseConnection")}
+          </h2>
+          <p className="text-muted-foreground">
+            {t("messages.databaseConnectionFailed")}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11 text-base font-semibold"
+            disabled={dbHealthChecking}
+            onClick={() => window.location.reload()}
+          >
+            {t("common.refresh")}
+          </Button>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm text-muted-foreground">
+                {t("common.language")}
+              </Label>
+            </div>
+            <LanguageSwitcher />
+          </div>
+          {isElectron() && currentServerUrl && (
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm text-muted-foreground">
+                  Server
+                </Label>
+                <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {currentServerUrl}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowServerConfig(true)}
+                className="h-8 px-3"
+              >
+                Edit
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
       {...props}
     >
-      {dbError && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{dbError}</AlertDescription>
-        </Alert>
-      )}
-      {firstUser && !dbError && !internalLoggedIn && (
-        <Alert variant="default" className="mb-4">
-          <AlertTitle>{t("auth.firstUser")}</AlertTitle>
-          <AlertDescription className="inline">
-            {t("auth.firstUserMessage")}{" "}
-            <a
-              href="https://github.com/LukeGus/Termix/issues/new"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline hover:text-blue-800 inline"
-            >
-              GitHub Issue
-            </a>
-            .
-          </AlertDescription>
-        </Alert>
-      )}
-      {!registrationAllowed && !internalLoggedIn && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertTitle>{t("auth.registerTitle")}</AlertTitle>
-          <AlertDescription>
-            {t("messages.registrationDisabled")}
-          </AlertDescription>
-        </Alert>
-      )}
       {totpRequired && (
         <div className="flex flex-col gap-5">
           <div className="mb-6 text-center">
@@ -805,14 +899,11 @@ export function HomepageAuth({
 
                     {resetSuccess && (
                       <>
-                        <Alert className="mb-4">
-                          <AlertTitle>
-                            {t("auth.passwordResetSuccess")}
-                          </AlertTitle>
-                          <AlertDescription>
+                        <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/20 mb-4">
+                          <p className="text-green-400 text-sm">
                             {t("auth.passwordResetSuccessDesc")}
-                          </AlertDescription>
-                        </Alert>
+                          </p>
+                        </div>
                         <Button
                           type="button"
                           className="w-full h-11 text-base font-semibold"
@@ -998,12 +1089,6 @@ export function HomepageAuth({
             </div>
           </>
         )}
-      {error && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }

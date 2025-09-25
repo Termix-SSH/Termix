@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,6 +15,7 @@ import {
   Save,
   RotateCcw,
   Keyboard,
+  Search,
 } from "lucide-react";
 import {
   SiJavascript,
@@ -49,7 +50,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { loadLanguage } from "@uiw/codemirror-extensions-langs";
 import { EditorView, keymap } from "@codemirror/view";
-import { searchKeymap, search } from "@codemirror/search";
+import { searchKeymap, search, openSearchPanel } from "@codemirror/search";
 import { defaultKeymap, history, historyKeymap, toggleComment } from "@codemirror/commands";
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 import { PhotoProvider, PhotoView } from "react-photo-view";
@@ -323,6 +324,7 @@ export function FileViewer({
   const [pdfScale, setPdfScale] = useState(1.2);
   const [pdfError, setPdfError] = useState(false);
   const [markdownEditMode, setMarkdownEditMode] = useState(false);
+  const editorRef = useRef<any>(null);
 
   const fileTypeInfo = getFileType(file.name);
 
@@ -348,7 +350,8 @@ export function FileViewer({
     if (savedContent) {
       setOriginalContent(savedContent);
     }
-    setHasChanges(content !== (savedContent || content));
+    // Fix: Compare current content with saved content properly
+    setHasChanges(content !== savedContent);
 
     // If unknown file type and file is large, show warning
     if (fileTypeInfo.type === "unknown" && isLargeFile && !forceShowAsText) {
@@ -361,7 +364,8 @@ export function FileViewer({
   // Handle content changes
   const handleContentChange = (newContent: string) => {
     setEditedContent(newContent);
-    setHasChanges(newContent !== originalContent);
+    // Fix: Compare with savedContent instead of originalContent for consistency
+    setHasChanges(newContent !== savedContent);
     onContentChange?.(newContent);
   };
 
@@ -373,9 +377,9 @@ export function FileViewer({
 
   // Revert file
   const handleRevert = () => {
-    setEditedContent(originalContent);
+    setEditedContent(savedContent);
     setHasChanges(false);
-    onContentChange?.(originalContent);
+    onContentChange?.(savedContent);
   };
 
   // Handle save shortcut specifically
@@ -453,6 +457,26 @@ export function FileViewer({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Search button */}
+            {isEditable && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  // Use CodeMirror's proper API to open search panel
+                  if (editorRef.current) {
+                    const view = editorRef.current.view;
+                    if (view) {
+                      openSearchPanel(view);
+                    }
+                  }
+                }}
+                className="flex items-center gap-2"
+                title="Search in file (Ctrl+F)"
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+            )}
             {/* Keyboard shortcuts help */}
             {isEditable && (
               <Button
@@ -557,14 +581,13 @@ export function FileViewer({
                   <span>{t("fileManager.redo")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Y</kbd>
                 </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium text-muted-foreground">{t("fileManager.navigation")}</h4>
-              <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>{t("fileManager.goToLine")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+G</kbd>
+                  <span>{t("fileManager.toggleComment")}</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+/</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>{t("fileManager.autoComplete")}</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Space</kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.moveLineUp")}</span>
@@ -573,27 +596,6 @@ export function FileViewer({
                 <div className="flex justify-between">
                   <span>{t("fileManager.moveLineDown")}</span>
                   <kbd className="px-2 py-1 bg-background rounded text-xs">Alt+↓</kbd>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium text-muted-foreground">{t("fileManager.code")}</h4>
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span>{t("fileManager.toggleComment")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+/</kbd>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t("fileManager.indent")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Tab</kbd>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t("fileManager.outdent")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Shift+Tab</kbd>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t("fileManager.autoComplete")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Space</kbd>
                 </div>
               </div>
             </div>
@@ -737,6 +739,7 @@ export function FileViewer({
             {isEditable ? (
               // Unified CodeMirror editor for all text-based files
               <CodeMirror
+                ref={editorRef}
                 value={editedContent}
                 onChange={(value) => handleContentChange(value)}
                 onFocus={() => setEditorFocused(true)}
@@ -906,17 +909,7 @@ export function FileViewer({
                   </Button>
                 </div>
                 <div className="flex items-center gap-2">
-                  {hasChanges && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => onSave?.(editedContent)}
-                      disabled={!hasChanges}
-                    >
-                      <Save className="w-4 h-4 mr-1" />
-                      {t("fileManager.save")}
-                    </Button>
-                  )}
+                  {/* Save button removed - using the main header save button instead */}
                 </div>
               </div>
             </div>

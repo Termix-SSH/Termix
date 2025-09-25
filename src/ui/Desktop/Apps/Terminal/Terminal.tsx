@@ -304,18 +304,18 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     }
 
     const baseWsUrl = isDev
-      ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:8082`
+      ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
       : isElectron()
         ? (() => {
             const baseUrl =
-              (window as any).configuredServerUrl || "http://127.0.0.1:8081";
+              (window as any).configuredServerUrl || "http://127.0.0.1:30001";
             const wsProtocol = baseUrl.startsWith("https://")
               ? "wss://"
               : "ws://";
             const wsHost = baseUrl.replace(/^https?:\/\//, "");
-            return `${wsProtocol}${wsHost.replace(':8081', ':8082')}/`;
+            return `${wsProtocol}${wsHost.replace(':30001', ':30002')}/`;
           })()
-        : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:8082/`;
+        : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:30002/`;
 
     // Clean up existing connection to prevent duplicates - Linus principle: eliminate complexity
     if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {

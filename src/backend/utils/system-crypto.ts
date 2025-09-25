@@ -41,10 +41,6 @@ class SystemCrypto {
       const envSecret = process.env.JWT_SECRET;
       if (envSecret && envSecret.length >= 64) {
         this.jwtSecret = envSecret;
-        databaseLogger.info("✅ Using JWT secret from environment variable", {
-          operation: "jwt_env_loaded",
-          source: "environment"
-        });
         return;
       }
 
@@ -82,10 +78,6 @@ class SystemCrypto {
       const envKey = process.env.DATABASE_KEY;
       if (envKey && envKey.length >= 64) {
         this.databaseKey = Buffer.from(envKey, 'hex');
-        databaseLogger.info("✅ Using database key from environment variable", {
-          operation: "db_key_env_loaded",
-          source: "environment"
-        });
         return;
       }
 
@@ -123,10 +115,6 @@ class SystemCrypto {
       const envToken = process.env.INTERNAL_AUTH_TOKEN;
       if (envToken && envToken.length >= 32) {
         this.internalAuthToken = envToken;
-        databaseLogger.info("✅ Using internal auth token from environment variable", {
-          operation: "internal_auth_env_loaded",
-          source: "environment"
-        });
         return;
       }
 
@@ -164,7 +152,7 @@ class SystemCrypto {
     // Auto-save to .env file
     await this.updateEnvFile("JWT_SECRET", newSecret);
 
-    databaseLogger.success("🔐 JWT secret auto-generated and saved to .env", {
+    databaseLogger.success("JWT secret auto-generated and saved to .env", {
       operation: "jwt_auto_generated",
       instanceId,
       envVarName: "JWT_SECRET",
@@ -210,7 +198,7 @@ class SystemCrypto {
     // Auto-save to .env file
     await this.updateEnvFile("INTERNAL_AUTH_TOKEN", newToken);
 
-    databaseLogger.success("🔑 Internal auth token auto-generated and saved to .env", {
+    databaseLogger.success("Internal auth token auto-generated and saved to .env", {
       operation: "internal_auth_auto_generated",
       instanceId,
       envVarName: "INTERNAL_AUTH_TOKEN",

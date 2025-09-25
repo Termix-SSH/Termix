@@ -95,7 +95,6 @@ function scheduleSessionCleanup(sessionId: string) {
 
     // Increase timeout to 30 minutes of inactivity
     session.timeout = setTimeout(() => {
-      fileLogger.info(`Cleaning up inactive SSH session: ${sessionId}`);
       cleanupSession(sessionId);
     }, 30 * 60 * 1000); // 30 minutes - increased from 10 minutes
   }
@@ -341,12 +340,6 @@ app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
   // Update last active time and reschedule cleanup
   session.lastActive = Date.now();
   scheduleSessionCleanup(sessionId);
-
-  fileLogger.debug(`SSH session keepalive: ${sessionId}`, {
-    operation: "ssh_keepalive",
-    sessionId,
-    lastActive: session.lastActive,
-  });
 
   res.json({
     status: "success",
@@ -2124,7 +2117,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   });
 });
 
-const PORT = 8084;
+const PORT = 30004;
 app.listen(PORT, async () => {
   fileLogger.success("File Manager API server started", {
     operation: "server_start",

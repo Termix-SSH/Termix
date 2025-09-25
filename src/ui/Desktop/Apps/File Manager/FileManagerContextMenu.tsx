@@ -257,14 +257,14 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Download function - unified download that uses best available method
-    if (hasFiles && onDragToDesktop) {
+    // Download function - use proper download handler
+    if (hasFiles && onDownload) {
       menuItems.push({
         icon: <Download className="w-4 h-4" />,
         label: isMultipleFiles
           ? t("fileManager.downloadFiles", { count: files.length })
           : t("fileManager.downloadFile"),
-        action: () => onDragToDesktop(),
+        action: () => onDownload(files),
         shortcut: "Ctrl+D",
       });
     }

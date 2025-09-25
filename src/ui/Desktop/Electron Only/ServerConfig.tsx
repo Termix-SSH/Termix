@@ -146,7 +146,7 @@ export function ServerConfig({
             <Input
               id="server-url"
               type="text"
-              placeholder="http://localhost:8081 or https://your-server.com"
+              placeholder="http://localhost:30001 or https://your-server.com"
               value={serverUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
               className="flex-1 h-10"

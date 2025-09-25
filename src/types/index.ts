@@ -383,26 +383,6 @@ export interface FileManagerProps {
   initialHost?: SSHHost | null;
 }
 
-export interface FileManagerLeftSidebarProps {
-  onSelectView?: (view: string) => void;
-  onOpenFile: (file: any) => void;
-  tabs: Tab[];
-  host: SSHHost;
-  onOperationComplete?: () => void;
-  onError?: (error: string) => void;
-  onSuccess?: (message: string) => void;
-  onPathChange?: (path: string) => void;
-  onDeleteItem?: (item: any) => void;
-}
-
-export interface FileManagerOperationsProps {
-  currentPath: string;
-  sshSessionId: string | null;
-  onOperationComplete?: () => void;
-  onError?: (error: string) => void;
-  onSuccess?: (message: string) => void;
-}
-
 export interface AlertCardProps {
   alert: TermixAlert;
   onDismiss: (alertId: string) => void;

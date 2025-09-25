@@ -87,7 +87,7 @@
     "keyPassphraseOptional": "可选：如果您的密钥没有密码，请留空",
     "leaveEmptyToKeepCurrent": "留空以保持当前值",
     "uploadKeyFile": "上传密钥文件",
-    "generateKeyPair": "生成密钥对",
+    "generateKeyPairButton": "生成密钥对",
     "sshKeyGenerationNotImplemented": "SSH密钥生成功能即将推出",
     "connectionTestingNotImplemented": "连接测试功能即将推出",
     "testConnection": "测试连接",
@@ -122,7 +122,7 @@
     "editCredentialDescription": "更新凭据信息",
     "listView": "列表",
     "folderView": "文件夹",
-    "unknown": "未知",
+    "unknownCredential": "未知",
     "confirmRemoveFromFolder": "确定要将\"{{name}}\"从文件夹\"{{folder}}\"中移除吗？凭据将被移动到\"未分类\"。",
     "removedFromFolder": "凭据\"{{name}}\"已成功从文件夹中移除",
     "failedToRemoveFromFolder": "从文件夹中移除凭据失败",
@@ -143,7 +143,7 @@
     "detectedKeyType": "检测到的密钥类型",
     "detectingKeyType": "检测中...",
     "optional": "可选",
-    "generateKeyPair": "生成新的密钥对",
+    "generateKeyPairNew": "生成新的密钥对",
     "generateEd25519": "生成 Ed25519",
     "generateECDSA": "生成 ECDSA",
     "generateRSA": "生成 RSA",
@@ -151,8 +151,17 @@
     "failedToGenerateKeyPair": "生成密钥对失败",
     "generateKeyPairNote": "直接生成新的SSH密钥对。这将替换表单中的现有密钥。",
     "invalidKey": "无效密钥",
-    "detectionError": "检测错误",
-    "unknown": "未知"
+    "detectionError": "检测错误"
+  },
+  "dragIndicator": {
+    "error": "错误：{{error}}",
+    "dragging": "正在拖拽 {{fileName}}",
+    "preparing": "正在准备 {{fileName}}",
+    "readySingle": "准备下载 {{fileName}}",
+    "readyMultiple": "准备下载 {{count}} 个文件",
+    "batchDrag": "拖拽 {{count}} 个文件到桌面",
+    "dragToDesktop": "拖拽到桌面",
+    "canDragAnywhere": "您可以将文件拖拽到桌面的任何位置"
   },
   "sshTools": {
     "title": "SSH 工具",
@@ -189,7 +198,7 @@
     "saveError": "保存配置时出错",
     "saving": "保存中...",
     "saveConfig": "保存配置",
-    "helpText": "输入您的 Termix 服务器运行地址（例如：http://localhost:8081 或 https://your-server.com）"
+    "helpText": "输入您的 Termix 服务器运行地址（例如：http://localhost:30001 或 https://your-server.com）"
   },
   "common": {
     "close": "关闭",
@@ -281,7 +290,10 @@
     "failedToInitiatePasswordReset": "启动密码重置失败",
     "failedToVerifyResetCode": "验证重置代码失败",
     "failedToCompletePasswordReset": "完成密码重置失败",
-    "documentation": "文档"
+    "documentation": "文档",
+    "retry": "重试",
+    "checking": "检查中...",
+    "checkingDatabase": "正在检查数据库连接..."
   },
   "nav": {
     "home": "首页",
@@ -742,6 +754,9 @@
     "failedToCreateFile": "创建文件失败",
     "folderCreatedSuccessfully": "文件夹 \"{{name}}\" 创建成功",
     "failedToCreateFolder": "创建文件夹失败",
+    "failedToCreateItem": "创建项目失败",
+    "operationFailed": "{{operation}} 操作失败，文件 {{name}}：{{error}}",
+    "failedToResolveSymlink": "解析符号链接失败",
     "itemDeletedSuccessfully": "{{type}}删除成功",
     "itemsDeletedSuccessfully": "{{count}} 个项目删除成功",
     "failedToDeleteItems": "删除项目失败",
@@ -800,7 +815,7 @@
     "serverError": "服务器错误",
     "error": "错误",
     "requestFailed": "请求失败，状态码",
-    "unknown": "未知",
+    "unknownFileError": "未知",
     "cannotReadFile": "无法读取文件",
     "noSshSessionId": "没有可用的 SSH 会话 ID",
     "noFilePath": "没有可用的文件路径",
@@ -940,7 +955,7 @@
     "disconnected": "已断开连接",
     "connecting": "连接中...",
     "disconnecting": "断开连接中...",
-    "unknown": "未知",
+    "unknownTunnelStatus": "未知",
     "error": "错误",
     "failed": "失败",
     "retrying": "重试中",
@@ -1106,7 +1121,7 @@
     "forbidden": "访问被禁止",
     "serverError": "服务器错误",
     "networkError": "网络错误",
-    "databaseConnection": "无法连接到数据库。请稍后再试。",
+    "databaseConnection": "无法连接到数据库。",
     "unknownError": "未知错误",
     "failedPasswordReset": "无法启动密码重置",
     "failedVerifyCode": "验证重置代码失败",
@@ -1144,7 +1159,15 @@
     "reconnecting": "重新连接中...",
     "processing": "处理中...",
     "pleaseWait": "请稍候...",
-    "registrationDisabled": "新用户注册已被管理员禁用。请登录或联系管理员。"
+    "registrationDisabled": "新用户注册已被管理员禁用。请登录或联系管理员。",
+    "databaseConnected": "数据库连接成功",
+    "databaseConnectionFailed": "无法连接到数据库服务器",
+    "checkServerConnection": "请检查您的服务器连接并重试",
+    "resetCodeSent": "重置代码已发送到您的邮箱",
+    "codeVerified": "代码验证成功",
+    "passwordResetSuccess": "密码重置成功",
+    "loginSuccess": "登录成功",
+    "registrationSuccess": "注册成功"
   },
   "profile": {
     "title": "用户资料",
@@ -1308,6 +1331,9 @@
     "sshServerConfigRequired": "需要 SSH 服务器配置",
     "productionFolder": "生产环境",
     "databaseServer": "数据库服务器",
+    "developmentServer": "开发服务器",
+    "developmentFolder": "开发环境",
+    "webServerProduction": "Web 服务器 - 生产环境",
     "unknownError": "未知错误",
     "failedToInitiatePasswordReset": "启动密码重置失败",
     "failedToVerifyResetCode": "验证重置代码失败",

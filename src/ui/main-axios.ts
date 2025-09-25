@@ -283,7 +283,7 @@ function createApiInstance(
       // Handle DEK (Data Encryption Key) invalidation
       if (status === 423) {
         const errorData = error.response?.data;
-        if (errorData?.error === "DATA_LOCKED" || errorData?.message?.includes("DATA_LOCKED")) {
+        if ((errorData as any)?.error === "DATA_LOCKED" || (errorData as any)?.message?.includes("DATA_LOCKED")) {
           // DEK session has expired (likely due to server restart or timeout)
           // Force logout to require re-authentication and DEK unlock
           if (isElectron()) {
@@ -324,11 +324,11 @@ function isDev(): boolean {
 }
 
 let apiHost = import.meta.env.VITE_API_HOST || "localhost";
-let apiPort = 8081;
+let apiPort = 30001;
 let configuredServerUrl: string | null = null;
 
 if (isElectron()) {
-  apiPort = 8081;
+  apiPort = 30001;
 }
 
 export interface ServerConfig {
@@ -416,38 +416,38 @@ function getApiUrl(path: string, defaultPort: number): string {
 
 // Initialize API instances
 function initializeApiInstances() {
-  // SSH Host Management API (port 8081)
-  sshHostApi = createApiInstance(getApiUrl("/ssh", 8081), "SSH_HOST");
+  // SSH Host Management API (port 30001)
+  sshHostApi = createApiInstance(getApiUrl("/ssh", 30001), "SSH_HOST");
 
-  // Tunnel Management API (port 8083)
-  tunnelApi = createApiInstance(getApiUrl("/ssh", 8083), "TUNNEL");
+  // Tunnel Management API (port 30003)
+  tunnelApi = createApiInstance(getApiUrl("/ssh", 30003), "TUNNEL");
 
-  // File Manager Operations API (port 8084)
+  // File Manager Operations API (port 30004)
   fileManagerApi = createApiInstance(
-    getApiUrl("/ssh/file_manager", 8084),
+    getApiUrl("/ssh/file_manager", 30004),
     "FILE_MANAGER",
   );
 
-  // Server Statistics API (port 8085)
-  statsApi = createApiInstance(getApiUrl("", 8085), "STATS");
+  // Server Statistics API (port 30005)
+  statsApi = createApiInstance(getApiUrl("", 30005), "STATS");
 
-  // Authentication API (port 8081)
-  authApi = createApiInstance(getApiUrl("", 8081), "AUTH");
+  // Authentication API (port 30001)
+  authApi = createApiInstance(getApiUrl("", 30001), "AUTH");
 }
 
-// SSH Host Management API (port 8081)
+// SSH Host Management API (port 30001)
 export let sshHostApi: AxiosInstance;
 
-// Tunnel Management API (port 8083)
+// Tunnel Management API (port 30003)
 export let tunnelApi: AxiosInstance;
 
-// File Manager Operations API (port 8084)
+// File Manager Operations API (port 30004)
 export let fileManagerApi: AxiosInstance;
 
-// Server Statistics API (port 8085)
+// Server Statistics API (port 30005)
 export let statsApi: AxiosInstance;
 
-// Authentication API (port 8081)
+// Authentication API (port 30001)
 export let authApi: AxiosInstance;
 
 // Initialize API instances immediately
@@ -1763,11 +1763,9 @@ export async function generateBackupCodes(
   }
 }
 
-export async function getUserAlerts(
-  userId: string,
-): Promise<{ alerts: any[] }> {
+export async function getUserAlerts(): Promise<{ alerts: any[] }> {
   try {
-    const response = await authApi.get(`/alerts/user/${userId}`);
+    const response = await authApi.get(`/alerts`);
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user alerts");
@@ -1775,11 +1773,10 @@ export async function getUserAlerts(
 }
 
 export async function dismissAlert(
-  userId: string,
   alertId: string,
 ): Promise<any> {
   try {
-    const response = await authApi.post("/alerts/dismiss", { userId, alertId });
+    const response = await authApi.post("/alerts/dismiss", { alertId });
     return response.data;
   } catch (error) {
     handleApiError(error, "dismiss alert");

@@ -28,8 +28,6 @@ function generateSSHKeyPair(
   publicKey?: string;
   error?: string;
 } {
-  console.log("Generating SSH key pair with ssh2:", keyType);
-
   try {
     // Convert our keyType to ssh2 format
     let ssh2Type = keyType;
@@ -54,17 +52,12 @@ function generateSSHKeyPair(
     // Use ssh2's native key generation
     const keyPair = ssh2Utils.generateKeyPairSync(ssh2Type as any, options);
 
-    console.log("SSH key pair generated successfully!");
-    console.log("Private key length:", keyPair.private.length);
-    console.log("Public key preview:", keyPair.public.substring(0, 50) + "...");
-
     return {
       success: true,
       privateKey: keyPair.private,
       publicKey: keyPair.public,
     };
   } catch (error) {
-    console.error("SSH key generation failed:", error);
     return {
       success: false,
       error:
@@ -785,20 +778,12 @@ router.post(
   async (req: Request, res: Response) => {
     const { privateKey, keyPassword } = req.body;
 
-    console.log("=== Key Detection API Called ===");
-    console.log("Request body keys:", Object.keys(req.body));
-    console.log("Private key provided:", !!privateKey);
-    console.log("Private key type:", typeof privateKey);
-
     if (!privateKey || typeof privateKey !== "string") {
-      console.log("Invalid private key provided");
       return res.status(400).json({ error: "Private key is required" });
     }
 
     try {
-      console.log("Calling parseSSHKey...");
       const keyInfo = parseSSHKey(privateKey, keyPassword);
-      console.log("parseSSHKey result:", keyInfo);
 
       const response = {
         success: keyInfo.success,
@@ -808,10 +793,8 @@ router.post(
         error: keyInfo.error || null,
       };
 
-      console.log("Sending response:", response);
       res.json(response);
     } catch (error) {
-      console.error("Exception in detect-key-type endpoint:", error);
       authLogger.error("Failed to detect key type", error);
       res.status(500).json({
         error:
@@ -829,20 +812,12 @@ router.post(
   async (req: Request, res: Response) => {
     const { publicKey } = req.body;
 
-    console.log("=== Public Key Detection API Called ===");
-    console.log("Request body keys:", Object.keys(req.body));
-    console.log("Public key provided:", !!publicKey);
-    console.log("Public key type:", typeof publicKey);
-
     if (!publicKey || typeof publicKey !== "string") {
-      console.log("Invalid public key provided");
       return res.status(400).json({ error: "Public key is required" });
     }
 
     try {
-      console.log("Calling parsePublicKey...");
       const keyInfo = parsePublicKey(publicKey);
-      console.log("parsePublicKey result:", keyInfo);
 
       const response = {
         success: keyInfo.success,
@@ -851,10 +826,8 @@ router.post(
         error: keyInfo.error || null,
       };
 
-      console.log("Sending response:", response);
       res.json(response);
     } catch (error) {
-      console.error("Exception in detect-public-key-type endpoint:", error);
       authLogger.error("Failed to detect public key type", error);
       res.status(500).json({
         error:
@@ -874,29 +847,20 @@ router.post(
   async (req: Request, res: Response) => {
     const { privateKey, publicKey, keyPassword } = req.body;
 
-    console.log("=== Key Pair Validation API Called ===");
-    console.log("Request body keys:", Object.keys(req.body));
-    console.log("Private key provided:", !!privateKey);
-    console.log("Public key provided:", !!publicKey);
-
     if (!privateKey || typeof privateKey !== "string") {
-      console.log("Invalid private key provided");
       return res.status(400).json({ error: "Private key is required" });
     }
 
     if (!publicKey || typeof publicKey !== "string") {
-      console.log("Invalid public key provided");
       return res.status(400).json({ error: "Public key is required" });
     }
 
     try {
-      console.log("Calling validateKeyPair...");
       const validationResult = validateKeyPair(
         privateKey,
         publicKey,
         keyPassword,
       );
-      console.log("validateKeyPair result:", validationResult);
 
       const response = {
         isValid: validationResult.isValid,
@@ -906,10 +870,8 @@ router.post(
         error: validationResult.error || null,
       };
 
-      console.log("Sending response:", response);
       res.json(response);
     } catch (error) {
-      console.error("Exception in validate-key-pair endpoint:", error);
       authLogger.error("Failed to validate key pair", error);
       res.status(500).json({
         error:
@@ -929,11 +891,6 @@ router.post(
   async (req: Request, res: Response) => {
     const { keyType = "ssh-ed25519", keySize = 2048, passphrase } = req.body;
 
-    console.log("=== Generate Key Pair API Called ===");
-    console.log("Key type:", keyType);
-    console.log("Key size:", keySize);
-    console.log("Has passphrase:", !!passphrase);
-
     try {
       // Generate SSH keys directly with ssh2
       const result = generateSSHKeyPair(keyType, keySize, passphrase);
@@ -950,17 +907,14 @@ router.post(
           curve: keyType === "ecdsa-sha2-nistp256" ? "nistp256" : undefined,
         };
 
-        console.log("SSH key pair generated successfully:", keyType);
         res.json(response);
       } else {
-        console.error("SSH key generation failed:", result.error);
         res.status(500).json({
           success: false,
           error: result.error || "Failed to generate SSH key pair",
         });
       }
     } catch (error) {
-      console.error("Exception in generate-key-pair endpoint:", error);
       authLogger.error("Failed to generate key pair", error);
       res.status(500).json({
         success: false,
@@ -981,23 +935,11 @@ router.post(
   async (req: Request, res: Response) => {
     const { privateKey, keyPassword } = req.body;
 
-    console.log("=== Generate Public Key API Called ===");
-    console.log("Request body keys:", Object.keys(req.body));
-    console.log("Private key provided:", !!privateKey);
-    console.log("Private key type:", typeof privateKey);
-
     if (!privateKey || typeof privateKey !== "string") {
-      console.log("Invalid private key provided");
       return res.status(400).json({ error: "Private key is required" });
     }
 
     try {
-      console.log(
-        "Using Node.js crypto to generate public key from private key...",
-      );
-      console.log("Private key length:", privateKey.length);
-      console.log("Private key first 100 chars:", privateKey.substring(0, 100));
-
       // First try to create private key object from the input
       let privateKeyObj;
       let parseAttempts = [];
@@ -1008,7 +950,6 @@ router.post(
           key: privateKey,
           passphrase: keyPassword,
         });
-        console.log("Successfully parsed with passphrase method");
       } catch (error) {
         parseAttempts.push(`Method 1 (with passphrase): ${error.message}`);
       }
@@ -1017,7 +958,6 @@ router.post(
       if (!privateKeyObj) {
         try {
           privateKeyObj = crypto.createPrivateKey(privateKey);
-          console.log("Successfully parsed without passphrase");
         } catch (error) {
           parseAttempts.push(`Method 2 (without passphrase): ${error.message}`);
         }
@@ -1031,7 +971,6 @@ router.post(
             format: "pem",
             type: "pkcs8",
           });
-          console.log("Successfully parsed as PKCS#8");
         } catch (error) {
           parseAttempts.push(`Method 3 (PKCS#8): ${error.message}`);
         }
@@ -1048,7 +987,6 @@ router.post(
             format: "pem",
             type: "pkcs1",
           });
-          console.log("Successfully parsed as PKCS#1 RSA");
         } catch (error) {
           parseAttempts.push(`Method 4 (PKCS#1): ${error.message}`);
         }
@@ -1065,7 +1003,6 @@ router.post(
             format: "pem",
             type: "sec1",
           });
-          console.log("Successfully parsed as SEC1 EC");
         } catch (error) {
           parseAttempts.push(`Method 5 (SEC1): ${error.message}`);
         }
@@ -1073,23 +1010,11 @@ router.post(
 
       // Final attempt: Try using ssh2 as fallback
       if (!privateKeyObj) {
-        console.log("Attempting fallback to parseSSHKey function...");
         try {
           const keyInfo = parseSSHKey(privateKey, keyPassword);
-          console.log("parseSSHKey fallback result:", keyInfo);
 
           if (keyInfo.success && keyInfo.publicKey) {
-            // Ensure SSH2 fallback also returns proper string
             const publicKeyString = String(keyInfo.publicKey);
-            console.log(
-              "SSH2 fallback public key type:",
-              typeof publicKeyString,
-            );
-            console.log(
-              "SSH2 fallback public key length:",
-              publicKeyString.length,
-            );
-
             return res.json({
               success: true,
               publicKey: publicKeyString,
@@ -1106,7 +1031,6 @@ router.post(
       }
 
       if (!privateKeyObj) {
-        console.error("All parsing attempts failed:", parseAttempts);
         return res.status(400).json({
           success: false,
           error: "Unable to parse private key. Tried multiple formats.",
@@ -1121,29 +1045,11 @@ router.post(
         format: "pem",
       });
 
-      // Debug: Check what we're actually generating
-      console.log("Generated public key type:", typeof publicKeyPem);
-      console.log(
-        "Generated public key is Buffer:",
-        Buffer.isBuffer(publicKeyPem),
-      );
-
       // Ensure publicKeyPem is a string
       const publicKeyString =
         typeof publicKeyPem === "string"
           ? publicKeyPem
           : publicKeyPem.toString("utf8");
-
-      console.log("Public key string length:", publicKeyString.length);
-      console.log(
-        "Generated public key first 100 chars:",
-        publicKeyString.substring(0, 100),
-      );
-      console.log("Public key is string:", typeof publicKeyString === "string");
-      console.log(
-        "Public key contains PEM header:",
-        publicKeyString.includes("-----BEGIN PUBLIC KEY-----"),
-      );
 
       // Detect key type from the private key object
       let keyType = "unknown";
@@ -1169,12 +1075,9 @@ router.post(
           const base64Data = publicKeyBuffer.toString("base64");
           finalPublicKey = `${keyType} ${base64Data}`;
           formatType = "ssh";
-          console.log("SSH format public key generated!");
-        } else {
-          console.warn("ssh2 parsing failed, using PEM format");
         }
       } catch (sshError) {
-        console.warn("ssh2 failed, using PEM format");
+        // Use PEM format as fallback
       }
 
       const response = {
@@ -1184,20 +1087,8 @@ router.post(
         format: formatType,
       };
 
-      console.log("Final response publicKey type:", typeof response.publicKey);
-      console.log("Final response publicKey format:", response.format);
-      console.log(
-        "Final response publicKey length:",
-        response.publicKey.length,
-      );
-      console.log(
-        "Public key generated successfully using crypto module:",
-        keyType,
-      );
-
       res.json(response);
     } catch (error) {
-      console.error("Exception in generate-public-key endpoint:", error);
       authLogger.error("Failed to generate public key", error);
       res.status(500).json({
         success: false,

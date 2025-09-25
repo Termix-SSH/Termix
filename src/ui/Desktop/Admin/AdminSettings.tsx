@@ -295,7 +295,7 @@ export function AdminSettings({
       const jwt = getCookie("jwt");
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/export`
-        : "http://localhost:8081/database/export";
+        : "http://localhost:30001/database/export";
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -355,7 +355,7 @@ export function AdminSettings({
       const jwt = getCookie("jwt");
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/import`
-        : "http://localhost:8081/database/import";
+        : "http://localhost:30001/database/import";
 
       // Create FormData for file upload
       const formData = new FormData();
@@ -927,12 +927,29 @@ export function AdminSettings({
                       <p className="text-xs text-muted-foreground">
                         {t("admin.importDescription")}
                       </p>
-                      <input
-                        type="file"
-                        accept=".sqlite,.db"
-                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                        className="block w-full text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted file:text-foreground mb-2"
-                      />
+                      <div className="relative inline-block w-full mb-2">
+                        <input
+                          id="import-file-upload"
+                          type="file"
+                          accept=".sqlite,.db"
+                          onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full justify-start text-left"
+                        >
+                          <span
+                            className="truncate"
+                            title={importFile?.name || t("admin.pleaseSelectImportFile")}
+                          >
+                            {importFile
+                              ? importFile.name
+                              : t("admin.pleaseSelectImportFile")}
+                          </span>
+                        </Button>
+                      </div>
                       {importFile && (
                         <div className="space-y-2">
                           <Label htmlFor="import-password">Password</Label>

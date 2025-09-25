@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import {
   Folder,
@@ -60,6 +61,7 @@ function formatFileSize(bytes?: number): string {
 interface DragState {
   type: "none" | "internal" | "external";
   files: FileItem[];
+  draggedFiles?: FileItem[];
   target?: FileItem;
   counter: number;
   mousePosition?: { x: number; y: number };
@@ -91,7 +93,7 @@ interface FileManagerGridProps {
   onFileDrop?: (draggedFiles: FileItem[], targetFile: FileItem) => void;
   onFileDiff?: (file1: FileItem, file2: FileItem) => void;
   onSystemDragStart?: (files: FileItem[]) => void;
-  onSystemDragEnd?: (e: DragEvent) => void;
+  onSystemDragEnd?: (e: DragEvent, files: FileItem[]) => void;
   hasClipboard?: boolean;
   // Linus-style creation intent props
   createIntent?: CreateIntent | null;
@@ -283,6 +285,7 @@ export function FileManagerGrid({
     setDragState({
       type: "internal",
       files: filesToDrag,
+      draggedFiles: filesToDrag,
       counter: 0,
       mousePosition: { x: e.clientX, y: e.clientY },
     });
@@ -293,9 +296,6 @@ export function FileManagerGrid({
       files: filesToDrag.map((f) => f.path),
     };
     e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
-
-    // Trigger system-level drag start
-    onSystemDragStart?.(filesToDrag);
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -378,10 +378,11 @@ export function FileManagerGrid({
   };
 
   const handleFileDragEnd = (e: React.DragEvent) => {
+    const draggedFiles = dragState.draggedFiles || [];
     setDragState({ type: "none", files: [], counter: 0 });
 
-    // Trigger system-level drag end detection
-    onSystemDragEnd?.(e.nativeEvent);
+    // Trigger system-level drag end detection with dragged files
+    onSystemDragEnd?.(e.nativeEvent, draggedFiles);
   };
 
   const [isSelecting, setIsSelecting] = useState(false);
@@ -1356,44 +1357,50 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      {/* Drag following tooltip */}
+      {/* Drag following tooltip - rendered as portal to ensure highest z-index */}
       {dragState.type === "internal" &&
-        dragState.files.length > 0 &&
-        dragState.mousePosition && (
+        (dragState.files.length > 0 || dragState.draggedFiles?.length > 0) &&
+        dragState.mousePosition &&
+        createPortal(
           <div
-            className="fixed z-[99999] pointer-events-none"
+            className="fixed pointer-events-none"
             style={{
-              left: dragState.mousePosition.x + 24,
-              top: dragState.mousePosition.y - 40,
+              left: Math.min(Math.max(dragState.mousePosition.x + 40, 10), window.innerWidth - 300),
+              top: Math.max(Math.min(dragState.mousePosition.y - 80, window.innerHeight - 100), 10),
+              zIndex: 999999,
             }}
           >
             <div className="bg-background border border-border rounded-md shadow-md px-3 py-2 flex items-center gap-2">
-              {dragState.target ? (
-                dragState.target.type === "directory" ? (
-                  <>
-                    <Move className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm font-medium text-foreground">
-                      Move to {dragState.target.name}
-                    </span>
-                  </>
+              {(() => {
+                const files = dragState.files.length > 0 ? dragState.files : dragState.draggedFiles || [];
+                return dragState.target ? (
+                  dragState.target.type === "directory" ? (
+                    <>
+                      <Move className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium text-foreground">
+                        Move to {dragState.target.name}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <GitCompare className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm font-medium text-foreground">
+                        Diff compare with {dragState.target.name}
+                      </span>
+                    </>
+                  )
                 ) : (
                   <>
-                    <GitCompare className="w-4 h-4 text-purple-500" />
+                    <Download className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-medium text-foreground">
-                      Diff compare with {dragState.target.name}
+                      Drag outside window to download ({files.length} files)
                     </span>
                   </>
-                )
-              ) : (
-                <>
-                  <Download className="w-4 h-4 text-green-500" />
-                  <span className="text-sm font-medium text-foreground">
-                    Drag outside window to download ({dragState.files.length} files)
-                  </span>
-                </>
-              )}
+                );
+              })()}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
     </div>
   );

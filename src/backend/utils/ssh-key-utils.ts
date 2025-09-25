@@ -57,7 +57,6 @@ function detectKeyTypeFromContent(keyContent: string): string {
       // Default to RSA for OpenSSH format if we can't detect specifically
       return "ssh-rsa";
     } catch (error) {
-      console.warn("Failed to decode OpenSSH key content:", error);
       // If decoding fails, default to RSA as it's most common for OpenSSH format
       return "ssh-rsa";
     }
@@ -103,7 +102,6 @@ function detectKeyTypeFromContent(keyContent: string): string {
       }
     } catch (error) {
       // If decoding fails, fall back to length-based detection
-      console.warn("Failed to decode private key for type detection:", error);
     }
 
     // Fallback: Try to detect key type from the content structure
@@ -176,7 +174,6 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
       }
     } catch (error) {
       // If decoding fails, fall back to length-based detection
-      console.warn("Failed to decode public key for type detection:", error);
     }
 
     // Fallback: Try to guess based on key length
@@ -246,15 +243,6 @@ export function parseSSHKey(
   privateKeyData: string,
   passphrase?: string,
 ): KeyInfo {
-  console.log("=== SSH Key Parsing Debug ===");
-  console.log("Key length:", privateKeyData?.length || "undefined");
-  console.log(
-    "First 100 chars:",
-    privateKeyData?.substring(0, 100) || "undefined",
-  );
-  console.log("ssh2Utils available:", typeof ssh2Utils);
-  console.log("parseKey function available:", typeof ssh2Utils?.parseKey);
-
   try {
     let keyType = "unknown";
     let publicKey = "";
@@ -263,30 +251,17 @@ export function parseSSHKey(
     // Try SSH2 first if available
     if (ssh2Utils && typeof ssh2Utils.parseKey === "function") {
       try {
-        console.log("Calling ssh2Utils.parseKey...");
         const parsedKey = ssh2Utils.parseKey(privateKeyData, passphrase);
-        console.log(
-          "parseKey returned:",
-          typeof parsedKey,
-          parsedKey instanceof Error ? parsedKey.message : "success",
-        );
 
         if (!(parsedKey instanceof Error)) {
           // Extract key type
           if (parsedKey.type) {
             keyType = parsedKey.type;
           }
-          console.log("Extracted key type:", keyType);
 
           // Generate public key in SSH format
           try {
-            console.log("Attempting to generate public key...");
             const publicKeyBuffer = parsedKey.getPublicSSH();
-            console.log("Public key buffer type:", typeof publicKeyBuffer);
-            console.log(
-              "Public key buffer is Buffer:",
-              Buffer.isBuffer(publicKeyBuffer),
-            );
 
             // ssh2's getPublicSSH() returns binary SSH protocol data, not text
             // We need to convert this to proper SSH public key format
@@ -304,53 +279,26 @@ export function parseSSHKey(
               } else {
                 publicKey = `${keyType} ${base64Data}`;
               }
-
-              console.log(
-                "Generated SSH public key format, length:",
-                publicKey.length,
-              );
-              console.log(
-                "Public key starts with:",
-                publicKey.substring(0, 50),
-              );
             } else {
-              console.warn("Unexpected public key buffer type");
               publicKey = "";
             }
           } catch (error) {
-            console.warn("Failed to generate public key:", error);
             publicKey = "";
           }
 
           useSSH2 = true;
-          console.log(`SSH key parsed successfully with SSH2: ${keyType}`);
-        } else {
-          console.warn("SSH2 parsing failed:", parsedKey.message);
         }
       } catch (error) {
-        console.warn(
-          "SSH2 parsing exception:",
-          error instanceof Error ? error.message : error,
-        );
+        // SSH2 parsing failed, will fall back to content detection
       }
-    } else {
-      console.warn("SSH2 parseKey function not available");
     }
 
     // Fallback to content-based detection
     if (!useSSH2) {
-      console.log("Using fallback key type detection...");
       keyType = detectKeyTypeFromContent(privateKeyData);
-      console.log(`Fallback detected key type: ${keyType}`);
 
       // For fallback, we can't generate public key but the detection is still useful
       publicKey = "";
-
-      if (keyType !== "unknown") {
-        console.log(
-          `SSH key type detected successfully with fallback: ${keyType}`,
-        );
-      }
     }
 
     return {
@@ -360,17 +308,10 @@ export function parseSSHKey(
       success: keyType !== "unknown",
     };
   } catch (error) {
-    console.error("Exception during SSH key parsing:", error);
-    console.error(
-      "Error stack:",
-      error instanceof Error ? error.stack : "No stack",
-    );
-
     // Final fallback - try content detection
     try {
       const fallbackKeyType = detectKeyTypeFromContent(privateKeyData);
       if (fallbackKeyType !== "unknown") {
-        console.log(`Final fallback detection successful: ${fallbackKeyType}`);
         return {
           privateKey: privateKeyData,
           publicKey: "",
@@ -379,7 +320,7 @@ export function parseSSHKey(
         };
       }
     } catch (fallbackError) {
-      console.error("Even fallback detection failed:", fallbackError);
+      // Even fallback detection failed
     }
 
     return {
@@ -397,16 +338,8 @@ export function parseSSHKey(
  * Parse SSH public key and extract type information
  */
 export function parsePublicKey(publicKeyData: string): PublicKeyInfo {
-  console.log("=== SSH Public Key Parsing Debug ===");
-  console.log("Public key length:", publicKeyData?.length || "undefined");
-  console.log(
-    "First 100 chars:",
-    publicKeyData?.substring(0, 100) || "undefined",
-  );
-
   try {
     const keyType = detectPublicKeyTypeFromContent(publicKeyData);
-    console.log(`Public key type detected: ${keyType}`);
 
     return {
       publicKey: publicKeyData,
@@ -414,7 +347,6 @@ export function parsePublicKey(publicKeyData: string): PublicKeyInfo {
       success: keyType !== "unknown",
     };
   } catch (error) {
-    console.error("Exception during SSH public key parsing:", error);
     return {
       publicKey: publicKeyData,
       keyType: "unknown",
@@ -469,25 +401,10 @@ export function validateKeyPair(
   publicKeyData: string,
   passphrase?: string,
 ): KeyPairValidationResult {
-  console.log("=== Key Pair Validation Debug ===");
-  console.log("Private key length:", privateKeyData?.length || "undefined");
-  console.log("Public key length:", publicKeyData?.length || "undefined");
-
   try {
     // First parse the private key and try to generate public key
     const privateKeyInfo = parseSSHKey(privateKeyData, passphrase);
     const publicKeyInfo = parsePublicKey(publicKeyData);
-
-    console.log(
-      "Private key parsing result:",
-      privateKeyInfo.success,
-      privateKeyInfo.keyType,
-    );
-    console.log(
-      "Public key parsing result:",
-      publicKeyInfo.success,
-      publicKeyInfo.keyType,
-    );
 
     if (!privateKeyInfo.success) {
       return {
@@ -522,9 +439,6 @@ export function validateKeyPair(
       const generatedPublicKey = privateKeyInfo.publicKey.trim();
       const providedPublicKey = publicKeyData.trim();
 
-      console.log("Generated public key length:", generatedPublicKey.length);
-      console.log("Provided public key length:", providedPublicKey.length);
-
       // Compare the key data part (excluding comments)
       const generatedKeyParts = generatedPublicKey.split(" ");
       const providedKeyParts = providedPublicKey.split(" ");
@@ -534,15 +448,6 @@ export function validateKeyPair(
         const generatedKeyData =
           generatedKeyParts[0] + " " + generatedKeyParts[1];
         const providedKeyData = providedKeyParts[0] + " " + providedKeyParts[1];
-
-        console.log(
-          "Generated key data:",
-          generatedKeyData.substring(0, 50) + "...",
-        );
-        console.log(
-          "Provided key data:",
-          providedKeyData.substring(0, 50) + "...",
-        );
 
         if (generatedKeyData === providedKeyData) {
           return {
@@ -571,7 +476,6 @@ export function validateKeyPair(
       error: "Unable to verify key pair match, but key types are compatible",
     };
   } catch (error) {
-    console.error("Exception during key pair validation:", error);
     return {
       isValid: false,
       privateKeyType: "unknown",

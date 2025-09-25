@@ -440,10 +440,6 @@ class DatabaseFileEncryption {
       for (const tempFile of tempFiles) {
         if (fs.existsSync(tempFile)) {
           fs.unlinkSync(tempFile);
-          databaseLogger.debug("Cleaned up temporary file", {
-            operation: "temp_cleanup",
-            file: tempFile,
-          });
         }
       }
     } catch (error) {

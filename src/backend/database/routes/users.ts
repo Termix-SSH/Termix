@@ -505,7 +505,7 @@ router.get("/oidc/authorize", async (req, res) => {
       "http://localhost:5173";
 
     if (origin.includes("localhost")) {
-      origin = "http://localhost:8081";
+      origin = "http://localhost:30001";
     }
 
     const redirectUri = `${origin}/users/oidc/callback`;

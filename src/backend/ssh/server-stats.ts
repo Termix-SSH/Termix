@@ -412,19 +412,6 @@ async function resolveHostCredentials(
 
         if (credentials.length > 0) {
           const credential = credentials[0];
-          statsLogger.debug(
-            `Using credential ${credential.id} for host ${host.id}`,
-            {
-              operation: "credential_resolve",
-              credentialId: credential.id,
-              authType: credential.authType,
-              hasPassword: !!credential.password,
-              hasKey: !!credential.key,
-              passwordLength: credential.password?.length || 0,
-              keyLength: credential.key?.length || 0,
-            },
-          );
-
           baseHost.credentialId = credential.id;
           baseHost.username = credential.username;
           baseHost.authType = credential.authType;
@@ -471,20 +458,6 @@ function addLegacyCredentials(baseHost: any, host: any): void {
 }
 
 function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
-  statsLogger.debug(`Building SSH config for host ${host.ip}`, {
-    operation: "ssh_config",
-    authType: host.authType,
-    hasPassword: !!host.password,
-    hasKey: !!host.key,
-    username: host.username,
-    passwordLength: host.password?.length || 0,
-    keyLength: host.key?.length || 0,
-    passwordType: typeof host.password,
-    passwordRaw: host.password
-      ? JSON.stringify(host.password.substring(0, 20))
-      : null,
-  });
-
   const base: ConnectConfig = {
     host: host.ip,
     port: host.port || 22,
@@ -521,25 +494,11 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     if (!host.password) {
       throw new Error(`No password available for host ${host.ip}`);
     }
-    statsLogger.debug(`Using password auth for ${host.ip}`, {
-      operation: "ssh_config",
-      passwordLength: host.password.length,
-      passwordFirst3: host.password.substring(0, 3),
-      passwordLast3: host.password.substring(host.password.length - 3),
-      passwordType: typeof host.password,
-      passwordIsString: typeof host.password === "string",
-    });
     (base as any).password = host.password;
   } else if (host.authType === "key") {
     if (!host.key) {
       throw new Error(`No SSH key available for host ${host.ip}`);
     }
-
-    statsLogger.debug(`Using key auth for ${host.ip}`, {
-      operation: "ssh_config",
-      keyPreview: host.key.substring(0, Math.min(50, host.key.length)) + "...",
-      hasPassphrase: !!host.keyPassword,
-    });
 
     try {
       if (!host.key.includes("-----BEGIN") || !host.key.includes("-----END")) {
@@ -988,7 +947,7 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 
-const PORT = 8085;
+const PORT = 30005;
 app.listen(PORT, async () => {
   statsLogger.success("Server Stats API server started", {
     operation: "server_start",

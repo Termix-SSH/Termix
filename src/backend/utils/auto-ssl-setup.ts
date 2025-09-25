@@ -24,13 +24,13 @@ export class AutoSSLSetup {
    */
   static async initialize(): Promise<void> {
     try {
-      systemLogger.info("🔐 Initializing SSL/TLS configuration...", {
+      systemLogger.info("Initializing SSL/TLS configuration...", {
         operation: "ssl_auto_init"
       });
 
       // Check if SSL is already properly configured
       if (await this.isSSLConfigured()) {
-        systemLogger.info("✅ SSL configuration already exists and is valid", {
+        systemLogger.info("SSL configuration already exists and is valid", {
           operation: "ssl_already_configured"
         });
         return;
@@ -42,19 +42,19 @@ export class AutoSSLSetup {
       // Setup environment variables for SSL
       await this.setupEnvironmentVariables();
 
-      systemLogger.success("🚀 SSL/TLS configuration completed successfully", {
+      systemLogger.success("SSL/TLS configuration completed successfully", {
         operation: "ssl_auto_init_complete",
         https_port: process.env.SSL_PORT || "8443",
         note: "HTTPS/WSS is now enabled by default"
       });
 
     } catch (error) {
-      systemLogger.error("❌ Failed to initialize SSL configuration", error, {
+      systemLogger.error("Failed to initialize SSL configuration", error, {
         operation: "ssl_auto_init_failed"
       });
 
       // Don't crash the application - fallback to HTTP
-      systemLogger.warn("⚠️  Falling back to HTTP-only mode", {
+      systemLogger.warn("Falling back to HTTP-only mode", {
         operation: "ssl_fallback_http"
       });
     }
@@ -84,7 +84,7 @@ export class AutoSSLSetup {
    * Generate SSL certificates automatically
    */
   private static async generateSSLCertificates(): Promise<void> {
-    systemLogger.info("🔑 Generating SSL certificates for local development...", {
+    systemLogger.info("Generating SSL certificates for local development...", {
       operation: "ssl_cert_generation"
     });
 
@@ -142,7 +142,7 @@ IP.2 = ::1
       // Clean up temp config
       await fs.unlink(configFile);
 
-      systemLogger.success("✅ SSL certificates generated successfully", {
+      systemLogger.success("SSL certificates generated successfully", {
         operation: "ssl_cert_generated",
         cert_path: this.CERT_FILE,
         key_path: this.KEY_FILE,
@@ -158,7 +158,7 @@ IP.2 = ::1
    * Setup environment variables for SSL configuration
    */
   private static async setupEnvironmentVariables(): Promise<void> {
-    systemLogger.info("⚙️  Configuring SSL environment variables...", {
+    systemLogger.info("Configuring SSL environment variables...", {
       operation: "ssl_env_setup"
     });
 
@@ -207,7 +207,7 @@ IP.2 = ::1
     if (hasChanges || !envContent) {
       await fs.writeFile(this.ENV_FILE, updatedContent.trim() + '\n');
 
-      systemLogger.info("✅ SSL environment variables configured", {
+      systemLogger.info("SSL environment variables configured", {
         operation: "ssl_env_configured",
         file: this.ENV_FILE,
         variables: Object.keys(sslEnvVars)
@@ -248,12 +248,12 @@ IP.2 = ::1
 ║ HTTP Port:  ${(process.env.PORT || "8080").padEnd(47)} ║
 ║ Domain:     ${config.domain.padEnd(47)} ║
 ║                                                              ║
-║ 🌐 Access URLs:                                              ║
+║ Access URLs:                                              ║
 ║   • HTTPS: https://localhost:${config.port.toString().padEnd(31)} ║
 ║   • HTTP:  http://localhost:${(process.env.PORT || "8080").padEnd(32)} ║
 ║                                                              ║
-║ 🔐 WebSocket connections automatically use WSS over HTTPS    ║
-║ ⚠️  Self-signed certificate will show browser warnings      ║
+║ WebSocket connections automatically use WSS over HTTPS    ║
+║ Self-signed certificate will show browser warnings      ║
 ╚══════════════════════════════════════════════════════════════╝
       `);
     }

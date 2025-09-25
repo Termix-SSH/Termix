@@ -40,6 +40,7 @@ export function Server({
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [showStatsUI, setShowStatsUI] = React.useState(true);
 
   React.useEffect(() => {
     setCurrentHostConfig(hostConfig);
@@ -116,10 +117,12 @@ export function Server({
         const data = await getServerMetricsById(currentHostConfig.id);
         if (!cancelled) {
           setMetrics(data);
+          setShowStatsUI(true);
         }
       } catch (error) {
         if (!cancelled) {
           setMetrics(null);
+          setShowStatsUI(false);
           toast.error(t("serverStats.failedToFetchMetrics"));
         }
       } finally {
@@ -208,6 +211,7 @@ export function Server({
                       currentHostConfig.id,
                     );
                     setMetrics(data);
+                    setShowStatsUI(true);
                   } catch (error: any) {
                     if (error?.response?.status === 503) {
                       setServerStatus("offline");
@@ -219,6 +223,7 @@ export function Server({
                       setServerStatus("offline");
                     }
                     setMetrics(null);
+                    setShowStatsUI(false);
                   } finally {
                     setIsRefreshing(false);
                   }
@@ -267,7 +272,8 @@ export function Server({
         <Separator className="p-0.25 w-full" />
 
         {/* Stats */}
-        <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4">
+        {showStatsUI && (
+          <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4">
           {isLoadingMetrics && !metrics ? (
             <div className="flex items-center justify-center py-8">
               <div className="flex items-center gap-3">
@@ -443,7 +449,8 @@ export function Server({
               </div>
             </div>
           )}
-        </div>
+          </div>
+        )}
 
         {/* SSH Tunnels */}
         {currentHostConfig?.tunnelConnections &&

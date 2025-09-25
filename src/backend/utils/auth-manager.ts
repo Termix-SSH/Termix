@@ -121,10 +121,6 @@ class AuthManager {
           migratedFieldsCount: migrationResult.migratedFieldsCount,
         });
       } else {
-        databaseLogger.debug("No lazy encryption migration needed for user", {
-          operation: "lazy_encryption_migration_not_needed",
-          userId,
-        });
       }
 
     } catch (error) {

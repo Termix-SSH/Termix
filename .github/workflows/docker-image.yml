@@ -1,18 +1,20 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - development
-    paths-ignore:
-      - "**.md"
-      - ".gitignore"
   workflow_dispatch:
     inputs:
       tag_name:
         description: "Custom tag name for the Docker image"
         required: false
         default: ""
+      registry:
+        description: "Docker registry to push to"
+        required: true
+        default: "ghcr"
+        type: choice
+        options:
+          - "ghcr"
+          - "dockerhub"
 
 jobs:
   build:
@@ -57,11 +59,19 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Login to Docker Registry
+        if: github.event.inputs.registry == 'dockerhub' || github.event_name == 'push'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        if: github.event.inputs.registry == 'dockerhub'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Determine Docker image tag
         run: |
@@ -76,6 +86,15 @@ jobs:
             IMAGE_TAG="${{ github.ref_name }}"
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          
+          # Determine registry and image name
+          if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
+            echo "REGISTRY=docker.io" >> $GITHUB_ENV
+            echo "IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/termix" >> $GITHUB_ENV
+          else
+            echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
+            echo "IMAGE_NAME=${{ env.REPO_OWNER }}/termix" >> $GITHUB_ENV
+          fi
 
       - name: Build and Push Multi-Arch Docker Image
         uses: docker/build-push-action@v6
@@ -84,7 +103,7 @@ jobs:
           file: ./docker/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/${{ env.REPO_OWNER }}/termix:${{ env.IMAGE_TAG }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -101,7 +120,7 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Delete all untagged image versions
-        if: success()
+        if: success() && (github.event.inputs.registry != 'dockerhub' && github.event_name == 'push')
         uses: quartx-analytics/ghcr-cleaner@v1
         with:
           owner-type: user

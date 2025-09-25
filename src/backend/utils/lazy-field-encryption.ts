@@ -41,22 +41,11 @@ export class LazyFieldEncryption {
 
     if (this.isPlaintextField(fieldValue)) {
       // 明文数据，直接返回
-      databaseLogger.debug("Field detected as plaintext, returning as-is", {
-        operation: "lazy_encryption_plaintext_detected",
-        recordId,
-        fieldName,
-        valuePreview: fieldValue.substring(0, 10) + "...",
-      });
       return fieldValue;
     } else {
       // 加密数据，需要解密
       try {
         const decrypted = FieldCrypto.decryptField(fieldValue, userKEK, recordId, fieldName);
-        databaseLogger.debug("Field decrypted successfully", {
-          operation: "lazy_encryption_decrypt_success",
-          recordId,
-          fieldName,
-        });
         return decrypted;
       } catch (error) {
         databaseLogger.error("Failed to decrypt field", error, {
@@ -108,11 +97,6 @@ export class LazyFieldEncryption {
       }
     } else {
       // 已经加密，无需处理
-      databaseLogger.debug("Field already encrypted, no migration needed", {
-        operation: "lazy_encryption_already_encrypted",
-        recordId,
-        fieldName,
-      });
       return { encrypted: fieldValue, wasPlaintext: false };
     }
   }
@@ -149,12 +133,6 @@ export class LazyFieldEncryption {
           updatedRecord[fieldName] = encrypted;
           migratedFields.push(fieldName);
           needsUpdate = true;
-
-          databaseLogger.debug("Record field migrated to encrypted", {
-            operation: "lazy_encryption_record_field_migrated",
-            recordId,
-            fieldName,
-          });
         } catch (error) {
           databaseLogger.error("Failed to migrate record field", error, {
             operation: "lazy_encryption_record_field_failed",

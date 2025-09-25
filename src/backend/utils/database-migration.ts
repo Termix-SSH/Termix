@@ -183,12 +183,6 @@ export class DatabaseMigration {
           });
           return false;
         }
-
-        databaseLogger.debug("Table verification passed", {
-          operation: "migration_verify_table_success",
-          table: table.name,
-          rows: originalCount.count,
-        });
       }
 
       databaseLogger.success("Migration integrity verification completed", {
@@ -253,11 +247,6 @@ export class DatabaseMigration {
         for (const table of tables) {
           memoryDb.exec(table.sql);
           migratedTables++;
-
-          databaseLogger.debug("Table structure created", {
-            operation: "migration_table_created",
-            table: table.name,
-          });
         }
 
         // 6. 禁用外键约束以避免插入顺序问题
@@ -287,12 +276,6 @@ export class DatabaseMigration {
 
             insertTransaction(rows);
             migratedRows += rows.length;
-
-            databaseLogger.debug("Table data migrated", {
-              operation: "migration_table_data",
-              table: table.name,
-              rows: rows.length,
-            });
           }
         }
 
@@ -424,10 +407,6 @@ export class DatabaseMigration {
       for (const file of [...backupsToDelete, ...migratedToDelete]) {
         try {
           fs.unlinkSync(file.path);
-          databaseLogger.debug("Cleaned up old migration file", {
-            operation: "migration_cleanup",
-            file: file.name,
-          });
         } catch (error) {
           databaseLogger.warn("Failed to cleanup old migration file", {
             operation: "migration_cleanup_failed",

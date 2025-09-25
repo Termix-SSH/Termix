@@ -53,13 +53,6 @@ class SimpleDBOps {
       userDataKey
     );
 
-    databaseLogger.debug(`Inserted encrypted record into ${tableName}`, {
-      operation: "simple_insert",
-      table: tableName,
-      userId,
-      recordId: result[0].id,
-    });
-
     return decryptedResult as T;
   }
 
@@ -111,13 +104,6 @@ class SimpleDBOps {
       userDataKey
     );
 
-    databaseLogger.debug(`Selected single record from ${tableName}`, {
-      operation: "simple_select_one",
-      table: tableName,
-      userId,
-      recordId: result.id,
-    });
-
     return decryptedResult;
   }
 
@@ -154,13 +140,6 @@ class SimpleDBOps {
       userId,
       userDataKey
     );
-
-    databaseLogger.debug(`Updated records in ${tableName}`, {
-      operation: "simple_update",
-      table: tableName,
-      userId,
-      updatedCount: result.length,
-    });
 
     return decryptedResults as T[];
   }

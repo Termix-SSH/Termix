@@ -1283,7 +1283,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
 
     // Get autostart hosts for tunnel configs
     const autostartResponse = await axios.get(
-      "http://localhost:8081/ssh/db/host/internal",
+      "http://localhost:30001/ssh/db/host/internal",
       {
         headers: {
           "Content-Type": "application/json",
@@ -1294,7 +1294,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
 
     // Get all hosts for endpointHost resolution
     const allHostsResponse = await axios.get(
-      "http://localhost:8081/ssh/db/host/internal/all",
+      "http://localhost:30001/ssh/db/host/internal/all",
       {
         headers: {
           "Content-Type": "application/json",
@@ -1420,7 +1420,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
   }
 }
 
-const PORT = 8083;
+const PORT = 30003;
 app.listen(PORT, () => {
   tunnelLogger.success("SSH Tunnel API server started", {
     operation: "server_start",

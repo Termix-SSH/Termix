@@ -1263,7 +1263,7 @@ app.use(
   },
 );
 
-const HTTP_PORT = 8081;
+const HTTP_PORT = 30001;
 const HTTPS_PORT = process.env.SSL_PORT || 8443;
 
 async function initializeSecurity() {

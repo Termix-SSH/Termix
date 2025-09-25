@@ -42,27 +42,13 @@ export class DatabaseSaveTrigger {
     // 防抖：延迟2秒执行，如果2秒内有新的保存请求，则重新计时
     this.saveTimeout = setTimeout(async () => {
       if (this.pendingSave) {
-        databaseLogger.debug("Database save already in progress, skipping", {
-          operation: "db_save_trigger_skip",
-          reason,
-        });
         return;
       }
 
       this.pendingSave = true;
 
       try {
-        databaseLogger.debug("Triggering database save", {
-          operation: "db_save_trigger_start",
-          reason,
-        });
-
         await this.saveFunction!();
-
-        databaseLogger.debug("Database save completed", {
-          operation: "db_save_trigger_success",
-          reason,
-        });
       } catch (error) {
         databaseLogger.error("Database save failed", error, {
           operation: "db_save_trigger_failed",
@@ -94,10 +80,6 @@ export class DatabaseSaveTrigger {
     }
 
     if (this.pendingSave) {
-      databaseLogger.debug("Database save already in progress, waiting", {
-        operation: "db_save_trigger_force_wait",
-        reason,
-      });
       return;
     }
 

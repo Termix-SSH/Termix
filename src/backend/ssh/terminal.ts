@@ -17,7 +17,7 @@ const userCrypto = UserCrypto.getInstance();
 const userConnections = new Map<string, Set<WebSocket>>();
 
 const wss = new WebSocketServer({
-  port: 8082,
+  port: 30002,
   // WebSocket authentication during handshake
   verifyClient: async (info) => {
     try {
@@ -90,7 +90,7 @@ const wss = new WebSocketServer({
 
 sshLogger.success("SSH Terminal WebSocket server started with authentication", {
   operation: "server_start",
-  port: 8082,
+  port: 30002,
   features: ["JWT_auth", "connection_limits", "data_access_control"]
 });
 
@@ -369,26 +369,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }, 60000);
 
-    sshLogger.debug(`Terminal SSH setup`, {
-      operation: "terminal_ssh",
-      hostId: id,
-      ip,
-      authType,
-      hasPassword: !!password,
-      passwordLength: password?.length || 0,
-      hasCredentialId: !!credentialId,
-    });
-
-    // SECURITY: Never log password information - removed password preview logging
-    sshLogger.debug(`SSH authentication setup`, {
-      operation: "terminal_ssh_auth_setup",
-      userId,
-      hostId: id,
-      authType,
-      hasPassword: !!password,
-      hasCredentialId: !!credentialId,
-    });
-
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     if (credentialId && id && hostConfig.userId) {
       try {
@@ -502,12 +482,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           // Change to initial path if specified
           if (initialPath && initialPath.trim() !== "") {
-            sshLogger.debug(`Changing to initial path: ${initialPath}`, {
-              operation: "ssh_initial_path",
-              hostId: id,
-              path: initialPath,
-            });
-
             // Send cd command to change directory
             const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
             stream.write(cdCommand);
@@ -515,12 +489,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           // Execute command if specified
           if (executeCommand && executeCommand.trim() !== "") {
-            sshLogger.debug(`Executing command: ${executeCommand}`, {
-              operation: "ssh_execute_command",
-              hostId: id,
-              command: executeCommand,
-            });
-
             // Wait a moment for the cd command to complete, then execute the command
             setTimeout(() => {
               const command = `${executeCommand}\n`;

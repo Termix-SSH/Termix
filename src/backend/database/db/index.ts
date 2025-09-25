@@ -148,8 +148,8 @@ async function initializeDatabaseAsync(): Promise<void> {
               backupPath: migrationResult.backupPath,
             });
 
-            // 🔥 CRITICAL: Migration failure with existing data
-            console.error("🚨 DATABASE MIGRATION FAILED - THIS IS CRITICAL!");
+            // CRITICAL: Migration failure with existing data
+            console.error("DATABASE MIGRATION FAILED - THIS IS CRITICAL!");
             console.error("Migration error:", migrationResult.error);
             console.error("Backup available at:", migrationResult.backupPath);
             console.error("Manual intervention required to recover data.");
@@ -177,9 +177,9 @@ async function initializeDatabaseAsync(): Promise<void> {
         databaseKeyLength: process.env.DATABASE_KEY?.length || 0,
       });
 
-      // 🔥 CRITICAL: Never silently ignore database decryption failures!
+      // CRITICAL: Never silently ignore database decryption failures!
       // This causes complete data loss for users
-      console.error("🚨 DATABASE DECRYPTION FAILED - THIS IS CRITICAL!");
+      console.error("DATABASE DECRYPTION FAILED - THIS IS CRITICAL!");
       console.error("Error details:", error instanceof Error ? error.message : error);
       console.error("Encrypted file exists:", DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath));
       console.error("DATABASE_KEY available:", !!process.env.DATABASE_KEY);
@@ -382,11 +382,6 @@ const addColumnIfNotExists = (
       .get();
   } catch (e) {
     try {
-      databaseLogger.debug(`Adding column ${column} to ${table}`, {
-        operation: "schema_migration",
-        table,
-        column,
-      });
       sqlite.exec(`ALTER TABLE ${table}
                 ADD COLUMN ${column} ${definition};`);
       databaseLogger.success(`Column ${column} added to ${table}`, {
@@ -515,22 +510,9 @@ async function saveMemoryDatabaseToFile() {
     if (enableFileEncryption) {
       // Save as encrypted file
       await DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, encryptedDbPath);
-
-      databaseLogger.debug("In-memory database saved to encrypted file", {
-        operation: "memory_db_save_encrypted",
-        bufferSize: buffer.length,
-        encryptedPath: encryptedDbPath,
-      });
     } else {
       // Fallback: save as unencrypted SQLite file to prevent data loss
       fs.writeFileSync(dbPath, buffer);
-
-      databaseLogger.debug("In-memory database saved to unencrypted file", {
-        operation: "memory_db_save_unencrypted",
-        bufferSize: buffer.length,
-        unencryptedPath: dbPath,
-        warning: "File encryption disabled - data saved unencrypted",
-      });
     }
   } catch (error) {
     databaseLogger.error("Failed to save in-memory database", error, {
@@ -643,9 +625,6 @@ async function cleanupDatabase() {
   try {
     if (sqlite) {
       sqlite.close();
-      databaseLogger.debug("Database connection closed", {
-        operation: "db_close",
-      });
     }
   } catch (error) {
     databaseLogger.warn("Error closing database connection", {
@@ -669,9 +648,6 @@ async function cleanupDatabase() {
 
       try {
         fs.rmdirSync(tempDir);
-        databaseLogger.debug("Temp directory cleaned up", {
-          operation: "temp_dir_cleanup",
-        });
       } catch {
         // Ignore directory removal errors
       }
@@ -745,12 +721,6 @@ function getMemoryDatabaseBuffer(): Buffer {
   try {
     // Export in-memory database to buffer
     const buffer = memoryDatabase.serialize();
-
-    databaseLogger.debug("Memory database serialized to buffer", {
-      operation: "memory_db_serialize",
-      bufferSize: buffer.length,
-    });
-
     return buffer;
   } catch (error) {
     databaseLogger.error(
