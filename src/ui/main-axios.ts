@@ -280,6 +280,27 @@ function createApiInstance(
         }
       }
 
+      // Handle DEK (Data Encryption Key) invalidation
+      if (status === 423) {
+        const errorData = error.response?.data;
+        if (errorData?.error === "DATA_LOCKED" || errorData?.message?.includes("DATA_LOCKED")) {
+          // DEK session has expired (likely due to server restart or timeout)
+          // Force logout to require re-authentication and DEK unlock
+          if (isElectron()) {
+            localStorage.removeItem("jwt");
+          } else {
+            document.cookie =
+              "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            localStorage.removeItem("jwt");
+          }
+
+          // Trigger a page reload to redirect to login
+          if (typeof window !== "undefined") {
+            setTimeout(() => window.location.reload(), 100);
+          }
+        }
+      }
+
       return Promise.reject(error);
     },
   );

@@ -144,6 +144,9 @@ class SimpleDBOps {
       .where(where)
       .returning();
 
+    // Trigger database save after update
+    DatabaseSaveTrigger.triggerSave(`update_${tableName}`);
+
     // Decrypt return data using the same key
     const decryptedResults = DataCrypto.decryptRecords(
       tableName,
