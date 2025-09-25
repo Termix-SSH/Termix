@@ -569,10 +569,20 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
       sizeStream.on("close", (sizeCode) => {
         if (sizeCode !== 0) {
+          // Check if it's a file not found error (case-insensitive)
+          const errorLower = sizeErrorData.toLowerCase();
+          const isFileNotFound = errorLower.includes("no such file or directory") ||
+                                 errorLower.includes("cannot access") ||
+                                 errorLower.includes("not found") ||
+                                 errorLower.includes("resource not found");
+
           fileLogger.error(`File size check failed: ${sizeErrorData}`);
           return res
-            .status(500)
-            .json({ error: `Cannot check file size: ${sizeErrorData}` });
+            .status(isFileNotFound ? 404 : 500)
+            .json({
+              error: `Cannot check file size: ${sizeErrorData}`,
+              fileNotFound: isFileNotFound
+            });
         }
 
         const fileSize = parseInt(sizeData.trim(), 10);
