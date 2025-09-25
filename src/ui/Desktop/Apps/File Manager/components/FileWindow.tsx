@@ -71,6 +71,7 @@ export function FileWindow({
   const [isLoading, setIsLoading] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
   const [pendingContent, setPendingContent] = useState<string>("");
+  const [mediaDimensions, setMediaDimensions] = useState<{ width: number; height: number } | undefined>();
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentWindow = windows.find((w) => w.id === windowId);
@@ -365,6 +366,12 @@ export function FileWindow({
     focusWindow(windowId);
   };
 
+  // Handle media dimensions change
+  const handleMediaDimensionsChange = (dimensions: { width: number; height: number }) => {
+    console.log('Media dimensions received:', dimensions);
+    setMediaDimensions(dimensions);
+  };
+
   if (!currentWindow) {
     return null;
   }
@@ -383,6 +390,7 @@ export function FileWindow({
       onFocus={handleFocus}
       isMaximized={currentWindow.isMaximized}
       zIndex={currentWindow.zIndex}
+      targetSize={mediaDimensions}
     >
       <FileViewer
         file={file}
@@ -393,6 +401,7 @@ export function FileWindow({
         onContentChange={handleContentChange}
         onSave={(newContent) => handleSave(newContent)}
         onDownload={handleDownload}
+        onMediaDimensionsChange={handleMediaDimensionsChange}
       />
     </DraggableWindow>
   );

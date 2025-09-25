@@ -18,6 +18,7 @@ interface DraggableWindowProps {
   isMaximized?: boolean;
   zIndex?: number;
   onFocus?: () => void;
+  targetSize?: { width: number; height: number };
 }
 
 export function DraggableWindow({
@@ -35,6 +36,7 @@ export function DraggableWindow({
   isMaximized = false,
   zIndex = 1000,
   onFocus,
+  targetSize,
 }: DraggableWindowProps) {
   const { t } = useTranslation();
   // Window state
@@ -54,6 +56,40 @@ export function DraggableWindow({
 
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
+
+  // Handle target size changes for media files
+  useEffect(() => {
+    if (targetSize && !isMaximized) {
+      const maxWidth = Math.min(window.innerWidth * 0.9, 1200);
+      const maxHeight = Math.min(window.innerHeight * 0.8, 800);
+
+      // Calculate appropriate window size maintaining aspect ratio
+      let newWidth = Math.min(targetSize.width + 50, maxWidth); // Add padding for UI
+      let newHeight = Math.min(targetSize.height + 150, maxHeight); // Add padding for header/footer
+
+      // If still too large, scale down maintaining aspect ratio
+      if (newWidth > maxWidth || newHeight > maxHeight) {
+        const widthRatio = maxWidth / newWidth;
+        const heightRatio = maxHeight / newHeight;
+        const scale = Math.min(widthRatio, heightRatio);
+
+        newWidth = Math.floor(newWidth * scale);
+        newHeight = Math.floor(newHeight * scale);
+      }
+
+      // Ensure minimum size
+      newWidth = Math.max(newWidth, minWidth);
+      newHeight = Math.max(newHeight, minHeight);
+
+      setSize({ width: newWidth, height: newHeight });
+
+      // Center the window
+      setPosition({
+        x: Math.max(0, (window.innerWidth - newWidth) / 2),
+        y: Math.max(0, (window.innerHeight - newHeight) / 2)
+      });
+    }
+  }, [targetSize, isMaximized, minWidth, minHeight]);
 
   // Handle window focus
   const handleWindowClick = useCallback(() => {

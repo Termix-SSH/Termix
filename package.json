@@ -94,6 +94,7 @@
     "react-i18next": "^15.7.3",
     "react-icons": "^5.5.0",
     "react-photo-view": "^1.2.7",
+    "react-player": "^3.3.3",
     "react-resizable-panels": "^3.0.3",
     "react-simple-keyboard": "^3.8.120",
     "react-xtermjs": "^1.0.10",

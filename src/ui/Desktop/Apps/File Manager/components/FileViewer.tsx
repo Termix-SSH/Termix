@@ -52,6 +52,7 @@ import { defaultKeymap, history, historyKeymap, toggleComment } from "@codemirro
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
+import ReactPlayer from "react-player";
 
 interface FileItem {
   name: string;
@@ -73,6 +74,7 @@ interface FileViewerProps {
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void;
   onDownload?: () => void;
+  onMediaDimensionsChange?: (dimensions: { width: number; height: number }) => void;
 }
 
 // Get official icon for programming languages
@@ -277,6 +279,7 @@ export function FileViewer({
   onContentChange,
   onSave,
   onDownload,
+  onMediaDimensionsChange,
 }: FileViewerProps) {
   const { t } = useTranslation();
   const [editedContent, setEditedContent] = useState(content);
@@ -664,9 +667,18 @@ export function FileViewer({
                     alt={file.name}
                     className="max-w-full max-h-full object-contain rounded-lg shadow-sm cursor-pointer hover:shadow-lg transition-shadow"
                     style={{ maxHeight: "calc(100vh - 200px)" }}
-                    onLoad={() => {
+                    onLoad={(e) => {
                       setImageLoading(false);
                       setImageLoadError(false);
+
+                      // Get natural dimensions and notify parent
+                      const img = e.currentTarget;
+                      if (onMediaDimensionsChange && img.naturalWidth && img.naturalHeight) {
+                        onMediaDimensionsChange({
+                          width: img.naturalWidth,
+                          height: img.naturalHeight
+                        });
+                      }
                     }}
                     onError={() => {
                       setImageLoading(false);
@@ -763,16 +775,79 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Video file preview */}
+        {/* Video file preview with enhanced HTML5 support */}
         {fileTypeInfo.type === "video" && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
-            <video
-              controls
-              className="max-w-full max-h-full rounded-lg shadow-sm"
-              src={`data:video/*;base64,${content}`}
-            >
-              Your browser does not support video playback.
-            </video>
+            <div className="w-full max-w-4xl">
+              {(() => {
+                const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                const mimeType = (() => {
+                  switch (ext) {
+                    case 'mp4': return 'video/mp4';
+                    case 'webm': return 'video/webm';
+                    case 'mkv': return 'video/x-matroska';
+                    case 'avi': return 'video/x-msvideo';
+                    case 'mov': return 'video/quicktime';
+                    case 'wmv': return 'video/x-ms-wmv';
+                    case 'flv': return 'video/x-flv';
+                    default: return 'video/mp4';
+                  }
+                })();
+
+                const videoUrl = `data:${mimeType};base64,${content}`;
+
+                return (
+                  <div className="relative">
+                    <video
+                      controls
+                      className="w-full rounded-lg shadow-sm"
+                      style={{
+                        maxHeight: "calc(100vh - 200px)",
+                        backgroundColor: "#000"
+                      }}
+                      preload="metadata"
+                      onError={(e) => {
+                        console.error('Video playback error:', e.currentTarget.error);
+                      }}
+                      onLoadStart={() => {
+                        console.log('Video loading started...');
+                      }}
+                      onLoadedMetadata={(e) => {
+                        const video = e.currentTarget;
+                        console.log('Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
+
+                        // Get video dimensions and notify parent
+                        if (onMediaDimensionsChange && video.videoWidth && video.videoHeight) {
+                          onMediaDimensionsChange({
+                            width: video.videoWidth,
+                            height: video.videoHeight
+                          });
+                        }
+                      }}
+                      onCanPlay={() => {
+                        console.log('Video can start playing');
+                      }}
+                    >
+                      <source src={videoUrl} type={mimeType} />
+                      <div className="text-center text-muted-foreground p-4">
+                        <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                        <p>Your browser does not support video playback for this format.</p>
+                        {onDownload && (
+                          <Button
+                            variant="outline"
+                            onClick={onDownload}
+                            className="mt-2 flex items-center gap-2 mx-auto"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download to play externally
+                          </Button>
+                        )}
+                      </div>
+                    </video>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 
