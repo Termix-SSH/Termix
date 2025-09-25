@@ -43,7 +43,7 @@ CONTRIBUTING.md
 LICENSE
 
 # Docker files (avoid copying docker files into docker)
-docker/
+# docker/ - commented out to allow entrypoint.sh to be copied
 
 # Repository images
 repo-images/
