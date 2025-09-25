@@ -119,7 +119,7 @@
     "ts-node": "^10.9.2",
     "tw-animate-css": "^1.3.5",
     "typescript": "~5.9.2",
-    "typescript-eslint": "^8.40.0",
+    "typescript-eslint": "^8.44.1",
     "vite": "^7.1.5",
     "wait-on": "^8.0.4"
   }
