@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { HomepageAuth } from "@/ui/Desktop/Homepage/HomepageAuth.tsx";
 import { HomepageUpdateLog } from "@/ui/Desktop/Homepage/HompageUpdateLog.tsx";
+import { HomepageAlertManager } from "@/ui/Desktop/Homepage/HomepageAlertManager.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getUserInfo, getDatabaseHealth, getCookie } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
@@ -45,10 +46,11 @@ export function Homepage({
           .then(([meRes]) => {
             setIsAdmin(!!meRes.is_admin);
             setUsername(meRes.username || null);
-            setUserId(meRes.id || null);
+            setUserId(meRes.userId || null);
             setDbError(null);
           })
           .catch((err) => {
+            console.error("Homepage: Error fetching user info:", err);
             setIsAdmin(false);
             setUsername(null);
             setUserId(null);
@@ -150,6 +152,8 @@ export function Homepage({
           </div>
         </div>
       )}
+      
+      <HomepageAlertManager userId={userId} loggedIn={loggedIn} />
     </>
   );
 }

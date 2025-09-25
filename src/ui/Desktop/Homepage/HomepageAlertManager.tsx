@@ -34,7 +34,6 @@ export function HomepageAlertManager({
 
     try {
       const response = await getUserAlerts(userId);
-
       const userAlerts = response.alerts || [];
 
       const sortedAlerts = userAlerts.sort((a: TermixAlert, b: TermixAlert) => {

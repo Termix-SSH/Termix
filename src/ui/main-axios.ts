@@ -66,7 +66,7 @@ interface AuthResponse {
 
 interface UserInfo {
   totp_enabled: boolean;
-  id: string;
+  userId: string;
   username: string;
   is_admin: boolean;
   is_oidc: boolean;
