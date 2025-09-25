@@ -30,9 +30,14 @@ import {
   getCredentials,
   getSSHHosts,
   updateSSHHost,
+  enableAutoStart,
+  disableAutoStart,
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/Desktop/Apps/Credentials/CredentialSelector.tsx";
+import CodeMirror from "@uiw/react-codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView } from "@codemirror/view";
 
 interface SSHHost {
   id: number;
@@ -45,7 +50,6 @@ interface SSHHost {
   pin: boolean;
   authType: string;
   password?: string;
-  requirePassword?: boolean;
   key?: string;
   keyPassword?: string;
   keyType?: string;
@@ -173,7 +177,6 @@ export function HostManagerEditor({
       authType: z.enum(["password", "key", "credential"]),
       credentialId: z.number().optional().nullable(),
       password: z.string().optional(),
-      requirePassword: z.boolean().default(true),
       key: z.any().optional().nullable(),
       keyPassword: z.string().optional(),
       keyType: z
@@ -207,18 +210,7 @@ export function HostManagerEditor({
       defaultPath: z.string().optional(),
     })
     .superRefine((data, ctx) => {
-      if (data.authType === "password") {
-        if (
-          data.requirePassword &&
-          (!data.password || data.password.trim() === "")
-        ) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: t("hosts.passwordRequired"),
-            path: ["password"],
-          });
-        }
-      } else if (data.authType === "key") {
+      if (data.authType === "key") {
         if (
           !data.key ||
           (typeof data.key === "string" && data.key.trim() === "")
@@ -279,7 +271,6 @@ export function HostManagerEditor({
       authType: "password" as const,
       credentialId: null,
       password: "",
-      requirePassword: true,
       key: null,
       keyPassword: "",
       keyType: "auto" as const,
@@ -336,7 +327,6 @@ export function HostManagerEditor({
         authType: defaultAuthType as "password" | "key" | "credential",
         credentialId: null,
         password: "",
-        requirePassword: cleanedHost.requirePassword ?? true,
         key: null,
         keyPassword: "",
         keyType: "auto" as const,
@@ -372,7 +362,6 @@ export function HostManagerEditor({
         authType: "password" as const,
         credentialId: null,
         password: "",
-        requirePassword: true,
         key: null,
         keyPassword: "",
         keyType: "auto" as const,
@@ -452,20 +441,45 @@ export function HostManagerEditor({
         submitData.keyType = data.keyType;
       }
 
+      let savedHost;
       if (editingHost && editingHost.id) {
-        const updatedHost = await updateSSHHost(editingHost.id, submitData);
+        savedHost = await updateSSHHost(editingHost.id, submitData);
         toast.success(t("hosts.hostUpdatedSuccessfully", { name: data.name }));
-
-        if (onFormSubmit) {
-          onFormSubmit(updatedHost);
-        }
       } else {
-        const newHost = await createSSHHost(submitData);
+        savedHost = await createSSHHost(submitData);
         toast.success(t("hosts.hostAddedSuccessfully", { name: data.name }));
+      }
 
-        if (onFormSubmit) {
-          onFormSubmit(newHost);
+      // Handle AutoStart plaintext cache management
+      if (savedHost && savedHost.id && data.tunnelConnections) {
+        const hasAutoStartTunnels = data.tunnelConnections.some(tunnel => tunnel.autoStart);
+
+        if (hasAutoStartTunnels) {
+          // User has enabled autoStart on some tunnels
+          // Need to ensure plaintext cache exists for this host
+          try {
+            await enableAutoStart(savedHost.id);
+            console.log(`AutoStart plaintext cache enabled for SSH host ${savedHost.id}`);
+          } catch (error) {
+            console.warn(`Failed to enable AutoStart plaintext cache for SSH host ${savedHost.id}:`, error);
+            // Don't fail the whole operation if cache setup fails
+            toast.warning(t("hosts.autoStartEnableFailed", { name: data.name }));
+          }
+        } else {
+          // User has disabled autoStart on all tunnels
+          // Clean up plaintext cache for this host
+          try {
+            await disableAutoStart(savedHost.id);
+            console.log(`AutoStart plaintext cache disabled for SSH host ${savedHost.id}`);
+          } catch (error) {
+            console.warn(`Failed to disable AutoStart plaintext cache for SSH host ${savedHost.id}:`, error);
+            // Don't fail the whole operation
+          }
         }
+      }
+
+      if (onFormSubmit) {
+        onFormSubmit(savedHost);
       }
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
@@ -881,24 +895,6 @@ export function HostManagerEditor({
                   <TabsContent value="password">
                     <FormField
                       control={form.control}
-                      name="requirePassword"
-                      render={({ field }) => (
-                        <FormItem className="mb-4">
-                          <FormLabel>{t("hosts.requirePassword")}</FormLabel>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            {t("hosts.requirePasswordDescription")}
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem>
@@ -906,7 +902,6 @@ export function HostManagerEditor({
                           <FormControl>
                             <PasswordInput
                               placeholder={t("placeholders.password")}
-                              disabled={!form.watch("requirePassword")}
                               {...field}
                             />
                           </FormControl>
@@ -988,19 +983,33 @@ export function HostManagerEditor({
                             <FormItem className="mb-4">
                               <FormLabel>{t("hosts.sshPrivateKey")}</FormLabel>
                               <FormControl>
-                                <textarea
-                                  placeholder={t(
-                                    "placeholders.pastePrivateKey",
-                                  )}
-                                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                <CodeMirror
                                   value={
                                     typeof field.value === "string"
                                       ? field.value
                                       : ""
                                   }
-                                  onChange={(e) =>
-                                    field.onChange(e.target.value)
-                                  }
+                                  onChange={(value) => field.onChange(value)}
+                                  placeholder={t("placeholders.pastePrivateKey")}
+                                  theme={oneDark}
+                                  className="border border-input rounded-md"
+                                  minHeight="120px"
+                                  basicSetup={{
+                                    lineNumbers: true,
+                                    foldGutter: false,
+                                    dropCursor: false,
+                                    allowMultipleSelections: false,
+                                    highlightSelectionMatches: false,
+                                    searchKeymap: false,
+                                    scrollPastEnd: false,
+                                  }}
+                                  extensions={[
+                                    EditorView.theme({
+                                      ".cm-scroller": {
+                                        overflow: "auto",
+                                      },
+                                    }),
+                                  ]}
                                 />
                               </FormControl>
                             </FormItem>
@@ -1149,7 +1158,7 @@ export function HostManagerEditor({
                           <code className="bg-muted px-1 rounded inline">
                             sudo apt install sshpass
                           </code>{" "}
-                          (Debian/Ubuntu) or the equivalent for your OS.
+                          {t("hosts.debianUbuntuEquivalent")}
                         </div>
                         <div className="mt-2">
                           <strong>{t("hosts.otherInstallMethods")}</strong>
@@ -1158,7 +1167,7 @@ export function HostManagerEditor({
                             <code className="bg-muted px-1 rounded inline">
                               sudo yum install sshpass
                             </code>{" "}
-                            or{" "}
+                            {t("hosts.or")}{" "}
                             <code className="bg-muted px-1 rounded inline">
                               sudo dnf install sshpass
                             </code>

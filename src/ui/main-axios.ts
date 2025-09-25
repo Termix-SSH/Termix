@@ -123,8 +123,10 @@ export function getCookie(name: string): string | undefined {
   } else {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
-    const token =
+    const encodedToken =
       parts.length === 2 ? parts.pop()?.split(";").shift() : undefined;
+    // Decode the token since setCookie uses encodeURIComponent
+    const token = encodedToken ? decodeURIComponent(encodedToken) : undefined;
     return token;
   }
 }
@@ -278,6 +280,27 @@ function createApiInstance(
         }
       }
 
+      // Handle DEK (Data Encryption Key) invalidation
+      if (status === 423) {
+        const errorData = error.response?.data;
+        if (errorData?.error === "DATA_LOCKED" || errorData?.message?.includes("DATA_LOCKED")) {
+          // DEK session has expired (likely due to server restart or timeout)
+          // Force logout to require re-authentication and DEK unlock
+          if (isElectron()) {
+            localStorage.removeItem("jwt");
+          } else {
+            document.cookie =
+              "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            localStorage.removeItem("jwt");
+          }
+
+          // Trigger a page reload to redirect to login
+          if (typeof window !== "undefined") {
+            setTimeout(() => window.location.reload(), 100);
+          }
+        }
+      }
+
       return Promise.reject(error);
     },
   );
@@ -376,7 +399,10 @@ if (isElectron()) {
 
 function getApiUrl(path: string, defaultPort: number): string {
   if (isDev()) {
-    return `http://${apiHost}:${defaultPort}${path}`;
+    // Auto-detect HTTPS in development
+    const protocol = window.location.protocol === "https:" ? "https" : "http";
+    const sslPort = protocol === "https" ? 8443 : defaultPort;
+    return `${protocol}://${apiHost}:${sslPort}${path}`;
   } else if (isElectron()) {
     if (configuredServerUrl) {
       const baseUrl = configuredServerUrl.replace(/\/$/, "");
@@ -738,6 +764,48 @@ export async function getSSHHostById(hostId: number): Promise<SSHHost> {
 }
 
 // ============================================================================
+// SSH AUTOSTART MANAGEMENT
+// ============================================================================
+
+export async function enableAutoStart(sshConfigId: number): Promise<any> {
+  try {
+    const response = await sshHostApi.post("/autostart/enable", { sshConfigId });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "enable autostart");
+  }
+}
+
+export async function disableAutoStart(sshConfigId: number): Promise<any> {
+  try {
+    const response = await sshHostApi.delete("/autostart/disable", {
+      data: { sshConfigId }
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "disable autostart");
+  }
+}
+
+export async function getAutoStartStatus(): Promise<{
+  autostart_configs: Array<{
+    sshConfigId: number;
+    host: string;
+    port: number;
+    username: string;
+    authType: string;
+  }>;
+  total_count: number;
+}> {
+  try {
+    const response = await sshHostApi.get("/autostart/status");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch autostart status");
+  }
+}
+
+// ============================================================================
 // TUNNEL MANAGEMENT
 // ============================================================================
 
@@ -955,6 +1023,17 @@ export async function getSSHStatus(
   }
 }
 
+export async function keepSSHAlive(sessionId: string): Promise<any> {
+  try {
+    const response = await fileManagerApi.post("/ssh/keepalive", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "SSH keepalive");
+  }
+}
+
 export async function listSSHFiles(
   sessionId: string,
   path: string,
@@ -966,7 +1045,7 @@ export async function listSSHFiles(
     return response.data || { files: [], path };
   } catch (error) {
     handleApiError(error, "list SSH files");
-    return { files: [], path }; // 确保总是返回正确格式
+    return { files: [], path }; // Ensure always return correct format
   }
 }
 
@@ -993,7 +1072,14 @@ export async function readSSHFile(
       params: { sessionId, path },
     });
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // Preserve fileNotFound information for 404 errors
+    if (error.response?.status === 404) {
+      const customError = new Error("File not found");
+      (customError as any).response = error.response;
+      (customError as any).isFileNotFound = error.response.data?.fileNotFound || true;
+      throw customError;
+    }
     handleApiError(error, "read SSH file");
   }
 }
@@ -1155,7 +1241,7 @@ export async function copySSHItem(
         userId,
       },
       {
-        timeout: 60000, // 60秒超时，因为文件复制可能需要更长时间
+        timeout: 60000, // 60 second timeout as file copying may take longer
       },
     );
     return response.data;
@@ -1201,6 +1287,8 @@ export async function moveSSHItem(
       newPath,
       hostId,
       userId,
+    }, {
+      timeout: 60000, // 60 second timeout for move operations
     });
     return response.data;
   } catch (error) {
@@ -1443,6 +1531,15 @@ export async function getOIDCConfig(): Promise<any> {
       error.response?.data?.error || error.message,
     );
     return null;
+  }
+}
+
+export async function getSetupRequired(): Promise<{ setup_required: boolean }> {
+  try {
+    const response = await authApi.get("/users/setup-required");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "check setup status");
   }
 }
 

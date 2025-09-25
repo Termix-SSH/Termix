@@ -1,19 +1,20 @@
 import express from "express";
 import cors from "cors";
 import { Client as SSHClient } from "ssh2";
-import { db } from "../database/db/index.js";
+import { getDb } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
-import { EncryptedDBOperations } from "../utils/encrypted-db-operations.js";
+import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { AuthManager } from "../utils/auth-manager.js";
 
-// 可执行文件检测工具函数
+// Executable file detection utility function
 function isExecutableFile(permissions: string, fileName: string): boolean {
-  // 检查执行权限位 (user, group, other)
+  // Check execute permission bits (user, group, other)
   const hasExecutePermission =
     permissions[3] === "x" || permissions[6] === "x" || permissions[9] === "x";
 
-  // 常见的脚本文件扩展名
+  // Common script file extensions
   const scriptExtensions = [
     ".sh",
     ".py",
@@ -29,13 +30,13 @@ function isExecutableFile(permissions: string, fileName: string): boolean {
     fileName.toLowerCase().endsWith(ext),
   );
 
-  // 常见的编译可执行文件（无扩展名或特定扩展名）
+  // Common compiled executable files (no extension or specific extensions)
   const executableExtensions = [".bin", ".exe", ".out"];
   const hasExecutableExtension = executableExtensions.some((ext) =>
     fileName.toLowerCase().endsWith(ext),
   );
 
-  // 无扩展名且有执行权限的文件通常是可执行文件
+  // Files with no extension and execute permission are usually executable files
   const hasNoExtension = !fileName.includes(".") && hasExecutePermission;
 
   return (
@@ -58,9 +59,13 @@ app.use(
     ],
   }),
 );
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ limit: "100mb", extended: true }));
-app.use(express.raw({ limit: "200mb", type: "application/octet-stream" }));
+app.use(express.json({ limit: "1gb" }));
+app.use(express.urlencoded({ limit: "1gb", extended: true }));
+app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
+
+// Initialize AuthManager and add authentication middleware
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
 
 interface SSHSession {
   client: SSHClient;
@@ -85,7 +90,14 @@ function cleanupSession(sessionId: string) {
 function scheduleSessionCleanup(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
+    // Clear existing timeout
     if (session.timeout) clearTimeout(session.timeout);
+
+    // Increase timeout to 30 minutes of inactivity
+    session.timeout = setTimeout(() => {
+      fileLogger.info(`Cleaning up inactive SSH session: ${sessionId}`);
+      cleanupSession(sessionId);
+    }, 30 * 60 * 1000); // 30 minutes - increased from 10 minutes
   }
 }
 
@@ -101,8 +113,18 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keyPassword,
     authType,
     credentialId,
-    userId,
   } = req.body;
+
+  // Use authenticated user ID from middleware
+  const userId = (req as any).userId;
+
+  if (!userId) {
+    fileLogger.error("SSH connection rejected: no authenticated user", {
+      operation: "file_connect_auth",
+      sessionId,
+    });
+    return res.status(401).json({ error: "Authentication required" });
+  }
 
   if (!sessionId || !ip || !username || !port) {
     fileLogger.warn("Missing SSH connection parameters for file manager", {
@@ -123,8 +145,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
   if (credentialId && hostId && userId) {
     try {
-      const credentials = await EncryptedDBOperations.select(
-        db
+      const credentials = await SimpleDBOps.select(
+        getDb()
           .select()
           .from(sshCredentials)
           .where(
@@ -134,6 +156,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             ),
           ),
         "ssh_credentials",
+        userId,
       );
 
       if (credentials.length > 0) {
@@ -176,9 +199,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     host: ip,
     port: port || 22,
     username,
-    readyTimeout: 0,
+    readyTimeout: 60000,
     keepaliveInterval: 30000,
-    keepaliveCountMax: 0,
+    keepaliveCountMax: 3,
     algorithms: {
       kex: [
         "diffie-hellman-group14-sha256",
@@ -201,7 +224,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         "aes256-cbc",
         "3des-cbc",
       ],
-      hmac: ["hmac-sha2-256", "hmac-sha2-512", "hmac-sha1", "hmac-md5"],
+      hmac: ["hmac-sha2-256-etm@openssh.com", "hmac-sha2-512-etm@openssh.com", "hmac-sha2-256", "hmac-sha2-512", "hmac-sha1", "hmac-md5"],
       compress: ["none", "zlib@openssh.com", "zlib"],
     },
   };
@@ -259,6 +282,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       isConnected: true,
       lastActive: Date.now(),
     };
+    scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
   });
 
@@ -295,6 +319,41 @@ app.get("/ssh/file_manager/ssh/status", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const isConnected = !!sshSessions[sessionId]?.isConnected;
   res.json({ status: "success", connected: isConnected });
+});
+
+// SSH keepalive endpoint - extends session timeout and verifies connection
+app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID is required" });
+  }
+
+  const session = sshSessions[sessionId];
+
+  if (!session || !session.isConnected) {
+    return res.status(400).json({
+      error: "SSH session not found or not connected",
+      connected: false
+    });
+  }
+
+  // Update last active time and reschedule cleanup
+  session.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  fileLogger.debug(`SSH session keepalive: ${sessionId}`, {
+    operation: "ssh_keepalive",
+    sessionId,
+    lastActive: session.lastActive,
+  });
+
+  res.json({
+    status: "success",
+    connected: true,
+    message: "Session keepalive successful",
+    lastActive: session.lastActive
+  });
 });
 
 app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
@@ -351,12 +410,12 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           const group = parts[3];
           const size = parseInt(parts[4], 10);
 
-          // 日期可能占夨3个部分（月 日 时间）或者是（月 日 年）
+          // Date may occupy 3 parts (month day time) or (month day year)
           let dateStr = "";
           let nameStartIndex = 8;
 
           if (parts[5] && parts[6] && parts[7]) {
-            // 常规格式: 月 日 时间/年
+            // Regular format: month day time/year
             dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
           }
 
@@ -366,7 +425,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
 
           if (name === "." || name === "..") continue;
 
-          // 解析符号链接目标
+          // Parse symbolic link target
           let actualName = name;
           let linkTarget = undefined;
           if (isLink && name.includes(" -> ")) {
@@ -378,17 +437,17 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           files.push({
             name: actualName,
             type: isDirectory ? "directory" : isLink ? "link" : "file",
-            size: isDirectory ? undefined : size, // 目录不显示大小
+            size: isDirectory ? undefined : size, // Directories don't show size
             modified: dateStr,
             permissions,
             owner,
             group,
-            linkTarget, // 符号链接的目标
-            path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`, // 添加完整路径
+            linkTarget, // Symbolic link target
+            path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`, // Add full path
             executable:
               !isDirectory && !isLink
                 ? isExecutableFile(permissions, actualName)
-                : false, // 检测可执行文件
+                : false, // Detect executable files
           });
         }
       }
@@ -484,8 +543,8 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
   sshConn.lastActive = Date.now();
 
-  // First check file size to prevent loading huge files
-  const MAX_READ_SIZE = 10 * 1024 * 1024; // 10MB - same as frontend limit
+  // Support large file reading - increased limit for better compatibility
+  const MAX_READ_SIZE = 500 * 1024 * 1024; // 500MB - much more reasonable limit
   const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
   // Get file size first
@@ -510,10 +569,20 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
       sizeStream.on("close", (sizeCode) => {
         if (sizeCode !== 0) {
+          // Check if it's a file not found error (case-insensitive)
+          const errorLower = sizeErrorData.toLowerCase();
+          const isFileNotFound = errorLower.includes("no such file or directory") ||
+                                 errorLower.includes("cannot access") ||
+                                 errorLower.includes("not found") ||
+                                 errorLower.includes("resource not found");
+
           fileLogger.error(`File size check failed: ${sizeErrorData}`);
           return res
-            .status(500)
-            .json({ error: `Cannot check file size: ${sizeErrorData}` });
+            .status(isFileNotFound ? 404 : 500)
+            .json({
+              error: `Cannot check file size: ${sizeErrorData}`,
+              fileNotFound: isFileNotFound
+            });
         }
 
         const fileSize = parseInt(sizeData.trim(), 10);
@@ -563,9 +632,19 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
               fileLogger.error(
                 `SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
               );
+
+              // Check if it's a "file not found" error
+              const isFileNotFound =
+                errorData.includes("No such file or directory") ||
+                errorData.includes("cannot access") ||
+                errorData.includes("not found");
+
               return res
-                .status(500)
-                .json({ error: `Command failed: ${errorData}` });
+                .status(isFileNotFound ? 404 : 500)
+                .json({
+                  error: `Command failed: ${errorData}`,
+                  fileNotFound: isFileNotFound
+                });
             }
 
             res.json({ content: data, path: filePath });
@@ -1492,8 +1571,22 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
 
   const moveCommand = `mv '${escapedOldPath}' '${escapedNewPath}' && echo "SUCCESS" && exit 0`;
 
+  // Add timeout for move operation
+  const commandTimeout = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(408).json({
+        error: "Move operation timed out. SSH connection may be unstable.",
+        toast: {
+          type: "error",
+          message: "Move operation timed out. SSH connection may be unstable.",
+        },
+      });
+    }
+  }, 60000); // 60 second timeout for move operations
+
   sshConn.client.exec(moveCommand, (err, stream) => {
     if (err) {
+      clearTimeout(commandTimeout);
       fileLogger.error("SSH moveItem error:", err);
       if (!res.headersSent) {
         return res.status(500).json({ error: err.message });
@@ -1527,6 +1620,7 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
     });
 
     stream.on("close", (code) => {
+      clearTimeout(commandTimeout);
       if (outputData.includes("SUCCESS")) {
         if (!res.headersSent) {
           res.json({
@@ -1569,6 +1663,7 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
     });
 
     stream.on("error", (streamErr) => {
+      clearTimeout(commandTimeout);
       fileLogger.error("SSH moveItem stream error:", streamErr);
       if (!res.headersSent) {
         res.status(500).json({ error: `Stream error: ${streamErr.message}` });
@@ -1633,8 +1728,8 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
           .json({ error: "Cannot download directories or special files" });
       }
 
-      // Check file size (limit to 100MB for safety)
-      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+      // Support large file downloads - increased limit for better compatibility
+      const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB - reasonable for SSH file operations
       if (stats.size > MAX_FILE_SIZE) {
         fileLogger.warn("File too large for download", {
           operation: "file_download",
@@ -1705,66 +1800,26 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
     // Extract source name
     const sourceName = sourcePath.split("/").pop() || "copied_item";
 
-    // First check if source file exists
-    const escapedSourceForCheck = sourcePath.replace(/'/g, "'\"'\"'");
-    const checkExistsCommand = `test -e '${escapedSourceForCheck}'`;
-    const checkExists = await new Promise<boolean>((resolve) => {
-      sshConn.client.exec(checkExistsCommand, (err, stream) => {
-        if (err) {
-          fileLogger.error("File existence check error:", err);
-          resolve(false);
-          return;
-        }
-
-        stream.on("close", (code) => {
-          fileLogger.info("File existence check completed", {
-            sourcePath,
-            exists: code === 0,
-          });
-          resolve(code === 0);
-        });
-
-        stream.on("error", () => resolve(false));
-      });
-    });
-
-    if (!checkExists) {
-      return res.status(404).json({
-        error: `Source file not found: ${sourcePath}`,
-        toast: {
-          type: "error",
-          message: `Source file not found: ${sourceName}`,
-        },
-      });
-    }
-
-    // Use timestamp for uniqueness
+    // Linus principle: simplify - generate unique name directly without complex checks
     const timestamp = Date.now().toString().slice(-8);
-    const nameWithoutExt = sourceName.includes(".")
-      ? sourceName.substring(0, sourceName.lastIndexOf("."))
-      : sourceName;
-    const extension = sourceName.includes(".")
-      ? sourceName.substring(sourceName.lastIndexOf("."))
-      : "";
+    const uniqueName = `${sourceName}_copy_${timestamp}`;
+    const targetPath = `${targetDir}/${uniqueName}`;
 
-    // Always use timestamp suffix to ensure uniqueness without SSH calls
-    const uniqueName = `${nameWithoutExt}_copy_${timestamp}${extension}`;
-
-    fileLogger.info("Using timestamp-based unique name", {
+    fileLogger.info("Starting copy operation", {
       originalName: sourceName,
       uniqueName,
+      sourcePath,
+      targetPath,
+      sessionId,
     });
-    const targetPath = `${targetDir}/${uniqueName}`;
 
     // Escape paths for shell commands
     const escapedSource = sourcePath.replace(/'/g, "'\"'\"'");
     const escapedTarget = targetPath.replace(/'/g, "'\"'\"'");
 
-    // Use cp with explicit flags to avoid hanging on prompts
-    // -f: force overwrite without prompting
-    // -r: recursive for directories
-    // -p: preserve timestamps, permissions
-    const copyCommand = `cp -fpr '${escapedSource}' '${escapedTarget}' 2>&1`;
+    // Linus principle: simplify - use basic cp command for reliability
+    // Just copy the file without complex flags that might cause issues
+    const copyCommand = `cp '${escapedSource}' '${escapedTarget}' && echo "COPY_SUCCESS"`;
 
     fileLogger.info("Starting file copy operation", {
       operation: "file_copy_start",
@@ -1777,7 +1832,7 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
 
     // Add timeout to prevent hanging
     const commandTimeout = setTimeout(() => {
-      fileLogger.error("Copy command timed out after 20 seconds", {
+      fileLogger.error("Copy command timed out after 60 seconds", {
         sourcePath,
         targetPath,
         command: copyCommand,
@@ -1792,7 +1847,7 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
           },
         });
       }
-    }, 20000); // 20 second timeout for better responsiveness
+    }, 60000); // 60 second timeout for large files
 
     sshConn.client.exec(copyCommand, (err, stream) => {
       if (err) {
@@ -1864,27 +1919,54 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
           return;
         }
 
-        fileLogger.success("Item copied successfully", {
-          operation: "file_copy",
-          sessionId,
-          sourcePath,
-          targetPath,
-          uniqueName,
-          hostId,
-          userId,
-        });
+        // Verify copy completion with COPY_SUCCESS marker or exit code 0
+        const copySuccessful = stdoutData.includes("COPY_SUCCESS") || code === 0;
 
-        if (!res.headersSent) {
-          res.json({
-            message: "Item copied successfully",
+        if (copySuccessful) {
+          fileLogger.success("Item copied successfully", {
+            operation: "file_copy",
+            sessionId,
             sourcePath,
             targetPath,
             uniqueName,
-            toast: {
-              type: "success",
-              message: `Successfully copied to: ${uniqueName}`,
-            },
+            hostId,
+            userId,
           });
+
+          if (!res.headersSent) {
+            res.json({
+              message: "Item copied successfully",
+              sourcePath,
+              targetPath,
+              uniqueName,
+              toast: {
+                type: "success",
+                message: `Successfully copied to: ${uniqueName}`,
+              },
+            });
+          }
+        } else {
+          fileLogger.warn("Copy completed but without success confirmation", {
+            operation: "file_copy_uncertain",
+            sessionId,
+            sourcePath,
+            targetPath,
+            code,
+            stdoutData: stdoutData.substring(0, 200),
+          });
+
+          if (!res.headersSent) {
+            res.json({
+              message: "Copy may have completed",
+              sourcePath,
+              targetPath,
+              uniqueName,
+              toast: {
+                type: "warning",
+                message: `Copy completed but verification uncertain for: ${uniqueName}`,
+              },
+            });
+          }
         }
       });
 
@@ -1933,7 +2015,7 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 
-// 执行可执行文件
+// Execute executable file
 app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   const { sessionId, filePath, hostId, userId } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -1957,7 +2039,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
 
   const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
-  // 检查文件是否存在且可执行
+  // Check if file exists and is executable
   const checkCommand = `test -x '${escapedPath}' && echo "EXECUTABLE" || echo "NOT_EXECUTABLE"`;
 
   sshConn.client.exec(checkCommand, (checkErr, checkStream) => {
@@ -1978,7 +2060,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
         return res.status(400).json({ error: "File is not executable" });
       }
 
-      // 执行文件
+      // Execute file
       const executeCommand = `cd "$(dirname '${escapedPath}')" && '${escapedPath}' 2>&1; echo "EXIT_CODE:$?"`;
 
       fileLogger.info("Executing file", {
@@ -2006,7 +2088,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
         });
 
         stream.on("close", (code) => {
-          // 从输出中提取退出代码
+          // Extract exit code from output
           const exitCodeMatch = output.match(/EXIT_CODE:(\d+)$/);
           const actualExitCode = exitCodeMatch
             ? parseInt(exitCodeMatch[1])
@@ -2043,9 +2125,21 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
 });
 
 const PORT = 8084;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   fileLogger.success("File Manager API server started", {
     operation: "server_start",
     port: PORT,
   });
+
+  // Initialize AuthManager for JWT verification
+  try {
+    await authManager.initialize();
+    fileLogger.info("AuthManager initialized for file manager", {
+      operation: "auth_init",
+    });
+  } catch (err) {
+    fileLogger.error("Failed to initialize AuthManager", err, {
+      operation: "auth_init_error",
+    });
+  }
 });

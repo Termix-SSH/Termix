@@ -80,12 +80,12 @@ export function FileManagerOperations({
     );
 
     try {
-      // 读取文件内容 - 支持文本和二进制文件
+      // Read file content - support text and binary files
       const content = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = () => reject(reader.error);
 
-        // 检查文件类型，决定读取方式
+        // Check file type to determine reading method
         const isTextFile =
           uploadFile.type.startsWith("text/") ||
           uploadFile.type === "application/json" ||

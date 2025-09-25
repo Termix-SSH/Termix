@@ -1,15 +1,67 @@
+# Termix Docker Compose Configuration
+#
+# QUICK START: Just run "docker-compose up -d"
+# - Security keys are auto-generated on first startup
+# - Keys are persisted in Docker volumes (survive container restarts)
+# - No manual .env file needed for single-instance deployment
+#
+# See docker/.env.example for advanced configuration options
+
 services:
   termix:
-    image: ghcr.io/lukegus/termix:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: termix
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      # HTTP port (redirects to HTTPS if SSL enabled)
+      - "${PORT:-8080}:8080"
+      # HTTPS port (when SSL is enabled)
+      - "${SSL_PORT:-8443}:8443"
     volumes:
       - termix-data:/app/data
+      - termix-config:/app/config  # Auto-generated .env keys are persisted here
+      # Optional: Mount custom SSL certificates
+      # - ./ssl:/app/ssl:ro
     environment:
-      PORT: "8080"
+      # Basic configuration
+      - PORT=${PORT:-8080}
+      - NODE_ENV=${NODE_ENV:-production}
+
+      # SSL/TLS Configuration
+      - ENABLE_SSL=${ENABLE_SSL:-false}
+      - SSL_PORT=${SSL_PORT:-8443}
+      - SSL_DOMAIN=${SSL_DOMAIN:-localhost}
+      - SSL_CERT_PATH=${SSL_CERT_PATH:-/app/ssl/termix.crt}
+      - SSL_KEY_PATH=${SSL_KEY_PATH:-/app/ssl/termix.key}
+
+      # Security keys (auto-generated if not provided)
+      # Leave empty to auto-generate secure random keys on first startup
+      # Set values only if you need specific keys for multi-instance deployment
+      - JWT_SECRET=${JWT_SECRET:-}
+      - DATABASE_KEY=${DATABASE_KEY:-}
+      - INTERNAL_AUTH_TOKEN=${INTERNAL_AUTH_TOKEN:-}
+
+      # Database configuration
+      - DATABASE_ENCRYPTION=${DATABASE_ENCRYPTION:-true}
+
+      # CORS configuration
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+
+    # Health check for both HTTP and HTTPS
+    healthcheck:
+      test: |
+        curl -f -k https://localhost:8443/health 2>/dev/null ||
+        curl -f http://localhost:8080/health 2>/dev/null ||
+        exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   termix-data:
+    driver: local
+  termix-config:
     driver: local

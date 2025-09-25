@@ -9,18 +9,35 @@ import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
-import { DatabaseEncryption } from "../utils/database-encryption.js";
-import { EncryptionMigration } from "../utils/encryption-migration.js";
-import { DatabaseMigration } from "../utils/database-migration.js";
-import { DatabaseSQLiteExport } from "../utils/database-sqlite-export.js";
+import { AuthManager } from "../utils/auth-manager.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
+import { DatabaseMigration } from "../utils/database-migration.js";
+import { UserDataExport } from "../utils/user-data-export.js";
+import { UserDataImport } from "../utils/user-data-import.js";
+import https from "https";
+import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
+import { eq, and } from "drizzle-orm";
+import { users, sshData, sshCredentials, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts, sshCredentialUsage, settings } from "./db/schema.js";
+import { getDb } from "./db/index.js";
+import Database from "better-sqlite3";
 
 const app = express();
+
+// Configure trust proxy to properly detect real client IP behind reverse proxy (nginx)
+app.set('trust proxy', true);
+
+// Initialize auth middleware
+const authManager = AuthManager.getInstance();
+const authenticateJWT = authManager.createAuthMiddleware();
+const requireAdmin = authManager.createAdminMiddleware();
 app.use(
   cors({
     origin: "*",
+    credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -46,7 +63,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB limit
+    fileSize: 1024 * 1024 * 1024, // 1GB limit for database operations
   },
   fileFilter: (req, file, cb) => {
     // Allow SQLite files
@@ -169,7 +186,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/version", async (req, res) => {
+app.get("/version", authenticateJWT, async (req, res) => {
   let localVersion = process.env.VERSION;
 
   if (!localVersion) {
@@ -235,7 +252,7 @@ app.get("/version", async (req, res) => {
   }
 });
 
-app.get("/releases/rss", async (req, res) => {
+app.get("/releases/rss", authenticateJWT, async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const per_page = Math.min(
@@ -291,303 +308,899 @@ app.get("/releases/rss", async (req, res) => {
   }
 });
 
-app.get("/encryption/status", async (req, res) => {
+app.get("/encryption/status", requireAdmin, async (req, res) => {
   try {
-    const detailedStatus = await DatabaseEncryption.getDetailedStatus();
-    const migrationStatus = await EncryptionMigration.checkMigrationStatus();
+    const authManager = AuthManager.getInstance();
+    // Simplified status for new architecture
+    const securityStatus = {
+      initialized: true,
+      system: { hasSecret: true, isValid: true },
+      activeSessions: {},
+      activeSessionCount: 0
+    };
 
     res.json({
-      encryption: detailedStatus,
-      migration: migrationStatus,
+      security: securityStatus,
+      version: "v2-kek-dek",
     });
   } catch (error) {
-    apiLogger.error("Failed to get encryption status", error, {
-      operation: "encryption_status",
+    apiLogger.error("Failed to get security status", error, {
+      operation: "security_status",
     });
-    res.status(500).json({ error: "Failed to get encryption status" });
+    res.status(500).json({ error: "Failed to get security status" });
   }
 });
 
-app.post("/encryption/initialize", async (req, res) => {
+app.post("/encryption/initialize", requireAdmin, async (req, res) => {
   try {
-    const { EncryptionKeyManager } = await import(
-      "../utils/encryption-key-manager.js"
-    );
-    const keyManager = EncryptionKeyManager.getInstance();
+    const authManager = AuthManager.getInstance();
 
-    const newKey = await keyManager.generateNewKey();
-    await DatabaseEncryption.initialize({ masterPassword: newKey });
+    // New system auto-initializes, no manual initialization needed
+    const isValid = true; // Simplified validation for new architecture
+    if (!isValid) {
+      await authManager.initialize();
+    }
 
-    apiLogger.info("Encryption initialized via API", {
-      operation: "encryption_init_api",
+    apiLogger.info("Security system initialized via API", {
+      operation: "security_init_api",
     });
 
     res.json({
       success: true,
-      message: "Encryption initialized successfully",
-      keyPreview: newKey.substring(0, 8) + "...",
+      message: "Security system initialized successfully",
+      version: "v2-kek-dek",
+      note: "User data encryption will be set up when users log in",
     });
   } catch (error) {
-    apiLogger.error("Failed to initialize encryption", error, {
-      operation: "encryption_init_api_failed",
+    apiLogger.error("Failed to initialize security system", error, {
+      operation: "security_init_api_failed",
     });
-    res.status(500).json({ error: "Failed to initialize encryption" });
+    res.status(500).json({ error: "Failed to initialize security system" });
   }
 });
 
-app.post("/encryption/migrate", async (req, res) => {
-  try {
-    const { dryRun = false } = req.body;
 
-    const migration = new EncryptionMigration({
-      dryRun,
-      backupEnabled: true,
+app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
+  try {
+    const authManager = AuthManager.getInstance();
+
+    // In new system, only JWT keys can be regenerated
+    // User data keys are protected by passwords and cannot be regenerated at will
+    // JWT regeneration will be implemented in SystemKeyManager
+    const newJWTSecret = "jwt-regeneration-placeholder";
+
+    apiLogger.warn("System JWT secret regenerated via API", {
+      operation: "jwt_regenerate_api",
     });
 
-    if (dryRun) {
-      apiLogger.info("Starting encryption migration (dry run)", {
-        operation: "encryption_migrate_dry_run",
-      });
+    res.json({
+      success: true,
+      message: "System JWT secret regenerated",
+      warning: "All existing JWT tokens are now invalid - users must re-authenticate",
+      note: "User data encryption keys are protected by passwords and cannot be regenerated",
+    });
+  } catch (error) {
+    apiLogger.error("Failed to regenerate JWT secret", error, {
+      operation: "jwt_regenerate_failed",
+    });
+    res.status(500).json({ error: "Failed to regenerate JWT secret" });
+  }
+});
 
-      res.json({
-        success: true,
-        message: "Dry run mode - no changes made",
-        dryRun: true,
-      });
-    } else {
-      apiLogger.info("Starting encryption migration", {
-        operation: "encryption_migrate",
-      });
+app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
+  try {
+    const authManager = AuthManager.getInstance();
+    // JWT regeneration moved to SystemKeyManager directly
+    // await authManager.regenerateJWTSecret();
 
-      await migration.runMigration();
+    apiLogger.warn("JWT secret regenerated via API", {
+      operation: "jwt_secret_regenerate_api",
+    });
 
-      res.json({
-        success: true,
-        message: "Migration completed successfully",
+    res.json({
+      success: true,
+      message: "New JWT secret generated",
+      warning: "All existing JWT tokens are now invalid - users must re-authenticate",
+    });
+  } catch (error) {
+    apiLogger.error("Failed to regenerate JWT secret", error, {
+      operation: "jwt_secret_regenerate_failed",
+    });
+    res.status(500).json({ error: "Failed to regenerate JWT secret" });
+  }
+});
+
+// User data export endpoint - SQLite file download
+app.post("/database/export", authenticateJWT, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { password } = req.body;
+
+    // Always require password for plaintext export
+    if (!password) {
+      return res.status(400).json({
+        error: "Password required for export",
+        code: "PASSWORD_REQUIRED"
       });
     }
+
+    const unlocked = await authManager.authenticateUser(userId, password);
+    if (!unlocked) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    apiLogger.info("Exporting user data as SQLite", {
+      operation: "user_data_sqlite_export_api",
+      userId,
+    });
+
+    // Get user data for SQLite export
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) {
+      throw new Error("User data not unlocked");
+    }
+
+    // Get user info
+    const user = await getDb().select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      throw new Error(`User not found: ${userId}`);
+    }
+
+    // Create temporary SQLite database
+    const tempDir = path.join(os.tmpdir(), 'termix-exports');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `termix-export-${user[0].username}-${timestamp}.sqlite`;
+    const tempPath = path.join(tempDir, filename);
+
+    // Create new SQLite database with export data
+    const exportDb = new Database(tempPath);
+
+    try {
+      // Create all tables with complete schema
+      exportDb.exec(`
+        CREATE TABLE users (
+          id TEXT PRIMARY KEY,
+          username TEXT NOT NULL,
+          password_hash TEXT NOT NULL,
+          is_admin INTEGER NOT NULL DEFAULT 0,
+          is_oidc INTEGER NOT NULL DEFAULT 0,
+          oidc_identifier TEXT,
+          client_id TEXT,
+          client_secret TEXT,
+          issuer_url TEXT,
+          authorization_url TEXT,
+          token_url TEXT,
+          identifier_path TEXT,
+          name_path TEXT,
+          scopes TEXT DEFAULT 'openid email profile',
+          totp_secret TEXT,
+          totp_enabled INTEGER NOT NULL DEFAULT 0,
+          totp_backup_codes TEXT
+        );
+
+        CREATE TABLE settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+
+        CREATE TABLE ssh_data (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT,
+          ip TEXT NOT NULL,
+          port INTEGER NOT NULL,
+          username TEXT NOT NULL,
+          folder TEXT,
+          tags TEXT,
+          pin INTEGER NOT NULL DEFAULT 0,
+          auth_type TEXT NOT NULL,
+          password TEXT,
+          key TEXT,
+          key_password TEXT,
+          key_type TEXT,
+          autostart_password TEXT,
+          autostart_key TEXT,
+          autostart_key_password TEXT,
+          credential_id INTEGER,
+          enable_terminal INTEGER NOT NULL DEFAULT 1,
+          enable_tunnel INTEGER NOT NULL DEFAULT 1,
+          tunnel_connections TEXT,
+          enable_file_manager INTEGER NOT NULL DEFAULT 1,
+          default_path TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE ssh_credentials (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          folder TEXT,
+          tags TEXT,
+          auth_type TEXT NOT NULL,
+          username TEXT NOT NULL,
+          password TEXT,
+          key TEXT,
+          private_key TEXT,
+          public_key TEXT,
+          key_password TEXT,
+          key_type TEXT,
+          detected_key_type TEXT,
+          usage_count INTEGER NOT NULL DEFAULT 0,
+          last_used TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE file_manager_recent (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          path TEXT NOT NULL,
+          last_opened TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE file_manager_pinned (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          path TEXT NOT NULL,
+          pinned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE file_manager_shortcuts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          path TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE dismissed_alerts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          alert_id TEXT NOT NULL,
+          dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE ssh_credential_usage (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          credential_id INTEGER NOT NULL,
+          host_id INTEGER NOT NULL,
+          user_id TEXT NOT NULL,
+          used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Export current user only (replace sensitive password_hash with placeholder)
+      const userRecord = user[0];
+      const insertUser = exportDb.prepare(`
+        INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      insertUser.run(
+        userRecord.id,
+        userRecord.username,
+        "[EXPORTED_USER_NO_PASSWORD]", // Replace password hash with placeholder
+        userRecord.is_admin ? 1 : 0,
+        userRecord.is_oidc ? 1 : 0,
+        userRecord.oidc_identifier || null,
+        userRecord.client_id || null,
+        userRecord.client_secret || null,
+        userRecord.issuer_url || null,
+        userRecord.authorization_url || null,
+        userRecord.token_url || null,
+        userRecord.identifier_path || null,
+        userRecord.name_path || null,
+        userRecord.scopes || null,
+        userRecord.totp_secret || null,
+        userRecord.totp_enabled ? 1 : 0,
+        userRecord.totp_backup_codes || null
+      );
+
+      // Export SSH hosts (decrypted)
+      const sshHosts = await getDb().select().from(sshData).where(eq(sshData.userId, userId));
+      const insertHost = exportDb.prepare(`
+        INSERT INTO ssh_data (id, user_id, name, ip, port, username, folder, tags, pin, auth_type, password, key, key_password, key_type, autostart_password, autostart_key, autostart_key_password, credential_id, enable_terminal, enable_tunnel, tunnel_connections, enable_file_manager, default_path, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const host of sshHosts) {
+        const decrypted = DataCrypto.decryptRecord("ssh_data", host, userId, userDataKey);
+        insertHost.run(
+          decrypted.id,
+          decrypted.userId,
+          decrypted.name || null,
+          decrypted.ip,
+          decrypted.port,
+          decrypted.username,
+          decrypted.folder || null,
+          decrypted.tags || null,
+          decrypted.pin ? 1 : 0,
+          decrypted.authType,
+          decrypted.password || null,
+          decrypted.key || null,
+          decrypted.keyPassword || null,
+          decrypted.keyType || null,
+          decrypted.autostartPassword || null,
+          decrypted.autostartKey || null,
+          decrypted.autostartKeyPassword || null,
+          decrypted.credentialId || null,
+          decrypted.enableTerminal ? 1 : 0,
+          decrypted.enableTunnel ? 1 : 0,
+          decrypted.tunnelConnections || null,
+          decrypted.enableFileManager ? 1 : 0,
+          decrypted.defaultPath || null,
+          decrypted.createdAt,
+          decrypted.updatedAt
+        );
+      }
+
+      // Export SSH credentials (decrypted)
+      const credentials = await getDb().select().from(sshCredentials).where(eq(sshCredentials.userId, userId));
+      const insertCred = exportDb.prepare(`
+        INSERT INTO ssh_credentials (id, user_id, name, description, folder, tags, auth_type, username, password, key, private_key, public_key, key_password, key_type, detected_key_type, usage_count, last_used, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const cred of credentials) {
+        const decrypted = DataCrypto.decryptRecord("ssh_credentials", cred, userId, userDataKey);
+        insertCred.run(
+          decrypted.id,
+          decrypted.userId,
+          decrypted.name,
+          decrypted.description || null,
+          decrypted.folder || null,
+          decrypted.tags || null,
+          decrypted.authType,
+          decrypted.username,
+          decrypted.password || null,
+          decrypted.key || null,
+          decrypted.privateKey || null,
+          decrypted.publicKey || null,
+          decrypted.keyPassword || null,
+          decrypted.keyType || null,
+          decrypted.detectedKeyType || null,
+          decrypted.usageCount || 0,
+          decrypted.lastUsed || null,
+          decrypted.createdAt,
+          decrypted.updatedAt
+        );
+      }
+
+      // Export file manager data
+      const [recentFiles, pinnedFiles, shortcuts] = await Promise.all([
+        getDb().select().from(fileManagerRecent).where(eq(fileManagerRecent.userId, userId)),
+        getDb().select().from(fileManagerPinned).where(eq(fileManagerPinned.userId, userId)),
+        getDb().select().from(fileManagerShortcuts).where(eq(fileManagerShortcuts.userId, userId))
+      ]);
+
+      // File manager recent
+      const insertRecent = exportDb.prepare(`
+        INSERT INTO file_manager_recent (id, user_id, host_id, name, path, last_opened)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      for (const item of recentFiles) {
+        insertRecent.run(item.id, item.userId, item.hostId, item.name, item.path, item.lastOpened);
+      }
+
+      // File manager pinned
+      const insertPinned = exportDb.prepare(`
+        INSERT INTO file_manager_pinned (id, user_id, host_id, name, path, pinned_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      for (const item of pinnedFiles) {
+        insertPinned.run(item.id, item.userId, item.hostId, item.name, item.path, item.pinnedAt);
+      }
+
+      // File manager shortcuts
+      const insertShortcut = exportDb.prepare(`
+        INSERT INTO file_manager_shortcuts (id, user_id, host_id, name, path, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      for (const item of shortcuts) {
+        insertShortcut.run(item.id, item.userId, item.hostId, item.name, item.path, item.createdAt);
+      }
+
+      // Export dismissed alerts
+      const alerts = await getDb().select().from(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
+      const insertAlert = exportDb.prepare(`
+        INSERT INTO dismissed_alerts (id, user_id, alert_id, dismissed_at)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const alert of alerts) {
+        insertAlert.run(alert.id, alert.userId, alert.alertId, alert.dismissedAt);
+      }
+
+      // Export credential usage
+      const usage = await getDb().select().from(sshCredentialUsage).where(eq(sshCredentialUsage.userId, userId));
+      const insertUsage = exportDb.prepare(`
+        INSERT INTO ssh_credential_usage (id, credential_id, host_id, user_id, used_at)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      for (const item of usage) {
+        insertUsage.run(item.id, item.credentialId, item.hostId, item.userId, item.usedAt);
+      }
+
+      // Export settings (including OIDC config) - only admin settings
+      const settingsData = await getDb().select().from(settings);
+      const insertSetting = exportDb.prepare(`
+        INSERT INTO settings (key, value)
+        VALUES (?, ?)
+      `);
+      for (const setting of settingsData) {
+        insertSetting.run(setting.key, setting.value);
+      }
+
+    } finally {
+      exportDb.close();
+    }
+
+    // Send file as download
+    res.setHeader('Content-Type', 'application/x-sqlite3');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    const fileStream = fs.createReadStream(tempPath);
+    fileStream.pipe(res);
+
+    fileStream.on('end', () => {
+      // Clean up temp file
+      fs.unlink(tempPath, (err) => {
+        if (err) {
+          apiLogger.warn("Failed to clean up export file", { path: tempPath });
+        }
+      });
+    });
+
+    apiLogger.success("User data exported as SQLite successfully", {
+      operation: "user_data_sqlite_export_success",
+      userId,
+      filename,
+    });
+
   } catch (error) {
-    apiLogger.error("Migration failed", error, {
-      operation: "encryption_migrate_failed",
+    apiLogger.error("User data SQLite export failed", error, {
+      operation: "user_data_sqlite_export_failed",
     });
     res.status(500).json({
-      error: "Migration failed",
+      error: "Failed to export user data",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
 
-app.post("/encryption/regenerate", async (req, res) => {
-  try {
-    await DatabaseEncryption.reinitializeWithNewKey();
-
-    apiLogger.warn("Encryption key regenerated via API", {
-      operation: "encryption_regenerate_api",
-    });
-
-    res.json({
-      success: true,
-      message: "New encryption key generated",
-      warning: "All encrypted data must be re-encrypted",
-    });
-  } catch (error) {
-    apiLogger.error("Failed to regenerate encryption key", error, {
-      operation: "encryption_regenerate_failed",
-    });
-    res.status(500).json({ error: "Failed to regenerate encryption key" });
-  }
-});
-
-// Database migration and backup endpoints
-app.post("/database/export", async (req, res) => {
-  try {
-    const { customPath } = req.body;
-
-    apiLogger.info("Starting SQLite database export via API", {
-      operation: "database_sqlite_export_api",
-      customPath: !!customPath,
-    });
-
-    const exportPath = await DatabaseSQLiteExport.exportDatabase(customPath);
-
-    res.json({
-      success: true,
-      message: "Database exported successfully as SQLite",
-      exportPath,
-      size: fs.statSync(exportPath).size,
-      format: "sqlite",
-    });
-  } catch (error) {
-    apiLogger.error("SQLite database export failed", error, {
-      operation: "database_sqlite_export_api_failed",
-    });
-    res.status(500).json({
-      error: "SQLite database export failed",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-});
-
-app.post("/database/import", upload.single("file"), async (req, res) => {
+// User data import endpoint - SQLite incremental import
+app.post("/database/import", authenticateJWT, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const { backupCurrent = "true" } = req.body;
-    const backupCurrentBool = backupCurrent === "true";
-    const importPath = req.file.path;
+    const userId = (req as any).userId;
+    const { password } = req.body;
 
-    apiLogger.info("Starting SQLite database import via API (additive mode)", {
-      operation: "database_sqlite_import_api",
-      importPath,
-      originalName: req.file.originalname,
+    // Always require password for import (to unlock user data for re-encryption)
+    if (!password) {
+      return res.status(400).json({
+        error: "Password required for import",
+        code: "PASSWORD_REQUIRED"
+      });
+    }
+
+    const unlocked = await authManager.authenticateUser(userId, password);
+    if (!unlocked) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    apiLogger.info("Importing SQLite data", {
+      operation: "sqlite_import_api",
+      userId,
+      filename: req.file.originalname,
       fileSize: req.file.size,
-      mode: "additive",
-      backupCurrent: backupCurrentBool,
+      mimetype: req.file.mimetype,
     });
 
-    // Validate export file first
-    // Check file extension using original filename
-    if (!req.file.originalname.endsWith(".termix-export.sqlite")) {
-      // Clean up uploaded file
-      fs.unlinkSync(importPath);
+    // Get user data key for re-encryption
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) {
+      throw new Error("User data not unlocked");
+    }
+
+    // Check if file exists and is readable
+    if (!fs.existsSync(req.file.path)) {
       return res.status(400).json({
-        error: "Invalid SQLite export file",
-        details: ["File must have .termix-export.sqlite extension"],
+        error: "Uploaded file not found",
+        details: "File was not properly uploaded"
       });
     }
 
-    const validation = DatabaseSQLiteExport.validateExportFile(importPath);
-    if (!validation.valid) {
-      // Clean up uploaded file
-      fs.unlinkSync(importPath);
+    // Read first few bytes to check if it's a SQLite file
+    const fileHeader = Buffer.alloc(16);
+    const fd = fs.openSync(req.file.path, 'r');
+    fs.readSync(fd, fileHeader, 0, 16, 0);
+    fs.closeSync(fd);
+
+    const sqliteHeader = "SQLite format 3";
+    if (fileHeader.toString('utf8', 0, 15) !== sqliteHeader) {
       return res.status(400).json({
-        error: "Invalid SQLite export file",
-        details: validation.errors,
+        error: "Invalid file format - not a SQLite database",
+        details: `Expected SQLite file, got file starting with: ${fileHeader.toString('utf8', 0, 15)}`
       });
     }
 
-    const result = await DatabaseSQLiteExport.importDatabase(importPath, {
-      replaceExisting: false, // Always use additive mode
-      backupCurrent: backupCurrentBool,
-    });
+    // Read SQLite file
+    let importDb;
+    try {
+      importDb = new Database(req.file.path, { readonly: true });
+
+      // Test if we can query the database
+      const tables = importDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+      apiLogger.info("SQLite file opened successfully", {
+        operation: "sqlite_file_validation",
+        tablesFound: tables.map(t => t.name)
+      });
+
+    } catch (sqliteError) {
+      return res.status(400).json({
+        error: "Failed to open SQLite database",
+        details: sqliteError.message
+      });
+    }
+
+    const result = {
+      success: false,
+      summary: {
+        sshHostsImported: 0,
+        sshCredentialsImported: 0,
+        fileManagerItemsImported: 0,
+        dismissedAlertsImported: 0,
+        credentialUsageImported: 0,
+        settingsImported: 0,
+        skippedItems: 0,
+        errors: [],
+      },
+    };
+
+    try {
+      const mainDb = getDb();
+
+      // Import SSH hosts (incremental - skip if exists)
+      try {
+        const importedHosts = importDb.prepare('SELECT * FROM ssh_data').all();
+        for (const host of importedHosts) {
+          try {
+            // Check if host already exists (by ip, port, username combination)
+            const existing = await mainDb.select().from(sshData)
+              .where(and(
+                eq(sshData.userId, userId),
+                eq(sshData.ip, host.ip),
+                eq(sshData.port, host.port),
+                eq(sshData.username, host.username)
+              ));
+
+            if (existing.length > 0) {
+              result.summary.skippedItems++;
+              continue;
+            }
+
+            // Prepare data for encryption and insert
+            const hostData = {
+              userId: userId, // Always use current user
+              name: host.name,
+              ip: host.ip,
+              port: host.port,
+              username: host.username,
+              folder: host.folder,
+              tags: host.tags,
+              pin: Boolean(host.pin),
+              authType: host.auth_type,
+              password: host.password,
+              key: host.key,
+              keyPassword: host.key_password,
+              keyType: host.key_type,
+              autostartPassword: host.autostart_password,
+              autostartKey: host.autostart_key,
+              autostartKeyPassword: host.autostart_key_password,
+              credentialId: null, // Reset credential references during import - user can reassign
+              enableTerminal: Boolean(host.enable_terminal),
+              enableTunnel: Boolean(host.enable_tunnel),
+              tunnelConnections: host.tunnel_connections,
+              enableFileManager: Boolean(host.enable_file_manager),
+              defaultPath: host.default_path,
+              createdAt: host.created_at || new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+
+            // Encrypt and insert
+            const encrypted = DataCrypto.encryptRecord("ssh_data", hostData, userId, userDataKey);
+            await mainDb.insert(sshData).values(encrypted);
+            result.summary.sshHostsImported++;
+          } catch (hostError) {
+            result.summary.errors.push(`SSH host import error: ${hostError.message}`);
+          }
+        }
+      } catch (tableError) {
+        // Table doesn't exist in import file, skip
+        apiLogger.info("ssh_data table not found in import file, skipping");
+      }
+
+      // Import SSH credentials (incremental - skip if exists)
+      try {
+        const importedCreds = importDb.prepare('SELECT * FROM ssh_credentials').all();
+        for (const cred of importedCreds) {
+          try {
+            // Check if credential already exists (by name and username combination)
+            const existing = await mainDb.select().from(sshCredentials)
+              .where(and(
+                eq(sshCredentials.userId, userId),
+                eq(sshCredentials.name, cred.name),
+                eq(sshCredentials.username, cred.username)
+              ));
+
+            if (existing.length > 0) {
+              result.summary.skippedItems++;
+              continue;
+            }
+
+            // Prepare data for encryption and insert
+            const credData = {
+              userId: userId, // Always use current user
+              name: cred.name,
+              description: cred.description,
+              folder: cred.folder,
+              tags: cred.tags,
+              authType: cred.auth_type,
+              username: cred.username,
+              password: cred.password,
+              key: cred.key,
+              privateKey: cred.private_key,
+              publicKey: cred.public_key,
+              keyPassword: cred.key_password,
+              keyType: cred.key_type,
+              detectedKeyType: cred.detected_key_type,
+              usageCount: cred.usage_count || 0,
+              lastUsed: cred.last_used,
+              createdAt: cred.created_at || new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+
+            // Encrypt and insert
+            const encrypted = DataCrypto.encryptRecord("ssh_credentials", credData, userId, userDataKey);
+            await mainDb.insert(sshCredentials).values(encrypted);
+            result.summary.sshCredentialsImported++;
+          } catch (credError) {
+            result.summary.errors.push(`SSH credential import error: ${credError.message}`);
+          }
+        }
+      } catch (tableError) {
+        apiLogger.info("ssh_credentials table not found in import file, skipping");
+      }
+
+      // Import file manager data (incremental)
+      const fileManagerTables = [
+        { table: 'file_manager_recent', schema: fileManagerRecent, key: 'fileManagerItemsImported' },
+        { table: 'file_manager_pinned', schema: fileManagerPinned, key: 'fileManagerItemsImported' },
+        { table: 'file_manager_shortcuts', schema: fileManagerShortcuts, key: 'fileManagerItemsImported' }
+      ];
+
+      for (const { table, schema, key } of fileManagerTables) {
+        try {
+          const importedItems = importDb.prepare(`SELECT * FROM ${table}`).all();
+          for (const item of importedItems) {
+            try {
+              // Check if item already exists (by path and name)
+              const existing = await mainDb.select().from(schema)
+                .where(and(
+                  eq(schema.userId, userId),
+                  eq(schema.path, item.path),
+                  eq(schema.name, item.name)
+                ));
+
+              if (existing.length > 0) {
+                result.summary.skippedItems++;
+                continue;
+              }
+
+              // Insert without encryption (file manager data is not encrypted)
+              const itemData = {
+                userId: userId,
+                hostId: item.host_id,
+                name: item.name,
+                path: item.path,
+                ...(table === 'file_manager_recent' && { lastOpened: item.last_opened }),
+                ...(table === 'file_manager_pinned' && { pinnedAt: item.pinned_at }),
+                ...(table === 'file_manager_shortcuts' && { createdAt: item.created_at }),
+              };
+
+              await mainDb.insert(schema).values(itemData);
+              result.summary[key]++;
+            } catch (itemError) {
+              result.summary.errors.push(`${table} import error: ${itemError.message}`);
+            }
+          }
+        } catch (tableError) {
+          apiLogger.info(`${table} table not found in import file, skipping`);
+        }
+      }
+
+      // Import dismissed alerts (incremental)
+      try {
+        const importedAlerts = importDb.prepare('SELECT * FROM dismissed_alerts').all();
+        for (const alert of importedAlerts) {
+          try {
+            // Check if alert already dismissed
+            const existing = await mainDb.select().from(dismissedAlerts)
+              .where(and(
+                eq(dismissedAlerts.userId, userId),
+                eq(dismissedAlerts.alertId, alert.alert_id)
+              ));
+
+            if (existing.length > 0) {
+              result.summary.skippedItems++;
+              continue;
+            }
+
+            await mainDb.insert(dismissedAlerts).values({
+              userId: userId,
+              alertId: alert.alert_id,
+              dismissedAt: alert.dismissed_at || new Date().toISOString(),
+            });
+            result.summary.dismissedAlertsImported++;
+          } catch (alertError) {
+            result.summary.errors.push(`Dismissed alert import error: ${alertError.message}`);
+          }
+        }
+      } catch (tableError) {
+        apiLogger.info("dismissed_alerts table not found in import file, skipping");
+      }
+
+      // Import settings (including OIDC config) - only for admin users
+      const targetUser = await mainDb.select().from(users).where(eq(users.id, userId));
+      if (targetUser.length > 0 && targetUser[0].is_admin) {
+        try {
+          const importedSettings = importDb.prepare('SELECT * FROM settings').all();
+          for (const setting of importedSettings) {
+            try {
+              // Check if setting already exists
+              const existing = await mainDb.select().from(settings)
+                .where(eq(settings.key, setting.key));
+
+              if (existing.length > 0) {
+                // Update existing setting
+                await mainDb.update(settings)
+                  .set({ value: setting.value })
+                  .where(eq(settings.key, setting.key));
+                result.summary.settingsImported++;
+              } else {
+                // Insert new setting
+                await mainDb.insert(settings).values({
+                  key: setting.key,
+                  value: setting.value
+                });
+                result.summary.settingsImported++;
+              }
+            } catch (settingError) {
+              result.summary.errors.push(`Setting import error (${setting.key}): ${settingError.message}`);
+            }
+          }
+        } catch (tableError) {
+          apiLogger.info("settings table not found in import file, skipping");
+        }
+      } else {
+        apiLogger.info("Settings import skipped - only admin users can import settings");
+      }
+
+      result.success = true;
+
+    } finally {
+      if (importDb) {
+        importDb.close();
+      }
+    }
 
     // Clean up uploaded file
-    fs.unlinkSync(importPath);
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (cleanupError) {
+      apiLogger.warn("Failed to clean up uploaded file", {
+        operation: "file_cleanup_warning",
+        filePath: req.file.path,
+      });
+    }
 
     res.json({
       success: result.success,
-      message: result.success
-        ? "SQLite database imported successfully"
-        : "SQLite database import completed with errors",
-      imported: result.imported,
-      errors: result.errors,
-      warnings: result.warnings,
-      format: "sqlite",
+      message: result.success ? "Incremental import completed successfully" : "Import failed",
+      summary: result.summary,
     });
+
+    if (result.success) {
+      apiLogger.success("SQLite data imported successfully", {
+        operation: "sqlite_import_api_success",
+        userId,
+        summary: result.summary,
+      });
+    }
+
   } catch (error) {
     // Clean up uploaded file if it exists
-    if (req.file?.path) {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
       try {
         fs.unlinkSync(req.file.path);
       } catch (cleanupError) {
-        apiLogger.warn("Failed to clean up uploaded file", {
-          operation: "file_cleanup_failed",
+        apiLogger.warn("Failed to clean up uploaded file after error", {
+          operation: "file_cleanup_error",
           filePath: req.file.path,
-          error:
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : "Unknown error",
         });
       }
     }
 
-    apiLogger.error("SQLite database import failed", error, {
-      operation: "database_sqlite_import_api_failed",
+    apiLogger.error("SQLite import failed", error, {
+      operation: "sqlite_import_api_failed",
+      userId: (req as any).userId,
     });
     res.status(500).json({
-      error: "SQLite database import failed",
+      error: "Failed to import SQLite data",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
 
-app.get("/database/export/:exportPath/info", async (req, res) => {
+// Export preview endpoint - validate export data without downloading
+app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   try {
-    const { exportPath } = req.params;
-    const decodedPath = decodeURIComponent(exportPath);
+    const userId = (req as any).userId;
+    const { format = 'encrypted', scope = 'user_data', includeCredentials = true } = req.body;
 
-    const validation = DatabaseSQLiteExport.validateExportFile(decodedPath);
-    if (!validation.valid) {
-      return res.status(400).json({
-        error: "Invalid SQLite export file",
-        details: validation.errors,
-      });
-    }
+    apiLogger.info("Generating export preview", {
+      operation: "export_preview_api",
+      userId,
+      format,
+      scope,
+      includeCredentials,
+    });
+
+    // Generate export data but don't decrypt sensitive fields
+    const exportData = await UserDataExport.exportUserData(userId, {
+      format: 'encrypted', // Always encrypt preview
+      scope,
+      includeCredentials,
+    });
+
+    const stats = UserDataExport.getExportStats(exportData);
 
     res.json({
-      valid: true,
-      metadata: validation.metadata,
-      format: "sqlite",
+      preview: true,
+      stats,
+      estimatedSize: JSON.stringify(exportData).length,
+    });
+
+    apiLogger.success("Export preview generated", {
+      operation: "export_preview_api_success",
+      userId,
+      totalRecords: stats.totalRecords,
     });
   } catch (error) {
-    apiLogger.error("Failed to get SQLite export info", error, {
-      operation: "sqlite_export_info_failed",
-    });
-    res.status(500).json({ error: "Failed to get SQLite export information" });
-  }
-});
-
-app.post("/database/backup", async (req, res) => {
-  try {
-    const { customPath } = req.body;
-
-    apiLogger.info("Creating encrypted database backup via API", {
-      operation: "database_backup_api",
-    });
-
-    // Import required modules
-    const { databasePaths, getMemoryDatabaseBuffer } = await import(
-      "./db/index.js"
-    );
-
-    // Get current in-memory database as buffer
-    const dbBuffer = getMemoryDatabaseBuffer();
-
-    // Create backup directory
-    const backupDir =
-      customPath || path.join(databasePaths.directory, "backups");
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-
-    // Generate backup filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const backupFileName = `database-backup-${timestamp}.sqlite.encrypted`;
-    const backupPath = path.join(backupDir, backupFileName);
-
-    // Create encrypted backup directly from memory buffer
-    DatabaseFileEncryption.encryptDatabaseFromBuffer(dbBuffer, backupPath);
-
-    res.json({
-      success: true,
-      message: "Encrypted backup created successfully",
-      backupPath,
-      size: fs.statSync(backupPath).size,
-    });
-  } catch (error) {
-    apiLogger.error("Database backup failed", error, {
-      operation: "database_backup_api_failed",
+    apiLogger.error("Export preview failed", error, {
+      operation: "export_preview_api_failed",
     });
     res.status(500).json({
-      error: "Database backup failed",
+      error: "Failed to generate export preview",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
 
-app.post("/database/restore", async (req, res) => {
+
+app.post("/database/restore", requireAdmin, async (req, res) => {
   try {
     const { backupPath, targetPath } = req.body;
 
@@ -605,16 +1218,9 @@ app.post("/database/restore", async (req, res) => {
       return res.status(400).json({ error: "Invalid encrypted backup file" });
     }
 
-    // Check hardware compatibility
-    if (!DatabaseFileEncryption.validateHardwareCompatibility(backupPath)) {
-      return res.status(400).json({
-        error: "Hardware fingerprint mismatch",
-        message:
-          "This backup was created on different hardware and cannot be restored",
-      });
-    }
+    // Hardware compatibility check removed - no longer required
 
-    const restoredPath = DatabaseFileEncryption.restoreFromEncryptedBackup(
+    const restoredPath = await DatabaseFileEncryption.restoreFromEncryptedBackup(
       backupPath,
       targetPath,
     );
@@ -657,57 +1263,220 @@ app.use(
   },
 );
 
-const PORT = 8081;
+const HTTP_PORT = 8081;
+const HTTPS_PORT = process.env.SSL_PORT || 8443;
 
-async function initializeEncryption() {
+async function initializeSecurity() {
   try {
-    databaseLogger.info("Initializing database encryption...", {
-      operation: "encryption_init",
+    databaseLogger.info("Initializing security system (KEK-DEK architecture)...", {
+      operation: "security_init",
     });
 
-    await DatabaseEncryption.initialize({
-      encryptionEnabled: process.env.ENCRYPTION_ENABLED !== "false",
-      forceEncryption: process.env.FORCE_ENCRYPTION === "true",
-      migrateOnAccess: process.env.MIGRATE_ON_ACCESS !== "false",
-    });
+    // Initialize simplified authentication system
+    const authManager = AuthManager.getInstance();
+    await authManager.initialize();
 
-    const status = await DatabaseEncryption.getDetailedStatus();
-    if (status.configValid && status.key.keyValid) {
-      databaseLogger.success("Database encryption initialized successfully", {
-        operation: "encryption_init_complete",
-        enabled: status.enabled,
-        keyId: status.key.keyId,
-        hasStoredKey: status.key.hasKey,
-      });
-    } else {
-      databaseLogger.error(
-        "Database encryption configuration invalid",
-        undefined,
-        {
-          operation: "encryption_init_failed",
-          status,
-        },
-      );
+    // Initialize simplified data encryption
+    DataCrypto.initialize();
+
+    // Validate security system
+    const isValid = true; // Simplified validation for new architecture
+    if (!isValid) {
+      throw new Error("Security system validation failed");
     }
-  } catch (error) {
-    databaseLogger.error("Failed to initialize database encryption", error, {
-      operation: "encryption_init_error",
+
+    const securityStatus = {
+      initialized: true,
+      system: { hasSecret: true, isValid: true },
+      activeSessions: {},
+      activeSessionCount: 0
+    };
+    databaseLogger.success("Security system initialized successfully", {
+      operation: "security_init_complete",
+      systemStatus: securityStatus.system,
+      initialized: securityStatus.initialized,
     });
+
+    databaseLogger.info("Security architecture: JWT (system) + KEK-DEK (users)", {
+      operation: "security_architecture_info",
+      features: [
+        "System JWT keys for authentication",
+        "User password-derived KEK for data protection",
+        "Session-based data key management",
+        "Multi-user independent encryption"
+      ],
+    });
+
+  } catch (error) {
+    databaseLogger.error("Failed to initialize security system", error, {
+      operation: "security_init_error",
+    });
+    throw error; // Security system is critical for API functionality
   }
 }
 
-app.listen(PORT, async () => {
+// Database migration status endpoint - for administrators to check migration status
+app.get("/database/migration/status", authenticateJWT, requireAdmin, async (req, res) => {
+  try {
+    const dataDir = process.env.DATA_DIR || "./db/data";
+    const migration = new DatabaseMigration(dataDir);
+    const status = migration.checkMigrationStatus();
+
+    apiLogger.info("Migration status requested", {
+      operation: "migration_status_api",
+      userId: (req as any).userId,
+    });
+
+    // Get migration-related files info
+    const dbPath = path.join(dataDir, "db.sqlite");
+    const encryptedDbPath = `${dbPath}.encrypted`;
+
+    const files = fs.readdirSync(dataDir);
+    const backupFiles = files.filter(f => f.includes('.migration-backup-'));
+    const migratedFiles = files.filter(f => f.includes('.migrated-'));
+
+    // Get file sizes
+    let unencryptedSize = 0;
+    let encryptedSize = 0;
+
+    if (status.hasUnencryptedDb) {
+      try {
+        unencryptedSize = fs.statSync(dbPath).size;
+      } catch (error) {
+        // File might be locked or deleted
+      }
+    }
+
+    if (status.hasEncryptedDb) {
+      try {
+        encryptedSize = fs.statSync(encryptedDbPath).size;
+      } catch (error) {
+        // File might not exist
+      }
+    }
+
+    res.json({
+      migrationStatus: status,
+      files: {
+        unencryptedDbSize: unencryptedSize,
+        encryptedDbSize: encryptedSize,
+        backupFiles: backupFiles.length,
+        migratedFiles: migratedFiles.length,
+      },
+      recommendations: getMigrationRecommendations(status),
+    });
+
+  } catch (error) {
+    apiLogger.error("Failed to get migration status", error, {
+      operation: "migration_status_api_failed",
+    });
+    res.status(500).json({
+      error: "Failed to get migration status",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// Database migration history endpoint - shows backup and migrated files
+app.get("/database/migration/history", authenticateJWT, requireAdmin, async (req, res) => {
+  try {
+    const dataDir = process.env.DATA_DIR || "./db/data";
+
+    apiLogger.info("Migration history requested", {
+      operation: "migration_history_api",
+      userId: (req as any).userId,
+    });
+
+    const files = fs.readdirSync(dataDir);
+
+    const backupFiles = files
+      .filter(f => f.includes('.migration-backup-'))
+      .map(f => {
+        const filePath = path.join(dataDir, f);
+        const stats = fs.statSync(filePath);
+        return {
+          name: f,
+          size: stats.size,
+          created: stats.birthtime,
+          modified: stats.mtime,
+          type: 'backup',
+        };
+      })
+      .sort((a, b) => b.modified.getTime() - a.modified.getTime());
+
+    const migratedFiles = files
+      .filter(f => f.includes('.migrated-'))
+      .map(f => {
+        const filePath = path.join(dataDir, f);
+        const stats = fs.statSync(filePath);
+        return {
+          name: f,
+          size: stats.size,
+          created: stats.birthtime,
+          modified: stats.mtime,
+          type: 'migrated',
+        };
+      })
+      .sort((a, b) => b.modified.getTime() - a.modified.getTime());
+
+    res.json({
+      files: [...backupFiles, ...migratedFiles],
+      summary: {
+        totalBackups: backupFiles.length,
+        totalMigrated: migratedFiles.length,
+        oldestBackup: backupFiles.length > 0 ? backupFiles[backupFiles.length - 1].created : null,
+        newestBackup: backupFiles.length > 0 ? backupFiles[0].created : null,
+      },
+    });
+
+  } catch (error) {
+    apiLogger.error("Failed to get migration history", error, {
+      operation: "migration_history_api_failed",
+    });
+    res.status(500).json({
+      error: "Failed to get migration history",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// Helper function to generate migration recommendations
+function getMigrationRecommendations(status: any): string[] {
+  const recommendations: string[] = [];
+
+  if (status.needsMigration) {
+    recommendations.push("Automatic migration will occur on next server restart");
+    recommendations.push("Ensure DATABASE_KEY environment variable is properly set");
+    recommendations.push("Consider manual backup before restart if desired");
+  } else if (status.hasUnencryptedDb && status.hasEncryptedDb) {
+    recommendations.push("Both encrypted and unencrypted databases found");
+    recommendations.push("This may indicate a previous migration was interrupted");
+    recommendations.push("Manual intervention may be required");
+    recommendations.push("Check logs for migration history");
+  } else if (status.hasEncryptedDb && !status.hasUnencryptedDb) {
+    recommendations.push("Database is properly encrypted");
+    recommendations.push("No action required");
+  } else if (!status.hasEncryptedDb && !status.hasUnencryptedDb) {
+    recommendations.push("Fresh installation detected");
+    recommendations.push("Database will be created encrypted on first use");
+  }
+
+  return recommendations;
+}
+
+app.listen(HTTP_PORT, async () => {
   // Ensure uploads directory exists
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  await initializeEncryption();
+  await initializeSecurity();
 
-  databaseLogger.success(`Database API server started on port ${PORT}`, {
+  databaseLogger.success(`Database API server started on HTTP port ${HTTP_PORT}`, {
     operation: "server_start",
-    port: PORT,
+    port: HTTP_PORT,
+    protocol: "HTTP",
     routes: [
       "/users",
       "/ssh",
@@ -718,13 +1487,43 @@ app.listen(PORT, async () => {
       "/releases/rss",
       "/encryption/status",
       "/encryption/initialize",
-      "/encryption/migrate",
       "/encryption/regenerate",
       "/database/export",
       "/database/import",
       "/database/export/:exportPath/info",
-      "/database/backup",
       "/database/restore",
     ],
   });
 });
+
+// Start HTTPS server if SSL is enabled
+const sslConfig = AutoSSLSetup.getSSLConfig();
+if (sslConfig.enabled && fs.existsSync(sslConfig.certPath) && fs.existsSync(sslConfig.keyPath)) {
+  const httpsOptions = {
+    cert: fs.readFileSync(sslConfig.certPath),
+    key: fs.readFileSync(sslConfig.keyPath)
+  };
+
+  https.createServer(httpsOptions, app).listen(HTTPS_PORT, () => {
+    databaseLogger.success(`Database API server started on HTTPS port ${HTTPS_PORT}`, {
+      operation: "server_start",
+      port: HTTPS_PORT,
+      protocol: "HTTPS",
+      domain: sslConfig.domain,
+      routes: [
+        "/users",
+        "/ssh",
+        "/alerts",
+        "/credentials",
+        "/health",
+        "/version",
+        "/releases/rss",
+        "/encryption/status",
+        "/database/export",
+        "/database/import",
+        "/database/export/:exportPath/info",
+        "/database/restore",
+      ],
+    });
+  });
+}

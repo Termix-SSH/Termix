@@ -5,6 +5,9 @@ import fs from "fs";
 import path from "path";
 import { databaseLogger } from "../../utils/logger.js";
 import { DatabaseFileEncryption } from "../../utils/database-file-encryption.js";
+import { SystemCrypto } from "../../utils/system-crypto.js";
+import { DatabaseMigration } from "../../utils/database-migration.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 
 const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
@@ -25,119 +28,198 @@ const encryptedDbPath = `${dbPath}.encrypted`;
 let actualDbPath = ":memory:"; // Always use memory database
 let memoryDatabase: Database.Database;
 let isNewDatabase = false;
+let sqlite: Database.Database; // Module-level sqlite instance
 
-if (enableFileEncryption) {
-  try {
-    // Check if encrypted database exists
-    if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
-      databaseLogger.info(
-        "Found encrypted database file, loading into memory...",
-        {
-          operation: "db_memory_load",
-          encryptedPath: encryptedDbPath,
-        },
-      );
+// Async initialization function to handle SystemCrypto and DatabaseFileEncryption
+async function initializeDatabaseAsync(): Promise<void> {
+  // Initialize SystemCrypto database key first
+  databaseLogger.info("Initializing SystemCrypto database key...", {
+    operation: "db_init_systemcrypto",
+    envKeyAvailable: !!process.env.DATABASE_KEY,
+    envKeyLength: process.env.DATABASE_KEY?.length || 0,
+  });
 
-      // Validate hardware compatibility
-      if (
-        !DatabaseFileEncryption.validateHardwareCompatibility(encryptedDbPath)
-      ) {
-        databaseLogger.error(
-          "Hardware fingerprint mismatch for encrypted database",
+  const systemCrypto = SystemCrypto.getInstance();
+  await systemCrypto.initializeDatabaseKey();
+
+  // Verify key is available after initialization
+  const dbKey = await systemCrypto.getDatabaseKey();
+  databaseLogger.info("SystemCrypto database key initialized", {
+    operation: "db_init_systemcrypto_complete",
+    keyLength: dbKey.length,
+    keyAvailable: !!dbKey,
+  });
+
+  if (enableFileEncryption) {
+    try {
+      // Check if encrypted database exists
+      if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
+        databaseLogger.info(
+          "Found encrypted database file, loading into memory...",
           {
-            operation: "db_decrypt_failed",
-            reason: "hardware_mismatch",
+            operation: "db_memory_load",
+            encryptedPath: encryptedDbPath,
+            fileSize: fs.statSync(encryptedDbPath).size,
           },
         );
-        throw new Error(
-          "Cannot decrypt database: hardware fingerprint mismatch",
-        );
-      }
 
-      // Decrypt database content to memory buffer
-      const decryptedBuffer =
-        DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
+        // Decrypt database content to memory buffer (now async)
+        databaseLogger.info("Starting database decryption...", {
+          operation: "db_decrypt_start",
+          encryptedPath: encryptedDbPath,
+        });
 
-      // Create in-memory database from decrypted buffer
-      memoryDatabase = new Database(decryptedBuffer);
-    } else {
-      memoryDatabase = new Database(":memory:");
-      isNewDatabase = true;
+        const decryptedBuffer =
+          await DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
 
-      // Check if there's an old unencrypted database to migrate
-      if (fs.existsSync(dbPath)) {
-        // Load old database and copy its content to memory database
-        const oldDb = new Database(dbPath, { readonly: true });
+        databaseLogger.info("Database decryption successful", {
+          operation: "db_decrypt_success",
+          decryptedSize: decryptedBuffer.length,
+          isSqlite: decryptedBuffer.slice(0, 16).toString().startsWith('SQLite format 3'),
+        });
 
-        // Get all table schemas and data from old database
-        const tables = oldDb
-          .prepare(
-            `
-          SELECT name, sql FROM sqlite_master
-          WHERE type='table' AND name NOT LIKE 'sqlite_%'
-        `,
-          )
-          .all() as { name: string; sql: string }[];
+        // Create in-memory database from decrypted buffer
+        memoryDatabase = new Database(decryptedBuffer);
 
-        // Create tables in memory database
-        for (const table of tables) {
-          memoryDatabase.exec(table.sql);
-        }
-
-        // Copy data for each table
-        for (const table of tables) {
-          const rows = oldDb.prepare(`SELECT * FROM ${table.name}`).all();
-          if (rows.length > 0) {
-            const columns = Object.keys(rows[0]);
-            const placeholders = columns.map(() => "?").join(", ");
-            const insertStmt = memoryDatabase.prepare(
-              `INSERT INTO ${table.name} (${columns.join(", ")}) VALUES (${placeholders})`,
-            );
-
-            for (const row of rows) {
-              const values = columns.map((col) => (row as any)[col]);
-              insertStmt.run(values);
-            }
-          }
-        }
-
-        oldDb.close();
-
-        isNewDatabase = false;
+        databaseLogger.info("In-memory database created from decrypted buffer", {
+          operation: "db_memory_create_success",
+        });
       } else {
+        // No encrypted database exists - check if we need to migrate
+        const migration = new DatabaseMigration(dataDir);
+        const migrationStatus = migration.checkMigrationStatus();
+
+        databaseLogger.info("Migration status check completed", {
+          operation: "migration_status",
+          needsMigration: migrationStatus.needsMigration,
+          hasUnencryptedDb: migrationStatus.hasUnencryptedDb,
+          hasEncryptedDb: migrationStatus.hasEncryptedDb,
+          unencryptedDbSize: migrationStatus.unencryptedDbSize,
+          reason: migrationStatus.reason,
+        });
+
+        if (migrationStatus.needsMigration) {
+          // Perform automatic migration
+          databaseLogger.info("Starting automatic database migration", {
+            operation: "auto_migration_start",
+            unencryptedDbSize: migrationStatus.unencryptedDbSize,
+          });
+
+          const migrationResult = await migration.migrateDatabase();
+
+          if (migrationResult.success) {
+            databaseLogger.success("Automatic database migration completed successfully", {
+              operation: "auto_migration_success",
+              migratedTables: migrationResult.migratedTables,
+              migratedRows: migrationResult.migratedRows,
+              duration: migrationResult.duration,
+              backupPath: migrationResult.backupPath,
+            });
+
+            // Clean up old backup files
+            migration.cleanupOldBackups();
+
+            // Load the newly created encrypted database
+            if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
+              databaseLogger.info("Loading migrated encrypted database into memory", {
+                operation: "load_migrated_db",
+                encryptedPath: encryptedDbPath,
+              });
+
+              const decryptedBuffer = await DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
+              memoryDatabase = new Database(decryptedBuffer);
+              isNewDatabase = false; // We have migrated data
+
+              databaseLogger.success("Migrated encrypted database loaded successfully", {
+                operation: "load_migrated_db_success",
+                decryptedSize: decryptedBuffer.length,
+              });
+            } else {
+              throw new Error("Migration completed but encrypted database file not found");
+            }
+          } else {
+            // Migration failed - this is critical
+            databaseLogger.error("Automatic database migration failed", null, {
+              operation: "auto_migration_failed",
+              error: migrationResult.error,
+              migratedTables: migrationResult.migratedTables,
+              migratedRows: migrationResult.migratedRows,
+              duration: migrationResult.duration,
+              backupPath: migrationResult.backupPath,
+            });
+
+            // 🔥 CRITICAL: Migration failure with existing data
+            console.error("🚨 DATABASE MIGRATION FAILED - THIS IS CRITICAL!");
+            console.error("Migration error:", migrationResult.error);
+            console.error("Backup available at:", migrationResult.backupPath);
+            console.error("Manual intervention required to recover data.");
+
+            throw new Error(`Database migration failed: ${migrationResult.error}. Backup available at: ${migrationResult.backupPath}`);
+          }
+        } else {
+          // No migration needed - create fresh database
+          memoryDatabase = new Database(":memory:");
+          isNewDatabase = true;
+
+          databaseLogger.info("Creating fresh in-memory database", {
+            operation: "fresh_db_create",
+            reason: migrationStatus.reason,
+          });
+        }
       }
-    }
-  } catch (error) {
-    databaseLogger.error("Failed to initialize memory database", error, {
-      operation: "db_memory_init_failed",
-    });
+    } catch (error) {
+      databaseLogger.error("Failed to initialize memory database", error, {
+        operation: "db_memory_init_failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorStack: error instanceof Error ? error.stack : undefined,
+        encryptedDbExists: DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
+        databaseKeyAvailable: !!process.env.DATABASE_KEY,
+        databaseKeyLength: process.env.DATABASE_KEY?.length || 0,
+      });
 
-    // If file encryption is critical, fail fast
-    if (process.env.DB_FILE_ENCRYPTION_REQUIRED === "true") {
-      throw error;
-    }
+      // 🔥 CRITICAL: Never silently ignore database decryption failures!
+      // This causes complete data loss for users
+      console.error("🚨 DATABASE DECRYPTION FAILED - THIS IS CRITICAL!");
+      console.error("Error details:", error instanceof Error ? error.message : error);
+      console.error("Encrypted file exists:", DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath));
+      console.error("DATABASE_KEY available:", !!process.env.DATABASE_KEY);
 
+      // Always fail fast on decryption errors - data integrity is critical
+      throw new Error(`Database decryption failed: ${error instanceof Error ? error.message : "Unknown error"}. This prevents data loss.`);
+    }
+  } else {
     memoryDatabase = new Database(":memory:");
     isNewDatabase = true;
   }
-} else {
-  memoryDatabase = new Database(":memory:");
-  isNewDatabase = true;
 }
 
-databaseLogger.info(`Initializing SQLite database`, {
-  operation: "db_init",
-  path: actualDbPath,
-  encrypted:
-    enableFileEncryption &&
-    DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
-  inMemory: true,
-  isNewDatabase,
-});
+// Main async initialization function that combines database setup with schema creation
+async function initializeCompleteDatabase(): Promise<void> {
+  // First initialize the database and SystemCrypto
+  await initializeDatabaseAsync();
 
-const sqlite = memoryDatabase;
+  databaseLogger.info(`Initializing SQLite database`, {
+    operation: "db_init",
+    path: actualDbPath,
+    encrypted:
+      enableFileEncryption &&
+      DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
+    inMemory: true,
+    isNewDatabase,
+  });
 
-sqlite.exec(`
+  // Create module-level sqlite instance after database is initialized
+  sqlite = memoryDatabase;
+
+  // Initialize drizzle ORM with the configured database
+  db = drizzle(sqlite, { schema });
+
+  databaseLogger.info("Database ORM initialized", {
+    operation: "drizzle_init",
+    tablesConfigured: Object.keys(schema).length
+  });
+
+  sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -256,7 +338,35 @@ sqlite.exec(`
         FOREIGN KEY (host_id) REFERENCES ssh_data (id),
         FOREIGN KEY (user_id) REFERENCES users (id)
     );
+
 `);
+
+  // Run schema migrations
+  migrateSchema();
+
+  // Initialize default settings
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
+      .get();
+    if (!row) {
+      databaseLogger.info("Initializing default settings", {
+        operation: "db_init",
+        setting: "allow_registration",
+      });
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')",
+        )
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize default settings", {
+      operation: "db_init",
+      error: e,
+    });
+  }
+}
 
 const addColumnIfNotExists = (
   table: string,
@@ -365,11 +475,11 @@ const migrateSchema = () => {
     "INTEGER REFERENCES ssh_credentials(id)",
   );
 
-  addColumnIfNotExists(
-    "ssh_data",
-    "require_password",
-    "INTEGER NOT NULL DEFAULT 1",
-  );
+  // AutoStart plaintext columns
+  addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
+
 
   // SSH credentials table migrations for encryption support
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
@@ -385,115 +495,70 @@ const migrateSchema = () => {
   });
 };
 
-const initializeDatabase = async (): Promise<void> => {
-  migrateSchema();
-
-  try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
-      .get();
-    if (!row) {
-      databaseLogger.info("Initializing default settings", {
-        operation: "db_init",
-        setting: "allow_registration",
-      });
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')",
-        )
-        .run();
-    } else {
-    }
-  } catch (e) {
-    databaseLogger.warn("Could not initialize default settings", {
-      operation: "db_init",
-      error: e,
-    });
-  }
-};
-
-// Function to save in-memory database to encrypted file
+// Function to save in-memory database to file (encrypted or unencrypted fallback)
 async function saveMemoryDatabaseToFile() {
-  if (!memoryDatabase || !enableFileEncryption) return;
+  if (!memoryDatabase) return;
 
   try {
     // Export in-memory database to buffer
     const buffer = memoryDatabase.serialize();
 
-    // Encrypt and save to file
-    DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, encryptedDbPath);
+    // Ensure data directory exists
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+      databaseLogger.info("Created data directory", {
+        operation: "data_dir_create",
+        path: dataDir,
+      });
+    }
 
-    databaseLogger.debug("In-memory database saved to encrypted file", {
-      operation: "memory_db_save",
-      bufferSize: buffer.length,
-      encryptedPath: encryptedDbPath,
-    });
+    if (enableFileEncryption) {
+      // Save as encrypted file
+      await DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, encryptedDbPath);
+
+      databaseLogger.debug("In-memory database saved to encrypted file", {
+        operation: "memory_db_save_encrypted",
+        bufferSize: buffer.length,
+        encryptedPath: encryptedDbPath,
+      });
+    } else {
+      // Fallback: save as unencrypted SQLite file to prevent data loss
+      fs.writeFileSync(dbPath, buffer);
+
+      databaseLogger.debug("In-memory database saved to unencrypted file", {
+        operation: "memory_db_save_unencrypted",
+        bufferSize: buffer.length,
+        unencryptedPath: dbPath,
+        warning: "File encryption disabled - data saved unencrypted",
+      });
+    }
   } catch (error) {
     databaseLogger.error("Failed to save in-memory database", error, {
       operation: "memory_db_save_failed",
+      enableFileEncryption,
     });
   }
 }
 
-// Function to handle post-initialization file encryption and cleanup
+// Function to handle post-initialization file encryption and periodic saves
 async function handlePostInitFileEncryption() {
   if (!enableFileEncryption) return;
 
   try {
-    // Clean up any existing unencrypted database files
+    // Check for any remaining unencrypted database files that may need attention
     if (fs.existsSync(dbPath)) {
+      // This could happen if migration was skipped or if there are multiple database files
       databaseLogger.warn(
-        "Found unencrypted database file, removing for security",
+        "Unencrypted database file still exists after initialization",
         {
-          operation: "db_security_cleanup_existing",
-          removingPath: dbPath,
+          operation: "db_security_check",
+          path: dbPath,
+          note: "This may be normal if migration was skipped for safety reasons",
         },
       );
 
-      try {
-        fs.unlinkSync(dbPath);
-        databaseLogger.success(
-          "Unencrypted database file removed for security",
-          {
-            operation: "db_security_cleanup_complete",
-            removedPath: dbPath,
-          },
-        );
-      } catch (error) {
-        databaseLogger.warn(
-          "Could not remove unencrypted database file (may be locked)",
-          {
-            operation: "db_security_cleanup_deferred",
-            path: dbPath,
-            error: error instanceof Error ? error.message : "Unknown error",
-          },
-        );
-
-        // Try again after a short delay
-        setTimeout(() => {
-          try {
-            if (fs.existsSync(dbPath)) {
-              fs.unlinkSync(dbPath);
-              databaseLogger.success(
-                "Delayed cleanup: unencrypted database file removed",
-                {
-                  operation: "db_security_cleanup_delayed_success",
-                  removedPath: dbPath,
-                },
-              );
-            }
-          } catch (delayedError) {
-            databaseLogger.error(
-              "Failed to remove unencrypted database file even after delay",
-              delayedError,
-              {
-                operation: "db_security_cleanup_delayed_failed",
-                path: dbPath,
-              },
-            );
-          }
-        }, 2000);
-      }
+      // Don't automatically delete - let migration logic handle this
+      // This provides better safety and transparency
     }
 
     // Always save the in-memory database (whether new or existing)
@@ -501,15 +566,35 @@ async function handlePostInitFileEncryption() {
       // Save immediately after initialization
       await saveMemoryDatabaseToFile();
 
-      // Set up periodic saves every 5 minutes
-      setInterval(saveMemoryDatabaseToFile, 5 * 60 * 1000);
+      databaseLogger.info("Setting up periodic database saves", {
+        operation: "db_periodic_save_setup",
+        interval: "15 seconds",
+      });
+
+      // Set up periodic saves every 15 seconds for real-time persistence
+      setInterval(saveMemoryDatabaseToFile, 15 * 1000);
+
+      // Initialize database save trigger for real-time saves
+      DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
     }
+
+    // Perform migration cleanup on startup (remove old backup files)
+    try {
+      const migration = new DatabaseMigration(dataDir);
+      migration.cleanupOldBackups();
+    } catch (cleanupError) {
+      databaseLogger.warn("Failed to cleanup old migration files", {
+        operation: "migration_cleanup_startup_failed",
+        error: cleanupError instanceof Error ? cleanupError.message : "Unknown error",
+      });
+    }
+
   } catch (error) {
     databaseLogger.error(
-      "Failed to handle database file encryption/cleanup",
+      "Failed to handle database file encryption setup",
       error,
       {
-        operation: "db_encrypt_cleanup_failed",
+        operation: "db_encrypt_setup_failed",
       },
     );
 
@@ -517,22 +602,25 @@ async function handlePostInitFileEncryption() {
   }
 }
 
-initializeDatabase()
-  .then(() => handlePostInitFileEncryption())
+// Export a promise that resolves when database is fully initialized
+export const databaseReady = initializeCompleteDatabase()
+  .then(async () => {
+    await handlePostInitFileEncryption();
+
+    databaseLogger.success("Database connection established", {
+      operation: "db_init",
+      path: actualDbPath,
+      hasEncryptedBackup:
+        enableFileEncryption &&
+        DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
+    });
+  })
   .catch((error) => {
     databaseLogger.error("Failed to initialize database", error, {
       operation: "db_init",
     });
     process.exit(1);
   });
-
-databaseLogger.success("Database connection established", {
-  operation: "db_init",
-  path: actualDbPath,
-  hasEncryptedBackup:
-    enableFileEncryption &&
-    DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
-});
 
 // Cleanup function for database and temporary files
 async function cleanupDatabase() {
@@ -619,9 +707,27 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
-// Export database connection and file encryption utilities
-export const db = drizzle(sqlite, { schema });
-export const sqliteInstance = sqlite; // Export underlying SQLite instance for schema queries
+// Database connection - will be initialized after database setup
+let db: ReturnType<typeof drizzle<typeof schema>>;
+
+// Export database connection getter function to avoid undefined access
+export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
+  if (!db) {
+    throw new Error("Database not initialized. Ensure databaseReady promise is awaited before accessing db.");
+  }
+  return db;
+}
+
+// Export raw SQLite instance for migrations
+export function getSqlite(): Database.Database {
+  if (!sqlite) {
+    throw new Error("SQLite not initialized. Ensure databaseReady promise is awaited before accessing sqlite.");
+  }
+  return sqlite;
+}
+
+// Legacy export for compatibility - will throw if accessed before initialization
+export { db };
 export { DatabaseFileEncryption };
 export const databasePaths = {
   main: actualDbPath,
@@ -660,3 +766,6 @@ function getMemoryDatabaseBuffer(): Buffer {
 
 // Export save function for manual saves and buffer access
 export { saveMemoryDatabaseToFile, getMemoryDatabaseBuffer };
+
+// Export database save trigger for real-time saves
+export { DatabaseSaveTrigger };

@@ -28,6 +28,9 @@ import {
   generateKeyPair,
 } from "@/ui/main-axios";
 import { useTranslation } from "react-i18next";
+import CodeMirror from "@uiw/react-codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView } from "@codemirror/view";
 import type {
   Credential,
   CredentialEditorProps,
@@ -312,9 +315,9 @@ export function CredentialEditor({
       "ssh-dss": "DSA (SSH)",
       "rsa-sha2-256": "RSA-SHA2-256",
       "rsa-sha2-512": "RSA-SHA2-512",
-      invalid: "Invalid Key",
-      error: "Detection Error",
-      unknown: "Unknown",
+      invalid: t("credentials.invalidKey"),
+      error: t("credentials.detectionError"),
+      unknown: t("credentials.unknown"),
     };
     return keyTypeMap[keyType] || keyType;
   };
@@ -908,23 +911,39 @@ export function CredentialEditor({
                                 </div>
                               </div>
                               <FormControl>
-                                <textarea
-                                  placeholder={t(
-                                    "placeholders.pastePrivateKey",
-                                  )}
-                                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                <CodeMirror
                                   value={
                                     typeof field.value === "string"
                                       ? field.value
                                       : ""
                                   }
-                                  onChange={(e) => {
-                                    field.onChange(e.target.value);
+                                  onChange={(value) => {
+                                    field.onChange(value);
                                     debouncedKeyDetection(
-                                      e.target.value,
+                                      value,
                                       form.watch("keyPassword"),
                                     );
                                   }}
+                                  placeholder={t("placeholders.pastePrivateKey")}
+                                  theme={oneDark}
+                                  className="border border-input rounded-md"
+                                  minHeight="120px"
+                                  basicSetup={{
+                                    lineNumbers: true,
+                                    foldGutter: false,
+                                    dropCursor: false,
+                                    allowMultipleSelections: false,
+                                    highlightSelectionMatches: false,
+                                    searchKeymap: false,
+                                    scrollPastEnd: false,
+                                  }}
+                                  extensions={[
+                                    EditorView.theme({
+                                      ".cm-scroller": {
+                                        overflow: "auto",
+                                      },
+                                    }),
+                                  ]}
                                 />
                               </FormControl>
                               {detectedKeyType && (
@@ -1062,14 +1081,32 @@ export function CredentialEditor({
                                 </Button>
                               </div>
                               <FormControl>
-                                <textarea
-                                  placeholder={t("placeholders.pastePublicKey")}
-                                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                <CodeMirror
                                   value={field.value || ""}
-                                  onChange={(e) => {
-                                    field.onChange(e.target.value);
-                                    debouncedPublicKeyDetection(e.target.value);
+                                  onChange={(value) => {
+                                    field.onChange(value);
+                                    debouncedPublicKeyDetection(value);
                                   }}
+                                  placeholder={t("placeholders.pastePublicKey")}
+                                  theme={oneDark}
+                                  className="border border-input rounded-md"
+                                  minHeight="120px"
+                                  basicSetup={{
+                                    lineNumbers: true,
+                                    foldGutter: false,
+                                    dropCursor: false,
+                                    allowMultipleSelections: false,
+                                    highlightSelectionMatches: false,
+                                    searchKeymap: false,
+                                    scrollPastEnd: false,
+                                  }}
+                                  extensions={[
+                                    EditorView.theme({
+                                      ".cm-scroller": {
+                                        overflow: "auto",
+                                      },
+                                    }),
+                                  ]}
                                 />
                               </FormControl>
                               <div className="text-xs text-muted-foreground mt-1">

@@ -2,6 +2,7 @@ import React from "react";
 import { DraggableWindow } from "./DraggableWindow";
 import { DiffViewer } from "./DiffViewer";
 import { useWindowManager } from "./WindowManager";
+import { useTranslation } from "react-i18next";
 import type { FileItem, SSHHost } from "../../../../types/index.js";
 
 interface DiffWindowProps {
@@ -23,18 +24,15 @@ export function DiffWindow({
   initialX = 150,
   initialY = 100,
 }: DiffWindowProps) {
-  const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } =
+  const { t } = useTranslation();
+  const { closeWindow, maximizeWindow, focusWindow, windows } =
     useWindowManager();
 
   const currentWindow = windows.find((w) => w.id === windowId);
 
-  // 窗口操作处理
+  // Window operation handling
   const handleClose = () => {
     closeWindow(windowId);
-  };
-
-  const handleMinimize = () => {
-    minimizeWindow(windowId);
   };
 
   const handleMaximize = () => {
@@ -51,7 +49,7 @@ export function DiffWindow({
 
   return (
     <DraggableWindow
-      title={`文件对比: ${file1.name} ↔ ${file2.name}`}
+      title={t("fileManager.fileComparison", { file1: file1.name, file2: file2.name })}
       initialX={initialX}
       initialY={initialY}
       initialWidth={1200}
@@ -59,7 +57,6 @@ export function DiffWindow({
       minWidth={800}
       minHeight={500}
       onClose={handleClose}
-      onMinimize={handleMinimize}
       onMaximize={handleMaximize}
       onFocus={handleFocus}
       isMaximized={currentWindow.isMaximized}

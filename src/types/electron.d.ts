@@ -18,7 +18,7 @@ export interface ElectronAPI {
 
   invoke: (channel: string, ...args: any[]) => Promise<any>;
 
-  // 拖拽API
+  // Drag and drop API
   createTempFile: (fileData: {
     fileName: string;
     content: string;

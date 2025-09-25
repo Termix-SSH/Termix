@@ -1,504 +1,457 @@
+import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
-import { DatabaseFileEncryption } from "./database-file-encryption.js";
-import { DatabaseEncryption } from "./database-encryption.js";
-import { FieldEncryption } from "./encryption.js";
-import { HardwareFingerprint } from "./hardware-fingerprint.js";
 import { databaseLogger } from "./logger.js";
-import { db, databasePaths } from "../database/db/index.js";
-import {
-  users,
-  sshData,
-  sshCredentials,
-  settings,
-  fileManagerRecent,
-  fileManagerPinned,
-  fileManagerShortcuts,
-  dismissedAlerts,
-  sshCredentialUsage,
-} from "../database/db/schema.js";
+import { DatabaseFileEncryption } from "./database-file-encryption.js";
 
-interface ExportMetadata {
-  version: string;
-  exportedAt: string;
-  exportId: string;
-  sourceHardwareFingerprint: string;
-  tableCount: number;
-  recordCount: number;
-  encryptedFields: string[];
-}
-
-interface MigrationExport {
-  metadata: ExportMetadata;
-  data: {
-    [tableName: string]: any[];
-  };
-}
-
-interface ImportResult {
+export interface MigrationResult {
   success: boolean;
-  imported: {
-    tables: number;
-    records: number;
-  };
-  errors: string[];
-  warnings: string[];
+  error?: string;
+  migratedTables: number;
+  migratedRows: number;
+  backupPath?: string;
+  duration: number;
 }
 
-/**
- * Database migration utility for exporting/importing data between different hardware
- * Handles both field-level and file-level encryption/decryption during migration
- */
-class DatabaseMigration {
-  private static readonly VERSION = "v1";
-  private static readonly EXPORT_FILE_EXTENSION = ".termix-export.json";
+export interface MigrationStatus {
+  needsMigration: boolean;
+  hasUnencryptedDb: boolean;
+  hasEncryptedDb: boolean;
+  unencryptedDbSize: number;
+  reason: string;
+}
+
+export class DatabaseMigration {
+  private dataDir: string;
+  private unencryptedDbPath: string;
+  private encryptedDbPath: string;
+
+  constructor(dataDir: string) {
+    this.dataDir = dataDir;
+    this.unencryptedDbPath = path.join(dataDir, "db.sqlite");
+    this.encryptedDbPath = `${this.unencryptedDbPath}.encrypted`;
+  }
 
   /**
-   * Export database for migration
-   * Decrypts all encrypted fields for transport to new hardware
+   * 检查是否需要迁移以及迁移状态
    */
-  static async exportDatabase(exportPath?: string): Promise<string> {
-    const exportId = crypto.randomUUID();
-    const timestamp = new Date().toISOString();
-    const defaultExportPath = path.join(
-      databasePaths.directory,
-      `termix-export-${timestamp.replace(/[:.]/g, "-")}${this.EXPORT_FILE_EXTENSION}`,
-    );
-    const actualExportPath = exportPath || defaultExportPath;
+  checkMigrationStatus(): MigrationStatus {
+    const hasUnencryptedDb = fs.existsSync(this.unencryptedDbPath);
+    const hasEncryptedDb = DatabaseFileEncryption.isEncryptedDatabaseFile(this.encryptedDbPath);
+
+    let unencryptedDbSize = 0;
+    if (hasUnencryptedDb) {
+      try {
+        unencryptedDbSize = fs.statSync(this.unencryptedDbPath).size;
+      } catch (error) {
+        databaseLogger.warn("Could not get unencrypted database file size", {
+          operation: "migration_status_check",
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    // 确定迁移状态
+    let needsMigration = false;
+    let reason = "";
+
+    if (hasEncryptedDb && hasUnencryptedDb) {
+      // 两个都存在：可能是之前迁移失败或中断
+      needsMigration = false;
+      reason = "Both encrypted and unencrypted databases exist. Skipping migration for safety. Manual intervention may be required.";
+    } else if (hasEncryptedDb && !hasUnencryptedDb) {
+      // 只有加密数据库：无需迁移
+      needsMigration = false;
+      reason = "Only encrypted database exists. No migration needed.";
+    } else if (!hasEncryptedDb && hasUnencryptedDb) {
+      // 只有未加密数据库：需要迁移
+      needsMigration = true;
+      reason = "Unencrypted database found. Migration to encrypted format required.";
+    } else {
+      // 都不存在：全新安装
+      needsMigration = false;
+      reason = "No existing database found. This is a fresh installation.";
+    }
+
+    return {
+      needsMigration,
+      hasUnencryptedDb,
+      hasEncryptedDb,
+      unencryptedDbSize,
+      reason,
+    };
+  }
+
+  /**
+   * 创建未加密数据库的安全备份
+   */
+  private createBackup(): string {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = `${this.unencryptedDbPath}.migration-backup-${timestamp}`;
 
     try {
-      databaseLogger.info("Starting database export for migration", {
-        operation: "database_export",
-        exportId,
-        exportPath: actualExportPath,
+      databaseLogger.info("Creating migration backup", {
+        operation: "migration_backup_create",
+        source: this.unencryptedDbPath,
+        backup: backupPath,
       });
 
-      // Define tables to export and their encryption status
-      const tablesToExport = [
-        { name: "users", table: users, hasEncryption: true },
-        { name: "ssh_data", table: sshData, hasEncryption: true },
-        { name: "ssh_credentials", table: sshCredentials, hasEncryption: true },
-        { name: "settings", table: settings, hasEncryption: false },
-        {
-          name: "file_manager_recent",
-          table: fileManagerRecent,
-          hasEncryption: false,
-        },
-        {
-          name: "file_manager_pinned",
-          table: fileManagerPinned,
-          hasEncryption: false,
-        },
-        {
-          name: "file_manager_shortcuts",
-          table: fileManagerShortcuts,
-          hasEncryption: false,
-        },
-        {
-          name: "dismissed_alerts",
-          table: dismissedAlerts,
-          hasEncryption: false,
-        },
-        {
-          name: "ssh_credential_usage",
-          table: sshCredentialUsage,
-          hasEncryption: false,
-        },
-      ];
+      fs.copyFileSync(this.unencryptedDbPath, backupPath);
 
-      const exportData: MigrationExport = {
-        metadata: {
-          version: this.VERSION,
-          exportedAt: timestamp,
-          exportId,
-          sourceHardwareFingerprint: HardwareFingerprint.generate().substring(
-            0,
-            16,
-          ),
-          tableCount: 0,
-          recordCount: 0,
-          encryptedFields: [],
-        },
-        data: {},
-      };
+      // 验证备份完整性
+      const originalSize = fs.statSync(this.unencryptedDbPath).size;
+      const backupSize = fs.statSync(backupPath).size;
 
-      let totalRecords = 0;
+      if (originalSize !== backupSize) {
+        throw new Error(`Backup size mismatch: original=${originalSize}, backup=${backupSize}`);
+      }
 
-      // Export each table
-      for (const tableInfo of tablesToExport) {
-        try {
-          databaseLogger.debug(`Exporting table: ${tableInfo.name}`, {
-            operation: "table_export",
-            table: tableInfo.name,
-            hasEncryption: tableInfo.hasEncryption,
+      databaseLogger.success("Migration backup created successfully", {
+        operation: "migration_backup_created",
+        backupPath,
+        fileSize: backupSize,
+      });
+
+      return backupPath;
+    } catch (error) {
+      databaseLogger.error("Failed to create migration backup", error, {
+        operation: "migration_backup_failed",
+        source: this.unencryptedDbPath,
+        backup: backupPath,
+      });
+      throw new Error(`Backup creation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+
+  /**
+   * 验证数据库迁移的完整性
+   */
+  private async verifyMigration(originalDb: Database.Database, memoryDb: Database.Database): Promise<boolean> {
+    try {
+      databaseLogger.info("Verifying migration integrity", {
+        operation: "migration_verify_start",
+      });
+
+      // 临时禁用外键约束以进行验证查询
+      memoryDb.exec("PRAGMA foreign_keys = OFF");
+
+      // 获取原数据库的表列表
+      const originalTables = originalDb
+        .prepare(`
+          SELECT name FROM sqlite_master
+          WHERE type='table' AND name NOT LIKE 'sqlite_%'
+          ORDER BY name
+        `)
+        .all() as { name: string }[];
+
+      // 获取内存数据库的表列表
+      const memoryTables = memoryDb
+        .prepare(`
+          SELECT name FROM sqlite_master
+          WHERE type='table' AND name NOT LIKE 'sqlite_%'
+          ORDER BY name
+        `)
+        .all() as { name: string }[];
+
+      // 检查表数量是否一致
+      if (originalTables.length !== memoryTables.length) {
+        databaseLogger.error("Table count mismatch during migration verification", null, {
+          operation: "migration_verify_failed",
+          originalCount: originalTables.length,
+          memoryCount: memoryTables.length,
+        });
+        return false;
+      }
+
+      let totalOriginalRows = 0;
+      let totalMemoryRows = 0;
+
+      // 逐表验证行数
+      for (const table of originalTables) {
+        const originalCount = originalDb.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).get() as { count: number };
+        const memoryCount = memoryDb.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).get() as { count: number };
+
+        totalOriginalRows += originalCount.count;
+        totalMemoryRows += memoryCount.count;
+
+        if (originalCount.count !== memoryCount.count) {
+          databaseLogger.error("Row count mismatch for table during migration verification", null, {
+            operation: "migration_verify_table_failed",
+            table: table.name,
+            originalRows: originalCount.count,
+            memoryRows: memoryCount.count,
           });
+          return false;
+        }
 
-          // Query all records from the table
-          const records = await db.select().from(tableInfo.table);
+        databaseLogger.debug("Table verification passed", {
+          operation: "migration_verify_table_success",
+          table: table.name,
+          rows: originalCount.count,
+        });
+      }
 
-          // Decrypt encrypted fields if necessary
-          let processedRecords = records;
-          if (tableInfo.hasEncryption && records.length > 0) {
-            processedRecords = records.map((record) => {
-              try {
-                return DatabaseEncryption.decryptRecord(tableInfo.name, record);
-              } catch (error) {
-                databaseLogger.warn(
-                  `Failed to decrypt record in ${tableInfo.name}`,
-                  {
-                    operation: "export_decrypt_warning",
-                    table: tableInfo.name,
-                    recordId: (record as any).id,
-                    error:
-                      error instanceof Error ? error.message : "Unknown error",
-                  },
-                );
-                // Return original record if decryption fails
-                return record;
+      databaseLogger.success("Migration integrity verification completed", {
+        operation: "migration_verify_success",
+        tables: originalTables.length,
+        totalRows: totalOriginalRows,
+      });
+
+      // 重新启用外键约束
+      memoryDb.exec("PRAGMA foreign_keys = ON");
+
+      return true;
+    } catch (error) {
+      databaseLogger.error("Migration verification failed", error, {
+        operation: "migration_verify_error",
+      });
+      return false;
+    }
+  }
+
+  /**
+   * 执行数据库迁移
+   */
+  async migrateDatabase(): Promise<MigrationResult> {
+    const startTime = Date.now();
+    let backupPath: string | undefined;
+    let migratedTables = 0;
+    let migratedRows = 0;
+
+    try {
+      databaseLogger.info("Starting database migration from unencrypted to encrypted format", {
+        operation: "migration_start",
+        source: this.unencryptedDbPath,
+        target: this.encryptedDbPath,
+      });
+
+      // 1. 创建安全备份
+      backupPath = this.createBackup();
+
+      // 2. 打开原数据库（只读）
+      const originalDb = new Database(this.unencryptedDbPath, { readonly: true });
+
+      // 3. 创建内存数据库
+      const memoryDb = new Database(":memory:");
+
+      try {
+        // 4. 获取所有表结构
+        const tables = originalDb
+          .prepare(`
+            SELECT name, sql FROM sqlite_master
+            WHERE type='table' AND name NOT LIKE 'sqlite_%'
+          `)
+          .all() as { name: string; sql: string }[];
+
+        databaseLogger.info("Found tables to migrate", {
+          operation: "migration_tables_found",
+          tableCount: tables.length,
+          tables: tables.map(t => t.name),
+        });
+
+        // 5. 在内存数据库中创建表结构
+        for (const table of tables) {
+          memoryDb.exec(table.sql);
+          migratedTables++;
+
+          databaseLogger.debug("Table structure created", {
+            operation: "migration_table_created",
+            table: table.name,
+          });
+        }
+
+        // 6. 禁用外键约束以避免插入顺序问题
+        databaseLogger.info("Disabling foreign key constraints for migration", {
+          operation: "migration_disable_fk",
+        });
+        memoryDb.exec("PRAGMA foreign_keys = OFF");
+
+        // 7. 复制每个表的数据
+        for (const table of tables) {
+          const rows = originalDb.prepare(`SELECT * FROM ${table.name}`).all();
+
+          if (rows.length > 0) {
+            const columns = Object.keys(rows[0]);
+            const placeholders = columns.map(() => "?").join(", ");
+            const insertStmt = memoryDb.prepare(
+              `INSERT INTO ${table.name} (${columns.join(", ")}) VALUES (${placeholders})`
+            );
+
+            // 使用事务批量插入
+            const insertTransaction = memoryDb.transaction((dataRows: any[]) => {
+              for (const row of dataRows) {
+                const values = columns.map((col) => row[col]);
+                insertStmt.run(values);
               }
             });
 
-            // Track which fields were encrypted
-            if (records.length > 0) {
-              const sampleRecord = records[0];
-              for (const fieldName of Object.keys(sampleRecord)) {
-                if (
-                  FieldEncryption.shouldEncryptField(tableInfo.name, fieldName)
-                ) {
-                  const fieldKey = `${tableInfo.name}.${fieldName}`;
-                  if (!exportData.metadata.encryptedFields.includes(fieldKey)) {
-                    exportData.metadata.encryptedFields.push(fieldKey);
-                  }
-                }
-              }
-            }
+            insertTransaction(rows);
+            migratedRows += rows.length;
+
+            databaseLogger.debug("Table data migrated", {
+              operation: "migration_table_data",
+              table: table.name,
+              rows: rows.length,
+            });
           }
-
-          exportData.data[tableInfo.name] = processedRecords;
-          totalRecords += processedRecords.length;
-
-          databaseLogger.debug(`Table ${tableInfo.name} exported`, {
-            operation: "table_export_complete",
-            table: tableInfo.name,
-            recordCount: processedRecords.length,
-          });
-        } catch (error) {
-          databaseLogger.error(
-            `Failed to export table ${tableInfo.name}`,
-            error,
-            {
-              operation: "table_export_failed",
-              table: tableInfo.name,
-            },
-          );
-          throw error;
         }
-      }
 
-      // Update metadata
-      exportData.metadata.tableCount = tablesToExport.length;
-      exportData.metadata.recordCount = totalRecords;
-
-      // Write export file
-      const exportContent = JSON.stringify(exportData, null, 2);
-      fs.writeFileSync(actualExportPath, exportContent, "utf8");
-
-      databaseLogger.success("Database export completed successfully", {
-        operation: "database_export_complete",
-        exportId,
-        exportPath: actualExportPath,
-        tableCount: exportData.metadata.tableCount,
-        recordCount: exportData.metadata.recordCount,
-        fileSize: exportContent.length,
-      });
-
-      return actualExportPath;
-    } catch (error) {
-      databaseLogger.error("Database export failed", error, {
-        operation: "database_export_failed",
-        exportId,
-        exportPath: actualExportPath,
-      });
-      throw new Error(
-        `Database export failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
-  }
-
-  /**
-   * Import database from migration export
-   * Re-encrypts fields for the current hardware
-   */
-  static async importDatabase(
-    importPath: string,
-    options: {
-      replaceExisting?: boolean;
-      backupCurrent?: boolean;
-    } = {},
-  ): Promise<ImportResult> {
-    const { replaceExisting = false, backupCurrent = true } = options;
-
-    if (!fs.existsSync(importPath)) {
-      throw new Error(`Import file does not exist: ${importPath}`);
-    }
-
-    try {
-      databaseLogger.info("Starting database import from migration export", {
-        operation: "database_import",
-        importPath,
-        replaceExisting,
-        backupCurrent,
-      });
-
-      // Read and validate export file
-      const exportContent = fs.readFileSync(importPath, "utf8");
-      const exportData: MigrationExport = JSON.parse(exportContent);
-
-      // Validate export format
-      if (exportData.metadata.version !== this.VERSION) {
-        throw new Error(
-          `Unsupported export version: ${exportData.metadata.version}`,
-        );
-      }
-
-      const result: ImportResult = {
-        success: false,
-        imported: { tables: 0, records: 0 },
-        errors: [],
-        warnings: [],
-      };
-
-      // Create backup if requested
-      if (backupCurrent) {
-        try {
-          const backupPath = await this.createCurrentDatabaseBackup();
-          databaseLogger.info("Current database backed up before import", {
-            operation: "import_backup",
-            backupPath,
-          });
-        } catch (error) {
-          const warningMsg = `Failed to create backup: ${error instanceof Error ? error.message : "Unknown error"}`;
-          result.warnings.push(warningMsg);
-          databaseLogger.warn("Failed to create pre-import backup", {
-            operation: "import_backup_failed",
-            error: warningMsg,
-          });
-        }
-      }
-
-      // Import data table by table
-      for (const [tableName, tableData] of Object.entries(exportData.data)) {
-        try {
-          databaseLogger.debug(`Importing table: ${tableName}`, {
-            operation: "table_import",
-            table: tableName,
-            recordCount: tableData.length,
-          });
-
-          if (replaceExisting) {
-            // Clear existing data
-            const tableSchema = this.getTableSchema(tableName);
-            if (tableSchema) {
-              await db.delete(tableSchema);
-              databaseLogger.debug(`Cleared existing data from ${tableName}`, {
-                operation: "table_clear",
-                table: tableName,
-              });
-            }
-          }
-
-          // Process and encrypt records
-          for (const record of tableData) {
-            try {
-              // Re-encrypt sensitive fields for current hardware
-              const processedRecord = DatabaseEncryption.encryptRecord(
-                tableName,
-                record,
-              );
-
-              // Insert record
-              const tableSchema = this.getTableSchema(tableName);
-              if (tableSchema) {
-                await db.insert(tableSchema).values(processedRecord);
-              }
-            } catch (error) {
-              const errorMsg = `Failed to import record in ${tableName}: ${error instanceof Error ? error.message : "Unknown error"}`;
-              result.errors.push(errorMsg);
-              databaseLogger.error("Failed to import record", error, {
-                operation: "record_import_failed",
-                table: tableName,
-                recordId: record.id,
-              });
-            }
-          }
-
-          result.imported.tables++;
-          result.imported.records += tableData.length;
-
-          databaseLogger.debug(`Table ${tableName} imported`, {
-            operation: "table_import_complete",
-            table: tableName,
-            recordCount: tableData.length,
-          });
-        } catch (error) {
-          const errorMsg = `Failed to import table ${tableName}: ${error instanceof Error ? error.message : "Unknown error"}`;
-          result.errors.push(errorMsg);
-          databaseLogger.error("Failed to import table", error, {
-            operation: "table_import_failed",
-            table: tableName,
-          });
-        }
-      }
-
-      // Check if import was successful
-      result.success = result.errors.length === 0;
-
-      if (result.success) {
-        databaseLogger.success("Database import completed successfully", {
-          operation: "database_import_complete",
-          importPath,
-          tablesImported: result.imported.tables,
-          recordsImported: result.imported.records,
-          warnings: result.warnings.length,
+        // 8. 重新启用外键约束
+        databaseLogger.info("Re-enabling foreign key constraints after migration", {
+          operation: "migration_enable_fk",
         });
-      } else {
-        databaseLogger.error(
-          "Database import completed with errors",
-          undefined,
-          {
-            operation: "database_import_partial",
-            importPath,
-            tablesImported: result.imported.tables,
-            recordsImported: result.imported.records,
-            errorCount: result.errors.length,
-            warningCount: result.warnings.length,
-          },
-        );
+        memoryDb.exec("PRAGMA foreign_keys = ON");
+
+        // 验证外键约束现在是否正常
+        const fkCheckResult = memoryDb.prepare("PRAGMA foreign_key_check").all();
+        if (fkCheckResult.length > 0) {
+          databaseLogger.error("Foreign key constraints violations detected after migration", null, {
+            operation: "migration_fk_check_failed",
+            violations: fkCheckResult,
+          });
+          throw new Error(`Foreign key violations detected: ${JSON.stringify(fkCheckResult)}`);
+        }
+
+        databaseLogger.success("Foreign key constraints verification passed", {
+          operation: "migration_fk_check_success",
+        });
+
+        // 9. 验证迁移完整性
+        const verificationPassed = await this.verifyMigration(originalDb, memoryDb);
+        if (!verificationPassed) {
+          throw new Error("Migration integrity verification failed");
+        }
+
+        // 10. 导出内存数据库到缓冲区
+        const buffer = memoryDb.serialize();
+
+        // 11. 创建加密数据库文件
+        databaseLogger.info("Creating encrypted database file", {
+          operation: "migration_encrypt_start",
+          bufferSize: buffer.length,
+        });
+
+        await DatabaseFileEncryption.encryptDatabaseFromBuffer(buffer, this.encryptedDbPath);
+
+        // 12. 验证加密文件
+        if (!DatabaseFileEncryption.isEncryptedDatabaseFile(this.encryptedDbPath)) {
+          throw new Error("Encrypted database file verification failed");
+        }
+
+        // 13. 清理：重命名原文件而不是删除
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const migratedPath = `${this.unencryptedDbPath}.migrated-${timestamp}`;
+
+        fs.renameSync(this.unencryptedDbPath, migratedPath);
+
+        databaseLogger.success("Database migration completed successfully", {
+          operation: "migration_complete",
+          migratedTables,
+          migratedRows,
+          duration: Date.now() - startTime,
+          backupPath,
+          migratedPath,
+          encryptedDbPath: this.encryptedDbPath,
+        });
+
+        return {
+          success: true,
+          migratedTables,
+          migratedRows,
+          backupPath,
+          duration: Date.now() - startTime,
+        };
+
+      } finally {
+        // 确保数据库连接关闭
+        originalDb.close();
+        memoryDb.close();
       }
 
-      return result;
     } catch (error) {
-      databaseLogger.error("Database import failed", error, {
-        operation: "database_import_failed",
-        importPath,
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      databaseLogger.error("Database migration failed", error, {
+        operation: "migration_failed",
+        migratedTables,
+        migratedRows,
+        duration: Date.now() - startTime,
+        backupPath,
       });
-      throw new Error(
-        `Database import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+
+      return {
+        success: false,
+        error: errorMessage,
+        migratedTables,
+        migratedRows,
+        backupPath,
+        duration: Date.now() - startTime,
+      };
     }
   }
 
   /**
-   * Validate export file format and compatibility
+   * 清理旧的备份文件（保留最近3个）
    */
-  static validateExportFile(exportPath: string): {
-    valid: boolean;
-    metadata?: ExportMetadata;
-    errors: string[];
-  } {
-    const result = {
-      valid: false,
-      metadata: undefined as ExportMetadata | undefined,
-      errors: [] as string[],
-    };
-
+  cleanupOldBackups(): void {
     try {
-      if (!fs.existsSync(exportPath)) {
-        result.errors.push("Export file does not exist");
-        return result;
-      }
+      const backupPattern = /\.migration-backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+      const migratedPattern = /\.migrated-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
 
-      const exportContent = fs.readFileSync(exportPath, "utf8");
-      const exportData: MigrationExport = JSON.parse(exportContent);
+      const files = fs.readdirSync(this.dataDir);
 
-      // Validate structure
-      if (!exportData.metadata || !exportData.data) {
-        result.errors.push("Invalid export file structure");
-        return result;
-      }
+      // 查找备份文件和已迁移文件
+      const backupFiles = files.filter(f => backupPattern.test(f))
+        .map(f => ({
+          name: f,
+          path: path.join(this.dataDir, f),
+          mtime: fs.statSync(path.join(this.dataDir, f)).mtime,
+        }))
+        .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
 
-      // Validate version
-      if (exportData.metadata.version !== this.VERSION) {
-        result.errors.push(
-          `Unsupported export version: ${exportData.metadata.version}`,
-        );
-        return result;
-      }
+      const migratedFiles = files.filter(f => migratedPattern.test(f))
+        .map(f => ({
+          name: f,
+          path: path.join(this.dataDir, f),
+          mtime: fs.statSync(path.join(this.dataDir, f)).mtime,
+        }))
+        .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
 
-      // Validate required metadata fields
-      const requiredFields = [
-        "exportedAt",
-        "exportId",
-        "sourceHardwareFingerprint",
-      ];
-      for (const field of requiredFields) {
-        if (!exportData.metadata[field as keyof ExportMetadata]) {
-          result.errors.push(`Missing required metadata field: ${field}`);
+      // 保留最近3个备份文件
+      const backupsToDelete = backupFiles.slice(3);
+      const migratedToDelete = migratedFiles.slice(3);
+
+      for (const file of [...backupsToDelete, ...migratedToDelete]) {
+        try {
+          fs.unlinkSync(file.path);
+          databaseLogger.debug("Cleaned up old migration file", {
+            operation: "migration_cleanup",
+            file: file.name,
+          });
+        } catch (error) {
+          databaseLogger.warn("Failed to cleanup old migration file", {
+            operation: "migration_cleanup_failed",
+            file: file.name,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
         }
       }
 
-      if (result.errors.length === 0) {
-        result.valid = true;
-        result.metadata = exportData.metadata;
+      if (backupsToDelete.length > 0 || migratedToDelete.length > 0) {
+        databaseLogger.info("Migration cleanup completed", {
+          operation: "migration_cleanup_complete",
+          deletedBackups: backupsToDelete.length,
+          deletedMigrated: migratedToDelete.length,
+          remainingBackups: Math.min(backupFiles.length, 3),
+          remainingMigrated: Math.min(migratedFiles.length, 3),
+        });
       }
 
-      return result;
     } catch (error) {
-      result.errors.push(
-        `Failed to parse export file: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-      return result;
+      databaseLogger.warn("Migration cleanup failed", {
+        operation: "migration_cleanup_error",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-  }
-
-  /**
-   * Create backup of current database
-   */
-  private static async createCurrentDatabaseBackup(): Promise<string> {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const backupDir = path.join(databasePaths.directory, "backups");
-
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-
-    // Create encrypted backup
-    const backupPath = DatabaseFileEncryption.createEncryptedBackup(
-      databasePaths.main,
-      backupDir,
-    );
-
-    return backupPath;
-  }
-
-  /**
-   * Get table schema for database operations
-   */
-  private static getTableSchema(tableName: string) {
-    const tableMap: { [key: string]: any } = {
-      users: users,
-      ssh_data: sshData,
-      ssh_credentials: sshCredentials,
-      settings: settings,
-      file_manager_recent: fileManagerRecent,
-      file_manager_pinned: fileManagerPinned,
-      file_manager_shortcuts: fileManagerShortcuts,
-      dismissed_alerts: dismissedAlerts,
-      ssh_credential_usage: sshCredentialUsage,
-    };
-
-    return tableMap[tableName];
-  }
-
-  /**
-   * Get export file info without importing
-   */
-  static getExportInfo(exportPath: string): ExportMetadata | null {
-    const validation = this.validateExportFile(exportPath);
-    return validation.valid ? validation.metadata! : null;
   }
 }
-
-export { DatabaseMigration };
-export type { ExportMetadata, MigrationExport, ImportResult };

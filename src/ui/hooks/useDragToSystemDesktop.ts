@@ -37,7 +37,7 @@ export function useDragToSystemDesktop({
     options: DragToSystemOptions;
   } | null>(null);
 
-  // 目录记忆功能
+  // Directory memory functionality
   const getLastSaveDirectory = async () => {
     try {
       if ("indexedDB" in window) {
@@ -61,7 +61,7 @@ export function useDragToSystemDesktop({
         });
       }
     } catch (error) {
-      console.log("无法获取上次保存目录:", error);
+      console.log("Unable to get last save directory:", error);
     }
     return null;
   };
@@ -79,18 +79,18 @@ export function useDragToSystemDesktop({
         };
       }
     } catch (error) {
-      console.log("无法保存目录记录:", error);
+      console.log("Unable to save directory record:", error);
     }
   };
 
-  // 检查File System Access API支持
+  // Check File System Access API support
   const isFileSystemAPISupported = () => {
     return "showSaveFilePicker" in window;
   };
 
-  // 检查拖拽是否离开窗口边界
+  // Check if drag has left window boundaries
   const isDraggedOutsideWindow = (e: DragEvent) => {
-    const margin = 50; // 增加容差边距
+    const margin = 50; // Increase tolerance margin
     return (
       e.clientX < margin ||
       e.clientX > window.innerWidth - margin ||
@@ -99,14 +99,14 @@ export function useDragToSystemDesktop({
     );
   };
 
-  // 创建文件blob
+  // Create file blob
   const createFileBlob = async (file: FileItem): Promise<Blob> => {
     const response = await downloadSSHFile(sshSessionId, file.path);
     if (!response?.content) {
-      throw new Error(`无法获取文件 ${file.name} 的内容`);
+      throw new Error(`Unable to get content for file ${file.name}`);
     }
 
-    // base64转换为blob
+    // Convert base64 to blob
     const binaryString = atob(response.content);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -116,9 +116,9 @@ export function useDragToSystemDesktop({
     return new Blob([bytes]);
   };
 
-  // 创建ZIP文件（用于多文件下载）
+  // Create ZIP file (for multi-file download)
   const createZipBlob = async (files: FileItem[]): Promise<Blob> => {
-    // 这里需要一个轻量级的zip库，先用简单方案
+    // A lightweight zip library is needed here, using simple approach for now
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
 
@@ -130,42 +130,8 @@ export function useDragToSystemDesktop({
     return await zip.generateAsync({ type: "blob" });
   };
 
-  // 使用File System Access API保存文件
-  const saveFileWithSystemAPI = async (blob: Blob, suggestedName: string) => {
-    try {
-      // 获取上次保存的目录句柄
-      const lastDirHandle = await getLastSaveDirectory();
 
-      const fileHandle = await (window as any).showSaveFilePicker({
-        suggestedName,
-        startIn: lastDirHandle || "desktop", // 优先使用上次目录，否则桌面
-        types: [
-          {
-            description: "文件",
-            accept: {
-              "*/*": [".txt", ".jpg", ".png", ".pdf", ".zip", ".tar", ".gz"],
-            },
-          },
-        ],
-      });
-
-      // 保存当前目录句柄以便下次使用
-      await saveLastDirectory(fileHandle);
-
-      const writable = await fileHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-
-      return true;
-    } catch (error: any) {
-      if (error.name === "AbortError") {
-        return false; // 用户取消
-      }
-      throw error;
-    }
-  };
-
-  // 降级方案：传统下载
+  // Fallback solution: traditional download
   const fallbackDownload = (blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -177,22 +143,22 @@ export function useDragToSystemDesktop({
     URL.revokeObjectURL(url);
   };
 
-  // 处理拖拽到系统桌面
+  // Handle drag to system desktop
   const handleDragToSystem = useCallback(
     async (files: FileItem[], options: DragToSystemOptions = {}) => {
       const { enableToast = true, onSuccess, onError } = options;
 
       if (files.length === 0) {
-        const error = "没有可拖拽的文件";
+        const error = "No files available for dragging";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
       }
 
-      // 过滤出文件类型
+      // Filter out file types
       const fileList = files.filter((f) => f.type === "file");
       if (fileList.length === 0) {
-        const error = "只能拖拽文件到桌面";
+        const error = "Only files can be dragged to desktop";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
@@ -206,40 +172,67 @@ export function useDragToSystemDesktop({
           error: null,
         }));
 
-        let blob: Blob;
-        let fileName: string;
+        // Determine file name first (synchronously)
+        const fileName = fileList.length === 1
+          ? fileList[0].name
+          : `files_${Date.now()}.zip`;
 
+        // For File System Access API, get the file handle FIRST to preserve user gesture
+        let fileHandle: any = null;
+        if (isFileSystemAPISupported()) {
+          try {
+            fileHandle = await (window as any).showSaveFilePicker({
+              suggestedName: fileName,
+              startIn: "desktop",
+              types: [
+                {
+                  description: "Files",
+                  accept: {
+                    "*/*": [".txt", ".jpg", ".png", ".pdf", ".zip", ".tar", ".gz"],
+                  },
+                },
+              ],
+            });
+          } catch (error: any) {
+            if (error.name === "AbortError") {
+              // User cancelled
+              setState((prev) => ({
+                ...prev,
+                isDownloading: false,
+                progress: 0,
+              }));
+              return false;
+            }
+            throw error;
+          }
+        }
+
+        // Now create the blob (after getting file handle)
+        let blob: Blob;
         if (fileList.length === 1) {
-          // 单文件
+          // Single file
           blob = await createFileBlob(fileList[0]);
-          fileName = fileList[0].name;
           setState((prev) => ({ ...prev, progress: 70 }));
         } else {
-          // 多文件打包成ZIP
+          // Package multiple files into ZIP
           blob = await createZipBlob(fileList);
-          fileName = `files_${Date.now()}.zip`;
           setState((prev) => ({ ...prev, progress: 70 }));
         }
 
         setState((prev) => ({ ...prev, progress: 90 }));
 
-        // 优先使用File System Access API
-        if (isFileSystemAPISupported()) {
-          const saved = await saveFileWithSystemAPI(blob, fileName);
-          if (!saved) {
-            // 用户取消了
-            setState((prev) => ({
-              ...prev,
-              isDownloading: false,
-              progress: 0,
-            }));
-            return false;
-          }
+        // Save the file
+        if (fileHandle) {
+          // Use File System Access API with pre-obtained handle
+          await saveLastDirectory(fileHandle);
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
         } else {
-          // 降级到传统下载
+          // Fallback to traditional download
           fallbackDownload(blob, fileName);
           if (enableToast) {
-            toast.info("由于浏览器限制，文件将下载到默认下载目录");
+            toast.info("Due to browser limitations, file will be downloaded to default download directory");
           }
         }
 
@@ -248,22 +241,22 @@ export function useDragToSystemDesktop({
         if (enableToast) {
           toast.success(
             fileList.length === 1
-              ? `${fileName} 已保存到指定位置`
-              : `${fileList.length} 个文件已打包保存`,
+              ? `${fileName} saved to specified location`
+              : `${fileList.length} files packaged and saved`,
           );
         }
 
         onSuccess?.();
 
-        // 重置状态
+        // Reset state
         setTimeout(() => {
           setState((prev) => ({ ...prev, isDownloading: false, progress: 0 }));
         }, 1000);
 
         return true;
       } catch (error: any) {
-        console.error("拖拽到桌面失败:", error);
-        const errorMessage = error.message || "保存失败";
+        console.error("Failed to drag to desktop:", error);
+        const errorMessage = error.message || "Save failed";
 
         setState((prev) => ({
           ...prev,
@@ -273,7 +266,7 @@ export function useDragToSystemDesktop({
         }));
 
         if (enableToast) {
-          toast.error(`保存失败: ${errorMessage}`);
+          toast.error(`Save failed: ${errorMessage}`);
         }
 
         onError?.(errorMessage);
@@ -283,7 +276,7 @@ export function useDragToSystemDesktop({
     [sshSessionId],
   );
 
-  // 开始拖拽（记录拖拽数据）
+  // Start dragging (record drag data)
   const startDragToSystem = useCallback(
     (files: FileItem[], options: DragToSystemOptions = {}) => {
       dragDataRef.current = { files, options };
@@ -292,29 +285,27 @@ export function useDragToSystemDesktop({
     [],
   );
 
-  // 结束拖拽检测
+  // End drag detection
   const handleDragEnd = useCallback(
     (e: DragEvent) => {
       if (!dragDataRef.current) return;
 
       const { files, options } = dragDataRef.current;
 
-      // 检查是否拖拽到窗口外
+      // Check if dragged outside window
       if (isDraggedOutsideWindow(e)) {
-        // 延迟执行，避免与其他拖拽事件冲突
-        setTimeout(() => {
-          handleDragToSystem(files, options);
-        }, 100);
+        // Execute immediately to preserve user gesture context for showSaveFilePicker
+        handleDragToSystem(files, options);
       }
 
-      // 清理拖拽状态
+      // Clean up drag state
       dragDataRef.current = null;
       setState((prev) => ({ ...prev, isDragging: false }));
     },
     [handleDragToSystem],
   );
 
-  // 取消拖拽
+  // Cancel dragging
   const cancelDragToSystem = useCallback(() => {
     dragDataRef.current = null;
     setState((prev) => ({ ...prev, isDragging: false, error: null }));
@@ -326,6 +317,6 @@ export function useDragToSystemDesktop({
     startDragToSystem,
     handleDragEnd,
     cancelDragToSystem,
-    handleDragToSystem, // 直接调用版本
+    handleDragToSystem, // Direct call version
   };
 }

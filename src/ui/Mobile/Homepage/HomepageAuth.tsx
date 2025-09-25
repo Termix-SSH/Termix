@@ -12,7 +12,7 @@ import {
   getUserInfo,
   getRegistrationAllowed,
   getOIDCConfig,
-  getUserCount,
+  getSetupRequired,
   initiatePasswordReset,
   verifyPasswordResetCode,
   completePasswordReset,
@@ -111,9 +111,9 @@ export function HomepageAuth({
   }, []);
 
   useEffect(() => {
-    getUserCount()
+    getSetupRequired()
       .then((res) => {
-        if (res.count === 0) {
+        if (res.setup_required) {
           setFirstUser(true);
           setTab("signup");
         } else {

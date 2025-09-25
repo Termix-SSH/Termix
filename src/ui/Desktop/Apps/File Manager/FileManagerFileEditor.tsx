@@ -320,16 +320,26 @@ export function FileManagerFileEditor({
             EditorView.theme({
               "&": {
                 backgroundColor: "var(--color-dark-bg-darkest) !important",
+                height: "100%",
               },
               ".cm-gutters": {
                 backgroundColor: "var(--color-dark-bg) !important",
+              },
+              ".cm-scroller": {
+                overflow: "auto",
+              },
+              ".cm-editor": {
+                height: "100%",
               },
             }),
           ]}
           onChange={(value: any) => onContentChange(value)}
           theme={undefined}
           height="100%"
-          basicSetup={{ lineNumbers: true }}
+          basicSetup={{
+            lineNumbers: true,
+            scrollPastEnd: false,
+          }}
           className="min-h-full min-w-full flex-1"
         />
       </div>

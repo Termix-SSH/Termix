@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import {
   Download,
   FileDown,
@@ -30,6 +31,8 @@ export function DragIndicator({
   error,
   className,
 }: DragIndicatorProps) {
+  const { t } = useTranslation();
+
   if (!isVisible) return null;
 
   const getIcon = () => {
@@ -54,18 +57,22 @@ export function DragIndicator({
 
   const getStatusText = () => {
     if (error) {
-      return `错误: ${error}`;
+      return t("dragIndicator.error", { error });
     }
 
     if (isDragging) {
-      return `正在拖拽${fileName ? ` ${fileName}` : ""}到桌面...`;
+      return t("dragIndicator.dragging", { fileName: fileName || "" });
     }
 
     if (isDownloading) {
-      return `正在准备拖拽${fileName ? ` ${fileName}` : ""}...`;
+      return t("dragIndicator.preparing", { fileName: fileName || "" });
     }
 
-    return `准备拖拽${fileCount > 1 ? ` ${fileCount} 个文件` : fileName ? ` ${fileName}` : ""}`;
+    if (fileCount > 1) {
+      return t("dragIndicator.readyMultiple", { count: fileCount });
+    }
+
+    return t("dragIndicator.readySingle", { fileName: fileName || "" });
   };
 
   return (
@@ -79,17 +86,17 @@ export function DragIndicator({
       )}
     >
       <div className="flex items-start gap-3">
-        {/* 图标 */}
+        {/* Icon */}
         <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
 
-        {/* 内容 */}
+        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* 标题 */}
+          {/* Title */}
           <div className="text-sm font-medium text-foreground mb-2">
-            {fileCount > 1 ? "批量拖拽到桌面" : "拖拽到桌面"}
+            {fileCount > 1 ? t("dragIndicator.batchDrag") : t("dragIndicator.dragToDesktop")}
           </div>
 
-          {/* 状态文字 */}
+          {/* Status text */}
           <div
             className={cn(
               "text-xs mb-3",
@@ -103,7 +110,7 @@ export function DragIndicator({
             {getStatusText()}
           </div>
 
-          {/* 进度条 */}
+          {/* Progress bar */}
           {(isDownloading || isDragging) && !error && (
             <div className="w-full bg-dark-border rounded-full h-2 mb-2">
               <div
@@ -116,24 +123,24 @@ export function DragIndicator({
             </div>
           )}
 
-          {/* 进度百分比 */}
+          {/* Progress percentage */}
           {(isDownloading || isDragging) && !error && (
             <div className="text-xs text-muted-foreground">
               {progress.toFixed(0)}%
             </div>
           )}
 
-          {/* 拖拽提示 */}
+          {/* Drag hint */}
           {isDragging && !error && (
             <div className="text-xs text-green-500 mt-2 flex items-center gap-1">
               <Download className="w-3 h-3" />
-              现在可以拖拽到桌面任意位置
+              {t("dragIndicator.canDragAnywhere")}
             </div>
           )}
         </div>
       </div>
 
-      {/* 动画效果的背景 */}
+      {/* Background with animation effect */}
       {isDragging && !error && (
         <div className="absolute inset-0 rounded-lg bg-green-500/5 animate-pulse" />
       )}

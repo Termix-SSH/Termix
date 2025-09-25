@@ -10,6 +10,7 @@ import {
   connectSSH,
 } from "@/ui/main-axios";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface FileItem {
   name: string;
@@ -43,7 +44,8 @@ interface FileWindowProps {
   sshHost: SSHHost;
   initialX?: number;
   initialY?: number;
-  // readOnly参数已移除，由FileViewer内部根据文件类型决定
+  onFileNotFound?: (file: FileItem) => void; // Callback for when file is not found
+  // readOnly parameter removed, determined internally by FileViewer based on file type
 }
 
 export function FileWindow({
@@ -53,35 +55,38 @@ export function FileWindow({
   sshHost,
   initialX = 100,
   initialY = 100,
+  onFileNotFound,
 }: FileWindowProps) {
   const {
     closeWindow,
-    minimizeWindow,
     maximizeWindow,
     focusWindow,
     updateWindow,
     windows,
   } = useWindowManager();
 
+  const { t } = useTranslation();
+
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
   const [pendingContent, setPendingContent] = useState<string>("");
+  const [mediaDimensions, setMediaDimensions] = useState<{ width: number; height: number } | undefined>();
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentWindow = windows.find((w) => w.id === windowId);
 
-  // 确保SSH连接有效
+  // Ensure SSH connection is valid
   const ensureSSHConnection = async () => {
     try {
-      // 首先检查SSH连接状态
+      // First check SSH connection status
       const status = await getSSHStatus(sshSessionId);
       console.log("SSH connection status:", status);
 
       if (!status.connected) {
         console.log("SSH not connected, attempting to reconnect...");
 
-        // 重新建立连接
+        // Re-establish connection
         await connectSSH(sshSessionId, {
           hostId: sshHost.id,
           ip: sshHost.ip,
@@ -99,12 +104,12 @@ export function FileWindow({
       }
     } catch (error) {
       console.log("SSH connection check/reconnect failed:", error);
-      // 即使连接失败也尝试继续，让具体的API调用报错
+      // Even if connection fails, try to continue and let specific API calls handle errors
       throw error;
     }
   };
 
-  // 加载文件内容
+  // Load file content
   useEffect(() => {
     const loadFileContent = async () => {
       if (file.type !== "file") return;
@@ -112,23 +117,23 @@ export function FileWindow({
       try {
         setIsLoading(true);
 
-        // 确保SSH连接有效
+        // Ensure SSH connection is valid
         await ensureSSHConnection();
 
         const response = await readSSHFile(sshSessionId, file.path);
         const fileContent = response.content || "";
         setContent(fileContent);
-        setPendingContent(fileContent); // 初始化待保存内容
+        setPendingContent(fileContent); // Initialize pending content
 
-        // 如果文件大小未知，根据内容计算大小
+        // If file size is unknown, calculate size based on content
         if (!file.size) {
           const contentSize = new Blob([fileContent]).size;
           file.size = contentSize;
         }
 
-        // 根据文件类型决定是否可编辑：除了媒体文件，其他都可编辑
+        // Determine if editable based on file type: all except media files are editable
         const mediaExtensions = [
-          // 图片文件
+          // Image files
           "jpg",
           "jpeg",
           "png",
@@ -138,7 +143,7 @@ export function FileWindow({
           "webp",
           "tiff",
           "ico",
-          // 音频文件
+          // Audio files
           "mp3",
           "wav",
           "ogg",
@@ -146,7 +151,7 @@ export function FileWindow({
           "flac",
           "m4a",
           "wma",
-          // 视频文件
+          // Video files
           "mp4",
           "avi",
           "mov",
@@ -155,7 +160,7 @@ export function FileWindow({
           "mkv",
           "webm",
           "m4v",
-          // 压缩文件
+          // Archive files
           "zip",
           "rar",
           "7z",
@@ -163,7 +168,7 @@ export function FileWindow({
           "gz",
           "bz2",
           "xz",
-          // 二进制文件
+          // Binary files
           "exe",
           "dll",
           "so",
@@ -173,12 +178,12 @@ export function FileWindow({
         ];
 
         const extension = file.name.split(".").pop()?.toLowerCase();
-        // 只有媒体文件和二进制文件不可编辑，其他所有文件都可编辑
+        // Only media files and binary files are not editable, all other files are editable
         setIsEditable(!mediaExtensions.includes(extension || ""));
       } catch (error: any) {
         console.error("Failed to load file:", error);
 
-        // 检查是否是大文件错误
+        // Check if it's a large file error
         const errorData = error?.response?.data;
         if (errorData?.tooLarge) {
           toast.error(`File too large: ${errorData.error}`, {
@@ -188,14 +193,38 @@ export function FileWindow({
           error.message?.includes("connection") ||
           error.message?.includes("established")
         ) {
-          // 如果是连接错误，提供更明确的错误信息
+          // If connection error, provide more specific error message
           toast.error(
             `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
           );
         } else {
-          toast.error(
-            `Failed to load file: ${error.message || errorData?.error || "Unknown error"}`,
-          );
+          // Check if file not found (common error messages from cat command)
+          const errorMessage = errorData?.error || error.message || "Unknown error";
+          const isFileNotFound =
+            (error as any).isFileNotFound ||
+            errorData?.fileNotFound ||
+            error.response?.status === 404 ||
+            errorMessage.includes("File not found") ||
+            errorMessage.includes("No such file or directory") ||
+            errorMessage.includes("cannot access") ||
+            errorMessage.includes("not found") ||
+            errorMessage.includes("Resource not found");
+
+          if (isFileNotFound && onFileNotFound) {
+            // Notify parent component about the missing file for cleanup
+            onFileNotFound(file);
+            toast.error(t("fileManager.fileNotFoundAndRemoved", { name: file.name }));
+
+            // Close this window since the file doesn't exist
+            closeWindow(windowId);
+            return; // Exit early to prevent showing empty editor
+          } else {
+            toast.error(t("fileManager.failedToLoadFile", {
+              error: errorMessage.includes("Server error occurred") ?
+                t("fileManager.serverErrorOccurred") :
+                errorMessage
+            }));
+          }
         }
       } finally {
         setIsLoading(false);
@@ -205,29 +234,29 @@ export function FileWindow({
     loadFileContent();
   }, [file, sshSessionId, sshHost]);
 
-  // 保存文件
+  // Save file
   const handleSave = async (newContent: string) => {
     try {
       setIsLoading(true);
 
-      // 确保SSH连接有效
+      // Ensure SSH connection is valid
       await ensureSSHConnection();
 
       await writeSSHFile(sshSessionId, file.path, newContent);
       setContent(newContent);
-      setPendingContent(""); // 清除待保存内容
+      setPendingContent(""); // Clear pending content
 
-      // 清除自动保存定时器
+      // Clear auto-save timer
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = null;
       }
 
-      toast.success("File saved successfully");
+      toast.success(t("fileManager.fileSavedSuccessfully"));
     } catch (error: any) {
       console.error("Failed to save file:", error);
 
-      // 如果是连接错误，提供更明确的错误信息
+      // If it's a connection error, provide more specific error message
       if (
         error.message?.includes("connection") ||
         error.message?.includes("established")
@@ -236,36 +265,36 @@ export function FileWindow({
           `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
         );
       } else {
-        toast.error(`Failed to save file: ${error.message || "Unknown error"}`);
+        toast.error(`${t("fileManager.failedToSaveFile")}: ${error.message || t("fileManager.unknownError")}`);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 处理内容变更 - 设置1分钟自动保存
+  // Handle content changes - set 1-minute auto-save
   const handleContentChange = (newContent: string) => {
     setPendingContent(newContent);
 
-    // 清除之前的定时器
+    // Clear previous timer
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // 设置新的1分钟自动保存定时器
+    // Set new 1-minute auto-save timer
     autoSaveTimerRef.current = setTimeout(async () => {
       try {
         console.log("Auto-saving file...");
         await handleSave(newContent);
-        toast.success("File auto-saved");
+        toast.success(t("fileManager.fileAutoSaved"));
       } catch (error) {
         console.error("Auto-save failed:", error);
-        toast.error("Auto-save failed");
+        toast.error(t("fileManager.autoSaveFailed"));
       }
-    }, 60000); // 1分钟 = 60000毫秒
+    }, 60000); // 1 minute = 60000 milliseconds
   };
 
-  // 清理定时器
+  // Cleanup timer
   useEffect(() => {
     return () => {
       if (autoSaveTimerRef.current) {
@@ -274,10 +303,10 @@ export function FileWindow({
     };
   }, []);
 
-  // 下载文件
+  // Download file
   const handleDownload = async () => {
     try {
-      // 确保SSH连接有效
+      // Ensure SSH connection is valid
       await ensureSSHConnection();
 
       const response = await downloadSSHFile(sshSessionId, file.path);
@@ -303,12 +332,12 @@ export function FileWindow({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success("File downloaded successfully");
+        toast.success(t("fileManager.fileDownloadedSuccessfully"));
       }
     } catch (error: any) {
       console.error("Failed to download file:", error);
 
-      // 如果是连接错误，提供更明确的错误信息
+      // If it's a connection error, provide more specific error message
       if (
         error.message?.includes("connection") ||
         error.message?.includes("established")
@@ -324,13 +353,9 @@ export function FileWindow({
     }
   };
 
-  // 窗口操作处理
+  // Window operation handling
   const handleClose = () => {
     closeWindow(windowId);
-  };
-
-  const handleMinimize = () => {
-    minimizeWindow(windowId);
   };
 
   const handleMaximize = () => {
@@ -339,6 +364,12 @@ export function FileWindow({
 
   const handleFocus = () => {
     focusWindow(windowId);
+  };
+
+  // Handle media dimensions change
+  const handleMediaDimensionsChange = (dimensions: { width: number; height: number }) => {
+    console.log('Media dimensions received:', dimensions);
+    setMediaDimensions(dimensions);
   };
 
   if (!currentWindow) {
@@ -355,21 +386,22 @@ export function FileWindow({
       minWidth={400}
       minHeight={300}
       onClose={handleClose}
-      onMinimize={handleMinimize}
       onMaximize={handleMaximize}
       onFocus={handleFocus}
       isMaximized={currentWindow.isMaximized}
       zIndex={currentWindow.zIndex}
+      targetSize={mediaDimensions}
     >
       <FileViewer
         file={file}
         content={pendingContent || content}
         savedContent={content}
         isLoading={isLoading}
-        isEditable={isEditable} // 移除强制只读模式，由FileViewer内部控制
+        isEditable={isEditable} // Remove forced read-only mode, controlled internally by FileViewer
         onContentChange={handleContentChange}
         onSave={(newContent) => handleSave(newContent)}
         onDownload={handleDownload}
+        onMediaDimensionsChange={handleMediaDimensionsChange}
       />
     </DraggableWindow>
   );

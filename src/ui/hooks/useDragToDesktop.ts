@@ -32,7 +32,7 @@ export function useDragToDesktop({
     error: null,
   });
 
-  // 检查是否在Electron环境中
+  // Check if running in Electron environment
   const isElectron = () => {
     return (
       typeof window !== "undefined" &&
@@ -41,20 +41,20 @@ export function useDragToDesktop({
     );
   };
 
-  // 拖拽单个文件到桌面
+  // Drag single file to desktop
   const dragFileToDesktop = useCallback(
     async (file: FileItem, options: DragToDesktopOptions = {}) => {
       const { enableToast = true, onSuccess, onError } = options;
 
       if (!isElectron()) {
-        const error = "拖拽到桌面功能仅在桌面应用中可用";
+        const error = "Drag to desktop feature is only available in desktop application";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
       }
 
       if (file.type !== "file") {
-        const error = "只能拖拽文件到桌面";
+        const error = "Only files can be dragged to desktop";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
@@ -68,16 +68,16 @@ export function useDragToDesktop({
           error: null,
         }));
 
-        // 下载文件内容
+        // Download file content
         const response = await downloadSSHFile(sshSessionId, file.path);
 
         if (!response?.content) {
-          throw new Error("无法获取文件内容");
+          throw new Error("Unable to get file content");
         }
 
         setState((prev) => ({ ...prev, progress: 50 }));
 
-        // 创建临时文件
+        // Create temporary file
         const tempResult = await window.electronAPI.createTempFile({
           fileName: file.name,
           content: response.content,
@@ -85,30 +85,30 @@ export function useDragToDesktop({
         });
 
         if (!tempResult.success) {
-          throw new Error(tempResult.error || "创建临时文件失败");
+          throw new Error(tempResult.error || "Failed to create temporary file");
         }
 
         setState((prev) => ({ ...prev, progress: 80, isDragging: true }));
 
-        // 开始拖拽
+        // Start dragging
         const dragResult = await window.electronAPI.startDragToDesktop({
           tempId: tempResult.tempId,
           fileName: file.name,
         });
 
         if (!dragResult.success) {
-          throw new Error(dragResult.error || "开始拖拽失败");
+          throw new Error(dragResult.error || "Failed to start dragging");
         }
 
         setState((prev) => ({ ...prev, progress: 100 }));
 
         if (enableToast) {
-          toast.success(`正在拖拽 ${file.name} 到桌面`);
+          toast.success(`Dragging ${file.name} to desktop`);
         }
 
         onSuccess?.();
 
-        // 延迟清理临时文件（给用户时间完成拖拽）
+        // Delayed cleanup of temporary file (give user time to complete drag)
         setTimeout(async () => {
           await window.electronAPI.cleanupTempFile(tempResult.tempId);
           setState((prev) => ({
@@ -117,12 +117,12 @@ export function useDragToDesktop({
             isDownloading: false,
             progress: 0,
           }));
-        }, 10000); // 10秒后清理
+        }, 10000); // Cleanup after 10 seconds
 
         return true;
       } catch (error: any) {
-        console.error("拖拽到桌面失败:", error);
-        const errorMessage = error.message || "拖拽失败";
+        console.error("Failed to drag to desktop:", error);
+        const errorMessage = error.message || "Drag failed";
 
         setState((prev) => ({
           ...prev,
@@ -133,7 +133,7 @@ export function useDragToDesktop({
         }));
 
         if (enableToast) {
-          toast.error(`拖拽失败: ${errorMessage}`);
+          toast.error(`Drag failed: ${errorMessage}`);
         }
 
         onError?.(errorMessage);
@@ -143,13 +143,13 @@ export function useDragToDesktop({
     [sshSessionId, sshHost],
   );
 
-  // 拖拽多个文件到桌面（批量操作）
+  // Drag multiple files to desktop (batch operation)
   const dragFilesToDesktop = useCallback(
     async (files: FileItem[], options: DragToDesktopOptions = {}) => {
       const { enableToast = true, onSuccess, onError } = options;
 
       if (!isElectron()) {
-        const error = "拖拽到桌面功能仅在桌面应用中可用";
+        const error = "Drag to desktop feature is only available in desktop application";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
@@ -157,7 +157,7 @@ export function useDragToDesktop({
 
       const fileList = files.filter((f) => f.type === "file");
       if (fileList.length === 0) {
-        const error = "没有可拖拽的文件";
+        const error = "No files available for dragging";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
@@ -175,7 +175,7 @@ export function useDragToDesktop({
           error: null,
         }));
 
-        // 批量下载文件
+        // Batch download files
         const downloadPromises = fileList.map((file) =>
           downloadSSHFile(sshSessionId, file.path),
         );
@@ -183,7 +183,7 @@ export function useDragToDesktop({
         const responses = await Promise.all(downloadPromises);
         setState((prev) => ({ ...prev, progress: 40 }));
 
-        // 创建临时文件夹结构
+        // Create temporary folder structure
         const folderName = `Files_${Date.now()}`;
         const filesData = fileList.map((file, index) => ({
           relativePath: file.name,
@@ -197,30 +197,30 @@ export function useDragToDesktop({
         });
 
         if (!tempResult.success) {
-          throw new Error(tempResult.error || "创建临时文件夹失败");
+          throw new Error(tempResult.error || "Failed to create temporary folder");
         }
 
         setState((prev) => ({ ...prev, progress: 80, isDragging: true }));
 
-        // 开始拖拽文件夹
+        // Start dragging folder
         const dragResult = await window.electronAPI.startDragToDesktop({
           tempId: tempResult.tempId,
           fileName: folderName,
         });
 
         if (!dragResult.success) {
-          throw new Error(dragResult.error || "开始拖拽失败");
+          throw new Error(dragResult.error || "Failed to start dragging");
         }
 
         setState((prev) => ({ ...prev, progress: 100 }));
 
         if (enableToast) {
-          toast.success(`正在拖拽 ${fileList.length} 个文件到桌面`);
+          toast.success(`Dragging ${fileList.length} files to desktop`);
         }
 
         onSuccess?.();
 
-        // 延迟清理临时文件夹
+        // Delayed cleanup of temporary folder
         setTimeout(async () => {
           await window.electronAPI.cleanupTempFile(tempResult.tempId);
           setState((prev) => ({
@@ -229,12 +229,12 @@ export function useDragToDesktop({
             isDownloading: false,
             progress: 0,
           }));
-        }, 15000); // 15秒后清理
+        }, 15000); // Cleanup after 15 seconds
 
         return true;
       } catch (error: any) {
-        console.error("批量拖拽到桌面失败:", error);
-        const errorMessage = error.message || "批量拖拽失败";
+        console.error("Failed to batch drag to desktop:", error);
+        const errorMessage = error.message || "Batch drag failed";
 
         setState((prev) => ({
           ...prev,
@@ -245,7 +245,7 @@ export function useDragToDesktop({
         }));
 
         if (enableToast) {
-          toast.error(`批量拖拽失败: ${errorMessage}`);
+          toast.error(`Batch drag failed: ${errorMessage}`);
         }
 
         onError?.(errorMessage);
@@ -255,31 +255,31 @@ export function useDragToDesktop({
     [sshSessionId, sshHost, dragFileToDesktop],
   );
 
-  // 拖拽文件夹到桌面
+  // Drag folder to desktop
   const dragFolderToDesktop = useCallback(
     async (folder: FileItem, options: DragToDesktopOptions = {}) => {
       const { enableToast = true, onSuccess, onError } = options;
 
       if (!isElectron()) {
-        const error = "拖拽到桌面功能仅在桌面应用中可用";
+        const error = "Drag to desktop feature is only available in desktop application";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
       }
 
       if (folder.type !== "directory") {
-        const error = "只能拖拽文件夹类型";
+        const error = "Only folder types can be dragged";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
       }
 
       if (enableToast) {
-        toast.info("文件夹拖拽功能开发中...");
+        toast.info("Folder drag functionality is under development...");
       }
 
-      // TODO: 实现文件夹递归下载和拖拽
-      // 这需要额外的API来递归获取文件夹内容
+      // TODO: Implement recursive folder download and drag
+      // This requires additional API to recursively get folder contents
 
       return false;
     },

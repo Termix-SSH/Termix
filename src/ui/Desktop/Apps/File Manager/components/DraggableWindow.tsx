@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Minus, Square, X, Maximize2, Minimize2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface DraggableWindowProps {
   title: string;
@@ -17,6 +18,7 @@ interface DraggableWindowProps {
   isMaximized?: boolean;
   zIndex?: number;
   onFocus?: () => void;
+  targetSize?: { width: number; height: number };
 }
 
 export function DraggableWindow({
@@ -34,8 +36,10 @@ export function DraggableWindow({
   isMaximized = false,
   zIndex = 1000,
   onFocus,
+  targetSize,
 }: DraggableWindowProps) {
-  // 窗口状态
+  const { t } = useTranslation();
+  // Window state
   const [position, setPosition] = useState({ x: initialX, y: initialY });
   const [size, setSize] = useState({
     width: initialWidth,
@@ -45,19 +49,54 @@ export function DraggableWindow({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string>("");
 
-  // 拖拽开始位置
+  // Drag and resize start positions
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
+  const [sizeStart, setSizeStart] = useState({ width: 0, height: 0 });
 
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
 
-  // 处理窗口焦点
+  // Handle target size changes for media files
+  useEffect(() => {
+    if (targetSize && !isMaximized) {
+      const maxWidth = Math.min(window.innerWidth * 0.9, 1200);
+      const maxHeight = Math.min(window.innerHeight * 0.8, 800);
+
+      // Calculate appropriate window size maintaining aspect ratio
+      let newWidth = Math.min(targetSize.width + 50, maxWidth); // Add padding for UI
+      let newHeight = Math.min(targetSize.height + 150, maxHeight); // Add padding for header/footer
+
+      // If still too large, scale down maintaining aspect ratio
+      if (newWidth > maxWidth || newHeight > maxHeight) {
+        const widthRatio = maxWidth / newWidth;
+        const heightRatio = maxHeight / newHeight;
+        const scale = Math.min(widthRatio, heightRatio);
+
+        newWidth = Math.floor(newWidth * scale);
+        newHeight = Math.floor(newHeight * scale);
+      }
+
+      // Ensure minimum size
+      newWidth = Math.max(newWidth, minWidth);
+      newHeight = Math.max(newHeight, minHeight);
+
+      setSize({ width: newWidth, height: newHeight });
+
+      // Center the window
+      setPosition({
+        x: Math.max(0, (window.innerWidth - newWidth) / 2),
+        y: Math.max(0, (window.innerHeight - newHeight) / 2)
+      });
+    }
+  }, [targetSize, isMaximized, minWidth, minHeight]);
+
+  // Handle window focus
   const handleWindowClick = useCallback(() => {
     onFocus?.();
   }, [onFocus]);
 
-  // 拖拽处理
+  // Drag handling
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (isMaximized) return;
@@ -85,7 +124,7 @@ export function DraggableWindow({
           y: Math.max(
             0,
             Math.min(window.innerHeight - 40, windowStart.y + deltaY),
-          ), // 保持标题栏可见
+          ), // Keep title bar visible
         });
       }
 
@@ -93,31 +132,44 @@ export function DraggableWindow({
         const deltaX = e.clientX - dragStart.x;
         const deltaY = e.clientY - dragStart.y;
 
-        let newWidth = size.width;
-        let newHeight = size.height;
-        let newX = position.x;
-        let newY = position.y;
+        let newWidth = sizeStart.width;
+        let newHeight = sizeStart.height;
+        let newX = windowStart.x;
+        let newY = windowStart.y;
 
+        // Handle horizontal resizing
         if (resizeDirection.includes("right")) {
-          newWidth = Math.max(minWidth, windowStart.x + deltaX);
+          newWidth = Math.max(minWidth, sizeStart.width + deltaX);
         }
         if (resizeDirection.includes("left")) {
-          newWidth = Math.max(minWidth, size.width - deltaX);
-          newX = Math.min(
-            windowStart.x + deltaX,
-            position.x + size.width - minWidth,
-          );
+          const widthChange = -deltaX;
+          newWidth = Math.max(minWidth, sizeStart.width + widthChange);
+          // Only move position if we're actually changing size
+          if (newWidth > minWidth || widthChange > 0) {
+            newX = windowStart.x - (newWidth - sizeStart.width);
+          } else {
+            newX = windowStart.x - (minWidth - sizeStart.width);
+          }
         }
+
+        // Handle vertical resizing
         if (resizeDirection.includes("bottom")) {
-          newHeight = Math.max(minHeight, windowStart.y + deltaY);
+          newHeight = Math.max(minHeight, sizeStart.height + deltaY);
         }
         if (resizeDirection.includes("top")) {
-          newHeight = Math.max(minHeight, size.height - deltaY);
-          newY = Math.min(
-            windowStart.y + deltaY,
-            position.y + size.height - minHeight,
-          );
+          const heightChange = -deltaY;
+          newHeight = Math.max(minHeight, sizeStart.height + heightChange);
+          // Only move position if we're actually changing size
+          if (newHeight > minHeight || heightChange > 0) {
+            newY = windowStart.y - (newHeight - sizeStart.height);
+          } else {
+            newY = windowStart.y - (minHeight - sizeStart.height);
+          }
         }
+
+        // Ensure window stays within viewport
+        newX = Math.max(0, Math.min(window.innerWidth - newWidth, newX));
+        newY = Math.max(0, Math.min(window.innerHeight - newHeight, newY));
 
         setSize({ width: newWidth, height: newHeight });
         setPosition({ x: newX, y: newY });
@@ -129,6 +181,7 @@ export function DraggableWindow({
       isMaximized,
       dragStart,
       windowStart,
+      sizeStart,
       size,
       position,
       minWidth,
@@ -143,7 +196,7 @@ export function DraggableWindow({
     setResizeDirection("");
   }, []);
 
-  // 调整大小处理
+  // Resize handling
   const handleResizeStart = useCallback(
     (e: React.MouseEvent, direction: string) => {
       if (isMaximized) return;
@@ -153,13 +206,14 @@ export function DraggableWindow({
       setIsResizing(true);
       setResizeDirection(direction);
       setDragStart({ x: e.clientX, y: e.clientY });
-      setWindowStart({ x: size.width, y: size.height });
+      setWindowStart({ x: position.x, y: position.y });
+      setSizeStart({ width: size.width, height: size.height });
       onFocus?.();
     },
-    [isMaximized, size, onFocus],
+    [isMaximized, position, size, onFocus],
   );
 
-  // 全局事件监听
+  // Global event listeners
   useEffect(() => {
     if (isDragging || isResizing) {
       document.addEventListener("mousemove", handleMouseMove);
@@ -176,7 +230,7 @@ export function DraggableWindow({
     }
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  // 双击标题栏最大化/还原
+  // Double-click title bar to maximize/restore
   const handleTitleDoubleClick = useCallback(() => {
     onMaximize?.();
   }, [onMaximize]);
@@ -198,7 +252,7 @@ export function DraggableWindow({
       }}
       onClick={handleWindowClick}
     >
-      {/* 标题栏 */}
+      {/* Title bar */}
       <div
         ref={titleBarRef}
         className={cn(
@@ -221,7 +275,7 @@ export function DraggableWindow({
                 e.stopPropagation();
                 onMinimize();
               }}
-              title="最小化"
+              title={t("common.minimize")}
             >
               <Minus className="w-4 h-4" />
             </button>
@@ -234,7 +288,7 @@ export function DraggableWindow({
                 e.stopPropagation();
                 onMaximize();
               }}
-              title={isMaximized ? "还原" : "最大化"}
+              title={isMaximized ? t("common.restore") : t("common.maximize")}
             >
               {isMaximized ? (
                 <Minimize2 className="w-4 h-4" />
@@ -250,14 +304,14 @@ export function DraggableWindow({
               e.stopPropagation();
               onClose();
             }}
-            title="关闭"
+            title={t("common.close")}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* 窗口内容 */}
+      {/* Window content */}
       <div
         className="flex-1 overflow-auto"
         style={{ height: "calc(100% - 40px)" }}
@@ -265,10 +319,10 @@ export function DraggableWindow({
         {children}
       </div>
 
-      {/* 调整大小边框 - 只在非最大化时显示 */}
+      {/* Resize borders - only show when not maximized */}
       {!isMaximized && (
         <>
-          {/* 边缘调整 */}
+          {/* Edge resize */}
           <div
             className="absolute top-0 left-0 right-0 h-1 cursor-n-resize"
             onMouseDown={(e) => handleResizeStart(e, "top")}
@@ -286,7 +340,7 @@ export function DraggableWindow({
             onMouseDown={(e) => handleResizeStart(e, "right")}
           />
 
-          {/* 角落调整 */}
+          {/* Corner resize */}
           <div
             className="absolute top-0 left-0 w-2 h-2 cursor-nw-resize"
             onMouseDown={(e) => handleResizeStart(e, "top-left")}

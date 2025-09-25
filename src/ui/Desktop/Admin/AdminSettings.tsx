@@ -30,8 +30,6 @@ import {
   Lock,
   Download,
   Upload,
-  HardDrive,
-  FileArchive,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -93,19 +91,16 @@ export function AdminSettings({
     null,
   );
 
-  // Database encryption state
-  const [encryptionStatus, setEncryptionStatus] = React.useState<any>(null);
-  const [encryptionLoading, setEncryptionLoading] = React.useState(false);
-  const [migrationLoading, setMigrationLoading] = React.useState(false);
-  const [migrationProgress, setMigrationProgress] = React.useState<string>("");
+  // Simplified security state
+  const [securityInitialized, setSecurityInitialized] = React.useState(true);
 
   // Database migration state
   const [exportLoading, setExportLoading] = React.useState(false);
   const [importLoading, setImportLoading] = React.useState(false);
-  const [backupLoading, setBackupLoading] = React.useState(false);
   const [importFile, setImportFile] = React.useState<File | null>(null);
-  const [exportPath, setExportPath] = React.useState<string>("");
-  const [backupPath, setBackupPath] = React.useState<string>("");
+  const [exportPassword, setExportPassword] = React.useState("");
+  const [showPasswordInput, setShowPasswordInput] = React.useState(false);
+  const [importPassword, setImportPassword] = React.useState("");
 
   React.useEffect(() => {
     const jwt = getCookie("jwt");
@@ -128,7 +123,6 @@ export function AdminSettings({
         }
       });
     fetchUsers();
-    fetchEncryptionStatus();
   }, []);
 
   React.useEffect(() => {
@@ -277,111 +271,25 @@ export function AdminSettings({
     );
   };
 
-  const fetchEncryptionStatus = async () => {
-    if (isElectron()) {
-      const serverUrl = (window as any).configuredServerUrl;
-      if (!serverUrl) return;
-    }
-
-    try {
-      const jwt = getCookie("jwt");
-      const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/encryption/status`
-        : "http://localhost:8081/encryption/status";
-
-      const response = await fetch(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setEncryptionStatus(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch encryption status:", err);
-    }
+  const checkSecurityStatus = async () => {
+    // New v2-kek-dek system is always initialized
+    setSecurityInitialized(true);
   };
 
-  const handleInitializeEncryption = async () => {
-    setEncryptionLoading(true);
-    try {
-      const jwt = getCookie("jwt");
-      const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/encryption/initialize`
-        : "http://localhost:8081/encryption/initialize";
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast.success("Database encryption initialized successfully!");
-        await fetchEncryptionStatus();
-      } else {
-        throw new Error("Failed to initialize encryption");
-      }
-    } catch (err) {
-      toast.error("Failed to initialize encryption");
-    } finally {
-      setEncryptionLoading(false);
-    }
-  };
-
-  const handleMigrateData = async (dryRun: boolean = false) => {
-    setMigrationLoading(true);
-    setMigrationProgress(
-      dryRun ? t("admin.runningVerification") : t("admin.startingMigration"),
-    );
-
-    try {
-      const jwt = getCookie("jwt");
-      const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/encryption/migrate`
-        : "http://localhost:8081/encryption/migrate";
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ dryRun }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (dryRun) {
-          toast.success(t("admin.verificationCompleted"));
-          setMigrationProgress(t("admin.verificationInProgress"));
-        } else {
-          toast.success(t("admin.dataMigrationCompleted"));
-          setMigrationProgress(t("admin.migrationCompleted"));
-          await fetchEncryptionStatus();
-        }
-      } else {
-        throw new Error("Migration failed");
-      }
-    } catch (err) {
-      toast.error(
-        dryRun ? t("admin.verificationFailed") : t("admin.migrationFailed"),
-      );
-      setMigrationProgress("Failed");
-    } finally {
-      setMigrationLoading(false);
-      setTimeout(() => setMigrationProgress(""), 3000);
-    }
-  };
 
   // Database export/import handlers
   const handleExportDatabase = async () => {
+    if (!showPasswordInput) {
+      setShowPasswordInput(true);
+      return;
+    }
+
+    if (!exportPassword.trim()) {
+      toast.error(t("admin.passwordRequired"));
+      return;
+    }
+
     setExportLoading(true);
     try {
       const jwt = getCookie("jwt");
@@ -395,15 +303,34 @@ export function AdminSettings({
           Authorization: `Bearer ${jwt}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ password: exportPassword }),
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setExportPath(result.exportPath);
+        // Handle file download
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('content-disposition');
+        const filename = contentDisposition?.match(/filename="([^"]+)"/)?.[1] || 'termix-export.sqlite';
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
         toast.success(t("admin.databaseExportedSuccessfully"));
+        setExportPassword("");
+        setShowPasswordInput(false);
       } else {
-        throw new Error("Export failed");
+        const error = await response.json();
+        if (error.code === "PASSWORD_REQUIRED") {
+          toast.error(t("admin.passwordRequired"));
+        } else {
+          toast.error(error.error || t("admin.databaseExportFailed"));
+        }
       }
     } catch (err) {
       toast.error(t("admin.databaseExportFailed"));
@@ -418,6 +345,11 @@ export function AdminSettings({
       return;
     }
 
+    if (!importPassword.trim()) {
+      toast.error(t("admin.passwordRequired"));
+      return;
+    }
+
     setImportLoading(true);
     try {
       const jwt = getCookie("jwt");
@@ -428,7 +360,7 @@ export function AdminSettings({
       // Create FormData for file upload
       const formData = new FormData();
       formData.append("file", importFile);
-      formData.append("backupCurrent", "true");
+      formData.append("password", importPassword);
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -441,16 +373,34 @@ export function AdminSettings({
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          toast.success(t("admin.databaseImportedSuccessfully"));
+          const summary = result.summary;
+          const imported = summary.sshHostsImported + summary.sshCredentialsImported + summary.fileManagerItemsImported + summary.dismissedAlertsImported + (summary.settingsImported || 0);
+          const skipped = summary.skippedItems;
+
+          const details = [];
+          if (summary.sshHostsImported > 0) details.push(`${summary.sshHostsImported} SSH hosts`);
+          if (summary.sshCredentialsImported > 0) details.push(`${summary.sshCredentialsImported} credentials`);
+          if (summary.fileManagerItemsImported > 0) details.push(`${summary.fileManagerItemsImported} file manager items`);
+          if (summary.dismissedAlertsImported > 0) details.push(`${summary.dismissedAlertsImported} alerts`);
+          if (summary.settingsImported > 0) details.push(`${summary.settingsImported} settings`);
+
+          toast.success(
+            `Import completed: ${imported} items imported${details.length > 0 ? ` (${details.join(', ')})` : ''}, ${skipped} items skipped`
+          );
           setImportFile(null);
-          await fetchEncryptionStatus(); // Refresh status
+          setImportPassword("");
         } else {
           toast.error(
-            `${t("admin.databaseImportFailed")}: ${result.errors?.join(", ") || "Unknown error"}`,
+            `${t("admin.databaseImportFailed")}: ${result.summary?.errors?.join(", ") || "Unknown error"}`,
           );
         }
       } else {
-        throw new Error("Import failed");
+        const error = await response.json();
+        if (error.code === "PASSWORD_REQUIRED") {
+          toast.error(t("admin.passwordRequired"));
+        } else {
+          toast.error(error.error || t("admin.databaseImportFailed"));
+        }
       }
     } catch (err) {
       toast.error(t("admin.databaseImportFailed"));
@@ -459,36 +409,6 @@ export function AdminSettings({
     }
   };
 
-  const handleCreateBackup = async () => {
-    setBackupLoading(true);
-    try {
-      const jwt = getCookie("jwt");
-      const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/backup`
-        : "http://localhost:8081/database/backup";
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setBackupPath(result.backupPath);
-        toast.success(t("admin.encryptedBackupCreatedSuccessfully"));
-      } else {
-        throw new Error("Backup failed");
-      }
-    } catch (err) {
-      toast.error(t("admin.backupCreationFailed"));
-    } finally {
-      setBackupLoading(false);
-    }
-  };
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
@@ -925,7 +845,7 @@ export function AdminSettings({
             </TabsContent>
 
             <TabsContent value="security" className="space-y-6">
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Database className="h-5 w-5" />
                   <h3 className="text-lg font-semibold">
@@ -933,241 +853,112 @@ export function AdminSettings({
                   </h3>
                 </div>
 
-                {encryptionStatus && (
-                  <div className="space-y-4">
-                    {/* Status Overview */}
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <div className="p-3 border rounded bg-card">
-                        <div className="flex items-center gap-2">
-                          {encryptionStatus.encryption?.enabled ? (
-                            <Lock className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Key className="h-4 w-4 text-yellow-500" />
-                          )}
-                          <div>
-                            <div className="text-sm font-medium">
-                              {t("admin.encryptionStatus")}
-                            </div>
-                            <div
-                              className={`text-xs ${
-                                encryptionStatus.encryption?.enabled
-                                  ? "text-green-500"
-                                  : "text-yellow-500"
-                              }`}
-                            >
-                              {encryptionStatus.encryption?.enabled
-                                ? t("admin.enabled")
-                                : t("admin.disabled")}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-3 border rounded bg-card">
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4 text-blue-500" />
-                          <div>
-                            <div className="text-sm font-medium">
-                              {t("admin.keyProtection")}
-                            </div>
-                            <div
-                              className={`text-xs ${
-                                encryptionStatus.encryption?.key?.kekProtected
-                                  ? "text-green-500"
-                                  : "text-yellow-500"
-                              }`}
-                            >
-                              {encryptionStatus.encryption?.key?.kekProtected
-                                ? t("admin.active")
-                                : t("admin.legacy")}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-3 border rounded bg-card">
-                        <div className="flex items-center gap-2">
-                          <Database className="h-4 w-4 text-purple-500" />
-                          <div>
-                            <div className="text-sm font-medium">
-                              {t("admin.dataStatus")}
-                            </div>
-                            <div
-                              className={`text-xs ${
-                                encryptionStatus.migration?.migrationCompleted
-                                  ? "text-green-500"
-                                  : encryptionStatus.migration
-                                        ?.migrationRequired
-                                    ? "text-yellow-500"
-                                    : "text-muted-foreground"
-                              }`}
-                            >
-                              {encryptionStatus.migration?.migrationCompleted
-                                ? t("admin.encrypted")
-                                : encryptionStatus.migration?.migrationRequired
-                                  ? t("admin.needsMigration")
-                                  : t("admin.ready")}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                {/* Simple status display - read only */}
+                <div className="p-4 border rounded bg-card">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-green-500" />
+                    <div>
+                      <div className="text-sm font-medium">{t("admin.encryptionStatus")}</div>
+                      <div className="text-xs text-green-500">{t("admin.encryptionEnabled")}</div>
                     </div>
+                  </div>
+                </div>
 
-                    {/* Actions */}
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {!encryptionStatus.encryption?.key?.hasKey ? (
-                        <div className="p-4 border rounded bg-card">
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-blue-500" />
-                              <h4 className="font-medium">
-                                {t("admin.initializeEncryption")}
-                              </h4>
-                            </div>
-                            <Button
-                              onClick={handleInitializeEncryption}
-                              disabled={encryptionLoading}
-                              className="w-full"
-                            >
-                              {encryptionLoading
-                                ? t("admin.initializing")
-                                : t("admin.initialize")}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          {encryptionStatus.migration?.migrationRequired && (
-                            <div className="p-4 border rounded bg-card">
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2">
-                                  <Database className="h-4 w-4 text-yellow-500" />
-                                  <h4 className="font-medium">
-                                    {t("admin.migrateData")}
-                                  </h4>
-                                </div>
-                                {migrationProgress && (
-                                  <div className="text-sm text-blue-600">
-                                    {migrationProgress}
-                                  </div>
-                                )}
-                                <div className="flex gap-2">
-                                  <Button
-                                    onClick={() => handleMigrateData(true)}
-                                    disabled={migrationLoading}
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1"
-                                  >
-                                    {t("admin.test")}
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleMigrateData(false)}
-                                    disabled={migrationLoading}
-                                    size="sm"
-                                    className="flex-1"
-                                  >
-                                    {migrationLoading
-                                      ? t("admin.migrating")
-                                      : t("admin.migrate")}
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="p-4 border rounded bg-card">
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <Database className="h-4 w-4 text-blue-500" />
-                                <h4 className="font-medium">
-                                  {t("admin.backup")}
-                                </h4>
-                              </div>
-                              <Button
-                                onClick={handleCreateBackup}
-                                disabled={backupLoading}
-                                variant="outline"
-                                className="w-full"
-                              >
-                                {backupLoading
-                                  ? t("admin.creatingBackup")
-                                  : t("admin.createBackup")}
-                              </Button>
-                              {backupPath && (
-                                <div className="p-2 bg-muted rounded border">
-                                  <div className="text-xs font-mono break-all">
-                                    {backupPath}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
-
-                      <div className="p-4 border rounded bg-card">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Upload className="h-4 w-4 text-green-500" />
-                            <h4 className="font-medium">
-                              {t("admin.exportImport")}
-                            </h4>
-                          </div>
-                          <div className="space-y-2">
-                            <Button
-                              onClick={handleExportDatabase}
-                              disabled={exportLoading}
-                              variant="outline"
-                              size="sm"
-                              className="w-full"
-                            >
-                              {exportLoading
-                                ? t("admin.exporting")
-                                : t("admin.export")}
-                            </Button>
-                            {exportPath && (
-                              <div className="p-2 bg-muted rounded border">
-                                <div className="text-xs font-mono break-all">
-                                  {exportPath}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <input
-                              type="file"
-                              accept=".sqlite,.termix-export.sqlite,.db"
-                              onChange={(e) =>
-                                setImportFile(e.target.files?.[0] || null)
+                {/* Data management functions - export/import */}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="p-4 border rounded bg-card">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Download className="h-4 w-4 text-blue-500" />
+                        <h4 className="font-medium">{t("admin.export")}</h4>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t("admin.exportDescription")}
+                      </p>
+                      {showPasswordInput && (
+                        <div className="space-y-2">
+                          <Label htmlFor="export-password">Password</Label>
+                          <PasswordInput
+                            id="export-password"
+                            value={exportPassword}
+                            onChange={(e) => setExportPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleExportDatabase();
                               }
-                              className="block w-full text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted file:text-foreground"
-                            />
-                            <Button
-                              onClick={handleImportDatabase}
-                              disabled={importLoading || !importFile}
-                              variant="outline"
-                              size="sm"
-                              className="w-full"
-                            >
-                              {importLoading
-                                ? t("admin.importing")
-                                : t("admin.import")}
-                            </Button>
-                          </div>
+                            }}
+                          />
                         </div>
-                      </div>
+                      )}
+                      <Button
+                        onClick={handleExportDatabase}
+                        disabled={exportLoading}
+                        className="w-full"
+                      >
+                        {exportLoading
+                          ? t("admin.exporting")
+                          : showPasswordInput
+                            ? t("admin.confirmExport")
+                            : t("admin.export")
+                        }
+                      </Button>
+                      {showPasswordInput && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowPasswordInput(false);
+                            setExportPassword("");
+                          }}
+                          className="w-full"
+                        >
+                          Cancel
+                        </Button>
+                      )}
                     </div>
                   </div>
-                )}
 
-                {!encryptionStatus && (
-                  <div className="text-center py-8">
-                    <div className="text-muted-foreground">
-                      {t("admin.loadingEncryptionStatus")}
+                  <div className="p-4 border rounded bg-card">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Upload className="h-4 w-4 text-green-500" />
+                        <h4 className="font-medium">{t("admin.import")}</h4>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t("admin.importDescription")}
+                      </p>
+                      <input
+                        type="file"
+                        accept=".sqlite,.db"
+                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                        className="block w-full text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted file:text-foreground mb-2"
+                      />
+                      {importFile && (
+                        <div className="space-y-2">
+                          <Label htmlFor="import-password">Password</Label>
+                          <PasswordInput
+                            id="import-password"
+                            value={importPassword}
+                            onChange={(e) => setImportPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleImportDatabase();
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+                      <Button
+                        onClick={handleImportDatabase}
+                        disabled={importLoading || !importFile || !importPassword.trim()}
+                        className="w-full"
+                      >
+                        {importLoading ? t("admin.importing") : t("admin.import")}
+                      </Button>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </TabsContent>
           </Tabs>

@@ -5,7 +5,8 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { authLogger } from "../../utils/logger.js";
-import { EncryptedDBOperations } from "../../utils/encrypted-db-operations.js";
+import { SimpleDBOps } from "../../utils/simple-db-ops.js";
+import { AuthManager } from "../../utils/auth-manager.js";
 import {
   parseSSHKey,
   parsePublicKey,
@@ -84,29 +85,14 @@ function isNonEmptyString(val: any): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
-function authenticateJWT(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers["authorization"];
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    authLogger.warn("Missing or invalid Authorization header");
-    return res
-      .status(401)
-      .json({ error: "Missing or invalid Authorization header" });
-  }
-  const token = authHeader.split(" ")[1];
-  const jwtSecret = process.env.JWT_SECRET || "secret";
-  try {
-    const payload = jwt.verify(token, jwtSecret) as JWTPayload;
-    (req as any).userId = payload.userId;
-    next();
-  } catch (err) {
-    authLogger.warn("Invalid or expired token");
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
-}
+// Use AuthManager middleware for authentication
+const authManager = AuthManager.getInstance();
+const authenticateJWT = authManager.createAuthMiddleware();
+const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Create a new credential
 // POST /credentials
-router.post("/", authenticateJWT, async (req: Request, res: Response) => {
+router.post("/", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
   const userId = (req as any).userId;
   const {
     name,
@@ -210,10 +196,11 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
       lastUsed: null,
     };
 
-    const created = (await EncryptedDBOperations.insert(
+    const created = (await SimpleDBOps.insert(
       sshCredentials,
       "ssh_credentials",
       credentialData,
+      userId,
     )) as typeof credentialData & { id: number };
 
     authLogger.success(
@@ -245,7 +232,7 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
 
 // Get all credentials for the authenticated user
 // GET /credentials
-router.get("/", authenticateJWT, async (req: Request, res: Response) => {
+router.get("/", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
   const userId = (req as any).userId;
 
   if (!isNonEmptyString(userId)) {
@@ -254,13 +241,14 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   }
 
   try {
-    const credentials = await EncryptedDBOperations.select(
+    const credentials = await SimpleDBOps.select(
       db
         .select()
         .from(sshCredentials)
         .where(eq(sshCredentials.userId, userId))
         .orderBy(desc(sshCredentials.updatedAt)),
       "ssh_credentials",
+      userId,
     );
 
     res.json(credentials.map((cred) => formatCredentialOutput(cred)));
@@ -272,7 +260,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
 
 // Get all unique credential folders for the authenticated user
 // GET /credentials/folders
-router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
+router.get("/folders", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
   const userId = (req as any).userId;
 
   if (!isNonEmptyString(userId)) {
@@ -305,7 +293,7 @@ router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
 
 // Get a specific credential by ID (with plain text secrets)
 // GET /credentials/:id
-router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
+router.get("/:id", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
   const userId = (req as any).userId;
   const { id } = req.params;
 
@@ -315,7 +303,7 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
   }
 
   try {
-    const credentials = await EncryptedDBOperations.select(
+    const credentials = await SimpleDBOps.select(
       db
         .select()
         .from(sshCredentials)
@@ -326,6 +314,7 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
           ),
         ),
       "ssh_credentials",
+      userId,
     );
 
     if (credentials.length === 0) {
@@ -362,7 +351,7 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
 
 // Update a credential
 // PUT /credentials/:id
-router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
+router.put("/:id", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
   const userId = (req as any).userId;
   const { id } = req.params;
   const updateData = req.body;
@@ -437,18 +426,19 @@ router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
     }
 
     if (Object.keys(updateFields).length === 0) {
-      const existing = await EncryptedDBOperations.select(
+      const existing = await SimpleDBOps.select(
         db
           .select()
           .from(sshCredentials)
           .where(eq(sshCredentials.id, parseInt(id))),
         "ssh_credentials",
+        userId,
       );
 
       return res.json(formatCredentialOutput(existing[0]));
     }
 
-    await EncryptedDBOperations.update(
+    await SimpleDBOps.update(
       sshCredentials,
       "ssh_credentials",
       and(
@@ -456,14 +446,16 @@ router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
         eq(sshCredentials.userId, userId),
       ),
       updateFields,
+      userId,
     );
 
-    const updated = await EncryptedDBOperations.select(
+    const updated = await SimpleDBOps.select(
       db
         .select()
         .from(sshCredentials)
         .where(eq(sshCredentials.id, parseInt(id))),
       "ssh_credentials",
+      userId,
     );
 
     const credential = updated[0];
@@ -490,7 +482,7 @@ router.put("/:id", authenticateJWT, async (req: Request, res: Response) => {
 
 // Delete a credential
 // DELETE /credentials/:id
-router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
+router.delete("/:id", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
   const userId = (req as any).userId;
   const { id } = req.params;
 
