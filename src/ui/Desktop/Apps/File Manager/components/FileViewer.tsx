@@ -10,6 +10,8 @@ import {
   Code,
   AlertCircle,
   Download,
+  Eye,
+  Edit,
   Save,
   RotateCcw,
   Keyboard,
@@ -55,6 +57,14 @@ import "react-photo-view/dist/react-photo-view.css";
 import ReactPlayer from "react-player";
 import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark as syntaxTheme } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Document, Page, pdfjs } from "react-pdf";
+
+// Use local PDF.js worker to avoid CDN issues
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 interface FileItem {
   name: string;
@@ -142,6 +152,8 @@ function getFileType(filename: string): {
   const videoExts = ["mp4", "avi", "mkv", "mov", "wmv", "flv", "webm"];
   const audioExts = ["mp3", "wav", "flac", "ogg", "aac", "m4a"];
   const textExts = ["txt", "readme"];
+  const markdownExts = ["md", "markdown", "mdown", "mkdn", "mdx"];
+  const pdfExts = ["pdf"];
   const codeExts = [
     "js",
     "ts",
@@ -173,7 +185,6 @@ function getFileType(filename: string): {
     "sql",
     "vue",
     "svelte",
-    "md",
   ];
 
   if (imageExts.includes(ext)) {
@@ -193,6 +204,18 @@ function getFileType(filename: string): {
       type: "audio",
       icon: <Music className="w-6 h-6" />,
       color: "text-pink-500",
+    };
+  } else if (markdownExts.includes(ext)) {
+    return {
+      type: "markdown",
+      icon: <FileText className="w-6 h-6" />,
+      color: "text-blue-600",
+    };
+  } else if (pdfExts.includes(ext)) {
+    return {
+      type: "pdf",
+      icon: <FileText className="w-6 h-6" />,
+      color: "text-red-600",
     };
   } else if (textExts.includes(ext)) {
     return {
@@ -295,6 +318,11 @@ export function FileViewer({
   const [editorFocused, setEditorFocused] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfScale, setPdfScale] = useState(1.2);
+  const [pdfError, setPdfError] = useState(false);
+  const [markdownEditMode, setMarkdownEditMode] = useState(false);
 
   const fileTypeInfo = getFileType(file.name);
 
@@ -849,6 +877,433 @@ export function FileViewer({
                   </div>
                 );
               })()}
+            </div>
+          </div>
+        )}
+
+        {/* Markdown file editor with live preview */}
+        {fileTypeInfo.type === "markdown" && !showLargeFileWarning && (
+          <div className="h-full flex flex-col">
+            {/* Markdown toolbar */}
+            <div className="flex-shrink-0 bg-muted/30 border-b border-border p-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={markdownEditMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setMarkdownEditMode(true)}
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    {t("fileManager.edit")}
+                  </Button>
+                  <Button
+                    variant={!markdownEditMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setMarkdownEditMode(false)}
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    {t("fileManager.preview")}
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasChanges && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => onSave?.(editedContent)}
+                      disabled={!hasChanges}
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      {t("fileManager.save")}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Markdown content area */}
+            <div className="flex-1 flex overflow-hidden">
+              {markdownEditMode ? (
+                <>
+                  {/* Editor pane */}
+                  <div className="flex-1 border-r border-border">
+                    <div className="h-full p-4 bg-background">
+                      <textarea
+                        value={editedContent}
+                        onChange={(e) => {
+                          setEditedContent(e.target.value);
+                          onContentChange?.(e.target.value);
+                        }}
+                        className="w-full h-full resize-none border-0 bg-transparent text-foreground font-mono text-sm leading-relaxed focus:outline-none focus:ring-0"
+                        placeholder="Start writing your markdown content..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Preview pane */}
+                  <div className="flex-1 overflow-auto bg-muted/10">
+                    <div className="p-4">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ node, inline, className, children, ...props }) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            return !inline && match ? (
+                              <SyntaxHighlighter
+                                style={syntaxTheme}
+                                language={match[1]}
+                                PreTag="div"
+                                className="rounded-lg"
+                                {...props}
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            ) : (
+                              <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono" {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                          h1: ({ children }) => (
+                            <h1 className="text-2xl font-bold mb-4 mt-6 text-foreground border-b border-border pb-2">
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="text-xl font-semibold mb-3 mt-5 text-foreground border-b border-border pb-1">
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="text-lg font-semibold mb-2 mt-4 text-foreground">
+                              {children}
+                            </h3>
+                          ),
+                          h4: ({ children }) => (
+                            <h4 className="text-base font-semibold mb-2 mt-3 text-foreground">
+                              {children}
+                            </h4>
+                          ),
+                          p: ({ children }) => (
+                            <p className="mb-3 text-foreground leading-relaxed">
+                              {children}
+                            </p>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="mb-3 ml-4 list-disc text-foreground">
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="mb-3 ml-4 list-decimal text-foreground">
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="mb-1 text-foreground">
+                              {children}
+                            </li>
+                          ),
+                          blockquote: ({ children }) => (
+                            <blockquote className="border-l-4 border-blue-500 pl-3 mb-3 italic text-muted-foreground bg-muted/30 py-1">
+                              {children}
+                            </blockquote>
+                          ),
+                          table: ({ children }) => (
+                            <div className="mb-3 overflow-x-auto">
+                              <table className="min-w-full border border-border rounded-lg text-sm">
+                                {children}
+                              </table>
+                            </div>
+                          ),
+                          thead: ({ children }) => (
+                            <thead className="bg-muted">
+                              {children}
+                            </thead>
+                          ),
+                          tbody: ({ children }) => (
+                            <tbody>
+                              {children}
+                            </tbody>
+                          ),
+                          tr: ({ children }) => (
+                            <tr className="border-b border-border">
+                              {children}
+                            </tr>
+                          ),
+                          th: ({ children }) => (
+                            <th className="px-3 py-2 text-left font-semibold text-foreground">
+                              {children}
+                            </th>
+                          ),
+                          td: ({ children }) => (
+                            <td className="px-3 py-2 text-foreground">
+                              {children}
+                            </td>
+                          ),
+                          a: ({ href, children }) => (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 underline"
+                            >
+                              {children}
+                            </a>
+                          ),
+                        }}
+                      >
+                        {editedContent || "Nothing to preview yet..."}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Full preview mode */
+                <div className="flex-1 overflow-auto p-6">
+                  <div className="max-w-4xl mx-auto">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        code({ node, inline, className, children, ...props }) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={syntaxTheme}
+                              language={match[1]}
+                              PreTag="div"
+                              className="rounded-lg"
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono" {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                        h1: ({ children }) => (
+                          <h1 className="text-3xl font-bold mb-6 mt-8 text-foreground border-b border-border pb-2">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="text-2xl font-semibold mb-4 mt-6 text-foreground border-b border-border pb-1">
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="text-xl font-semibold mb-3 mt-4 text-foreground">
+                            {children}
+                          </h3>
+                        ),
+                        h4: ({ children }) => (
+                          <h4 className="text-lg font-semibold mb-2 mt-3 text-foreground">
+                            {children}
+                          </h4>
+                        ),
+                        p: ({ children }) => (
+                          <p className="mb-4 text-foreground leading-relaxed">
+                            {children}
+                          </p>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="mb-4 ml-6 list-disc text-foreground">
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="mb-4 ml-6 list-decimal text-foreground">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="mb-1 text-foreground">
+                            {children}
+                          </li>
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-4 border-blue-500 pl-4 mb-4 italic text-muted-foreground bg-muted/30 py-2">
+                            {children}
+                          </blockquote>
+                        ),
+                        table: ({ children }) => (
+                          <div className="mb-4 overflow-x-auto">
+                            <table className="min-w-full border border-border rounded-lg">
+                              {children}
+                            </table>
+                          </div>
+                        ),
+                        thead: ({ children }) => (
+                          <thead className="bg-muted">
+                            {children}
+                          </thead>
+                        ),
+                        tbody: ({ children }) => (
+                          <tbody>
+                            {children}
+                          </tbody>
+                        ),
+                        tr: ({ children }) => (
+                          <tr className="border-b border-border">
+                            {children}
+                          </tr>
+                        ),
+                        th: ({ children }) => (
+                          <th className="px-4 py-2 text-left font-semibold text-foreground">
+                            {children}
+                          </th>
+                        ),
+                        td: ({ children }) => (
+                          <td className="px-4 py-2 text-foreground">
+                            {children}
+                          </td>
+                        ),
+                        a: ({ href, children }) => (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {children}
+                          </a>
+                        ),
+                      }}
+                    >
+                      {editedContent}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* PDF file preview with react-pdf */}
+        {fileTypeInfo.type === "pdf" && !showLargeFileWarning && (
+          <div className="h-full flex flex-col bg-background">
+            {/* PDF Controls */}
+            <div className="flex-shrink-0 bg-muted/30 border-b border-border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
+                      disabled={pageNumber <= 1}
+                    >
+                      {t("fileManager.previous")}
+                    </Button>
+                    <span className="text-sm text-foreground px-3 py-1 bg-background rounded border">
+                      {t("fileManager.pageXOfY", { current: pageNumber, total: numPages || 0 })}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageNumber(Math.min(numPages || 1, pageNumber + 1))}
+                      disabled={!numPages || pageNumber >= numPages}
+                    >
+                      {t("fileManager.next")}
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPdfScale(Math.max(0.5, pdfScale - 0.2))}
+                    >
+                      {t("fileManager.zoomOut")}
+                    </Button>
+                    <span className="text-sm text-foreground px-3 py-1 bg-background rounded border min-w-[80px] text-center">
+                      {Math.round(pdfScale * 100)}%
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPdfScale(Math.min(3.0, pdfScale + 0.2))}
+                    >
+                      {t("fileManager.zoomIn")}
+                    </Button>
+                  </div>
+                </div>
+                {onDownload && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onDownload}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    {t("fileManager.download")}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* PDF Content */}
+            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-gray-900">
+              <div className="flex justify-center">
+                {pdfError ? (
+                  <div className="text-center text-muted-foreground p-8">
+                    <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
+                    <h3 className="text-lg font-medium mb-2">Cannot load PDF</h3>
+                    <p className="text-sm mb-4">
+                      There was an error loading this PDF file.
+                    </p>
+                    {onDownload && (
+                      <Button
+                        variant="outline"
+                        onClick={onDownload}
+                        className="flex items-center gap-2 mx-auto"
+                      >
+                        <Download className="w-4 h-4" />
+                        {t("fileManager.download")}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Document
+                    file={`data:application/pdf;base64,${content}`}
+                    onLoadSuccess={({ numPages }) => {
+                      setNumPages(numPages);
+                      setPdfError(false);
+
+                      // Notify parent about PDF dimensions for window sizing
+                      if (onMediaDimensionsChange) {
+                        onMediaDimensionsChange({
+                          width: 800,
+                          height: 600
+                        });
+                      }
+                    }}
+                    onLoadError={(error) => {
+                      console.error('PDF load error:', error);
+                      setPdfError(true);
+                    }}
+                    loading={
+                      <div className="text-center p-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                        <p className="text-sm text-muted-foreground">Loading PDF...</p>
+                      </div>
+                    }
+                  >
+                    <Page
+                      pageNumber={pageNumber}
+                      scale={pdfScale}
+                      className="shadow-lg"
+                      loading={
+                        <div className="text-center p-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                          <p className="text-xs text-muted-foreground">Loading page...</p>
+                        </div>
+                      }
+                    />
+                  </Document>
+                )}
+              </div>
             </div>
           </div>
         )}
