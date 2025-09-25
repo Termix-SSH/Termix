@@ -26,6 +26,9 @@
     "migrate:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-migration.js"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.18.7",
+    "@codemirror/comment": "^0.19.1",
+    "@codemirror/search": "^6.5.11",
     "@hookform/resolvers": "^5.1.1",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-accordion": "^1.2.11",

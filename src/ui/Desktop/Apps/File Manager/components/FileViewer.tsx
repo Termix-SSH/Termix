@@ -12,11 +12,7 @@ import {
   Download,
   Save,
   RotateCcw,
-  Search,
-  X,
-  ChevronUp,
-  ChevronDown,
-  Replace,
+  Keyboard,
 } from "lucide-react";
 import {
   SiJavascript,
@@ -47,11 +43,13 @@ import {
   SiDocker,
 } from "react-icons/si";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { languages, loadLanguage } from "@uiw/codemirror-extensions-langs";
-import { EditorView } from "@codemirror/view";
+import { loadLanguage } from "@uiw/codemirror-extensions-langs";
+import { EditorView, keymap } from "@codemirror/view";
+import { searchKeymap, search } from "@codemirror/search";
+import { defaultKeymap, history, historyKeymap, toggleComment } from "@codemirror/commands";
+import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 
 interface FileItem {
   name: string;
@@ -286,14 +284,8 @@ export function FileViewer({
   const [hasChanges, setHasChanges] = useState(false);
   const [showLargeFileWarning, setShowLargeFileWarning] = useState(false);
   const [forceShowAsText, setForceShowAsText] = useState(false);
-  const [showSearchPanel, setShowSearchPanel] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [replaceText, setReplaceText] = useState("");
-  const [showReplacePanel, setShowReplacePanel] = useState(false);
-  const [searchMatches, setSearchMatches] = useState<
-    { start: number; end: number }[]
-  >([]);
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [editorFocused, setEditorFocused] = useState(false);
 
   const fileTypeInfo = getFileType(file.name);
 
@@ -349,126 +341,30 @@ export function FileViewer({
     onContentChange?.(originalContent);
   };
 
-  // Search matching functionality
-  const findMatches = (text: string) => {
-    if (!text) {
-      setSearchMatches([]);
-      setCurrentMatchIndex(-1);
-      return;
-    }
+  // Handle save shortcut specifically
+  useEffect(() => {
+    if (!editorFocused || !isEditable) return;
 
-    const matches: { start: number; end: number }[] = [];
-    const regex = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-    let match;
-
-    while ((match = regex.exec(editedContent)) !== null) {
-      matches.push({
-        start: match.index,
-        end: match.index + match[0].length,
-      });
-      // Avoid infinite loop
-      if (match.index === regex.lastIndex) regex.lastIndex++;
-    }
-
-    setSearchMatches(matches);
-    setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
-  };
-
-  // Search navigation
-  const goToNextMatch = () => {
-    if (searchMatches.length === 0) return;
-    setCurrentMatchIndex((prev) => (prev + 1) % searchMatches.length);
-  };
-
-  const goToPrevMatch = () => {
-    if (searchMatches.length === 0) return;
-    setCurrentMatchIndex(
-      (prev) => (prev - 1 + searchMatches.length) % searchMatches.length,
-    );
-  };
-
-  // Replace functionality
-  const handleFindReplace = (
-    findText: string,
-    replaceWithText: string,
-    replaceAll: boolean = false,
-  ) => {
-    if (!findText) return;
-
-    let newContent = editedContent;
-    if (replaceAll) {
-      newContent = newContent.replace(
-        new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-        replaceWithText,
-      );
-    } else if (currentMatchIndex >= 0 && searchMatches[currentMatchIndex]) {
-      // Replace current match
-      const match = searchMatches[currentMatchIndex];
-      newContent =
-        editedContent.substring(0, match.start) +
-        replaceWithText +
-        editedContent.substring(match.end);
-    }
-
-    setEditedContent(newContent);
-    setHasChanges(newContent !== originalContent);
-    onContentChange?.(newContent);
-
-    // Re-search to update matches
-    setTimeout(() => findMatches(findText), 0);
-  };
-
-  const handleFind = () => {
-    setShowSearchPanel(true);
-    setShowReplacePanel(false);
-  };
-
-  const handleReplace = () => {
-    setShowSearchPanel(true);
-    setShowReplacePanel(true);
-  };
-
-  // Render highlighted text
-  const renderHighlightedText = (text: string) => {
-    if (!searchText || searchMatches.length === 0) {
-      return text;
-    }
-
-    const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-
-    searchMatches.forEach((match, index) => {
-      // Add text before match
-      if (match.start > lastIndex) {
-        parts.push(text.substring(lastIndex, match.start));
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle Ctrl+S for custom save, let CodeMirror handle everything else
+      const isCtrl = e.ctrlKey || e.metaKey;
+      if (isCtrl && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSave();
       }
+    };
 
-      // Add highlighted match text
-      const isCurrentMatch = index === currentMatchIndex;
-      parts.push(
-        <span
-          key={`match-${index}`}
-          className={cn(
-            "font-bold",
-            isCurrentMatch
-              ? "text-red-600 bg-yellow-200"
-              : "text-blue-800 bg-blue-100",
-          )}
-        >
-          {text.substring(match.start, match.end)}
-        </span>,
-      );
+    // Add event listener with capture for save shortcut only
+    document.addEventListener('keydown', handleKeyDown, true);
 
-      lastIndex = match.end;
-    });
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [editorFocused, isEditable, handleSave]);
 
-    // Add final text
-    if (lastIndex < text.length) {
-      parts.push(text.substring(lastIndex));
-    }
 
-    return parts;
-  };
+
 
   // Handle user confirmation to open large file
   const handleConfirmOpenAsText = () => {
@@ -520,26 +416,17 @@ export function FileViewer({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Edit toolbar - display directly, no toggle needed */}
+            {/* Keyboard shortcuts help */}
             {isEditable && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleFind}
-                  className="flex items-center gap-2"
-                >
-                  <Search className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleReplace}
-                  className="flex items-center gap-2"
-                >
-                  <Replace className="w-4 h-4" />
-                </Button>
-              </>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
+                className="flex items-center gap-2"
+                title="Show keyboard shortcuts"
+              >
+                <Keyboard className="w-4 h-4" />
+              </Button>
             )}
             {hasChanges && (
               <>
@@ -571,92 +458,109 @@ export function FileViewer({
                 className="flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
-                Download
+                {t("fileManager.download")}
               </Button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Search and replace panel */}
-      {showSearchPanel && (
-        <div className="flex-shrink-0 bg-muted/30 border-b border-border p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Input
-              placeholder={t("fileManager.find")}
-              value={searchText}
-              onChange={(e) => {
-                setSearchText(e.target.value);
-                findMatches(e.target.value);
-              }}
-              className="w-48 h-8"
-            />
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goToPrevMatch}
-                disabled={searchMatches.length === 0}
-              >
-                <ChevronUp className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goToNextMatch}
-                disabled={searchMatches.length === 0}
-              >
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-              <span className="text-xs text-muted-foreground min-w-[3rem]">
-                {searchMatches.length > 0
-                  ? `${currentMatchIndex + 1}/${searchMatches.length}`
-                  : searchText
-                    ? "0/0"
-                    : ""}
-              </span>
-            </div>
+      {/* Keyboard shortcuts help panel */}
+      {showKeyboardShortcuts && isEditable && (
+        <div className="flex-shrink-0 bg-muted/30 border-b border-border p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold">Keyboard Shortcuts</h3>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setShowSearchPanel(false);
-                setSearchText("");
-                setSearchMatches([]);
-                setCurrentMatchIndex(-1);
-              }}
+              onClick={() => setShowKeyboardShortcuts(false)}
+              className="h-6 w-6 p-0"
             >
-              <X className="w-4 h-4" />
+              ×
             </Button>
           </div>
-          {showReplacePanel && (
-            <div className="flex items-center gap-2 mb-2">
-              <Input
-                placeholder={t("fileManager.replaceWith")}
-                value={replaceText}
-                onChange={(e) => setReplaceText(e.target.value)}
-                className="w-48 h-8"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  handleFindReplace(searchText, replaceText, false)
-                }
-                disabled={!searchText}
-              >
-                Replace
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleFindReplace(searchText, replaceText, true)}
-                disabled={!searchText}
-              >
-                Replace All
-              </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="space-y-2">
+              <h4 className="font-medium text-muted-foreground">Search & Replace</h4>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span>Search</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+F</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Replace</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+H</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Find Next</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">F3</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Find Previous</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Shift+F3</kbd>
+                </div>
+              </div>
             </div>
-          )}
+            <div className="space-y-2">
+              <h4 className="font-medium text-muted-foreground">Editing</h4>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span>Save</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+S</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Select All</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+A</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Undo</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Z</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Redo</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Y</kbd>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-muted-foreground">Navigation</h4>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span>Go to Line</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+G</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Move Line Up</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Alt+↑</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Move Line Down</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Alt+↓</kbd>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-muted-foreground">Code</h4>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span>Toggle Comment</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+/</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Indent</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Tab</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Outdent</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Shift+Tab</kbd>
+                </div>
+                <div className="flex justify-between">
+                  <span>Auto Complete</span>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Space</kbd>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -710,7 +614,7 @@ export function FileViewer({
                   className="flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  Download Instead
+                  {t("fileManager.downloadInstead")}
                 </Button>
                 <Button
                   variant="outline"
@@ -739,123 +643,75 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Text and code file preview */}
+        {/* Unified text and code file editor */}
         {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
-            {fileTypeInfo.type === "code" ? (
-              // Code files use CodeMirror
-              <div className="h-full">
-                {searchText && searchMatches.length > 0 ? (
-                  // When there are search results, show read-only highlighted text (with line numbers)
-                  <div className="h-full flex bg-muted">
-                    {/* Line number column */}
-                    <div className="flex-shrink-0 bg-muted border-r border-border px-2 py-4 text-xs text-muted-foreground font-mono select-none">
-                      {editedContent.split("\n").map((_, index) => (
-                        <div
-                          key={index + 1}
-                          className="text-right leading-5 min-w-[2rem]"
-                        >
-                          {index + 1}
-                        </div>
-                      ))}
-                    </div>
-                    {/* Code content */}
-                    <div className="flex-1 p-4 font-mono text-sm whitespace-pre-wrap overflow-auto text-foreground">
-                      {renderHighlightedText(editedContent)}
-                    </div>
-                  </div>
-                ) : (
-                  // Show CodeMirror editor when no search
-                  <CodeMirror
-                    value={editedContent}
-                    onChange={(value) => handleContentChange(value)}
-                    extensions={[
-                      ...(getLanguageExtension(file.name)
-                        ? [getLanguageExtension(file.name)!]
-                        : []),
-                      EditorView.theme({
-                        "&": {
-                          height: "100%",
-                        },
-                        ".cm-scroller": {
-                          overflow: "auto",
-                        },
-                        ".cm-editor": {
-                          height: "100%",
-                        },
-                      }),
-                    ]}
-                    theme="dark"
-                    basicSetup={{
-                      lineNumbers: true,
-                      foldGutter: true,
-                      dropCursor: false,
-                      allowMultipleSelections: false,
-                      indentOnInput: true,
-                      bracketMatching: true,
-                      closeBrackets: true,
-                      autocompletion: true,
-                      highlightSelectionMatches: false,
-                      scrollPastEnd: false,
-                    }}
-                    className="h-full overflow-auto"
-                    readOnly={!isEditable}
-                  />
-                )}
-              </div>
+            {isEditable ? (
+              // Unified CodeMirror editor for all text-based files
+              <CodeMirror
+                value={editedContent}
+                onChange={(value) => handleContentChange(value)}
+                onFocus={() => setEditorFocused(true)}
+                onBlur={() => setEditorFocused(false)}
+                extensions={[
+                  ...(getLanguageExtension(file.name)
+                    ? [getLanguageExtension(file.name)!]
+                    : []),
+                  history(),
+                  search(),
+                  autocompletion(),
+                  keymap.of([
+                    ...defaultKeymap,
+                    ...searchKeymap,
+                    ...historyKeymap,
+                    ...completionKeymap,
+                    // Custom keybindings
+                    {
+                      key: "Mod-/",
+                      run: toggleComment,
+                      preventDefault: true
+                    },
+                    {
+                      key: "Mod-h",
+                      run: () => {
+                        // Let CodeMirror search handle this, just prevent browser default
+                        return false; // Return false to let search keymap handle it
+                      },
+                      preventDefault: true
+                    }
+                  ]),
+                  EditorView.theme({
+                    "&": {
+                      height: "100%",
+                    },
+                    ".cm-scroller": {
+                      overflow: "auto",
+                    },
+                    ".cm-editor": {
+                      height: "100%",
+                    },
+                  }),
+                ]}
+                theme={oneDark}
+                placeholder={t("fileManager.startTyping")}
+                className="h-full"
+                basicSetup={{
+                  lineNumbers: true,
+                  foldGutter: true,
+                  dropCursor: false,
+                  allowMultipleSelections: false,
+                  indentOnInput: true,
+                  bracketMatching: true,
+                  closeBrackets: true,
+                  autocompletion: true,
+                  highlightSelectionMatches: false,
+                  scrollPastEnd: false,
+                }}
+              />
             ) : (
-              // Plain text files
-              <div className="h-full">
-                {isEditable ? (
-                  <div className="h-full">
-                    {searchText && searchMatches.length > 0 ? (
-                      // When there are search results, show read-only highlighted text
-                      <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
-                        {renderHighlightedText(editedContent)}
-                      </div>
-                    ) : (
-                      // Use CodeMirror for all text files (unified editor experience)
-                      <CodeMirror
-                        value={editedContent}
-                        onChange={(value) => handleContentChange(value)}
-                        extensions={[
-                          ...(getLanguageExtension(file.name)
-                            ? [getLanguageExtension(file.name)!]
-                            : []),
-                          EditorView.theme({
-                            "&": {
-                              height: "100%",
-                            },
-                            ".cm-scroller": {
-                              overflow: "auto",
-                            },
-                            ".cm-editor": {
-                              height: "100%",
-                            },
-                          }),
-                        ]}
-                        theme={oneDark}
-                        editable={isEditable}
-                        placeholder={t("fileManager.startTyping")}
-                        className="h-full text-sm"
-                        basicSetup={{
-                          lineNumbers: true,
-                          foldGutter: true,
-                          dropCursor: false,
-                          allowMultipleSelections: false,
-                          highlightSelectionMatches: false,
-                          searchKeymap: true,
-                          scrollPastEnd: false,
-                        }}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  // Only show as read-only for non-editable files (media files)
-                  <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
-                    {editedContent || content || t("fileManager.fileIsEmpty")}
-                  </div>
-                )}
+              // Read-only view for non-editable files
+              <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
+                {editedContent || content || t("fileManager.fileIsEmpty")}
               </div>
             )}
           </div>
@@ -918,7 +774,7 @@ export function FileViewer({
                     className="flex items-center gap-2 mx-auto"
                   >
                     <Download className="w-4 h-4" />
-                    Download File
+                    {t("fileManager.downloadFile")}
                   </Button>
                 )}
               </div>

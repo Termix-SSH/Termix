@@ -1190,7 +1190,7 @@ export function FileManagerGrid({
                           />
                         ) : (
                           <p
-                            className="text-xs text-foreground truncate px-1 py-0.5 rounded w-fit max-w-full text-center"
+                            className="text-xs text-foreground break-words px-1 py-0.5 rounded text-center leading-tight w-full"
                             title={file.name}
                           >
                             {file.name}
@@ -1205,7 +1205,7 @@ export function FileManagerGrid({
                           )}
                         {file.type === "link" && file.linkTarget && (
                           <p
-                            className="text-xs text-primary mt-1 truncate max-w-full"
+                            className="text-xs text-primary mt-1 break-words w-full leading-tight"
                             title={file.linkTarget}
                           >
                             → {file.linkTarget}
@@ -1283,7 +1283,7 @@ export function FileManagerGrid({
                         />
                       ) : (
                         <p
-                          className="text-sm text-foreground truncate px-1 py-0.5 rounded w-fit max-w-full"
+                          className="text-sm text-foreground break-words px-1 py-0.5 rounded leading-tight"
                           title={file.name}
                         >
                           {file.name}
@@ -1291,7 +1291,7 @@ export function FileManagerGrid({
                       )}
                       {file.type === "link" && file.linkTarget && (
                         <p
-                          className="text-xs text-primary truncate"
+                          className="text-xs text-primary break-words leading-tight"
                           title={file.linkTarget}
                         >
                           → {file.linkTarget}
