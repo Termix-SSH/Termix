@@ -53,6 +53,8 @@ import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
 import ReactPlayer from "react-player";
+import AudioPlayer from "react-h5-audio-player";
+import "react-h5-audio-player/lib/styles.css";
 
 interface FileItem {
   name: string;
@@ -851,25 +853,85 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Audio file preview */}
+        {/* Audio file preview with react-h5-audio-player */}
         {fileTypeInfo.type === "audio" && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
-            <div className="text-center">
-              <div
-                className={cn(
-                  "w-24 h-24 mx-auto mb-4 rounded-full bg-pink-100 flex items-center justify-center",
-                  fileTypeInfo.color,
-                )}
-              >
-                <Music className="w-12 h-12" />
-              </div>
-              <audio
-                controls
-                className="w-full max-w-md"
-                src={`data:audio/*;base64,${content}`}
-              >
-                Your browser does not support audio playback.
-              </audio>
+            <div className="w-full max-w-2xl">
+              {(() => {
+                const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                const mimeType = (() => {
+                  switch (ext) {
+                    case 'mp3': return 'audio/mpeg';
+                    case 'wav': return 'audio/wav';
+                    case 'flac': return 'audio/flac';
+                    case 'ogg': return 'audio/ogg';
+                    case 'aac': return 'audio/aac';
+                    case 'm4a': return 'audio/mp4';
+                    default: return 'audio/mpeg';
+                  }
+                })();
+
+                const audioUrl = `data:${mimeType};base64,${content}`;
+
+                return (
+                  <div className="space-y-4">
+                    {/* Album artwork placeholder */}
+                    <div className="flex justify-center">
+                      <div
+                        className={cn(
+                          "w-32 h-32 rounded-lg bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center shadow-lg",
+                          fileTypeInfo.color,
+                        )}
+                      >
+                        <Music className="w-16 h-16 text-pink-600" />
+                      </div>
+                    </div>
+
+                    {/* Track info */}
+                    <div className="text-center">
+                      <h3 className="font-semibold text-foreground text-lg mb-1">
+                        {file.name.replace(/\.[^/.]+$/, "")}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {ext.toUpperCase()} • {formatFileSize(file.size, t)}
+                      </p>
+                    </div>
+
+                    {/* Audio Player */}
+                    <div className="rounded-lg overflow-hidden">
+                      <AudioPlayer
+                        src={audioUrl}
+                        onPlay={() => {
+                          console.log('Audio playback started');
+                        }}
+                        onPause={() => {
+                          console.log('Audio playback paused');
+                        }}
+                        onLoadedMetadata={(e) => {
+                          const audio = e.currentTarget;
+                          console.log('Audio metadata loaded, duration:', audio.duration);
+
+                          // Get audio dimensions for window sizing (use a standard audio player height)
+                          if (onMediaDimensionsChange) {
+                            onMediaDimensionsChange({
+                              width: 600,
+                              height: 400
+                            });
+                          }
+                        }}
+                        onError={(e) => {
+                          console.error('Audio playback error:', e);
+                        }}
+                        showJumpControls={false}
+                        showSkipControls={false}
+                        showDownloadProgress={true}
+                        customAdditionalControls={[]}
+                        customVolumeControls={[]}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

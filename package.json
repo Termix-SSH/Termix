@@ -90,6 +90,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-h5-audio-player": "^3.10.1",
     "react-hook-form": "^7.60.0",
     "react-i18next": "^15.7.3",
     "react-icons": "^5.5.0",
