@@ -19,9 +19,20 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     const envPath = path.join(dataDir, ".env");
     try {
       await fs.access(envPath);
-      dotenv.config({ path: envPath });
+      // Load the persistent .env file and override process.env
+      const persistentConfig = dotenv.config({ path: envPath });
+      if (persistentConfig.parsed) {
+        // Override process.env with values from persistent config
+        Object.assign(process.env, persistentConfig.parsed);
+      }
       systemLogger.info(`Loaded persistent configuration from ${envPath}`, {
-        operation: "config_load"
+        operation: "config_load",
+        hasDatabaseKey: !!persistentConfig.parsed?.DATABASE_KEY,
+        databaseKeyLength: persistentConfig.parsed?.DATABASE_KEY?.length || 0,
+        hasJwtSecret: !!persistentConfig.parsed?.JWT_SECRET,
+        jwtSecretLength: persistentConfig.parsed?.JWT_SECRET?.length || 0,
+        hasInternalAuthToken: !!persistentConfig.parsed?.INTERNAL_AUTH_TOKEN,
+        internalAuthTokenLength: persistentConfig.parsed?.INTERNAL_AUTH_TOKEN?.length || 0
       });
     } catch {
       // Config file doesn't exist yet, will be created on first run

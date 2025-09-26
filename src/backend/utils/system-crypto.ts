@@ -76,8 +76,19 @@ class SystemCrypto {
 
       // Check environment variable
       const envKey = process.env.DATABASE_KEY;
+      databaseLogger.info("Checking DATABASE_KEY from environment", {
+        operation: "db_key_check",
+        hasKey: !!envKey,
+        keyLength: envKey?.length || 0,
+        meetsLengthRequirement: envKey && envKey.length >= 64
+      });
+      
       if (envKey && envKey.length >= 64) {
         this.databaseKey = Buffer.from(envKey, 'hex');
+        databaseLogger.info("Using existing DATABASE_KEY from environment", {
+          operation: "db_key_use_existing",
+          keyLength: envKey.length
+        });
         return;
       }
 
