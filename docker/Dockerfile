@@ -64,6 +64,7 @@ RUN apk add --no-cache nginx gettext su-exec openssl && \
     chown -R node:node /app/data
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/nginx-https.conf /etc/nginx/nginx-https.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY --from=frontend-builder /app/src/locales /usr/share/nginx/html/locales
 RUN chown -R nginx:nginx /usr/share/nginx/html

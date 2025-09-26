@@ -321,7 +321,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
                   ? "wss://"
                   : "ws://";
                 const wsHost = baseUrl.replace(/^https?:\/\//, "");
-                return `${wsProtocol}${wsHost.replace(':30001', ':30002')}/ssh/websocket/`;
+                return `${wsProtocol}${wsHost}/ssh/websocket/`;
               })()
             : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
 
