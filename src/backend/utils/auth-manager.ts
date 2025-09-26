@@ -97,10 +97,9 @@ class AuthManager {
       }
 
       // Import database connection - need to access raw SQLite for migration
-      const { getSqlite, saveMemoryDatabaseToFile, databaseReady } = await import("../database/db/index.js");
+      const { getSqlite, saveMemoryDatabaseToFile } = await import("../database/db/index.js");
 
-      // Ensure database is fully initialized before accessing SQLite
-      await databaseReady;
+      // Database should already be initialized by starter.ts, but ensure we can access it
       const sqlite = getSqlite();
 
       // Perform the migration

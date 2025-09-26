@@ -61,7 +61,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       operation: "database_init"
     });
     const dbModule = await import("./database/db/index.js");
-    await dbModule.databaseReady;
+    await dbModule.initializeDatabase();
     systemLogger.success("Database initialized successfully", {
       operation: "database_init_complete"
     });

@@ -80,6 +80,7 @@ export function HomepageAuth({
   const [error, setError] = useState<string | null>(null);
   const [internalLoggedIn, setInternalLoggedIn] = useState(false);
   const [firstUser, setFirstUser] = useState(false);
+  const [firstUserToastShown, setFirstUserToastShown] = useState(false);
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
   const [oidcConfigured, setOidcConfigured] = useState(false);
 
@@ -143,7 +144,10 @@ export function HomepageAuth({
         if (res.setup_required) {
           setFirstUser(true);
           setTab("signup");
-          toast.info(t("auth.firstUserMessage"));
+          if (!firstUserToastShown) {
+            toast.info(t("auth.firstUserMessage"));
+            setFirstUserToastShown(true);
+          }
         } else {
           setFirstUser(false);
         }
@@ -156,7 +160,7 @@ export function HomepageAuth({
       .finally(() => {
         setDbHealthChecking(false);
       });
-  }, [setDbError, t]);
+  }, [setDbError, firstUserToastShown]);
 
   useEffect(() => {
     if (!registrationAllowed && !internalLoggedIn) {

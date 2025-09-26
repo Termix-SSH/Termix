@@ -588,25 +588,22 @@ async function handlePostInitFileEncryption() {
   }
 }
 
-// Export a promise that resolves when database is fully initialized
-export const databaseReady = initializeCompleteDatabase()
-  .then(async () => {
-    await handlePostInitFileEncryption();
+// Database initialization function - called explicitly, not at module import time
+async function initializeDatabase(): Promise<void> {
+  await initializeCompleteDatabase();
+  await handlePostInitFileEncryption();
 
-    databaseLogger.success("Database connection established", {
-      operation: "db_init",
-      path: actualDbPath,
-      hasEncryptedBackup:
-        enableFileEncryption &&
-        DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
-    });
-  })
-  .catch((error) => {
-    databaseLogger.error("Failed to initialize database", error, {
-      operation: "db_init",
-    });
-    process.exit(1);
+  databaseLogger.success("Database connection established", {
+    operation: "db_init",
+    path: actualDbPath,
+    hasEncryptedBackup:
+      enableFileEncryption &&
+      DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
   });
+}
+
+// Export the initialization function instead of auto-starting
+export { initializeDatabase };
 
 // Cleanup function for database and temporary files
 async function cleanupDatabase() {
@@ -693,7 +690,7 @@ let db: ReturnType<typeof drizzle<typeof schema>>;
 // Export database connection getter function to avoid undefined access
 export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   if (!db) {
-    throw new Error("Database not initialized. Ensure databaseReady promise is awaited before accessing db.");
+    throw new Error("Database not initialized. Ensure initializeDatabase() is called before accessing db.");
   }
   return db;
 }
@@ -701,7 +698,7 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
 // Export raw SQLite instance for migrations
 export function getSqlite(): Database.Database {
   if (!sqlite) {
-    throw new Error("SQLite not initialized. Ensure databaseReady promise is awaited before accessing sqlite.");
+    throw new Error("SQLite not initialized. Ensure initializeDatabase() is called before accessing sqlite.");
   }
   return sqlite;
 }
