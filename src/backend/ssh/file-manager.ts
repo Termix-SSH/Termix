@@ -872,9 +872,8 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
       fileName,
       fileSize: contentSize,
     });
-    // Extend keepalive interval for large files
-    // Note: SSH2 client doesn't expose config directly, but we can set keepalive
-    sshConn.client.setKeepAlive(true, 10000); // 10 seconds
+    // Note: SSH2 handles keepalive through connection options (keepaliveInterval, keepaliveCountMax)
+    // which are set during connection establishment. No runtime method is available.
   }
 
   const fullPath = filePath.endsWith("/")
