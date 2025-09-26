@@ -945,7 +945,17 @@
     "operationCompletedSuccessfully": "已{{operation}} {{count}} 个项目",
     "operationCompleted": "已{{operation}} {{count}} 个项目",
     "downloadFileSuccess": "文件 {{name}} 下载成功",
-    "downloadFileFailed": "下载失败"
+    "downloadFileFailed": "下载失败",
+    "moveTo": "移动到 {{name}}",
+    "diffCompareWith": "与 {{name}} 对比",
+    "dragOutsideToDownload": "拖拽到窗口外下载 ({{count}} 个文件)",
+    "newFolderDefault": "新文件夹",
+    "newFileDefault": "新文件.txt",
+    "successfullyMovedItems": "成功移动 {{count}} 个项目到 {{target}}",
+    "move": "移动",
+    "searchInFile": "在文件中搜索 (Ctrl+F)",
+    "showKeyboardShortcuts": "显示键盘快捷键",
+    "startWritingMarkdown": "开始编写您的 markdown 内容..."
   },
   "tunnels": {
     "title": "SSH 隧道",

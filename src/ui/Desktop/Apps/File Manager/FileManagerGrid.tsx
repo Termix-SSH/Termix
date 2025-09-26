@@ -1026,13 +1026,13 @@ export function FileManagerGrid({
               />
               <button
                 onClick={confirmEditingPath}
-                className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/80"
+                className="px-2 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/80"
               >
                 {t("fileManager.confirm")}
               </button>
               <button
                 onClick={cancelEditingPath}
-                className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs hover:bg-secondary/80"
+                className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-sm hover:bg-secondary/80"
               >
                 {t("fileManager.cancel")}
               </button>
@@ -1061,7 +1061,7 @@ export function FileManagerGrid({
               ))}
               <button
                 onClick={startEditingPath}
-                className="ml-2 p-1 rounded hover:bg-dark-hover opacity-60 hover:opacity-100"
+                className="ml-2 p-1 rounded hover:bg-dark-hover opacity-60 hover:opacity-100 flex items-center justify-center"
                 title={t("fileManager.editPath")}
               >
                 <Edit className="w-3 h-3" />
@@ -1147,7 +1147,7 @@ export function FileManagerGrid({
                     data-file-path={file.path}
                     draggable={true}
                     className={cn(
-                      "group p-3 rounded-lg cursor-pointer transition-all",
+                      "group p-3 rounded-lg cursor-pointer",
                       "hover:bg-accent hover:text-accent-foreground border-2 border-transparent",
                       isSelected && "bg-primary/20 border-primary",
                       dragState.target?.path === file.path &&
@@ -1240,7 +1240,7 @@ export function FileManagerGrid({
                     data-file-path={file.path}
                     draggable={true}
                     className={cn(
-                      "flex items-center gap-3 p-2 rounded cursor-pointer transition-all",
+                      "flex items-center gap-3 p-2 rounded cursor-pointer",
                       "hover:bg-accent hover:text-accent-foreground",
                       isSelected && "bg-primary/20",
                       dragState.target?.path === file.path &&
@@ -1378,14 +1378,14 @@ export function FileManagerGrid({
                     <>
                       <Move className="w-4 h-4 text-blue-500" />
                       <span className="text-sm font-medium text-foreground">
-                        Move to {dragState.target.name}
+                        {t("fileManager.moveTo", { name: dragState.target.name })}
                       </span>
                     </>
                   ) : (
                     <>
                       <GitCompare className="w-4 h-4 text-purple-500" />
                       <span className="text-sm font-medium text-foreground">
-                        Diff compare with {dragState.target.name}
+                        {t("fileManager.diffCompareWith", { name: dragState.target.name })}
                       </span>
                     </>
                   )
@@ -1393,7 +1393,7 @@ export function FileManagerGrid({
                   <>
                     <Download className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-medium text-foreground">
-                      Drag outside window to download ({files.length} files)
+                      {t("fileManager.dragOutsideToDownload", { count: files.length })}
                     </span>
                   </>
                 );
@@ -1436,7 +1436,7 @@ function CreateIntentGridItem({
   };
 
   return (
-    <div className="group p-3 rounded-lg border-2 border-dashed border-primary bg-primary/10 transition-all">
+    <div className="group p-3 rounded-lg border-2 border-dashed border-primary bg-primary/10">
       <div className="flex flex-col items-center text-center">
         <div className="mb-2">
           {intent.type === 'directory' ? (
@@ -1490,7 +1490,7 @@ function CreateIntentListItem({
   };
 
   return (
-    <div className="flex items-center gap-3 p-2 rounded border-2 border-dashed border-primary bg-primary/10 transition-all">
+    <div className="flex items-center gap-3 p-2 rounded border-2 border-dashed border-primary bg-primary/10">
       <div className="flex-shrink-0">
         {intent.type === 'directory' ? (
           <Folder className="w-6 h-6 text-primary" />

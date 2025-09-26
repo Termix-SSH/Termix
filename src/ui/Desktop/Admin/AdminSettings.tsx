@@ -389,6 +389,11 @@ export function AdminSettings({
           );
           setImportFile(null);
           setImportPassword("");
+          
+          // Refresh the page to show imported data
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
         } else {
           toast.error(
             `${t("admin.databaseImportFailed")}: ${result.summary?.errors?.join(", ") || "Unknown error"}`,

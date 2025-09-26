@@ -657,7 +657,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   // Linus-style creation: pure intent, no side effects
   function handleCreateNewFolder() {
-    const defaultName = generateUniqueName("NewFolder", "directory");
+    const defaultName = generateUniqueName(t("fileManager.newFolderDefault"), "directory");
     const newCreateIntent = {
       id: Date.now().toString(),
       type: 'directory' as const,
@@ -670,7 +670,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   }
 
   function handleCreateNewFile() {
-    const defaultName = generateUniqueName("NewFile.txt", "file");
+    const defaultName = generateUniqueName(t("fileManager.newFileDefault"), "file");
     const newCreateIntent = {
       id: Date.now().toString(),
       type: 'file' as const,

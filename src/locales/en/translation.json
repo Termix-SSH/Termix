@@ -931,7 +931,17 @@
     "operationCompletedSuccessfully": "{{operation}} {{count}} items successfully",
     "operationCompleted": "{{operation}} {{count}} items",
     "downloadFileSuccess": "File {{name}} downloaded successfully",
-    "downloadFileFailed": "Download failed"
+    "downloadFileFailed": "Download failed",
+    "moveTo": "Move to {{name}}",
+    "diffCompareWith": "Diff compare with {{name}}",
+    "dragOutsideToDownload": "Drag outside window to download ({{count}} files)",
+    "newFolderDefault": "NewFolder",
+    "newFileDefault": "NewFile.txt",
+    "successfullyMovedItems": "Successfully moved {{count}} items to {{target}}",
+    "move": "Move",
+    "searchInFile": "Search in file (Ctrl+F)",
+    "showKeyboardShortcuts": "Show keyboard shortcuts",
+    "startWritingMarkdown": "Start writing your markdown content..."
   },
   "tunnels": {
     "title": "SSH Tunnels",

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label.tsx";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/Desktop/User/LanguageSwitcher.tsx";
+import { toast } from "sonner";
 import {
   registerUser,
   loginUser,
@@ -93,6 +94,12 @@ export function HomepageAuth({
   }, []);
 
   useEffect(() => {
+    if (!registrationAllowed && !internalLoggedIn) {
+      toast.warning(t("messages.registrationDisabled"));
+    }
+  }, [registrationAllowed, internalLoggedIn, t]);
+
+  useEffect(() => {
     getOIDCConfig()
       .then((response) => {
         if (response) {
@@ -116,6 +123,7 @@ export function HomepageAuth({
         if (res.setup_required) {
           setFirstUser(true);
           setTab("signup");
+          toast.info(t("auth.firstUserMessage"));
         } else {
           setFirstUser(false);
         }
@@ -124,7 +132,7 @@ export function HomepageAuth({
       .catch(() => {
         setDbError(t("errors.databaseConnection"));
       });
-  }, [setDbError]);
+  }, [setDbError, t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -132,7 +140,7 @@ export function HomepageAuth({
     setLoading(true);
 
     if (!localUsername.trim()) {
-      setError(t("errors.requiredField"));
+      toast.error(t("errors.requiredField"));
       setLoading(false);
       return;
     }
@@ -143,12 +151,12 @@ export function HomepageAuth({
         res = await loginUser(localUsername, password);
       } else {
         if (password !== signupConfirmPassword) {
-          setError(t("errors.passwordMismatch"));
+          toast.error(t("errors.passwordMismatch"));
           setLoading(false);
           return;
         }
         if (password.length < 6) {
-          setError(t("errors.minLength", { min: 6 }));
+          toast.error(t("errors.minLength", { min: 6 }));
           setLoading(false);
           return;
         }
@@ -185,12 +193,15 @@ export function HomepageAuth({
       setInternalLoggedIn(true);
       if (tab === "signup") {
         setSignupConfirmPassword("");
+        toast.success(t("messages.registrationSuccess"));
+      } else {
+        toast.success(t("messages.loginSuccess"));
       }
       setTotpRequired(false);
       setTotpCode("");
       setTotpTempToken("");
     } catch (err: any) {
-      setError(
+      toast.error(
         err?.response?.data?.error || err?.message || t("errors.unknownError"),
       );
       setInternalLoggedIn(false);
@@ -215,9 +226,9 @@ export function HomepageAuth({
     try {
       const result = await initiatePasswordReset(localUsername);
       setResetStep("verify");
-      setError(null);
+      toast.success(t("messages.resetCodeSent"));
     } catch (err: any) {
-      setError(
+      toast.error(
         err?.response?.data?.error ||
           err?.message ||
           t("errors.failedPasswordReset"),
@@ -234,9 +245,9 @@ export function HomepageAuth({
       const response = await verifyPasswordResetCode(localUsername, resetCode);
       setTempToken(response.tempToken);
       setResetStep("newPassword");
-      setError(null);
+      toast.success(t("messages.codeVerified"));
     } catch (err: any) {
-      setError(err?.response?.data?.error || t("errors.failedVerifyCode"));
+      toast.error(err?.response?.data?.error || t("errors.failedVerifyCode"));
     } finally {
       setResetLoading(false);
     }
@@ -247,13 +258,13 @@ export function HomepageAuth({
     setResetLoading(true);
 
     if (newPassword !== confirmPassword) {
-      setError(t("errors.passwordMismatch"));
+      toast.error(t("errors.passwordMismatch"));
       setResetLoading(false);
       return;
     }
 
     if (newPassword.length < 6) {
-      setError(t("errors.minLength", { min: 6 }));
+      toast.error(t("errors.minLength", { min: 6 }));
       setResetLoading(false);
       return;
     }
@@ -269,8 +280,9 @@ export function HomepageAuth({
       setError(null);
 
       setResetSuccess(true);
+      toast.success(t("messages.passwordResetSuccess"));
     } catch (err: any) {
-      setError(err?.response?.data?.error || t("errors.failedCompleteReset"));
+      toast.error(err?.response?.data?.error || t("errors.failedCompleteReset"));
     } finally {
       setResetLoading(false);
     }
@@ -295,7 +307,7 @@ export function HomepageAuth({
 
   async function handleTOTPVerification() {
     if (totpCode.length !== 6) {
-      setError(t("auth.enterCode"));
+      toast.error(t("auth.enterCode"));
       return;
     }
 
@@ -327,8 +339,9 @@ export function HomepageAuth({
       setTotpRequired(false);
       setTotpCode("");
       setTotpTempToken("");
+      toast.success(t("messages.loginSuccess"));
     } catch (err: any) {
-      setError(
+      toast.error(
         err?.response?.data?.error ||
           err?.message ||
           t("errors.invalidTotpCode"),
@@ -351,7 +364,7 @@ export function HomepageAuth({
 
       window.location.replace(authUrl);
     } catch (err: any) {
-      setError(
+      toast.error(
         err?.response?.data?.error ||
           err?.message ||
           t("errors.failedOidcLogin"),
@@ -367,7 +380,7 @@ export function HomepageAuth({
     const error = urlParams.get("error");
 
     if (error) {
-      setError(`${t("errors.oidcAuthFailed")}: ${error}`);
+      toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
       setOidcLoading(false);
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
@@ -399,7 +412,7 @@ export function HomepageAuth({
           );
         })
         .catch((err) => {
-          setError(t("errors.failedUserInfo"));
+          toast.error(t("errors.failedUserInfo"));
           setInternalLoggedIn(false);
           setLoggedIn(false);
           setIsAdmin(false);
@@ -449,31 +462,6 @@ export function HomepageAuth({
         <Alert variant="destructive" className="mb-4">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{dbError}</AlertDescription>
-        </Alert>
-      )}
-      {firstUser && !dbError && !internalLoggedIn && (
-        <Alert variant="default" className="mb-4">
-          <AlertTitle>{t("auth.firstUser")}</AlertTitle>
-          <AlertDescription className="inline">
-            {t("auth.firstUserMessage")}{" "}
-            <a
-              href="https://github.com/LukeGus/Termix/issues/new"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline hover:text-blue-800 inline"
-            >
-              GitHub Issue
-            </a>
-            .
-          </AlertDescription>
-        </Alert>
-      )}
-      {!registrationAllowed && !internalLoggedIn && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertTitle>{t("auth.registerTitle")}</AlertTitle>
-          <AlertDescription>
-            {t("messages.registrationDisabled")}
-          </AlertDescription>
         </Alert>
       )}
       {totpRequired && (
@@ -709,14 +697,11 @@ export function HomepageAuth({
 
                     {resetSuccess && (
                       <>
-                        <Alert className="mb-4">
-                          <AlertTitle>
-                            {t("auth.passwordResetSuccess")}
-                          </AlertTitle>
-                          <AlertDescription>
+                        <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/20 mb-4">
+                          <p className="text-green-400 text-sm">
                             {t("auth.passwordResetSuccessDesc")}
-                          </AlertDescription>
-                        </Alert>
+                          </p>
+                        </div>
                         <Button
                           type="button"
                           className="w-full h-11 text-base font-semibold"
@@ -881,12 +866,6 @@ export function HomepageAuth({
             </div>
           </>
         )}
-      {error && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }

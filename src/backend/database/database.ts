@@ -17,8 +17,6 @@ import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
-import { UserDataImport } from "../utils/user-data-import.js";
-import https from "https";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
 import { eq, and } from "drizzle-orm";
 import { users, sshData, sshCredentials, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts, sshCredentialUsage, settings } from "./db/schema.js";
@@ -447,7 +445,10 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     }
 
     // Create temporary SQLite database
-    const tempDir = path.join(os.tmpdir(), 'termix-exports');
+    // Use app data directory for temp files in Docker environments
+    const tempDir = process.env.NODE_ENV === 'production' 
+      ? path.join(process.env.DATA_DIR || './db/data', '.temp', 'exports')
+      : path.join(os.tmpdir(), 'termix-exports');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }

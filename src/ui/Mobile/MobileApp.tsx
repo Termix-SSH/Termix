@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, type FC } from "react";
 import { Terminal } from "@/ui/Mobile/Apps/Terminal/Terminal.tsx";
 import { TerminalKeyboard } from "@/ui/Mobile/Apps/Terminal/TerminalKeyboard.tsx";
 import { BottomNavbar } from "@/ui/Mobile/Navigation/BottomNavbar.tsx";
@@ -10,6 +10,7 @@ import {
 import { getUserInfo, getCookie } from "@/ui/main-axios.ts";
 import { HomepageAuth } from "@/ui/Mobile/Homepage/HomepageAuth.tsx";
 import { useTranslation } from "react-i18next";
+import { Toaster } from "@/components/ui/sonner.tsx";
 
 const AppContent: FC = () => {
   const { t } = useTranslation();
@@ -159,7 +160,6 @@ const AppContent: FC = () => {
               ref={tab.terminalRef}
               hostConfig={tab.hostConfig}
               isVisible={tab.id === currentTab}
-              onClose={() => removeTab(tab.id)}
             />
           </div>
         ))}
@@ -207,6 +207,13 @@ const AppContent: FC = () => {
           />
         </div>
       </div>
+      <Toaster
+        position="bottom-center"
+        richColors={false}
+        closeButton
+        duration={5000}
+        offset={20}
+      />
     </div>
   );
 };

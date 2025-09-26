@@ -472,7 +472,7 @@ export function FileViewer({
                   }
                 }}
                 className="flex items-center gap-2"
-                title="Search in file (Ctrl+F)"
+                title={t("fileManager.searchInFile")}
               >
                 <Search className="w-4 h-4" />
               </Button>
@@ -484,7 +484,7 @@ export function FileViewer({
                 size="sm"
                 onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
                 className="flex items-center gap-2"
-                title="Show keyboard shortcuts"
+                title={t("fileManager.showKeyboardShortcuts")}
               >
                 <Keyboard className="w-4 h-4" />
               </Button>
@@ -928,7 +928,7 @@ export function FileViewer({
                           onContentChange?.(e.target.value);
                         }}
                         className="w-full h-full resize-none border-0 bg-transparent text-foreground font-mono text-sm leading-relaxed focus:outline-none focus:ring-0"
-                        placeholder="Start writing your markdown content..."
+                        placeholder={t("fileManager.startWritingMarkdown")}
                       />
                     </div>
                   </div>
