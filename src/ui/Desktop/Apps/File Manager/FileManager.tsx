@@ -62,6 +62,24 @@ interface CreateIntent {
   currentName: string;
 }
 
+// Format file size helper function
+function formatFileSize(bytes?: number): string {
+  if (bytes === undefined || bytes === null) return "-";
+  if (bytes === 0) return "0 B";
+  
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = bytes;
+  let unitIndex = 0;
+  
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  
+  const formattedSize = size < 10 && unitIndex > 0 ? size.toFixed(1) : Math.round(size).toString();
+  return `${formattedSize} ${units[unitIndex]}`;
+}
+
 // Internal component, uses window manager
 function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const { openWindow } = useWindowManager();
@@ -226,13 +244,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const handleFileDragEnd = useCallback(
     (e: DragEvent, draggedFiles: FileItem[]) => {
-      // More conservative detection - only trigger download if clearly outside window
-      const margin = 10; // Very small margin to reduce false positives
+      // Allow dragging off screen on all sides - only check if completely outside window bounds
       const isOutside =
-        e.clientX < margin ||
-        e.clientX > window.innerWidth - margin ||
-        e.clientY < margin ||
-        e.clientY > window.innerHeight - margin;
+        e.clientX < 0 ||
+        e.clientX > window.innerWidth ||
+        e.clientY < 0 ||
+        e.clientY > window.innerHeight;
 
       // Only trigger download if clearly outside the window bounds
       if (isOutside) {
@@ -478,6 +495,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   async function handleUploadFile(file: File) {
     if (!sshSessionId) return;
 
+    // Show progress for large files (>10MB)
+    const isLargeFile = file.size > 10 * 1024 * 1024;
+    let progressToast: any = null;
+    
+    if (isLargeFile) {
+      progressToast = toast.loading(
+        t("fileManager.uploadingLargeFile", { 
+          name: file.name, 
+          size: formatFileSize(file.size) 
+        }),
+        { duration: Infinity }
+      );
+    }
+
     try {
       // Ensure SSH connection is valid
       await ensureSSHConnection();
@@ -493,8 +524,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           file.type === "application/json" ||
           file.type === "application/javascript" ||
           file.type === "application/xml" ||
+          file.type === "image/svg+xml" ||
           file.name.match(
-            /\.(txt|json|js|ts|jsx|tsx|css|html|htm|xml|yaml|yml|md|py|java|c|cpp|h|sh|bat|ps1)$/i,
+            /\.(txt|json|js|ts|jsx|tsx|css|scss|less|html|htm|xml|svg|yaml|yml|md|markdown|mdown|mkdn|mdx|py|java|c|cpp|h|sh|bash|zsh|bat|ps1|toml|ini|conf|config|sql|vue|svelte)$/i,
           );
 
         if (isTextFile) {
@@ -532,11 +564,22 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         currentHost?.id,
         undefined, // userId - will be handled by backend
       );
+      
+      // Dismiss progress toast if it exists
+      if (progressToast) {
+        toast.dismiss(progressToast);
+      }
+      
       toast.success(
         t("fileManager.fileUploadedSuccessfully", { name: file.name }),
       );
       handleRefreshDirectory();
     } catch (error: any) {
+      // Dismiss progress toast if it exists
+      if (progressToast) {
+        toast.dismiss(progressToast);
+      }
+      
       if (
         error.message?.includes("connection") ||
         error.message?.includes("established")

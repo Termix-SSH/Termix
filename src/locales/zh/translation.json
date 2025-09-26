@@ -200,6 +200,19 @@
     "saveConfig": "保存配置",
     "helpText": "输入您的 Termix 服务器运行地址（例如：http://localhost:30001 或 https://your-server.com）"
   },
+  "versionCheck": {
+    "error": "版本检查错误",
+    "checkFailed": "检查更新失败",
+    "upToDate": "应用已是最新版本",
+    "currentVersion": "您正在运行版本 {{version}}",
+    "updateAvailable": "有可用更新",
+    "newVersionAvailable": "有新版本可用！您正在运行 {{current}}，但 {{latest}} 已可用。",
+    "releasedOn": "发布于 {{date}}",
+    "downloadUpdate": "下载更新",
+    "dismiss": "忽略",
+    "checking": "正在检查更新...",
+    "checkUpdates": "检查更新"
+  },
   "common": {
     "close": "关闭",
     "minimize": "最小化",
@@ -724,6 +737,7 @@
     "uploading": "上传中...",
     "downloading": "下载中...",
     "uploadingFile": "正在上传 {{name}}...",
+    "uploadingLargeFile": "正在上传大文件 {{name}} ({{size}})...",
     "downloadingFile": "正在下载 {{name}}...",
     "creatingFile": "正在创建 {{name}}...",
     "creatingFolder": "正在创建 {{name}}...",

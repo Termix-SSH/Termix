@@ -1365,8 +1365,8 @@ export function FileManagerGrid({
           <div
             className="fixed pointer-events-none"
             style={{
-              left: Math.min(Math.max(dragState.mousePosition.x + 40, 10), window.innerWidth - 300),
-              top: Math.max(Math.min(dragState.mousePosition.y - 80, window.innerHeight - 100), 10),
+              left: Math.min(Math.max(dragState.mousePosition.x + 40, 0), window.innerWidth - 300),
+              top: Math.max(Math.min(dragState.mousePosition.y - 80, window.innerHeight - 100), 0),
               zIndex: 999999,
             }}
           >

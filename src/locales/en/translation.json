@@ -202,6 +202,19 @@
     "saveConfig": "Save Configuration",
     "helpText": "Enter the URL where your Termix server is running (e.g., http://localhost:30001 or https://your-server.com)"
   },
+  "versionCheck": {
+    "error": "Version Check Error",
+    "checkFailed": "Failed to check for updates",
+    "upToDate": "App is Up to Date",
+    "currentVersion": "You are running version {{version}}",
+    "updateAvailable": "Update Available",
+    "newVersionAvailable": "A new version is available! You are running {{current}}, but {{latest}} is available.",
+    "releasedOn": "Released on {{date}}",
+    "downloadUpdate": "Download Update",
+    "dismiss": "Dismiss",
+    "checking": "Checking for updates...",
+    "checkUpdates": "Check for Updates"
+  },
   "common": {
     "close": "Close",
     "minimize": "Minimize",
@@ -702,6 +715,7 @@
     "uploading": "Uploading...",
     "downloading": "Downloading...",
     "uploadingFile": "Uploading {{name}}...",
+    "uploadingLargeFile": "Uploading large file {{name}} ({{size}})...",
     "downloadingFile": "Downloading {{name}}...",
     "creatingFile": "Creating {{name}}...",
     "creatingFolder": "Creating {{name}}...",

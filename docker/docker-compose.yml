@@ -21,6 +21,15 @@ services:
       PORT: "4300"
       ENABLE_SSL: "true"
       SSL_DOMAIN: "termix-dev.karmaa.site"
+    # Resource limits for better large file handling
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
 
 volumes:
   termix-dev-data:

@@ -3,14 +3,16 @@ import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
+import { VersionAlert } from "@/components/ui/version-alert.tsx";
 import { useTranslation } from "react-i18next";
 import {
   getServerConfig,
   saveServerConfig,
   testServerConnection,
+  checkElectronUpdate,
   type ServerConfig,
 } from "@/ui/main-axios.ts";
-import { CheckCircle, XCircle, Server, Wifi } from "lucide-react";
+import { CheckCircle, XCircle, Server, Wifi, RefreshCw } from "lucide-react";
 
 interface ServerConfigProps {
   onServerConfigured: (serverUrl: string) => void;
@@ -31,9 +33,13 @@ export function ServerConfig({
   const [connectionStatus, setConnectionStatus] = useState<
     "unknown" | "success" | "error"
   >("unknown");
+  const [versionInfo, setVersionInfo] = useState<any>(null);
+  const [versionChecking, setVersionChecking] = useState(false);
+  const [versionDismissed, setVersionDismissed] = useState(false);
 
   useEffect(() => {
     loadServerConfig();
+    checkForUpdates();
   }, []);
 
   const loadServerConfig = async () => {
@@ -44,6 +50,29 @@ export function ServerConfig({
         setConnectionStatus("success");
       }
     } catch (error) {}
+  };
+
+  const checkForUpdates = async () => {
+    setVersionChecking(true);
+    try {
+      const updateInfo = await checkElectronUpdate();
+      setVersionInfo(updateInfo);
+    } catch (error) {
+      console.error("Failed to check for updates:", error);
+      setVersionInfo({ success: false, error: "Check failed" });
+    } finally {
+      setVersionChecking(false);
+    }
+  };
+
+  const handleVersionDismiss = () => {
+    setVersionDismissed(true);
+  };
+
+  const handleDownloadUpdate = () => {
+    if (versionInfo?.latest_release?.html_url) {
+      window.open(versionInfo.latest_release.html_url, "_blank");
+    }
   };
 
   const handleTestConnection = async () => {
@@ -193,6 +222,34 @@ export function ServerConfig({
             <AlertTitle>{t("common.error")}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
+        )}
+
+        {/* Version Check Section */}
+        {versionInfo && !versionDismissed && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">{t("versionCheck.checkUpdates")}</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={checkForUpdates}
+                disabled={versionChecking}
+                className="h-6 px-2"
+              >
+                {versionChecking ? (
+                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3 h-3" />
+                )}
+              </Button>
+            </div>
+            <VersionAlert
+              updateInfo={versionInfo}
+              onDismiss={handleVersionDismiss}
+              onDownload={handleDownloadUpdate}
+              showDismiss={true}
+            />
+          </div>
         )}
 
         <div className="flex space-x-2">

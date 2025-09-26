@@ -97,6 +97,163 @@ ipcMain.handle("get-app-version", () => {
   return app.getVersion();
 });
 
+// GitHub API service for version checking
+const GITHUB_API_BASE = "https://api.github.com";
+const REPO_OWNER = "LukeGus";
+const REPO_NAME = "Termix";
+
+// Simple cache for GitHub API responses
+const githubCache = new Map();
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+async function fetchGitHubAPI(endpoint, cacheKey) {
+  // Check cache first
+  const cached = githubCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return {
+      data: cached.data,
+      cached: true,
+      cache_age: Date.now() - cached.timestamp,
+    };
+  }
+
+  try {
+    let fetch;
+    try {
+      fetch = globalThis.fetch || require("node-fetch");
+    } catch (e) {
+      const https = require("https");
+      const http = require("http");
+      const { URL } = require("url");
+
+      fetch = (url, options = {}) => {
+        return new Promise((resolve, reject) => {
+          const urlObj = new URL(url);
+          const isHttps = urlObj.protocol === "https:";
+          const client = isHttps ? https : http;
+
+          const req = client.request(
+            url,
+            {
+              method: options.method || "GET",
+              headers: options.headers || {},
+              timeout: options.timeout || 10000,
+            },
+            (res) => {
+              let data = "";
+              res.on("data", (chunk) => (data += chunk));
+              res.on("end", () => {
+                resolve({
+                  ok: res.statusCode >= 200 && res.statusCode < 300,
+                  status: res.statusCode,
+                  text: () => Promise.resolve(data),
+                  json: () => Promise.resolve(JSON.parse(data)),
+                });
+              });
+            },
+          );
+
+          req.on("error", reject);
+          req.on("timeout", () => {
+            req.destroy();
+            reject(new Error("Request timeout"));
+          });
+
+          if (options.body) {
+            req.write(options.body);
+          }
+          req.end();
+        });
+      };
+    }
+
+    const response = await fetch(`${GITHUB_API_BASE}${endpoint}`, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "TermixElectronUpdateChecker/1.0",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      timeout: 10000,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `GitHub API error: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data = await response.json();
+    
+    // Cache the response
+    githubCache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+    });
+
+    return {
+      data: data,
+      cached: false,
+    };
+  } catch (error) {
+    console.error("Failed to fetch from GitHub API:", error);
+    throw error;
+  }
+}
+
+// Check for Electron app updates
+ipcMain.handle("check-electron-update", async () => {
+  try {
+    const localVersion = app.getVersion();
+    console.log(`Checking for updates. Local version: ${localVersion}`);
+
+    const releaseData = await fetchGitHubAPI(
+      `/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
+      "latest_release_electron"
+    );
+
+    const rawTag = releaseData.data.tag_name || releaseData.data.name || "";
+    const remoteVersionMatch = rawTag.match(/(\d+\.\d+(\.\d+)?)/);
+    const remoteVersion = remoteVersionMatch ? remoteVersionMatch[1] : null;
+
+    if (!remoteVersion) {
+      console.warn("Remote version not found in GitHub response:", rawTag);
+      return {
+        success: false,
+        error: "Remote version not found",
+        localVersion,
+      };
+    }
+
+    const isUpToDate = localVersion === remoteVersion;
+
+    const result = {
+      success: true,
+      status: isUpToDate ? "up_to_date" : "requires_update",
+      localVersion: localVersion,
+      remoteVersion: remoteVersion,
+      latest_release: {
+        tag_name: releaseData.data.tag_name,
+        name: releaseData.data.name,
+        published_at: releaseData.data.published_at,
+        html_url: releaseData.data.html_url,
+        body: releaseData.data.body,
+      },
+      cached: releaseData.cached,
+      cache_age: releaseData.cache_age,
+    };
+
+    console.log(`Version check result: ${result.status}`);
+    return result;
+  } catch (error) {
+    console.error("Version check failed:", error);
+    return {
+      success: false,
+      error: error.message,
+      localVersion: app.getVersion(),
+    };
+  }
+});
+
 ipcMain.handle("get-platform", () => {
   return process.platform;
 });

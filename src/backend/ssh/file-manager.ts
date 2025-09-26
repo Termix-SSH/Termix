@@ -860,7 +860,22 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
       .json({ error: "File path, name, and content are required" });
   }
 
+  // Update last active time and extend keepalive for large file operations
   sshConn.lastActive = Date.now();
+  
+  // For large files, extend the keepalive interval to prevent connection drops
+  const contentSize = typeof content === 'string' ? Buffer.byteLength(content, 'utf8') : content.length;
+  if (contentSize > 10 * 1024 * 1024) { // 10MB threshold
+    fileLogger.info("Large file upload detected, extending SSH keepalive", {
+      operation: "file_upload",
+      sessionId,
+      fileName,
+      fileSize: contentSize,
+    });
+    // Extend keepalive interval for large files
+    // Note: SSH2 client doesn't expose config directly, but we can set keepalive
+    sshConn.client.setKeepAlive(true, 10000); // 10 seconds
+  }
 
   const fullPath = filePath.endsWith("/")
     ? filePath + fileName
@@ -906,6 +921,13 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
           hasError = true;
           fileLogger.warn(
             `SFTP write failed, trying fallback method: ${streamErr.message}`,
+            {
+              operation: "file_upload",
+              sessionId,
+              fileName,
+              fileSize: contentSize,
+              error: streamErr.message,
+            }
           );
           tryFallbackMethod();
         });

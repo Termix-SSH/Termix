@@ -389,6 +389,36 @@ export async function testServerConnection(
   }
 }
 
+export async function checkElectronUpdate(): Promise<{
+  success: boolean;
+  status?: "up_to_date" | "requires_update";
+  localVersion?: string;
+  remoteVersion?: string;
+  latest_release?: {
+    tag_name: string;
+    name: string;
+    published_at: string;
+    html_url: string;
+    body: string;
+  };
+  cached?: boolean;
+  cache_age?: number;
+  error?: string;
+}> {
+  if (!isElectron())
+    return { success: false, error: "Not in Electron environment" };
+
+  try {
+    const result = await (window as any).electronAPI?.invoke(
+      "check-electron-update",
+    );
+    return result;
+  } catch (error) {
+    console.error("Failed to check Electron update:", error);
+    return { success: false, error: "Update check failed" };
+  }
+}
+
 if (isElectron()) {
   getServerConfig().then((config) => {
     if (config?.serverUrl) {
