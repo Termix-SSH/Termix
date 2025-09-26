@@ -92,9 +92,6 @@ NODE_ENV=production
 # CORS configuration
 ALLOWED_ORIGINS=*
 
-# Database encryption
-DATABASE_ENCRYPTION=true
-
 EOF
 
     # Add security keys

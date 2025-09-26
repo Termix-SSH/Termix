@@ -138,7 +138,7 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   try {
     let fetch;
     try {
-      fetch = globalThis.fetch || require("node:fetch");
+      fetch = globalThis.fetch || require("node-fetch");
     } catch (e) {
       const https = require("https");
       const http = require("http");

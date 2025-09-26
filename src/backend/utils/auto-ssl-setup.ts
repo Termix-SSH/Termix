@@ -33,6 +33,9 @@ export class AutoSSLSetup {
         systemLogger.info("SSL configuration already exists and is valid", {
           operation: "ssl_already_configured"
         });
+        
+        // Log certificate information for existing certificates
+        await this.logCertificateInfo();
         return;
       }
 
@@ -70,12 +73,29 @@ export class AutoSSLSetup {
       await fs.access(this.KEY_FILE);
 
       // Check if certificate is still valid (at least 30 days)
-      const result = execSync(`openssl x509 -in "${this.CERT_FILE}" -checkend 2592000 -noout`, {
+      execSync(`openssl x509 -in "${this.CERT_FILE}" -checkend 2592000 -noout`, {
         stdio: 'pipe'
       });
 
+      systemLogger.info("SSL certificate is valid and will expire in more than 30 days", {
+        operation: "ssl_cert_check",
+        cert_path: this.CERT_FILE
+      });
+
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('checkend')) {
+        systemLogger.warn("SSL certificate is expired or expiring soon, will regenerate", {
+          operation: "ssl_cert_expired",
+          cert_path: this.CERT_FILE,
+          error: error.message
+        });
+      } else {
+        systemLogger.info("SSL certificate not found or invalid, will generate new one", {
+          operation: "ssl_cert_missing",
+          cert_path: this.CERT_FILE
+        });
+      }
       return false;
     }
   }
@@ -89,6 +109,13 @@ export class AutoSSLSetup {
     });
 
     try {
+      // Check if OpenSSL is available
+      try {
+        execSync('openssl version', { stdio: 'pipe' });
+      } catch (error) {
+        throw new Error('OpenSSL is not installed or not available in PATH. Please install OpenSSL to enable SSL certificate generation.');
+      }
+
       // Create SSL directory
       await fs.mkdir(this.SSL_DIR, { recursive: true });
 
@@ -149,8 +176,37 @@ IP.2 = ::1
         valid_days: 365
       });
 
+      // Log certificate information
+      await this.logCertificateInfo();
+
     } catch (error) {
       throw new Error(`SSL certificate generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Log certificate information including expiration date
+   */
+  private static async logCertificateInfo(): Promise<void> {
+    try {
+      const subject = execSync(`openssl x509 -in "${this.CERT_FILE}" -noout -subject`, { stdio: 'pipe' }).toString().trim();
+      const issuer = execSync(`openssl x509 -in "${this.CERT_FILE}" -noout -issuer`, { stdio: 'pipe' }).toString().trim();
+      const notAfter = execSync(`openssl x509 -in "${this.CERT_FILE}" -noout -enddate`, { stdio: 'pipe' }).toString().trim();
+      const notBefore = execSync(`openssl x509 -in "${this.CERT_FILE}" -noout -startdate`, { stdio: 'pipe' }).toString().trim();
+
+      systemLogger.info("SSL Certificate Information:", {
+        operation: "ssl_cert_info",
+        subject: subject.replace('subject=', ''),
+        issuer: issuer.replace('issuer=', ''),
+        valid_from: notBefore.replace('notBefore=', ''),
+        valid_until: notAfter.replace('notAfter=', ''),
+        note: "Certificate will auto-renew 30 days before expiration"
+      });
+    } catch (error) {
+      systemLogger.warn("Could not retrieve certificate information", {
+        operation: "ssl_cert_info_error",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   }
 

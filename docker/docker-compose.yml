@@ -43,9 +43,6 @@ services:
       - DATABASE_KEY=${DATABASE_KEY:-}
       - INTERNAL_AUTH_TOKEN=${INTERNAL_AUTH_TOKEN:-}
 
-      # Database configuration
-      - DATABASE_ENCRYPTION=${DATABASE_ENCRYPTION:-true}
-
       # CORS configuration
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
 

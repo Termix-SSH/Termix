@@ -59,7 +59,7 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apk add --no-cache nginx gettext su-exec && \
+RUN apk add --no-cache nginx gettext su-exec openssl && \
     mkdir -p /app/data && \
     chown -R node:node /app/data
 
