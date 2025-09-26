@@ -40,11 +40,10 @@ async function initializeDatabaseAsync(): Promise<void> {
   });
 
   const systemCrypto = SystemCrypto.getInstance();
-  await systemCrypto.initializeDatabaseKey();
-
-  // Verify key is available after initialization
+  
+  // Verify key is available (should already be initialized by starter.ts)
   const dbKey = await systemCrypto.getDatabaseKey();
-  databaseLogger.info("SystemCrypto database key initialized", {
+  databaseLogger.info("SystemCrypto database key verified", {
     operation: "db_init_systemcrypto_complete",
     keyLength: dbKey.length,
     keyAvailable: !!dbKey,

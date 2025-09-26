@@ -1096,7 +1096,7 @@
     "enableTwoFactorButton": "Enable Two-Factor Authentication",
     "addExtraSecurityLayer": "Add an extra layer of security to your account",
     "firstUser": "First User",
-    "firstUserMessage": "You are the first user and will be made an admin. You can view admin settings in the sidebar user dropdown. If you think this is a mistake, check the docker logs, or create a",
+    "firstUserMessage": "You are the first user and will be made an admin. You can view admin settings in the sidebar user dropdown. If you think this is a mistake, check the docker logs, or create a GitHub issue.",
     "external": "External",
     "loginWithExternal": "Login with External Provider",
     "loginWithExternalDesc": "Login using your configured external identity provider",

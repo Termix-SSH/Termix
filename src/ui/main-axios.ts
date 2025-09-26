@@ -70,6 +70,7 @@ interface UserInfo {
   username: string;
   is_admin: boolean;
   is_oidc: boolean;
+  data_unlocked: boolean;
 }
 
 interface UserCount {
@@ -1509,6 +1510,15 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
+  }
+}
+
+export async function unlockUserData(password: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await authApi.post("/users/unlock-data", { password });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "unlock user data");
   }
 }
 

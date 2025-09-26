@@ -942,12 +942,17 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       authLogger.warn(`User not found for /users/me: ${userId}`);
       return res.status(401).json({ error: "User not found" });
     }
+
+    // Check if user data is unlocked
+    const isDataUnlocked = authManager.isUserUnlocked(userId);
+    
     res.json({
       userId: user[0].id,
       username: user[0].username,
       is_admin: !!user[0].is_admin,
       is_oidc: !!user[0].is_oidc,
       totp_enabled: !!user[0].totp_enabled,
+      data_unlocked: isDataUnlocked,
     });
   } catch (err) {
     authLogger.error("Failed to get username", err);

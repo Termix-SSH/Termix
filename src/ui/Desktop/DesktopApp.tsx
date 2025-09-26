@@ -35,6 +35,17 @@ function AppContent() {
             setIsAuthenticated(true);
             setIsAdmin(!!meRes.is_admin);
             setUsername(meRes.username || null);
+            
+            // Check if user data is unlocked
+            if (!meRes.data_unlocked) {
+              // Data is locked - user needs to re-authenticate
+              // For now, we'll just log this and let the user know they need to log in again
+              console.warn("User data is locked - re-authentication required");
+              setIsAuthenticated(false);
+              setIsAdmin(false);
+              setUsername(null);
+              document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            }
           })
           .catch((err) => {
             setIsAuthenticated(false);

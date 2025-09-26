@@ -1096,7 +1096,7 @@
     "enableTwoFactorButton": "启用双因素认证",
     "addExtraSecurityLayer": "为您的账户添加额外的安全层",
     "firstUser": "首位用户",
-    "firstUserMessage": "您是第一个用户，将被设为管理员。您可以在侧边栏用户下拉菜单中查看管理员设置。如果您认为这是错误，请检查 docker 日志，或创建",
+    "firstUserMessage": "作为您的第一个用户，您将被设置为管理员。您可以在侧边栏用户下拉菜单中查看管理员设置。如果您认为这是一个错误，请检查 Docker 日志或创建 GitHub 问题",
     "external": "外部",
     "loginWithExternal": "使用外部提供商登录",
     "loginWithExternalDesc": "使用您配置的外部身份提供者登录",

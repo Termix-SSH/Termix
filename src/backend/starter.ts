@@ -13,20 +13,21 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
 
 (async () => {
   try {
-    // Load persistent .env file from config directory if available (Docker)
-    if (process.env.NODE_ENV === 'production') {
-      try {
-        await fs.access('/app/config/.env');
-        dotenv.config({ path: '/app/config/.env' });
-        systemLogger.info("Loaded persistent configuration from /app/config/.env", {
-          operation: "config_load"
-        });
-      } catch {
-        // Config file doesn't exist yet, will be created on first run
-        systemLogger.info("No persistent config found, will create on first run", {
-          operation: "config_init"
-        });
-      }
+    // Load persistent .env file from data directory (where database is stored)
+    // Always try to load from data directory, regardless of NODE_ENV
+    const dataDir = process.env.DATA_DIR || "./db/data";
+    const envPath = path.join(dataDir, ".env");
+    try {
+      await fs.access(envPath);
+      dotenv.config({ path: envPath });
+      systemLogger.info(`Loaded persistent configuration from ${envPath}`, {
+        operation: "config_load"
+      });
+    } catch {
+      // Config file doesn't exist yet, will be created on first run
+      systemLogger.info("No persistent config found, will create on first run", {
+        operation: "config_init"
+      });
     }
 
     const version = process.env.VERSION || "unknown";
@@ -34,6 +35,12 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       operation: "startup",
       version: version,
     });
+
+    // Initialize system crypto keys FIRST (after .env is loaded)
+    const systemCrypto = SystemCrypto.getInstance();
+    await systemCrypto.initializeJWTSecret();
+    await systemCrypto.initializeDatabaseKey();
+    await systemCrypto.initializeInternalAuthToken();
 
     // Auto-initialize SSL/TLS configuration
     await AutoSSLSetup.initialize();
@@ -125,11 +132,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await authManager.initialize();
     DataCrypto.initialize();
 
-    // Initialize system crypto keys (JWT, Database, Internal Auth)
-    const systemCrypto = SystemCrypto.getInstance();
-    await systemCrypto.initializeJWTSecret();
-    await systemCrypto.initializeDatabaseKey();
-    await systemCrypto.initializeInternalAuthToken();
+    // System crypto keys already initialized above
 
     systemLogger.info("Security system initialized (KEK-DEK architecture + SystemCrypto)", {
       operation: "security_init",
