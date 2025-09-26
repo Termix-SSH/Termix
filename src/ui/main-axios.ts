@@ -1592,6 +1592,49 @@ export async function getUserCount(): Promise<UserCount> {
   }
 }
 
+// ===== New Recovery API functions (UX compromise) =====
+
+export async function requestRecoveryCode(username: string): Promise<any> {
+  try {
+    const response = await authApi.post("/users/recovery/request", { username });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "request recovery code");
+  }
+}
+
+export async function verifyRecoveryCode(
+  username: string,
+  code: string,
+): Promise<any> {
+  try {
+    const response = await authApi.post("/users/recovery/verify", {
+      username,
+      code,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "verify recovery code");
+  }
+}
+
+export async function loginWithRecovery(
+  username: string,
+  tempToken: string,
+): Promise<any> {
+  try {
+    const response = await authApi.post("/users/recovery/login", {
+      username,
+      tempToken,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "recovery login");
+  }
+}
+
+// ===== Legacy password reset functions (deprecated) =====
+
 export async function initiatePasswordReset(username: string): Promise<any> {
   try {
     const response = await authApi.post("/users/initiate-reset", { username });
