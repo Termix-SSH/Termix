@@ -423,6 +423,11 @@ const migrateSchema = () => {
   addColumnIfNotExists("users", "totp_enabled", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfNotExists("users", "totp_backup_codes", "TEXT");
 
+  // Password recovery fields (UX compromise - breaks zero-trust for usability)
+  addColumnIfNotExists("users", "recovery_dek", "TEXT");
+  addColumnIfNotExists("users", "backup_encrypted_dek", "TEXT");
+  addColumnIfNotExists("users", "zero_trust_mode", "INTEGER NOT NULL DEFAULT 0");
+
   addColumnIfNotExists("ssh_data", "name", "TEXT");
   addColumnIfNotExists("ssh_data", "folder", "TEXT");
   addColumnIfNotExists("ssh_data", "tags", "TEXT");
