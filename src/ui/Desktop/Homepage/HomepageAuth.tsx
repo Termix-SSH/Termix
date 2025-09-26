@@ -307,13 +307,6 @@ export function HomepageAuth({
 
       // DEBUG: Verify JWT was set correctly (same as normal login)
       const verifyJWT = getCookie("jwt");
-      console.log("Recovery JWT Set Debug:", {
-        originalToken: response.token.substring(0, 20) + "...",
-        retrievedToken: verifyJWT ? verifyJWT.substring(0, 20) + "..." : null,
-        match: response.token === verifyJWT,
-        tokenLength: response.token.length,
-        retrievedLength: verifyJWT?.length || 0
-      });
 
       setLoggedIn(true);
       setIsAdmin(response.is_admin);
@@ -1029,39 +1022,6 @@ export function HomepageAuth({
                             }}
                           >
                             Start Over
-                          </Button>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Legacy Reset Flow (kept for compatibility) */}
-                    {false && resetStep === "initiate" && (
-                      <>
-                        <div className="text-center text-muted-foreground mb-4">
-                          <p>{t("auth.resetCodeDesc")}</p>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                          <div className="flex flex-col gap-2">
-                            <Label htmlFor="reset-username">
-                              {t("common.username")}
-                            </Label>
-                            <Input
-                              id="reset-username"
-                              type="text"
-                              required
-                              className="h-11 text-base"
-                              value={localUsername}
-                              onChange={(e) => setLocalUsername(e.target.value)}
-                              disabled={resetLoading}
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            className="w-full h-11 text-base font-semibold"
-                            disabled={resetLoading || !localUsername.trim()}
-                            onClick={handleInitiatePasswordReset}
-                          >
-                            {resetLoading ? Spinner : t("auth.sendResetCode")}
                           </Button>
                         </div>
                       </>

@@ -1136,7 +1136,7 @@ router.post("/initiate-reset", async (req, res) => {
       });
     }
 
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetCode = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     db.$client
@@ -2037,7 +2037,7 @@ router.post("/recovery/request", async (req, res) => {
     }
 
     // Generate 6-digit recovery code
-    const recoveryCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const recoveryCode = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = Date.now() + 60 * 1000; // 1 minute expiry
 
     // Store recovery code in settings
