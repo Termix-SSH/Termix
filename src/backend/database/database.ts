@@ -1496,34 +1496,14 @@ app.listen(HTTP_PORT, async () => {
   });
 });
 
-// Start HTTPS server if SSL is enabled
+// Note: HTTPS is handled by nginx reverse proxy, not directly by Node.js
+// The backend runs on HTTP and nginx terminates SSL
 const sslConfig = AutoSSLSetup.getSSLConfig();
-if (sslConfig.enabled && fs.existsSync(sslConfig.certPath) && fs.existsSync(sslConfig.keyPath)) {
-  const httpsOptions = {
-    cert: fs.readFileSync(sslConfig.certPath),
-    key: fs.readFileSync(sslConfig.keyPath)
-  };
-
-  https.createServer(httpsOptions, app).listen(HTTPS_PORT, () => {
-    databaseLogger.success(`Database API server started on HTTPS port ${HTTPS_PORT}`, {
-      operation: "server_start",
-      port: HTTPS_PORT,
-      protocol: "HTTPS",
-      domain: sslConfig.domain,
-      routes: [
-        "/users",
-        "/ssh",
-        "/alerts",
-        "/credentials",
-        "/health",
-        "/version",
-        "/releases/rss",
-        "/encryption/status",
-        "/database/export",
-        "/database/import",
-        "/database/export/:exportPath/info",
-        "/database/restore",
-      ],
-    });
+if (sslConfig.enabled) {
+  databaseLogger.info(`SSL is enabled - HTTPS termination handled by nginx on port ${sslConfig.port}`, {
+    operation: "ssl_info",
+    nginx_https_port: sslConfig.port,
+    backend_http_port: HTTP_PORT,
+    note: "Backend runs on HTTP, nginx handles SSL termination"
   });
 }

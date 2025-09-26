@@ -16,9 +16,9 @@ services:
     restart: unless-stopped
     ports:
       # HTTP port (redirects to HTTPS if SSL enabled)
-      - "${PORT:-8080}:8080"
+      - "${PORT:-8080}:${PORT:-8080}"
       # HTTPS port (when SSL is enabled)
-      - "${SSL_PORT:-8443}:8443"
+      - "${SSL_PORT:-8443}:${SSL_PORT:-8443}"
     volumes:
       - termix-data:/app/data
       - termix-config:/app/config  # Auto-generated .env keys are persisted here
