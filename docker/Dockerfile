@@ -67,6 +67,7 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/nginx-https.conf /etc/nginx/nginx-https.conf
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY --from=frontend-builder /app/src/locales /usr/share/nginx/html/locales
+COPY --from=frontend-builder /app/public/fonts /usr/share/nginx/html/fonts
 RUN chown -R nginx:nginx /usr/share/nginx/html
 
 COPY --from=production-deps /app/node_modules /app/node_modules

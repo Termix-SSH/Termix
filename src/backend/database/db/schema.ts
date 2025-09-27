@@ -23,13 +23,6 @@ export const users = sqliteTable("users", {
     .notNull()
     .default(false),
   totp_backup_codes: text("totp_backup_codes"),
-
-  // Password recovery fields (breaks zero-trust for UX)
-  recovery_dek: text("recovery_dek"),                    // Recovery DEK stored in plaintext
-  backup_encrypted_dek: text("backup_encrypted_dek"),   // DEK encrypted with recovery DEK
-  zero_trust_mode: integer("zero_trust_mode", { mode: "boolean" })
-    .notNull()
-    .default(false),                                     // false=compromise mode, true=zero-trust mode
 });
 
 export const settings = sqliteTable("settings", {

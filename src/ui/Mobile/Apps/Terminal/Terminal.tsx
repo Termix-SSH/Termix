@@ -226,7 +226,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       scrollback: 10000,
       fontSize: 14,
       fontFamily:
-        '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace',
+        '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       theme: { background: "#09090b", foreground: "#f7f7f7" },
       allowTransparency: true,
       convertEol: true,
@@ -402,7 +402,7 @@ const style = document.createElement("style");
 style.innerHTML = `
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
-/* Load NerdFonts locally */
+/* Load NerdFonts locally with fallback handling */
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
   src: url('./fonts/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
@@ -424,6 +424,15 @@ style.innerHTML = `
   src: url('./fonts/JetBrainsMonoNerdFont-Italic.ttf') format('truetype');
   font-weight: normal;
   font-style: italic;
+  font-display: swap;
+}
+
+/* Fallback fonts for when custom fonts fail to load */
+@font-face {
+  font-family: 'Terminal Fallback';
+  src: local('SF Mono'), local('Monaco'), local('Consolas'), local('Liberation Mono'), local('Courier New');
+  font-weight: normal;
+  font-style: normal;
   font-display: swap;
 }
 
@@ -451,7 +460,7 @@ style.innerHTML = `
 }
 
 .xterm .xterm-screen {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font', 'Cascadia Code', 'JetBrains Mono', Consolas, "Courier New", monospace !important;
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
   font-variant-ligatures: contextual;
 }
 

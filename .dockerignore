@@ -51,9 +51,6 @@ repo-images/
 # Uploads directory
 uploads/
 
-# Fonts (Electron-only, not needed for Docker)
-public/fonts/
-
 # Logs
 logs
 *.log
