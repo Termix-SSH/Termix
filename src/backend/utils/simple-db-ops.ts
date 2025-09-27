@@ -64,8 +64,16 @@ class SimpleDBOps {
     tableName: TableName,
     userId: string,
   ): Promise<T[]> {
-    // Get user data key once and reuse throughout operation
-    const userDataKey = DataCrypto.validateUserAccess(userId);
+    // Check if user data is unlocked - return empty array if locked
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) {
+      databaseLogger.debug("User data locked - returning empty results", {
+        operation: "select_data_locked",
+        userId,
+        tableName
+      });
+      return [];
+    }
 
     // Execute query
     const results = await query;
@@ -89,8 +97,16 @@ class SimpleDBOps {
     tableName: TableName,
     userId: string,
   ): Promise<T | undefined> {
-    // Get user data key once and reuse throughout operation
-    const userDataKey = DataCrypto.validateUserAccess(userId);
+    // Check if user data is unlocked - return undefined if locked
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) {
+      databaseLogger.debug("User data locked - returning undefined", {
+        operation: "selectOne_data_locked",
+        userId,
+        tableName
+      });
+      return undefined;
+    }
 
     // Execute query
     const result = await query;
@@ -166,6 +182,13 @@ class SimpleDBOps {
    */
   static async healthCheck(userId: string): Promise<boolean> {
     return DataCrypto.canUserAccessData(userId);
+  }
+
+  /**
+   * Check if user data is unlocked
+   */
+  static isUserDataUnlocked(userId: string): boolean {
+    return DataCrypto.getUserDataKey(userId) !== null;
   }
 
   /**

@@ -30,20 +30,21 @@ interface UserSession {
  *
  * Linus principles:
  * - Delete just-in-time fantasy, cache DEK directly
- * - Reasonable 2-hour timeout, not 5-minute user experience disaster
+ * - Reasonable 24-hour timeout with 6-hour inactivity, not 5-minute user experience disaster
  * - Simple working implementation, not theoretically perfect garbage
  * - Server restart invalidates sessions (this is reasonable)
  */
 class UserCrypto {
   private static instance: UserCrypto;
   private userSessions: Map<string, UserSession> = new Map();
+  private sessionExpiredCallback?: (userId: string) => void; // Callback for session expiration
 
   // Configuration constants - reasonable timeout settings
   private static readonly PBKDF2_ITERATIONS = 100000;
   private static readonly KEK_LENGTH = 32;
   private static readonly DEK_LENGTH = 32;
-  private static readonly SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours, reasonable user experience
-  private static readonly MAX_INACTIVITY = 30 * 60 * 1000;       // 30 minutes, not 1-minute disaster
+  private static readonly SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours, full day session
+  private static readonly MAX_INACTIVITY = 6 * 60 * 60 * 1000;   // 6 hours, reasonable inactivity timeout
 
   private constructor() {
     // Reasonable cleanup interval
@@ -57,6 +58,13 @@ class UserCrypto {
       this.instance = new UserCrypto();
     }
     return this.instance;
+  }
+
+  /**
+   * Set callback for session expiration (used by AuthManager)
+   */
+  setSessionExpiredCallback(callback: (userId: string) => void): void {
+    this.sessionExpiredCallback = callback;
   }
 
   /**
@@ -172,6 +180,10 @@ class UserCrypto {
         operation: "user_session_expired",
         userId,
       });
+      // Trigger callback to invalidate JWT tokens
+      if (this.sessionExpiredCallback) {
+        this.sessionExpiredCallback(userId);
+      }
       return null;
     }
 
@@ -183,6 +195,10 @@ class UserCrypto {
         operation: "user_session_inactive",
         userId,
       });
+      // Trigger callback to invalidate JWT tokens
+      if (this.sessionExpiredCallback) {
+        this.sessionExpiredCallback(userId);
+      }
       return null;
     }
 

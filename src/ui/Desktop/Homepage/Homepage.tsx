@@ -54,7 +54,13 @@ export function Homepage({
             setIsAdmin(false);
             setUsername(null);
             setUserId(null);
-            if (err?.response?.data?.error?.includes("Database")) {
+            
+            // Check if this is a session expiration error
+            const errorCode = err?.response?.data?.code;
+            if (errorCode === "SESSION_EXPIRED") {
+              console.warn("Session expired - please log in again");
+              setDbError("Session expired - please log in again");
+            } else if (err?.response?.data?.error?.includes("Database")) {
               setDbError(
                 "Could not connect to the database. Please try again later.",
               );

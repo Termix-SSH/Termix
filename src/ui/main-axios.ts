@@ -272,6 +272,10 @@ function createApiInstance(
       }
 
       if (status === 401) {
+        // Check if this is a session expiration (data lock) vs regular auth failure
+        const errorCode = (error.response?.data as any)?.code;
+        const isSessionExpired = errorCode === "SESSION_EXPIRED";
+        
         if (isElectron()) {
           localStorage.removeItem("jwt");
         } else {
@@ -279,28 +283,22 @@ function createApiInstance(
             "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
           localStorage.removeItem("jwt");
         }
-      }
 
-      // Handle DEK (Data Encryption Key) invalidation
-      if (status === 423) {
-        const errorData = error.response?.data;
-        if ((errorData as any)?.error === "DATA_LOCKED" || (errorData as any)?.message?.includes("DATA_LOCKED")) {
-          // DEK session has expired (likely due to server restart or timeout)
-          // Force logout to require re-authentication and DEK unlock
-          if (isElectron()) {
-            localStorage.removeItem("jwt");
-          } else {
-            document.cookie =
-              "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            localStorage.removeItem("jwt");
-          }
-
+        // If session expired, show notification and reload page
+        if (isSessionExpired && typeof window !== "undefined") {
+          // Show user-friendly notification
+          console.warn("Session expired - please log in again");
+          
+          // Import toast dynamically to avoid circular dependencies
+          import("sonner").then(({ toast }) => {
+            toast.warning("Session expired - please log in again");
+          });
+          
           // Trigger a page reload to redirect to login
-          if (typeof window !== "undefined") {
-            setTimeout(() => window.location.reload(), 100);
-          }
+          setTimeout(() => window.location.reload(), 100);
         }
       }
+
 
       return Promise.reject(error);
     },

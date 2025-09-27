@@ -1879,22 +1879,19 @@ router.post("/unlock-data", authenticateJWT, async (req, res) => {
 // GET /users/data-status
 router.get("/data-status", authenticateJWT, async (req, res) => {
   const userId = (req as any).userId;
-
+  
   try {
     const isUnlocked = authManager.isUserUnlocked(userId);
-    const userCrypto = UserCrypto.getInstance();
-    const sessionStatus = { unlocked: isUnlocked };
-
     res.json({
-      isUnlocked,
-      session: sessionStatus,
+      unlocked: isUnlocked,
+      message: isUnlocked ? "Data is unlocked" : "Data is locked - re-authenticate with password"
     });
   } catch (err) {
-    authLogger.error("Failed to get data status", err, {
-      operation: "data_status_error",
+    authLogger.error("Failed to check data status", err, {
+      operation: "data_status_check_failed",
       userId,
     });
-    res.status(500).json({ error: "Failed to get data status" });
+    res.status(500).json({ error: "Failed to check data status" });
   }
 });
 
@@ -2241,7 +2238,7 @@ router.post("/recovery/login", async (req, res) => {
     const originalDEK = Buffer.from(sessionData.dekHex, 'hex');
 
     // Set user session directly (bypass normal auth)
-    const sessionExpiry = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
+    const sessionExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
     (userCrypto as any).userSessions.set(sessionData.userId, {
       dataKey: originalDEK,
       lastActivity: Date.now(),
@@ -2250,7 +2247,7 @@ router.post("/recovery/login", async (req, res) => {
 
     // Generate JWT token
     const token = await authManager.generateJWTToken(sessionData.userId, {
-      expiresIn: "2h",
+      expiresIn: "24h",
     });
 
     // Clean up temporary session

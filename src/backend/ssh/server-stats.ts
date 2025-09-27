@@ -344,6 +344,16 @@ async function fetchHostById(
   userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
+    // Check if user data is unlocked before attempting to fetch
+    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+      statsLogger.debug("User data locked - cannot fetch host", {
+        operation: "fetchHostById_data_locked",
+        userId,
+        hostId: id
+      });
+      return undefined;
+    }
+
     const hosts = await SimpleDBOps.select(
       getDb().select().from(sshData).where(and(eq(sshData.id, id), eq(sshData.userId, userId))),
       "ssh_data",
@@ -848,6 +858,14 @@ async function pollStatusesOnce(userId?: string): Promise<void> {
 app.get("/status", async (req, res) => {
   const userId = (req as any).userId;
 
+  // Check if user data is unlocked
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED"
+    });
+  }
+
   if (hostStatuses.size === 0) {
     await pollStatusesOnce(userId);
   }
@@ -861,6 +879,14 @@ app.get("/status", async (req, res) => {
 app.get("/status/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as any).userId;
+
+  // Check if user data is unlocked
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED"
+    });
+  }
 
   try {
     const host = await fetchHostById(id, userId);
@@ -885,6 +911,15 @@ app.get("/status/:id", validateHostId, async (req, res) => {
 
 app.post("/refresh", async (req, res) => {
   const userId = (req as any).userId;
+
+  // Check if user data is unlocked
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED"
+    });
+  }
+
   await pollStatusesOnce(userId);
   res.json({ message: "Refreshed" });
 });
@@ -892,6 +927,14 @@ app.post("/refresh", async (req, res) => {
 app.get("/metrics/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as any).userId;
+
+  // Check if user data is unlocked
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED"
+    });
+  }
 
   try {
     const host = await fetchHostById(id, userId);

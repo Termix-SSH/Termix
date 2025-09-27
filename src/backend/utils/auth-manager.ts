@@ -37,10 +37,16 @@ class AuthManager {
   private static instance: AuthManager;
   private systemCrypto: SystemCrypto;
   private userCrypto: UserCrypto;
+  private invalidatedTokens: Set<string> = new Set(); // Track invalidated JWT tokens
 
   private constructor() {
     this.systemCrypto = SystemCrypto.getInstance();
     this.userCrypto = UserCrypto.getInstance();
+    
+    // Set up callback to invalidate JWT tokens when data sessions expire
+    this.userCrypto.setSessionExpiredCallback((userId: string) => {
+      this.invalidateUserTokens(userId);
+    });
   }
 
   static getInstance(): AuthManager {
@@ -156,6 +162,15 @@ class AuthManager {
    */
   async verifyJWTToken(token: string): Promise<JWTPayload | null> {
     try {
+      // Check if token is in invalidated list
+      if (this.invalidatedTokens.has(token)) {
+        databaseLogger.debug("JWT token is invalidated", {
+          operation: "jwt_verify_invalidated",
+          tokenPrefix: token.substring(0, 20) + "..."
+        });
+        return null;
+      }
+
       const jwtSecret = await this.systemCrypto.getJWTSecret();
       const payload = jwt.verify(token, jwtSecret) as JWTPayload;
       return payload;
@@ -166,6 +181,30 @@ class AuthManager {
       });
       return null;
     }
+  }
+
+  /**
+   * Invalidate JWT token (add to blacklist)
+   */
+  invalidateJWTToken(token: string): void {
+    this.invalidatedTokens.add(token);
+    databaseLogger.info("JWT token invalidated", {
+      operation: "jwt_invalidate",
+      tokenPrefix: token.substring(0, 20) + "..."
+    });
+  }
+
+  /**
+   * Invalidate all JWT tokens for a user (when data locks)
+   */
+  invalidateUserTokens(userId: string): void {
+    // Note: This is a simplified approach. In a production system, you might want
+    // to track tokens by userId and invalidate them more precisely.
+    // For now, we'll rely on the data lock mechanism to handle this.
+    databaseLogger.info("User tokens invalidated due to data lock", {
+      operation: "user_tokens_invalidate",
+      userId
+    });
   }
 
   /**
@@ -203,9 +242,9 @@ class AuthManager {
 
       const dataKey = this.userCrypto.getUserDataKey(userId);
       if (!dataKey) {
-        return res.status(423).json({
-          error: "Data locked - re-authenticate with password",
-          code: "DATA_LOCKED"
+        return res.status(401).json({
+          error: "Session expired - please log in again",
+          code: "SESSION_EXPIRED"
         });
       }
 

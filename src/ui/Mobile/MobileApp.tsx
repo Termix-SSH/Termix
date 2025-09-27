@@ -37,7 +37,6 @@ const AppContent: FC = () => {
             // Check if user data is unlocked
             if (!meRes.data_unlocked) {
               // Data is locked - user needs to re-authenticate
-              // For now, we'll just log this and let the user know they need to log in again
               console.warn("User data is locked - re-authentication required");
               setIsAuthenticated(false);
               setIsAdmin(false);
@@ -49,6 +48,13 @@ const AppContent: FC = () => {
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
+            
+            // Check if this is a session expiration error
+            const errorCode = err?.response?.data?.code;
+            if (errorCode === "SESSION_EXPIRED") {
+              console.warn("Session expired - please log in again");
+            }
+            
             document.cookie =
               "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
           })
