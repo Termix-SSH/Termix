@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import multer from "multer";
+import cookieParser from "cookie-parser";
 import userRoutes from "./routes/users.js";
 import sshRoutes from "./routes/ssh.js";
 import alertRoutes from "./routes/alerts.js";
@@ -34,7 +35,33 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Allow localhost and 127.0.0.1 for development
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:3000", 
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+      ];
+      
+      if (origin.startsWith("https://")) {
+        return callback(null, true);
+      }
+      
+      if (origin.startsWith("http://")) {
+        return callback(null, true);
+      }
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Reject other origins
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
@@ -179,6 +206,7 @@ async function fetchGitHubAPI(
 }
 
 app.use(bodyParser.json());
+app.use(cookieParser());
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });

@@ -176,11 +176,12 @@ export function HomepageAuth({
         return;
       }
 
-      if (!res || !res.token) {
-        throw new Error(t("errors.noTokenReceived"));
+      if (!res || !res.success) {
+        throw new Error(t("errors.loginFailed"));
       }
 
-      setCookie("jwt", res.token);
+      // JWT token is now automatically set as HttpOnly cookie by backend
+      console.log("Login successful - JWT set as secure HttpOnly cookie");
       [meRes] = await Promise.all([getUserInfo()]);
 
       setInternalLoggedIn(true);
@@ -213,7 +214,7 @@ export function HomepageAuth({
       setIsAdmin(false);
       setUsername(null);
       setUserId(null);
-      setCookie("jwt", "", -1);
+      // HttpOnly cookies cannot be cleared from JavaScript - backend handles this
       if (err?.response?.data?.error?.includes("Database")) {
         setDbError(t("errors.databaseConnection"));
       } else {
@@ -321,11 +322,12 @@ export function HomepageAuth({
     try {
       const res = await verifyTOTPLogin(totpTempToken, totpCode);
 
-      if (!res || !res.token) {
-        throw new Error(t("errors.noTokenReceived"));
+      if (!res || !res.success) {
+        throw new Error(t("errors.loginFailed"));
       }
 
-      setCookie("jwt", res.token);
+      // JWT token is now automatically set as HttpOnly cookie by backend
+      console.log("TOTP login successful - JWT set as secure HttpOnly cookie");
       const meRes = await getUserInfo();
 
       setInternalLoggedIn(true);
@@ -390,11 +392,12 @@ export function HomepageAuth({
       return;
     }
 
-    if (success && token) {
+    if (success) {
       setOidcLoading(true);
       setError(null);
 
-      setCookie("jwt", token);
+      // JWT token is now automatically set as HttpOnly cookie by backend
+      console.log("OIDC login successful - JWT set as secure HttpOnly cookie");
       getUserInfo()
         .then((meRes) => {
           setInternalLoggedIn(true);
@@ -422,7 +425,7 @@ export function HomepageAuth({
           setIsAdmin(false);
           setUsername(null);
           setUserId(null);
-          setCookie("jwt", "", -1);
+          // HttpOnly cookies cannot be cleared from JavaScript - backend handles this
           window.history.replaceState(
             {},
             document.title,
@@ -522,7 +525,7 @@ export function HomepageAuth({
       )}
 
       {!internalLoggedIn &&
-        (!authLoading || !getCookie("jwt")) &&
+        !authLoading &&
         !totpRequired && (
           <>
             <div className="flex gap-2 mb-6">

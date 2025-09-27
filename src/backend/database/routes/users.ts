@@ -787,9 +787,10 @@ router.get("/oidc/callback", async (req, res) => {
 
     const redirectUrl = new URL(frontendUrl);
     redirectUrl.searchParams.set("success", "true");
-    redirectUrl.searchParams.set("token", token);
 
-    res.redirect(redirectUrl.toString());
+    return res
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000))
+      .redirect(redirectUrl.toString());
   } catch (err) {
     authLogger.error("OIDC callback failed", err);
 
@@ -919,14 +920,42 @@ router.post("/login", async (req, res) => {
       dataUnlocked: true,
     });
 
-    return res.json({
-      token,
-      is_admin: !!userRecord.is_admin,
-      username: userRecord.username,
-    });
+    return res
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req, 24 * 60 * 60 * 1000))
+      .json({
+        success: true,
+        is_admin: !!userRecord.is_admin,
+        username: userRecord.username,
+      });
   } catch (err) {
     authLogger.error("Failed to log in user", err);
     return res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// Route: Logout user
+// POST /users/logout
+router.post("/logout", async (req, res) => {
+  try {
+    // Try to get userId from JWT if available
+    const userId = (req as any).userId;
+    
+    if (userId) {
+      // User is authenticated - clear data session
+      authManager.logoutUser(userId);
+      authLogger.info("User logged out", {
+        operation: "user_logout",
+        userId,
+      });
+    }
+    
+    // Always clear the JWT cookie
+    return res
+      .clearCookie("jwt", authManager.getSecureCookieOptions(req))
+      .json({ success: true, message: "Logged out successfully" });
+  } catch (err) {
+    authLogger.error("Logout failed", err);
+    return res.status(500).json({ error: "Logout failed" });
   }
 });
 
@@ -1525,11 +1554,13 @@ router.post("/totp/verify-login", async (req, res) => {
       expiresIn: "50d",
     });
 
-    return res.json({
-      token,
-      is_admin: !!userRecord.is_admin,
-      username: userRecord.username,
-    });
+    return res
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000))
+      .json({
+        success: true,
+        is_admin: !!userRecord.is_admin,
+        username: userRecord.username,
+      });
   } catch (err) {
     authLogger.error("TOTP verification failed", err);
     return res.status(500).json({ error: "TOTP verification failed" });
@@ -1895,26 +1926,7 @@ router.get("/data-status", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: User logout (clear data session)
-// POST /users/logout
-router.post("/logout", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
-
-  try {
-    authManager.logoutUser(userId);
-    authLogger.info("User logged out", {
-      operation: "user_logout",
-      userId,
-    });
-    res.json({ message: "Logged out successfully" });
-  } catch (err) {
-    authLogger.error("Logout failed", err, {
-      operation: "logout_error",
-      userId,
-    });
-    res.status(500).json({ error: "Logout failed" });
-  }
-});
+// Duplicate logout route removed - handled by the main logout route above
 
 // Route: Change user password (re-encrypt data keys)
 // POST /users/change-password
@@ -2259,12 +2271,14 @@ router.post("/recovery/login", async (req, res) => {
       userId: sessionData.userId,
     });
 
-    res.json({
-      token,
-      is_admin: !!user[0].is_admin,
-      username: user[0].username,
-      message: "Login successful via recovery"
-    });
+    return res
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req, 24 * 60 * 60 * 1000))
+      .json({
+        success: true,
+        is_admin: !!user[0].is_admin,
+        username: user[0].username,
+        message: "Login successful via recovery"
+      });
 
   } catch (error) {
     authLogger.error("Recovery login failed", error, {

@@ -62,6 +62,9 @@ export type ServerMetrics = {
 
 interface AuthResponse {
   token: string;
+  success?: boolean;
+  is_admin?: boolean;
+  username?: string;
 }
 
 interface UserInfo {
@@ -112,6 +115,8 @@ export function setCookie(name: string, value: string, days = 7): void {
   if (isElectron()) {
     localStorage.setItem(name, value);
   } else {
+    // Note: For secure authentication, cookies should be set by the backend
+    // This function is kept for backward compatibility with non-auth cookies
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
     document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
   }
@@ -140,6 +145,7 @@ function createApiInstance(
     baseURL,
     headers: { "Content-Type": "application/json" },
     timeout: 30000,
+    withCredentials: true, // Required for HttpOnly cookies to be sent cross-origin
   });
 
   instance.interceptors.request.use((config) => {
@@ -149,7 +155,6 @@ function createApiInstance(
     (config as any).startTime = startTime;
     (config as any).requestId = requestId;
 
-    const token = getCookie("jwt");
     const method = config.method?.toUpperCase() || "UNKNOWN";
     const url = config.url || "UNKNOWN";
     const fullUrl = `${config.baseURL}${url}`;
@@ -167,14 +172,8 @@ function createApiInstance(
       logger.requestStart(method, fullUrl, context);
     }
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else if (process.env.NODE_ENV === "development") {
-      authLogger.warn(
-        "No JWT token found, request will be unauthenticated",
-        context,
-      );
-    }
+    // Note: JWT token is now automatically sent via secure HttpOnly cookies
+    // No need to manually set Authorization header for cookie-based auth
 
     if (isElectron()) {
       config.headers["X-Electron-App"] = "true";
@@ -276,20 +275,19 @@ function createApiInstance(
         const errorCode = (error.response?.data as any)?.code;
         const isSessionExpired = errorCode === "SESSION_EXPIRED";
         
+        // Clear authentication state
         if (isElectron()) {
           localStorage.removeItem("jwt");
         } else {
-          document.cookie =
-            "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          // For web, the secure HttpOnly cookie will be cleared by the backend
+          // We can't clear HttpOnly cookies from JavaScript
           localStorage.removeItem("jwt");
         }
 
         // If session expired, show notification and reload page
         if (isSessionExpired && typeof window !== "undefined") {
-          // Show user-friendly notification
           console.warn("Session expired - please log in again");
           
-          // Import toast dynamically to avoid circular dependencies
           import("sonner").then(({ toast }) => {
             toast.warning("Session expired - please log in again");
           });
@@ -1526,9 +1524,25 @@ export async function loginUser(
 ): Promise<AuthResponse> {
   try {
     const response = await authApi.post("/users/login", { username, password });
-    return response.data;
+    // JWT token is now set as secure HttpOnly cookie by backend
+    // Return success status and user info
+    return {
+      token: "cookie-based", // Placeholder since token is in HttpOnly cookie
+      success: response.data.success,
+      is_admin: response.data.is_admin,
+      username: response.data.username,
+    };
   } catch (error) {
     handleApiError(error, "login user");
+  }
+}
+
+export async function logoutUser(): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await authApi.post("/users/logout");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "logout user");
   }
 }
 

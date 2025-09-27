@@ -103,8 +103,8 @@ export function AdminSettings({
   const [importPassword, setImportPassword] = React.useState("");
 
   React.useEffect(() => {
-    const jwt = getCookie("jwt");
-    if (!jwt) return;
+    // JWT is now automatically sent via HttpOnly cookies
+    // No need to check for JWT cookie manually
 
     if (isElectron()) {
       const serverUrl = (window as any).configuredServerUrl;
@@ -147,8 +147,8 @@ export function AdminSettings({
   }, []);
 
   const fetchUsers = async () => {
-    const jwt = getCookie("jwt");
-    if (!jwt) return;
+    // JWT is now automatically sent via HttpOnly cookies
+    // No need to check for JWT cookie manually
 
     if (isElectron()) {
       const serverUrl = (window as any).configuredServerUrl;
@@ -172,7 +172,7 @@ export function AdminSettings({
 
   const handleToggleRegistration = async (checked: boolean) => {
     setRegLoading(true);
-    const jwt = getCookie("jwt");
+    // JWT is now automatically sent via HttpOnly cookies
     try {
       await updateRegistrationAllowed(checked);
       setAllowRegistration(checked);
@@ -204,7 +204,7 @@ export function AdminSettings({
       return;
     }
 
-    const jwt = getCookie("jwt");
+    // JWT is now automatically sent via HttpOnly cookies
     try {
       await updateOIDCConfig(oidcConfig);
       toast.success(t("admin.oidcConfigurationUpdated"));
@@ -226,7 +226,7 @@ export function AdminSettings({
     if (!newAdminUsername.trim()) return;
     setMakeAdminLoading(true);
     setMakeAdminError(null);
-    const jwt = getCookie("jwt");
+    // JWT is now automatically sent via HttpOnly cookies
     try {
       await makeUserAdmin(newAdminUsername.trim());
       toast.success(t("admin.userIsNowAdmin", { username: newAdminUsername }));
@@ -243,7 +243,7 @@ export function AdminSettings({
 
   const handleRemoveAdminStatus = async (username: string) => {
     confirmWithToast(t("admin.removeAdminStatus", { username }), async () => {
-      const jwt = getCookie("jwt");
+      // JWT is now automatically sent via HttpOnly cookies
       try {
         await removeAdminStatus(username);
         toast.success(t("admin.adminStatusRemoved", { username }));
@@ -258,7 +258,7 @@ export function AdminSettings({
     confirmWithToast(
       t("admin.deleteUser", { username }),
       async () => {
-        const jwt = getCookie("jwt");
+        // JWT is now automatically sent via HttpOnly cookies
         try {
           await deleteUser(username);
           toast.success(t("admin.userDeletedSuccessfully", { username }));
@@ -292,7 +292,7 @@ export function AdminSettings({
 
     setExportLoading(true);
     try {
-      const jwt = getCookie("jwt");
+      // JWT is now automatically sent via HttpOnly cookies
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/export`
         : "http://localhost:30001/database/export";
@@ -300,9 +300,9 @@ export function AdminSettings({
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${jwt}`,
           "Content-Type": "application/json",
         },
+        credentials: "include", // Include HttpOnly cookies
         body: JSON.stringify({ password: exportPassword }),
       });
 
@@ -352,7 +352,7 @@ export function AdminSettings({
 
     setImportLoading(true);
     try {
-      const jwt = getCookie("jwt");
+      // JWT is now automatically sent via HttpOnly cookies
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/import`
         : "http://localhost:30001/database/import";
@@ -364,9 +364,7 @@ export function AdminSettings({
 
       const response = await fetch(apiUrl, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
+        credentials: "include", // Include HttpOnly cookies
         body: formData,
       });
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ChevronUp, User2, HardDrive, Menu, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { getCookie, setCookie, isElectron } from "@/ui/main-axios.ts";
+import { getCookie, setCookie, isElectron, logoutUser } from "@/ui/main-axios.ts";
 
 import {
   Sidebar,
@@ -66,14 +66,23 @@ interface SidebarProps {
   children?: React.ReactNode;
 }
 
-function handleLogout() {
-  if (isElectron()) {
-    localStorage.removeItem("jwt");
-  } else {
-    document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+async function handleLogout() {
+  try {
+    // Call backend logout endpoint to clear HttpOnly cookie and data session
+    await logoutUser();
+    
+    // Clear any local storage (for Electron)
+    if (isElectron()) {
+      localStorage.removeItem("jwt");
+    }
+    
+    // Reload the page to reset the application state
+    window.location.reload();
+  } catch (error) {
+    console.error("Logout failed:", error);
+    // Even if logout fails, reload the page to reset state
+    window.location.reload();
   }
-
-  window.location.reload();
 }
 
 export function LeftSidebar({

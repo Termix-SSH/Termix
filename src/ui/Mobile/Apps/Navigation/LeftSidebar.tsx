@@ -14,7 +14,7 @@ import { ChevronUp, Menu, User2 } from "lucide-react";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Separator } from "@/components/ui/separator.tsx";
 import { FolderCard } from "@/ui/Mobile/Apps/Navigation/Hosts/FolderCard.tsx";
-import { getSSHHosts } from "@/ui/main-axios.ts";
+import { getSSHHosts, logoutUser } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input.tsx";
 import {
@@ -55,9 +55,18 @@ interface LeftSidebarProps {
   username?: string | null;
 }
 
-function handleLogout() {
-  document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-  window.location.reload();
+async function handleLogout() {
+  try {
+    // Call backend logout endpoint to clear HttpOnly cookie and data session
+    await logoutUser();
+    
+    // Reload the page to reset the application state
+    window.location.reload();
+  } catch (error) {
+    console.error("Logout failed:", error);
+    // Even if logout fails, reload the page to reset state
+    window.location.reload();
+  }
 }
 
 export function LeftSidebar({

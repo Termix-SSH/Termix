@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { Client } from "ssh2";
 import { ChildProcess } from "child_process";
 import axios from "axios";
@@ -20,7 +21,37 @@ import { SystemCrypto } from "../utils/system-crypto.js";
 const app = express();
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Allow localhost and 127.0.0.1 for development
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:3000", 
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+      ];
+      
+      // Allow any HTTPS origin (production deployments)
+      if (origin.startsWith("https://")) {
+        return callback(null, true);
+      }
+      
+      // Allow any HTTP origin for self-hosted scenarios
+      if (origin.startsWith("http://")) {
+        return callback(null, true);
+      }
+      
+      // Check against allowed development origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Reject other origins
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Origin",
@@ -33,6 +64,7 @@ app.use(
     ],
   }),
 );
+app.use(cookieParser());
 app.use(express.json());
 
 const activeTunnels = new Map<string, Client>();

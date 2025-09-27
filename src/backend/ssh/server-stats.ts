@@ -1,6 +1,7 @@
 import express from "express";
 import net from "net";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
@@ -278,7 +279,37 @@ function validateHostId(
 const app = express();
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Allow localhost and 127.0.0.1 for development
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:3000", 
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+      ];
+      
+      // Allow any HTTPS origin (production deployments)
+      if (origin.startsWith("https://")) {
+        return callback(null, true);
+      }
+      
+      // Allow any HTTP origin for self-hosted scenarios
+      if (origin.startsWith("http://")) {
+        return callback(null, true);
+      }
+      
+      // Check against allowed development origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Reject other origins
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -288,21 +319,7 @@ app.use(
     ],
   }),
 );
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, User-Agent, X-Electron-App",
-  );
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  );
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
-  next();
-});
+app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 
 // Add authentication middleware - Linus principle: eliminate special cases

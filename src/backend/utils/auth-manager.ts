@@ -208,16 +208,38 @@ class AuthManager {
   }
 
   /**
+   * Helper function to get secure cookie options based on request
+   */
+  getSecureCookieOptions(req: any, maxAge: number = 24 * 60 * 60 * 1000) {
+    return {
+      httpOnly: true,        // Prevent XSS attacks
+      secure: req.secure || req.headers['x-forwarded-proto'] === 'https', // Detect HTTPS properly
+      sameSite: "strict" as const,   // Prevent CSRF attacks
+      maxAge: maxAge,        // Session duration in milliseconds
+      path: "/",            // Available site-wide
+    };
+  }
+
+  /**
    * Authentication middleware
    */
   createAuthMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
-      const authHeader = req.headers["authorization"];
-      if (!authHeader?.startsWith("Bearer ")) {
-        return res.status(401).json({ error: "Missing Authorization header" });
+      // Try to get JWT from secure HttpOnly cookie first
+      let token = req.cookies?.jwt;
+      
+      // Fallback to Authorization header for backward compatibility
+      if (!token) {
+        const authHeader = req.headers["authorization"];
+        if (authHeader?.startsWith("Bearer ")) {
+          token = authHeader.split(" ")[1];
+        }
       }
 
-      const token = authHeader.split(" ")[1];
+      if (!token) {
+        return res.status(401).json({ error: "Missing authentication token" });
+      }
+
       const payload = await this.verifyJWTToken(token);
 
       if (!payload) {
