@@ -903,7 +903,6 @@ export function HomepageAuth({
                     {recoveryStep === "request" && (
                       <>
                         <div className="text-center text-muted-foreground mb-4">
-                          <p>🔥 Password Recovery with Docker Access</p>
                           <p className="text-sm mt-2">
                             Recovery requires server access to view Docker logs
                           </p>
@@ -942,9 +941,6 @@ export function HomepageAuth({
                             Check Docker logs for recovery code for{" "}
                             <strong>{localUsername}</strong>
                           </p>
-                          <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono">
-                            docker logs termix | grep RECOVERY
-                          </div>
                         </div>
                         <div className="flex flex-col gap-4">
                           <div className="flex flex-col gap-2">
@@ -992,7 +988,6 @@ export function HomepageAuth({
                     {recoveryStep === "login" && (
                       <>
                         <div className="text-center text-muted-foreground mb-4">
-                          <p>✅ Recovery verification successful!</p>
                           <p className="text-sm mt-2">
                             Click below to complete login for{" "}
                             <strong>{localUsername}</strong>

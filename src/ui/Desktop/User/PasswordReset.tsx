@@ -157,7 +157,7 @@ export function PasswordReset({ userInfo }: PasswordResetProps) {
               <div className="flex flex-col gap-4">
                 <Button
                   type="button"
-                  className="w-full h-11 text-base font-semibold"
+                  className="w-full h-11 text-base"
                   disabled={resetLoading || !userInfo.username.trim()}
                   onClick={handleInitiatePasswordReset}
                 >

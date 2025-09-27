@@ -455,7 +455,7 @@ export function TOTPSetup({
         <Button
           onClick={handleSetupStart}
           disabled={loading}
-          className="w-full"
+          className="w-full h-11 text-base"
         >
           {loading ? t("common.settingUp") : t("auth.enableTwoFactorButton")}
         </Button>
