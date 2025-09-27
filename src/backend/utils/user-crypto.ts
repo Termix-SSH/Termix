@@ -79,20 +79,13 @@ class UserCrypto {
     const encryptedDEK = this.encryptDEK(DEK, KEK);
     await this.storeEncryptedDEK(userId, encryptedDEK);
 
-    // 🔴 Add recovery layer (breaks zero-trust for UX)
-    const recoveryDEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
-    const backupEncryptedDEK = this.encryptDEK(DEK, recoveryDEK);
-    await this.storeRecoveryData(userId, recoveryDEK, backupEncryptedDEK);
-
     // Immediately clean temporary keys
     KEK.fill(0);
     DEK.fill(0);
-    recoveryDEK.fill(0);
 
-    databaseLogger.success("User encryption setup completed with recovery layer", {
+    databaseLogger.success("User encryption setup completed", {
       operation: "user_crypto_setup",
       userId,
-      recoveryEnabled: true,
     });
   }
 
@@ -427,33 +420,6 @@ class UserCrypto {
     }
   }
 
-  /**
-   * Store recovery data (breaks zero-trust for UX compromise)
-   */
-  private async storeRecoveryData(userId: string, recoveryDEK: Buffer, backupEncryptedDEK: EncryptedDEK): Promise<void> {
-    try {
-      await getDb()
-        .update(users)
-        .set({
-          recovery_dek: recoveryDEK.toString('hex'),
-          backup_encrypted_dek: JSON.stringify(backupEncryptedDEK),
-          zero_trust_mode: false, // Compromise mode for UX
-        })
-        .where(eq(users.id, userId));
-
-      databaseLogger.info("Recovery data stored for user", {
-        operation: "store_recovery_data",
-        userId,
-        mode: "compromise",
-      });
-    } catch (error) {
-      databaseLogger.error("Failed to store recovery data", error, {
-        operation: "store_recovery_data_failed",
-        userId,
-      });
-      throw error;
-    }
-  }
 }
 
 export { UserCrypto, type KEKSalt, type EncryptedDEK };

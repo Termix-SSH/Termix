@@ -14,9 +14,6 @@ import {
   getRegistrationAllowed,
   getOIDCConfig,
   getSetupRequired,
-  requestRecoveryCode,
-  verifyRecoveryCode,
-  loginWithRecovery,
   initiatePasswordReset,
   verifyPasswordResetCode,
   completePasswordReset,
@@ -83,15 +80,6 @@ export function HomepageAuth({
   const [firstUserToastShown, setFirstUserToastShown] = useState(false);
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
   const [oidcConfigured, setOidcConfigured] = useState(false);
-
-  // Recovery states (new UX compromise flow)
-  const [recoveryStep, setRecoveryStep] = useState<
-    "request" | "verify" | "login"
-  >("request");
-  const [recoveryCode, setRecoveryCode] = useState("");
-  const [recoveryTempToken, setRecoveryTempToken] = useState("");
-  const [recoveryLoading, setRecoveryLoading] = useState(false);
-  const [recoverySuccess, setRecoverySuccess] = useState(false);
 
   // Legacy reset states (kept for compatibility)
   const [resetStep, setResetStep] = useState<
@@ -257,80 +245,9 @@ export function HomepageAuth({
     }
   }
 
-  // ===== New Recovery Functions (UX compromise) =====
 
-  async function handleRequestRecoveryCode() {
-    setError(null);
-    setRecoveryLoading(true);
-    try {
-      const result = await requestRecoveryCode(localUsername);
-      setRecoveryStep("verify");
-      toast.success("Recovery code sent to Docker logs");
-    } catch (err: any) {
-      toast.error(
-        err?.response?.data?.error ||
-          err?.message ||
-          "Failed to request recovery code",
-      );
-    } finally {
-      setRecoveryLoading(false);
-    }
-  }
 
-  async function handleVerifyRecoveryCode() {
-    setError(null);
-    setRecoveryLoading(true);
-    try {
-      const response = await verifyRecoveryCode(localUsername, recoveryCode);
-      setRecoveryTempToken(response.tempToken);
-      setRecoveryStep("login");
-      toast.success("Recovery verification successful");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Failed to verify recovery code");
-    } finally {
-      setRecoveryLoading(false);
-    }
-  }
 
-  async function handleRecoveryLogin() {
-    setError(null);
-    setRecoveryLoading(true);
-    try {
-      const response = await loginWithRecovery(localUsername, recoveryTempToken);
-
-      // JWT token is now automatically set as HttpOnly cookie by backend
-      console.log("Recovery login successful - JWT set as secure HttpOnly cookie");
-
-      setLoggedIn(true);
-      setIsAdmin(response.is_admin);
-      setUsername(response.username);
-
-      onAuthSuccess({
-        isAdmin: response.is_admin,
-        username: response.username,
-        userId: response.userId || null,
-      });
-
-      // Reset recovery state
-      setRecoveryStep("request");
-      setRecoveryCode("");
-      setRecoveryTempToken("");
-      setRecoverySuccess(true);
-
-      toast.success("Login successful via recovery");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Recovery login failed");
-    } finally {
-      setRecoveryLoading(false);
-    }
-  }
-
-  function resetRecoveryState() {
-    setRecoveryStep("request");
-    setRecoveryCode("");
-    setRecoveryTempToken("");
-    setError(null);
-  }
 
   // ===== Legacy password reset functions (deprecated) =====
 
@@ -395,6 +312,10 @@ export function HomepageAuth({
 
       setResetSuccess(true);
       toast.success(t("messages.passwordResetSuccess"));
+      
+      // Immediately redirect to login after successful reset
+      setTab("login");
+      resetPasswordState();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || t("errors.failedCompleteReset"));
     } finally {
@@ -899,119 +820,33 @@ export function HomepageAuth({
                 )}
                 {tab === "reset" && (
                   <>
-                    {/* New Recovery Flow (UX compromise) */}
-                    {recoveryStep === "request" && (
+                    {resetStep === "initiate" && (
                       <>
                         <div className="text-center text-muted-foreground mb-4">
-                          <p className="text-sm mt-2">
-                            Recovery requires server access to view Docker logs
-                          </p>
+                          <p>{t("auth.resetCodeDesc")}</p>
                         </div>
                         <div className="flex flex-col gap-4">
                           <div className="flex flex-col gap-2">
-                            <Label htmlFor="recovery-username">
+                            <Label htmlFor="reset-username">
                               {t("common.username")}
                             </Label>
                             <Input
-                              id="recovery-username"
+                              id="reset-username"
                               type="text"
                               required
                               className="h-11 text-base"
                               value={localUsername}
                               onChange={(e) => setLocalUsername(e.target.value)}
-                              disabled={recoveryLoading}
+                              disabled={resetLoading}
                             />
                           </div>
                           <Button
                             type="button"
                             className="w-full h-11 text-base font-semibold"
-                            disabled={recoveryLoading || !localUsername.trim()}
-                            onClick={handleRequestRecoveryCode}
+                            disabled={resetLoading || !localUsername.trim()}
+                            onClick={handleInitiatePasswordReset}
                           >
-                            {recoveryLoading ? Spinner : "Request Recovery Code"}
-                          </Button>
-                        </div>
-                      </>
-                    )}
-
-                    {recoveryStep === "verify" && (
-                      <>
-                        <div className="text-center text-muted-foreground mb-4">
-                          <p>
-                            Check Docker logs for recovery code for{" "}
-                            <strong>{localUsername}</strong>
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                          <div className="flex flex-col gap-2">
-                            <Label htmlFor="recovery-code">
-                              Recovery Code (6 digits)
-                            </Label>
-                            <Input
-                              id="recovery-code"
-                              type="text"
-                              required
-                              maxLength={6}
-                              className="h-11 text-base text-center text-lg tracking-widest"
-                              value={recoveryCode}
-                              onChange={(e) =>
-                                setRecoveryCode(e.target.value.replace(/\D/g, ""))
-                              }
-                              disabled={recoveryLoading}
-                              placeholder="000000"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            className="w-full h-11 text-base font-semibold"
-                            disabled={recoveryLoading || recoveryCode.length !== 6}
-                            onClick={handleVerifyRecoveryCode}
-                          >
-                            {recoveryLoading ? Spinner : "Verify & Unlock"}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full h-11 text-base font-semibold"
-                            disabled={recoveryLoading}
-                            onClick={() => {
-                              setRecoveryStep("request");
-                              setRecoveryCode("");
-                            }}
-                          >
-                            Back
-                          </Button>
-                        </div>
-                      </>
-                    )}
-
-                    {recoveryStep === "login" && (
-                      <>
-                        <div className="text-center text-muted-foreground mb-4">
-                          <p className="text-sm mt-2">
-                            Click below to complete login for{" "}
-                            <strong>{localUsername}</strong>
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                          <Button
-                            type="button"
-                            className="w-full h-11 text-base font-semibold"
-                            disabled={recoveryLoading}
-                            onClick={handleRecoveryLogin}
-                          >
-                            {recoveryLoading ? Spinner : "Complete Login"}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full h-11 text-base font-semibold"
-                            disabled={recoveryLoading}
-                            onClick={() => {
-                              resetRecoveryState();
-                            }}
-                          >
-                            Start Over
+                            {resetLoading ? Spinner : t("auth.sendResetCode")}
                           </Button>
                         </div>
                       </>
@@ -1070,25 +905,6 @@ export function HomepageAuth({
                       </>
                     )}
 
-                    {resetSuccess && (
-                      <>
-                        <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/20 mb-4">
-                          <p className="text-green-400 text-sm">
-                            {t("auth.passwordResetSuccessDesc")}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          className="w-full h-11 text-base font-semibold"
-                          onClick={() => {
-                            setTab("login");
-                            resetPasswordState();
-                          }}
-                        >
-                          {t("auth.goToLogin")}
-                        </Button>
-                      </>
-                    )}
 
                     {resetStep === "newPassword" && !resetSuccess && (
                       <>
@@ -1100,7 +916,7 @@ export function HomepageAuth({
                         </div>
                         <div className="flex flex-col gap-5">
                           <div className="flex flex-col gap-2">
-                            <Label htmlFor="new-password">
+                            <Label htmlFor="new-p assword">
                               {t("auth.newPassword")}
                             </Label>
                             <PasswordInput

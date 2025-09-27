@@ -286,6 +286,10 @@ export function HomepageAuth({
 
       setResetSuccess(true);
       toast.success(t("messages.passwordResetSuccess"));
+      
+      // Immediately redirect to login after successful reset
+      setTab("login");
+      resetPasswordState();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || t("errors.failedCompleteReset"));
     } finally {
@@ -702,25 +706,6 @@ export function HomepageAuth({
                       </>
                     )}
 
-                    {resetSuccess && (
-                      <>
-                        <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/20 mb-4">
-                          <p className="text-green-400 text-sm">
-                            {t("auth.passwordResetSuccessDesc")}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          className="w-full h-11 text-base font-semibold"
-                          onClick={() => {
-                            setTab("login");
-                            resetPasswordState();
-                          }}
-                        >
-                          {t("auth.goToLogin")}
-                        </Button>
-                      </>
-                    )}
 
                     {resetStep === "newPassword" && !resetSuccess && (
                       <>
