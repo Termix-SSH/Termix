@@ -21,6 +21,8 @@ services:
       PORT: "4300"
       ENABLE_SSL: "true"
       SSL_DOMAIN: "termix-dev.karmaa.site"
+      SSL_CERT_PATH: "/app/data/ssl/termix.crt"
+      SSL_KEY_PATH: "/app/data/ssl/termix.key"
     # Resource limits for better large file handling
     deploy:
       resources:

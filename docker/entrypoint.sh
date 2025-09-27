@@ -4,8 +4,8 @@ set -e
 export PORT=${PORT:-8080}
 export ENABLE_SSL=${ENABLE_SSL:-false}
 export SSL_PORT=${SSL_PORT:-8443}
-export SSL_CERT_PATH=${SSL_CERT_PATH:-/app/ssl/termix.crt}
-export SSL_KEY_PATH=${SSL_KEY_PATH:-/app/ssl/termix.key}
+export SSL_CERT_PATH=${SSL_CERT_PATH:-/app/data/ssl/termix.crt}
+export SSL_KEY_PATH=${SSL_KEY_PATH:-/app/data/ssl/termix.key}
 
 echo "Configuring web UI to run on port: $PORT"
 
@@ -30,16 +30,16 @@ chmod 755 /app/data
 # If SSL is enabled, generate certificates first
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "Generating SSL certificates..."
-    mkdir -p /app/ssl
-    chown -R node:node /app/ssl
-    chmod 755 /app/ssl
+    mkdir -p /app/data/ssl
+    chown -R node:node /app/data/ssl
+    chmod 755 /app/data/ssl
     
     # Generate SSL certificates using OpenSSL directly (faster and more reliable)
     DOMAIN=${SSL_DOMAIN:-localhost}
     echo "Generating certificate for domain: $DOMAIN"
     
     # Create OpenSSL config
-    cat > /app/ssl/openssl.conf << EOF
+    cat > /app/data/ssl/openssl.conf << EOF
 [req]
 default_bits = 2048
 prompt = no
@@ -69,18 +69,18 @@ IP.2 = ::1
 EOF
 
     # Generate private key
-    openssl genrsa -out /app/ssl/termix.key 2048
+    openssl genrsa -out /app/data/ssl/termix.key 2048
     
     # Generate certificate
-    openssl req -new -x509 -key /app/ssl/termix.key -out /app/ssl/termix.crt -days 365 -config /app/ssl/openssl.conf -extensions v3_req
+    openssl req -new -x509 -key /app/data/ssl/termix.key -out /app/data/ssl/termix.crt -days 365 -config /app/data/ssl/openssl.conf -extensions v3_req
     
     # Set proper permissions
-    chmod 600 /app/ssl/termix.key
-    chmod 644 /app/ssl/termix.crt
-    chown node:node /app/ssl/termix.key /app/ssl/termix.crt
+    chmod 600 /app/data/ssl/termix.key
+    chmod 644 /app/data/ssl/termix.crt
+    chown node:node /app/data/ssl/termix.key /app/data/ssl/termix.crt
     
     # Clean up config
-    rm -f /app/ssl/openssl.conf
+    rm -f /app/data/ssl/openssl.conf
     
     echo "SSL certificates generated successfully for domain: $DOMAIN"
 fi

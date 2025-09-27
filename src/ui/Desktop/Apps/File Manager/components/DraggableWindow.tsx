@@ -116,15 +116,53 @@ export function DraggableWindow({
         const deltaX = e.clientX - dragStart.x;
         const deltaY = e.clientY - dragStart.y;
 
+        const newX = windowStart.x + deltaX;
+        const newY = windowStart.y + deltaY;
+
+        // Find the positioning container by checking parent hierarchy
+        const windowElement = windowRef.current;
+        let positioningContainer = null;
+        let currentElement = windowElement?.parentElement;
+        
+        while (currentElement && currentElement !== document.body) {
+          const computedStyle = window.getComputedStyle(currentElement);
+          const position = computedStyle.position;
+          const transform = computedStyle.transform;
+          
+          if (position === 'relative' || position === 'absolute' || position === 'fixed' || transform !== 'none') {
+            positioningContainer = currentElement;
+            break;
+          }
+          
+          currentElement = currentElement.parentElement;
+        }
+
+        // Calculate boundaries based on the actual positioning context
+        let maxX, maxY, minX, minY;
+        
+        if (positioningContainer) {
+          const containerRect = positioningContainer.getBoundingClientRect();
+          
+          // Window is positioned relative to a positioning container
+          maxX = containerRect.width - size.width;
+          maxY = containerRect.height - size.height;
+          minX = 0;
+          minY = 0;
+        } else {
+          // Window is positioned relative to viewport
+          maxX = window.innerWidth - size.width;
+          maxY = window.innerHeight - size.height;
+          minX = 0;
+          minY = 0;
+        }
+
+        // Ensure window stays within boundaries
+        const constrainedX = Math.max(minX, Math.min(maxX, newX));
+        const constrainedY = Math.max(minY, Math.min(maxY, newY));
+
         setPosition({
-          x: Math.max(
-            0,
-            Math.min(window.innerWidth - size.width, windowStart.x + deltaX),
-          ),
-          y: Math.max(
-            0,
-            Math.min(window.innerHeight - 40, windowStart.y + deltaY),
-          ), // Keep title bar visible
+          x: constrainedX,
+          y: constrainedY,
         });
       }
 

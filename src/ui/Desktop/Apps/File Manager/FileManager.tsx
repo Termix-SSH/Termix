@@ -495,19 +495,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   async function handleUploadFile(file: File) {
     if (!sshSessionId) return;
 
-    // Show progress for large files (>10MB)
-    const isLargeFile = file.size > 10 * 1024 * 1024;
-    let progressToast: any = null;
-    
-    if (isLargeFile) {
-      progressToast = toast.loading(
-        t("fileManager.uploadingLargeFile", { 
-          name: file.name, 
-          size: formatFileSize(file.size) 
-        }),
-        { duration: Infinity }
-      );
-    }
+    // Show progress for all file uploads
+    const progressToast = toast.loading(
+      t("fileManager.uploadingFile", { 
+        name: file.name, 
+        size: formatFileSize(file.size) 
+      }),
+      { duration: Infinity }
+    );
 
     try {
       // Ensure SSH connection is valid
@@ -565,20 +560,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         undefined, // userId - will be handled by backend
       );
       
-      // Dismiss progress toast if it exists
-      if (progressToast) {
-        toast.dismiss(progressToast);
-      }
+      // Dismiss progress toast
+      toast.dismiss(progressToast);
       
       toast.success(
         t("fileManager.fileUploadedSuccessfully", { name: file.name }),
       );
       handleRefreshDirectory();
     } catch (error: any) {
-      // Dismiss progress toast if it exists
-      if (progressToast) {
-        toast.dismiss(progressToast);
-      }
+      // Dismiss progress toast
+      toast.dismiss(progressToast);
       
       if (
         error.message?.includes("connection") ||

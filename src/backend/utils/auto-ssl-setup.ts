@@ -14,10 +14,11 @@ import { systemLogger } from "./logger.js";
  * - Users can enable SSL by setting ENABLE_SSL=true
  */
 export class AutoSSLSetup {
-  private static readonly SSL_DIR = path.join(process.cwd(), "ssl");
+  private static readonly DATA_DIR = process.env.DATA_DIR || "./db/data";
+  private static readonly SSL_DIR = path.join(AutoSSLSetup.DATA_DIR, "ssl");
   private static readonly CERT_FILE = path.join(AutoSSLSetup.SSL_DIR, "termix.crt");
   private static readonly KEY_FILE = path.join(AutoSSLSetup.SSL_DIR, "termix.key");
-  private static readonly ENV_FILE = path.join(process.cwd(), ".env");
+  private static readonly ENV_FILE = path.join(AutoSSLSetup.DATA_DIR, ".env");
 
   /**
    * Initialize SSL setup automatically during system startup
@@ -218,10 +219,9 @@ IP.2 = ::1
       operation: "ssl_env_setup"
     });
 
-    // Use container paths in production, local paths in development
-    const isProduction = process.env.NODE_ENV === "production";
-    const certPath = isProduction ? "/app/ssl/termix.crt" : this.CERT_FILE;
-    const keyPath = isProduction ? "/app/ssl/termix.key" : this.KEY_FILE;
+    // Use data directory paths for both production and development
+    const certPath = this.CERT_FILE;
+    const keyPath = this.KEY_FILE;
 
     const sslEnvVars = {
       ENABLE_SSL: "false", // Disable SSL by default to avoid setup issues
