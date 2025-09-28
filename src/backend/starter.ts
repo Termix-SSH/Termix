@@ -11,7 +11,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
 (async () => {
   try {
     dotenv.config({ quiet: true });
-    
+
     const dataDir = process.env.DATA_DIR || "./db/data";
     const envPath = path.join(dataDir, ".env");
     try {
@@ -21,12 +21,17 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
         Object.assign(process.env, persistentConfig.parsed);
       }
     } catch {}
-    
+
     let version = "unknown";
     try {
       const __filename = fileURLToPath(import.meta.url);
-      const packageJsonPath = path.join(path.dirname(__filename), "../../../package.json");
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf-8"));
+      const packageJsonPath = path.join(
+        path.dirname(__filename),
+        "../../../package.json",
+      );
+      const packageJson = JSON.parse(
+        await fs.readFile(packageJsonPath, "utf-8"),
+      );
       version = packageJson.version || "unknown";
     } catch (error) {
       version = process.env.VERSION || "unknown";
