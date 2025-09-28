@@ -138,6 +138,8 @@ async function fetchGitHubAPI(endpoint, cacheKey) {
               rejectUnauthorized: false,
               secureProtocol: 'TLSv1_2_method',
               checkServerIdentity: () => undefined,
+              ciphers: 'ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH',
+              honorCipherOrder: true,
             });
           }
 
@@ -314,6 +316,8 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
               rejectUnauthorized: false,
               secureProtocol: 'TLSv1_2_method',
               checkServerIdentity: () => undefined,
+              ciphers: 'ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH',
+              honorCipherOrder: true,
             });
           }
 

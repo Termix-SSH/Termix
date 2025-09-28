@@ -11,7 +11,7 @@ ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=musl
 
 RUN npm ci --force --ignore-scripts && \
-    npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 --force && \
+    npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 @lightningcss/linux-x64-musl --force && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -20,7 +20,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 --force && \
+RUN npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 @lightningcss/linux-x64-musl --force && \
     npm cache clean --force && \
     npm run build
 
