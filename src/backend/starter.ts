@@ -1,7 +1,7 @@
-import "dotenv/config";
 import dotenv from "dotenv";
 import { promises as fs } from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
@@ -10,17 +10,27 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
 
 (async () => {
   try {
+    dotenv.config({ quiet: true });
+    
     const dataDir = process.env.DATA_DIR || "./db/data";
     const envPath = path.join(dataDir, ".env");
     try {
       await fs.access(envPath);
-      const persistentConfig = dotenv.config({ path: envPath });
+      const persistentConfig = dotenv.config({ path: envPath, quiet: true });
       if (persistentConfig.parsed) {
         Object.assign(process.env, persistentConfig.parsed);
       }
     } catch {}
-
-    const version = process.env.VERSION || "unknown";
+    
+    let version = "unknown";
+    try {
+      const __filename = fileURLToPath(import.meta.url);
+      const packageJsonPath = path.join(path.dirname(__filename), "../../../package.json");
+      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf-8"));
+      version = packageJson.version || "unknown";
+    } catch (error) {
+      version = process.env.VERSION || "unknown";
+    }
     versionLogger.info(`Termix Backend starting - Version: ${version}`, {
       operation: "startup",
       version: version,

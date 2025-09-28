@@ -18,6 +18,15 @@ export class AutoSSLSetup {
   private static readonly ENV_FILE = path.join(AutoSSLSetup.DATA_DIR, ".env");
 
   static async initialize(): Promise<void> {
+    if (process.env.ENABLE_SSL !== "true") {
+      systemLogger.info("SSL not enabled - skipping certificate generation", {
+        operation: "ssl_disabled_default",
+        enable_ssl: process.env.ENABLE_SSL || "undefined",
+        note: "Set ENABLE_SSL=true to enable SSL certificate generation",
+      });
+      return;
+    }
+
     try {
       if (await this.isSSLConfigured()) {
         await this.logCertificateInfo();
@@ -75,10 +84,6 @@ export class AutoSSLSetup {
   }
 
   private static async generateSSLCertificates(): Promise<void> {
-    systemLogger.info("Generating SSL certificates for local development...", {
-      operation: "ssl_cert_generation",
-    });
-
     try {
       try {
         execSync("openssl version", { stdio: "pipe" });
