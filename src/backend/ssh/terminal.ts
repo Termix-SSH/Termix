@@ -77,12 +77,6 @@ const wss = new WebSocketServer({
   },
 });
 
-sshLogger.success("SSH Terminal WebSocket server started with authentication", {
-  operation: "server_start",
-  port: 30002,
-  features: ["JWT_auth", "connection_limits", "data_access_control"],
-});
-
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
   let userPayload: any;

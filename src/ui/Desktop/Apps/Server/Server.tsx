@@ -136,10 +136,8 @@ export function Server({
       fetchStatus();
       fetchMetrics();
       intervalId = window.setInterval(() => {
-        if (isVisible) {
-          fetchStatus();
-          fetchMetrics();
-        }
+        fetchStatus();
+        fetchMetrics();
       }, 30000);
     }
 

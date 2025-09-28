@@ -237,7 +237,7 @@ export function TunnelObject({
                                     rel="noopener noreferrer"
                                     className="underline text-blue-600 dark:text-blue-400"
                                   >
-                                    Discord
+                                    {t("tunnels.discord")}
                                   </a>{" "}
                                   or create a{" "}
                                   <a
@@ -246,9 +246,9 @@ export function TunnelObject({
                                     rel="noopener noreferrer"
                                     className="underline text-blue-600 dark:text-blue-400"
                                   >
-                                    GitHub issue
+                                    {t("tunnels.githubIssue")}
                                   </a>{" "}
-                                  for help.
+                                  {t("tunnels.forHelp")}.
                                 </div>
                               </>
                             )}
@@ -471,7 +471,7 @@ export function TunnelObject({
                                     rel="noopener noreferrer"
                                     className="underline text-blue-600 dark:text-blue-400"
                                   >
-                                    Discord
+                                    {t("tunnels.discord")}
                                   </a>{" "}
                                   or create a{" "}
                                   <a
@@ -480,9 +480,9 @@ export function TunnelObject({
                                     rel="noopener noreferrer"
                                     className="underline text-blue-600 dark:text-blue-400"
                                   >
-                                    GitHub issue
+                                    {t("tunnels.githubIssue")}
                                   </a>{" "}
-                                  for help.
+                                  {t("tunnels.forHelp")}.
                                 </div>
                               </>
                             )}

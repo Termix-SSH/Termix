@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { TunnelViewer } from "@/ui/Desktop/Apps/Tunnel/TunnelViewer.tsx";
 import {
   getSSHHosts,
@@ -15,6 +16,7 @@ import type {
 } from "../../../types/index.js";
 
 export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
+  const { t } = useTranslation();
   const [allHosts, setAllHosts] = useState<SSHHost[]>([]);
   const [visibleHosts, setVisibleHosts] = useState<SSHHost[]>([]);
   const [tunnelStatuses, setTunnelStatuses] = useState<
@@ -114,7 +116,7 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
 
   useEffect(() => {
     fetchTunnelStatuses();
-    const interval = setInterval(fetchTunnelStatuses, 500);
+    const interval = setInterval(fetchTunnelStatuses, 5000);
     return () => clearInterval(interval);
   }, [fetchTunnelStatuses]);
 
@@ -137,7 +139,7 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
         );
 
         if (!endpointHost) {
-          throw new Error("Endpoint host not found");
+          throw new Error(t("tunnels.endpointHostNotFound"));
         }
 
         const tunnelConfig = {

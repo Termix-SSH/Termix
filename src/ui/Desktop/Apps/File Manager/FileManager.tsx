@@ -96,6 +96,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  const [isClosing, setIsClosing] = useState<boolean>(false);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -178,6 +179,18 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       keepaliveTimerRef.current = null;
     }
   }, []);
+
+  const handleCloseWithError = useCallback(
+    (errorMessage: string) => {
+      if (isClosing) return; // Prevent duplicate calls
+      setIsClosing(true);
+      toast.error(errorMessage);
+      if (onClose) {
+        onClose();
+      }
+    },
+    [isClosing, onClose],
+  );
 
   useEffect(() => {
     if (currentHost) {
@@ -286,12 +299,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
     } catch (error: any) {
       console.error("SSH connection failed:", error);
-      toast.error(
+      handleCloseWithError(
         t("fileManager.failedToConnect") + ": " + (error.message || error),
       );
-      if (onClose) {
-        onClose();
-      }
     } finally {
       setIsLoading(false);
     }
@@ -342,9 +352,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             error.message?.includes("connection") ||
             error.message?.includes("SSH")
           ) {
-            if (onClose) {
-              onClose();
-            }
+            handleCloseWithError(
+              t("fileManager.failedToLoadDirectory") +
+                ": " +
+                (error.message || error),
+            );
           }
         }
       } finally {
@@ -1104,9 +1116,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         });
       }
     } catch (error) {
-      if (onClose) {
-        onClose();
-      }
+      handleCloseWithError(
+        `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
+      );
       throw error;
     } finally {
       setIsReconnecting(false);

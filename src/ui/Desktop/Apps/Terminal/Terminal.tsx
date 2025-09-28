@@ -617,9 +617,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         const jwtToken = getCookie("jwt");
 
         if (!jwtToken || jwtToken.trim() === "") {
-          console.warn(
-            "WebSocket connection delayed - no authentication token",
-          );
           setIsConnected(false);
           setIsConnecting(false);
           setConnectionError("Authentication required");

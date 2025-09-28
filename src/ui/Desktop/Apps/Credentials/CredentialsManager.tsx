@@ -91,12 +91,49 @@ export function CredentialsManager({
   const [availableHosts, setAvailableHosts] = useState<any[]>([]);
   const [selectedHostId, setSelectedHostId] = useState<string>("");
   const [deployLoading, setDeployLoading] = useState(false);
+  const [hostSearchQuery, setHostSearchQuery] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const dragCounter = useRef(0);
 
   useEffect(() => {
     fetchCredentials();
     fetchHosts();
   }, []);
+
+  useEffect(() => {
+    if (showDeployDialog) {
+      setDropdownOpen(false);
+      setHostSearchQuery("");
+      setTimeout(() => {
+        const activeElement = document.activeElement as HTMLElement;
+        if (activeElement && activeElement.blur) {
+          activeElement.blur();
+        }
+      }, 100);
+    }
+  }, [showDeployDialog]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    }
+
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownOpen]);
 
   const fetchHosts = async () => {
     try {
@@ -137,6 +174,8 @@ export function CredentialsManager({
     }
     setDeployingCredential(credential);
     setSelectedHostId("");
+    setHostSearchQuery("");
+    setDropdownOpen(false);
     setShowDeployDialog(true);
   };
 
@@ -789,145 +828,209 @@ export function CredentialsManager({
 
       <Sheet open={showDeployDialog} onOpenChange={setShowDeployDialog}>
         <SheetContent className="w-[500px] max-w-[50vw] overflow-y-auto">
-          <SheetHeader className="space-y-6 pb-8">
-            <SheetTitle className="flex items-center space-x-4">
-              <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                <Upload className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xl font-semibold">Deploy SSH Key</div>
-                <div className="text-sm font-normal text-zinc-600 dark:text-zinc-400 mt-1">
-                  Deploy public key to target server
+          <div className="px-4 py-4">
+            <div className="space-y-3 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                  <Upload className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-
-          <div className="space-y-6">
-            {deployingCredential && (
-              <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 bg-zinc-50 dark:bg-zinc-900/50">
-                <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3 flex items-center">
-                  <Key className="h-4 w-4 mr-2 text-zinc-500" />
-                  Source Credential
-                </h4>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800">
-                      <User className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Name
-                      </div>
-                      <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                        {deployingCredential.name ||
-                          deployingCredential.username}
-                      </div>
-                    </div>
+                <div className="flex-1">
+                  <div className="text-lg font-semibold">
+                    {t("credentials.deploySSHKey")}
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800">
-                      <User className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Username
-                      </div>
-                      <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                        {deployingCredential.username}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800">
-                      <Key className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Key Type
-                      </div>
-                      <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                        {deployingCredential.keyType || "SSH Key"}
-                      </div>
-                    </div>
+                  <div className="text-sm text-muted-foreground">
+                    {t("credentials.deploySSHKeyDescription")}
                   </div>
                 </div>
               </div>
-            )}
-
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center">
-                <Server className="h-4 w-4 mr-2 text-zinc-500" />
-                Target Host
-              </label>
-              <Select value={selectedHostId} onValueChange={setSelectedHostId}>
-                <SelectTrigger className="h-12 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
-                  <SelectValue placeholder="Choose a host to deploy to..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableHosts.map((host) => (
-                    <SelectItem key={host.id} value={host.id.toString()}>
-                      <div className="flex items-center gap-3 py-1">
-                        <div className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800">
-                          <Server className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-zinc-800 dark:text-zinc-200">
-                            {host.name || host.ip}
-                          </div>
-                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {host.username}@{host.ip}:{host.port}
-                          </div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
-            <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
-              <div className="flex items-start space-x-3">
-                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-blue-800 dark:text-blue-200">
-                  <p className="font-medium mb-1">Deployment Process</p>
-                  <p className="text-blue-700 dark:text-blue-300">
-                    This will safely add the public key to the target host's
-                    ~/.ssh/authorized_keys file without overwriting existing
-                    keys. The operation is reversible.
-                  </p>
+            <div className="space-y-4">
+              {deployingCredential && (
+                <div className="border rounded-lg p-3 bg-muted/20">
+                  <h4 className="text-sm font-semibold mb-2 flex items-center">
+                    <Key className="h-4 w-4 mr-2 text-muted-foreground" />
+                    {t("credentials.sourceCredential")}
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-3 px-2 py-1">
+                      <div className="p-1.5 rounded bg-muted">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-muted-foreground">
+                          {t("common.name")}
+                        </div>
+                        <div className="text-sm font-medium">
+                          {deployingCredential.name ||
+                            deployingCredential.username}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3 px-2 py-1">
+                      <div className="p-1.5 rounded bg-muted">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-muted-foreground">
+                          {t("common.username")}
+                        </div>
+                        <div className="text-sm font-medium">
+                          {deployingCredential.username}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3 px-2 py-1">
+                      <div className="p-1.5 rounded bg-muted">
+                        <Key className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-muted-foreground">
+                          {t("credentials.keyType")}
+                        </div>
+                        <div className="text-sm font-medium">
+                          {deployingCredential.keyType || "SSH Key"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold flex items-center">
+                  <Server className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {t("credentials.targetHost")}
+                </label>
+                <div className="relative" ref={dropdownRef}>
+                  <Input
+                    placeholder={t("credentials.chooseHostToDeploy")}
+                    value={hostSearchQuery}
+                    onChange={(e) => {
+                      setHostSearchQuery(e.target.value);
+                      if (e.target.value.trim() !== "") {
+                        setDropdownOpen(true);
+                      } else {
+                        setDropdownOpen(false);
+                      }
+                    }}
+                    onFocus={() => {
+                      setDropdownOpen(true);
+                    }}
+                    className="w-full"
+                    autoFocus={false}
+                  />
+                  {dropdownOpen && (
+                    <div className="absolute top-full left-0 z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {availableHosts.length === 0 ? (
+                        <div className="p-3 text-sm text-muted-foreground text-center">
+                          {t("credentials.noHostsAvailable")}
+                        </div>
+                      ) : availableHosts.filter(
+                          (host) =>
+                            !hostSearchQuery ||
+                            host.name
+                              ?.toLowerCase()
+                              .includes(hostSearchQuery.toLowerCase()) ||
+                            host.ip
+                              ?.toLowerCase()
+                              .includes(hostSearchQuery.toLowerCase()) ||
+                            host.username
+                              ?.toLowerCase()
+                              .includes(hostSearchQuery.toLowerCase()),
+                        ).length === 0 ? (
+                        <div className="p-3 text-sm text-muted-foreground text-center">
+                          {t("credentials.noHostsMatchSearch")}
+                        </div>
+                      ) : (
+                        availableHosts
+                          .filter(
+                            (host) =>
+                              !hostSearchQuery ||
+                              host.name
+                                ?.toLowerCase()
+                                .includes(hostSearchQuery.toLowerCase()) ||
+                              host.ip
+                                ?.toLowerCase()
+                                .includes(hostSearchQuery.toLowerCase()) ||
+                              host.username
+                                ?.toLowerCase()
+                                .includes(hostSearchQuery.toLowerCase()),
+                          )
+                          .map((host) => (
+                            <div
+                              key={host.id}
+                              className="flex items-center gap-3 py-2 px-3 hover:bg-muted cursor-pointer"
+                              onClick={() => {
+                                setSelectedHostId(host.id.toString());
+                                setHostSearchQuery(host.name || host.ip);
+                                setDropdownOpen(false);
+                              }}
+                            >
+                              <div className="p-1.5 rounded bg-muted">
+                                <Server className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium text-foreground">
+                                  {host.name || host.ip}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {host.username}@{host.ip}:{host.port}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
+                <div className="flex items-start space-x-2">
+                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-800 dark:text-blue-200 mb-1">
+                      {t("credentials.deploymentProcess")}
+                    </p>
+                    <p className="text-blue-700 dark:text-blue-300">
+                      {t("credentials.deploymentProcessDescription")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeployDialog(false)}
+                    disabled={deployLoading}
+                    className="flex-1"
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    onClick={performDeploy}
+                    disabled={!selectedHostId || deployLoading}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {deployLoading ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                        {t("credentials.deploying")}
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <Upload className="h-4 w-4 mr-2" />
+                        {t("credentials.deploySSHKey")}
+                      </div>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
           </div>
-
-          <SheetFooter className="mt-8 flex space-x-3">
-            <Button
-              variant="outline"
-              onClick={() => setShowDeployDialog(false)}
-              disabled={deployLoading}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={performDeploy}
-              disabled={!selectedHostId || deployLoading}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-            >
-              {deployLoading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                  Deploying...
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Deploy SSH Key
-                </div>
-              )}
-            </Button>
-          </SheetFooter>
         </SheetContent>
       </Sheet>
     </div>

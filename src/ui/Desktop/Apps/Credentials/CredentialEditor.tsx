@@ -377,7 +377,6 @@ export function CredentialEditor({
   };
 
   const [tagInput, setTagInput] = useState("");
-  const [keyGenerationPassphrase, setKeyGenerationPassphrase] = useState("");
 
   const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -440,10 +439,10 @@ export function CredentialEditor({
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="general" className="pt-2">
-                <FormLabel className="mb-3 font-bold">
+                <FormLabel className="mb-2 font-bold">
                   {t("credentials.basicInformation")}
                 </FormLabel>
-                <div className="grid grid-cols-12 gap-4">
+                <div className="grid grid-cols-12 gap-3">
                   <FormField
                     control={form.control}
                     name="name"
@@ -476,10 +475,10 @@ export function CredentialEditor({
                     )}
                   />
                 </div>
-                <FormLabel className="mb-3 mt-3 font-bold">
+                <FormLabel className="mb-2 mt-4 font-bold">
                   {t("credentials.organization")}
                 </FormLabel>
-                <div className="grid grid-cols-26 gap-4">
+                <div className="grid grid-cols-26 gap-3">
                   <FormField
                     control={form.control}
                     name="description"
@@ -623,7 +622,7 @@ export function CredentialEditor({
                 </div>
               </TabsContent>
               <TabsContent value="authentication">
-                <FormLabel className="mb-3 font-bold">
+                <FormLabel className="mb-2 font-bold">
                   {t("credentials.authentication")}
                 </FormLabel>
                 <Tabs
@@ -670,29 +669,15 @@ export function CredentialEditor({
                     />
                   </TabsContent>
                   <TabsContent value="key">
-                    <div className="mt-4">
-                      {/* Generate Key Pair Buttons */}
-                      <div className="mb-4 p-4 bg-muted/20 border border-muted rounded-md">
-                        <FormLabel className="mb-3 font-bold block">
+                    <div className="mt-2">
+                      <div className="mb-3 p-3 bg-muted/20 border border-muted rounded-md">
+                        <FormLabel className="mb-2 font-bold block">
                           {t("credentials.generateKeyPair")}
                         </FormLabel>
 
-                        {/* Key Generation Passphrase Input */}
-                        <div className="mb-3">
-                          <FormLabel className="text-sm mb-2 block">
-                            {t("credentials.keyPassword")} (
-                            {t("credentials.optional")})
-                          </FormLabel>
-                          <PasswordInput
-                            placeholder={t("placeholders.keyPassword")}
-                            value={keyGenerationPassphrase}
-                            onChange={(e) =>
-                              setKeyGenerationPassphrase(e.target.value)
-                            }
-                            className="max-w-xs"
-                          />
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {t("credentials.keyPassphraseOptional")}
+                        <div className="mb-2">
+                          <div className="text-sm text-muted-foreground">
+                            {t("credentials.generateKeyPairDescription")}
                           </div>
                         </div>
 
@@ -703,24 +688,20 @@ export function CredentialEditor({
                             size="sm"
                             onClick={async () => {
                               try {
+                                const currentKeyPassword =
+                                  form.watch("keyPassword");
                                 const result = await generateKeyPair(
                                   "ssh-ed25519",
                                   undefined,
-                                  keyGenerationPassphrase,
+                                  currentKeyPassword,
                                 );
 
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  if (keyGenerationPassphrase) {
-                                    form.setValue(
-                                      "keyPassword",
-                                      keyGenerationPassphrase,
-                                    );
-                                  }
                                   debouncedKeyDetection(
                                     result.privateKey,
-                                    keyGenerationPassphrase,
+                                    currentKeyPassword,
                                   );
                                   debouncedPublicKeyDetection(result.publicKey);
                                   toast.success(
@@ -754,24 +735,20 @@ export function CredentialEditor({
                             size="sm"
                             onClick={async () => {
                               try {
+                                const currentKeyPassword =
+                                  form.watch("keyPassword");
                                 const result = await generateKeyPair(
                                   "ecdsa-sha2-nistp256",
                                   undefined,
-                                  keyGenerationPassphrase,
+                                  currentKeyPassword,
                                 );
 
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  if (keyGenerationPassphrase) {
-                                    form.setValue(
-                                      "keyPassword",
-                                      keyGenerationPassphrase,
-                                    );
-                                  }
                                   debouncedKeyDetection(
                                     result.privateKey,
-                                    keyGenerationPassphrase,
+                                    currentKeyPassword,
                                   );
                                   debouncedPublicKeyDetection(result.publicKey);
                                   toast.success(
@@ -805,24 +782,20 @@ export function CredentialEditor({
                             size="sm"
                             onClick={async () => {
                               try {
+                                const currentKeyPassword =
+                                  form.watch("keyPassword");
                                 const result = await generateKeyPair(
                                   "ssh-rsa",
                                   2048,
-                                  keyGenerationPassphrase,
+                                  currentKeyPassword,
                                 );
 
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  if (keyGenerationPassphrase) {
-                                    form.setValue(
-                                      "keyPassword",
-                                      keyGenerationPassphrase,
-                                    );
-                                  }
                                   debouncedKeyDetection(
                                     result.privateKey,
-                                    keyGenerationPassphrase,
+                                    currentKeyPassword,
                                   );
                                   debouncedPublicKeyDetection(result.publicKey);
                                   toast.success(
@@ -851,20 +824,17 @@ export function CredentialEditor({
                             {t("credentials.generateRSA")}
                           </Button>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-2">
-                          {t("credentials.generateKeyPairNote")}
-                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 items-start">
+                      <div className="grid grid-cols-2 gap-3 items-start">
                         <Controller
                           control={form.control}
                           name="key"
                           render={({ field }) => (
-                            <FormItem className="mb-4 flex flex-col">
-                              <FormLabel className="mb-2 min-h-[20px]">
+                            <FormItem className="mb-3 flex flex-col">
+                              <FormLabel className="mb-1 min-h-[20px]">
                                 {t("credentials.sshPrivateKey")}
                               </FormLabel>
-                              <div className="mb-2">
+                              <div className="mb-1">
                                 <div className="relative inline-block w-full">
                                   <input
                                     id="key-upload"
@@ -968,12 +938,11 @@ export function CredentialEditor({
                           control={form.control}
                           name="publicKey"
                           render={({ field }) => (
-                            <FormItem className="mb-4 flex flex-col">
-                              <FormLabel className="mb-2 min-h-[20px]">
-                                {t("credentials.sshPublicKey")} (
-                                {t("credentials.optional")})
+                            <FormItem className="mb-3 flex flex-col">
+                              <FormLabel className="mb-1 min-h-[20px]">
+                                {t("credentials.sshPublicKey")}
                               </FormLabel>
-                              <div className="mb-2 flex gap-2">
+                              <div className="mb-1 flex gap-2">
                                 <div className="relative inline-block flex-1">
                                   <input
                                     id="public-key-upload"
@@ -1100,9 +1069,6 @@ export function CredentialEditor({
                                   ]}
                                 />
                               </FormControl>
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {t("credentials.publicKeyNote")}
-                              </div>
                               {detectedPublicKeyType && field.value && (
                                 <div className="text-sm mt-2">
                                   <span className="text-muted-foreground">
@@ -1131,7 +1097,7 @@ export function CredentialEditor({
                           )}
                         />
                       </div>
-                      <div className="grid grid-cols-8 gap-4 mt-4">
+                      <div className="grid grid-cols-8 gap-3 mt-3">
                         <FormField
                           control={form.control}
                           name="keyPassword"
