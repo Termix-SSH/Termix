@@ -1,19 +1,16 @@
 # Stage 1: Install dependencies and build frontend
-FROM node:22-alpine AS deps
+FROM node:22-bullseye AS deps
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++ 
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/* 
 
 COPY package*.json ./
 
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=musl
+ENV npm_config_target_libc=glibc
 
 RUN npm ci --force --ignore-scripts && \
-    if [ "$(uname -m)" = "x86_64" ]; then \
-        npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 --force; \
-    fi && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -22,10 +19,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN if [ "$(uname -m)" = "x86_64" ]; then \
-        npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 --force; \
-    fi && \
-    npm cache clean --force && \
+RUN npm cache clean --force && \
     npm run build
 
 # Stage 3: Build backend TypeScript
@@ -36,37 +30,38 @@ COPY . .
 
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=musl
+ENV npm_config_target_libc=glibc
 
 RUN npm rebuild better-sqlite3 --force
 
 RUN npm run build:backend
 
 # Stage 4: Production dependencies only
-FROM node:22-alpine AS production-deps
+FROM node:22-bullseye AS production-deps
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=musl
+ENV npm_config_target_libc=glibc
 
 RUN npm ci --only=production --ignore-scripts --force && \
     npm rebuild better-sqlite3 bcryptjs --force && \
     npm cache clean --force
 
 # Stage 5: Final optimized image
-FROM node:22-alpine
+FROM node:22-bullseye
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apk add --no-cache nginx gettext su-exec openssl && \
+RUN apt-get update && apt-get install -y nginx gettext-base openssl && \
+    rm -rf /var/lib/apt/lists/* && \
     mkdir -p /app/data && \
     chown -R node:node /app/data
 
