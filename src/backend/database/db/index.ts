@@ -126,15 +126,18 @@ async function initializeCompleteDatabase(): Promise<void> {
         password_hash TEXT NOT NULL,
         is_admin INTEGER NOT NULL DEFAULT 0,
         is_oidc INTEGER NOT NULL DEFAULT 0,
-        client_id TEXT NOT NULL,
-        client_secret TEXT NOT NULL,
-        issuer_url TEXT NOT NULL,
-        authorization_url TEXT NOT NULL,
-        token_url TEXT NOT NULL,
-        redirect_uri TEXT,
-        identifier_path TEXT NOT NULL,
-        name_path TEXT NOT NULL,
-        scopes TEXT NOT NULL
+        oidc_identifier TEXT,
+        client_id TEXT,
+        client_secret TEXT,
+        issuer_url TEXT,
+        authorization_url TEXT,
+        token_url TEXT,
+        identifier_path TEXT,
+        name_path TEXT,
+        scopes TEXT DEFAULT 'openid email profile',
+        totp_secret TEXT,
+        totp_enabled INTEGER NOT NULL DEFAULT 0,
+        totp_backup_codes TEXT
     );
 
     CREATE TABLE IF NOT EXISTS settings (

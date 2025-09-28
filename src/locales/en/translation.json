@@ -226,7 +226,10 @@
     "downloadUpdate": "Download Update",
     "dismiss": "Dismiss",
     "checking": "Checking for updates...",
-    "checkUpdates": "Check for Updates"
+    "checkUpdates": "Check for Updates",
+    "checkingUpdates": "Checking for updates...",
+    "refresh": "Refresh",
+    "updateRequired": "Update Required"
   },
   "common": {
     "close": "Close",
@@ -1207,7 +1210,7 @@
     "databaseConnected": "Database connected successfully",
     "databaseConnectionFailed": "Failed to connect to the database server",
     "checkServerConnection": "Please check your server connection and try again",
-    "resetCodeSent": "Reset code sent to your email",
+    "resetCodeSent": "Reset code sent to Docker logs",
     "codeVerified": "Code verified successfully",
     "passwordResetSuccess": "Password reset successfully",
     "loginSuccess": "Login successful",

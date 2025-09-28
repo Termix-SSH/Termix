@@ -9,7 +9,6 @@ COPY package*.json ./
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 RUN npm ci --force --ignore-scripts && \
     npm cache clean --force
@@ -20,11 +19,7 @@ WORKDIR /app
 
 COPY . .
 
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-ENV NODE_ENV=production
-
 RUN npm run build
-RUN npm run build:types
 
 # Stage 3: Build backend TypeScript
 FROM deps AS backend-builder
@@ -35,8 +30,6 @@ COPY . .
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-ENV NODE_ENV=production
 
 RUN npm rebuild better-sqlite3 --force
 
@@ -46,14 +39,13 @@ RUN npm run build:backend
 FROM node:24-alpine AS production-deps
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++ 
+RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 RUN npm ci --only=production --ignore-scripts --force && \
     npm rebuild better-sqlite3 bcryptjs --force && \

@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { promises as fs } from "fs";
+import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
@@ -23,18 +24,52 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     } catch {}
 
     let version = "unknown";
-    try {
-      const __filename = fileURLToPath(import.meta.url);
-      const packageJsonPath = path.join(
-        path.dirname(__filename),
-        "../../../package.json",
-      );
-      const packageJson = JSON.parse(
-        await fs.readFile(packageJsonPath, "utf-8"),
-      );
-      version = packageJson.version || "unknown";
-    } catch (error) {
-      version = process.env.VERSION || "unknown";
+    
+    const versionSources = [
+      () => process.env.VERSION,
+      () => {
+        try {
+          const packageJsonPath = path.join(process.cwd(), "package.json");
+          const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+          return packageJson.version;
+        } catch {
+          return null;
+        }
+      },
+      () => {
+        try {
+          const __filename = fileURLToPath(import.meta.url);
+          const packageJsonPath = path.join(
+            path.dirname(__filename),
+            "../../../package.json",
+          );
+          const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+          return packageJson.version;
+        } catch {
+          return null;
+        }
+      },
+      () => {
+        try {
+          const packageJsonPath = path.join("/app", "package.json");
+          const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+          return packageJson.version;
+        } catch {
+          return null;
+        }
+      }
+    ];
+
+    for (const getVersion of versionSources) {
+      try {
+        const foundVersion = getVersion();
+        if (foundVersion && foundVersion !== "unknown") {
+          version = foundVersion;
+          break;
+        }
+      } catch (error) {
+        continue;
+      }
     }
     versionLogger.info(`Termix Backend starting - Version: ${version}`, {
       operation: "startup",
@@ -50,79 +85,6 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
 
     const dbModule = await import("./database/db/index.js");
     await dbModule.initializeDatabase();
-    if (process.env.NODE_ENV === "production") {
-      const securityIssues: string[] = [];
-
-      if (!process.env.JWT_SECRET) {
-        systemLogger.warn(
-          "JWT_SECRET not set - using auto-generated keys (consider setting for production)",
-          {
-            operation: "security_warning",
-            note: "Auto-generated keys are secure but not persistent across deployments",
-          },
-        );
-      } else if (process.env.JWT_SECRET.length < 64) {
-        securityIssues.push(
-          "JWT_SECRET should be at least 64 characters in production",
-        );
-      }
-
-      if (!process.env.DATABASE_KEY) {
-        systemLogger.warn(
-          "DATABASE_KEY not set - using auto-generated keys (consider setting for production)",
-          {
-            operation: "security_warning",
-            note: "Auto-generated keys are secure but not persistent across deployments",
-          },
-        );
-      } else if (process.env.DATABASE_KEY.length < 64) {
-        securityIssues.push(
-          "DATABASE_KEY should be at least 64 characters in production",
-        );
-      }
-
-      if (!process.env.INTERNAL_AUTH_TOKEN) {
-        systemLogger.warn(
-          "INTERNAL_AUTH_TOKEN not set - using auto-generated token (consider setting for production)",
-          {
-            operation: "security_warning",
-            note: "Auto-generated tokens are secure but not persistent across deployments",
-          },
-        );
-      } else if (process.env.INTERNAL_AUTH_TOKEN.length < 32) {
-        securityIssues.push(
-          "INTERNAL_AUTH_TOKEN should be at least 32 characters in production",
-        );
-      }
-
-      if (process.env.DB_FILE_ENCRYPTION === "false") {
-        securityIssues.push(
-          "Database file encryption should be enabled in production",
-        );
-      }
-
-      systemLogger.warn(
-        "Production deployment detected - ensure CORS is properly configured",
-        {
-          operation: "security_checks",
-          warning: "Verify frontend domain whitelist",
-        },
-      );
-
-      if (securityIssues.length > 0) {
-        systemLogger.error("SECURITY ISSUES DETECTED IN PRODUCTION:", {
-          operation: "security_checks_failed",
-          issues: securityIssues,
-        });
-        for (const issue of securityIssues) {
-          systemLogger.error(`- ${issue}`, { operation: "security_issue" });
-        }
-        systemLogger.error("Fix these issues before running in production!", {
-          operation: "security_checks_failed",
-        });
-        process.exit(1);
-      }
-    }
 
     const authManager = AuthManager.getInstance();
     await authManager.initialize();

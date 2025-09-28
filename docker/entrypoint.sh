@@ -32,11 +32,9 @@ if [ "$ENABLE_SSL" = "true" ]; then
 
     DOMAIN=${SSL_DOMAIN:-localhost}
     
-    # Check if certificates already exist and are valid
     if [ -f "/app/data/ssl/termix.crt" ] && [ -f "/app/data/ssl/termix.key" ]; then
         echo "SSL certificates found, checking validity..."
         
-        # Check if certificate is still valid (not expired within 30 days)
         if openssl x509 -in /app/data/ssl/termix.crt -checkend 2592000 -noout >/dev/null 2>&1; then
             echo "SSL certificates are valid and will be reused for domain: $DOMAIN"
         else
@@ -47,7 +45,6 @@ if [ "$ENABLE_SSL" = "true" ]; then
         echo "SSL certificates not found, will generate new ones..."
     fi
     
-    # Generate certificates only if they don't exist or are invalid
     if [ ! -f "/app/data/ssl/termix.crt" ] || [ ! -f "/app/data/ssl/termix.key" ]; then
         echo "Generating SSL certificates for domain: $DOMAIN"
 
@@ -100,6 +97,18 @@ nginx
 echo "Starting backend services..."
 cd /app
 export NODE_ENV=production
+
+if [ -f "package.json" ]; then
+    VERSION=$(grep '"version"' package.json | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+    if [ -n "$VERSION" ]; then
+        export VERSION
+        echo "Detected version: $VERSION"
+    else
+        echo "Warning: Could not extract version from package.json"
+    fi
+else
+    echo "Warning: package.json not found"
+fi
 
 if command -v su-exec > /dev/null 2>&1; then
   su-exec node node dist/backend/backend/starter.js

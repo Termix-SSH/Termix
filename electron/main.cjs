@@ -126,26 +126,31 @@ async function fetchGitHubAPI(endpoint, cacheKey) {
           const isHttps = urlObj.protocol === "https:";
           const client = isHttps ? https : http;
 
-          const req = client.request(
-            url,
-            {
-              method: options.method || "GET",
-              headers: options.headers || {},
-              timeout: options.timeout || 10000,
-            },
-            (res) => {
-              let data = "";
-              res.on("data", (chunk) => (data += chunk));
-              res.on("end", () => {
-                resolve({
-                  ok: res.statusCode >= 200 && res.statusCode < 300,
-                  status: res.statusCode,
-                  text: () => Promise.resolve(data),
-                  json: () => Promise.resolve(JSON.parse(data)),
-                });
+          const requestOptions = {
+            method: options.method || "GET",
+            headers: options.headers || {},
+            timeout: options.timeout || 10000,
+          };
+
+          if (isHttps) {
+            requestOptions.rejectUnauthorized = false;
+            requestOptions.agent = new https.Agent({
+              rejectUnauthorized: false,
+            });
+          }
+
+          const req = client.request(url, requestOptions, (res) => {
+            let data = "";
+            res.on("data", (chunk) => (data += chunk));
+            res.on("end", () => {
+              resolve({
+                ok: res.statusCode >= 200 && res.statusCode < 300,
+                status: res.statusCode,
+                text: () => Promise.resolve(data),
+                json: () => Promise.resolve(JSON.parse(data)),
               });
-            },
-          );
+            });
+          });
 
           req.on("error", reject);
           req.on("timeout", () => {
@@ -295,26 +300,31 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
           const isHttps = urlObj.protocol === "https:";
           const client = isHttps ? https : http;
 
-          const req = client.request(
-            url,
-            {
-              method: options.method || "GET",
-              headers: options.headers || {},
-              timeout: options.timeout || 5000,
-            },
-            (res) => {
-              let data = "";
-              res.on("data", (chunk) => (data += chunk));
-              res.on("end", () => {
-                resolve({
-                  ok: res.statusCode >= 200 && res.statusCode < 300,
-                  status: res.statusCode,
-                  text: () => Promise.resolve(data),
-                  json: () => Promise.resolve(JSON.parse(data)),
-                });
+          const requestOptions = {
+            method: options.method || "GET",
+            headers: options.headers || {},
+            timeout: options.timeout || 5000,
+          };
+
+          if (isHttps) {
+            requestOptions.rejectUnauthorized = false;
+            requestOptions.agent = new https.Agent({
+              rejectUnauthorized: false,
+            });
+          }
+
+          const req = client.request(url, requestOptions, (res) => {
+            let data = "";
+            res.on("data", (chunk) => (data += chunk));
+            res.on("end", () => {
+              resolve({
+                ok: res.statusCode >= 200 && res.statusCode < 300,
+                status: res.statusCode,
+                text: () => Promise.resolve(data),
+                json: () => Promise.resolve(JSON.parse(data)),
               });
-            },
-          );
+            });
+          });
 
           req.on("error", reject);
           req.on("timeout", () => {

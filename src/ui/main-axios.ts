@@ -526,8 +526,12 @@ function handleApiError(error: unknown, operation: string): never {
         `Auth failed: ${method} ${url} - ${message}`,
         errorContext,
       );
+      
+      const isLoginEndpoint = url?.includes('/users/login');
+      const errorMessage = isLoginEndpoint ? message : "Authentication required. Please log in again.";
+      
       throw new ApiError(
-        "Authentication required. Please log in again.",
+        errorMessage,
         401,
         "AUTH_REQUIRED",
       );

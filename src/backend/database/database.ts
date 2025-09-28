@@ -218,14 +218,46 @@ app.get("/version", authenticateJWT, async (req, res) => {
   let localVersion = process.env.VERSION;
 
   if (!localVersion) {
-    try {
-      const packagePath = path.resolve(process.cwd(), "package.json");
-      const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-      localVersion = packageJson.version;
-    } catch (error) {
-      databaseLogger.error("Failed to read version from package.json", error, {
-        operation: "version_check",
-      });
+    const versionSources = [
+      () => {
+        try {
+          const packagePath = path.resolve(process.cwd(), "package.json");
+          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+          return packageJson.version;
+        } catch {
+          return null;
+        }
+      },
+      () => {
+        try {
+          const packagePath = path.resolve("/app", "package.json");
+          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+          return packageJson.version;
+        } catch {
+          return null;
+        }
+      },
+      () => {
+        try {
+          const packagePath = path.resolve(__dirname, "../../../package.json");
+          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+          return packageJson.version;
+        } catch {
+          return null;
+        }
+      }
+    ];
+
+    for (const getVersion of versionSources) {
+      try {
+        const foundVersion = getVersion();
+        if (foundVersion && foundVersion !== "unknown") {
+          localVersion = foundVersion;
+          break;
+        }
+      } catch (error) {
+        continue;
+      }
     }
   }
 

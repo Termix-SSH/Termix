@@ -11,6 +11,7 @@ import { TopNavbar } from "@/ui/Desktop/Navigation/TopNavbar.tsx";
 import { AdminSettings } from "@/ui/Desktop/Admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/Desktop/User/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
+import { VersionCheckModal } from "@/components/ui/version-check-modal.tsx";
 import { getUserInfo, getCookie } from "@/ui/main-axios.ts";
 
 function AppContent() {
@@ -22,6 +23,7 @@ function AppContent() {
   const [username, setUsername] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [showVersionCheck, setShowVersionCheck] = useState(true);
   const [isTopbarOpen, setIsTopbarOpen] = useState<boolean>(true);
   const { currentTab, tabs } = useTabs();
 
@@ -94,6 +96,13 @@ function AppContent() {
 
   return (
     <div>
+      {showVersionCheck && (
+        <VersionCheckModal
+          onDismiss={() => setShowVersionCheck(false)}
+          onContinue={() => setShowVersionCheck(false)}
+        />
+      )}
+
       {!isAuthenticated && !authLoading && (
         <div>
           <div

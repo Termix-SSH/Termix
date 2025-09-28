@@ -224,7 +224,10 @@
     "downloadUpdate": "下载更新",
     "dismiss": "忽略",
     "checking": "正在检查更新...",
-    "checkUpdates": "检查更新"
+    "checkUpdates": "检查更新",
+    "checkingUpdates": "正在检查更新...",
+    "refresh": "刷新",
+    "updateRequired": "需要更新"
   },
   "common": {
     "close": "关闭",
@@ -1184,7 +1187,7 @@
     "databaseConnected": "数据库连接成功",
     "databaseConnectionFailed": "无法连接到数据库服务器",
     "checkServerConnection": "请检查您的服务器连接并重试",
-    "resetCodeSent": "重置代码已发送到您的邮箱",
+    "resetCodeSent": "重置代码已发送到 Docker 日志",
     "codeVerified": "代码验证成功",
     "passwordResetSuccess": "密码重置成功",
     "loginSuccess": "登录成功",
