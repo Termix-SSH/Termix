@@ -218,7 +218,6 @@ const CredentialViewer: React.FC<CredentialViewerProps> = ({
         </SheetHeader>
 
         <div className="space-y-10">
-          {/* Tab Navigation */}
           <div className="flex space-x-2 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg">
             <Button
               variant={activeTab === "overview" ? "default" : "ghost"}
@@ -249,7 +248,6 @@ const CredentialViewer: React.FC<CredentialViewerProps> = ({
             </Button>
           </div>
 
-          {/* Tab Content */}
           {activeTab === "overview" && (
             <div className="grid gap-10 lg:grid-cols-2">
               <Card className="border-zinc-200 dark:border-zinc-700">

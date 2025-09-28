@@ -91,10 +91,8 @@ export function AdminSettings({
     null,
   );
 
-  // Simplified security state
   const [securityInitialized, setSecurityInitialized] = React.useState(true);
 
-  // Database migration state
   const [exportLoading, setExportLoading] = React.useState(false);
   const [importLoading, setImportLoading] = React.useState(false);
   const [importFile, setImportFile] = React.useState<File | null>(null);
@@ -103,9 +101,6 @@ export function AdminSettings({
   const [importPassword, setImportPassword] = React.useState("");
 
   React.useEffect(() => {
-    // JWT is now automatically sent via HttpOnly cookies
-    // No need to check for JWT cookie manually
-
     if (isElectron()) {
       const serverUrl = (window as any).configuredServerUrl;
       if (!serverUrl) {
@@ -147,9 +142,6 @@ export function AdminSettings({
   }, []);
 
   const fetchUsers = async () => {
-    // JWT is now automatically sent via HttpOnly cookies
-    // No need to check for JWT cookie manually
-
     if (isElectron()) {
       const serverUrl = (window as any).configuredServerUrl;
       if (!serverUrl) {
@@ -172,7 +164,6 @@ export function AdminSettings({
 
   const handleToggleRegistration = async (checked: boolean) => {
     setRegLoading(true);
-    // JWT is now automatically sent via HttpOnly cookies
     try {
       await updateRegistrationAllowed(checked);
       setAllowRegistration(checked);
@@ -204,7 +195,6 @@ export function AdminSettings({
       return;
     }
 
-    // JWT is now automatically sent via HttpOnly cookies
     try {
       await updateOIDCConfig(oidcConfig);
       toast.success(t("admin.oidcConfigurationUpdated"));
@@ -226,7 +216,6 @@ export function AdminSettings({
     if (!newAdminUsername.trim()) return;
     setMakeAdminLoading(true);
     setMakeAdminError(null);
-    // JWT is now automatically sent via HttpOnly cookies
     try {
       await makeUserAdmin(newAdminUsername.trim());
       toast.success(t("admin.userIsNowAdmin", { username: newAdminUsername }));
@@ -243,7 +232,6 @@ export function AdminSettings({
 
   const handleRemoveAdminStatus = async (username: string) => {
     confirmWithToast(t("admin.removeAdminStatus", { username }), async () => {
-      // JWT is now automatically sent via HttpOnly cookies
       try {
         await removeAdminStatus(username);
         toast.success(t("admin.adminStatusRemoved", { username }));
@@ -258,7 +246,6 @@ export function AdminSettings({
     confirmWithToast(
       t("admin.deleteUser", { username }),
       async () => {
-        // JWT is now automatically sent via HttpOnly cookies
         try {
           await deleteUser(username);
           toast.success(t("admin.userDeletedSuccessfully", { username }));
@@ -271,14 +258,6 @@ export function AdminSettings({
     );
   };
 
-  const checkSecurityStatus = async () => {
-    // New v2-kek-dek system is always initialized
-    setSecurityInitialized(true);
-  };
-
-
-
-  // Database export/import handlers
   const handleExportDatabase = async () => {
     if (!showPasswordInput) {
       setShowPasswordInput(true);
@@ -292,7 +271,6 @@ export function AdminSettings({
 
     setExportLoading(true);
     try {
-      // JWT is now automatically sent via HttpOnly cookies
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/export`
         : "http://localhost:30001/database/export";
@@ -302,18 +280,19 @@ export function AdminSettings({
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // Include HttpOnly cookies
+        credentials: "include",
         body: JSON.stringify({ password: exportPassword }),
       });
 
       if (response.ok) {
-        // Handle file download
         const blob = await response.blob();
-        const contentDisposition = response.headers.get('content-disposition');
-        const filename = contentDisposition?.match(/filename="([^"]+)"/)?.[1] || 'termix-export.sqlite';
+        const contentDisposition = response.headers.get("content-disposition");
+        const filename =
+          contentDisposition?.match(/filename="([^"]+)"/)?.[1] ||
+          "termix-export.sqlite";
 
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = filename;
         document.body.appendChild(a);
@@ -352,19 +331,17 @@ export function AdminSettings({
 
     setImportLoading(true);
     try {
-      // JWT is now automatically sent via HttpOnly cookies
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/import`
         : "http://localhost:30001/database/import";
 
-      // Create FormData for file upload
       const formData = new FormData();
       formData.append("file", importFile);
       formData.append("password", importPassword);
 
       const response = await fetch(apiUrl, {
         method: "POST",
-        credentials: "include", // Include HttpOnly cookies
+        credentials: "include",
         body: formData,
       });
 
@@ -372,23 +349,34 @@ export function AdminSettings({
         const result = await response.json();
         if (result.success) {
           const summary = result.summary;
-          const imported = summary.sshHostsImported + summary.sshCredentialsImported + summary.fileManagerItemsImported + summary.dismissedAlertsImported + (summary.settingsImported || 0);
+          const imported =
+            summary.sshHostsImported +
+            summary.sshCredentialsImported +
+            summary.fileManagerItemsImported +
+            summary.dismissedAlertsImported +
+            (summary.settingsImported || 0);
           const skipped = summary.skippedItems;
 
           const details = [];
-          if (summary.sshHostsImported > 0) details.push(`${summary.sshHostsImported} SSH hosts`);
-          if (summary.sshCredentialsImported > 0) details.push(`${summary.sshCredentialsImported} credentials`);
-          if (summary.fileManagerItemsImported > 0) details.push(`${summary.fileManagerItemsImported} file manager items`);
-          if (summary.dismissedAlertsImported > 0) details.push(`${summary.dismissedAlertsImported} alerts`);
-          if (summary.settingsImported > 0) details.push(`${summary.settingsImported} settings`);
+          if (summary.sshHostsImported > 0)
+            details.push(`${summary.sshHostsImported} SSH hosts`);
+          if (summary.sshCredentialsImported > 0)
+            details.push(`${summary.sshCredentialsImported} credentials`);
+          if (summary.fileManagerItemsImported > 0)
+            details.push(
+              `${summary.fileManagerItemsImported} file manager items`,
+            );
+          if (summary.dismissedAlertsImported > 0)
+            details.push(`${summary.dismissedAlertsImported} alerts`);
+          if (summary.settingsImported > 0)
+            details.push(`${summary.settingsImported} settings`);
 
           toast.success(
-            `Import completed: ${imported} items imported${details.length > 0 ? ` (${details.join(', ')})` : ''}, ${skipped} items skipped`
+            `Import completed: ${imported} items imported${details.length > 0 ? ` (${details.join(", ")})` : ""}, ${skipped} items skipped`,
           );
           setImportFile(null);
           setImportPassword("");
-          
-          // Refresh the page to show imported data
+
           setTimeout(() => {
             window.location.reload();
           }, 1500);
@@ -411,7 +399,6 @@ export function AdminSettings({
       setImportLoading(false);
     }
   };
-
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
@@ -856,18 +843,20 @@ export function AdminSettings({
                   </h3>
                 </div>
 
-                {/* Simple status display - read only */}
                 <div className="p-4 border rounded bg-card">
                   <div className="flex items-center gap-2">
                     <Lock className="h-4 w-4 text-green-500" />
                     <div>
-                      <div className="text-sm font-medium">{t("admin.encryptionStatus")}</div>
-                      <div className="text-xs text-green-500">{t("admin.encryptionEnabled")}</div>
+                      <div className="text-sm font-medium">
+                        {t("admin.encryptionStatus")}
+                      </div>
+                      <div className="text-xs text-green-500">
+                        {t("admin.encryptionEnabled")}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Data management functions - export/import */}
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="p-4 border rounded bg-card">
                     <div className="space-y-3">
@@ -887,7 +876,7 @@ export function AdminSettings({
                             onChange={(e) => setExportPassword(e.target.value)}
                             placeholder="Enter your password"
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
+                              if (e.key === "Enter") {
                                 handleExportDatabase();
                               }
                             }}
@@ -903,8 +892,7 @@ export function AdminSettings({
                           ? t("admin.exporting")
                           : showPasswordInput
                             ? t("admin.confirmExport")
-                            : t("admin.export")
-                        }
+                            : t("admin.export")}
                       </Button>
                       {showPasswordInput && (
                         <Button
@@ -935,7 +923,9 @@ export function AdminSettings({
                           id="import-file-upload"
                           type="file"
                           accept=".sqlite,.db"
-                          onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                          onChange={(e) =>
+                            setImportFile(e.target.files?.[0] || null)
+                          }
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
                         <Button
@@ -945,7 +935,10 @@ export function AdminSettings({
                         >
                           <span
                             className="truncate"
-                            title={importFile?.name || t("admin.pleaseSelectImportFile")}
+                            title={
+                              importFile?.name ||
+                              t("admin.pleaseSelectImportFile")
+                            }
                           >
                             {importFile
                               ? importFile.name
@@ -962,7 +955,7 @@ export function AdminSettings({
                             onChange={(e) => setImportPassword(e.target.value)}
                             placeholder="Enter your password"
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
+                              if (e.key === "Enter") {
                                 handleImportDatabase();
                               }
                             }}
@@ -971,10 +964,14 @@ export function AdminSettings({
                       )}
                       <Button
                         onClick={handleImportDatabase}
-                        disabled={importLoading || !importFile || !importPassword.trim()}
+                        disabled={
+                          importLoading || !importFile || !importPassword.trim()
+                        }
                         className="w-full"
                       >
-                        {importLoading ? t("admin.importing") : t("admin.import")}
+                        {importLoading
+                          ? t("admin.importing")
+                          : t("admin.import")}
                       </Button>
                     </div>
                   </div>

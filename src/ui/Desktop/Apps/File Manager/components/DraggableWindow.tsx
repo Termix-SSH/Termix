@@ -39,7 +39,6 @@ export function DraggableWindow({
   targetSize,
 }: DraggableWindowProps) {
   const { t } = useTranslation();
-  // Window state
   const [position, setPosition] = useState({ x: initialX, y: initialY });
   const [size, setSize] = useState({
     width: initialWidth,
@@ -49,7 +48,6 @@ export function DraggableWindow({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string>("");
 
-  // Drag and resize start positions
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
   const [sizeStart, setSizeStart] = useState({ width: 0, height: 0 });
@@ -57,17 +55,14 @@ export function DraggableWindow({
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
 
-  // Handle target size changes for media files
   useEffect(() => {
     if (targetSize && !isMaximized) {
       const maxWidth = Math.min(window.innerWidth * 0.9, 1200);
       const maxHeight = Math.min(window.innerHeight * 0.8, 800);
 
-      // Calculate appropriate window size maintaining aspect ratio
-      let newWidth = Math.min(targetSize.width + 50, maxWidth); // Add padding for UI
-      let newHeight = Math.min(targetSize.height + 150, maxHeight); // Add padding for header/footer
+      let newWidth = Math.min(targetSize.width + 50, maxWidth);
+      let newHeight = Math.min(targetSize.height + 150, maxHeight);
 
-      // If still too large, scale down maintaining aspect ratio
       if (newWidth > maxWidth || newHeight > maxHeight) {
         const widthRatio = maxWidth / newWidth;
         const heightRatio = maxHeight / newHeight;
@@ -77,26 +72,22 @@ export function DraggableWindow({
         newHeight = Math.floor(newHeight * scale);
       }
 
-      // Ensure minimum size
       newWidth = Math.max(newWidth, minWidth);
       newHeight = Math.max(newHeight, minHeight);
 
       setSize({ width: newWidth, height: newHeight });
 
-      // Center the window
       setPosition({
         x: Math.max(0, (window.innerWidth - newWidth) / 2),
-        y: Math.max(0, (window.innerHeight - newHeight) / 2)
+        y: Math.max(0, (window.innerHeight - newHeight) / 2),
       });
     }
   }, [targetSize, isMaximized, minWidth, minHeight]);
 
-  // Handle window focus
   const handleWindowClick = useCallback(() => {
     onFocus?.();
   }, [onFocus]);
 
-  // Drag handling
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (isMaximized) return;
@@ -119,44 +110,44 @@ export function DraggableWindow({
         const newX = windowStart.x + deltaX;
         const newY = windowStart.y + deltaY;
 
-        // Find the positioning container by checking parent hierarchy
         const windowElement = windowRef.current;
         let positioningContainer = null;
         let currentElement = windowElement?.parentElement;
-        
+
         while (currentElement && currentElement !== document.body) {
           const computedStyle = window.getComputedStyle(currentElement);
           const position = computedStyle.position;
           const transform = computedStyle.transform;
-          
-          if (position === 'relative' || position === 'absolute' || position === 'fixed' || transform !== 'none') {
+
+          if (
+            position === "relative" ||
+            position === "absolute" ||
+            position === "fixed" ||
+            transform !== "none"
+          ) {
             positioningContainer = currentElement;
             break;
           }
-          
+
           currentElement = currentElement.parentElement;
         }
 
-        // Calculate boundaries based on the actual positioning context
         let maxX, maxY, minX, minY;
-        
+
         if (positioningContainer) {
           const containerRect = positioningContainer.getBoundingClientRect();
-          
-          // Window is positioned relative to a positioning container
+
           maxX = containerRect.width - size.width;
           maxY = containerRect.height - size.height;
           minX = 0;
           minY = 0;
         } else {
-          // Window is positioned relative to viewport
           maxX = window.innerWidth - size.width;
           maxY = window.innerHeight - size.height;
           minX = 0;
           minY = 0;
         }
 
-        // Ensure window stays within boundaries
         const constrainedX = Math.max(minX, Math.min(maxX, newX));
         const constrainedY = Math.max(minY, Math.min(maxY, newY));
 
@@ -175,14 +166,12 @@ export function DraggableWindow({
         let newX = windowStart.x;
         let newY = windowStart.y;
 
-        // Handle horizontal resizing
         if (resizeDirection.includes("right")) {
           newWidth = Math.max(minWidth, sizeStart.width + deltaX);
         }
         if (resizeDirection.includes("left")) {
           const widthChange = -deltaX;
           newWidth = Math.max(minWidth, sizeStart.width + widthChange);
-          // Only move position if we're actually changing size
           if (newWidth > minWidth || widthChange > 0) {
             newX = windowStart.x - (newWidth - sizeStart.width);
           } else {
@@ -190,14 +179,12 @@ export function DraggableWindow({
           }
         }
 
-        // Handle vertical resizing
         if (resizeDirection.includes("bottom")) {
           newHeight = Math.max(minHeight, sizeStart.height + deltaY);
         }
         if (resizeDirection.includes("top")) {
           const heightChange = -deltaY;
           newHeight = Math.max(minHeight, sizeStart.height + heightChange);
-          // Only move position if we're actually changing size
           if (newHeight > minHeight || heightChange > 0) {
             newY = windowStart.y - (newHeight - sizeStart.height);
           } else {
@@ -205,7 +192,6 @@ export function DraggableWindow({
           }
         }
 
-        // Ensure window stays within viewport
         newX = Math.max(0, Math.min(window.innerWidth - newWidth, newX));
         newY = Math.max(0, Math.min(window.innerHeight - newHeight, newY));
 
@@ -234,7 +220,6 @@ export function DraggableWindow({
     setResizeDirection("");
   }, []);
 
-  // Resize handling
   const handleResizeStart = useCallback(
     (e: React.MouseEvent, direction: string) => {
       if (isMaximized) return;
@@ -251,7 +236,6 @@ export function DraggableWindow({
     [isMaximized, position, size, onFocus],
   );
 
-  // Global event listeners
   useEffect(() => {
     if (isDragging || isResizing) {
       document.addEventListener("mousemove", handleMouseMove);
@@ -268,7 +252,6 @@ export function DraggableWindow({
     }
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  // Double-click title bar to maximize/restore
   const handleTitleDoubleClick = useCallback(() => {
     onMaximize?.();
   }, [onMaximize]);
@@ -290,7 +273,6 @@ export function DraggableWindow({
       }}
       onClick={handleWindowClick}
     >
-      {/* Title bar */}
       <div
         ref={titleBarRef}
         className={cn(
@@ -349,7 +331,6 @@ export function DraggableWindow({
         </div>
       </div>
 
-      {/* Window content */}
       <div
         className="flex-1 overflow-auto"
         style={{ height: "calc(100% - 40px)" }}
@@ -357,10 +338,8 @@ export function DraggableWindow({
         {children}
       </div>
 
-      {/* Resize borders - only show when not maximized */}
       {!isMaximized && (
         <>
-          {/* Edge resize */}
           <div
             className="absolute top-0 left-0 right-0 h-1 cursor-n-resize"
             onMouseDown={(e) => handleResizeStart(e, "top")}
@@ -378,7 +357,6 @@ export function DraggableWindow({
             onMouseDown={(e) => handleResizeStart(e, "right")}
           />
 
-          {/* Corner resize */}
           <div
             className="absolute top-0 left-0 w-2 h-2 cursor-nw-resize"
             onMouseDown={(e) => handleResizeStart(e, "top-left")}

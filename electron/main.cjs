@@ -14,7 +14,6 @@ if (!gotTheLock) {
   process.exit(0);
 } else {
   app.on("second-instance", (event, commandLine, workingDirectory) => {
-    console.log("Second instance detected, focusing existing window...");
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
@@ -51,12 +50,10 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     const indexPath = path.join(__dirname, "..", "dist", "index.html");
-    console.log("Loading frontend from:", indexPath);
     mainWindow.loadFile(indexPath);
   }
 
   mainWindow.once("ready-to-show", () => {
-    console.log("Window ready to show");
     mainWindow.show();
   });
 
@@ -97,17 +94,14 @@ ipcMain.handle("get-app-version", () => {
   return app.getVersion();
 });
 
-// GitHub API service for version checking
 const GITHUB_API_BASE = "https://api.github.com";
 const REPO_OWNER = "LukeGus";
 const REPO_NAME = "Termix";
 
-// Simple cache for GitHub API responses
 const githubCache = new Map();
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 async function fetchGitHubAPI(endpoint, cacheKey) {
-  // Check cache first
   const cached = githubCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return {
@@ -183,8 +177,7 @@ async function fetchGitHubAPI(endpoint, cacheKey) {
     }
 
     const data = await response.json();
-    
-    // Cache the response
+
     githubCache.set(cacheKey, {
       data,
       timestamp: Date.now(),
@@ -200,15 +193,13 @@ async function fetchGitHubAPI(endpoint, cacheKey) {
   }
 }
 
-// Check for Electron app updates
 ipcMain.handle("check-electron-update", async () => {
   try {
     const localVersion = app.getVersion();
-    console.log(`Checking for updates. Local version: ${localVersion}`);
 
     const releaseData = await fetchGitHubAPI(
       `/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
-      "latest_release_electron"
+      "latest_release_electron",
     );
 
     const rawTag = releaseData.data.tag_name || releaseData.data.name || "";
@@ -216,7 +207,6 @@ ipcMain.handle("check-electron-update", async () => {
     const remoteVersion = remoteVersionMatch ? remoteVersionMatch[1] : null;
 
     if (!remoteVersion) {
-      console.warn("Remote version not found in GitHub response:", rawTag);
       return {
         success: false,
         error: "Remote version not found",
@@ -242,10 +232,8 @@ ipcMain.handle("check-electron-update", async () => {
       cache_age: releaseData.cache_age,
     };
 
-    console.log(`Version check result: ${result.status}`);
     return result;
   } catch (error) {
-    console.error("Version check failed:", error);
     return {
       success: false,
       error: error.message,
@@ -361,9 +349,6 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
           data.includes("<head>") ||
           data.includes("<body>")
         ) {
-          console.log(
-            "Health endpoint returned HTML instead of JSON - not a Termix server",
-          );
           return {
             success: false,
             error:
@@ -410,9 +395,6 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
           data.includes("<head>") ||
           data.includes("<body>")
         ) {
-          console.log(
-            "Version endpoint returned HTML instead of JSON - not a Termix server",
-          );
           return {
             success: false,
             error:
@@ -458,7 +440,6 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
 
 app.whenReady().then(() => {
   createWindow();
-  console.log("Termix started successfully");
 });
 
 app.on("window-all-closed", () => {
@@ -473,187 +454,6 @@ app.on("activate", () => {
   } else if (mainWindow) {
     mainWindow.show();
   }
-});
-
-// ================== 拖拽功能实现 ==================
-
-// 临时文件管理
-const tempFiles = new Map(); // 存储临时文件路径映射
-
-// 创建临时文件
-ipcMain.handle("create-temp-file", async (event, fileData) => {
-  try {
-    const { fileName, content, encoding = "base64" } = fileData;
-
-    // 创建临时目录
-    const tempDir = path.join(os.tmpdir(), "termix-drag-files");
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
-    // 生成临时文件路径
-    const tempId = Date.now() + "-" + Math.random().toString(36).substr(2, 9);
-    const tempFilePath = path.join(tempDir, `${tempId}-${fileName}`);
-
-    // 写入文件内容
-    if (encoding === "base64") {
-      const buffer = Buffer.from(content, "base64");
-      fs.writeFileSync(tempFilePath, buffer);
-    } else {
-      fs.writeFileSync(tempFilePath, content, "utf8");
-    }
-
-    // 记录临时文件
-    tempFiles.set(tempId, {
-      path: tempFilePath,
-      fileName: fileName,
-      createdAt: Date.now(),
-    });
-
-    console.log(`Created temp file: ${tempFilePath}`);
-    return { success: true, tempId, path: tempFilePath };
-  } catch (error) {
-    console.error("Error creating temp file:", error);
-    return { success: false, error: error.message };
-  }
-});
-
-// 开始拖拽到桌面
-ipcMain.handle("start-drag-to-desktop", async (event, { tempId, fileName }) => {
-  try {
-    const tempFile = tempFiles.get(tempId);
-    if (!tempFile) {
-      throw new Error("Temporary file not found");
-    }
-
-    // 使用Electron的startDrag API
-    const iconPath = path.join(__dirname, "..", "public", "icon.png");
-    const iconExists = fs.existsSync(iconPath);
-
-    mainWindow.webContents.startDrag({
-      file: tempFile.path,
-      icon: iconExists ? iconPath : undefined,
-    });
-
-    console.log(`Started drag for: ${tempFile.path}`);
-    return { success: true };
-  } catch (error) {
-    console.error("Error starting drag:", error);
-    return { success: false, error: error.message };
-  }
-});
-
-// 清理临时文件
-ipcMain.handle("cleanup-temp-file", async (event, tempId) => {
-  try {
-    const tempFile = tempFiles.get(tempId);
-    if (tempFile && fs.existsSync(tempFile.path)) {
-      fs.unlinkSync(tempFile.path);
-      tempFiles.delete(tempId);
-      console.log(`Cleaned up temp file: ${tempFile.path}`);
-    }
-    return { success: true };
-  } catch (error) {
-    console.error("Error cleaning up temp file:", error);
-    return { success: false, error: error.message };
-  }
-});
-
-// 批量清理过期临时文件（5分钟过期）
-const cleanupExpiredTempFiles = () => {
-  const now = Date.now();
-  const maxAge = 5 * 60 * 1000; // 5分钟
-
-  for (const [tempId, tempFile] of tempFiles.entries()) {
-    if (now - tempFile.createdAt > maxAge) {
-      try {
-        if (fs.existsSync(tempFile.path)) {
-          fs.unlinkSync(tempFile.path);
-        }
-        tempFiles.delete(tempId);
-        console.log(`Auto-cleaned expired temp file: ${tempFile.path}`);
-      } catch (error) {
-        console.error("Error auto-cleaning temp file:", error);
-      }
-    }
-  }
-};
-
-// 每分钟清理一次过期临时文件
-setInterval(cleanupExpiredTempFiles, 60 * 1000);
-
-// 创建临时文件夹拖拽支持
-ipcMain.handle("create-temp-folder", async (event, folderData) => {
-  try {
-    const { folderName, files } = folderData;
-
-    // 创建临时目录
-    const tempDir = path.join(os.tmpdir(), "termix-drag-folders");
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
-    const tempId = Date.now() + "-" + Math.random().toString(36).substr(2, 9);
-    const tempFolderPath = path.join(tempDir, `${tempId}-${folderName}`);
-
-    // 递归创建文件夹结构
-    const createFolderStructure = (basePath, fileList) => {
-      for (const file of fileList) {
-        const fullPath = path.join(basePath, file.relativePath);
-        const dirPath = path.dirname(fullPath);
-
-        // 确保目录存在
-        if (!fs.existsSync(dirPath)) {
-          fs.mkdirSync(dirPath, { recursive: true });
-        }
-
-        // 写入文件
-        if (file.encoding === "base64") {
-          const buffer = Buffer.from(file.content, "base64");
-          fs.writeFileSync(fullPath, buffer);
-        } else {
-          fs.writeFileSync(fullPath, file.content, "utf8");
-        }
-      }
-    };
-
-    fs.mkdirSync(tempFolderPath, { recursive: true });
-    createFolderStructure(tempFolderPath, files);
-
-    // 记录临时文件夹
-    tempFiles.set(tempId, {
-      path: tempFolderPath,
-      fileName: folderName,
-      createdAt: Date.now(),
-      isFolder: true,
-    });
-
-    console.log(`Created temp folder: ${tempFolderPath}`);
-    return { success: true, tempId, path: tempFolderPath };
-  } catch (error) {
-    console.error("Error creating temp folder:", error);
-    return { success: false, error: error.message };
-  }
-});
-
-app.on("before-quit", () => {
-  console.log("App is quitting...");
-
-  // 清理所有临时文件
-  for (const [tempId, tempFile] of tempFiles.entries()) {
-    try {
-      if (fs.existsSync(tempFile.path)) {
-        if (tempFile.isFolder) {
-          fs.rmSync(tempFile.path, { recursive: true, force: true });
-        } else {
-          fs.unlinkSync(tempFile.path);
-        }
-      }
-    } catch (error) {
-      console.error("Error cleaning up temp file on quit:", error);
-    }
-  }
-  tempFiles.clear();
 });
 
 app.on("will-quit", () => {

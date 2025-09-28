@@ -450,30 +450,31 @@ export function HostManagerEditor({
         toast.success(t("hosts.hostAddedSuccessfully", { name: data.name }));
       }
 
-      // Handle AutoStart plaintext cache management
       if (savedHost && savedHost.id && data.tunnelConnections) {
-        const hasAutoStartTunnels = data.tunnelConnections.some(tunnel => tunnel.autoStart);
+        const hasAutoStartTunnels = data.tunnelConnections.some(
+          (tunnel) => tunnel.autoStart,
+        );
 
         if (hasAutoStartTunnels) {
-          // User has enabled autoStart on some tunnels
-          // Need to ensure plaintext cache exists for this host
           try {
             await enableAutoStart(savedHost.id);
-            console.log(`AutoStart plaintext cache enabled for SSH host ${savedHost.id}`);
           } catch (error) {
-            console.warn(`Failed to enable AutoStart plaintext cache for SSH host ${savedHost.id}:`, error);
-            // Don't fail the whole operation if cache setup fails
-            toast.warning(t("hosts.autoStartEnableFailed", { name: data.name }));
+            console.warn(
+              `Failed to enable AutoStart plaintext cache for SSH host ${savedHost.id}:`,
+              error,
+            );
+            toast.warning(
+              t("hosts.autoStartEnableFailed", { name: data.name }),
+            );
           }
         } else {
-          // User has disabled autoStart on all tunnels
-          // Clean up plaintext cache for this host
           try {
             await disableAutoStart(savedHost.id);
-            console.log(`AutoStart plaintext cache disabled for SSH host ${savedHost.id}`);
           } catch (error) {
-            console.warn(`Failed to disable AutoStart plaintext cache for SSH host ${savedHost.id}:`, error);
-            // Don't fail the whole operation
+            console.warn(
+              `Failed to disable AutoStart plaintext cache for SSH host ${savedHost.id}:`,
+              error,
+            );
           }
         }
       }
@@ -990,7 +991,9 @@ export function HostManagerEditor({
                                       : ""
                                   }
                                   onChange={(value) => field.onChange(value)}
-                                  placeholder={t("placeholders.pastePrivateKey")}
+                                  placeholder={t(
+                                    "placeholders.pastePrivateKey",
+                                  )}
                                   theme={oneDark}
                                   className="border border-input rounded-md"
                                   minHeight="120px"

@@ -23,10 +23,6 @@ const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-interface JWTPayload {
-  userId: string;
-}
-
 function isNonEmptyString(value: any): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -35,26 +31,25 @@ function isValidPort(port: any): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
-// Use AuthManager middleware for authentication
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
-
-// Internal-only endpoint for autostart - requires internal auth token
 router.get("/db/host/internal", async (req: Request, res: Response) => {
   try {
-    // Check for internal authentication token using SystemCrypto
     const internalToken = req.headers["x-internal-auth-token"];
     const systemCrypto = SystemCrypto.getInstance();
     const expectedToken = await systemCrypto.getInternalAuthToken();
 
     if (internalToken !== expectedToken) {
-      sshLogger.warn("Unauthorized attempt to access internal SSH host endpoint", {
-        source: req.ip,
-        userAgent: req.headers["user-agent"],
-        providedToken: internalToken ? "present" : "missing"
-      });
+      sshLogger.warn(
+        "Unauthorized attempt to access internal SSH host endpoint",
+        {
+          source: req.ip,
+          userAgent: req.headers["user-agent"],
+          providedToken: internalToken ? "present" : "missing",
+        },
+      );
       return res.status(403).json({ error: "Forbidden" });
     }
   } catch (error) {
@@ -63,25 +58,16 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
   }
 
   try {
-    // Query sshData directly for hosts that have autostart plaintext fields populated
-    const autostartHosts = await db.select()
+    const autostartHosts = await db
+      .select()
       .from(sshData)
       .where(
-        // Check if any autostart fields are populated (meaning autostart is enabled)
         or(
           isNotNull(sshData.autostartPassword),
-          isNotNull(sshData.autostartKey)
-        )
+          isNotNull(sshData.autostartKey),
+        ),
       );
 
-    sshLogger.info("Internal autostart endpoint accessed", {
-      operation: "autostart_internal_access",
-      configCount: autostartHosts.length,
-      source: req.ip,
-      userAgent: req.headers["user-agent"]
-    });
-
-    // Transform to expected format for tunnel service
     const result = autostartHosts.map((host) => {
       const tunnelConnections = host.tunnelConnections
         ? JSON.parse(host.tunnelConnections)
@@ -97,13 +83,14 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
         password: host.autostartPassword,
         key: host.autostartKey,
         keyPassword: host.autostartKeyPassword,
-        // Include explicit autostart fields for tunnel service
         autostartPassword: host.autostartPassword,
         autostartKey: host.autostartKey,
         autostartKeyPassword: host.autostartKeyPassword,
         authType: host.authType,
         enableTunnel: true,
-        tunnelConnections: tunnelConnections.filter((tunnel: any) => tunnel.autoStart),
+        tunnelConnections: tunnelConnections.filter(
+          (tunnel: any) => tunnel.autoStart,
+        ),
         pin: false,
         enableTerminal: false,
         enableFileManager: false,
@@ -118,33 +105,26 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
   }
 });
 
-// Internal-only endpoint for all hosts - requires internal auth token (for tunnel endpointHost resolution)
 router.get("/db/host/internal/all", async (req: Request, res: Response) => {
   try {
-    // Check for internal authentication token using SystemCrypto
     const internalToken = req.headers["x-internal-auth-token"];
     if (!internalToken) {
-      return res.status(401).json({ error: "Internal authentication token required" });
+      return res
+        .status(401)
+        .json({ error: "Internal authentication token required" });
     }
 
     const systemCrypto = SystemCrypto.getInstance();
     const expectedToken = await systemCrypto.getInternalAuthToken();
 
     if (internalToken !== expectedToken) {
-      return res.status(401).json({ error: "Invalid internal authentication token" });
+      return res
+        .status(401)
+        .json({ error: "Invalid internal authentication token" });
     }
 
-    // Query all hosts for endpointHost resolution
     const allHosts = await db.select().from(sshData);
 
-    sshLogger.info("Internal all hosts endpoint accessed", {
-      operation: "all_hosts_internal_access",
-      hostCount: allHosts.length,
-      source: req.ip,
-      userAgent: req.headers["user-agent"]
-    });
-
-    // Transform to expected format for tunnel service
     const result = allHosts.map((host) => {
       const tunnelConnections = host.tunnelConnections
         ? JSON.parse(host.tunnelConnections)
@@ -160,7 +140,6 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
         password: host.autostartPassword || host.password,
         key: host.autostartKey || host.key,
         keyPassword: host.autostartKeyPassword || host.keyPassword,
-        // Include autostart fields for fallback
         autostartPassword: host.autostartPassword,
         autostartKey: host.autostartKey,
         autostartKeyPassword: host.autostartKeyPassword,
@@ -291,7 +270,6 @@ router.post(
       sshDataObj.keyType = keyType;
       sshDataObj.password = null;
     } else {
-      // For credential auth
       sshDataObj.password = null;
       sshDataObj.key = null;
       sshDataObj.keyPassword = null;
@@ -1381,103 +1359,116 @@ router.post(
     const { sshConfigId } = req.body;
 
     if (!sshConfigId || typeof sshConfigId !== "number") {
-      sshLogger.warn("Missing or invalid sshConfigId in autostart enable request", {
-        operation: "autostart_enable",
-        userId,
-        sshConfigId
-      });
+      sshLogger.warn(
+        "Missing or invalid sshConfigId in autostart enable request",
+        {
+          operation: "autostart_enable",
+          userId,
+          sshConfigId,
+        },
+      );
       return res.status(400).json({ error: "Valid sshConfigId is required" });
     }
 
     try {
-      // Validate user has access to decrypt the data
       const userDataKey = DataCrypto.getUserDataKey(userId);
       if (!userDataKey) {
-        sshLogger.warn("User attempted to enable autostart without unlocked data", {
-          operation: "autostart_enable_failed",
-          userId,
-          sshConfigId,
-          reason: "data_locked"
-        });
+        sshLogger.warn(
+          "User attempted to enable autostart without unlocked data",
+          {
+            operation: "autostart_enable_failed",
+            userId,
+            sshConfigId,
+            reason: "data_locked",
+          },
+        );
         return res.status(400).json({
-          error: "Failed to enable autostart. Ensure user data is unlocked."
+          error: "Failed to enable autostart. Ensure user data is unlocked.",
         });
       }
 
-      // Get and decrypt SSH configuration
-      const sshConfig = await db.select()
+      const sshConfig = await db
+        .select()
         .from(sshData)
-        .where(and(
-          eq(sshData.id, sshConfigId),
-          eq(sshData.userId, userId)
-        ));
+        .where(and(eq(sshData.id, sshConfigId), eq(sshData.userId, userId)));
 
       if (sshConfig.length === 0) {
         sshLogger.warn("SSH config not found for autostart enable", {
           operation: "autostart_enable_failed",
           userId,
           sshConfigId,
-          reason: "config_not_found"
+          reason: "config_not_found",
         });
         return res.status(404).json({
-          error: "SSH configuration not found"
+          error: "SSH configuration not found",
         });
       }
 
       const config = sshConfig[0];
 
-      // Decrypt sensitive fields
-      const decryptedConfig = DataCrypto.decryptRecord("ssh_data", config, userId, userDataKey);
+      const decryptedConfig = DataCrypto.decryptRecord(
+        "ssh_data",
+        config,
+        userId,
+        userDataKey,
+      );
 
-      // Also handle tunnel connections - populate endpoint credentials
       let updatedTunnelConnections = config.tunnelConnections;
       if (config.tunnelConnections) {
         try {
           const tunnelConnections = JSON.parse(config.tunnelConnections);
 
-          // For each tunnel connection, try to resolve endpoint credentials
           const resolvedConnections = await Promise.all(
             tunnelConnections.map(async (tunnel: any) => {
-              if (tunnel.autoStart && tunnel.endpointHost && !tunnel.endpointPassword && !tunnel.endpointKey) {
-                // Find endpoint host by name or username@ip
-                const endpointHosts = await db.select()
+              if (
+                tunnel.autoStart &&
+                tunnel.endpointHost &&
+                !tunnel.endpointPassword &&
+                !tunnel.endpointKey
+              ) {
+                const endpointHosts = await db
+                  .select()
                   .from(sshData)
                   .where(eq(sshData.userId, userId));
 
-                const endpointHost = endpointHosts.find(h =>
-                  h.name === tunnel.endpointHost ||
-                  `${h.username}@${h.ip}` === tunnel.endpointHost
+                const endpointHost = endpointHosts.find(
+                  (h) =>
+                    h.name === tunnel.endpointHost ||
+                    `${h.username}@${h.ip}` === tunnel.endpointHost,
                 );
 
                 if (endpointHost) {
-                  // Decrypt endpoint host credentials
-                  const decryptedEndpoint = DataCrypto.decryptRecord("ssh_data", endpointHost, userId, userDataKey);
+                  const decryptedEndpoint = DataCrypto.decryptRecord(
+                    "ssh_data",
+                    endpointHost,
+                    userId,
+                    userDataKey,
+                  );
 
-                  // Add endpoint credentials to tunnel connection
                   return {
                     ...tunnel,
                     endpointPassword: decryptedEndpoint.password || null,
                     endpointKey: decryptedEndpoint.key || null,
                     endpointKeyPassword: decryptedEndpoint.keyPassword || null,
-                    endpointAuthType: endpointHost.authType
+                    endpointAuthType: endpointHost.authType,
                   };
                 }
               }
               return tunnel;
-            })
+            }),
           );
 
           updatedTunnelConnections = JSON.stringify(resolvedConnections);
         } catch (error) {
           sshLogger.warn("Failed to update tunnel connections", {
             operation: "tunnel_connections_update_failed",
-            error: error instanceof Error ? error.message : "Unknown error"
+            error: error instanceof Error ? error.message : "Unknown error",
           });
         }
       }
 
-      // Update the SSH config with plaintext autostart fields and resolved tunnel connections
-      const updateResult = await db.update(sshData)
+      const updateResult = await db
+        .update(sshData)
         .set({
           autostartPassword: decryptedConfig.password || null,
           autostartKey: decryptedConfig.key || null,
@@ -1486,36 +1477,29 @@ router.post(
         })
         .where(eq(sshData.id, sshConfigId));
 
-      // Force database save after autostart update
       try {
         await DatabaseSaveTrigger.triggerSave();
       } catch (saveError) {
         sshLogger.warn("Database save failed after autostart", {
           operation: "autostart_db_save_failed",
-          error: saveError instanceof Error ? saveError.message : "Unknown error"
+          error:
+            saveError instanceof Error ? saveError.message : "Unknown error",
         });
       }
 
-      sshLogger.success("AutoStart enabled successfully", {
-        operation: "autostart_enabled",
-        userId,
-        sshConfigId,
-        host: config.ip
-      });
-
       res.json({
         message: "AutoStart enabled successfully",
-        sshConfigId
+        sshConfigId,
       });
     } catch (error) {
       sshLogger.error("Error enabling autostart", error, {
         operation: "autostart_enable_error",
         userId,
-        sshConfigId
+        sshConfigId,
       });
       res.status(500).json({ error: "Internal server error" });
     }
-  }
+  },
 );
 
 // Route: Disable autostart for SSH configuration (requires JWT)
@@ -1528,46 +1512,40 @@ router.delete(
     const { sshConfigId } = req.body;
 
     if (!sshConfigId || typeof sshConfigId !== "number") {
-      sshLogger.warn("Missing or invalid sshConfigId in autostart disable request", {
-        operation: "autostart_disable",
-        userId,
-        sshConfigId
-      });
+      sshLogger.warn(
+        "Missing or invalid sshConfigId in autostart disable request",
+        {
+          operation: "autostart_disable",
+          userId,
+          sshConfigId,
+        },
+      );
       return res.status(400).json({ error: "Valid sshConfigId is required" });
     }
 
     try {
-      // Clear the autostart plaintext fields for this SSH config
-      const result = await db.update(sshData)
+      const result = await db
+        .update(sshData)
         .set({
           autostartPassword: null,
           autostartKey: null,
           autostartKeyPassword: null,
         })
-        .where(and(
-          eq(sshData.id, sshConfigId),
-          eq(sshData.userId, userId)
-        ));
-
-      sshLogger.info("AutoStart disabled successfully", {
-        operation: "autostart_disabled",
-        userId,
-        sshConfigId
-      });
+        .where(and(eq(sshData.id, sshConfigId), eq(sshData.userId, userId)));
 
       res.json({
         message: "AutoStart disabled successfully",
-        sshConfigId
+        sshConfigId,
       });
     } catch (error) {
       sshLogger.error("Error disabling autostart", error, {
         operation: "autostart_disable_error",
         userId,
-        sshConfigId
+        sshConfigId,
       });
       res.status(500).json({ error: "Internal server error" });
     }
-  }
+  },
 );
 
 // Route: Get autostart status for user's SSH configurations (requires JWT)
@@ -1579,44 +1557,39 @@ router.get(
     const userId = (req as any).userId;
 
     try {
-      // Query user's SSH configs that have autostart enabled
-      const autostartConfigs = await db.select()
+      const autostartConfigs = await db
+        .select()
         .from(sshData)
-        .where(and(
-          eq(sshData.userId, userId),
-          or(
-            isNotNull(sshData.autostartPassword),
-            isNotNull(sshData.autostartKey)
-          )
-        ));
+        .where(
+          and(
+            eq(sshData.userId, userId),
+            or(
+              isNotNull(sshData.autostartPassword),
+              isNotNull(sshData.autostartKey),
+            ),
+          ),
+        );
 
-      // Map to just the basic info needed for status
-      const statusList = autostartConfigs.map(config => ({
+      const statusList = autostartConfigs.map((config) => ({
         sshConfigId: config.id,
         host: config.ip,
         port: config.port,
         username: config.username,
-        authType: config.authType
+        authType: config.authType,
       }));
-
-      sshLogger.info("AutoStart status retrieved", {
-        operation: "autostart_status",
-        userId,
-        configCount: statusList.length
-      });
 
       res.json({
         autostart_configs: statusList,
-        total_count: statusList.length
+        total_count: statusList.length,
       });
     } catch (error) {
       sshLogger.error("Error getting autostart status", error, {
         operation: "autostart_status_error",
-        userId
+        userId,
       });
       res.status(500).json({ error: "Internal server error" });
     }
-  }
+  },
 );
 
 export default router;

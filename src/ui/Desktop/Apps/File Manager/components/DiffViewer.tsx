@@ -33,8 +33,6 @@ export function DiffViewer({
   file2,
   sshSessionId,
   sshHost,
-  onDownload1,
-  onDownload2,
 }: DiffViewerProps) {
   const { t } = useTranslation();
   const [content1, setContent1] = useState<string>("");
@@ -46,7 +44,6 @@ export function DiffViewer({
   );
   const [showLineNumbers, setShowLineNumbers] = useState(true);
 
-  // Ensure SSH connection is valid
   const ensureSSHConnection = async () => {
     try {
       const status = await getSSHStatus(sshSessionId);
@@ -70,7 +67,6 @@ export function DiffViewer({
     }
   };
 
-  // Load file contents
   const loadFileContents = async () => {
     if (file1.type !== "file" || file2.type !== "file") {
       setError(t("fileManager.canOnlyCompareFiles"));
@@ -81,10 +77,8 @@ export function DiffViewer({
       setIsLoading(true);
       setError(null);
 
-      // Ensure SSH connection is valid
       await ensureSSHConnection();
 
-      // Load both files in parallel
       const [response1, response2] = await Promise.all([
         readSSHFile(sshSessionId, file1.path),
         readSSHFile(sshSessionId, file2.path),
@@ -106,13 +100,16 @@ export function DiffViewer({
           t("fileManager.sshConnectionFailed", {
             name: sshHost.name,
             ip: sshHost.ip,
-            port: sshHost.port
+            port: sshHost.port,
           }),
         );
       } else {
         setError(
           t("fileManager.loadFileFailed", {
-            error: error.message || errorData?.error || t("fileManager.unknownError")
+            error:
+              error.message ||
+              errorData?.error ||
+              t("fileManager.unknownError"),
           }),
         );
       }
@@ -121,7 +118,6 @@ export function DiffViewer({
     }
   };
 
-  // Download file
   const handleDownloadFile = async (file: FileItem) => {
     try {
       await ensureSSHConnection();
@@ -147,15 +143,20 @@ export function DiffViewer({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success(t("fileManager.downloadFileSuccess", { name: file.name }));
+        toast.success(
+          t("fileManager.downloadFileSuccess", { name: file.name }),
+        );
       }
     } catch (error: any) {
       console.error("Failed to download file:", error);
-      toast.error(t("fileManager.downloadFileFailed") + ": " + (error.message || t("fileManager.unknownError")));
+      toast.error(
+        t("fileManager.downloadFileFailed") +
+          ": " +
+          (error.message || t("fileManager.unknownError")),
+      );
     }
   };
 
-  // Get file language type
   const getFileLanguage = (fileName: string): string => {
     const ext = fileName.split(".").pop()?.toLowerCase();
     const languageMap: Record<string, string> = {
@@ -190,7 +191,6 @@ export function DiffViewer({
     return languageMap[ext || ""] || "plaintext";
   };
 
-  // Initial load
   useEffect(() => {
     loadFileContents();
   }, [file1, file2, sshSessionId]);
@@ -200,7 +200,9 @@ export function DiffViewer({
       <div className="h-full flex items-center justify-center bg-dark-bg">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">{t("fileManager.loadingFileComparison")}</p>
+          <p className="text-sm text-muted-foreground">
+            {t("fileManager.loadingFileComparison")}
+          </p>
         </div>
       </div>
     );
@@ -223,12 +225,13 @@ export function DiffViewer({
 
   return (
     <div className="h-full flex flex-col bg-dark-bg">
-      {/* Toolbar */}
       <div className="flex-shrink-0 border-b border-dark-border p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="text-sm">
-              <span className="text-muted-foreground">{t("fileManager.compare")}:</span>
+              <span className="text-muted-foreground">
+                {t("fileManager.compare")}:
+              </span>
               <span className="font-medium text-green-400 mx-2">
                 {file1.name}
               </span>
@@ -238,7 +241,6 @@ export function DiffViewer({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View toggle */}
             <Button
               variant="outline"
               size="sm"
@@ -248,10 +250,11 @@ export function DiffViewer({
                 )
               }
             >
-              {diffMode === "side-by-side" ? t("fileManager.sideBySide") : t("fileManager.inline")}
+              {diffMode === "side-by-side"
+                ? t("fileManager.sideBySide")
+                : t("fileManager.inline")}
             </Button>
 
-            {/* Line number toggle */}
             <Button
               variant="outline"
               size="sm"
@@ -264,7 +267,6 @@ export function DiffViewer({
               )}
             </Button>
 
-            {/* Download buttons */}
             <Button
               variant="outline"
               size="sm"
@@ -285,7 +287,6 @@ export function DiffViewer({
               {file2.name}
             </Button>
 
-            {/* Refresh button */}
             <Button variant="outline" size="sm" onClick={loadFileContents}>
               <RefreshCw className="w-4 h-4" />
             </Button>
@@ -293,7 +294,6 @@ export function DiffViewer({
         </div>
       </div>
 
-      {/* Diff editor */}
       <div className="flex-1">
         <DiffEditor
           original={content1}
@@ -322,7 +322,9 @@ export function DiffViewer({
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">{t("fileManager.initializingEditor")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("fileManager.initializingEditor")}
+                </p>
               </div>
             </div>
           }

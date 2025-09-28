@@ -86,17 +86,15 @@ export function DragIndicator({
       )}
     >
       <div className="flex items-start gap-3">
-        {/* Icon */}
         <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Title */}
           <div className="text-sm font-medium text-foreground mb-2">
-            {fileCount > 1 ? t("dragIndicator.batchDrag") : t("dragIndicator.dragToDesktop")}
+            {fileCount > 1
+              ? t("dragIndicator.batchDrag")
+              : t("dragIndicator.dragToDesktop")}
           </div>
 
-          {/* Status text */}
           <div
             className={cn(
               "text-xs mb-3",
@@ -110,7 +108,6 @@ export function DragIndicator({
             {getStatusText()}
           </div>
 
-          {/* Progress bar */}
           {(isDownloading || isDragging) && !error && (
             <div className="w-full bg-dark-border rounded-full h-2 mb-2">
               <div
@@ -123,14 +120,12 @@ export function DragIndicator({
             </div>
           )}
 
-          {/* Progress percentage */}
           {(isDownloading || isDragging) && !error && (
             <div className="text-xs text-muted-foreground">
               {progress.toFixed(0)}%
             </div>
           )}
 
-          {/* Drag hint */}
           {isDragging && !error && (
             <div className="text-xs text-green-500 mt-2 flex items-center gap-1">
               <Download className="w-3 h-3" />
@@ -140,7 +135,6 @@ export function DragIndicator({
         </div>
       </div>
 
-      {/* Background with animation effect */}
       {isDragging && !error && (
         <div className="absolute inset-0 rounded-lg bg-green-500/5 animate-pulse" />
       )}

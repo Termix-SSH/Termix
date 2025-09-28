@@ -15,7 +15,6 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
   RefreshCw,
   ArrowUp,
   FileSymlink,
@@ -26,20 +25,16 @@ import {
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
 
-// Linus-style data structure: separate creation intent from actual files
 interface CreateIntent {
   id: string;
-  type: 'file' | 'directory';
+  type: "file" | "directory";
   defaultName: string;
   currentName: string;
 }
 
-// Format file size
 function formatFileSize(bytes?: number): string {
-  // Handle undefined or null cases
   if (bytes === undefined || bytes === null) return "-";
 
-  // Display 0-byte files as "0 B"
   if (bytes === 0) return "0 B";
 
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -51,7 +46,6 @@ function formatFileSize(bytes?: number): string {
     unitIndex++;
   }
 
-  // Display one decimal place for values less than 10, integers for values greater than 10
   const formattedSize =
     size < 10 && unitIndex > 0 ? size.toFixed(1) : Math.round(size).toString();
 
@@ -95,7 +89,6 @@ interface FileManagerGridProps {
   onSystemDragStart?: (files: FileItem[]) => void;
   onSystemDragEnd?: (e: DragEvent, files: FileItem[]) => void;
   hasClipboard?: boolean;
-  // Linus-style creation intent props
   createIntent?: CreateIntent | null;
   onConfirmCreate?: (name: string) => void;
   onCancelCreate?: () => void;
@@ -206,16 +199,12 @@ export function FileManagerGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const [editingName, setEditingName] = useState("");
 
-
-
-  // Unified drag state management
   const [dragState, setDragState] = useState<DragState>({
     type: "none",
     files: [],
     counter: 0,
   });
 
-  // Global mouse move listener - for drag tooltip following
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (dragState.type === "internal" && dragState.files.length > 0) {
@@ -235,11 +224,9 @@ export function FileManagerGrid({
 
   const editInputRef = useRef<HTMLInputElement>(null);
 
-  // Set initial name when starting edit
   useEffect(() => {
     if (editingFile) {
       setEditingName(editingFile.name);
-      // Delay focus to ensure DOM is updated
       setTimeout(() => {
         editInputRef.current?.focus();
         editInputRef.current?.select();
@@ -247,7 +234,6 @@ export function FileManagerGrid({
     }
   }, [editingFile]);
 
-  // Handle edit confirmation
   const handleEditConfirm = () => {
     if (
       editingFile &&
@@ -260,13 +246,11 @@ export function FileManagerGrid({
     onCancelEdit?.();
   };
 
-  // Handle edit cancellation
   const handleEditCancel = () => {
     setEditingName("");
     onCancelEdit?.();
   };
 
-  // Handle input key events
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -277,9 +261,7 @@ export function FileManagerGrid({
     }
   };
 
-  // File drag handling function
   const handleFileDragStart = (e: React.DragEvent, file: FileItem) => {
-    // If dragged file is selected, drag all selected files
     const filesToDrag = selectedFiles.includes(file) ? selectedFiles : [file];
 
     setDragState({
@@ -290,7 +272,6 @@ export function FileManagerGrid({
       mousePosition: { x: e.clientX, y: e.clientY },
     });
 
-    // Set drag data, add internal drag identifier
     const dragData = {
       type: "internal_files",
       files: filesToDrag.map((f) => f.path),
@@ -303,7 +284,6 @@ export function FileManagerGrid({
     e.preventDefault();
     e.stopPropagation();
 
-    // Only set target when dragging to different file and not being dragged file
     if (
       dragState.type === "internal" &&
       !dragState.files.some((f) => f.path === targetFile.path)
@@ -317,7 +297,6 @@ export function FileManagerGrid({
     e.preventDefault();
     e.stopPropagation();
 
-    // Clear drag target highlight
     if (dragState.target?.path === targetFile.path) {
       setDragState((prev) => ({ ...prev, target: undefined }));
     }
@@ -332,46 +311,23 @@ export function FileManagerGrid({
       return;
     }
 
-    // Check if dragging to self
     const isDroppingOnSelf = dragState.files.some(
       (f) => f.path === targetFile.path,
     );
     if (isDroppingOnSelf) {
-      console.log("Ignoring drop on self");
       setDragState({ type: "none", files: [], counter: 0 });
       return;
     }
 
-    // Determine drag behavior:
-    // 1. File/folder drag to folder = move operation
-    // 2. Single file drag to single file = diff comparison
-    // 3. Other cases = invalid operation
-
     if (targetFile.type === "directory") {
-      // Move operation
-      console.log(
-        "Moving files to directory:",
-        dragState.files.map((f) => f.name),
-        "to",
-        targetFile.name,
-      );
       onFileDrop?.(dragState.files, targetFile);
     } else if (
       targetFile.type === "file" &&
       dragState.files.length === 1 &&
       dragState.files[0].type === "file"
     ) {
-      // Diff comparison operation
-      console.log(
-        "Comparing files:",
-        dragState.files[0].name,
-        "vs",
-        targetFile.name,
-      );
       onFileDiff?.(dragState.files[0], targetFile);
     } else {
-      // Invalid operation, notify user
-      console.log("Invalid drag operation");
     }
 
     setDragState({ type: "none", files: [], counter: 0 });
@@ -381,7 +337,6 @@ export function FileManagerGrid({
     const draggedFiles = dragState.draggedFiles || [];
     setDragState({ type: "none", files: [], counter: 0 });
 
-    // Trigger system-level drag end detection with dragged files
     onSystemDragEnd?.(e.nativeEvent, draggedFiles);
   };
 
@@ -398,17 +353,14 @@ export function FileManagerGrid({
   } | null>(null);
   const [justFinishedSelecting, setJustFinishedSelecting] = useState(false);
 
-  // Navigation history management
   const [navigationHistory, setNavigationHistory] = useState<string[]>([
     currentPath,
   ]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
-  // Path editing state
   const [isEditingPath, setIsEditingPath] = useState(false);
   const [editPathValue, setEditPathValue] = useState(currentPath);
 
-  // Update navigation history
   useEffect(() => {
     const lastPath = navigationHistory[historyIndex];
     if (currentPath !== lastPath) {
@@ -419,7 +371,6 @@ export function FileManagerGrid({
     }
   }, [currentPath]);
 
-  // Navigation functions
   const goBack = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
@@ -447,7 +398,6 @@ export function FileManagerGrid({
     }
   };
 
-  // Path navigation
   const pathParts = currentPath.split("/").filter(Boolean);
   const navigateToPath = (index: number) => {
     if (index === -1) {
@@ -458,7 +408,6 @@ export function FileManagerGrid({
     }
   };
 
-  // Path editing functionality
   const startEditingPath = () => {
     setEditPathValue(currentPath);
     setIsEditingPath(true);
@@ -472,7 +421,6 @@ export function FileManagerGrid({
   const confirmEditingPath = () => {
     const trimmedPath = editPathValue.trim();
     if (trimmedPath) {
-      // Ensure path starts with /
       const normalizedPath = trimmedPath.startsWith("/")
         ? trimmedPath
         : "/" + trimmedPath;
@@ -491,31 +439,26 @@ export function FileManagerGrid({
     }
   };
 
-  // Sync editPathValue with currentPath
   useEffect(() => {
     if (!isEditingPath) {
       setEditPathValue(currentPath);
     }
   }, [currentPath, isEditingPath]);
 
-  // Drag and drop handling - distinguish internal file drag and external file upload
   const handleDragEnter = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // Check if it's internal file drag
       const isInternalDrag = dragState.type === "internal";
 
       if (!isInternalDrag) {
-        // Only show upload prompt for external file drag
         setDragState((prev) => ({
           ...prev,
           type: "external",
           counter: prev.counter + 1,
         }));
         if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-          // External drag detected
         }
       }
     },
@@ -527,7 +470,6 @@ export function FileManagerGrid({
       e.preventDefault();
       e.stopPropagation();
 
-      // Check if it's internal file drag
       const isInternalDrag = dragState.type === "internal";
 
       if (!isInternalDrag && dragState.type === "external") {
@@ -549,11 +491,9 @@ export function FileManagerGrid({
       e.preventDefault();
       e.stopPropagation();
 
-      // Check if it's internal file drag
       const isInternalDrag = dragState.type === "internal";
 
       if (isInternalDrag) {
-        // Update mouse position
         setDragState((prev) => ({
           ...prev,
           mousePosition: { x: e.clientX, y: e.clientY },
@@ -566,15 +506,11 @@ export function FileManagerGrid({
     [dragState.type],
   );
 
-  // Mouse wheel event handling, ensure scrolling works normally
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    // Don't prevent default scroll behavior, let browser handle scrolling
     e.stopPropagation();
   }, []);
 
-  // Box selection functionality implementation
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only start box selection in empty area, avoid interfering with file clicks
     if (e.target === e.currentTarget && e.button === 0) {
       e.preventDefault();
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -585,7 +521,6 @@ export function FileManagerGrid({
       setSelectionStart({ x: startX, y: startY });
       setSelectionRect({ x: startX, y: startY, width: 0, height: 0 });
 
-      // Reset flag for just completed selection, prepare for new selection
       setJustFinishedSelecting(false);
     }
   }, []);
@@ -604,7 +539,6 @@ export function FileManagerGrid({
 
         setSelectionRect({ x, y, width, height });
 
-        // Detect intersection with file items, perform real-time selection
         if (gridRef.current) {
           const fileElements =
             gridRef.current.querySelectorAll("[data-file-path]");
@@ -614,7 +548,6 @@ export function FileManagerGrid({
             const elementRect = element.getBoundingClientRect();
             const containerRect = gridRef.current!.getBoundingClientRect();
 
-            // Simplify coordinate calculation - directly use coordinates relative to container
             const relativeElementRect = {
               left: elementRect.left - containerRect.left,
               top: elementRect.top - containerRect.top,
@@ -622,7 +555,6 @@ export function FileManagerGrid({
               bottom: elementRect.bottom - containerRect.top,
             };
 
-            // Selection box coordinates
             const selectionBox = {
               left: x,
               top: y,
@@ -630,7 +562,6 @@ export function FileManagerGrid({
               bottom: y + height,
             };
 
-            // Check if intersecting
             const intersects = !(
               relativeElementRect.right < selectionBox.left ||
               relativeElementRect.left > selectionBox.right ||
@@ -642,20 +573,12 @@ export function FileManagerGrid({
               const filePath = element.getAttribute("data-file-path");
               if (filePath) {
                 selectedPaths.push(filePath);
-                console.log("Selected file:", filePath);
               }
             }
           });
 
-          console.log("Total selected paths:", selectedPaths.length);
-
-          // Update selected files
           const newSelection = files.filter((file) =>
             selectedPaths.includes(file.path),
-          );
-          console.log(
-            "New selection:",
-            newSelection.map((f) => f.name),
           );
           onSelectionChange(newSelection);
         }
@@ -671,7 +594,6 @@ export function FileManagerGrid({
         setSelectionStart(null);
         setSelectionRect(null);
 
-        // Only consider as box selection when movement distance is large enough, otherwise it's a click
         const startPos = selectionStart;
         if (startPos) {
           const rect = gridRef.current?.getBoundingClientRect();
@@ -683,13 +605,11 @@ export function FileManagerGrid({
             );
 
             if (distance > 5) {
-              // Real box selection, set flag to prevent immediate clearing
               setJustFinishedSelecting(true);
               setTimeout(() => {
                 setJustFinishedSelecting(false);
               }, 50);
             } else {
-              // Just a click, don't set flag, let handleGridClick handle normally
               setJustFinishedSelecting(false);
             }
           }
@@ -699,7 +619,6 @@ export function FileManagerGrid({
     [isSelecting, selectionStart],
   );
 
-  // Global mouse event listener, ensure box selection can end outside container
   useEffect(() => {
     const handleGlobalMouseUp = (e: MouseEvent) => {
       if (isSelecting) {
@@ -707,7 +626,6 @@ export function FileManagerGrid({
         setSelectionStart(null);
         setSelectionRect(null);
 
-        // Global mouseup indicates drag box selection, set flag
         setJustFinishedSelecting(true);
         setTimeout(() => {
           setJustFinishedSelecting(false);
@@ -747,58 +665,32 @@ export function FileManagerGrid({
       e.stopPropagation();
 
       if (dragState.type === "internal") {
-        // Internal drag to empty area: just cancel the drag operation
-        console.log("Internal drag to empty area - cancelling drag operation");
-        // Do not trigger download here - system drag end will handle it if truly outside window
         setDragState({ type: "none", files: [], counter: 0 });
       } else if (dragState.type === "external") {
-        // External drag: handle file upload
         if (onUpload && e.dataTransfer.files.length > 0) {
           onUpload(e.dataTransfer.files);
         }
       }
 
-      // Reset drag state
       setDragState({ type: "none", files: [], counter: 0 });
     },
     [onUpload, onDownload, dragState],
   );
 
-  // File selection handling
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    // Ensure grid gets focus to support keyboard events
     if (gridRef.current) {
       gridRef.current.focus();
     }
 
-    console.log(
-      "File clicked:",
-      file.name,
-      "Current selected:",
-      selectedFiles.length,
-    );
-
     if (event.detail === 2) {
-      // Double click to open
-      console.log("Double click - opening file");
       onFileOpen(file);
     } else {
-      // Single click to select
       const multiSelect = event.ctrlKey || event.metaKey;
       const rangeSelect = event.shiftKey;
 
-      console.log(
-        "Single click - multiSelect:",
-        multiSelect,
-        "rangeSelect:",
-        rangeSelect,
-      );
-
       if (rangeSelect && selectedFiles.length > 0) {
-        // Range selection (Shift+click)
-        console.log("Range selection");
         const lastSelected = selectedFiles[selectedFiles.length - 1];
         const currentIndex = files.findIndex((f) => f.path === file.path);
         const lastIndex = files.findIndex((f) => f.path === lastSelected.path);
@@ -807,36 +699,26 @@ export function FileManagerGrid({
           const start = Math.min(currentIndex, lastIndex);
           const end = Math.max(currentIndex, lastIndex);
           const rangeFiles = files.slice(start, end + 1);
-          console.log("Range selection result:", rangeFiles.length, "files");
           onSelectionChange(rangeFiles);
         }
       } else if (multiSelect) {
-        // Multi-selection (Ctrl+click)
-        console.log("Multi selection");
         const isSelected = selectedFiles.some((f) => f.path === file.path);
         if (isSelected) {
-          console.log("Removing from selection");
           onSelectionChange(selectedFiles.filter((f) => f.path !== file.path));
         } else {
-          console.log("Adding to selection");
           onSelectionChange([...selectedFiles, file]);
         }
       } else {
-        // Single selection
-        console.log("Single selection - should select only:", file.name);
         onSelectionChange([file]);
       }
     }
   };
 
-  // Click empty area to cancel selection
   const handleGridClick = (event: React.MouseEvent) => {
-    // Ensure grid gets focus to support keyboard events
     if (gridRef.current) {
       gridRef.current.focus();
     }
 
-    // If just completed box selection, don't clear selection
     if (
       event.target === event.currentTarget &&
       !isSelecting &&
@@ -846,10 +728,8 @@ export function FileManagerGrid({
     }
   };
 
-  // Keyboard support
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Check if input box or editable element has focus, skip if so
       const activeElement = document.activeElement;
       if (
         activeElement &&
@@ -868,7 +748,6 @@ export function FileManagerGrid({
         case "A":
           if (event.ctrlKey || event.metaKey) {
             event.preventDefault();
-            console.log("Ctrl+A pressed - selecting all files:", files.length);
             onSelectionChange([...files]);
           }
           break;
@@ -910,7 +789,6 @@ export function FileManagerGrid({
           break;
         case "Delete":
           if (selectedFiles.length > 0 && onDelete) {
-            // Trigger delete operation
             onDelete(selectedFiles);
           }
           break;
@@ -922,7 +800,7 @@ export function FileManagerGrid({
           break;
         case "y":
         case "Y":
-          if ((event.ctrlKey || event.metaKey)) {
+          if (event.ctrlKey || event.metaKey) {
             event.preventDefault();
             onRefresh();
           }
@@ -957,9 +835,7 @@ export function FileManagerGrid({
 
   return (
     <div className="h-full flex flex-col bg-dark-bg overflow-hidden">
-      {/* Toolbar and path navigation */}
       <div className="flex-shrink-0 border-b border-dark-border">
-        {/* Navigation buttons */}
         <div className="flex items-center gap-1 p-2 border-b border-dark-border">
           <button
             onClick={goBack}
@@ -1004,10 +880,8 @@ export function FileManagerGrid({
           </button>
         </div>
 
-        {/* Breadcrumb navigation */}
         <div className="flex items-center px-3 py-2 text-sm">
           {isEditingPath ? (
-            // Edit mode: path input box
             <div className="flex-1 flex items-center gap-2">
               <input
                 type="text"
@@ -1038,7 +912,6 @@ export function FileManagerGrid({
               </button>
             </div>
           ) : (
-            // View mode: breadcrumb navigation
             <>
               <button
                 onClick={() => navigateToPath(-1)}
@@ -1071,7 +944,6 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      {/* Main file grid - scroll area */}
       <div className="flex-1 relative overflow-hidden">
         <div
           ref={gridRef}
@@ -1092,7 +964,6 @@ export function FileManagerGrid({
           onContextMenu={(e) => onContextMenu?.(e)}
           tabIndex={0}
         >
-          {/* Drag hint overlay */}
           {dragState.type === "external" && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 pointer-events-none animate-in fade-in-0">
               <div className="text-center p-8 bg-background/95 border-2 border-dashed border-primary rounded-lg shadow-lg">
@@ -1128,7 +999,6 @@ export function FileManagerGrid({
             </div>
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-              {/* Linus-style creation intent UI - pure separation */}
               {createIntent && (
                 <CreateIntentGridItem
                   intent={createIntent}
@@ -1169,10 +1039,8 @@ export function FileManagerGrid({
                     onDragEnd={handleFileDragEnd}
                   >
                     <div className="flex flex-col items-center text-center">
-                      {/* File icon */}
                       <div className="mb-2">{getFileIcon(file, viewMode)}</div>
 
-                      {/* File name */}
                       <div className="w-full flex flex-col items-center">
                         {editingFile?.path === file.path ? (
                           <input
@@ -1221,7 +1089,6 @@ export function FileManagerGrid({
           ) : (
             /* List view */
             <div className="space-y-1">
-              {/* Linus-style creation intent UI - list view */}
               {createIntent && (
                 <CreateIntentListItem
                   intent={createIntent}
@@ -1260,12 +1127,10 @@ export function FileManagerGrid({
                     onDrop={(e) => handleFileDrop(e, file)}
                     onDragEnd={handleFileDragEnd}
                   >
-                    {/* File icon */}
                     <div className="flex-shrink-0">
                       {getFileIcon(file, viewMode)}
                     </div>
 
-                    {/* File info */}
                     <div className="flex-1 min-w-0">
                       {editingFile?.path === file.path ? (
                         <input
@@ -1305,7 +1170,6 @@ export function FileManagerGrid({
                       )}
                     </div>
 
-                    {/* File size */}
                     <div className="flex-shrink-0 text-right">
                       {file.type === "file" &&
                         file.size !== undefined &&
@@ -1316,7 +1180,6 @@ export function FileManagerGrid({
                         )}
                     </div>
 
-                    {/* Permission info */}
                     <div className="flex-shrink-0 text-right w-20">
                       {file.permissions && (
                         <p className="text-xs text-muted-foreground font-mono">
@@ -1330,7 +1193,6 @@ export function FileManagerGrid({
             </div>
           )}
 
-          {/* Selection rectangle */}
           {isSelecting && selectionRect && (
             <div
               className="absolute pointer-events-none border-2 border-primary bg-primary/10 z-50"
@@ -1345,7 +1207,6 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      {/* Status bar */}
       <div className="flex-shrink-0 border-t border-dark-border px-4 py-2 text-xs text-muted-foreground">
         <div className="flex justify-between items-center">
           <span>{t("fileManager.itemCount", { count: files.length })}</span>
@@ -1357,7 +1218,6 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      {/* Drag following tooltip - rendered as portal to ensure highest z-index */}
       {dragState.type === "internal" &&
         (dragState.files.length > 0 || dragState.draggedFiles?.length > 0) &&
         dragState.mousePosition &&
@@ -1365,27 +1225,43 @@ export function FileManagerGrid({
           <div
             className="fixed pointer-events-none"
             style={{
-              left: Math.min(Math.max(dragState.mousePosition.x + 40, 0), window.innerWidth - 300),
-              top: Math.max(Math.min(dragState.mousePosition.y - 80, window.innerHeight - 100), 0),
+              left: Math.min(
+                Math.max(dragState.mousePosition.x + 40, 0),
+                window.innerWidth - 300,
+              ),
+              top: Math.max(
+                Math.min(
+                  dragState.mousePosition.y - 80,
+                  window.innerHeight - 100,
+                ),
+                0,
+              ),
               zIndex: 999999,
             }}
           >
             <div className="bg-background border border-border rounded-md shadow-md px-3 py-2 flex items-center gap-2">
               {(() => {
-                const files = dragState.files.length > 0 ? dragState.files : dragState.draggedFiles || [];
+                const files =
+                  dragState.files.length > 0
+                    ? dragState.files
+                    : dragState.draggedFiles || [];
                 return dragState.target ? (
                   dragState.target.type === "directory" ? (
                     <>
                       <Move className="w-4 h-4 text-blue-500" />
                       <span className="text-sm font-medium text-foreground">
-                        {t("fileManager.moveTo", { name: dragState.target.name })}
+                        {t("fileManager.moveTo", {
+                          name: dragState.target.name,
+                        })}
                       </span>
                     </>
                   ) : (
                     <>
                       <GitCompare className="w-4 h-4 text-purple-500" />
                       <span className="text-sm font-medium text-foreground">
-                        {t("fileManager.diffCompareWith", { name: dragState.target.name })}
+                        {t("fileManager.diffCompareWith", {
+                          name: dragState.target.name,
+                        })}
                       </span>
                     </>
                   )
@@ -1393,20 +1269,21 @@ export function FileManagerGrid({
                   <>
                     <Download className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-medium text-foreground">
-                      {t("fileManager.dragOutsideToDownload", { count: files.length })}
+                      {t("fileManager.dragOutsideToDownload", {
+                        count: files.length,
+                      })}
                     </span>
                   </>
                 );
               })()}
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );
 }
 
-// Linus-style creation intent component: Grid view
 function CreateIntentGridItem({
   intent,
   onConfirm,
@@ -1439,7 +1316,7 @@ function CreateIntentGridItem({
     <div className="group p-3 rounded-lg border-2 border-dashed border-primary bg-primary/10">
       <div className="flex flex-col items-center text-center">
         <div className="mb-2">
-          {intent.type === 'directory' ? (
+          {intent.type === "directory" ? (
             <Folder className="w-8 h-8 text-primary" />
           ) : (
             <File className="w-8 h-8 text-primary" />
@@ -1453,14 +1330,17 @@ function CreateIntentGridItem({
           onKeyDown={handleKeyDown}
           onBlur={() => onConfirm?.(inputName.trim())}
           className="w-full max-w-[120px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-center text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
-          placeholder={intent.type === 'directory' ? t('fileManager.folderName') : t('fileManager.fileName')}
+          placeholder={
+            intent.type === "directory"
+              ? t("fileManager.folderName")
+              : t("fileManager.fileName")
+          }
         />
       </div>
     </div>
   );
 }
 
-// Linus-style creation intent component: List view
 function CreateIntentListItem({
   intent,
   onConfirm,
@@ -1492,7 +1372,7 @@ function CreateIntentListItem({
   return (
     <div className="flex items-center gap-3 p-2 rounded border-2 border-dashed border-primary bg-primary/10">
       <div className="flex-shrink-0">
-        {intent.type === 'directory' ? (
+        {intent.type === "directory" ? (
           <Folder className="w-6 h-6 text-primary" />
         ) : (
           <File className="w-6 h-6 text-primary" />
@@ -1506,7 +1386,11 @@ function CreateIntentListItem({
         onKeyDown={handleKeyDown}
         onBlur={() => onConfirm?.(inputName.trim())}
         className="flex-1 min-w-0 max-w-[200px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
-        placeholder={intent.type === 'directory' ? t('fileManager.folderName') : t('fileManager.fileName')}
+        placeholder={
+          intent.type === "directory"
+            ? t("fileManager.folderName")
+            : t("fileManager.fileName")
+        }
       />
     </div>
   );

@@ -228,7 +228,9 @@ export function ServerConfig({
         {versionInfo && !versionDismissed && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium">{t("versionCheck.checkUpdates")}</h3>
+              <h3 className="text-sm font-medium">
+                {t("versionCheck.checkUpdates")}
+              </h3>
               <Button
                 variant="ghost"
                 size="sm"

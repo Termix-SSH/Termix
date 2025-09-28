@@ -9,9 +9,6 @@ export SSL_KEY_PATH=${SSL_KEY_PATH:-/app/data/ssl/termix.key}
 
 echo "Configuring web UI to run on port: $PORT"
 
-# Choose nginx configuration based on SSL setting
-# Default: HTTP-only for easy setup
-# Set ENABLE_SSL=true to use HTTPS with automatic redirect
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "SSL enabled - using HTTPS configuration with redirect"
     NGINX_CONF_SOURCE="/etc/nginx/nginx-https.conf"
@@ -27,18 +24,15 @@ mkdir -p /app/data
 chown -R node:node /app/data
 chmod 755 /app/data
 
-# If SSL is enabled, generate certificates first
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "Generating SSL certificates..."
     mkdir -p /app/data/ssl
     chown -R node:node /app/data/ssl
     chmod 755 /app/data/ssl
-    
-    # Generate SSL certificates using OpenSSL directly (faster and more reliable)
+
     DOMAIN=${SSL_DOMAIN:-localhost}
     echo "Generating certificate for domain: $DOMAIN"
-    
-    # Create OpenSSL config
+
     cat > /app/data/ssl/openssl.conf << EOF
 [req]
 default_bits = 2048
@@ -68,18 +62,14 @@ IP.1 = 127.0.0.1
 IP.2 = ::1
 EOF
 
-    # Generate private key
     openssl genrsa -out /app/data/ssl/termix.key 2048
-    
-    # Generate certificate
+
     openssl req -new -x509 -key /app/data/ssl/termix.key -out /app/data/ssl/termix.crt -days 365 -config /app/data/ssl/openssl.conf -extensions v3_req
-    
-    # Set proper permissions
+
     chmod 600 /app/data/ssl/termix.key
     chmod 644 /app/data/ssl/termix.crt
     chown node:node /app/data/ssl/termix.key /app/data/ssl/termix.crt
-    
-    # Clean up config
+
     rm -f /app/data/ssl/openssl.conf
     
     echo "SSL certificates generated successfully for domain: $DOMAIN"

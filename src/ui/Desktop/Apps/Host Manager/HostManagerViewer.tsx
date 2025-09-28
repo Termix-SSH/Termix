@@ -719,7 +719,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                       {
                         sourcePort: 5432,
                         endpointPort: 5432,
-                          endpointHost: t("interface.webServerProduction"),
+                        endpointHost: t("interface.webServerProduction"),
                         maxRetries: 3,
                         retryInterval: 10,
                         autoStart: true,

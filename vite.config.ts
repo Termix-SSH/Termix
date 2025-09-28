@@ -22,10 +22,12 @@ export default defineConfig({
   },
   base: "./",
   server: {
-    https: useHTTPS ? {
-      cert: fs.readFileSync(sslCertPath),
-      key: fs.readFileSync(sslKeyPath),
-    } : false,
+    https: useHTTPS
+      ? {
+          cert: fs.readFileSync(sslCertPath),
+          key: fs.readFileSync(sslKeyPath),
+        }
+      : false,
     port: 5173,
     host: "localhost",
   },

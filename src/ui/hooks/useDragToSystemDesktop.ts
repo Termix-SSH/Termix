@@ -37,7 +37,6 @@ export function useDragToSystemDesktop({
     options: DragToSystemOptions;
   } | null>(null);
 
-  // Directory memory functionality
   const getLastSaveDirectory = async () => {
     try {
       if ("indexedDB" in window) {
@@ -60,9 +59,7 @@ export function useDragToSystemDesktop({
           };
         });
       }
-    } catch (error) {
-      console.log("Unable to get last save directory:", error);
-    }
+    } catch (error) {}
     return null;
   };
 
@@ -78,19 +75,15 @@ export function useDragToSystemDesktop({
           store.put({ handle: dirHandle }, "lastSaveDir");
         };
       }
-    } catch (error) {
-      console.log("Unable to save directory record:", error);
-    }
+    } catch (error) {}
   };
 
-  // Check File System Access API support
   const isFileSystemAPISupported = () => {
     return "showSaveFilePicker" in window;
   };
 
-  // Check if drag has left window boundaries
   const isDraggedOutsideWindow = (e: DragEvent) => {
-    const margin = 50; // Increase tolerance margin
+    const margin = 50;
     return (
       e.clientX < margin ||
       e.clientX > window.innerWidth - margin ||
@@ -99,14 +92,12 @@ export function useDragToSystemDesktop({
     );
   };
 
-  // Create file blob
   const createFileBlob = async (file: FileItem): Promise<Blob> => {
     const response = await downloadSSHFile(sshSessionId, file.path);
     if (!response?.content) {
       throw new Error(`Unable to get content for file ${file.name}`);
     }
 
-    // Convert base64 to blob
     const binaryString = atob(response.content);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -116,9 +107,7 @@ export function useDragToSystemDesktop({
     return new Blob([bytes]);
   };
 
-  // Create ZIP file (for multi-file download)
   const createZipBlob = async (files: FileItem[]): Promise<Blob> => {
-    // A lightweight zip library is needed here, using simple approach for now
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
 
@@ -130,8 +119,6 @@ export function useDragToSystemDesktop({
     return await zip.generateAsync({ type: "blob" });
   };
 
-
-  // Fallback solution: traditional download
   const fallbackDownload = (blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -143,7 +130,6 @@ export function useDragToSystemDesktop({
     URL.revokeObjectURL(url);
   };
 
-  // Handle drag to system desktop
   const handleDragToSystem = useCallback(
     async (files: FileItem[], options: DragToSystemOptions = {}) => {
       const { enableToast = true, onSuccess, onError } = options;
@@ -155,7 +141,6 @@ export function useDragToSystemDesktop({
         return false;
       }
 
-      // Filter out file types
       const fileList = files.filter((f) => f.type === "file");
       if (fileList.length === 0) {
         const error = "Only files can be dragged to desktop";
@@ -172,12 +157,9 @@ export function useDragToSystemDesktop({
           error: null,
         }));
 
-        // Determine file name first (synchronously)
-        const fileName = fileList.length === 1
-          ? fileList[0].name
-          : `files_${Date.now()}.zip`;
+        const fileName =
+          fileList.length === 1 ? fileList[0].name : `files_${Date.now()}.zip`;
 
-        // For File System Access API, get the file handle FIRST to preserve user gesture
         let fileHandle: any = null;
         if (isFileSystemAPISupported()) {
           try {
@@ -188,14 +170,21 @@ export function useDragToSystemDesktop({
                 {
                   description: "Files",
                   accept: {
-                    "*/*": [".txt", ".jpg", ".png", ".pdf", ".zip", ".tar", ".gz"],
+                    "*/*": [
+                      ".txt",
+                      ".jpg",
+                      ".png",
+                      ".pdf",
+                      ".zip",
+                      ".tar",
+                      ".gz",
+                    ],
                   },
                 },
               ],
             });
           } catch (error: any) {
             if (error.name === "AbortError") {
-              // User cancelled
               setState((prev) => ({
                 ...prev,
                 isDownloading: false,
@@ -207,32 +196,28 @@ export function useDragToSystemDesktop({
           }
         }
 
-        // Now create the blob (after getting file handle)
         let blob: Blob;
         if (fileList.length === 1) {
-          // Single file
           blob = await createFileBlob(fileList[0]);
           setState((prev) => ({ ...prev, progress: 70 }));
         } else {
-          // Package multiple files into ZIP
           blob = await createZipBlob(fileList);
           setState((prev) => ({ ...prev, progress: 70 }));
         }
 
         setState((prev) => ({ ...prev, progress: 90 }));
 
-        // Save the file
         if (fileHandle) {
-          // Use File System Access API with pre-obtained handle
           await saveLastDirectory(fileHandle);
           const writable = await fileHandle.createWritable();
           await writable.write(blob);
           await writable.close();
         } else {
-          // Fallback to traditional download
           fallbackDownload(blob, fileName);
           if (enableToast) {
-            toast.info("Due to browser limitations, file will be downloaded to default download directory");
+            toast.info(
+              "Due to browser limitations, file will be downloaded to default download directory",
+            );
           }
         }
 
@@ -248,14 +233,12 @@ export function useDragToSystemDesktop({
 
         onSuccess?.();
 
-        // Reset state
         setTimeout(() => {
           setState((prev) => ({ ...prev, isDownloading: false, progress: 0 }));
         }, 1000);
 
         return true;
       } catch (error: any) {
-        console.error("Failed to drag to desktop:", error);
         const errorMessage = error.message || "Save failed";
 
         setState((prev) => ({
@@ -276,7 +259,6 @@ export function useDragToSystemDesktop({
     [sshSessionId],
   );
 
-  // Start dragging (record drag data)
   const startDragToSystem = useCallback(
     (files: FileItem[], options: DragToSystemOptions = {}) => {
       dragDataRef.current = { files, options };
@@ -285,27 +267,22 @@ export function useDragToSystemDesktop({
     [],
   );
 
-  // End drag detection
   const handleDragEnd = useCallback(
     (e: DragEvent) => {
       if (!dragDataRef.current) return;
 
       const { files, options } = dragDataRef.current;
 
-      // Check if dragged outside window
       if (isDraggedOutsideWindow(e)) {
-        // Execute immediately to preserve user gesture context for showSaveFilePicker
         handleDragToSystem(files, options);
       }
 
-      // Clean up drag state
       dragDataRef.current = null;
       setState((prev) => ({ ...prev, isDragging: false }));
     },
     [handleDragToSystem],
   );
 
-  // Cancel dragging
   const cancelDragToSystem = useCallback(() => {
     dragDataRef.current = null;
     setState((prev) => ({ ...prev, isDragging: false, error: null }));
@@ -317,6 +294,6 @@ export function useDragToSystemDesktop({
     startDragToSystem,
     handleDragEnd,
     cancelDragToSystem,
-    handleDragToSystem, // Direct call version
+    handleDragToSystem,
   };
 }

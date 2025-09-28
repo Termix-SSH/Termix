@@ -14,23 +14,35 @@ export interface LogContext {
   [key: string]: any;
 }
 
-// Sensitive fields that should be masked in logs
 const SENSITIVE_FIELDS = [
-  'password', 'passphrase', 'key', 'privateKey', 'publicKey', 'token', 'secret',
-  'clientSecret', 'keyPassword', 'autostartPassword', 'autostartKey', 'autostartKeyPassword',
-  'credentialId', 'authToken', 'jwt', 'session', 'cookie'
+  "password",
+  "passphrase",
+  "key",
+  "privateKey",
+  "publicKey",
+  "token",
+  "secret",
+  "clientSecret",
+  "keyPassword",
+  "autostartPassword",
+  "autostartKey",
+  "autostartKeyPassword",
+  "credentialId",
+  "authToken",
+  "jwt",
+  "session",
+  "cookie",
 ];
 
-// Fields that should be truncated if too long
-const TRUNCATE_FIELDS = ['data', 'content', 'body', 'response', 'request'];
+const TRUNCATE_FIELDS = ["data", "content", "body", "response", "request"];
 
 class Logger {
   private serviceName: string;
   private serviceIcon: string;
   private serviceColor: string;
   private logCounts = new Map<string, { count: number; lastLog: number }>();
-  private readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
-  private readonly RATE_LIMIT_MAX = 10; // Max logs per minute for same message
+  private readonly RATE_LIMIT_WINDOW = 60000;
+  private readonly RATE_LIMIT_MAX = 10;
 
   constructor(serviceName: string, serviceIcon: string, serviceColor: string) {
     this.serviceName = serviceName;
@@ -44,27 +56,32 @@ class Logger {
 
   private sanitizeContext(context: LogContext): LogContext {
     const sanitized = { ...context };
-    
-    // Mask sensitive fields
+
     for (const field of SENSITIVE_FIELDS) {
       if (sanitized[field] !== undefined) {
-        if (typeof sanitized[field] === 'string' && sanitized[field].length > 0) {
-          sanitized[field] = '[MASKED]';
-        } else if (typeof sanitized[field] === 'boolean') {
-          sanitized[field] = sanitized[field] ? '[PRESENT]' : '[ABSENT]';
+        if (
+          typeof sanitized[field] === "string" &&
+          sanitized[field].length > 0
+        ) {
+          sanitized[field] = "[MASKED]";
+        } else if (typeof sanitized[field] === "boolean") {
+          sanitized[field] = sanitized[field] ? "[PRESENT]" : "[ABSENT]";
         } else {
-          sanitized[field] = '[MASKED]';
+          sanitized[field] = "[MASKED]";
         }
       }
     }
-    
-    // Truncate long fields
+
     for (const field of TRUNCATE_FIELDS) {
-      if (sanitized[field] && typeof sanitized[field] === 'string' && sanitized[field].length > 100) {
-        sanitized[field] = sanitized[field].substring(0, 100) + '...';
+      if (
+        sanitized[field] &&
+        typeof sanitized[field] === "string" &&
+        sanitized[field].length > 100
+      ) {
+        sanitized[field] = sanitized[field].substring(0, 100) + "...";
       }
     }
-    
+
     return sanitized;
   }
 
@@ -82,13 +99,20 @@ class Logger {
     if (context) {
       const sanitizedContext = this.sanitizeContext(context);
       const contextParts = [];
-      if (sanitizedContext.operation) contextParts.push(`op:${sanitizedContext.operation}`);
-      if (sanitizedContext.userId) contextParts.push(`user:${sanitizedContext.userId}`);
-      if (sanitizedContext.hostId) contextParts.push(`host:${sanitizedContext.hostId}`);
-      if (sanitizedContext.tunnelName) contextParts.push(`tunnel:${sanitizedContext.tunnelName}`);
-      if (sanitizedContext.sessionId) contextParts.push(`session:${sanitizedContext.sessionId}`);
-      if (sanitizedContext.requestId) contextParts.push(`req:${sanitizedContext.requestId}`);
-      if (sanitizedContext.duration) contextParts.push(`duration:${sanitizedContext.duration}ms`);
+      if (sanitizedContext.operation)
+        contextParts.push(`op:${sanitizedContext.operation}`);
+      if (sanitizedContext.userId)
+        contextParts.push(`user:${sanitizedContext.userId}`);
+      if (sanitizedContext.hostId)
+        contextParts.push(`host:${sanitizedContext.hostId}`);
+      if (sanitizedContext.tunnelName)
+        contextParts.push(`tunnel:${sanitizedContext.tunnelName}`);
+      if (sanitizedContext.sessionId)
+        contextParts.push(`session:${sanitizedContext.sessionId}`);
+      if (sanitizedContext.requestId)
+        contextParts.push(`req:${sanitizedContext.requestId}`);
+      if (sanitizedContext.duration)
+        contextParts.push(`duration:${sanitizedContext.duration}ms`);
 
       if (contextParts.length > 0) {
         contextStr = chalk.gray(` [${contextParts.join(",")}]`);
@@ -119,27 +143,25 @@ class Logger {
     if (level === "debug" && process.env.NODE_ENV === "production") {
       return false;
     }
-    
-    // Rate limiting for frequent messages
+
     const now = Date.now();
     const logKey = `${level}:${message}`;
     const logInfo = this.logCounts.get(logKey);
-    
+
     if (logInfo) {
       if (now - logInfo.lastLog < this.RATE_LIMIT_WINDOW) {
         logInfo.count++;
         if (logInfo.count > this.RATE_LIMIT_MAX) {
-          return false; // Rate limited
+          return false;
         }
       } else {
-        // Reset counter for new window
         logInfo.count = 1;
         logInfo.lastLog = now;
       }
     } else {
       this.logCounts.set(logKey, { count: 1, lastLog: now });
     }
-    
+
     return true;
   }
 

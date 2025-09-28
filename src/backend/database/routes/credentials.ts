@@ -17,7 +17,6 @@ import crypto from "crypto";
 import ssh2Pkg from "ssh2";
 const { utils: ssh2Utils, Client } = ssh2Pkg;
 
-// Direct SSH key generation with ssh2 - the right way
 function generateSSHKeyPair(
   keyType: string,
   keySize?: number,
@@ -29,7 +28,6 @@ function generateSSHKeyPair(
   error?: string;
 } {
   try {
-    // Convert our keyType to ssh2 format
     let ssh2Type = keyType;
     const options: any = {};
 
@@ -40,16 +38,14 @@ function generateSSHKeyPair(
       ssh2Type = "ed25519";
     } else if (keyType === "ecdsa-sha2-nistp256") {
       ssh2Type = "ecdsa";
-      options.bits = 256; // ECDSA P-256 uses 256 bits
+      options.bits = 256;
     }
 
-    // Add passphrase protection if provided
     if (passphrase && passphrase.trim()) {
       options.passphrase = passphrase;
-      options.cipher = "aes128-cbc"; // Default cipher for encrypted private keys
+      options.cipher = "aes128-cbc";
     }
 
-    // Use ssh2's native key generation
     const keyPair = ssh2Utils.generateKeyPairSync(ssh2Type as any, options);
 
     return {
@@ -68,67 +64,51 @@ function generateSSHKeyPair(
 
 const router = express.Router();
 
-interface JWTPayload {
-  userId: string;
-  iat?: number;
-  exp?: number;
-}
-
 function isNonEmptyString(val: any): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
-// Use AuthManager middleware for authentication
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Create a new credential
 // POST /credentials
-router.post("/", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
-  const {
-    name,
-    description,
-    folder,
-    tags,
-    authType,
-    username,
-    password,
-    key,
-    keyPassword,
-    keyType,
-  } = req.body;
-
-  if (
-    !isNonEmptyString(userId) ||
-    !isNonEmptyString(name) ||
-    !isNonEmptyString(username)
-  ) {
-    authLogger.warn("Invalid credential creation data validation failed", {
-      operation: "credential_create",
-      userId,
-      hasName: !!name,
-      hasUsername: !!username,
-    });
-    return res.status(400).json({ error: "Name and username are required" });
-  }
-
-  if (!["password", "key"].includes(authType)) {
-    authLogger.warn("Invalid auth type provided", {
-      operation: "credential_create",
-      userId,
+router.post(
+  "/",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const {
       name,
+      description,
+      folder,
+      tags,
       authType,
-    });
-    return res
-      .status(400)
-      .json({ error: 'Auth type must be "password" or "key"' });
-  }
+      username,
+      password,
+      key,
+      keyPassword,
+      keyType,
+    } = req.body;
 
-  try {
-    if (authType === "password" && !password) {
-      authLogger.warn("Password required for password authentication", {
+    if (
+      !isNonEmptyString(userId) ||
+      !isNonEmptyString(name) ||
+      !isNonEmptyString(username)
+    ) {
+      authLogger.warn("Invalid credential creation data validation failed", {
+        operation: "credential_create",
+        userId,
+        hasName: !!name,
+        hasUsername: !!username,
+      });
+      return res.status(400).json({ error: "Name and username are required" });
+    }
+
+    if (!["password", "key"].includes(authType)) {
+      authLogger.warn("Invalid auth type provided", {
         operation: "credential_create",
         userId,
         name,
@@ -136,168 +116,262 @@ router.post("/", authenticateJWT, requireDataAccess, async (req: Request, res: R
       });
       return res
         .status(400)
-        .json({ error: "Password is required for password authentication" });
+        .json({ error: 'Auth type must be "password" or "key"' });
     }
-    if (authType === "key" && !key) {
-      authLogger.warn("SSH key required for key authentication", {
-        operation: "credential_create",
-        userId,
-        name,
-        authType,
-      });
-      return res
-        .status(400)
-        .json({ error: "SSH key is required for key authentication" });
-    }
-    const plainPassword = authType === "password" && password ? password : null;
-    const plainKey = authType === "key" && key ? key : null;
-    const plainKeyPassword =
-      authType === "key" && keyPassword ? keyPassword : null;
 
-    let keyInfo = null;
-    if (authType === "key" && plainKey) {
-      keyInfo = parseSSHKey(plainKey, plainKeyPassword);
-      if (!keyInfo.success) {
-        authLogger.warn("SSH key parsing failed", {
+    try {
+      if (authType === "password" && !password) {
+        authLogger.warn("Password required for password authentication", {
           operation: "credential_create",
           userId,
           name,
-          error: keyInfo.error,
+          authType,
         });
-        return res.status(400).json({
-          error: `Invalid SSH key: ${keyInfo.error}`,
-        });
+        return res
+          .status(400)
+          .json({ error: "Password is required for password authentication" });
       }
-    }
+      if (authType === "key" && !key) {
+        authLogger.warn("SSH key required for key authentication", {
+          operation: "credential_create",
+          userId,
+          name,
+          authType,
+        });
+        return res
+          .status(400)
+          .json({ error: "SSH key is required for key authentication" });
+      }
+      const plainPassword =
+        authType === "password" && password ? password : null;
+      const plainKey = authType === "key" && key ? key : null;
+      const plainKeyPassword =
+        authType === "key" && keyPassword ? keyPassword : null;
 
-    const credentialData = {
-      userId,
-      name: name.trim(),
-      description: description?.trim() || null,
-      folder: folder?.trim() || null,
-      tags: Array.isArray(tags) ? tags.join(",") : tags || "",
-      authType,
-      username: username.trim(),
-      password: plainPassword,
-      key: plainKey, // backward compatibility
-      privateKey: keyInfo?.privateKey || plainKey,
-      publicKey: keyInfo?.publicKey || null,
-      keyPassword: plainKeyPassword,
-      keyType: keyType || null,
-      detectedKeyType: keyInfo?.keyType || null,
-      usageCount: 0,
-      lastUsed: null,
-    };
+      let keyInfo = null;
+      if (authType === "key" && plainKey) {
+        keyInfo = parseSSHKey(plainKey, plainKeyPassword);
+        if (!keyInfo.success) {
+          authLogger.warn("SSH key parsing failed", {
+            operation: "credential_create",
+            userId,
+            name,
+            error: keyInfo.error,
+          });
+          return res.status(400).json({
+            error: `Invalid SSH key: ${keyInfo.error}`,
+          });
+        }
+      }
 
-    const created = (await SimpleDBOps.insert(
-      sshCredentials,
-      "ssh_credentials",
-      credentialData,
-      userId,
-    )) as typeof credentialData & { id: number };
-
-    authLogger.success(
-      `SSH credential created: ${name} (${authType}) by user ${userId}`,
-      {
-        operation: "credential_create_success",
+      const credentialData = {
         userId,
-        credentialId: created.id,
+        name: name.trim(),
+        description: description?.trim() || null,
+        folder: folder?.trim() || null,
+        tags: Array.isArray(tags) ? tags.join(",") : tags || "",
+        authType,
+        username: username.trim(),
+        password: plainPassword,
+        key: plainKey,
+        privateKey: keyInfo?.privateKey || plainKey,
+        publicKey: keyInfo?.publicKey || null,
+        keyPassword: plainKeyPassword,
+        keyType: keyType || null,
+        detectedKeyType: keyInfo?.keyType || null,
+        usageCount: 0,
+        lastUsed: null,
+      };
+
+      const created = (await SimpleDBOps.insert(
+        sshCredentials,
+        "ssh_credentials",
+        credentialData,
+        userId,
+      )) as typeof credentialData & { id: number };
+
+      authLogger.success(
+        `SSH credential created: ${name} (${authType}) by user ${userId}`,
+        {
+          operation: "credential_create_success",
+          userId,
+          credentialId: created.id,
+          name,
+          authType,
+          username,
+        },
+      );
+
+      res.status(201).json(formatCredentialOutput(created));
+    } catch (err) {
+      authLogger.error("Failed to create credential in database", err, {
+        operation: "credential_create",
+        userId,
         name,
         authType,
         username,
-      },
-    );
-
-    res.status(201).json(formatCredentialOutput(created));
-  } catch (err) {
-    authLogger.error("Failed to create credential in database", err, {
-      operation: "credential_create",
-      userId,
-      name,
-      authType,
-      username,
-    });
-    res.status(500).json({
-      error: err instanceof Error ? err.message : "Failed to create credential",
-    });
-  }
-});
+      });
+      res.status(500).json({
+        error:
+          err instanceof Error ? err.message : "Failed to create credential",
+      });
+    }
+  },
+);
 
 // Get all credentials for the authenticated user
 // GET /credentials
-router.get("/", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
+router.get(
+  "/",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
 
-  if (!isNonEmptyString(userId)) {
-    authLogger.warn("Invalid userId for credential fetch");
-    return res.status(400).json({ error: "Invalid userId" });
-  }
+    if (!isNonEmptyString(userId)) {
+      authLogger.warn("Invalid userId for credential fetch");
+      return res.status(400).json({ error: "Invalid userId" });
+    }
 
-  try {
-    const credentials = await SimpleDBOps.select(
-      db
-        .select()
-        .from(sshCredentials)
-        .where(eq(sshCredentials.userId, userId))
-        .orderBy(desc(sshCredentials.updatedAt)),
-      "ssh_credentials",
-      userId,
-    );
+    try {
+      const credentials = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshCredentials)
+          .where(eq(sshCredentials.userId, userId))
+          .orderBy(desc(sshCredentials.updatedAt)),
+        "ssh_credentials",
+        userId,
+      );
 
-    res.json(credentials.map((cred) => formatCredentialOutput(cred)));
-  } catch (err) {
-    authLogger.error("Failed to fetch credentials", err);
-    res.status(500).json({ error: "Failed to fetch credentials" });
-  }
-});
+      res.json(credentials.map((cred) => formatCredentialOutput(cred)));
+    } catch (err) {
+      authLogger.error("Failed to fetch credentials", err);
+      res.status(500).json({ error: "Failed to fetch credentials" });
+    }
+  },
+);
 
 // Get all unique credential folders for the authenticated user
 // GET /credentials/folders
-router.get("/folders", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
+router.get(
+  "/folders",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
 
-  if (!isNonEmptyString(userId)) {
-    authLogger.warn("Invalid userId for credential folder fetch");
-    return res.status(400).json({ error: "Invalid userId" });
-  }
+    if (!isNonEmptyString(userId)) {
+      authLogger.warn("Invalid userId for credential folder fetch");
+      return res.status(400).json({ error: "Invalid userId" });
+    }
 
-  try {
-    const result = await db
-      .select({ folder: sshCredentials.folder })
-      .from(sshCredentials)
-      .where(eq(sshCredentials.userId, userId));
+    try {
+      const result = await db
+        .select({ folder: sshCredentials.folder })
+        .from(sshCredentials)
+        .where(eq(sshCredentials.userId, userId));
 
-    const folderCounts: Record<string, number> = {};
-    result.forEach((r) => {
-      if (r.folder && r.folder.trim() !== "") {
-        folderCounts[r.folder] = (folderCounts[r.folder] || 0) + 1;
-      }
-    });
+      const folderCounts: Record<string, number> = {};
+      result.forEach((r) => {
+        if (r.folder && r.folder.trim() !== "") {
+          folderCounts[r.folder] = (folderCounts[r.folder] || 0) + 1;
+        }
+      });
 
-    const folders = Object.keys(folderCounts).filter(
-      (folder) => folderCounts[folder] > 0,
-    );
-    res.json(folders);
-  } catch (err) {
-    authLogger.error("Failed to fetch credential folders", err);
-    res.status(500).json({ error: "Failed to fetch credential folders" });
-  }
-});
+      const folders = Object.keys(folderCounts).filter(
+        (folder) => folderCounts[folder] > 0,
+      );
+      res.json(folders);
+    } catch (err) {
+      authLogger.error("Failed to fetch credential folders", err);
+      res.status(500).json({ error: "Failed to fetch credential folders" });
+    }
+  },
+);
 
 // Get a specific credential by ID (with plain text secrets)
 // GET /credentials/:id
-router.get("/:id", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
-  const { id } = req.params;
+router.get(
+  "/:id",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const { id } = req.params;
 
-  if (!isNonEmptyString(userId) || !id) {
-    authLogger.warn("Invalid request for credential fetch");
-    return res.status(400).json({ error: "Invalid request" });
-  }
+    if (!isNonEmptyString(userId) || !id) {
+      authLogger.warn("Invalid request for credential fetch");
+      return res.status(400).json({ error: "Invalid request" });
+    }
 
-  try {
-    const credentials = await SimpleDBOps.select(
-      db
+    try {
+      const credentials = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, parseInt(id)),
+              eq(sshCredentials.userId, userId),
+            ),
+          ),
+        "ssh_credentials",
+        userId,
+      );
+
+      if (credentials.length === 0) {
+        return res.status(404).json({ error: "Credential not found" });
+      }
+
+      const credential = credentials[0];
+      const output = formatCredentialOutput(credential);
+
+      if (credential.password) {
+        (output as any).password = credential.password;
+      }
+      if (credential.key) {
+        (output as any).key = credential.key;
+      }
+      if (credential.privateKey) {
+        (output as any).privateKey = credential.privateKey;
+      }
+      if (credential.publicKey) {
+        (output as any).publicKey = credential.publicKey;
+      }
+      if (credential.keyPassword) {
+        (output as any).keyPassword = credential.keyPassword;
+      }
+
+      res.json(output);
+    } catch (err) {
+      authLogger.error("Failed to fetch credential", err);
+      res.status(500).json({
+        error:
+          err instanceof Error ? err.message : "Failed to fetch credential",
+      });
+    }
+  },
+);
+
+// Update a credential
+// PUT /credentials/:id
+router.put(
+  "/:id",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (!isNonEmptyString(userId) || !id) {
+      authLogger.warn("Invalid request for credential update");
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    try {
+      const existing = await db
         .select()
         .from(sshCredentials)
         .where(
@@ -305,121 +379,85 @@ router.get("/:id", authenticateJWT, requireDataAccess, async (req: Request, res:
             eq(sshCredentials.id, parseInt(id)),
             eq(sshCredentials.userId, userId),
           ),
-        ),
-      "ssh_credentials",
-      userId,
-    );
+        );
 
-    if (credentials.length === 0) {
-      return res.status(404).json({ error: "Credential not found" });
-    }
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Credential not found" });
+      }
 
-    const credential = credentials[0];
-    const output = formatCredentialOutput(credential);
+      const updateFields: any = {};
 
-    if (credential.password) {
-      (output as any).password = credential.password;
-    }
-    if (credential.key) {
-      (output as any).key = credential.key; // backward compatibility
-    }
-    if (credential.privateKey) {
-      (output as any).privateKey = credential.privateKey;
-    }
-    if (credential.publicKey) {
-      (output as any).publicKey = credential.publicKey;
-    }
-    if (credential.keyPassword) {
-      (output as any).keyPassword = credential.keyPassword;
-    }
+      if (updateData.name !== undefined)
+        updateFields.name = updateData.name.trim();
+      if (updateData.description !== undefined)
+        updateFields.description = updateData.description?.trim() || null;
+      if (updateData.folder !== undefined)
+        updateFields.folder = updateData.folder?.trim() || null;
+      if (updateData.tags !== undefined) {
+        updateFields.tags = Array.isArray(updateData.tags)
+          ? updateData.tags.join(",")
+          : updateData.tags || "";
+      }
+      if (updateData.username !== undefined)
+        updateFields.username = updateData.username.trim();
+      if (updateData.authType !== undefined)
+        updateFields.authType = updateData.authType;
+      if (updateData.keyType !== undefined)
+        updateFields.keyType = updateData.keyType;
 
-    res.json(output);
-  } catch (err) {
-    authLogger.error("Failed to fetch credential", err);
-    res.status(500).json({
-      error: err instanceof Error ? err.message : "Failed to fetch credential",
-    });
-  }
-});
+      if (updateData.password !== undefined) {
+        updateFields.password = updateData.password || null;
+      }
+      if (updateData.key !== undefined) {
+        updateFields.key = updateData.key || null;
 
-// Update a credential
-// PUT /credentials/:id
-router.put("/:id", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
-  const { id } = req.params;
-  const updateData = req.body;
+        if (updateData.key && existing[0].authType === "key") {
+          const keyInfo = parseSSHKey(updateData.key, updateData.keyPassword);
+          if (!keyInfo.success) {
+            authLogger.warn("SSH key parsing failed during update", {
+              operation: "credential_update",
+              userId,
+              credentialId: parseInt(id),
+              error: keyInfo.error,
+            });
+            return res.status(400).json({
+              error: `Invalid SSH key: ${keyInfo.error}`,
+            });
+          }
+          updateFields.privateKey = keyInfo.privateKey;
+          updateFields.publicKey = keyInfo.publicKey;
+          updateFields.detectedKeyType = keyInfo.keyType;
+        }
+      }
+      if (updateData.keyPassword !== undefined) {
+        updateFields.keyPassword = updateData.keyPassword || null;
+      }
 
-  if (!isNonEmptyString(userId) || !id) {
-    authLogger.warn("Invalid request for credential update");
-    return res.status(400).json({ error: "Invalid request" });
-  }
+      if (Object.keys(updateFields).length === 0) {
+        const existing = await SimpleDBOps.select(
+          db
+            .select()
+            .from(sshCredentials)
+            .where(eq(sshCredentials.id, parseInt(id))),
+          "ssh_credentials",
+          userId,
+        );
 
-  try {
-    const existing = await db
-      .select()
-      .from(sshCredentials)
-      .where(
+        return res.json(formatCredentialOutput(existing[0]));
+      }
+
+      await SimpleDBOps.update(
+        sshCredentials,
+        "ssh_credentials",
         and(
           eq(sshCredentials.id, parseInt(id)),
           eq(sshCredentials.userId, userId),
         ),
+        updateFields,
+        userId,
       );
 
-    if (existing.length === 0) {
-      return res.status(404).json({ error: "Credential not found" });
-    }
-
-    const updateFields: any = {};
-
-    if (updateData.name !== undefined)
-      updateFields.name = updateData.name.trim();
-    if (updateData.description !== undefined)
-      updateFields.description = updateData.description?.trim() || null;
-    if (updateData.folder !== undefined)
-      updateFields.folder = updateData.folder?.trim() || null;
-    if (updateData.tags !== undefined) {
-      updateFields.tags = Array.isArray(updateData.tags)
-        ? updateData.tags.join(",")
-        : updateData.tags || "";
-    }
-    if (updateData.username !== undefined)
-      updateFields.username = updateData.username.trim();
-    if (updateData.authType !== undefined)
-      updateFields.authType = updateData.authType;
-    if (updateData.keyType !== undefined)
-      updateFields.keyType = updateData.keyType;
-
-    if (updateData.password !== undefined) {
-      updateFields.password = updateData.password || null;
-    }
-    if (updateData.key !== undefined) {
-      updateFields.key = updateData.key || null; // backward compatibility
-
-      // Parse SSH key if provided
-      if (updateData.key && existing[0].authType === "key") {
-        const keyInfo = parseSSHKey(updateData.key, updateData.keyPassword);
-        if (!keyInfo.success) {
-          authLogger.warn("SSH key parsing failed during update", {
-            operation: "credential_update",
-            userId,
-            credentialId: parseInt(id),
-            error: keyInfo.error,
-          });
-          return res.status(400).json({
-            error: `Invalid SSH key: ${keyInfo.error}`,
-          });
-        }
-        updateFields.privateKey = keyInfo.privateKey;
-        updateFields.publicKey = keyInfo.publicKey;
-        updateFields.detectedKeyType = keyInfo.keyType;
-      }
-    }
-    if (updateData.keyPassword !== undefined) {
-      updateFields.keyPassword = updateData.keyPassword || null;
-    }
-
-    if (Object.keys(updateFields).length === 0) {
-      const existing = await SimpleDBOps.select(
+      const updated = await SimpleDBOps.select(
         db
           .select()
           .from(sshCredentials)
@@ -428,141 +466,129 @@ router.put("/:id", authenticateJWT, requireDataAccess, async (req: Request, res:
         userId,
       );
 
-      return res.json(formatCredentialOutput(existing[0]));
+      const credential = updated[0];
+      authLogger.success(
+        `SSH credential updated: ${credential.name} (${credential.authType}) by user ${userId}`,
+        {
+          operation: "credential_update_success",
+          userId,
+          credentialId: parseInt(id),
+          name: credential.name,
+          authType: credential.authType,
+          username: credential.username,
+        },
+      );
+
+      res.json(formatCredentialOutput(updated[0]));
+    } catch (err) {
+      authLogger.error("Failed to update credential", err);
+      res.status(500).json({
+        error:
+          err instanceof Error ? err.message : "Failed to update credential",
+      });
     }
-
-    await SimpleDBOps.update(
-      sshCredentials,
-      "ssh_credentials",
-      and(
-        eq(sshCredentials.id, parseInt(id)),
-        eq(sshCredentials.userId, userId),
-      ),
-      updateFields,
-      userId,
-    );
-
-    const updated = await SimpleDBOps.select(
-      db
-        .select()
-        .from(sshCredentials)
-        .where(eq(sshCredentials.id, parseInt(id))),
-      "ssh_credentials",
-      userId,
-    );
-
-    const credential = updated[0];
-    authLogger.success(
-      `SSH credential updated: ${credential.name} (${credential.authType}) by user ${userId}`,
-      {
-        operation: "credential_update_success",
-        userId,
-        credentialId: parseInt(id),
-        name: credential.name,
-        authType: credential.authType,
-        username: credential.username,
-      },
-    );
-
-    res.json(formatCredentialOutput(updated[0]));
-  } catch (err) {
-    authLogger.error("Failed to update credential", err);
-    res.status(500).json({
-      error: err instanceof Error ? err.message : "Failed to update credential",
-    });
-  }
-});
+  },
+);
 
 // Delete a credential
 // DELETE /credentials/:id
-router.delete("/:id", authenticateJWT, requireDataAccess, async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
-  const { id } = req.params;
+router.delete(
+  "/:id",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const { id } = req.params;
 
-  if (!isNonEmptyString(userId) || !id) {
-    authLogger.warn("Invalid request for credential deletion");
-    return res.status(400).json({ error: "Invalid request" });
-  }
-
-  try {
-    const credentialToDelete = await db
-      .select()
-      .from(sshCredentials)
-      .where(
-        and(
-          eq(sshCredentials.id, parseInt(id)),
-          eq(sshCredentials.userId, userId),
-        ),
-      );
-
-    if (credentialToDelete.length === 0) {
-      return res.status(404).json({ error: "Credential not found" });
+    if (!isNonEmptyString(userId) || !id) {
+      authLogger.warn("Invalid request for credential deletion");
+      return res.status(400).json({ error: "Invalid request" });
     }
 
-    const hostsUsingCredential = await db
-      .select()
-      .from(sshData)
-      .where(
-        and(eq(sshData.credentialId, parseInt(id)), eq(sshData.userId, userId)),
-      );
+    try {
+      const credentialToDelete = await db
+        .select()
+        .from(sshCredentials)
+        .where(
+          and(
+            eq(sshCredentials.id, parseInt(id)),
+            eq(sshCredentials.userId, userId),
+          ),
+        );
 
-    if (hostsUsingCredential.length > 0) {
-      await db
-        .update(sshData)
-        .set({
-          credentialId: null,
-          password: null,
-          key: null,
-          keyPassword: null,
-          authType: "password",
-        })
+      if (credentialToDelete.length === 0) {
+        return res.status(404).json({ error: "Credential not found" });
+      }
+
+      const hostsUsingCredential = await db
+        .select()
+        .from(sshData)
         .where(
           and(
             eq(sshData.credentialId, parseInt(id)),
             eq(sshData.userId, userId),
           ),
         );
+
+      if (hostsUsingCredential.length > 0) {
+        await db
+          .update(sshData)
+          .set({
+            credentialId: null,
+            password: null,
+            key: null,
+            keyPassword: null,
+            authType: "password",
+          })
+          .where(
+            and(
+              eq(sshData.credentialId, parseInt(id)),
+              eq(sshData.userId, userId),
+            ),
+          );
+      }
+
+      await db
+        .delete(sshCredentialUsage)
+        .where(
+          and(
+            eq(sshCredentialUsage.credentialId, parseInt(id)),
+            eq(sshCredentialUsage.userId, userId),
+          ),
+        );
+
+      await db
+        .delete(sshCredentials)
+        .where(
+          and(
+            eq(sshCredentials.id, parseInt(id)),
+            eq(sshCredentials.userId, userId),
+          ),
+        );
+
+      const credential = credentialToDelete[0];
+      authLogger.success(
+        `SSH credential deleted: ${credential.name} (${credential.authType}) by user ${userId}`,
+        {
+          operation: "credential_delete_success",
+          userId,
+          credentialId: parseInt(id),
+          name: credential.name,
+          authType: credential.authType,
+          username: credential.username,
+        },
+      );
+
+      res.json({ message: "Credential deleted successfully" });
+    } catch (err) {
+      authLogger.error("Failed to delete credential", err);
+      res.status(500).json({
+        error:
+          err instanceof Error ? err.message : "Failed to delete credential",
+      });
     }
-
-    await db
-      .delete(sshCredentialUsage)
-      .where(
-        and(
-          eq(sshCredentialUsage.credentialId, parseInt(id)),
-          eq(sshCredentialUsage.userId, userId),
-        ),
-      );
-
-    await db
-      .delete(sshCredentials)
-      .where(
-        and(
-          eq(sshCredentials.id, parseInt(id)),
-          eq(sshCredentials.userId, userId),
-        ),
-      );
-
-    const credential = credentialToDelete[0];
-    authLogger.success(
-      `SSH credential deleted: ${credential.name} (${credential.authType}) by user ${userId}`,
-      {
-        operation: "credential_delete_success",
-        userId,
-        credentialId: parseInt(id),
-        name: credential.name,
-        authType: credential.authType,
-        username: credential.username,
-      },
-    );
-
-    res.json({ message: "Credential deleted successfully" });
-  } catch (err) {
-    authLogger.error("Failed to delete credential", err);
-    res.status(500).json({
-      error: err instanceof Error ? err.message : "Failed to delete credential",
-    });
-  }
-});
+  },
+);
 
 // Apply a credential to an SSH host (for quick application)
 // POST /credentials/:id/apply-to-host/:hostId
@@ -892,7 +918,6 @@ router.post(
     const { keyType = "ssh-ed25519", keySize = 2048, passphrase } = req.body;
 
     try {
-      // Generate SSH keys directly with ssh2
       const result = generateSSHKeyPair(keyType, keySize, passphrase);
 
       if (result.success && result.privateKey && result.publicKey) {
@@ -940,11 +965,9 @@ router.post(
     }
 
     try {
-      // First try to create private key object from the input
       let privateKeyObj;
       let parseAttempts = [];
 
-      // Attempt 1: Direct parsing with passphrase
       try {
         privateKeyObj = crypto.createPrivateKey({
           key: privateKey,
@@ -954,7 +977,6 @@ router.post(
         parseAttempts.push(`Method 1 (with passphrase): ${error.message}`);
       }
 
-      // Attempt 2: Direct parsing without passphrase
       if (!privateKeyObj) {
         try {
           privateKeyObj = crypto.createPrivateKey(privateKey);
@@ -963,7 +985,6 @@ router.post(
         }
       }
 
-      // Attempt 3: Try with explicit format specification
       if (!privateKeyObj) {
         try {
           privateKeyObj = crypto.createPrivateKey({
@@ -976,7 +997,6 @@ router.post(
         }
       }
 
-      // Attempt 4: Try as PKCS#1 RSA
       if (
         !privateKeyObj &&
         privateKey.includes("-----BEGIN RSA PRIVATE KEY-----")
@@ -992,7 +1012,6 @@ router.post(
         }
       }
 
-      // Attempt 5: Try as SEC1 EC
       if (
         !privateKeyObj &&
         privateKey.includes("-----BEGIN EC PRIVATE KEY-----")
@@ -1008,7 +1027,6 @@ router.post(
         }
       }
 
-      // Final attempt: Try using ssh2 as fallback
       if (!privateKeyObj) {
         try {
           const keyInfo = parseSSHKey(privateKey, keyPassword);
@@ -1038,20 +1056,17 @@ router.post(
         });
       }
 
-      // Generate public key from private key
       const publicKeyObj = crypto.createPublicKey(privateKeyObj);
       const publicKeyPem = publicKeyObj.export({
         type: "spki",
         format: "pem",
       });
 
-      // Ensure publicKeyPem is a string
       const publicKeyString =
         typeof publicKeyPem === "string"
           ? publicKeyPem
           : publicKeyPem.toString("utf8");
 
-      // Detect key type from the private key object
       let keyType = "unknown";
       const asymmetricKeyType = privateKeyObj.asymmetricKeyType;
 
@@ -1060,12 +1075,10 @@ router.post(
       } else if (asymmetricKeyType === "ed25519") {
         keyType = "ssh-ed25519";
       } else if (asymmetricKeyType === "ec") {
-        // For EC keys, we need to check the curve
-        keyType = "ecdsa-sha2-nistp256"; // Default assumption for P-256
+        keyType = "ecdsa-sha2-nistp256";
       }
 
-      // Use ssh2 to generate SSH format public key
-      let finalPublicKey = publicKeyString; // PEM fallback
+      let finalPublicKey = publicKeyString;
       let formatType = "pem";
 
       try {
@@ -1076,9 +1089,7 @@ router.post(
           finalPublicKey = `${keyType} ${base64Data}`;
           formatType = "ssh";
         }
-      } catch (sshError) {
-        // Use PEM format as fallback
-      }
+      } catch (sshError) {}
 
       const response = {
         success: true,
@@ -1101,7 +1112,6 @@ router.post(
   },
 );
 
-// SSH Key Deployment Function
 async function deploySSHKeyToHost(
   hostConfig: any,
   publicKey: string,
@@ -1111,7 +1121,6 @@ async function deploySSHKeyToHost(
     const conn = new Client();
     let connectionTimeout: NodeJS.Timeout;
 
-    // Connection timeout
     connectionTimeout = setTimeout(() => {
       conn.destroy();
       resolve({ success: false, error: "Connection timeout" });
@@ -1121,7 +1130,6 @@ async function deploySSHKeyToHost(
       clearTimeout(connectionTimeout);
 
       try {
-        // Step 1: Create ~/.ssh directory if it doesn't exist
         await new Promise<void>((resolveCmd, rejectCmd) => {
           conn.exec("mkdir -p ~/.ssh && chmod 700 ~/.ssh", (err, stream) => {
             if (err) return rejectCmd(err);
@@ -1136,17 +1144,16 @@ async function deploySSHKeyToHost(
           });
         });
 
-        // Step 2: Check if public key already exists
         const keyExists = await new Promise<boolean>(
           (resolveCheck, rejectCheck) => {
-            const keyPattern = publicKey.split(" ")[1]; // Get the key part without algorithm
+            const keyPattern = publicKey.split(" ")[1];
             conn.exec(
               `grep -q "${keyPattern}" ~/.ssh/authorized_keys 2>/dev/null`,
               (err, stream) => {
                 if (err) return rejectCheck(err);
 
                 stream.on("close", (code) => {
-                  resolveCheck(code === 0); // code 0 means key found
+                  resolveCheck(code === 0);
                 });
               },
             );
@@ -1159,7 +1166,6 @@ async function deploySSHKeyToHost(
           return;
         }
 
-        // Step 3: Add public key to authorized_keys
         await new Promise<void>((resolveAdd, rejectAdd) => {
           const escapedKey = publicKey.replace(/'/g, "'\\''");
           conn.exec(
@@ -1180,7 +1186,6 @@ async function deploySSHKeyToHost(
           );
         });
 
-        // Step 4: Verify deployment
         const verifySuccess = await new Promise<boolean>(
           (resolveVerify, rejectVerify) => {
             const keyPattern = publicKey.split(" ")[1];
@@ -1221,7 +1226,6 @@ async function deploySSHKeyToHost(
       resolve({ success: false, error: err.message });
     });
 
-    // Connect to the target host
     try {
       const connectionConfig: any = {
         host: hostConfig.ip,
@@ -1272,7 +1276,6 @@ router.post(
     }
 
     try {
-      // Get credential details
       const credential = await db
         .select()
         .from(sshCredentials)
@@ -1288,7 +1291,6 @@ router.post(
 
       const credData = credential[0];
 
-      // Only support key-based credentials for deployment
       if (credData.authType !== "key") {
         return res.status(400).json({
           success: false,
@@ -1303,7 +1305,6 @@ router.post(
         });
       }
 
-      // Get target host details
       const targetHost = await db
         .select()
         .from(sshData)
@@ -1319,7 +1320,6 @@ router.post(
 
       const hostData = targetHost[0];
 
-      // Prepare host configuration for connection
       let hostConfig = {
         ip: hostData.ip,
         port: hostData.port,
@@ -1330,7 +1330,6 @@ router.post(
         keyPassword: hostData.keyPassword,
       };
 
-      // If host uses credential authentication, resolve the credential
       if (hostData.authType === "credential" && hostData.credentialId) {
         const hostCredential = await db
           .select()
@@ -1341,14 +1340,13 @@ router.post(
         if (hostCredential && hostCredential.length > 0) {
           const cred = hostCredential[0];
 
-          // Update hostConfig with credential data
           hostConfig.authType = cred.authType;
-          hostConfig.username = cred.username; // Use credential's username
+          hostConfig.username = cred.username;
 
           if (cred.authType === "password") {
             hostConfig.password = cred.password;
           } else if (cred.authType === "key") {
-            hostConfig.privateKey = cred.privateKey || cred.key; // Try both fields
+            hostConfig.privateKey = cred.privateKey || cred.key;
             hostConfig.keyPassword = cred.keyPassword;
           }
         } else {
@@ -1359,7 +1357,6 @@ router.post(
         }
       }
 
-      // Deploy the SSH key
       const deployResult = await deploySSHKeyToHost(
         hostConfig,
         credData.publicKey,
@@ -1367,8 +1364,7 @@ router.post(
       );
 
       if (deployResult.success) {
-        // Log successful deployment
-        authLogger.info(`SSH key deployed successfully`, {
+        authLogger.success(`SSH key deployed successfully`, {
           credentialId,
           targetHostId,
           operation: "deploy_ssh_key",

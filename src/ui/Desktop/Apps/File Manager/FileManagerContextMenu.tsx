@@ -107,7 +107,6 @@ export function FileManagerContextMenu({
   useEffect(() => {
     if (!isVisible) return;
 
-    // Adjust menu position to avoid going off screen
     const adjustPosition = () => {
       const menuWidth = 200;
       const menuHeight = 300;
@@ -130,13 +129,10 @@ export function FileManagerContextMenu({
 
     adjustPosition();
 
-    // Delay adding event listeners to avoid capturing the click that triggered the menu
     let cleanupFn: (() => void) | null = null;
 
     const timeoutId = setTimeout(() => {
-      // Click outside to close menu
       const handleClickOutside = (event: MouseEvent) => {
-        // Check if click is inside menu
         const target = event.target as Element;
         const menuElement = document.querySelector("[data-context-menu]");
 
@@ -145,13 +141,11 @@ export function FileManagerContextMenu({
         }
       };
 
-      // Right-click to close menu (Windows behavior)
       const handleRightClick = (event: MouseEvent) => {
         event.preventDefault();
         onClose();
       };
 
-      // Keyboard support
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -159,12 +153,10 @@ export function FileManagerContextMenu({
         }
       };
 
-      // Close menu on window blur
       const handleBlur = () => {
         onClose();
       };
 
-      // Close menu on scroll (Windows behavior)
       const handleScroll = () => {
         onClose();
       };
@@ -175,7 +167,6 @@ export function FileManagerContextMenu({
       window.addEventListener("blur", handleBlur);
       window.addEventListener("scroll", handleScroll, true);
 
-      // Set cleanup function
       cleanupFn = () => {
         document.removeEventListener("mousedown", handleClickOutside, true);
         document.removeEventListener("contextmenu", handleRightClick);
@@ -183,7 +174,7 @@ export function FileManagerContextMenu({
         window.removeEventListener("blur", handleBlur);
         window.removeEventListener("scroll", handleScroll, true);
       };
-    }, 50); // 50ms delay to ensure we don't capture the click that triggered the menu
+    }, 50);
 
     return () => {
       clearTimeout(timeoutId);
@@ -204,13 +195,9 @@ export function FileManagerContextMenu({
     (f) => f.type === "file" && f.executable,
   );
 
-  // Build menu items
   const menuItems: MenuItem[] = [];
 
   if (isFileContext) {
-    // Menu when files/folders are selected
-
-    // Open terminal function - supports files and folders
     if (onOpenTerminal) {
       const targetPath = isSingleFile
         ? files[0].type === "directory"
@@ -229,7 +216,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Run executable file function - only show for single executable files
     if (isSingleFile && hasExecutableFiles && onRunExecutable) {
       menuItems.push({
         icon: <Play className="w-4 h-4" />,
@@ -239,7 +225,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Add separator (if above functions exist)
     if (
       onOpenTerminal ||
       (isSingleFile && hasExecutableFiles && onRunExecutable)
@@ -247,7 +232,6 @@ export function FileManagerContextMenu({
       menuItems.push({ separator: true } as MenuItem);
     }
 
-    // Preview function
     if (hasFiles && onPreview) {
       menuItems.push({
         icon: <Eye className="w-4 h-4" />,
@@ -257,7 +241,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Download function - use proper download handler
     if (hasFiles && onDownload) {
       menuItems.push({
         icon: <Download className="w-4 h-4" />,
@@ -269,7 +252,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // PIN/UNPIN function - only show for single files
     if (isSingleFile && files[0].type === "file") {
       const isCurrentlyPinned = isPinned ? isPinned(files[0]) : false;
 
@@ -288,7 +270,6 @@ export function FileManagerContextMenu({
       }
     }
 
-    // Add folder shortcut - only show for single folders
     if (isSingleFile && files[0].type === "directory" && onAddShortcut) {
       menuItems.push({
         icon: <Bookmark className="w-4 h-4" />,
@@ -297,7 +278,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Add separator (if above functions exist)
     if (
       (hasFiles && (onPreview || onDragToDesktop)) ||
       (isSingleFile &&
@@ -308,7 +288,6 @@ export function FileManagerContextMenu({
       menuItems.push({ separator: true } as MenuItem);
     }
 
-    // Rename function
     if (isSingleFile && onRename) {
       menuItems.push({
         icon: <Edit3 className="w-4 h-4" />,
@@ -318,7 +297,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Copy function
     if (onCopy) {
       menuItems.push({
         icon: <Copy className="w-4 h-4" />,
@@ -330,7 +308,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Cut function
     if (onCut) {
       menuItems.push({
         icon: <Scissors className="w-4 h-4" />,
@@ -342,12 +319,10 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Add separator (if edit functions exist)
     if ((isSingleFile && onRename) || onCopy || onCut) {
       menuItems.push({ separator: true } as MenuItem);
     }
 
-    // Delete function
     if (onDelete) {
       menuItems.push({
         icon: <Trash2 className="w-4 h-4" />,
@@ -360,12 +335,10 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Add separator (if delete function exists)
     if (onDelete) {
       menuItems.push({ separator: true } as MenuItem);
     }
 
-    // Properties function
     if (isSingleFile && onProperties) {
       menuItems.push({
         icon: <Info className="w-4 h-4" />,
@@ -374,9 +347,6 @@ export function FileManagerContextMenu({
       });
     }
   } else {
-    // Empty area right-click menu
-
-    // Open terminal in current directory
     if (onOpenTerminal && currentPath) {
       menuItems.push({
         icon: <Terminal className="w-4 h-4" />,
@@ -386,7 +356,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Upload function
     if (onUpload) {
       menuItems.push({
         icon: <Upload className="w-4 h-4" />,
@@ -396,12 +365,10 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Add separator (if terminal or upload functions exist)
     if ((onOpenTerminal && currentPath) || onUpload) {
       menuItems.push({ separator: true } as MenuItem);
     }
 
-    // New folder
     if (onNewFolder) {
       menuItems.push({
         icon: <FolderPlus className="w-4 h-4" />,
@@ -411,7 +378,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // New file
     if (onNewFile) {
       menuItems.push({
         icon: <FilePlus className="w-4 h-4" />,
@@ -421,12 +387,10 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Add separator (if new functions exist)
     if (onNewFolder || onNewFile) {
       menuItems.push({ separator: true } as MenuItem);
     }
 
-    // Refresh function
     if (onRefresh) {
       menuItems.push({
         icon: <RefreshCw className="w-4 h-4" />,
@@ -436,7 +400,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Paste function
     if (hasClipboard && onPaste) {
       menuItems.push({
         icon: <Clipboard className="w-4 h-4" />,
@@ -447,15 +410,12 @@ export function FileManagerContextMenu({
     }
   }
 
-  // Filter out consecutive separators
   const filteredMenuItems = menuItems.filter((item, index) => {
     if (!item.separator) return true;
 
-    // If it's a separator, check if previous and next are also separators
     const prevItem = index > 0 ? menuItems[index - 1] : null;
     const nextItem = index < menuItems.length - 1 ? menuItems[index + 1] : null;
 
-    // If previous or next is a separator, filter out current separator
     if (prevItem?.separator || nextItem?.separator) {
       return false;
     }
@@ -463,7 +423,6 @@ export function FileManagerContextMenu({
     return true;
   });
 
-  // Remove separators at beginning and end
   const finalMenuItems = filteredMenuItems.filter((item, index) => {
     if (!item.separator) return true;
     return index > 0 && index < filteredMenuItems.length - 1;
@@ -471,10 +430,8 @@ export function FileManagerContextMenu({
 
   return (
     <>
-      {/* Transparent overlay to capture click events */}
       <div className="fixed inset-0 z-[99990]" />
 
-      {/* Menu body */}
       <div
         data-context-menu
         className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden"

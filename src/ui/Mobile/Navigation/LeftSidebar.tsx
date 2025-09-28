@@ -60,7 +60,7 @@ async function handleLogout() {
   try {
     // Call backend logout endpoint to clear HttpOnly cookie and data session
     await logoutUser();
-    
+
     // Reload the page to reset the application state
     window.location.reload();
   } catch (error) {

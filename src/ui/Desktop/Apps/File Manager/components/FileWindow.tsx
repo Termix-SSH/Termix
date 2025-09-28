@@ -44,8 +44,7 @@ interface FileWindowProps {
   sshHost: SSHHost;
   initialX?: number;
   initialY?: number;
-  onFileNotFound?: (file: FileItem) => void; // Callback for when file is not found
-  // readOnly parameter removed, determined internally by FileViewer based on file type
+  onFileNotFound?: (file: FileItem) => void;
 }
 
 export function FileWindow({
@@ -57,13 +56,8 @@ export function FileWindow({
   initialY = 100,
   onFileNotFound,
 }: FileWindowProps) {
-  const {
-    closeWindow,
-    maximizeWindow,
-    focusWindow,
-    updateWindow,
-    windows,
-  } = useWindowManager();
+  const { closeWindow, maximizeWindow, focusWindow, updateWindow, windows } =
+    useWindowManager();
 
   const { t } = useTranslation();
 
@@ -71,22 +65,18 @@ export function FileWindow({
   const [isLoading, setIsLoading] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
   const [pendingContent, setPendingContent] = useState<string>("");
-  const [mediaDimensions, setMediaDimensions] = useState<{ width: number; height: number } | undefined>();
+  const [mediaDimensions, setMediaDimensions] = useState<
+    { width: number; height: number } | undefined
+  >();
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentWindow = windows.find((w) => w.id === windowId);
 
-  // Ensure SSH connection is valid
   const ensureSSHConnection = async () => {
     try {
-      // First check SSH connection status
       const status = await getSSHStatus(sshSessionId);
-      console.log("SSH connection status:", status);
 
       if (!status.connected) {
-        console.log("SSH not connected, attempting to reconnect...");
-
-        // Re-establish connection
         await connectSSH(sshSessionId, {
           hostId: sshHost.id,
           ip: sshHost.ip,
@@ -99,17 +89,13 @@ export function FileWindow({
           credentialId: sshHost.credentialId,
           userId: sshHost.userId,
         });
-
-        console.log("SSH reconnection successful");
       }
     } catch (error) {
-      console.log("SSH connection check/reconnect failed:", error);
-      // Even if connection fails, try to continue and let specific API calls handle errors
+      console.error("SSH connection check/reconnect failed:", error);
       throw error;
     }
   };
 
-  // Load file content
   useEffect(() => {
     const loadFileContent = async () => {
       if (file.type !== "file") return;
@@ -117,23 +103,19 @@ export function FileWindow({
       try {
         setIsLoading(true);
 
-        // Ensure SSH connection is valid
         await ensureSSHConnection();
 
         const response = await readSSHFile(sshSessionId, file.path);
         const fileContent = response.content || "";
         setContent(fileContent);
-        setPendingContent(fileContent); // Initialize pending content
+        setPendingContent(fileContent);
 
-        // If file size is unknown, calculate size based on content
         if (!file.size) {
           const contentSize = new Blob([fileContent]).size;
           file.size = contentSize;
         }
 
-        // Determine if editable based on file type: all except media files are editable
         const mediaExtensions = [
-          // Image files
           "jpg",
           "jpeg",
           "png",
@@ -143,7 +125,6 @@ export function FileWindow({
           "webp",
           "tiff",
           "ico",
-          // Audio files
           "mp3",
           "wav",
           "ogg",
@@ -151,7 +132,6 @@ export function FileWindow({
           "flac",
           "m4a",
           "wma",
-          // Video files
           "mp4",
           "avi",
           "mov",
@@ -160,7 +140,6 @@ export function FileWindow({
           "mkv",
           "webm",
           "m4v",
-          // Archive files
           "zip",
           "rar",
           "7z",
@@ -168,7 +147,6 @@ export function FileWindow({
           "gz",
           "bz2",
           "xz",
-          // Binary files
           "exe",
           "dll",
           "so",
@@ -178,28 +156,25 @@ export function FileWindow({
         ];
 
         const extension = file.name.split(".").pop()?.toLowerCase();
-        // Only media files and binary files are not editable, all other files are editable
         setIsEditable(!mediaExtensions.includes(extension || ""));
       } catch (error: any) {
         console.error("Failed to load file:", error);
 
-        // Check if it's a large file error
         const errorData = error?.response?.data;
         if (errorData?.tooLarge) {
           toast.error(`File too large: ${errorData.error}`, {
-            duration: 10000, // 10 seconds for important message
+            duration: 10000,
           });
         } else if (
           error.message?.includes("connection") ||
           error.message?.includes("established")
         ) {
-          // If connection error, provide more specific error message
           toast.error(
             `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
           );
         } else {
-          // Check if file not found (common error messages from cat command)
-          const errorMessage = errorData?.error || error.message || "Unknown error";
+          const errorMessage =
+            errorData?.error || error.message || "Unknown error";
           const isFileNotFound =
             (error as any).isFileNotFound ||
             errorData?.fileNotFound ||
@@ -211,19 +186,21 @@ export function FileWindow({
             errorMessage.includes("Resource not found");
 
           if (isFileNotFound && onFileNotFound) {
-            // Notify parent component about the missing file for cleanup
             onFileNotFound(file);
-            toast.error(t("fileManager.fileNotFoundAndRemoved", { name: file.name }));
+            toast.error(
+              t("fileManager.fileNotFoundAndRemoved", { name: file.name }),
+            );
 
-            // Close this window since the file doesn't exist
             closeWindow(windowId);
-            return; // Exit early to prevent showing empty editor
+            return;
           } else {
-            toast.error(t("fileManager.failedToLoadFile", {
-              error: errorMessage.includes("Server error occurred") ?
-                t("fileManager.serverErrorOccurred") :
-                errorMessage
-            }));
+            toast.error(
+              t("fileManager.failedToLoadFile", {
+                error: errorMessage.includes("Server error occurred")
+                  ? t("fileManager.serverErrorOccurred")
+                  : errorMessage,
+              }),
+            );
           }
         }
       } finally {
@@ -234,19 +211,16 @@ export function FileWindow({
     loadFileContent();
   }, [file, sshSessionId, sshHost]);
 
-  // Save file
   const handleSave = async (newContent: string) => {
     try {
       setIsLoading(true);
 
-      // Ensure SSH connection is valid
       await ensureSSHConnection();
 
       await writeSSHFile(sshSessionId, file.path, newContent);
       setContent(newContent);
-      setPendingContent(""); // Clear pending content
+      setPendingContent("");
 
-      // Clear auto-save timer
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = null;
@@ -256,7 +230,6 @@ export function FileWindow({
     } catch (error: any) {
       console.error("Failed to save file:", error);
 
-      // If it's a connection error, provide more specific error message
       if (
         error.message?.includes("connection") ||
         error.message?.includes("established")
@@ -265,36 +238,33 @@ export function FileWindow({
           `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
         );
       } else {
-        toast.error(`${t("fileManager.failedToSaveFile")}: ${error.message || t("fileManager.unknownError")}`);
+        toast.error(
+          `${t("fileManager.failedToSaveFile")}: ${error.message || t("fileManager.unknownError")}`,
+        );
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle content changes - set 1-minute auto-save
   const handleContentChange = (newContent: string) => {
     setPendingContent(newContent);
 
-    // Clear previous timer
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // Set new 1-minute auto-save timer
     autoSaveTimerRef.current = setTimeout(async () => {
       try {
-        console.log("Auto-saving file...");
         await handleSave(newContent);
         toast.success(t("fileManager.fileAutoSaved"));
       } catch (error) {
         console.error("Auto-save failed:", error);
         toast.error(t("fileManager.autoSaveFailed"));
       }
-    }, 60000); // 1 minute = 60000 milliseconds
+    }, 60000);
   };
 
-  // Cleanup timer
   useEffect(() => {
     return () => {
       if (autoSaveTimerRef.current) {
@@ -303,16 +273,13 @@ export function FileWindow({
     };
   }, []);
 
-  // Download file
   const handleDownload = async () => {
     try {
-      // Ensure SSH connection is valid
       await ensureSSHConnection();
 
       const response = await downloadSSHFile(sshSessionId, file.path);
 
       if (response?.content) {
-        // Convert base64 to blob and trigger download
         const byteCharacters = atob(response.content);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -337,7 +304,6 @@ export function FileWindow({
     } catch (error: any) {
       console.error("Failed to download file:", error);
 
-      // If it's a connection error, provide more specific error message
       if (
         error.message?.includes("connection") ||
         error.message?.includes("established")
@@ -353,7 +319,6 @@ export function FileWindow({
     }
   };
 
-  // Window operation handling
   const handleClose = () => {
     closeWindow(windowId);
   };
@@ -366,9 +331,10 @@ export function FileWindow({
     focusWindow(windowId);
   };
 
-  // Handle media dimensions change
-  const handleMediaDimensionsChange = (dimensions: { width: number; height: number }) => {
-    console.log('Media dimensions received:', dimensions);
+  const handleMediaDimensionsChange = (dimensions: {
+    width: number;
+    height: number;
+  }) => {
     setMediaDimensions(dimensions);
   };
 
@@ -397,7 +363,7 @@ export function FileWindow({
         content={pendingContent || content}
         savedContent={content}
         isLoading={isLoading}
-        isEditable={isEditable} // Remove forced read-only mode, controlled internally by FileViewer
+        isEditable={isEditable}
         onContentChange={handleContentChange}
         onSave={(newContent) => handleSave(newContent)}
         onDownload={handleDownload}

@@ -13,16 +13,13 @@ import {
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import jwt from "jsonwebtoken";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
-import type { Request, Response, NextFunction } from "express";
-import { authLogger, apiLogger } from "../../utils/logger.js";
+import type { Request, Response } from "express";
+import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { UserCrypto } from "../../utils/user-crypto.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 
-// Get auth manager instance
 const authManager = AuthManager.getInstance();
 
 async function verifyOIDCToken(
@@ -137,11 +134,8 @@ interface JWTPayload {
   exp?: number;
 }
 
-// JWT authentication middleware - only verify JWT, no data unlock required
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
-
-// Data access middleware - requires user to have unlocked data keys
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Route: Create traditional user (username/password)
@@ -220,22 +214,20 @@ router.post("/create", async (req, res) => {
       totp_backup_codes: null,
     });
 
-    // Set up user data encryption (KEK-DEK architecture)
     try {
       await authManager.registerUser(id, password);
-      authLogger.success("User encryption setup completed", {
-        operation: "user_encryption_setup",
-        userId: id,
-      });
     } catch (encryptionError) {
-      // If encryption setup fails, delete user record
       await db.delete(users).where(eq(users.id, id));
-      authLogger.error("Failed to setup user encryption, user creation rolled back", encryptionError, {
-        operation: "user_create_encryption_failed",
-        userId: id,
-      });
+      authLogger.error(
+        "Failed to setup user encryption, user creation rolled back",
+        encryptionError,
+        {
+          operation: "user_create_encryption_failed",
+          userId: id,
+        },
+      );
       return res.status(500).json({
-        error: "Failed to setup user security - user creation cancelled"
+        error: "Failed to setup user security - user creation cancelled",
       });
     }
 
@@ -338,38 +330,46 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         scopes: scopes || "openid email profile",
       };
 
-      // Encrypt sensitive configuration for storage
       let encryptedConfig;
       try {
-        // Use admin's data key to encrypt OIDC configuration
         const adminDataKey = DataCrypto.getUserDataKey(userId);
         if (adminDataKey) {
-          // Provide stable recordId for settings objects
           const configWithId = { ...config, id: `oidc-config-${userId}` };
-          encryptedConfig = DataCrypto.encryptRecord("settings", configWithId, userId, adminDataKey);
+          encryptedConfig = DataCrypto.encryptRecord(
+            "settings",
+            configWithId,
+            userId,
+            adminDataKey,
+          );
           authLogger.info("OIDC configuration encrypted with admin data key", {
             operation: "oidc_config_encrypt",
             userId,
           });
         } else {
-          // If admin data not unlocked, only encrypt client_secret
           encryptedConfig = {
             ...config,
-            client_secret: `encrypted:${Buffer.from(client_secret).toString('base64')}`, // Simple base64 encoding
+            client_secret: `encrypted:${Buffer.from(client_secret).toString("base64")}`, // Simple base64 encoding
           };
-          authLogger.warn("OIDC configuration stored with basic encoding - admin should re-save with password", {
-            operation: "oidc_config_basic_encoding",
-            userId,
-          });
+          authLogger.warn(
+            "OIDC configuration stored with basic encoding - admin should re-save with password",
+            {
+              operation: "oidc_config_basic_encoding",
+              userId,
+            },
+          );
         }
       } catch (encryptError) {
-        authLogger.error("Failed to encrypt OIDC configuration, storing with basic encoding", encryptError, {
-          operation: "oidc_config_encrypt_failed",
-          userId,
-        });
+        authLogger.error(
+          "Failed to encrypt OIDC configuration, storing with basic encoding",
+          encryptError,
+          {
+            operation: "oidc_config_encrypt_failed",
+            userId,
+          },
+        );
         encryptedConfig = {
           ...config,
-          client_secret: `encoded:${Buffer.from(client_secret).toString('base64')}`,
+          client_secret: `encoded:${Buffer.from(client_secret).toString("base64")}`,
         };
       }
 
@@ -426,10 +426,8 @@ router.get("/oidc-config", async (req, res) => {
 
     let config = JSON.parse((row as any).value);
 
-    // Decrypt or decode client_secret for display
     if (config.client_secret) {
-      if (config.client_secret.startsWith('encrypted:')) {
-        // Requires admin permission to decrypt
+      if (config.client_secret.startsWith("encrypted:")) {
         const authHeader = req.headers["authorization"];
         if (authHeader?.startsWith("Bearer ")) {
           const token = authHeader.split(" ")[1];
@@ -438,16 +436,22 @@ router.get("/oidc-config", async (req, res) => {
 
           if (payload) {
             const userId = payload.userId;
-            const user = await db.select().from(users).where(eq(users.id, userId));
+            const user = await db
+              .select()
+              .from(users)
+              .where(eq(users.id, userId));
 
             if (user && user.length > 0 && user[0].is_admin) {
               try {
                 const adminDataKey = DataCrypto.getUserDataKey(userId);
                 if (adminDataKey) {
-                  // Use same stable recordId for decryption - note: FieldCrypto will use stored recordId
-                  config = DataCrypto.decryptRecord("settings", config, userId, adminDataKey);
+                  config = DataCrypto.decryptRecord(
+                    "settings",
+                    config,
+                    userId,
+                    adminDataKey,
+                  );
                 } else {
-                  // Admin data not unlocked, hide client_secret
                   config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
                 }
               } catch (decryptError) {
@@ -466,16 +470,17 @@ router.get("/oidc-config", async (req, res) => {
         } else {
           config.client_secret = "[ENCRYPTED - AUTH REQUIRED]";
         }
-      } else if (config.client_secret.startsWith('encoded:')) {
-        // base64 decode
+      } else if (config.client_secret.startsWith("encoded:")) {
         try {
-          const decoded = Buffer.from(config.client_secret.substring(8), 'base64').toString('utf8');
+          const decoded = Buffer.from(
+            config.client_secret.substring(8),
+            "base64",
+          ).toString("utf8");
           config.client_secret = decoded;
         } catch {
           config.client_secret = "[ENCODING ERROR]";
         }
       }
-      // Otherwise plaintext, return directly
     }
 
     res.json(config);
@@ -788,7 +793,11 @@ router.get("/oidc/callback", async (req, res) => {
     redirectUrl.searchParams.set("success", "true");
 
     return res
-      .cookie("jwt", token, authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000))
+      .cookie(
+        "jwt",
+        token,
+        authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000),
+      )
       .redirect(redirectUrl.toString());
   } catch (err) {
     authLogger.error("OIDC callback failed", err);
@@ -857,7 +866,6 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    // Check if legacy user needs encryption setup
     try {
       const kekSalt = await db
         .select()
@@ -865,13 +873,7 @@ router.post("/login", async (req, res) => {
         .where(eq(settings.key, `user_kek_salt_${userRecord.id}`));
 
       if (kekSalt.length === 0) {
-        // Legacy user first login - set up new encryption
         await authManager.registerUser(userRecord.id, password);
-        authLogger.success("Legacy user encryption initialized", {
-          operation: "legacy_user_setup",
-          username,
-          userId: userRecord.id,
-        });
       }
     } catch (setupError) {
       authLogger.error("Failed to initialize user encryption", setupError, {
@@ -879,11 +881,12 @@ router.post("/login", async (req, res) => {
         username,
         userId: userRecord.id,
       });
-      // Encryption setup failure should not block login for existing users
     }
 
-    // Unlock user data keys
-    const dataUnlocked = await authManager.authenticateUser(userRecord.id, password);
+    const dataUnlocked = await authManager.authenticateUser(
+      userRecord.id,
+      password,
+    );
     if (!dataUnlocked) {
       authLogger.error("Failed to unlock user data during login", undefined, {
         operation: "user_login_data_unlock_failed",
@@ -891,11 +894,10 @@ router.post("/login", async (req, res) => {
         userId: userRecord.id,
       });
       return res.status(500).json({
-        error: "Failed to unlock user data - please contact administrator"
+        error: "Failed to unlock user data - please contact administrator",
       });
     }
 
-    // TOTP handling
     if (userRecord.totp_enabled) {
       const tempToken = await authManager.generateJWTToken(userRecord.id, {
         pendingTOTP: true,
@@ -907,7 +909,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Generate normal JWT token
     const token = await authManager.generateJWTToken(userRecord.id, {
       expiresIn: "24h",
     });
@@ -920,7 +921,11 @@ router.post("/login", async (req, res) => {
     });
 
     return res
-      .cookie("jwt", token, authManager.getSecureCookieOptions(req, 24 * 60 * 60 * 1000))
+      .cookie(
+        "jwt",
+        token,
+        authManager.getSecureCookieOptions(req, 24 * 60 * 60 * 1000),
+      )
       .json({
         success: true,
         is_admin: !!userRecord.is_admin,
@@ -936,19 +941,16 @@ router.post("/login", async (req, res) => {
 // POST /users/logout
 router.post("/logout", async (req, res) => {
   try {
-    // Try to get userId from JWT if available
     const userId = (req as any).userId;
-    
+
     if (userId) {
-      // User is authenticated - clear data session
       authManager.logoutUser(userId);
       authLogger.info("User logged out", {
         operation: "user_logout",
         userId,
       });
     }
-    
-    // Always clear the JWT cookie
+
     return res
       .clearCookie("jwt", authManager.getSecureCookieOptions(req))
       .json({ success: true, message: "Logged out successfully" });
@@ -973,9 +975,8 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       return res.status(401).json({ error: "User not found" });
     }
 
-    // Check if user data is unlocked
     const isDataUnlocked = authManager.isUserUnlocked(userId);
-    
+
     res.json({
       userId: user[0].id,
       username: user[0].username,
@@ -1001,7 +1002,6 @@ router.get("/setup-required", async (req, res) => {
 
     res.json({
       setup_required: count === 0,
-      // 不暴露具体用户数量，只返回是否需要初始化
     });
   } catch (err) {
     authLogger.error("Failed to check setup status", err);
@@ -1014,7 +1014,6 @@ router.get("/setup-required", async (req, res) => {
 router.get("/count", authenticateJWT, async (req, res) => {
   const userId = (req as any).userId;
   try {
-    // 只有管理员可以查看用户统计
     const user = await db.select().from(users).where(eq(users.id, userId));
     if (!user[0] || !user[0].is_admin) {
       return res.status(403).json({ error: "Admin access required" });
@@ -1282,14 +1281,15 @@ router.post("/complete-reset", async (req, res) => {
       return res.status(400).json({ error: "Invalid temporary token" });
     }
 
-    // Get user ID for KEK-DEK operations
-    const user = await db.select().from(users).where(eq(users.username, username));
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
     if (!user || user.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
     const userId = user[0].id;
 
-    // Update password hash
     const saltRounds = parseInt(process.env.SALT || "10", 10);
     const password_hash = await bcrypt.hash(newPassword, saltRounds);
 
@@ -1490,7 +1490,11 @@ router.post("/totp/verify-login", async (req, res) => {
     });
 
     return res
-      .cookie("jwt", token, authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000))
+      .cookie(
+        "jwt",
+        token,
+        authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000),
+      )
       .json({
         success: true,
         is_admin: !!userRecord.is_admin,
@@ -1802,8 +1806,6 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
   }
 });
 
-// ===== New security API endpoints =====
-
 // Route: User data unlock - used when session expires
 // POST /users/unlock-data
 router.post("/unlock-data", authenticateJWT, async (req, res) => {
@@ -1817,13 +1819,9 @@ router.post("/unlock-data", authenticateJWT, async (req, res) => {
   try {
     const unlocked = await authManager.authenticateUser(userId, password);
     if (unlocked) {
-      authLogger.success("User data unlocked", {
-        operation: "user_data_unlock",
-        userId,
-      });
       res.json({
         success: true,
-        message: "Data unlocked successfully"
+        message: "Data unlocked successfully",
       });
     } else {
       authLogger.warn("Failed to unlock user data - invalid password", {
@@ -1845,12 +1843,14 @@ router.post("/unlock-data", authenticateJWT, async (req, res) => {
 // GET /users/data-status
 router.get("/data-status", authenticateJWT, async (req, res) => {
   const userId = (req as any).userId;
-  
+
   try {
     const isUnlocked = authManager.isUserUnlocked(userId);
     res.json({
       unlocked: isUnlocked,
-      message: isUnlocked ? "Data is unlocked" : "Data is locked - re-authenticate with password"
+      message: isUnlocked
+        ? "Data is unlocked"
+        : "Data is locked - re-authenticate with password",
     });
   } catch (err) {
     authLogger.error("Failed to check data status", err, {
@@ -1869,26 +1869,24 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 
   if (!currentPassword || !newPassword) {
     return res.status(400).json({
-      error: "Current password and new password are required"
+      error: "Current password and new password are required",
     });
   }
 
   if (newPassword.length < 8) {
     return res.status(400).json({
-      error: "New password must be at least 8 characters long"
+      error: "New password must be at least 8 characters long",
     });
   }
 
   try {
-    // Verify current password and change
     const success = await authManager.changeUserPassword(
       userId,
       currentPassword,
-      newPassword
+      newPassword,
     );
 
     if (success) {
-      // Also update password hash in database
       const saltRounds = parseInt(process.env.SALT || "10", 10);
       const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
       await db
@@ -1903,7 +1901,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 
       res.json({
         success: true,
-        message: "Password changed successfully"
+        message: "Password changed successfully",
       });
     } else {
       authLogger.warn("Password change failed - invalid current password", {

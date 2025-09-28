@@ -35,13 +35,11 @@ export function WindowManager({ children }: WindowManagerProps) {
   const nextZIndex = useRef(1000);
   const windowCounter = useRef(0);
 
-  // Open new window
   const openWindow = useCallback(
     (windowData: Omit<WindowInstance, "id" | "zIndex">) => {
       const id = `window-${++windowCounter.current}`;
       const zIndex = ++nextZIndex.current;
 
-      // Calculate offset position to avoid windows completely overlapping
       const offset = (windows.length % 5) * 30;
       const adjustedX = windowData.x + offset;
       const adjustedY = windowData.y + offset;
@@ -60,12 +58,10 @@ export function WindowManager({ children }: WindowManagerProps) {
     [windows.length],
   );
 
-  // Close window
   const closeWindow = useCallback((id: string) => {
     setWindows((prev) => prev.filter((w) => w.id !== id));
   }, []);
 
-  // Minimize window
   const minimizeWindow = useCallback((id: string) => {
     setWindows((prev) =>
       prev.map((w) =>
@@ -74,7 +70,6 @@ export function WindowManager({ children }: WindowManagerProps) {
     );
   }, []);
 
-  // Maximize/restore window
   const maximizeWindow = useCallback((id: string) => {
     setWindows((prev) =>
       prev.map((w) =>
@@ -83,7 +78,6 @@ export function WindowManager({ children }: WindowManagerProps) {
     );
   }, []);
 
-  // Focus window (bring to top)
   const focusWindow = useCallback((id: string) => {
     setWindows((prev) => {
       const targetWindow = prev.find((w) => w.id === id);
@@ -94,7 +88,6 @@ export function WindowManager({ children }: WindowManagerProps) {
     });
   }, []);
 
-  // Update window properties
   const updateWindow = useCallback(
     (id: string, updates: Partial<WindowInstance>) => {
       setWindows((prev) =>
@@ -117,7 +110,6 @@ export function WindowManager({ children }: WindowManagerProps) {
   return (
     <WindowManagerContext.Provider value={contextValue}>
       {children}
-      {/* Render all windows */}
       <div className="window-container">
         {windows.map((window) => (
           <div key={window.id}>
@@ -131,7 +123,6 @@ export function WindowManager({ children }: WindowManagerProps) {
   );
 }
 
-// Hook for using window manager
 export function useWindowManager() {
   const context = React.useContext(WindowManagerContext);
   if (!context) {

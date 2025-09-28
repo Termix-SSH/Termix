@@ -36,18 +36,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   },
   ref,
 ) {
-  // DEBUG: Add global JWT test function (only once)
-  if (typeof window !== 'undefined' && !(window as any).testJWT) {
+  if (typeof window !== "undefined" && !(window as any).testJWT) {
     (window as any).testJWT = () => {
       const jwt = getCookie("jwt");
-      console.log("Manual JWT Test:", {
-        isElectron: isElectron(),
-        rawCookie: document.cookie,
-        localStorage: localStorage.getItem("jwt"),
-        getCookieResult: jwt,
-        jwtLength: jwt?.length || 0,
-        jwtFirst20: jwt?.substring(0, 20) || "empty"
-      });
       return jwt;
     };
   }
@@ -83,35 +74,25 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     isVisibleRef.current = isVisible;
   }, [isVisible]);
 
-  // Monitor authentication state - Linus principle: explicit state management
   useEffect(() => {
     const checkAuth = () => {
       const jwtToken = getCookie("jwt");
       const isAuth = !!(jwtToken && jwtToken.trim() !== "");
 
-      // Only update state if it actually changed - prevent unnecessary re-renders
-      setIsAuthenticated(prev => {
+      setIsAuthenticated((prev) => {
         if (prev !== isAuth) {
-          console.debug("Auth State Changed:", {
-            from: prev,
-            to: isAuth,
-            jwtPresent: !!jwtToken,
-            timestamp: new Date().toISOString()
-          });
           return isAuth;
         }
-        return prev; // No change, don't trigger re-render
+        return prev;
       });
     };
 
-    // Check immediately
     checkAuth();
 
-    // Reduced frequency - check every 5 seconds instead of every second
     const authCheckInterval = setInterval(checkAuth, 5000);
 
     return () => clearInterval(authCheckInterval);
-  }, []); // No dependencies - prevent infinite loop
+  }, []);
 
   function hardRefresh() {
     try {
@@ -187,8 +168,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     [terminal],
   );
 
-  // Resize handling moved to AppView to avoid conflicts - Linus principle: eliminate duplicate complexity
-
   function handleWindowResize() {
     if (!isVisibleRef.current) return;
     fitAddonRef.current?.fit();
@@ -207,7 +186,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       isReconnectingRef.current ||
       isConnectingRef.current
     ) {
-      console.debug("Skipping reconnection - already in progress or blocked");
       return;
     }
 
@@ -245,7 +223,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         return;
       }
 
-      // Verify authentication before attempting reconnection
       const jwtToken = getCookie("jwt");
       if (!jwtToken || jwtToken.trim() === "") {
         console.warn("Reconnection cancelled - no authentication token");
@@ -266,9 +243,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   }
 
   function connectToHost(cols: number, rows: number) {
-    // Prevent duplicate connections - Linus principle: fail fast
     if (isConnectingRef.current) {
-      console.debug("Skipping connection - already connecting");
       return;
     }
 
@@ -280,26 +255,14 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         window.location.port === "5173" ||
         window.location.port === "");
 
-    // Get JWT token for WebSocket authentication (from cookie, not localStorage)
     const jwtToken = getCookie("jwt");
-
-    // DEBUG: Log authentication issues only
-    if (!jwtToken || jwtToken.trim() === "") {
-      console.debug("JWT Debug Info:", {
-        isElectron: isElectron(),
-        rawCookie: isElectron() ? localStorage.getItem("jwt") : document.cookie,
-        jwtToken: jwtToken,
-        isEmpty: true
-      });
-    }
 
     if (!jwtToken || jwtToken.trim() === "") {
       console.error("No JWT token available for WebSocket connection");
       setIsConnected(false);
       setIsConnecting(false);
       setConnectionError("Authentication required");
-      isConnectingRef.current = false; // Reset on auth failure
-      // Don't show toast here - let auth system handle it
+      isConnectingRef.current = false;
       return;
     }
 
@@ -317,13 +280,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           })()
         : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
 
-    // Clean up existing connection to prevent duplicates - Linus principle: eliminate complexity
-    if (webSocketRef.current && webSocketRef.current.readyState !== WebSocket.CLOSED) {
-      console.log("Closing existing WebSocket connection before creating new one");
+    if (
+      webSocketRef.current &&
+      webSocketRef.current.readyState !== WebSocket.CLOSED
+    ) {
       webSocketRef.current.close();
     }
 
-    // Clear existing intervals/timeouts
     if (pingIntervalRef.current) {
       clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = null;
@@ -333,17 +296,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       connectionTimeoutRef.current = null;
     }
 
-    // Add JWT token as query parameter for authentication
     const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(jwtToken)}`;
-
-    // DEBUG: Log WebSocket connection details
-    console.log("Creating WebSocket connection:", {
-      baseWsUrl,
-      jwtTokenLength: jwtToken.length,
-      jwtTokenStart: jwtToken.substring(0, 20),
-      encodedTokenLength: encodeURIComponent(jwtToken).length,
-      wsUrl: wsUrl.length > 100 ? `${wsUrl.substring(0, 100)}...` : wsUrl
-    });
 
     const ws = new WebSocket(wsUrl);
     webSocketRef.current = ws;
@@ -439,7 +392,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         } else if (msg.type === "connected") {
           setIsConnected(true);
           setIsConnecting(false);
-          isConnectingRef.current = false; // Clear connecting state
+          isConnectingRef.current = false;
           if (connectionTimeoutRef.current) {
             clearTimeout(connectionTimeoutRef.current);
             connectionTimeoutRef.current = null;
@@ -467,25 +420,21 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
     ws.addEventListener("close", (event) => {
       setIsConnected(false);
-      isConnectingRef.current = false; // Clear connecting state
+      isConnectingRef.current = false;
       if (terminal) {
         terminal.clear();
       }
 
-      // Handle authentication errors (code 1008)
       if (event.code === 1008) {
         console.error("WebSocket authentication failed:", event.reason);
         setConnectionError("Authentication failed - please re-login");
         setIsConnecting(false);
         shouldNotReconnectRef.current = true;
 
-        // Clear invalid JWT token
         localStorage.removeItem("jwt");
 
-        // Show authentication error message
         toast.error("Authentication failed. Please log in again.");
 
-        // Don't attempt to reconnect on auth failure
         return;
       }
 
@@ -501,7 +450,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
     ws.addEventListener("error", (event) => {
       setIsConnected(false);
-      isConnectingRef.current = false; // Clear connecting state
+      isConnectingRef.current = false;
       setConnectionError(t("terminal.websocketError"));
       if (terminal) {
         terminal.clear();
@@ -546,12 +495,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   useEffect(() => {
     if (!terminal || !xtermRef.current || !hostConfig) return;
 
-    // Critical auth check - prevent terminal setup without authentication - Linus principle: fail fast
-    if (!isAuthenticated) {
-      console.debug("Terminal setup delayed - waiting for authentication");
-      return;
-    }
-
     terminal.options = {
       cursorBlink: true,
       cursorStyle: "bar",
@@ -563,7 +506,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       allowTransparency: true,
       convertEol: true,
       windowsMode: false,
-      // Keep Option key for special characters on macOS (false = allows special chars, true = Meta key)
       macOptionIsMeta: false,
       macOptionClickForcesSelection: false,
       rightClickSelectsWord: false,
@@ -604,32 +546,26 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     };
     element?.addEventListener("contextmenu", handleContextMenu);
 
-    // Add macOS-specific keyboard event handling for special characters
     const handleMacKeyboard = (e: KeyboardEvent) => {
-      // Detect macOS
       const isMacOS =
         navigator.platform.toUpperCase().indexOf("MAC") >= 0 ||
         navigator.userAgent.toUpperCase().indexOf("MAC") >= 0;
 
       if (!isMacOS) return;
 
-      // Handle Option key combinations for special characters
       if (e.altKey && !e.metaKey && !e.ctrlKey) {
-        // Use both e.key and e.code to handle different keyboard layouts
         const keyMappings: { [key: string]: string } = {
-          // Using e.key values
-          "7": "|", // Option+7 = pipe symbol
-          "2": "€", // Option+2 = euro symbol
-          "8": "[", // Option+8 = left bracket
-          "9": "]", // Option+9 = right bracket
-          l: "@", // Option+L = at symbol
-          L: "@", // Option+L = at symbol (uppercase)
-          // Using e.code values as fallback
-          Digit7: "|", // Option+7 = pipe symbol
-          Digit2: "€", // Option+2 = euro symbol
-          Digit8: "[", // Option+8 = left bracket
-          Digit9: "]", // Option+9 = right bracket
-          KeyL: "@", // Option+L = at symbol
+          "7": "|",
+          "2": "€",
+          "8": "[",
+          "9": "]",
+          l: "@",
+          L: "@",
+          Digit7: "|",
+          Digit2: "€",
+          Digit8: "[",
+          Digit9: "]",
+          KeyL: "@",
         };
 
         const char = keyMappings[e.key] || keyMappings[e.code];
@@ -637,7 +573,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           e.preventDefault();
           e.stopPropagation();
 
-          // Send the character directly to the terminal
           if (webSocketRef.current?.readyState === 1) {
             webSocketRef.current.send(
               JSON.stringify({ type: "input", data: char }),
@@ -657,12 +592,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         fitAddonRef.current?.fit();
         if (terminal) scheduleNotify(terminal.cols, terminal.rows);
         hardRefresh();
-      }, 150); // Increased debounce for better stability
+      }, 150);
     });
 
     resizeObserver.observe(xtermRef.current);
 
-    // Show terminal immediately - better UX, no unnecessary delays
     setVisible(true);
 
     const readyFonts =
@@ -671,7 +605,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         : Promise.resolve();
 
     readyFonts.then(() => {
-      // Fixed delay and authentication check - Linus principle: eliminate race conditions
       setTimeout(() => {
         fitAddon.fit();
         if (terminal) scheduleNotify(terminal.cols, terminal.rows);
@@ -681,23 +614,15 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           terminal.focus();
         }
 
-        // Verify authentication before attempting WebSocket connection
         const jwtToken = getCookie("jwt");
 
-        // DEBUG: Log only authentication failures
         if (!jwtToken || jwtToken.trim() === "") {
-          console.debug("ReadyFonts Auth Check Failed:", {
-            isAuthenticated: isAuthenticated,
-            jwtPresent: !!jwtToken
-          });
-        }
-
-        if (!jwtToken || jwtToken.trim() === "") {
-          console.warn("WebSocket connection delayed - no authentication token");
+          console.warn(
+            "WebSocket connection delayed - no authentication token",
+          );
           setIsConnected(false);
           setIsConnecting(false);
           setConnectionError("Authentication required");
-          // Don't show toast here - let auth system handle it
           return;
         }
 
@@ -705,7 +630,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         const rows = terminal.rows;
 
         connectToHost(cols, rows);
-      }, 200); // Increased from 100ms to 200ms for auth stability
+      }, 200);
     });
 
     return () => {
@@ -728,7 +653,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       }
       webSocketRef.current?.close();
     };
-  }, [xtermRef, terminal, hostConfig]); // Removed isAuthenticated to prevent infinite loop
+  }, [xtermRef, terminal, hostConfig]);
 
   useEffect(() => {
     if (isVisible && fitAddonRef.current) {

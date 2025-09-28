@@ -32,7 +32,6 @@ export function useDragToDesktop({
     error: null,
   });
 
-  // Check if running in Electron environment
   const isElectron = () => {
     return (
       typeof window !== "undefined" &&
@@ -41,13 +40,13 @@ export function useDragToDesktop({
     );
   };
 
-  // Drag single file to desktop
   const dragFileToDesktop = useCallback(
     async (file: FileItem, options: DragToDesktopOptions = {}) => {
       const { enableToast = true, onSuccess, onError } = options;
 
       if (!isElectron()) {
-        const error = "Drag to desktop feature is only available in desktop application";
+        const error =
+          "Drag to desktop feature is only available in desktop application";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
@@ -68,7 +67,6 @@ export function useDragToDesktop({
           error: null,
         }));
 
-        // Download file content
         const response = await downloadSSHFile(sshSessionId, file.path);
 
         if (!response?.content) {
@@ -77,7 +75,6 @@ export function useDragToDesktop({
 
         setState((prev) => ({ ...prev, progress: 50 }));
 
-        // Create temporary file
         const tempResult = await window.electronAPI.createTempFile({
           fileName: file.name,
           content: response.content,
@@ -85,12 +82,13 @@ export function useDragToDesktop({
         });
 
         if (!tempResult.success) {
-          throw new Error(tempResult.error || "Failed to create temporary file");
+          throw new Error(
+            tempResult.error || "Failed to create temporary file",
+          );
         }
 
         setState((prev) => ({ ...prev, progress: 80, isDragging: true }));
 
-        // Start dragging
         const dragResult = await window.electronAPI.startDragToDesktop({
           tempId: tempResult.tempId,
           fileName: file.name,
@@ -108,7 +106,6 @@ export function useDragToDesktop({
 
         onSuccess?.();
 
-        // Delayed cleanup of temporary file (give user time to complete drag)
         setTimeout(async () => {
           await window.electronAPI.cleanupTempFile(tempResult.tempId);
           setState((prev) => ({
@@ -117,7 +114,7 @@ export function useDragToDesktop({
             isDownloading: false,
             progress: 0,
           }));
-        }, 10000); // Cleanup after 10 seconds
+        }, 10000);
 
         return true;
       } catch (error: any) {
@@ -143,13 +140,13 @@ export function useDragToDesktop({
     [sshSessionId, sshHost],
   );
 
-  // Drag multiple files to desktop (batch operation)
   const dragFilesToDesktop = useCallback(
     async (files: FileItem[], options: DragToDesktopOptions = {}) => {
       const { enableToast = true, onSuccess, onError } = options;
 
       if (!isElectron()) {
-        const error = "Drag to desktop feature is only available in desktop application";
+        const error =
+          "Drag to desktop feature is only available in desktop application";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
@@ -175,7 +172,6 @@ export function useDragToDesktop({
           error: null,
         }));
 
-        // Batch download files
         const downloadPromises = fileList.map((file) =>
           downloadSSHFile(sshSessionId, file.path),
         );
@@ -183,7 +179,6 @@ export function useDragToDesktop({
         const responses = await Promise.all(downloadPromises);
         setState((prev) => ({ ...prev, progress: 40 }));
 
-        // Create temporary folder structure
         const folderName = `Files_${Date.now()}`;
         const filesData = fileList.map((file, index) => ({
           relativePath: file.name,
@@ -197,12 +192,13 @@ export function useDragToDesktop({
         });
 
         if (!tempResult.success) {
-          throw new Error(tempResult.error || "Failed to create temporary folder");
+          throw new Error(
+            tempResult.error || "Failed to create temporary folder",
+          );
         }
 
         setState((prev) => ({ ...prev, progress: 80, isDragging: true }));
 
-        // Start dragging folder
         const dragResult = await window.electronAPI.startDragToDesktop({
           tempId: tempResult.tempId,
           fileName: folderName,
@@ -220,7 +216,6 @@ export function useDragToDesktop({
 
         onSuccess?.();
 
-        // Delayed cleanup of temporary folder
         setTimeout(async () => {
           await window.electronAPI.cleanupTempFile(tempResult.tempId);
           setState((prev) => ({
@@ -229,8 +224,7 @@ export function useDragToDesktop({
             isDownloading: false,
             progress: 0,
           }));
-        }, 15000); // Cleanup after 15 seconds
-
+        }, 15000);
         return true;
       } catch (error: any) {
         console.error("Failed to batch drag to desktop:", error);
@@ -255,13 +249,13 @@ export function useDragToDesktop({
     [sshSessionId, sshHost, dragFileToDesktop],
   );
 
-  // Drag folder to desktop
   const dragFolderToDesktop = useCallback(
     async (folder: FileItem, options: DragToDesktopOptions = {}) => {
       const { enableToast = true, onSuccess, onError } = options;
 
       if (!isElectron()) {
-        const error = "Drag to desktop feature is only available in desktop application";
+        const error =
+          "Drag to desktop feature is only available in desktop application";
         if (enableToast) toast.error(error);
         onError?.(error);
         return false;
@@ -277,9 +271,6 @@ export function useDragToDesktop({
       if (enableToast) {
         toast.info("Folder drag functionality is under development...");
       }
-
-      // TODO: Implement recursive folder download and drag
-      // This requires additional API to recursively get folder contents
 
       return false;
     },

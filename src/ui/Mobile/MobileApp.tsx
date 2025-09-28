@@ -25,18 +25,14 @@ const AppContent: FC = () => {
 
   useEffect(() => {
     const checkAuth = () => {
-      // With HttpOnly cookies, we can't check for JWT presence from frontend
-      // Instead, we'll try to get user info and handle the response
       setAuthLoading(true);
       getUserInfo()
         .then((meRes) => {
           setIsAuthenticated(true);
           setIsAdmin(!!meRes.is_admin);
           setUsername(meRes.username || null);
-          
-          // Check if user data is unlocked
+
           if (!meRes.data_unlocked) {
-            // Data is locked - user needs to re-authenticate
             console.warn("User data is locked - re-authentication required");
             setIsAuthenticated(false);
             setIsAdmin(false);
@@ -47,8 +43,7 @@ const AppContent: FC = () => {
           setIsAuthenticated(false);
           setIsAdmin(false);
           setUsername(null);
-          
-          // Check if this is a session expiration error
+
           const errorCode = err?.response?.data?.code;
           if (errorCode === "SESSION_EXPIRED") {
             console.warn("Session expired - please log in again");

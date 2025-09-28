@@ -222,7 +222,6 @@ export function CredentialEditor({
     }
   }, [editingCredential?.id, fullCredentialDetails, form]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (keyDetectionTimeoutRef.current) {
@@ -234,7 +233,6 @@ export function CredentialEditor({
     };
   }, []);
 
-  // Detect key type function
   const handleKeyTypeDetection = async (
     keyValue: string,
     keyPassword?: string,
@@ -251,7 +249,6 @@ export function CredentialEditor({
         setDetectedKeyType(result.keyType);
       } else {
         setDetectedKeyType("invalid");
-        console.warn("Key detection failed:", result.error);
       }
     } catch (error) {
       setDetectedKeyType("error");
@@ -261,7 +258,6 @@ export function CredentialEditor({
     }
   };
 
-  // Debounced key type detection
   const debouncedKeyDetection = (keyValue: string, keyPassword?: string) => {
     if (keyDetectionTimeoutRef.current) {
       clearTimeout(keyDetectionTimeoutRef.current);
@@ -271,7 +267,6 @@ export function CredentialEditor({
     }, 1000);
   };
 
-  // Detect public key type function
   const handlePublicKeyTypeDetection = async (publicKeyValue: string) => {
     if (!publicKeyValue || publicKeyValue.trim() === "") {
       setDetectedPublicKeyType(null);
@@ -295,7 +290,6 @@ export function CredentialEditor({
     }
   };
 
-  // Debounced public key type detection
   const debouncedPublicKeyDetection = (publicKeyValue: string) => {
     if (publicKeyDetectionTimeoutRef.current) {
       clearTimeout(publicKeyDetectionTimeoutRef.current);
@@ -718,7 +712,6 @@ export function CredentialEditor({
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  // Auto-fill the key password field if passphrase was used
                                   if (keyGenerationPassphrase) {
                                     form.setValue(
                                       "keyPassword",
@@ -770,7 +763,6 @@ export function CredentialEditor({
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  // Auto-fill the key password field if passphrase was used
                                   if (keyGenerationPassphrase) {
                                     form.setValue(
                                       "keyPassword",
@@ -822,7 +814,6 @@ export function CredentialEditor({
                                 if (result.success) {
                                   form.setValue("key", result.privateKey);
                                   form.setValue("publicKey", result.publicKey);
-                                  // Auto-fill the key password field if passphrase was used
                                   if (keyGenerationPassphrase) {
                                     form.setValue(
                                       "keyPassword",
@@ -924,7 +915,9 @@ export function CredentialEditor({
                                       form.watch("keyPassword"),
                                     );
                                   }}
-                                  placeholder={t("placeholders.pastePrivateKey")}
+                                  placeholder={t(
+                                    "placeholders.pastePrivateKey",
+                                  )}
                                   theme={oneDark}
                                   className="border border-input rounded-md"
                                   minHeight="120px"
@@ -1044,9 +1037,7 @@ export function CredentialEditor({
                                         );
 
                                       if (result.success && result.publicKey) {
-                                        // Set the generated public key
                                         field.onChange(result.publicKey);
-                                        // Trigger public key detection
                                         debouncedPublicKeyDetection(
                                           result.publicKey,
                                         );

@@ -77,7 +77,7 @@ jobs:
         run: |
           REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
           echo "REPO_OWNER=$REPO_OWNER" >> $GITHUB_ENV
-          
+
           if [ "${{ github.event.inputs.tag_name }}" != "" ]; then
             IMAGE_TAG="${{ github.event.inputs.tag_name }}"
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
@@ -88,7 +88,7 @@ jobs:
             IMAGE_TAG="${{ github.ref_name }}"
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-          
+
           # Determine registry and image name
           if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
             echo "REGISTRY=docker.io" >> $GITHUB_ENV

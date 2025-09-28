@@ -1,31 +1,19 @@
 import { databaseLogger } from "./logger.js";
 
-/**
- * Database Save Trigger - 自动触发内存数据库保存到磁盘
- * 确保数据修改后能持久化保存
- */
 export class DatabaseSaveTrigger {
   private static saveFunction: (() => Promise<void>) | null = null;
   private static isInitialized = false;
   private static pendingSave = false;
   private static saveTimeout: NodeJS.Timeout | null = null;
 
-  /**
-   * 初始化保存触发器
-   */
   static initialize(saveFunction: () => Promise<void>): void {
     this.saveFunction = saveFunction;
     this.isInitialized = true;
-
-    databaseLogger.info("Database save trigger initialized", {
-      operation: "db_save_trigger_init",
-    });
   }
 
-  /**
-   * 触发数据库保存 - 防抖处理，避免频繁保存
-   */
-  static async triggerSave(reason: string = "data_modification"): Promise<void> {
+  static async triggerSave(
+    reason: string = "data_modification",
+  ): Promise<void> {
     if (!this.isInitialized || !this.saveFunction) {
       databaseLogger.warn("Database save trigger not initialized", {
         operation: "db_save_trigger_not_init",
@@ -34,12 +22,10 @@ export class DatabaseSaveTrigger {
       return;
     }
 
-    // 清除之前的定时器
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
     }
 
-    // 防抖：延迟2秒执行，如果2秒内有新的保存请求，则重新计时
     this.saveTimeout = setTimeout(async () => {
       if (this.pendingSave) {
         return;
@@ -58,22 +44,21 @@ export class DatabaseSaveTrigger {
       } finally {
         this.pendingSave = false;
       }
-    }, 2000); // 2秒防抖
+    }, 2000);
   }
 
-  /**
-   * 立即保存 - 用于关键操作
-   */
   static async forceSave(reason: string = "critical_operation"): Promise<void> {
     if (!this.isInitialized || !this.saveFunction) {
-      databaseLogger.warn("Database save trigger not initialized for force save", {
-        operation: "db_save_trigger_force_not_init",
-        reason,
-      });
+      databaseLogger.warn(
+        "Database save trigger not initialized for force save",
+        {
+          operation: "db_save_trigger_force_not_init",
+          reason,
+        },
+      );
       return;
     }
 
-    // 清除防抖定时器
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
@@ -92,26 +77,18 @@ export class DatabaseSaveTrigger {
       });
 
       await this.saveFunction();
-
-      databaseLogger.success("Database force save completed", {
-        operation: "db_save_trigger_force_success",
-        reason,
-      });
     } catch (error) {
       databaseLogger.error("Database force save failed", error, {
         operation: "db_save_trigger_force_failed",
         reason,
         error: error instanceof Error ? error.message : "Unknown error",
       });
-      throw error; // 重新抛出错误，因为这是强制保存
+      throw error;
     } finally {
       this.pendingSave = false;
     }
   }
 
-  /**
-   * 获取保存状态
-   */
   static getStatus(): {
     initialized: boolean;
     pendingSave: boolean;
@@ -124,9 +101,6 @@ export class DatabaseSaveTrigger {
     };
   }
 
-  /**
-   * 清理资源
-   */
   static cleanup(): void {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);

@@ -10,19 +10,10 @@ interface EncryptedFileMetadata {
   version: string;
   fingerprint: string;
   algorithm: string;
-  keySource?: string; // Track where the key comes from (SystemCrypto) - v2 only
-  salt?: string; // Legacy v1 format only
+  keySource?: string;
+  salt?: string;
 }
 
-/**
- * Database file encryption - encrypts the entire SQLite database file at rest
- * Uses SystemCrypto for key management - no more fixed seed garbage!
- *
- * Linus principles applied:
- * - Remove hardcoded keys security disaster
- * - Use SystemCrypto instance keys for proper per-instance security
- * - Simple and direct, no complex key derivation
- */
 class DatabaseFileEncryption {
   private static readonly VERSION = "v2";
   private static readonly ALGORITHM = "aes-256-gcm";
@@ -30,33 +21,28 @@ class DatabaseFileEncryption {
   private static readonly METADATA_FILE_SUFFIX = ".meta";
   private static systemCrypto = SystemCrypto.getInstance();
 
-  /**
-   * Encrypt database from buffer (for in-memory databases)
-   */
-  static async encryptDatabaseFromBuffer(buffer: Buffer, targetPath: string): Promise<string> {
+  static async encryptDatabaseFromBuffer(
+    buffer: Buffer,
+    targetPath: string,
+  ): Promise<string> {
     try {
-      // Get database key from SystemCrypto (no more fixed seed garbage!)
       const key = await this.systemCrypto.getDatabaseKey();
 
-      // Generate encryption components
       const iv = crypto.randomBytes(16);
 
-      // Encrypt the buffer
       const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv) as any;
       const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
       const tag = cipher.getAuthTag();
 
-      // Create metadata
       const metadata: EncryptedFileMetadata = {
         iv: iv.toString("hex"),
         tag: tag.toString("hex"),
         version: this.VERSION,
-        fingerprint: "termix-v2-systemcrypto", // SystemCrypto managed key
+        fingerprint: "termix-v2-systemcrypto",
         algorithm: this.ALGORITHM,
         keySource: "SystemCrypto",
       };
 
-      // Write encrypted file and metadata
       const metadataPath = `${targetPath}${this.METADATA_FILE_SUFFIX}`;
       fs.writeFileSync(targetPath, encrypted);
       fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
@@ -73,10 +59,10 @@ class DatabaseFileEncryption {
     }
   }
 
-  /**
-   * Encrypt database file
-   */
-  static async encryptDatabaseFile(sourcePath: string, targetPath?: string): Promise<string> {
+  static async encryptDatabaseFile(
+    sourcePath: string,
+    targetPath?: string,
+  ): Promise<string> {
     if (!fs.existsSync(sourcePath)) {
       throw new Error(`Source database file does not exist: ${sourcePath}`);
     }
@@ -86,16 +72,12 @@ class DatabaseFileEncryption {
     const metadataPath = `${encryptedPath}${this.METADATA_FILE_SUFFIX}`;
 
     try {
-      // Read source file
       const sourceData = fs.readFileSync(sourcePath);
 
-      // Get database key from SystemCrypto (no more fixed seed garbage!)
       const key = await this.systemCrypto.getDatabaseKey();
 
-      // Generate encryption components
       const iv = crypto.randomBytes(16);
 
-      // Encrypt the file
       const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv) as any;
       const encrypted = Buffer.concat([
         cipher.update(sourceData),
@@ -103,17 +85,15 @@ class DatabaseFileEncryption {
       ]);
       const tag = cipher.getAuthTag();
 
-      // Create metadata
       const metadata: EncryptedFileMetadata = {
         iv: iv.toString("hex"),
         tag: tag.toString("hex"),
         version: this.VERSION,
-        fingerprint: "termix-v2-systemcrypto", // SystemCrypto managed key
+        fingerprint: "termix-v2-systemcrypto",
         algorithm: this.ALGORITHM,
         keySource: "SystemCrypto",
       };
 
-      // Write encrypted file and metadata
       fs.writeFileSync(encryptedPath, encrypted);
       fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
 
@@ -139,9 +119,6 @@ class DatabaseFileEncryption {
     }
   }
 
-  /**
-   * Decrypt database file to buffer (for in-memory usage)
-   */
   static async decryptDatabaseToBuffer(encryptedPath: string): Promise<Buffer> {
     if (!fs.existsSync(encryptedPath)) {
       throw new Error(
@@ -155,35 +132,33 @@ class DatabaseFileEncryption {
     }
 
     try {
-      // Read metadata
       const metadataContent = fs.readFileSync(metadataPath, "utf8");
       const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
 
-      // Read encrypted data
       const encryptedData = fs.readFileSync(encryptedPath);
 
-      // Get decryption key based on version
       let key: Buffer;
       if (metadata.version === "v2") {
-        // New v2 format: use SystemCrypto key
         key = await this.systemCrypto.getDatabaseKey();
       } else if (metadata.version === "v1") {
-        // Legacy v1 format: use deprecated salt-based key derivation
-        databaseLogger.warn("Decrypting legacy v1 encrypted database - consider upgrading", {
-          operation: "decrypt_legacy_v1",
-          path: encryptedPath
-        });
+        databaseLogger.warn(
+          "Decrypting legacy v1 encrypted database - consider upgrading",
+          {
+            operation: "decrypt_legacy_v1",
+            path: encryptedPath,
+          },
+        );
         if (!metadata.salt) {
           throw new Error("v1 encrypted file missing required salt field");
         }
         const salt = Buffer.from(metadata.salt, "hex");
-        const fixedSeed = process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
+        const fixedSeed =
+          process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
         key = crypto.pbkdf2Sync(fixedSeed, salt, 100000, 32, "sha256");
       } else {
         throw new Error(`Unsupported encryption version: ${metadata.version}`);
       }
 
-      // Decrypt to buffer
       const decipher = crypto.createDecipheriv(
         metadata.algorithm,
         key,
@@ -208,9 +183,6 @@ class DatabaseFileEncryption {
     }
   }
 
-  /**
-   * Decrypt database file
-   */
   static async decryptDatabaseFile(
     encryptedPath: string,
     targetPath?: string,
@@ -230,35 +202,33 @@ class DatabaseFileEncryption {
       targetPath || encryptedPath.replace(this.ENCRYPTED_FILE_SUFFIX, "");
 
     try {
-      // Read metadata
       const metadataContent = fs.readFileSync(metadataPath, "utf8");
       const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
 
-      // Read encrypted data
       const encryptedData = fs.readFileSync(encryptedPath);
 
-      // Get decryption key based on version
       let key: Buffer;
       if (metadata.version === "v2") {
-        // New v2 format: use SystemCrypto key
         key = await this.systemCrypto.getDatabaseKey();
       } else if (metadata.version === "v1") {
-        // Legacy v1 format: use deprecated salt-based key derivation
-        databaseLogger.warn("Decrypting legacy v1 encrypted database - consider upgrading", {
-          operation: "decrypt_legacy_v1",
-          path: encryptedPath
-        });
+        databaseLogger.warn(
+          "Decrypting legacy v1 encrypted database - consider upgrading",
+          {
+            operation: "decrypt_legacy_v1",
+            path: encryptedPath,
+          },
+        );
         if (!metadata.salt) {
           throw new Error("v1 encrypted file missing required salt field");
         }
         const salt = Buffer.from(metadata.salt, "hex");
-        const fixedSeed = process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
+        const fixedSeed =
+          process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
         key = crypto.pbkdf2Sync(fixedSeed, salt, 100000, 32, "sha256");
       } else {
         throw new Error(`Unsupported encryption version: ${metadata.version}`);
       }
 
-      // Decrypt the file
       const decipher = crypto.createDecipheriv(
         metadata.algorithm,
         key,
@@ -271,7 +241,6 @@ class DatabaseFileEncryption {
         decipher.final(),
       ]);
 
-      // Write decrypted file
       fs.writeFileSync(decryptedPath, decrypted);
 
       databaseLogger.info("Database file decrypted successfully", {
@@ -296,9 +265,6 @@ class DatabaseFileEncryption {
     }
   }
 
-  /**
-   * Check if a file is an encrypted database file
-   */
   static isEncryptedDatabaseFile(filePath: string): boolean {
     const metadataPath = `${filePath}${this.METADATA_FILE_SUFFIX}`;
 
@@ -318,9 +284,6 @@ class DatabaseFileEncryption {
     }
   }
 
-  /**
-   * Get information about an encrypted database file
-   */
   static getEncryptedFileInfo(encryptedPath: string): {
     version: string;
     algorithm: string;
@@ -338,13 +301,13 @@ class DatabaseFileEncryption {
       const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
 
       const fileStats = fs.statSync(encryptedPath);
-      const currentFingerprint = "termix-v1-file"; // Fixed identifier
+      const currentFingerprint = "termix-v1-file";
 
       return {
         version: metadata.version,
         algorithm: metadata.algorithm,
         fingerprint: metadata.fingerprint,
-        isCurrentHardware: true, // Hardware validation removed
+        isCurrentHardware: true,
         fileSize: fileStats.size,
       };
     } catch {
@@ -352,9 +315,6 @@ class DatabaseFileEncryption {
     }
   }
 
-  /**
-   * Securely backup database by creating encrypted copy
-   */
   static async createEncryptedBackup(
     databasePath: string,
     backupDir: string,
@@ -363,25 +323,19 @@ class DatabaseFileEncryption {
       throw new Error(`Database file does not exist: ${databasePath}`);
     }
 
-    // Ensure backup directory exists
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
 
-    // Generate backup filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupFileName = `database-backup-${timestamp}.sqlite.encrypted`;
     const backupPath = path.join(backupDir, backupFileName);
 
     try {
-      const encryptedPath = await this.encryptDatabaseFile(databasePath, backupPath);
-
-      databaseLogger.info("Encrypted database backup created", {
-        operation: "database_backup",
-        sourcePath: databasePath,
-        backupPath: encryptedPath,
-        timestamp,
-      });
+      const encryptedPath = await this.encryptDatabaseFile(
+        databasePath,
+        backupPath,
+      );
 
       return encryptedPath;
     } catch (error) {
@@ -394,9 +348,6 @@ class DatabaseFileEncryption {
     }
   }
 
-  /**
-   * Restore database from encrypted backup
-   */
   static async restoreFromEncryptedBackup(
     backupPath: string,
     targetPath: string,
@@ -406,13 +357,10 @@ class DatabaseFileEncryption {
     }
 
     try {
-      const restoredPath = await this.decryptDatabaseFile(backupPath, targetPath);
-
-      databaseLogger.info("Database restored from encrypted backup", {
-        operation: "database_restore",
+      const restoredPath = await this.decryptDatabaseFile(
         backupPath,
-        restoredPath,
-      });
+        targetPath,
+      );
 
       return restoredPath;
     } catch (error) {
@@ -425,10 +373,6 @@ class DatabaseFileEncryption {
     }
   }
 
-
-  /**
-   * Clean up temporary files
-   */
   static cleanupTempFiles(basePath: string): void {
     try {
       const tempFiles = [

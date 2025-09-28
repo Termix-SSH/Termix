@@ -115,8 +115,6 @@ export function setCookie(name: string, value: string, days = 7): void {
   if (isElectron()) {
     localStorage.setItem(name, value);
   } else {
-    // Note: For secure authentication, cookies should be set by the backend
-    // This function is kept for backward compatibility with non-auth cookies
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
     document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
   }
@@ -131,7 +129,6 @@ export function getCookie(name: string): string | undefined {
     const parts = value.split(`; ${name}=`);
     const encodedToken =
       parts.length === 2 ? parts.pop()?.split(";").shift() : undefined;
-    // Decode the token since setCookie uses encodeURIComponent
     const token = encodedToken ? decodeURIComponent(encodedToken) : undefined;
     return token;
   }
@@ -271,32 +268,25 @@ function createApiInstance(
       }
 
       if (status === 401) {
-        // Check if this is a session expiration (data lock) vs regular auth failure
         const errorCode = (error.response?.data as any)?.code;
         const isSessionExpired = errorCode === "SESSION_EXPIRED";
-        
-        // Clear authentication state
+
         if (isElectron()) {
           localStorage.removeItem("jwt");
         } else {
-          // For web, the secure HttpOnly cookie will be cleared by the backend
-          // We can't clear HttpOnly cookies from JavaScript
           localStorage.removeItem("jwt");
         }
 
-        // If session expired, show notification and reload page
         if (isSessionExpired && typeof window !== "undefined") {
           console.warn("Session expired - please log in again");
-          
+
           import("sonner").then(({ toast }) => {
             toast.warning("Session expired - please log in again");
           });
-          
-          // Trigger a page reload to redirect to login
+
           setTimeout(() => window.location.reload(), 100);
         }
       }
-
 
       return Promise.reject(error);
     },
@@ -441,7 +431,6 @@ function getApiUrl(path: string, defaultPort: number): string {
   }
 }
 
-// Initialize API instances
 function initializeApiInstances() {
   // SSH Host Management API (port 30001)
   sshHostApi = createApiInstance(getApiUrl("/ssh", 30001), "SSH_HOST");
@@ -477,7 +466,6 @@ export let statsApi: AxiosInstance;
 // Authentication API (port 30001)
 export let authApi: AxiosInstance;
 
-// Initialize API instances immediately
 initializeApiInstances();
 
 function updateApiInstances() {
@@ -488,7 +476,6 @@ function updateApiInstances() {
 
   initializeApiInstances();
 
-  // Make configuredServerUrl available globally for components that need it
   (window as any).configuredServerUrl = configuredServerUrl;
 
   systemLogger.success("All API instances updated successfully", {
@@ -587,7 +574,6 @@ function handleApiError(error: unknown, operation: string): never {
         "SERVER_ERROR",
       );
     } else if (status === 0) {
-      // Check if this is a "no server configured" error
       if (url.includes("no-server-configured")) {
         apiLogger.error(
           `No server configured: ${method} ${url}`,
@@ -796,7 +782,9 @@ export async function getSSHHostById(hostId: number): Promise<SSHHost> {
 
 export async function enableAutoStart(sshConfigId: number): Promise<any> {
   try {
-    const response = await sshHostApi.post("/autostart/enable", { sshConfigId });
+    const response = await sshHostApi.post("/autostart/enable", {
+      sshConfigId,
+    });
     return response.data;
   } catch (error) {
     handleApiError(error, "enable autostart");
@@ -806,7 +794,7 @@ export async function enableAutoStart(sshConfigId: number): Promise<any> {
 export async function disableAutoStart(sshConfigId: number): Promise<any> {
   try {
     const response = await sshHostApi.delete("/autostart/disable", {
-      data: { sshConfigId }
+      data: { sshConfigId },
     });
     return response.data;
   } catch (error) {
@@ -1072,7 +1060,7 @@ export async function listSSHFiles(
     return response.data || { files: [], path };
   } catch (error) {
     handleApiError(error, "list SSH files");
-    return { files: [], path }; // Ensure always return correct format
+    return { files: [], path };
   }
 }
 
@@ -1100,11 +1088,11 @@ export async function readSSHFile(
     });
     return response.data;
   } catch (error: any) {
-    // Preserve fileNotFound information for 404 errors
     if (error.response?.status === 404) {
       const customError = new Error("File not found");
       (customError as any).response = error.response;
-      (customError as any).isFileNotFound = error.response.data?.fileNotFound || true;
+      (customError as any).isFileNotFound =
+        error.response.data?.fileNotFound || true;
       throw customError;
     }
     handleApiError(error, "read SSH file");
@@ -1268,7 +1256,7 @@ export async function copySSHItem(
         userId,
       },
       {
-        timeout: 60000, // 60 second timeout as file copying may take longer
+        timeout: 60000,
       },
     );
     return response.data;
@@ -1308,15 +1296,19 @@ export async function moveSSHItem(
   userId?: string,
 ): Promise<any> {
   try {
-    const response = await fileManagerApi.put("/ssh/moveItem", {
-      sessionId,
-      oldPath,
-      newPath,
-      hostId,
-      userId,
-    }, {
-      timeout: 60000, // 60 second timeout for move operations
-    });
+    const response = await fileManagerApi.put(
+      "/ssh/moveItem",
+      {
+        sessionId,
+        oldPath,
+        newPath,
+        hostId,
+        userId,
+      },
+      {
+        timeout: 60000,
+      },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "move SSH item");
@@ -1374,7 +1366,6 @@ export async function removeRecentFile(
   }
 }
 
-// Pinned Files
 export async function getPinnedFiles(hostId: number): Promise<any> {
   try {
     const response = await authApi.get("/ssh/file_manager/pinned", {
@@ -1420,7 +1411,6 @@ export async function removePinnedFile(
   }
 }
 
-// Folder Shortcuts
 export async function getFolderShortcuts(hostId: number): Promise<any> {
   try {
     const response = await authApi.get("/ssh/file_manager/shortcuts", {
@@ -1524,10 +1514,8 @@ export async function loginUser(
 ): Promise<AuthResponse> {
   try {
     const response = await authApi.post("/users/login", { username, password });
-    // JWT token is now set as secure HttpOnly cookie by backend
-    // Return success status and user info
     return {
-      token: "cookie-based", // Placeholder since token is in HttpOnly cookie
+      token: "cookie-based",
       success: response.data.success,
       is_admin: response.data.is_admin,
       username: response.data.username,
@@ -1537,7 +1525,10 @@ export async function loginUser(
   }
 }
 
-export async function logoutUser(): Promise<{ success: boolean; message: string }> {
+export async function logoutUser(): Promise<{
+  success: boolean;
+  message: string;
+}> {
   try {
     const response = await authApi.post("/users/logout");
     return response.data;
@@ -1555,7 +1546,9 @@ export async function getUserInfo(): Promise<UserInfo> {
   }
 }
 
-export async function unlockUserData(password: string): Promise<{ success: boolean; message: string }> {
+export async function unlockUserData(
+  password: string,
+): Promise<{ success: boolean; message: string }> {
   try {
     const response = await authApi.post("/users/unlock-data", { password });
     return response.data;
@@ -1824,9 +1817,7 @@ export async function getUserAlerts(): Promise<{ alerts: any[] }> {
   }
 }
 
-export async function dismissAlert(
-  alertId: string,
-): Promise<any> {
+export async function dismissAlert(alertId: string): Promise<any> {
   try {
     const response = await authApi.post("/alerts/dismiss", { alertId });
     return response.data;
@@ -1943,7 +1934,6 @@ export async function getCredentialFolders(): Promise<any> {
   }
 }
 
-// Get SSH host with resolved credentials
 export async function getSSHHostWithCredentials(hostId: number): Promise<any> {
   try {
     const response = await sshHostApi.get(
@@ -1955,7 +1945,6 @@ export async function getSSHHostWithCredentials(hostId: number): Promise<any> {
   }
 }
 
-// Apply credential to SSH host
 export async function applyCredentialToHost(
   hostId: number,
   credentialId: number,
@@ -1971,7 +1960,6 @@ export async function applyCredentialToHost(
   }
 }
 
-// Remove credential from SSH host
 export async function removeCredentialFromHost(hostId: number): Promise<any> {
   try {
     const response = await sshHostApi.delete(`/db/host/${hostId}/credential`);
@@ -1981,7 +1969,6 @@ export async function removeCredentialFromHost(hostId: number): Promise<any> {
   }
 }
 
-// Migrate host to managed credential
 export async function migrateHostToCredential(
   hostId: number,
   credentialName: string,

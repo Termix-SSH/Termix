@@ -180,7 +180,6 @@ export function Server({
   return (
     <div style={wrapperStyle} className={containerClass}>
       <div className="h-full w-full flex flex-col">
-        {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
           <div className="flex items-center gap-4 min-w-0">
             <div className="min-w-0">
@@ -271,184 +270,183 @@ export function Server({
         </div>
         <Separator className="p-0.25 w-full" />
 
-        {/* Stats */}
         {showStatsUI && (
           <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4">
-          {isLoadingMetrics && !metrics ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-gray-300">
-                  {t("serverStats.loadingMetrics")}
-                </span>
-              </div>
-            </div>
-          ) : !metrics && serverStatus === "offline" ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
+            {isLoadingMetrics && !metrics ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-gray-300">
+                    {t("serverStats.loadingMetrics")}
+                  </span>
                 </div>
-                <p className="text-gray-300 mb-1">
-                  {t("serverStats.serverOffline")}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {t("serverStats.cannotFetchMetrics")}
-                </p>
               </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-              {/* CPU Stats */}
-              <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <Cpu className="h-5 w-5 text-blue-400" />
-                  <h3 className="font-semibold text-lg text-white">
-                    {t("serverStats.cpuUsage")}
-                  </h3>
+            ) : !metrics && serverStatus === "offline" ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
+                  </div>
+                  <p className="text-gray-300 mb-1">
+                    {t("serverStats.serverOffline")}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {t("serverStats.cannotFetchMetrics")}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                {/* CPU Stats */}
+                <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Cpu className="h-5 w-5 text-blue-400" />
+                    <h3 className="font-semibold text-lg text-white">
+                      {t("serverStats.cpuUsage")}
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-300">
+                        {(() => {
+                          const pct = metrics?.cpu?.percent;
+                          const cores = metrics?.cpu?.cores;
+                          const pctText =
+                            typeof pct === "number" ? `${pct}%` : "N/A";
+                          const coresText =
+                            typeof cores === "number"
+                              ? t("serverStats.cpuCores", { count: cores })
+                              : t("serverStats.naCpus");
+                          return `${pctText} ${t("serverStats.of")} ${coresText}`;
+                        })()}
+                      </span>
+                    </div>
+
+                    <div className="relative">
+                      <Progress
+                        value={
+                          typeof metrics?.cpu?.percent === "number"
+                            ? metrics!.cpu!.percent!
+                            : 0
+                        }
+                        className="h-2"
+                      />
+                    </div>
+
+                    <div className="text-xs text-gray-500">
+                      {metrics?.cpu?.load
+                        ? `Load: ${metrics.cpu.load[0].toFixed(2)}, ${metrics.cpu.load[1].toFixed(2)}, ${metrics.cpu.load[2].toFixed(2)}`
+                        : "Load: N/A"}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-300">
+                {/* Memory Stats */}
+                <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MemoryStick className="h-5 w-5 text-green-400" />
+                    <h3 className="font-semibold text-lg text-white">
+                      {t("serverStats.memoryUsage")}
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-300">
+                        {(() => {
+                          const pct = metrics?.memory?.percent;
+                          const used = metrics?.memory?.usedGiB;
+                          const total = metrics?.memory?.totalGiB;
+                          const pctText =
+                            typeof pct === "number" ? `${pct}%` : "N/A";
+                          const usedText =
+                            typeof used === "number"
+                              ? `${used.toFixed(1)} GiB`
+                              : "N/A";
+                          const totalText =
+                            typeof total === "number"
+                              ? `${total.toFixed(1)} GiB`
+                              : "N/A";
+                          return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
+                        })()}
+                      </span>
+                    </div>
+
+                    <div className="relative">
+                      <Progress
+                        value={
+                          typeof metrics?.memory?.percent === "number"
+                            ? metrics!.memory!.percent!
+                            : 0
+                        }
+                        className="h-2"
+                      />
+                    </div>
+
+                    <div className="text-xs text-gray-500">
                       {(() => {
-                        const pct = metrics?.cpu?.percent;
-                        const cores = metrics?.cpu?.cores;
-                        const pctText =
-                          typeof pct === "number" ? `${pct}%` : "N/A";
-                        const coresText =
-                          typeof cores === "number"
-                            ? t("serverStats.cpuCores", { count: cores })
-                            : t("serverStats.naCpus");
-                        return `${pctText} ${t("serverStats.of")} ${coresText}`;
-                      })()}
-                    </span>
-                  </div>
-
-                  <div className="relative">
-                    <Progress
-                      value={
-                        typeof metrics?.cpu?.percent === "number"
-                          ? metrics!.cpu!.percent!
-                          : 0
-                      }
-                      className="h-2"
-                    />
-                  </div>
-
-                  <div className="text-xs text-gray-500">
-                    {metrics?.cpu?.load
-                      ? `Load: ${metrics.cpu.load[0].toFixed(2)}, ${metrics.cpu.load[1].toFixed(2)}, ${metrics.cpu.load[2].toFixed(2)}`
-                      : "Load: N/A"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Memory Stats */}
-              <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <MemoryStick className="h-5 w-5 text-green-400" />
-                  <h3 className="font-semibold text-lg text-white">
-                    {t("serverStats.memoryUsage")}
-                  </h3>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-300">
-                      {(() => {
-                        const pct = metrics?.memory?.percent;
                         const used = metrics?.memory?.usedGiB;
                         const total = metrics?.memory?.totalGiB;
-                        const pctText =
-                          typeof pct === "number" ? `${pct}%` : "N/A";
-                        const usedText =
-                          typeof used === "number"
-                            ? `${used.toFixed(1)} GiB`
+                        const free =
+                          typeof used === "number" && typeof total === "number"
+                            ? (total - used).toFixed(1)
                             : "N/A";
-                        const totalText =
-                          typeof total === "number"
-                            ? `${total.toFixed(1)} GiB`
-                            : "N/A";
-                        return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
+                        return `Free: ${free} GiB`;
                       })()}
-                    </span>
-                  </div>
-
-                  <div className="relative">
-                    <Progress
-                      value={
-                        typeof metrics?.memory?.percent === "number"
-                          ? metrics!.memory!.percent!
-                          : 0
-                      }
-                      className="h-2"
-                    />
-                  </div>
-
-                  <div className="text-xs text-gray-500">
-                    {(() => {
-                      const used = metrics?.memory?.usedGiB;
-                      const total = metrics?.memory?.totalGiB;
-                      const free =
-                        typeof used === "number" && typeof total === "number"
-                          ? (total - used).toFixed(1)
-                          : "N/A";
-                      return `Free: ${free} GiB`;
-                    })()}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Disk Stats */}
-              <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <HardDrive className="h-5 w-5 text-orange-400" />
-                  <h3 className="font-semibold text-lg text-white">
-                    {t("serverStats.rootStorageSpace")}
-                  </h3>
-                </div>
+                {/* Disk Stats */}
+                <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <HardDrive className="h-5 w-5 text-orange-400" />
+                    <h3 className="font-semibold text-lg text-white">
+                      {t("serverStats.rootStorageSpace")}
+                    </h3>
+                  </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-300">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-300">
+                        {(() => {
+                          const pct = metrics?.disk?.percent;
+                          const used = metrics?.disk?.usedHuman;
+                          const total = metrics?.disk?.totalHuman;
+                          const pctText =
+                            typeof pct === "number" ? `${pct}%` : "N/A";
+                          const usedText = used ?? "N/A";
+                          const totalText = total ?? "N/A";
+                          return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
+                        })()}
+                      </span>
+                    </div>
+
+                    <div className="relative">
+                      <Progress
+                        value={
+                          typeof metrics?.disk?.percent === "number"
+                            ? metrics!.disk!.percent!
+                            : 0
+                        }
+                        className="h-2"
+                      />
+                    </div>
+
+                    <div className="text-xs text-gray-500">
                       {(() => {
-                        const pct = metrics?.disk?.percent;
                         const used = metrics?.disk?.usedHuman;
                         const total = metrics?.disk?.totalHuman;
-                        const pctText =
-                          typeof pct === "number" ? `${pct}%` : "N/A";
-                        const usedText = used ?? "N/A";
-                        const totalText = total ?? "N/A";
-                        return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
+                        return used && total
+                          ? `Available: ${total}`
+                          : "Available: N/A";
                       })()}
-                    </span>
-                  </div>
-
-                  <div className="relative">
-                    <Progress
-                      value={
-                        typeof metrics?.disk?.percent === "number"
-                          ? metrics!.disk!.percent!
-                          : 0
-                      }
-                      className="h-2"
-                    />
-                  </div>
-
-                  <div className="text-xs text-gray-500">
-                    {(() => {
-                      const used = metrics?.disk?.usedHuman;
-                      const total = metrics?.disk?.totalHuman;
-                      return used && total
-                        ? `Available: ${total}`
-                        : "Available: N/A";
-                    })()}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         )}
 

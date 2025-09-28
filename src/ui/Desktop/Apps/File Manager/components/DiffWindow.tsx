@@ -30,7 +30,6 @@ export function DiffWindow({
 
   const currentWindow = windows.find((w) => w.id === windowId);
 
-  // Window operation handling
   const handleClose = () => {
     closeWindow(windowId);
   };
@@ -49,7 +48,10 @@ export function DiffWindow({
 
   return (
     <DraggableWindow
-      title={t("fileManager.fileComparison", { file1: file1.name, file2: file2.name })}
+      title={t("fileManager.fileComparison", {
+        file1: file1.name,
+        file2: file2.name,
+      })}
       initialX={initialX}
       initialY={initialY}
       initialWidth={1200}

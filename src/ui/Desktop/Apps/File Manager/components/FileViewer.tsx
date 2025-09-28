@@ -51,7 +51,12 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { loadLanguage } from "@uiw/codemirror-extensions-langs";
 import { EditorView, keymap } from "@codemirror/view";
 import { searchKeymap, search, openSearchPanel } from "@codemirror/search";
-import { defaultKeymap, history, historyKeymap, toggleComment } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  toggleComment,
+} from "@codemirror/commands";
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
@@ -64,8 +69,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark as syntaxTheme } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Document, Page, pdfjs } from "react-pdf";
 
-// Use local PDF.js worker to avoid CDN issues
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
 interface FileItem {
   name: string;
@@ -87,15 +91,16 @@ interface FileViewerProps {
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void;
   onDownload?: () => void;
-  onMediaDimensionsChange?: (dimensions: { width: number; height: number }) => void;
+  onMediaDimensionsChange?: (dimensions: {
+    width: number;
+    height: number;
+  }) => void;
 }
 
-// Get official icon for programming languages
 function getLanguageIcon(filename: string): React.ReactNode {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   const baseName = filename.toLowerCase();
 
-  // Special filename handling
   if (["dockerfile"].includes(baseName)) {
     return <SiDocker className="w-6 h-6 text-blue-400" />;
   }
@@ -141,7 +146,6 @@ function getLanguageIcon(filename: string): React.ReactNode {
   return iconMap[ext] || <Code className="w-6 h-6 text-yellow-500" />;
 }
 
-// Get file type and icon
 function getFileType(filename: string): {
   type: string;
   icon: React.ReactNode;
@@ -239,17 +243,14 @@ function getFileType(filename: string): {
   }
 }
 
-// Get CodeMirror language extension
 function getLanguageExtension(filename: string) {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   const baseName = filename.toLowerCase();
 
-  // Special filename handling
   if (["dockerfile", "makefile", "rakefile", "gemfile"].includes(baseName)) {
     return loadLanguage(baseName);
   }
 
-  // Map by file extension
   const langMap: Record<string, string> = {
     js: "javascript",
     jsx: "jsx",
@@ -288,7 +289,6 @@ function getLanguageExtension(filename: string) {
   return language ? loadLanguage(language) : null;
 }
 
-// Format file size
 function formatFileSize(bytes?: number, t?: any): string {
   if (!bytes) return t ? t("fileManager.unknownSize") : "Unknown size";
   const sizes = ["B", "KB", "MB", "GB"];
@@ -328,32 +328,25 @@ export function FileViewer({
 
   const fileTypeInfo = getFileType(file.name);
 
-  // File size limits - remove hard limits, support large file handling
-  const WARNING_SIZE = 50 * 1024 * 1024; // 50MB warning
-  const MAX_SIZE = Number.MAX_SAFE_INTEGER; // Remove hard limits
+  const WARNING_SIZE = 50 * 1024 * 1024;
+  const MAX_SIZE = Number.MAX_SAFE_INTEGER;
 
-  // Check if should display as text
   const shouldShowAsText =
     fileTypeInfo.type === "text" ||
     fileTypeInfo.type === "code" ||
     (fileTypeInfo.type === "unknown" &&
       (forceShowAsText || !file.size || file.size <= WARNING_SIZE));
 
-  // Check if file is too large
   const isLargeFile = file.size && file.size > WARNING_SIZE;
   const isTooLarge = file.size && file.size > MAX_SIZE;
 
-  // Sync external content changes
   useEffect(() => {
     setEditedContent(content);
-    // Only update originalContent when savedContent is updated
     if (savedContent) {
       setOriginalContent(savedContent);
     }
-    // Fix: Compare current content with saved content properly
     setHasChanges(content !== savedContent);
 
-    // If unknown file type and file is large, show warning
     if (fileTypeInfo.type === "unknown" && isLargeFile && !forceShowAsText) {
       setShowLargeFileWarning(true);
     } else {
@@ -361,59 +354,46 @@ export function FileViewer({
     }
   }, [content, savedContent, fileTypeInfo.type, isLargeFile, forceShowAsText]);
 
-  // Handle content changes
   const handleContentChange = (newContent: string) => {
     setEditedContent(newContent);
-    // Fix: Compare with savedContent instead of originalContent for consistency
     setHasChanges(newContent !== savedContent);
     onContentChange?.(newContent);
   };
 
-  // Save file
   const handleSave = () => {
     onSave?.(editedContent);
-    // Note: Don't update originalContent here, as it will be updated via savedContent prop
   };
 
-  // Revert file
   const handleRevert = () => {
     setEditedContent(savedContent);
     setHasChanges(false);
     onContentChange?.(savedContent);
   };
 
-  // Handle save shortcut specifically
   useEffect(() => {
     if (!editorFocused || !isEditable) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle Ctrl+S for custom save, let CodeMirror handle everything else
       const isCtrl = e.ctrlKey || e.metaKey;
-      if (isCtrl && e.key.toLowerCase() === 's') {
+      if (isCtrl && e.key.toLowerCase() === "s") {
         e.preventDefault();
         e.stopPropagation();
         handleSave();
       }
     };
 
-    // Add event listener with capture for save shortcut only
-    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [editorFocused, isEditable, handleSave]);
 
-
-
-
-  // Handle user confirmation to open large file
   const handleConfirmOpenAsText = () => {
     setForceShowAsText(true);
     setShowLargeFileWarning(false);
   };
 
-  // Handle user rejection to open large file
   const handleCancelOpenAsText = () => {
     setShowLargeFileWarning(false);
   };
@@ -431,7 +411,6 @@ export function FileViewer({
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* File info header */}
       <div className="flex-shrink-0 bg-card border-b border-border p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -442,7 +421,11 @@ export function FileViewer({
               <h3 className="font-medium text-foreground">{file.name}</h3>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{formatFileSize(file.size, t)}</span>
-                {file.modified && <span>{t("fileManager.modified")}: {file.modified}</span>}
+                {file.modified && (
+                  <span>
+                    {t("fileManager.modified")}: {file.modified}
+                  </span>
+                )}
                 <span
                   className={cn(
                     "px-2 py-1 rounded-full text-xs",
@@ -457,13 +440,11 @@ export function FileViewer({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Search button */}
             {isEditable && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  // Use CodeMirror's proper API to open search panel
                   if (editorRef.current) {
                     const view = editorRef.current.view;
                     if (view) {
@@ -477,7 +458,6 @@ export function FileViewer({
                 <Search className="w-4 h-4" />
               </Button>
             )}
-            {/* Keyboard shortcuts help */}
             {isEditable && (
               <Button
                 variant="ghost"
@@ -526,11 +506,12 @@ export function FileViewer({
         </div>
       </div>
 
-      {/* Keyboard shortcuts help panel */}
       {showKeyboardShortcuts && isEditable && (
         <div className="flex-shrink-0 bg-muted/30 border-b border-border p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold">{t("fileManager.keyboardShortcuts")}</h3>
+            <h3 className="text-sm font-semibold">
+              {t("fileManager.keyboardShortcuts")}
+            </h3>
             <Button
               variant="ghost"
               size="sm"
@@ -542,60 +523,88 @@ export function FileViewer({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             <div className="space-y-2">
-              <h4 className="font-medium text-muted-foreground">{t("fileManager.searchAndReplace")}</h4>
+              <h4 className="font-medium text-muted-foreground">
+                {t("fileManager.searchAndReplace")}
+              </h4>
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span>{t("fileManager.search")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+F</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Ctrl+F
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.replace")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+H</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Ctrl+H
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.findNext")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">F3</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    F3
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.findPrevious")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Shift+F3</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Shift+F3
+                  </kbd>
                 </div>
               </div>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium text-muted-foreground">{t("fileManager.editing")}</h4>
+              <h4 className="font-medium text-muted-foreground">
+                {t("fileManager.editing")}
+              </h4>
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span>{t("fileManager.save")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+S</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Ctrl+S
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.selectAll")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+A</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Ctrl+A
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.undo")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Z</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Ctrl+Z
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.redo")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Y</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Ctrl+Y
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.toggleComment")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+/</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Ctrl+/
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.autoComplete")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Ctrl+Space</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Ctrl+Space
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.moveLineUp")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Alt+↑</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Alt+↑
+                  </kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.moveLineDown")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">Alt+↓</kbd>
+                  <kbd className="px-2 py-1 bg-background rounded text-xs">
+                    Alt+↓
+                  </kbd>
                 </div>
               </div>
             </div>
@@ -603,9 +612,7 @@ export function FileViewer({
         </div>
       )}
 
-      {/* File content */}
       <div className="flex-1 overflow-hidden">
-        {/* Large file warning dialog */}
         {showLargeFileWarning && (
           <div className="h-full flex items-center justify-center bg-background">
             <div className="bg-card border border-destructive/30 rounded-lg p-6 max-w-md mx-4 shadow-lg">
@@ -616,7 +623,9 @@ export function FileViewer({
                     {t("fileManager.largeFileWarning")}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-3">
-                    {t("fileManager.largeFileWarningDesc", { size: formatFileSize(file.size, t) })}
+                    {t("fileManager.largeFileWarningDesc", {
+                      size: formatFileSize(file.size, t),
+                    })}
                   </p>
                   {isTooLarge ? (
                     <div className="bg-destructive/10 border border-destructive/30 rounded p-3 mb-4">
@@ -667,19 +676,15 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Image preview with react-photo-view */}
         {fileTypeInfo.type === "image" && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full relative">
             {imageLoadError ? (
-              // Error state
               <div className="text-center text-muted-foreground">
                 <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
                 <h3 className="text-lg font-medium mb-2">
                   {t("fileManager.imageLoadError")}
                 </h3>
-                <p className="text-sm mb-4">
-                  {file.name}
-                </p>
+                <p className="text-sm mb-4">{file.name}</p>
                 {onDownload && (
                   <Button
                     variant="outline"
@@ -703,12 +708,15 @@ export function FileViewer({
                       setImageLoading(false);
                       setImageLoadError(false);
 
-                      // Get natural dimensions and notify parent
                       const img = e.currentTarget;
-                      if (onMediaDimensionsChange && img.naturalWidth && img.naturalHeight) {
+                      if (
+                        onMediaDimensionsChange &&
+                        img.naturalWidth &&
+                        img.naturalHeight
+                      ) {
                         onMediaDimensionsChange({
                           width: img.naturalWidth,
-                          height: img.naturalHeight
+                          height: img.naturalHeight,
                         });
                       }
                     }}
@@ -721,23 +729,22 @@ export function FileViewer({
               </PhotoProvider>
             )}
 
-            {/* Loading state */}
             {imageLoading && !imageLoadError && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/80">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-sm text-muted-foreground">Loading image...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Loading image...
+                  </p>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Unified text and code file editor */}
         {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
             {isEditable ? (
-              // Unified CodeMirror editor for all text-based files
               <CodeMirror
                 ref={editorRef}
                 value={editedContent}
@@ -756,20 +763,18 @@ export function FileViewer({
                     ...searchKeymap,
                     ...historyKeymap,
                     ...completionKeymap,
-                    // Custom keybindings
                     {
                       key: "Mod-/",
                       run: toggleComment,
-                      preventDefault: true
+                      preventDefault: true,
                     },
                     {
                       key: "Mod-h",
                       run: () => {
-                        // Let CodeMirror search handle this, just prevent browser default
-                        return false; // Return false to let search keymap handle it
+                        return false;
                       },
-                      preventDefault: true
-                    }
+                      preventDefault: true,
+                    },
                   ]),
                   EditorView.theme({
                     "&": {
@@ -800,7 +805,6 @@ export function FileViewer({
                 }}
               />
             ) : (
-              // Read-only view for non-editable files
               <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
                 {editedContent || content || t("fileManager.fileIsEmpty")}
               </div>
@@ -808,22 +812,29 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Video file preview with enhanced HTML5 support */}
         {fileTypeInfo.type === "video" && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
             <div className="w-full max-w-4xl">
               {(() => {
-                const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                const ext = file.name.split(".").pop()?.toLowerCase() || "";
                 const mimeType = (() => {
                   switch (ext) {
-                    case 'mp4': return 'video/mp4';
-                    case 'webm': return 'video/webm';
-                    case 'mkv': return 'video/x-matroska';
-                    case 'avi': return 'video/x-msvideo';
-                    case 'mov': return 'video/quicktime';
-                    case 'wmv': return 'video/x-ms-wmv';
-                    case 'flv': return 'video/x-flv';
-                    default: return 'video/mp4';
+                    case "mp4":
+                      return "video/mp4";
+                    case "webm":
+                      return "video/webm";
+                    case "mkv":
+                      return "video/x-matroska";
+                    case "avi":
+                      return "video/x-msvideo";
+                    case "mov":
+                      return "video/quicktime";
+                    case "wmv":
+                      return "video/x-ms-wmv";
+                    case "flv":
+                      return "video/x-flv";
+                    default:
+                      return "video/mp4";
                   }
                 })();
 
@@ -836,35 +847,36 @@ export function FileViewer({
                       className="w-full rounded-lg shadow-sm"
                       style={{
                         maxHeight: "calc(100vh - 200px)",
-                        backgroundColor: "#000"
+                        backgroundColor: "#000",
                       }}
                       preload="metadata"
                       onError={(e) => {
-                        console.error('Video playback error:', e.currentTarget.error);
-                      }}
-                      onLoadStart={() => {
-                        console.log('Video loading started...');
+                        console.error(
+                          "Video playback error:",
+                          e.currentTarget.error,
+                        );
                       }}
                       onLoadedMetadata={(e) => {
                         const video = e.currentTarget;
-                        console.log('Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
-
-                        // Get video dimensions and notify parent
-                        if (onMediaDimensionsChange && video.videoWidth && video.videoHeight) {
+                        if (
+                          onMediaDimensionsChange &&
+                          video.videoWidth &&
+                          video.videoHeight
+                        ) {
                           onMediaDimensionsChange({
                             width: video.videoWidth,
-                            height: video.videoHeight
+                            height: video.videoHeight,
                           });
                         }
-                      }}
-                      onCanPlay={() => {
-                        console.log('Video can start playing');
                       }}
                     >
                       <source src={videoUrl} type={mimeType} />
                       <div className="text-center text-muted-foreground p-4">
                         <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-                        <p>Your browser does not support video playback for this format.</p>
+                        <p>
+                          Your browser does not support video playback for this
+                          format.
+                        </p>
                         {onDownload && (
                           <Button
                             variant="outline"
@@ -884,10 +896,8 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Markdown file editor with live preview */}
         {fileTypeInfo.type === "markdown" && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
-            {/* Markdown toolbar */}
             <div className="flex-shrink-0 bg-muted/30 border-b border-border p-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -908,17 +918,13 @@ export function FileViewer({
                     {t("fileManager.preview")}
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Save button removed - using the main header save button instead */}
-                </div>
+                <div className="flex items-center gap-2"></div>
               </div>
             </div>
 
-            {/* Markdown content area */}
             <div className="flex-1 flex overflow-hidden">
               {markdownEditMode ? (
                 <>
-                  {/* Editor pane */}
                   <div className="flex-1 border-r border-border">
                     <div className="h-full p-4 bg-background">
                       <textarea
@@ -933,14 +939,21 @@ export function FileViewer({
                     </div>
                   </div>
 
-                  {/* Preview pane */}
                   <div className="flex-1 overflow-auto bg-muted/10">
                     <div className="p-4">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          code({ node, inline, className, children, ...props }) {
-                            const match = /language-(\w+)/.exec(className || '');
+                          code({
+                            node,
+                            inline,
+                            className,
+                            children,
+                            ...props
+                          }) {
+                            const match = /language-(\w+)/.exec(
+                              className || "",
+                            );
                             return !inline && match ? (
                               <SyntaxHighlighter
                                 style={syntaxTheme}
@@ -949,10 +962,13 @@ export function FileViewer({
                                 className="rounded-lg"
                                 {...props}
                               >
-                                {String(children).replace(/\n$/, '')}
+                                {String(children).replace(/\n$/, "")}
                               </SyntaxHighlighter>
                             ) : (
-                              <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono" {...props}>
+                              <code
+                                className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                                {...props}
+                              >
                                 {children}
                               </code>
                             );
@@ -993,9 +1009,7 @@ export function FileViewer({
                             </ol>
                           ),
                           li: ({ children }) => (
-                            <li className="mb-1 text-foreground">
-                              {children}
-                            </li>
+                            <li className="mb-1 text-foreground">{children}</li>
                           ),
                           blockquote: ({ children }) => (
                             <blockquote className="border-l-4 border-blue-500 pl-3 mb-3 italic text-muted-foreground bg-muted/30 py-1">
@@ -1010,15 +1024,9 @@ export function FileViewer({
                             </div>
                           ),
                           thead: ({ children }) => (
-                            <thead className="bg-muted">
-                              {children}
-                            </thead>
+                            <thead className="bg-muted">{children}</thead>
                           ),
-                          tbody: ({ children }) => (
-                            <tbody>
-                              {children}
-                            </tbody>
-                          ),
+                          tbody: ({ children }) => <tbody>{children}</tbody>,
                           tr: ({ children }) => (
                             <tr className="border-b border-border">
                               {children}
@@ -1059,7 +1067,7 @@ export function FileViewer({
                       remarkPlugins={[remarkGfm]}
                       components={{
                         code({ node, inline, className, children, ...props }) {
-                          const match = /language-(\w+)/.exec(className || '');
+                          const match = /language-(\w+)/.exec(className || "");
                           return !inline && match ? (
                             <SyntaxHighlighter
                               style={syntaxTheme}
@@ -1068,10 +1076,13 @@ export function FileViewer({
                               className="rounded-lg"
                               {...props}
                             >
-                              {String(children).replace(/\n$/, '')}
+                              {String(children).replace(/\n$/, "")}
                             </SyntaxHighlighter>
                           ) : (
-                            <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono" {...props}>
+                            <code
+                              className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                              {...props}
+                            >
                               {children}
                             </code>
                           );
@@ -1112,9 +1123,7 @@ export function FileViewer({
                           </ol>
                         ),
                         li: ({ children }) => (
-                          <li className="mb-1 text-foreground">
-                            {children}
-                          </li>
+                          <li className="mb-1 text-foreground">{children}</li>
                         ),
                         blockquote: ({ children }) => (
                           <blockquote className="border-l-4 border-blue-500 pl-4 mb-4 italic text-muted-foreground bg-muted/30 py-2">
@@ -1129,19 +1138,11 @@ export function FileViewer({
                           </div>
                         ),
                         thead: ({ children }) => (
-                          <thead className="bg-muted">
-                            {children}
-                          </thead>
+                          <thead className="bg-muted">{children}</thead>
                         ),
-                        tbody: ({ children }) => (
-                          <tbody>
-                            {children}
-                          </tbody>
-                        ),
+                        tbody: ({ children }) => <tbody>{children}</tbody>,
                         tr: ({ children }) => (
-                          <tr className="border-b border-border">
-                            {children}
-                          </tr>
+                          <tr className="border-b border-border">{children}</tr>
                         ),
                         th: ({ children }) => (
                           <th className="px-4 py-2 text-left font-semibold text-foreground">
@@ -1174,10 +1175,8 @@ export function FileViewer({
           </div>
         )}
 
-        {/* PDF file preview with react-pdf */}
         {fileTypeInfo.type === "pdf" && !showLargeFileWarning && (
           <div className="h-full flex flex-col bg-background">
-            {/* PDF Controls */}
             <div className="flex-shrink-0 bg-muted/30 border-b border-border p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -1191,12 +1190,17 @@ export function FileViewer({
                       {t("fileManager.previous")}
                     </Button>
                     <span className="text-sm text-foreground px-3 py-1 bg-background rounded border">
-                      {t("fileManager.pageXOfY", { current: pageNumber, total: numPages || 0 })}
+                      {t("fileManager.pageXOfY", {
+                        current: pageNumber,
+                        total: numPages || 0,
+                      })}
                     </span>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setPageNumber(Math.min(numPages || 1, pageNumber + 1))}
+                      onClick={() =>
+                        setPageNumber(Math.min(numPages || 1, pageNumber + 1))
+                      }
                       disabled={!numPages || pageNumber >= numPages}
                     >
                       {t("fileManager.next")}
@@ -1236,13 +1240,14 @@ export function FileViewer({
               </div>
             </div>
 
-            {/* PDF Content */}
             <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-gray-900">
               <div className="flex justify-center">
                 {pdfError ? (
                   <div className="text-center text-muted-foreground p-8">
                     <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-                    <h3 className="text-lg font-medium mb-2">Cannot load PDF</h3>
+                    <h3 className="text-lg font-medium mb-2">
+                      Cannot load PDF
+                    </h3>
                     <p className="text-sm mb-4">
                       There was an error loading this PDF file.
                     </p>
@@ -1264,22 +1269,23 @@ export function FileViewer({
                       setNumPages(numPages);
                       setPdfError(false);
 
-                      // Notify parent about PDF dimensions for window sizing
                       if (onMediaDimensionsChange) {
                         onMediaDimensionsChange({
                           width: 800,
-                          height: 600
+                          height: 600,
                         });
                       }
                     }}
                     onLoadError={(error) => {
-                      console.error('PDF load error:', error);
+                      console.error("PDF load error:", error);
                       setPdfError(true);
                     }}
                     loading={
                       <div className="text-center p-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                        <p className="text-sm text-muted-foreground">Loading PDF...</p>
+                        <p className="text-sm text-muted-foreground">
+                          Loading PDF...
+                        </p>
                       </div>
                     }
                   >
@@ -1290,7 +1296,9 @@ export function FileViewer({
                       loading={
                         <div className="text-center p-4">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                          <p className="text-xs text-muted-foreground">Loading page...</p>
+                          <p className="text-xs text-muted-foreground">
+                            Loading page...
+                          </p>
                         </div>
                       }
                     />
@@ -1301,21 +1309,27 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Audio file preview with react-h5-audio-player */}
         {fileTypeInfo.type === "audio" && !showLargeFileWarning && (
           <div className="p-6 flex items-center justify-center h-full">
             <div className="w-full max-w-2xl">
               {(() => {
-                const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                const ext = file.name.split(".").pop()?.toLowerCase() || "";
                 const mimeType = (() => {
                   switch (ext) {
-                    case 'mp3': return 'audio/mpeg';
-                    case 'wav': return 'audio/wav';
-                    case 'flac': return 'audio/flac';
-                    case 'ogg': return 'audio/ogg';
-                    case 'aac': return 'audio/aac';
-                    case 'm4a': return 'audio/mp4';
-                    default: return 'audio/mpeg';
+                    case "mp3":
+                      return "audio/mpeg";
+                    case "wav":
+                      return "audio/wav";
+                    case "flac":
+                      return "audio/flac";
+                    case "ogg":
+                      return "audio/ogg";
+                    case "aac":
+                      return "audio/aac";
+                    case "m4a":
+                      return "audio/mp4";
+                    default:
+                      return "audio/mpeg";
                   }
                 })();
 
@@ -1323,7 +1337,6 @@ export function FileViewer({
 
                 return (
                   <div className="space-y-4">
-                    {/* Album artwork placeholder */}
                     <div className="flex justify-center">
                       <div
                         className={cn(
@@ -1335,7 +1348,6 @@ export function FileViewer({
                       </div>
                     </div>
 
-                    {/* Track info */}
                     <div className="text-center">
                       <h3 className="font-semibold text-foreground text-lg mb-1">
                         {file.name.replace(/\.[^/.]+$/, "")}
@@ -1345,30 +1357,20 @@ export function FileViewer({
                       </p>
                     </div>
 
-                    {/* Audio Player */}
                     <div className="rounded-lg overflow-hidden">
                       <AudioPlayer
                         src={audioUrl}
-                        onPlay={() => {
-                          console.log('Audio playback started');
-                        }}
-                        onPause={() => {
-                          console.log('Audio playback paused');
-                        }}
                         onLoadedMetadata={(e) => {
                           const audio = e.currentTarget;
-                          console.log('Audio metadata loaded, duration:', audio.duration);
-
-                          // Get audio dimensions for window sizing (use a standard audio player height)
                           if (onMediaDimensionsChange) {
                             onMediaDimensionsChange({
                               width: 600,
-                              height: 400
+                              height: 400,
                             });
                           }
                         }}
                         onError={(e) => {
-                          console.error('Audio playback error:', e);
+                          console.error("Audio playback error:", e);
                         }}
                         showJumpControls={false}
                         showSkipControls={false}
@@ -1384,7 +1386,6 @@ export function FileViewer({
           </div>
         )}
 
-        {/* Unknown file type - only show when cannot display as text and no warning */}
         {fileTypeInfo.type === "unknown" &&
           !shouldShowAsText &&
           !showLargeFileWarning && (
@@ -1413,7 +1414,6 @@ export function FileViewer({
           )}
       </div>
 
-      {/* Bottom status bar */}
       <div className="flex-shrink-0 bg-muted/50 border-t border-border px-4 py-2 text-xs text-muted-foreground">
         <div className="flex justify-between items-center">
           <span>{file.path}</span>

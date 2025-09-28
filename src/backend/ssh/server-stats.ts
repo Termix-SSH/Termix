@@ -282,30 +282,30 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
+
       // Allow localhost and 127.0.0.1 for development
       const allowedOrigins = [
         "http://localhost:5173",
-        "http://localhost:3000", 
+        "http://localhost:3000",
         "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
       ];
-      
+
       // Allow any HTTPS origin (production deployments)
       if (origin.startsWith("https://")) {
         return callback(null, true);
       }
-      
+
       // Allow any HTTP origin for self-hosted scenarios
       if (origin.startsWith("http://")) {
         return callback(null, true);
       }
-      
+
       // Check against allowed development origins
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      
+
       // Reject other origins
       callback(new Error("Not allowed by CORS"));
     },
@@ -327,7 +327,9 @@ app.use(authManager.createAuthMiddleware());
 
 const hostStatuses: Map<number, StatusEntry> = new Map();
 
-async function fetchAllHosts(userId: string): Promise<SSHHostWithCredentials[]> {
+async function fetchAllHosts(
+  userId: string,
+): Promise<SSHHostWithCredentials[]> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb().select().from(sshData).where(eq(sshData.userId, userId)),
@@ -366,13 +368,16 @@ async function fetchHostById(
       statsLogger.debug("User data locked - cannot fetch host", {
         operation: "fetchHostById_data_locked",
         userId,
-        hostId: id
+        hostId: id,
       });
       return undefined;
     }
 
     const hosts = await SimpleDBOps.select(
-      getDb().select().from(sshData).where(and(eq(sshData.id, id), eq(sshData.userId, userId))),
+      getDb()
+        .select()
+        .from(sshData)
+        .where(and(eq(sshData.id, id), eq(sshData.userId, userId))),
       "ssh_data",
       userId,
     );
@@ -512,7 +517,14 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
         "aes256-cbc",
         "3des-cbc",
       ],
-      hmac: ["hmac-sha2-256-etm@openssh.com", "hmac-sha2-512-etm@openssh.com", "hmac-sha2-256", "hmac-sha2-512", "hmac-sha1", "hmac-md5"],
+      hmac: [
+        "hmac-sha2-256-etm@openssh.com",
+        "hmac-sha2-512-etm@openssh.com",
+        "hmac-sha2-256",
+        "hmac-sha2-512",
+        "hmac-sha1",
+        "hmac-md5",
+      ],
       compress: ["none", "zlib@openssh.com", "zlib"],
     },
   } as ConnectConfig;
@@ -879,7 +891,7 @@ app.get("/status", async (req, res) => {
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
       error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED"
+      code: "SESSION_EXPIRED",
     });
   }
 
@@ -901,7 +913,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
       error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED"
+      code: "SESSION_EXPIRED",
     });
   }
 
@@ -933,7 +945,7 @@ app.post("/refresh", async (req, res) => {
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
       error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED"
+      code: "SESSION_EXPIRED",
     });
   }
 
@@ -949,7 +961,7 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
       error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED"
+      code: "SESSION_EXPIRED",
     });
   }
 
@@ -996,38 +1008,22 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
 });
 
 process.on("SIGINT", () => {
-  statsLogger.info("Received SIGINT, shutting down gracefully");
   connectionPool.destroy();
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
-  statsLogger.info("Received SIGTERM, shutting down gracefully");
   connectionPool.destroy();
   process.exit(0);
 });
 
 const PORT = 30005;
 app.listen(PORT, async () => {
-  statsLogger.success("Server Stats API server started", {
-    operation: "server_start",
-    port: PORT,
-  });
-
-  // Initialize AuthManager for JWT verification
   try {
     await authManager.initialize();
-    statsLogger.info("AuthManager initialized for metrics collection", {
-      operation: "auth_init",
-    });
   } catch (err) {
     statsLogger.error("Failed to initialize AuthManager", err, {
       operation: "auth_init_error",
     });
   }
-
-  // Skip initial poll - requires user authentication
-  statsLogger.info("Server ready - status polling will begin with first authenticated request", {
-    operation: "server_ready",
-  });
 });

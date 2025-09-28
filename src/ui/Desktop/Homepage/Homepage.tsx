@@ -50,12 +50,10 @@ export function Homepage({
             setDbError(null);
           })
           .catch((err) => {
-            console.error("Homepage: Error fetching user info:", err);
             setIsAdmin(false);
             setUsername(null);
             setUserId(null);
-            
-            // Check if this is a session expiration error
+
             const errorCode = err?.response?.data?.code;
             if (errorCode === "SESSION_EXPIRED") {
               console.warn("Session expired - please log in again");
@@ -158,7 +156,7 @@ export function Homepage({
           </div>
         </div>
       )}
-      
+
       <HomepageAlertManager userId={userId} loggedIn={loggedIn} />
     </>
   );

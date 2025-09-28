@@ -23,25 +23,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   isDev: process.env.NODE_ENV === "development",
 
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
-
-  // ================== Drag & Drop API ==================
-
-  // Create temporary file for dragging
-  createTempFile: (fileData) =>
-    ipcRenderer.invoke("create-temp-file", fileData),
-
-  // Create temporary folder for dragging
-  createTempFolder: (folderData) =>
-    ipcRenderer.invoke("create-temp-folder", folderData),
-
-  // Start dragging to desktop
-  startDragToDesktop: (dragData) =>
-    ipcRenderer.invoke("start-drag-to-desktop", dragData),
-
-  // Cleanup temporary files
-  cleanupTempFile: (tempId) => ipcRenderer.invoke("cleanup-temp-file", tempId),
 });
 
 window.IS_ELECTRON = true;
-
-console.log("electronAPI exposed to window");

@@ -108,7 +108,6 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
 
 const router = express.Router();
 
-// Initialize auth middleware
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 
@@ -143,8 +142,6 @@ router.get("/", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch alerts" });
   }
 });
-
-// Deprecated endpoint - use GET /alerts instead
 
 // Route: Dismiss an alert for the authenticated user
 // POST /alerts/dismiss

@@ -39,10 +39,8 @@ export function TerminalWindow({
   const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } =
     useWindowManager();
 
-  // Get current window state
   const currentWindow = windows.find((w) => w.id === windowId);
   if (!currentWindow) {
-    console.warn(`Window with id ${windowId} not found`);
     return null;
   }
 
@@ -65,7 +63,10 @@ export function TerminalWindow({
   const terminalTitle = executeCommand
     ? t("terminal.runTitle", { host: hostConfig.name, command: executeCommand })
     : initialPath
-      ? t("terminal.terminalWithPath", { host: hostConfig.name, path: initialPath })
+      ? t("terminal.terminalWithPath", {
+          host: hostConfig.name,
+          path: initialPath,
+        })
       : t("terminal.terminalTitle", { host: hostConfig.name });
 
   return (

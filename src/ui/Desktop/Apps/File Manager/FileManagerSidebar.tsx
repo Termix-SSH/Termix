@@ -38,9 +38,9 @@ interface FileManagerSidebarProps {
   currentPath: string;
   onPathChange: (path: string) => void;
   onLoadDirectory?: (path: string) => void;
-  onFileOpen?: (file: SidebarItem) => void; // Added: handle file opening
+  onFileOpen?: (file: SidebarItem) => void;
   sshSessionId?: string;
-  refreshTrigger?: number; // Used to trigger data refresh
+  refreshTrigger?: number;
 }
 
 export function FileManagerSidebar({
@@ -61,7 +61,6 @@ export function FileManagerSidebar({
     new Set(["root"]),
   );
 
-  // Right-click menu state
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -74,12 +73,10 @@ export function FileManagerSidebar({
     item: null,
   });
 
-  // Load quick access data
   useEffect(() => {
     loadQuickAccessData();
   }, [currentHost, refreshTrigger]);
 
-  // Load directory tree (depends on sshSessionId)
   useEffect(() => {
     if (sshSessionId) {
       loadDirectoryTree();
@@ -90,7 +87,6 @@ export function FileManagerSidebar({
     if (!currentHost?.id) return;
 
     try {
-      // Load recent files (limit to 5)
       const recentData = await getRecentFiles(currentHost.id);
       const recentItems = recentData.slice(0, 5).map((item: any) => ({
         id: `recent-${item.id}`,
@@ -101,7 +97,6 @@ export function FileManagerSidebar({
       }));
       setRecentItems(recentItems);
 
-      // Load pinned files
       const pinnedData = await getPinnedFiles(currentHost.id);
       const pinnedItems = pinnedData.map((item: any) => ({
         id: `pinned-${item.id}`,
@@ -111,7 +106,6 @@ export function FileManagerSidebar({
       }));
       setPinnedItems(pinnedItems);
 
-      // Load folder shortcuts
       const shortcutData = await getFolderShortcuts(currentHost.id);
       const shortcutItems = shortcutData.map((item: any) => ({
         id: `shortcut-${item.id}`,
@@ -122,20 +116,18 @@ export function FileManagerSidebar({
       setShortcuts(shortcutItems);
     } catch (error) {
       console.error("Failed to load quick access data:", error);
-      // If loading fails, keep empty arrays
       setRecentItems([]);
       setPinnedItems([]);
       setShortcuts([]);
     }
   };
 
-  // Delete functionality implementation
   const handleRemoveRecentFile = async (item: SidebarItem) => {
     if (!currentHost?.id) return;
 
     try {
       await removeRecentFile(currentHost.id, item.path);
-      loadQuickAccessData(); // Reload data
+      loadQuickAccessData();
       toast.success(
         t("fileManager.removedFromRecentFiles", { name: item.name }),
       );
@@ -150,7 +142,7 @@ export function FileManagerSidebar({
 
     try {
       await removePinnedFile(currentHost.id, item.path);
-      loadQuickAccessData(); // Reload data
+      loadQuickAccessData();
       toast.success(t("fileManager.unpinnedSuccessfully", { name: item.name }));
     } catch (error) {
       console.error("Failed to unpin file:", error);
@@ -163,7 +155,7 @@ export function FileManagerSidebar({
 
     try {
       await removeFolderShortcut(currentHost.id, item.path);
-      loadQuickAccessData(); // Reload data
+      loadQuickAccessData();
       toast.success(t("fileManager.removedShortcut", { name: item.name }));
     } catch (error) {
       console.error("Failed to remove shortcut:", error);
@@ -175,11 +167,10 @@ export function FileManagerSidebar({
     if (!currentHost?.id || recentItems.length === 0) return;
 
     try {
-      // Batch delete all recent files
       await Promise.all(
         recentItems.map((item) => removeRecentFile(currentHost.id, item.path)),
       );
-      loadQuickAccessData(); // Reload data
+      loadQuickAccessData();
       toast.success(t("fileManager.clearedAllRecentFiles"));
     } catch (error) {
       console.error("Failed to clear recent files:", error);
@@ -187,7 +178,6 @@ export function FileManagerSidebar({
     }
   };
 
-  // Right-click menu handling
   const handleContextMenu = (e: React.MouseEvent, item: SidebarItem) => {
     e.preventDefault();
     e.stopPropagation();
@@ -204,7 +194,6 @@ export function FileManagerSidebar({
     setContextMenu((prev) => ({ ...prev, isVisible: false, item: null }));
   };
 
-  // Click outside to close menu
   useEffect(() => {
     if (!contextMenu.isVisible) return;
 
@@ -223,7 +212,6 @@ export function FileManagerSidebar({
       }
     };
 
-    // Delay adding listeners to avoid immediate trigger
     const timeoutId = setTimeout(() => {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleKeyDown);
@@ -240,10 +228,8 @@ export function FileManagerSidebar({
     if (!sshSessionId) return;
 
     try {
-      // Load root directory
       const response = await listSSHFiles(sshSessionId, "/");
 
-      // listSSHFiles now always returns {files: Array, path: string} format
       const rootFiles = response.files || [];
       const rootFolders = rootFiles.filter(
         (item: any) => item.type === "directory",
@@ -255,7 +241,7 @@ export function FileManagerSidebar({
         path: folder.path,
         type: "folder" as const,
         isExpanded: false,
-        children: [], // Subdirectories will be loaded on demand
+        children: [],
       }));
 
       setDirectoryTree([
@@ -270,7 +256,6 @@ export function FileManagerSidebar({
       ]);
     } catch (error) {
       console.error("Failed to load directory tree:", error);
-      // If loading fails, show simple root directory
       setDirectoryTree([
         {
           id: "root",
@@ -289,17 +274,14 @@ export function FileManagerSidebar({
       toggleFolder(item.id, item.path);
       onPathChange(item.path);
     } else if (item.type === "recent" || item.type === "pinned") {
-      // For file types, call file open callback
       if (onFileOpen) {
         onFileOpen(item);
       } else {
-        // If no file open callback, switch to file directory
         const directory =
           item.path.substring(0, item.path.lastIndexOf("/")) || "/";
         onPathChange(directory);
       }
     } else if (item.type === "shortcut") {
-      // Folder shortcuts directly switch to directory
       onPathChange(item.path);
     }
   };
@@ -312,12 +294,10 @@ export function FileManagerSidebar({
     } else {
       newExpanded.add(folderId);
 
-      // Load subdirectories on demand
       if (sshSessionId && folderPath && folderPath !== "/") {
         try {
           const subResponse = await listSSHFiles(sshSessionId, folderPath);
 
-          // listSSHFiles now always returns {files: Array, path: string} format
           const subFiles = subResponse.files || [];
           const subFolders = subFiles.filter(
             (item: any) => item.type === "directory",
@@ -332,7 +312,6 @@ export function FileManagerSidebar({
             children: [],
           }));
 
-          // Update directory tree, add subdirectories for current folder
           setDirectoryTree((prevTree) => {
             const updateChildren = (items: SidebarItem[]): SidebarItem[] => {
               return items.map((item) => {
@@ -370,7 +349,6 @@ export function FileManagerSidebar({
           style={{ paddingLeft: `${12 + level * 16}px`, paddingRight: "12px" }}
           onClick={() => handleItemClick(item)}
           onContextMenu={(e) => {
-            // Only quick access items need right-click menu
             if (
               item.type === "recent" ||
               item.type === "pinned" ||
@@ -438,7 +416,6 @@ export function FileManagerSidebar({
     );
   };
 
-  // Check if there are any quick access items
   const hasQuickAccessItems =
     recentItems.length > 0 || pinnedItems.length > 0 || shortcuts.length > 0;
 
@@ -447,7 +424,6 @@ export function FileManagerSidebar({
       <div className="h-full flex flex-col bg-dark-bg border-r border-dark-border">
         <div className="flex-1 relative overflow-hidden">
           <div className="absolute inset-1.5 overflow-y-auto thin-scrollbar space-y-4">
-            {/* Quick access area */}
             {renderSection(
               t("fileManager.recent"),
               <Clock className="w-3 h-3" />,
@@ -464,7 +440,6 @@ export function FileManagerSidebar({
               shortcuts,
             )}
 
-            {/* Directory tree */}
             <div
               className={cn(
                 hasQuickAccessItems && "pt-4 border-t border-dark-border",
@@ -482,7 +457,6 @@ export function FileManagerSidebar({
         </div>
       </div>
 
-      {/* Right-click menu */}
       {contextMenu.isVisible && contextMenu.item && (
         <>
           <div className="fixed inset-0 z-40" />

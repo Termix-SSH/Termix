@@ -9,16 +9,13 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 
-// Get auth instances
 const authManager = AuthManager.getInstance();
 const userCrypto = UserCrypto.getInstance();
 
-// Track user connections for rate limiting
 const userConnections = new Map<string, Set<WebSocket>>();
 
 const wss = new WebSocketServer({
   port: 30002,
-  // WebSocket authentication during handshake
   verifyClient: async (info) => {
     try {
       const url = parseUrl(info.req.url!, true);
@@ -28,7 +25,7 @@ const wss = new WebSocketServer({
         sshLogger.warn("WebSocket connection rejected: missing token", {
           operation: "websocket_auth_reject",
           reason: "missing_token",
-          ip: info.req.socket.remoteAddress
+          ip: info.req.socket.remoteAddress,
         });
         return false;
       }
@@ -39,23 +36,24 @@ const wss = new WebSocketServer({
         sshLogger.warn("WebSocket connection rejected: invalid token", {
           operation: "websocket_auth_reject",
           reason: "invalid_token",
-          ip: info.req.socket.remoteAddress
+          ip: info.req.socket.remoteAddress,
         });
         return false;
       }
 
-      // Check for TOTP pending (should not allow terminal access during TOTP)
       if (payload.pendingTOTP) {
-        sshLogger.warn("WebSocket connection rejected: TOTP verification pending", {
-          operation: "websocket_auth_reject",
-          reason: "totp_pending",
-          userId: payload.userId,
-          ip: info.req.socket.remoteAddress
-        });
+        sshLogger.warn(
+          "WebSocket connection rejected: TOTP verification pending",
+          {
+            operation: "websocket_auth_reject",
+            reason: "totp_pending",
+            userId: payload.userId,
+            ip: info.req.socket.remoteAddress,
+          },
+        );
         return false;
       }
 
-      // Check connection limits per user (max 3 concurrent connections)
       const existingConnections = userConnections.get(payload.userId);
       if (existingConnections && existingConnections.size >= 3) {
         sshLogger.warn("WebSocket connection rejected: too many connections", {
@@ -63,39 +61,29 @@ const wss = new WebSocketServer({
           reason: "connection_limit",
           userId: payload.userId,
           currentConnections: existingConnections.size,
-          ip: info.req.socket.remoteAddress
+          ip: info.req.socket.remoteAddress,
         });
         return false;
       }
-
-      // Note: We don't need to attach user info to request anymore
-      // Connection handler will re-verify JWT directly from URL
-
-      sshLogger.info("WebSocket connection authenticated", {
-        operation: "websocket_auth_success",
-        userId: payload.userId,
-        ip: info.req.socket.remoteAddress
-      });
 
       return true;
     } catch (error) {
       sshLogger.error("WebSocket authentication error", error, {
         operation: "websocket_auth_error",
-        ip: info.req.socket.remoteAddress
+        ip: info.req.socket.remoteAddress,
       });
       return false;
     }
-  }
+  },
 });
 
 sshLogger.success("SSH Terminal WebSocket server started with authentication", {
   operation: "server_start",
   port: 30002,
-  features: ["JWT_auth", "connection_limits", "data_access_control"]
+  features: ["JWT_auth", "connection_limits", "data_access_control"],
 });
 
 wss.on("connection", async (ws: WebSocket, req) => {
-  // Linus principle: eliminate complexity - always parse JWT from URL directly
   let userId: string | undefined;
   let userPayload: any;
 
@@ -104,75 +92,76 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const token = url.query.token as string;
 
     if (!token) {
-      sshLogger.warn("WebSocket connection rejected: missing token in connection", {
-        operation: "websocket_connection_reject",
-        reason: "missing_token",
-        ip: req.socket.remoteAddress
-      });
+      sshLogger.warn(
+        "WebSocket connection rejected: missing token in connection",
+        {
+          operation: "websocket_connection_reject",
+          reason: "missing_token",
+          ip: req.socket.remoteAddress,
+        },
+      );
       ws.close(1008, "Authentication required");
       return;
     }
 
     const payload = await authManager.verifyJWTToken(token);
     if (!payload) {
-      sshLogger.warn("WebSocket connection rejected: invalid token in connection", {
-        operation: "websocket_connection_reject",
-        reason: "invalid_token",
-        ip: req.socket.remoteAddress
-      });
+      sshLogger.warn(
+        "WebSocket connection rejected: invalid token in connection",
+        {
+          operation: "websocket_connection_reject",
+          reason: "invalid_token",
+          ip: req.socket.remoteAddress,
+        },
+      );
       ws.close(1008, "Authentication required");
       return;
     }
 
     userId = payload.userId;
     userPayload = payload;
-
   } catch (error) {
-    sshLogger.error("WebSocket JWT verification failed during connection", error, {
-      operation: "websocket_connection_auth_error",
-      ip: req.socket.remoteAddress
-    });
+    sshLogger.error(
+      "WebSocket JWT verification failed during connection",
+      error,
+      {
+        operation: "websocket_connection_auth_error",
+        ip: req.socket.remoteAddress,
+      },
+    );
     ws.close(1008, "Authentication required");
     return;
   }
 
-  // Check data access permissions
   const dataKey = userCrypto.getUserDataKey(userId);
   if (!dataKey) {
     sshLogger.warn("WebSocket connection rejected: data locked", {
       operation: "websocket_data_locked",
       userId,
-      ip: req.socket.remoteAddress
+      ip: req.socket.remoteAddress,
     });
-    ws.send(JSON.stringify({
-      type: "error",
-      message: "Data locked - re-authenticate with password",
-      code: "DATA_LOCKED"
-    }));
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        message: "Data locked - re-authenticate with password",
+        code: "DATA_LOCKED",
+      }),
+    );
     ws.close(1008, "Data access required");
     return;
   }
 
-  // Track user connections for limits
   if (!userConnections.has(userId)) {
     userConnections.set(userId, new Set());
   }
   const userWs = userConnections.get(userId)!;
   userWs.add(ws);
 
-  sshLogger.info("WebSocket connection established", {
-    operation: "websocket_connection_established",
-    userId,
-    userConnections: userWs.size,
-    ip: req.socket.remoteAddress
-  });
-
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
   let pingInterval: NodeJS.Timeout | null = null;
 
   ws.on("close", () => {
-    // Clean up user connection tracking
     const userWs = userConnections.get(userId);
     if (userWs) {
       userWs.delete(ws);
@@ -181,29 +170,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }
 
-    sshLogger.info("WebSocket connection closed", {
-      operation: "websocket_connection_closed",
-      userId,
-      remainingConnections: userWs?.size || 0
-    });
-
     cleanupSSH();
   });
 
   ws.on("message", (msg: RawData) => {
-    // Verify user still has data access before processing any messages
     const currentDataKey = userCrypto.getUserDataKey(userId);
     if (!currentDataKey) {
       sshLogger.warn("WebSocket message rejected: data access expired", {
         operation: "websocket_message_rejected",
         userId,
-        reason: "data_access_expired"
+        reason: "data_access_expired",
       });
-      ws.send(JSON.stringify({
-        type: "error",
-        message: "Data access expired - please re-authenticate",
-        code: "DATA_EXPIRED"
-      }));
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "Data access expired - please re-authenticate",
+          code: "DATA_EXPIRED",
+        }),
+      );
       ws.close(1008, "Data access expired");
       return;
     }
@@ -225,7 +209,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     switch (type) {
       case "connectToHost":
-        // Ensure userId is attached to hostConfig for secure credential resolution
         if (data.hostConfig) {
           data.hostConfig.userId = userId;
         }
@@ -390,7 +373,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const credential = credentials[0];
           resolvedCredentials = {
             password: credential.password,
-            key: credential.privateKey || credential.key, // prefer new privateKey field
+            key: credential.privateKey || credential.key,
             keyPassword: credential.keyPassword,
             keyType: credential.keyType,
             authType: credential.authType,
@@ -480,16 +463,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           setupPingInterval();
 
-          // Change to initial path if specified
           if (initialPath && initialPath.trim() !== "") {
-            // Send cd command to change directory
             const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
             stream.write(cdCommand);
           }
 
-          // Execute command if specified
           if (executeCommand && executeCommand.trim() !== "") {
-            // Wait a moment for the cd command to complete, then execute the command
             setTimeout(() => {
               const command = `${executeCommand}\n`;
               stream.write(command);
@@ -604,7 +583,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
           "aes256-cbc",
           "3des-cbc",
         ],
-        hmac: ["hmac-sha2-256-etm@openssh.com", "hmac-sha2-512-etm@openssh.com", "hmac-sha2-256", "hmac-sha2-512", "hmac-sha1", "hmac-md5"],
+        hmac: [
+          "hmac-sha2-256-etm@openssh.com",
+          "hmac-sha2-512-etm@openssh.com",
+          "hmac-sha2-256",
+          "hmac-sha2-512",
+          "hmac-sha1",
+          "hmac-md5",
+        ],
         compress: ["none", "zlib@openssh.com", "zlib"],
       },
     };

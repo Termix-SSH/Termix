@@ -52,7 +52,9 @@ export function VersionAlert({
         <Download className="h-4 w-4" />
         <AlertTitle>{t("versionCheck.upToDate")}</AlertTitle>
         <AlertDescription>
-          {t("versionCheck.currentVersion", { version: updateInfo.localVersion })}
+          {t("versionCheck.currentVersion", {
+            version: updateInfo.localVersion,
+          })}
         </AlertDescription>
       </Alert>
     );
@@ -70,13 +72,17 @@ export function VersionAlert({
               latest: updateInfo.remoteVersion,
             })}
           </div>
-          
+
           {updateInfo.latest_release && (
             <div className="text-sm text-muted-foreground">
-              <div className="font-medium">{updateInfo.latest_release.name}</div>
+              <div className="font-medium">
+                {updateInfo.latest_release.name}
+              </div>
               <div className="text-xs">
                 {t("versionCheck.releasedOn", {
-                  date: new Date(updateInfo.latest_release.published_at).toLocaleDateString(),
+                  date: new Date(
+                    updateInfo.latest_release.published_at,
+                  ).toLocaleDateString(),
                 })}
               </div>
             </div>
@@ -100,7 +106,7 @@ export function VersionAlert({
                 {t("versionCheck.downloadUpdate")}
               </Button>
             )}
-            
+
             {showDismiss && onDismiss && (
               <Button
                 variant="ghost"

@@ -1,5 +1,13 @@
 import { getDb } from "../database/db/index.js";
-import { users, sshData, sshCredentials, fileManagerRecent, fileManagerPinned, fileManagerShortcuts, dismissedAlerts } from "../database/db/schema.js";
+import {
+  users,
+  sshData,
+  sshCredentials,
+  fileManagerRecent,
+  fileManagerPinned,
+  fileManagerShortcuts,
+  dismissedAlerts,
+} from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { DataCrypto } from "./data-crypto.js";
 import { UserDataExport, type UserExportData } from "./user-data-export.js";
@@ -26,62 +34,40 @@ interface ImportResult {
   dryRun: boolean;
 }
 
-/**
- * UserDataImport - User data import
- *
- * Linus principles:
- * - Import should not break existing data (unless explicitly requested)
- * - Support dry-run mode for validation
- * - Simple strategy for ID conflicts: regenerate
- * - Error handling must be explicit, no silent failures
- */
 class UserDataImport {
-
-  /**
-   * Import user data
-   */
   static async importUserData(
     targetUserId: string,
     exportData: UserExportData,
-    options: ImportOptions = {}
+    options: ImportOptions = {},
   ): Promise<ImportResult> {
     const {
       replaceExisting = false,
       skipCredentials = false,
       skipFileManagerData = false,
-      dryRun = false
+      dryRun = false,
     } = options;
 
     try {
-      databaseLogger.info("Starting user data import", {
-        operation: "user_data_import",
-        targetUserId,
-        sourceUserId: exportData.userId,
-        sourceUsername: exportData.username,
-        dryRun,
-        replaceExisting,
-        skipCredentials,
-        skipFileManagerData,
-      });
-
-      // Verify target user exists
-      const targetUser = await getDb().select().from(users).where(eq(users.id, targetUserId));
+      const targetUser = await getDb()
+        .select()
+        .from(users)
+        .where(eq(users.id, targetUserId));
       if (!targetUser || targetUser.length === 0) {
         throw new Error(`Target user not found: ${targetUserId}`);
       }
 
-      // Validate export data format
       const validation = UserDataExport.validateExportData(exportData);
       if (!validation.valid) {
-        throw new Error(`Invalid export data: ${validation.errors.join(', ')}`);
+        throw new Error(`Invalid export data: ${validation.errors.join(", ")}`);
       }
 
-      // Verify user data is unlocked (if data is encrypted)
       let userDataKey: Buffer | null = null;
       if (exportData.metadata.encrypted) {
         userDataKey = DataCrypto.getUserDataKey(targetUserId);
         if (!userDataKey) {
-          throw new Error("Target user data not unlocked - password required for encrypted import");
+          throw new Error(
+            "Target user data not unlocked - password required for encrypted import",
+          );
         }
       }
 
@@ -98,48 +84,54 @@ class UserDataImport {
         dryRun,
       };
 
-      // Import SSH host configurations
-      if (exportData.userData.sshHosts && exportData.userData.sshHosts.length > 0) {
+      if (
+        exportData.userData.sshHosts &&
+        exportData.userData.sshHosts.length > 0
+      ) {
         const importStats = await this.importSshHosts(
           targetUserId,
           exportData.userData.sshHosts,
-          { replaceExisting, dryRun, userDataKey }
+          { replaceExisting, dryRun, userDataKey },
         );
         result.summary.sshHostsImported = importStats.imported;
         result.summary.skippedItems += importStats.skipped;
         result.summary.errors.push(...importStats.errors);
       }
 
-      // Import SSH credentials
-      if (!skipCredentials && exportData.userData.sshCredentials && exportData.userData.sshCredentials.length > 0) {
+      if (
+        !skipCredentials &&
+        exportData.userData.sshCredentials &&
+        exportData.userData.sshCredentials.length > 0
+      ) {
         const importStats = await this.importSshCredentials(
           targetUserId,
           exportData.userData.sshCredentials,
-          { replaceExisting, dryRun, userDataKey }
+          { replaceExisting, dryRun, userDataKey },
         );
         result.summary.sshCredentialsImported = importStats.imported;
         result.summary.skippedItems += importStats.skipped;
         result.summary.errors.push(...importStats.errors);
       }
 
-      // Import file manager data
       if (!skipFileManagerData && exportData.userData.fileManagerData) {
         const importStats = await this.importFileManagerData(
           targetUserId,
           exportData.userData.fileManagerData,
-          { replaceExisting, dryRun }
+          { replaceExisting, dryRun },
         );
         result.summary.fileManagerItemsImported = importStats.imported;
         result.summary.skippedItems += importStats.skipped;
         result.summary.errors.push(...importStats.errors);
       }
 
-      // Import dismissed alerts
-      if (exportData.userData.dismissedAlerts && exportData.userData.dismissedAlerts.length > 0) {
+      if (
+        exportData.userData.dismissedAlerts &&
+        exportData.userData.dismissedAlerts.length > 0
+      ) {
         const importStats = await this.importDismissedAlerts(
           targetUserId,
           exportData.userData.dismissedAlerts,
-          { replaceExisting, dryRun }
+          { replaceExisting, dryRun },
         );
         result.summary.dismissedAlertsImported = importStats.imported;
         result.summary.skippedItems += importStats.skipped;
@@ -166,13 +158,14 @@ class UserDataImport {
     }
   }
 
-  /**
-   * Import SSH host configurations
-   */
   private static async importSshHosts(
     targetUserId: string,
     sshHosts: any[],
-    options: { replaceExisting: boolean; dryRun: boolean; userDataKey: Buffer | null }
+    options: {
+      replaceExisting: boolean;
+      dryRun: boolean;
+      userDataKey: Buffer | null;
+    },
   ) {
     let imported = 0;
     let skipped = 0;
@@ -185,29 +178,33 @@ class UserDataImport {
           continue;
         }
 
-        // Generate temporary ID for encryption context, then remove for database insert
         const tempId = `import-ssh-${targetUserId}-${Date.now()}-${imported}`;
         const newHostData = {
           ...host,
-          id: tempId, // Temporary ID for encryption context
+          id: tempId,
           userId: targetUserId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        // If data needs re-encryption
         let processedHostData = newHostData;
         if (options.userDataKey) {
-          processedHostData = DataCrypto.encryptRecord("ssh_data", newHostData, targetUserId, options.userDataKey);
+          processedHostData = DataCrypto.encryptRecord(
+            "ssh_data",
+            newHostData,
+            targetUserId,
+            options.userDataKey,
+          );
         }
 
-        // Remove temp ID to let database auto-generate real ID
         delete processedHostData.id;
 
         await getDb().insert(sshData).values(processedHostData);
         imported++;
       } catch (error) {
-        errors.push(`SSH host import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        errors.push(
+          `SSH host import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
         skipped++;
       }
     }
@@ -215,13 +212,14 @@ class UserDataImport {
     return { imported, skipped, errors };
   }
 
-  /**
-   * Import SSH credentials
-   */
   private static async importSshCredentials(
     targetUserId: string,
     credentials: any[],
-    options: { replaceExisting: boolean; dryRun: boolean; userDataKey: Buffer | null }
+    options: {
+      replaceExisting: boolean;
+      dryRun: boolean;
+      userDataKey: Buffer | null;
+    },
   ) {
     let imported = 0;
     let skipped = 0;
@@ -234,31 +232,35 @@ class UserDataImport {
           continue;
         }
 
-        // Generate temporary ID for encryption context, then remove for database insert
         const tempCredId = `import-cred-${targetUserId}-${Date.now()}-${imported}`;
         const newCredentialData = {
           ...credential,
-          id: tempCredId, // Temporary ID for encryption context
+          id: tempCredId,
           userId: targetUserId,
-          usageCount: 0, // Reset usage count
+          usageCount: 0,
           lastUsed: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        // If data needs re-encryption
         let processedCredentialData = newCredentialData;
         if (options.userDataKey) {
-          processedCredentialData = DataCrypto.encryptRecord("ssh_credentials", newCredentialData, targetUserId, options.userDataKey);
+          processedCredentialData = DataCrypto.encryptRecord(
+            "ssh_credentials",
+            newCredentialData,
+            targetUserId,
+            options.userDataKey,
+          );
         }
 
-        // Remove temp ID to let database auto-generate real ID
         delete processedCredentialData.id;
 
         await getDb().insert(sshCredentials).values(processedCredentialData);
         imported++;
       } catch (error) {
-        errors.push(`SSH credential import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        errors.push(
+          `SSH credential import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
         skipped++;
       }
     }
@@ -266,20 +268,16 @@ class UserDataImport {
     return { imported, skipped, errors };
   }
 
-  /**
-   * Import file manager data
-   */
   private static async importFileManagerData(
     targetUserId: string,
     fileManagerData: any,
-    options: { replaceExisting: boolean; dryRun: boolean }
+    options: { replaceExisting: boolean; dryRun: boolean },
   ) {
     let imported = 0;
     let skipped = 0;
     const errors: string[] = [];
 
     try {
-      // Import recent files
       if (fileManagerData.recent && Array.isArray(fileManagerData.recent)) {
         for (const item of fileManagerData.recent) {
           try {
@@ -294,13 +292,14 @@ class UserDataImport {
             }
             imported++;
           } catch (error) {
-            errors.push(`Recent file import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            errors.push(
+              `Recent file import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
             skipped++;
           }
         }
       }
 
-      // Import pinned files
       if (fileManagerData.pinned && Array.isArray(fileManagerData.pinned)) {
         for (const item of fileManagerData.pinned) {
           try {
@@ -315,14 +314,18 @@ class UserDataImport {
             }
             imported++;
           } catch (error) {
-            errors.push(`Pinned file import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            errors.push(
+              `Pinned file import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
             skipped++;
           }
         }
       }
 
-      // Import shortcuts
-      if (fileManagerData.shortcuts && Array.isArray(fileManagerData.shortcuts)) {
+      if (
+        fileManagerData.shortcuts &&
+        Array.isArray(fileManagerData.shortcuts)
+      ) {
         for (const item of fileManagerData.shortcuts) {
           try {
             if (!options.dryRun) {
@@ -336,25 +339,26 @@ class UserDataImport {
             }
             imported++;
           } catch (error) {
-            errors.push(`Shortcut import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            errors.push(
+              `Shortcut import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
             skipped++;
           }
         }
       }
     } catch (error) {
-      errors.push(`File manager data import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(
+        `File manager data import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
 
     return { imported, skipped, errors };
   }
 
-  /**
-   * Import dismissed alerts
-   */
   private static async importDismissedAlerts(
     targetUserId: string,
     alerts: any[],
-    options: { replaceExisting: boolean; dryRun: boolean }
+    options: { replaceExisting: boolean; dryRun: boolean },
   ) {
     let imported = 0;
     let skipped = 0;
@@ -367,15 +371,14 @@ class UserDataImport {
           continue;
         }
 
-        // Check if alert already exists
         const existing = await getDb()
           .select()
           .from(dismissedAlerts)
           .where(
             and(
               eq(dismissedAlerts.userId, targetUserId),
-              eq(dismissedAlerts.alertId, alert.alertId)
-            )
+              eq(dismissedAlerts.alertId, alert.alertId),
+            ),
           );
 
         if (existing.length > 0 && !options.replaceExisting) {
@@ -401,7 +404,9 @@ class UserDataImport {
 
         imported++;
       } catch (error) {
-        errors.push(`Dismissed alert import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        errors.push(
+          `Dismissed alert import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
         skipped++;
       }
     }
@@ -409,13 +414,10 @@ class UserDataImport {
     return { imported, skipped, errors };
   }
 
-  /**
-   * Import from JSON string
-   */
   static async importUserDataFromJSON(
     targetUserId: string,
     jsonData: string,
-    options: ImportOptions = {}
+    options: ImportOptions = {},
   ): Promise<ImportResult> {
     try {
       const exportData: UserExportData = JSON.parse(jsonData);

@@ -2,7 +2,6 @@
 // CENTRAL TYPE DEFINITIONS
 // ============================================================================
 // This file contains all shared interfaces and types used across the application
-// to avoid duplication and ensure consistency.
 
 import type { Client } from "ssh2";
 
@@ -25,7 +24,6 @@ export interface SSHHost {
   keyPassword?: string;
   keyType?: string;
 
-  // Autostart plaintext credentials
   autostartPassword?: string;
   autostartKey?: string;
   autostartKeyPassword?: string;

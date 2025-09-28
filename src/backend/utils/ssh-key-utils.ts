@@ -1,14 +1,10 @@
-// Import SSH2 using ES modules
 import ssh2Pkg from "ssh2";
 const ssh2Utils = ssh2Pkg.utils;
 
-// Simple fallback SSH key type detection
 function detectKeyTypeFromContent(keyContent: string): string {
   const content = keyContent.trim();
 
-  // Check for OpenSSH format headers
   if (content.includes("-----BEGIN OPENSSH PRIVATE KEY-----")) {
-    // Look for key type indicators in the content
     if (
       content.includes("ssh-ed25519") ||
       content.includes("AAAAC3NzaC1lZDI1NTE5")
@@ -28,14 +24,12 @@ function detectKeyTypeFromContent(keyContent: string): string {
       return "ecdsa-sha2-nistp521";
     }
 
-    // For OpenSSH format, try to detect by analyzing the base64 content structure
     try {
       const base64Content = content
         .replace("-----BEGIN OPENSSH PRIVATE KEY-----", "")
         .replace("-----END OPENSSH PRIVATE KEY-----", "")
         .replace(/\s/g, "");
 
-      // OpenSSH format starts with "openssh-key-v1" followed by key type
       const decoded = Buffer.from(base64Content, "base64").toString("binary");
 
       if (decoded.includes("ssh-rsa")) {
@@ -54,15 +48,12 @@ function detectKeyTypeFromContent(keyContent: string): string {
         return "ecdsa-sha2-nistp521";
       }
 
-      // Default to RSA for OpenSSH format if we can't detect specifically
       return "ssh-rsa";
     } catch (error) {
-      // If decoding fails, default to RSA as it's most common for OpenSSH format
       return "ssh-rsa";
     }
   }
 
-  // Check for traditional PEM headers
   if (content.includes("-----BEGIN RSA PRIVATE KEY-----")) {
     return "ssh-rsa";
   }
@@ -70,12 +61,10 @@ function detectKeyTypeFromContent(keyContent: string): string {
     return "ssh-dss";
   }
   if (content.includes("-----BEGIN EC PRIVATE KEY-----")) {
-    return "ecdsa-sha2-nistp256"; // Default ECDSA type
+    return "ecdsa-sha2-nistp256";
   }
 
-  // Check for PKCS#8 format (modern format)
   if (content.includes("-----BEGIN PRIVATE KEY-----")) {
-    // Try to decode and analyze the DER structure for better detection
     try {
       const base64Content = content
         .replace("-----BEGIN PRIVATE KEY-----", "")
@@ -85,35 +74,23 @@ function detectKeyTypeFromContent(keyContent: string): string {
       const decoded = Buffer.from(base64Content, "base64");
       const decodedString = decoded.toString("binary");
 
-      // Check for algorithm identifiers in the DER structure
       if (decodedString.includes("1.2.840.113549.1.1.1")) {
-        // RSA OID
         return "ssh-rsa";
       } else if (decodedString.includes("1.2.840.10045.2.1")) {
-        // EC Private Key OID - this indicates ECDSA
         if (decodedString.includes("1.2.840.10045.3.1.7")) {
-          // prime256v1 curve OID
           return "ecdsa-sha2-nistp256";
         }
-        return "ecdsa-sha2-nistp256"; // Default to P-256
+        return "ecdsa-sha2-nistp256";
       } else if (decodedString.includes("1.3.101.112")) {
-        // Ed25519 OID
         return "ssh-ed25519";
       }
-    } catch (error) {
-      // If decoding fails, fall back to length-based detection
-    }
+    } catch (error) {}
 
-    // Fallback: Try to detect key type from the content structure
-    // This is a fallback for PKCS#8 format keys
     if (content.length < 800) {
-      // Ed25519 keys are typically shorter
       return "ssh-ed25519";
     } else if (content.length > 1600) {
-      // RSA keys are typically longer
       return "ssh-rsa";
     } else {
-      // ECDSA keys are typically medium length
       return "ecdsa-sha2-nistp256";
     }
   }
@@ -121,11 +98,9 @@ function detectKeyTypeFromContent(keyContent: string): string {
   return "unknown";
 }
 
-// Detect public key type from public key content
 function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
   const content = publicKeyContent.trim();
 
-  // SSH public keys start with the key type
   if (content.startsWith("ssh-rsa ")) {
     return "ssh-rsa";
   }
@@ -145,9 +120,7 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
     return "ssh-dss";
   }
 
-  // Check for PEM format public keys
   if (content.includes("-----BEGIN PUBLIC KEY-----")) {
-    // Try to decode the base64 content to detect key type
     try {
       const base64Content = content
         .replace("-----BEGIN PUBLIC KEY-----", "")
@@ -157,26 +130,18 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
       const decoded = Buffer.from(base64Content, "base64");
       const decodedString = decoded.toString("binary");
 
-      // Check for algorithm identifiers in the DER structure
       if (decodedString.includes("1.2.840.113549.1.1.1")) {
-        // RSA OID
         return "ssh-rsa";
       } else if (decodedString.includes("1.2.840.10045.2.1")) {
-        // EC Public Key OID - this indicates ECDSA
         if (decodedString.includes("1.2.840.10045.3.1.7")) {
-          // prime256v1 curve OID
           return "ecdsa-sha2-nistp256";
         }
-        return "ecdsa-sha2-nistp256"; // Default to P-256
+        return "ecdsa-sha2-nistp256";
       } else if (decodedString.includes("1.3.101.112")) {
-        // Ed25519 OID
         return "ssh-ed25519";
       }
-    } catch (error) {
-      // If decoding fails, fall back to length-based detection
-    }
+    } catch (error) {}
 
-    // Fallback: Try to guess based on key length
     if (content.length < 400) {
       return "ssh-ed25519";
     } else if (content.length > 600) {
@@ -190,7 +155,6 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
     return "ssh-rsa";
   }
 
-  // Check for base64 encoded key data patterns
   if (content.includes("AAAAB3NzaC1yc2E")) {
     return "ssh-rsa";
   }
@@ -236,9 +200,6 @@ export interface KeyPairValidationResult {
   error?: string;
 }
 
-/**
- * Parse SSH private key and extract public key and type information
- */
 export function parseSSHKey(
   privateKeyData: string,
   passphrase?: string,
@@ -248,28 +209,21 @@ export function parseSSHKey(
     let publicKey = "";
     let useSSH2 = false;
 
-    // Try SSH2 first if available
     if (ssh2Utils && typeof ssh2Utils.parseKey === "function") {
       try {
         const parsedKey = ssh2Utils.parseKey(privateKeyData, passphrase);
 
         if (!(parsedKey instanceof Error)) {
-          // Extract key type
           if (parsedKey.type) {
             keyType = parsedKey.type;
           }
 
-          // Generate public key in SSH format
           try {
             const publicKeyBuffer = parsedKey.getPublicSSH();
 
-            // ssh2's getPublicSSH() returns binary SSH protocol data, not text
-            // We need to convert this to proper SSH public key format
             if (Buffer.isBuffer(publicKeyBuffer)) {
-              // Convert binary SSH data to base64 and create proper SSH key format
               const base64Data = publicKeyBuffer.toString("base64");
 
-              // Create proper SSH public key format: "keytype base64data"
               if (keyType === "ssh-rsa") {
                 publicKey = `ssh-rsa ${base64Data}`;
               } else if (keyType === "ssh-ed25519") {
@@ -288,16 +242,12 @@ export function parseSSHKey(
 
           useSSH2 = true;
         }
-      } catch (error) {
-        // SSH2 parsing failed, will fall back to content detection
-      }
+      } catch (error) {}
     }
 
-    // Fallback to content-based detection
     if (!useSSH2) {
       keyType = detectKeyTypeFromContent(privateKeyData);
 
-      // For fallback, we can't generate public key but the detection is still useful
       publicKey = "";
     }
 
@@ -308,7 +258,6 @@ export function parseSSHKey(
       success: keyType !== "unknown",
     };
   } catch (error) {
-    // Final fallback - try content detection
     try {
       const fallbackKeyType = detectKeyTypeFromContent(privateKeyData);
       if (fallbackKeyType !== "unknown") {
@@ -319,9 +268,7 @@ export function parseSSHKey(
           success: true,
         };
       }
-    } catch (fallbackError) {
-      // Even fallback detection failed
-    }
+    } catch (fallbackError) {}
 
     return {
       privateKey: privateKeyData,
@@ -334,9 +281,6 @@ export function parseSSHKey(
   }
 }
 
-/**
- * Parse SSH public key and extract type information
- */
 export function parsePublicKey(publicKeyData: string): PublicKeyInfo {
   try {
     const keyType = detectPublicKeyTypeFromContent(publicKeyData);
@@ -359,9 +303,6 @@ export function parsePublicKey(publicKeyData: string): PublicKeyInfo {
   }
 }
 
-/**
- * Detect SSH key type from private key content
- */
 export function detectKeyType(privateKeyData: string): string {
   try {
     const parsedKey = ssh2Utils.parseKey(privateKeyData);
@@ -374,9 +315,6 @@ export function detectKeyType(privateKeyData: string): string {
   }
 }
 
-/**
- * Get friendly key type name
- */
 export function getFriendlyKeyTypeName(keyType: string): string {
   const keyTypeMap: Record<string, string> = {
     "ssh-rsa": "RSA",
@@ -393,16 +331,12 @@ export function getFriendlyKeyTypeName(keyType: string): string {
   return keyTypeMap[keyType] || keyType;
 }
 
-/**
- * Validate if a private key and public key form a valid key pair
- */
 export function validateKeyPair(
   privateKeyData: string,
   publicKeyData: string,
   passphrase?: string,
 ): KeyPairValidationResult {
   try {
-    // First parse the private key and try to generate public key
     const privateKeyInfo = parseSSHKey(privateKeyData, passphrase);
     const publicKeyInfo = parsePublicKey(publicKeyData);
 
@@ -424,7 +358,6 @@ export function validateKeyPair(
       };
     }
 
-    // Check if key types match
     if (privateKeyInfo.keyType !== publicKeyInfo.keyType) {
       return {
         isValid: false,
@@ -434,17 +367,14 @@ export function validateKeyPair(
       };
     }
 
-    // If we have a generated public key from the private key, compare them
     if (privateKeyInfo.publicKey && privateKeyInfo.publicKey.trim()) {
       const generatedPublicKey = privateKeyInfo.publicKey.trim();
       const providedPublicKey = publicKeyData.trim();
 
-      // Compare the key data part (excluding comments)
       const generatedKeyParts = generatedPublicKey.split(" ");
       const providedKeyParts = providedPublicKey.split(" ");
 
       if (generatedKeyParts.length >= 2 && providedKeyParts.length >= 2) {
-        // Compare key type and key data (first two parts)
         const generatedKeyData =
           generatedKeyParts[0] + " " + generatedKeyParts[1];
         const providedKeyData = providedKeyParts[0] + " " + providedKeyParts[1];
@@ -468,9 +398,8 @@ export function validateKeyPair(
       }
     }
 
-    // If we can't generate public key or compare, just check if types match
     return {
-      isValid: true, // Assume valid if types match and no errors
+      isValid: true,
       privateKeyType: privateKeyInfo.keyType,
       publicKeyType: publicKeyInfo.keyType,
       error: "Unable to verify key pair match, but key types are compatible",

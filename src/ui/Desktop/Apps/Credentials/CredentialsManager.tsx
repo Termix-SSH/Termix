@@ -804,7 +804,6 @@ export function CredentialsManager({
           </SheetHeader>
 
           <div className="space-y-6">
-            {/* Credential Information Card */}
             {deployingCredential && (
               <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 bg-zinc-50 dark:bg-zinc-900/50">
                 <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3 flex items-center">
@@ -856,7 +855,6 @@ export function CredentialsManager({
               </div>
             )}
 
-            {/* Target Host Selection */}
             <div className="space-y-3">
               <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center">
                 <Server className="h-4 w-4 mr-2 text-zinc-500" />
@@ -888,7 +886,6 @@ export function CredentialsManager({
               </Select>
             </div>
 
-            {/* Information Note */}
             <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
               <div className="flex items-start space-x-3">
                 <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
