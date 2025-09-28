@@ -25,15 +25,33 @@ chown -R node:node /app/data
 chmod 755 /app/data
 
 if [ "$ENABLE_SSL" = "true" ]; then
-    echo "Generating SSL certificates..."
+    echo "Checking SSL certificate configuration..."
     mkdir -p /app/data/ssl
     chown -R node:node /app/data/ssl
     chmod 755 /app/data/ssl
 
     DOMAIN=${SSL_DOMAIN:-localhost}
-    echo "Generating certificate for domain: $DOMAIN"
+    
+    # Check if certificates already exist and are valid
+    if [ -f "/app/data/ssl/termix.crt" ] && [ -f "/app/data/ssl/termix.key" ]; then
+        echo "SSL certificates found, checking validity..."
+        
+        # Check if certificate is still valid (not expired within 30 days)
+        if openssl x509 -in /app/data/ssl/termix.crt -checkend 2592000 -noout >/dev/null 2>&1; then
+            echo "SSL certificates are valid and will be reused for domain: $DOMAIN"
+        else
+            echo "SSL certificate is expired or expiring soon, regenerating..."
+            rm -f /app/data/ssl/termix.crt /app/data/ssl/termix.key
+        fi
+    else
+        echo "SSL certificates not found, will generate new ones..."
+    fi
+    
+    # Generate certificates only if they don't exist or are invalid
+    if [ ! -f "/app/data/ssl/termix.crt" ] || [ ! -f "/app/data/ssl/termix.key" ]; then
+        echo "Generating SSL certificates for domain: $DOMAIN"
 
-    cat > /app/data/ssl/openssl.conf << EOF
+        cat > /app/data/ssl/openssl.conf << EOF
 [req]
 default_bits = 2048
 prompt = no
@@ -62,17 +80,18 @@ IP.1 = 127.0.0.1
 IP.2 = ::1
 EOF
 
-    openssl genrsa -out /app/data/ssl/termix.key 2048
+        openssl genrsa -out /app/data/ssl/termix.key 2048
 
-    openssl req -new -x509 -key /app/data/ssl/termix.key -out /app/data/ssl/termix.crt -days 365 -config /app/data/ssl/openssl.conf -extensions v3_req
+        openssl req -new -x509 -key /app/data/ssl/termix.key -out /app/data/ssl/termix.crt -days 365 -config /app/data/ssl/openssl.conf -extensions v3_req
 
-    chmod 600 /app/data/ssl/termix.key
-    chmod 644 /app/data/ssl/termix.crt
-    chown node:node /app/data/ssl/termix.key /app/data/ssl/termix.crt
+        chmod 600 /app/data/ssl/termix.key
+        chmod 644 /app/data/ssl/termix.crt
+        chown node:node /app/data/ssl/termix.key /app/data/ssl/termix.crt
 
-    rm -f /app/data/ssl/openssl.conf
-    
-    echo "SSL certificates generated successfully for domain: $DOMAIN"
+        rm -f /app/data/ssl/openssl.conf
+        
+        echo "SSL certificates generated successfully for domain: $DOMAIN"
+    fi
 fi
 
 echo "Starting nginx..."

@@ -204,9 +204,8 @@ export function HomepageAuth({
       setTotpCode("");
       setTotpTempToken("");
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.error || err?.message || t("errors.unknownError"),
-      );
+      const errorMessage = err?.response?.data?.error || err?.message || t("errors.unknownError");
+      toast.error(errorMessage);
       setInternalLoggedIn(false);
       setLoggedIn(false);
       setIsAdmin(false);
@@ -347,11 +346,8 @@ export function HomepageAuth({
       setTotpTempToken("");
       toast.success(t("messages.loginSuccess"));
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.error ||
-          err?.message ||
-          t("errors.invalidTotpCode"),
-      );
+      const errorMessage = err?.response?.data?.error || err?.message || t("errors.invalidTotpCode");
+      toast.error(errorMessage);
     } finally {
       setTotpLoading(false);
     }
@@ -370,11 +366,8 @@ export function HomepageAuth({
 
       window.location.replace(authUrl);
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.error ||
-          err?.message ||
-          t("errors.failedOidcLogin"),
-      );
+      const errorMessage = err?.response?.data?.error || err?.message || t("errors.failedOidcLogin");
+      toast.error(errorMessage);
       setOidcLoading(false);
     }
   }
@@ -402,12 +395,12 @@ export function HomepageAuth({
           setLoggedIn(true);
           setIsAdmin(!!meRes.is_admin);
           setUsername(meRes.username || null);
-          setUserId(meRes.id || null);
+          setUserId(meRes.userId || null);
           setDbError(null);
           onAuthSuccess({
             isAdmin: !!meRes.is_admin,
             username: meRes.username || null,
-            userId: meRes.id || null,
+            userId: meRes.userId || null,
           });
           setInternalLoggedIn(true);
           window.history.replaceState(
