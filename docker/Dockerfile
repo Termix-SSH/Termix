@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies and build frontend
-FROM node:24-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++ 
@@ -8,7 +8,7 @@ COPY package*.json ./
 
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
+ENV npm_config_target_libc=musl
 
 RUN npm ci --force --ignore-scripts && \
     npm cache clean --force
@@ -29,14 +29,14 @@ COPY . .
 
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
+ENV npm_config_target_libc=musl
 
 RUN npm rebuild better-sqlite3 --force
 
 RUN npm run build:backend
 
 # Stage 4: Production dependencies only
-FROM node:24-alpine AS production-deps
+FROM node:22-alpine AS production-deps
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
@@ -45,14 +45,14 @@ COPY package*.json ./
 
 ENV npm_config_target_platform=linux
 ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
+ENV npm_config_target_libc=musl
 
 RUN npm ci --only=production --ignore-scripts --force && \
     npm rebuild better-sqlite3 bcryptjs --force && \
     npm cache clean --force
 
 # Stage 5: Final optimized image
-FROM node:24-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
