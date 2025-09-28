@@ -11,6 +11,7 @@ ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=musl
 
 RUN npm ci --force --ignore-scripts && \
+    npm install @rollup/rollup-linux-x64-musl --force && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -19,7 +20,9 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm run build
+RUN npm install @rollup/rollup-linux-x64-musl --force && \
+    npm cache clean --force && \
+    npm run build
 
 # Stage 3: Build backend TypeScript
 FROM deps AS backend-builder
