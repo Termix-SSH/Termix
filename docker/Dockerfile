@@ -11,8 +11,9 @@ ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=musl
 
 RUN npm ci --force --ignore-scripts && \
-    npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 --force && \
-    npm rebuild --build-from-source && \
+    if [ "$(uname -m)" = "x86_64" ]; then \
+        npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 --force; \
+    fi && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -21,8 +22,9 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 --force && \
-    npm rebuild --build-from-source && \
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+        npm install @rollup/rollup-linux-x64-musl @esbuild/linux-x64 --force; \
+    fi && \
     npm cache clean --force && \
     npm run build
 
