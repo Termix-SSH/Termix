@@ -75,6 +75,7 @@ DNS.2 = localhost
 DNS.3 = 127.0.0.1
 IP.1 = 127.0.0.1
 IP.2 = ::1
+IP.3 = 0.0.0.0
 EOF
 
         openssl genrsa -out /app/data/ssl/termix.key 2048

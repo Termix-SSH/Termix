@@ -29,6 +29,7 @@ export class AutoSSLSetup {
 
     try {
       if (await this.isSSLConfigured()) {
+        await this.logCertificateInfo();
         await this.setupEnvironmentVariables();
         return;
       }
@@ -36,7 +37,14 @@ export class AutoSSLSetup {
       try {
         await fs.access(this.CERT_FILE);
         await fs.access(this.KEY_FILE);
-
+        
+        systemLogger.info("SSL certificates found from entrypoint script", {
+          operation: "ssl_cert_found_entrypoint",
+          cert_path: this.CERT_FILE,
+          key_path: this.KEY_FILE,
+        });
+        
+        await this.logCertificateInfo();
         await this.setupEnvironmentVariables();
         return;
       } catch {
@@ -132,6 +140,7 @@ DNS.4 = termix.local
 DNS.5 = *.termix.local
 IP.1 = 127.0.0.1
 IP.2 = ::1
+IP.3 = 0.0.0.0
       `.trim();
 
       await fs.writeFile(configFile, opensslConfig);
@@ -158,10 +167,55 @@ IP.2 = ::1
         key_path: this.KEY_FILE,
         valid_days: 365,
       });
+
+      await this.logCertificateInfo();
     } catch (error) {
       throw new Error(
         `SSL certificate generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
+    }
+  }
+
+  private static async logCertificateInfo(): Promise<void> {
+    try {
+      const subject = execSync(
+        `openssl x509 -in "${this.CERT_FILE}" -noout -subject`,
+        { stdio: "pipe" },
+      )
+        .toString()
+        .trim();
+      const issuer = execSync(
+        `openssl x509 -in "${this.CERT_FILE}" -noout -issuer`,
+        { stdio: "pipe" },
+      )
+        .toString()
+        .trim();
+      const notAfter = execSync(
+        `openssl x509 -in "${this.CERT_FILE}" -noout -enddate`,
+        { stdio: "pipe" },
+      )
+        .toString()
+        .trim();
+      const notBefore = execSync(
+        `openssl x509 -in "${this.CERT_FILE}" -noout -startdate`,
+        { stdio: "pipe" },
+      )
+        .toString()
+        .trim();
+
+      systemLogger.info("SSL Certificate Information:", {
+        operation: "ssl_cert_info",
+        subject: subject.replace("subject=", ""),
+        issuer: issuer.replace("issuer=", ""),
+        valid_from: notBefore.replace("notBefore=", ""),
+        valid_until: notAfter.replace("notAfter=", ""),
+        note: "Certificate will auto-renew 30 days before expiration",
+      });
+    } catch (error) {
+      systemLogger.warn("Could not retrieve certificate information", {
+        operation: "ssl_cert_info_error",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   }
 

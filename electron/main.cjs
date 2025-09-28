@@ -136,6 +136,8 @@ async function fetchGitHubAPI(endpoint, cacheKey) {
             requestOptions.rejectUnauthorized = false;
             requestOptions.agent = new https.Agent({
               rejectUnauthorized: false,
+              secureProtocol: 'TLSv1_2_method',
+              checkServerIdentity: () => undefined,
             });
           }
 
@@ -303,13 +305,15 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
           const requestOptions = {
             method: options.method || "GET",
             headers: options.headers || {},
-            timeout: options.timeout || 5000,
+            timeout: options.timeout || 10000,
           };
 
           if (isHttps) {
             requestOptions.rejectUnauthorized = false;
             requestOptions.agent = new https.Agent({
               rejectUnauthorized: false,
+              secureProtocol: 'TLSv1_2_method',
+              checkServerIdentity: () => undefined,
             });
           }
 
@@ -347,7 +351,7 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
     try {
       const response = await fetch(healthUrl, {
         method: "GET",
-        timeout: 5000,
+        timeout: 10000,
       });
 
       if (response.ok) {
@@ -393,7 +397,7 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
       const versionUrl = `${normalizedServerUrl}/version`;
       const response = await fetch(versionUrl, {
         method: "GET",
-        timeout: 5000,
+        timeout: 10000,
       });
 
       if (response.ok) {
