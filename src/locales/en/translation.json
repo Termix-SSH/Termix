@@ -229,13 +229,16 @@
     "checkUpdates": "Check for Updates",
     "checkingUpdates": "Checking for updates...",
     "refresh": "Refresh",
-    "updateRequired": "Update Required"
+    "updateRequired": "Update Required",
+    "updateDismissed": "Update notification dismissed",
+    "noUpdatesFound": "No updates found"
   },
   "common": {
     "close": "Close",
     "minimize": "Minimize",
     "online": "Online",
     "offline": "Offline",
+    "continue": "Continue",
     "maintenance": "Maintenance",
     "degraded": "Degraded",
     "discord": "Discord",

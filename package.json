@@ -9,15 +9,10 @@
   "scripts": {
     "clean": "npx prettier . --write",
     "dev": "vite",
-    "dev:https": "cross-env VITE_HTTPS=true vite",
     "build": "vite build && tsc -p tsconfig.node.json",
     "build:backend": "tsc -p tsconfig.node.json",
     "dev:backend": "tsc -p tsconfig.node.json && node ./dist/backend/backend/starter.js",
-    "start": "npm run build:backend && node ./dist/backend/backend/starter.js",
-    "start:ssl": "npm run start",
-    "lint": "eslint .",
     "preview": "vite preview",
-    "electron": "electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "build:win-portable": "npm run build && electron-builder --win --dir",
     "build:win-installer": "npm run build && electron-builder --win --publish=never",
@@ -103,6 +98,7 @@
     "speakeasy": "^2.0.0",
     "ssh2": "^1.16.0",
     "tailwind-merge": "^3.3.1",
+    "wait-on": "^9.0.1",
     "ws": "^8.18.3",
     "zod": "^4.0.5"
   },

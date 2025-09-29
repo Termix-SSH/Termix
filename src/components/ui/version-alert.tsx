@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ExternalLink, Download, X, AlertTriangle } from "lucide-react";
+import { ExternalLink, Download, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface VersionAlertProps {
@@ -21,16 +21,12 @@ interface VersionAlertProps {
     cache_age?: number;
     error?: string;
   };
-  onDismiss?: () => void;
   onDownload?: () => void;
-  showDismiss?: boolean;
 }
 
 export function VersionAlert({
   updateInfo,
-  onDismiss,
   onDownload,
-  showDismiss = true,
 }: VersionAlertProps) {
   const { t } = useTranslation();
 
@@ -104,18 +100,6 @@ export function VersionAlert({
               >
                 <ExternalLink className="h-3 w-3" />
                 {t("versionCheck.downloadUpdate")}
-              </Button>
-            )}
-
-            {showDismiss && onDismiss && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onDismiss}
-                className="flex items-center gap-1"
-              >
-                <X className="h-3 w-3" />
-                {t("versionCheck.dismiss")}
               </Button>
             )}
           </div>

@@ -8,9 +8,10 @@ import { checkElectronUpdate, isElectron } from "@/ui/main-axios.ts";
 interface VersionCheckModalProps {
   onDismiss: () => void;
   onContinue: () => void;
+  isAuthenticated?: boolean;
 }
 
-export function VersionCheckModal({ onDismiss, onContinue }: VersionCheckModalProps) {
+export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = false }: VersionCheckModalProps) {
   const { t } = useTranslation();
   const [versionInfo, setVersionInfo] = useState<any>(null);
   const [versionChecking, setVersionChecking] = useState(false);
@@ -29,6 +30,11 @@ export function VersionCheckModal({ onDismiss, onContinue }: VersionCheckModalPr
     try {
       const updateInfo = await checkElectronUpdate();
       setVersionInfo(updateInfo);
+      
+      if (updateInfo?.status === "up_to_date") {
+        onContinue();
+        return;
+      }
     } catch (error) {
       console.error("Failed to check for updates:", error);
       setVersionInfo({ success: false, error: "Check failed" });
@@ -57,8 +63,25 @@ export function VersionCheckModal({ onDismiss, onContinue }: VersionCheckModalPr
 
   if (versionChecking && !versionInfo) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-dark-bg border border-dark-border rounded-lg p-6 max-w-md w-full mx-4">
+      <div className="fixed inset-0 flex items-center justify-center z-50">
+        {!isAuthenticated && (
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `linear-gradient(
+                135deg,
+                transparent 0%,
+                transparent 49%,
+                rgba(255, 255, 255, 0.03) 49%,
+                rgba(255, 255, 255, 0.03) 51%,
+                transparent 51%,
+                transparent 100%
+              )`,
+              backgroundSize: "80px 80px",
+            }}
+          />
+        )}
+        <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
           <div className="flex items-center justify-center mb-4">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
@@ -70,53 +93,47 @@ export function VersionCheckModal({ onDismiss, onContinue }: VersionCheckModalPr
     );
   }
 
-  if (!versionInfo || versionInfo.status === "up_to_date" || versionDismissed) {
+
+  if (!versionInfo || versionDismissed) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-dark-bg border border-dark-border rounded-lg p-6 max-w-md w-full mx-4">
-          <div className="flex items-center justify-between mb-4">
+      <div className="fixed inset-0 flex items-center justify-center z-50">
+        {!isAuthenticated && (
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `linear-gradient(
+                135deg,
+                transparent 0%,
+                transparent 49%,
+                rgba(255, 255, 255, 0.03) 49%,
+                rgba(255, 255, 255, 0.03) 51%,
+                transparent 51%,
+                transparent 100%
+              )`,
+              backgroundSize: "80px 80px",
+            }}
+          />
+        )}
+        <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
+          <div className="mb-4">
             <h2 className="text-lg font-semibold">
               {t("versionCheck.checkUpdates")}
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onDismiss}
-              className="h-6 w-6 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
           
           {versionInfo && !versionDismissed && (
             <div className="mb-4">
               <VersionAlert
                 updateInfo={versionInfo}
-                onDismiss={handleVersionDismiss}
                 onDownload={handleDownloadUpdate}
-                showDismiss={true}
               />
             </div>
           )}
 
           <div className="flex gap-2">
             <Button
-              variant="outline"
-              size="sm"
-              onClick={checkForUpdates}
-              disabled={versionChecking}
-              className="flex-1"
-            >
-              {versionChecking ? (
-                <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <RefreshCw className="w-3 h-3" />
-              )}
-              {t("versionCheck.refresh")}
-            </Button>
-            <Button
               onClick={handleContinue}
-              className="flex-1"
+              className="flex-1 h-10"
             >
               {t("common.continue")}
             </Button>
@@ -127,49 +144,42 @@ export function VersionCheckModal({ onDismiss, onContinue }: VersionCheckModalPr
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-dark-bg border border-dark-border rounded-lg p-6 max-w-md w-full mx-4">
-        <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      {!isAuthenticated && (
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(
+              135deg,
+              transparent 0%,
+              transparent 49%,
+              rgba(255, 255, 255, 0.03) 49%,
+              rgba(255, 255, 255, 0.03) 51%,
+              transparent 51%,
+              transparent 100%
+            )`,
+            backgroundSize: "80px 80px",
+          }}
+        />
+      )}
+      <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
+        <div className="mb-4">
           <h2 className="text-lg font-semibold">
             {t("versionCheck.updateRequired")}
           </h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDismiss}
-            className="h-6 w-6 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </div>
         
         <div className="mb-4">
           <VersionAlert
             updateInfo={versionInfo}
-            onDismiss={handleVersionDismiss}
             onDownload={handleDownloadUpdate}
-            showDismiss={true}
           />
         </div>
 
         <div className="flex gap-2">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={checkForUpdates}
-            disabled={versionChecking}
-            className="flex-1"
-          >
-            {versionChecking ? (
-              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <RefreshCw className="w-3 h-3" />
-            )}
-            {t("versionCheck.refresh")}
-          </Button>
-          <Button
             onClick={handleContinue}
-            className="flex-1"
+            className="flex-1 h-10"
           >
             {t("common.continue")}
           </Button>

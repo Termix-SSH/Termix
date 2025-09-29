@@ -920,17 +920,25 @@ router.post("/login", async (req, res) => {
       dataUnlocked: true,
     });
 
+    const response: any = {
+      success: true,
+      is_admin: !!userRecord.is_admin,
+      username: userRecord.username,
+    };
+
+    const isElectron = req.headers['x-electron-app'] === 'true' || req.headers['X-Electron-App'] === 'true';
+    
+    if (isElectron) {
+      response.token = token;
+    }
+
     return res
       .cookie(
         "jwt",
         token,
         authManager.getSecureCookieOptions(req, 24 * 60 * 60 * 1000),
       )
-      .json({
-        success: true,
-        is_admin: !!userRecord.is_admin,
-        username: userRecord.username,
-      });
+      .json(response);
   } catch (err) {
     authLogger.error("Failed to log in user", err);
     return res.status(500).json({ error: "Login failed" });
@@ -1499,6 +1507,7 @@ router.post("/totp/verify-login", async (req, res) => {
         success: true,
         is_admin: !!userRecord.is_admin,
         username: userRecord.username,
+        token: req.headers['x-electron-app'] === 'true' ? token : undefined,
       });
   } catch (err) {
     authLogger.error("TOTP verification failed", err);

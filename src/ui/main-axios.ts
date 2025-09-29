@@ -142,7 +142,7 @@ function createApiInstance(
     baseURL,
     headers: { "Content-Type": "application/json" },
     timeout: 30000,
-    withCredentials: true, // Required for HttpOnly cookies to be sent cross-origin
+    withCredentials: true,
   });
 
   instance.interceptors.request.use((config) => {
@@ -168,13 +168,14 @@ function createApiInstance(
     if (process.env.NODE_ENV === "development") {
       logger.requestStart(method, fullUrl, context);
     }
-
-    // Note: JWT token is now automatically sent via secure HttpOnly cookies
-    // No need to manually set Authorization header for cookie-based auth
-
+    
     if (isElectron()) {
       config.headers["X-Electron-App"] = "true";
-      config.headers["User-Agent"] = "Termix-Electron/1.6.0";
+      
+      const token = localStorage.getItem("jwt");
+      if (token) {
+        config.headers["Authorization"] = `Bearer ${token}`;
+      }
     }
 
     return config;
@@ -300,6 +301,10 @@ function createApiInstance(
 // ============================================================================
 
 function isDev(): boolean {
+  if (isElectron()) {
+    return false;
+  }
+  
   return (
     process.env.NODE_ENV === "development" &&
     (window.location.port === "3000" ||
@@ -347,6 +352,7 @@ export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
     );
     if (result?.success) {
       configuredServerUrl = config.serverUrl;
+      (window as any).configuredServerUrl = configuredServerUrl;
       updateApiInstances();
       return true;
     }
@@ -405,18 +411,8 @@ export async function checkElectronUpdate(): Promise<{
   }
 }
 
-if (isElectron()) {
-  getServerConfig().then((config) => {
-    if (config?.serverUrl) {
-      configuredServerUrl = config.serverUrl;
-      updateApiInstances();
-    }
-  });
-}
-
 function getApiUrl(path: string, defaultPort: number): string {
   if (isDev()) {
-    // Auto-detect HTTPS in development
     const protocol = window.location.protocol === "https:" ? "https" : "http";
     const sslPort = protocol === "https" ? 8443 : defaultPort;
     return `${protocol}://${apiHost}:${sslPort}${path}`;
@@ -466,7 +462,20 @@ export let statsApi: AxiosInstance;
 // Authentication API (port 30001)
 export let authApi: AxiosInstance;
 
-initializeApiInstances();
+if (isElectron()) {
+  getServerConfig().then((config) => {
+    if (config?.serverUrl) {
+      configuredServerUrl = config.serverUrl;
+      (window as any).configuredServerUrl = configuredServerUrl;
+    }
+    initializeApiInstances();
+  }).catch((error) => {
+    console.error("Failed to load server config, initializing with default:", error);
+    initializeApiInstances();
+  });
+} else {
+  initializeApiInstances();
+}
 
 function updateApiInstances() {
   systemLogger.info("Updating API instances with new server configuration", {
@@ -1518,8 +1527,13 @@ export async function loginUser(
 ): Promise<AuthResponse> {
   try {
     const response = await authApi.post("/users/login", { username, password });
+    
+    if (isElectron() && response.data.token) {
+      localStorage.setItem("jwt", response.data.token);
+    }
+    
     return {
-      token: "cookie-based",
+      token: response.data.token || "cookie-based",
       success: response.data.success,
       is_admin: response.data.is_admin,
       username: response.data.username,

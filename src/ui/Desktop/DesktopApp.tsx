@@ -100,10 +100,11 @@ function AppContent() {
         <VersionCheckModal
           onDismiss={() => setShowVersionCheck(false)}
           onContinue={() => setShowVersionCheck(false)}
+          isAuthenticated={isAuthenticated}
         />
       )}
 
-      {!isAuthenticated && !authLoading && (
+      {!isAuthenticated && !authLoading && !showVersionCheck && (
         <div>
           <div
             className="absolute inset-0"
@@ -123,7 +124,7 @@ function AppContent() {
         </div>
       )}
 
-      {!isAuthenticated && !authLoading && (
+      {!isAuthenticated && !authLoading && !showVersionCheck && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000]">
           <Homepage
             onSelectView={handleSelectView}

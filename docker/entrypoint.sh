@@ -103,7 +103,6 @@ if [ -f "package.json" ]; then
     VERSION=$(grep '"version"' package.json | sed 's/.*"version": *"\([^"]*\)".*/\1/')
     if [ -n "$VERSION" ]; then
         export VERSION
-        echo "Detected version: $VERSION"
     else
         echo "Warning: Could not extract version from package.json"
     fi

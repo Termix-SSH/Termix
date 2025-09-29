@@ -3,6 +3,11 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 
+app.commandLine.appendSwitch('--ignore-certificate-errors');
+app.commandLine.appendSwitch('--ignore-ssl-errors');
+app.commandLine.appendSwitch('--ignore-certificate-errors-spki-list');
+app.commandLine.appendSwitch('--enable-features=NetworkService');
+
 let mainWindow = null;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
@@ -35,7 +40,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: !isDev,
+      webSecurity: true,
       preload: path.join(__dirname, "preload.js"),
     },
     show: false,
@@ -55,6 +60,16 @@ function createWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
+  });
+
+  mainWindow.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({ requestHeaders: details.requestHeaders });
+  });
+
+  mainWindow.webContents.session.cookies.onChanged((event, cookie, cause, removed) => {
+    if (!removed) {
+      console.log('Cookie set:', cookie.name, 'for domain:', cookie.domain);
+    }
   });
 
   mainWindow.webContents.on(

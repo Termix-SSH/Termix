@@ -696,7 +696,7 @@ export function HomepageAuth({
         </div>
       )}
 
-      {!internalLoggedIn && !authLoading && !totpRequired && (
+      {!loggedIn && !authLoading && !totpRequired && (
         <>
           <div className="flex gap-2 mb-6">
             <button
@@ -963,7 +963,7 @@ export function HomepageAuth({
                   className="h-11 text-base"
                   value={localUsername}
                   onChange={(e) => setLocalUsername(e.target.value)}
-                  disabled={loading || internalLoggedIn}
+                  disabled={loading || loggedIn}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -974,7 +974,7 @@ export function HomepageAuth({
                   className="h-11 text-base"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading || internalLoggedIn}
+                  disabled={loading || loggedIn}
                 />
               </div>
               {tab === "signup" && (
@@ -988,7 +988,7 @@ export function HomepageAuth({
                     className="h-11 text-base"
                     value={signupConfirmPassword}
                     onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                    disabled={loading || internalLoggedIn}
+                    disabled={loading || loggedIn}
                   />
                 </div>
               )}
@@ -1008,7 +1008,7 @@ export function HomepageAuth({
                   type="button"
                   variant="outline"
                   className="w-full h-11 text-base font-semibold"
-                  disabled={loading || internalLoggedIn}
+                  disabled={loading || loggedIn}
                   onClick={() => {
                     setTab("reset");
                     resetPasswordState();

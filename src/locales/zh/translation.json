@@ -227,13 +227,16 @@
     "checkUpdates": "检查更新",
     "checkingUpdates": "正在检查更新...",
     "refresh": "刷新",
-    "updateRequired": "需要更新"
+    "updateRequired": "需要更新",
+    "updateDismissed": "更新通知已忽略",
+    "noUpdatesFound": "未找到更新"
   },
   "common": {
     "close": "关闭",
     "minimize": "最小化",
     "online": "在线",
     "offline": "离线",
+    "continue": "继续",
     "maintenance": "维护中",
     "degraded": "降级",
     "discord": "Discord",
