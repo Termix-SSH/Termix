@@ -1217,7 +1217,7 @@ async function deploySSHKeyToHost(
         await new Promise<void>((resolveAdd, rejectAdd) => {
           const addTimeout = setTimeout(() => {
             rejectAdd(new Error("Key add timeout"));
-          }, 10000);
+          }, 30000);
 
           let actualPublicKey = publicKey;
           try {

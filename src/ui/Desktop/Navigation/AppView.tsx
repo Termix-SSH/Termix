@@ -140,10 +140,10 @@ export function AppView({
       const isFileManagerTab = mainTab.type === "file_manager";
       styles[mainTab.id] = {
         position: "absolute",
-        top: isFileManagerTab ? 0 : 2,
-        left: isFileManagerTab ? 0 : 2,
-        right: isFileManagerTab ? 0 : 2,
-        bottom: isFileManagerTab ? 0 : 2,
+        top: isFileManagerTab ? 0 : 4,
+        left: isFileManagerTab ? 0 : 4,
+        right: isFileManagerTab ? 0 : 4,
+        bottom: isFileManagerTab ? 0 : 4,
         zIndex: 20,
         display: "block",
         pointerEvents: "auto",
@@ -156,10 +156,10 @@ export function AppView({
         if (rect && parentRect) {
           styles[t.id] = {
             position: "absolute",
-            top: rect.top - parentRect.top + HEADER_H + 2,
-            left: rect.left - parentRect.left + 2,
-            width: rect.width - 4,
-            height: rect.height - HEADER_H - 4,
+            top: rect.top - parentRect.top + HEADER_H + 4,
+            left: rect.left - parentRect.left + 4,
+            width: rect.width - 8,
+            height: rect.height - HEADER_H - 8,
             zIndex: 20,
             display: "block",
             pointerEvents: "auto",

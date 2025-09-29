@@ -211,6 +211,37 @@ export function FileWindow({
     loadFileContent();
   }, [file, sshSessionId, sshHost]);
 
+  const handleRevert = async () => {
+    const loadFileContent = async () => {
+      if (file.type !== "file") return;
+
+      try {
+        setIsLoading(true);
+
+        await ensureSSHConnection();
+
+        const response = await readSSHFile(sshSessionId, file.path);
+        const fileContent = response.content || "";
+        setContent(fileContent);
+        setPendingContent("");
+
+        if (!file.size) {
+          const contentSize = new Blob([fileContent]).size;
+          file.size = contentSize;
+        }
+      } catch (error: any) {
+        console.error("Failed to load file content:", error);
+        toast.error(
+          `${t("fileManager.failedToLoadFile")}: ${error.message || t("fileManager.unknownError")}`,
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFileContent();
+  };
+
   const handleSave = async (newContent: string) => {
     try {
       setIsLoading(true);
@@ -252,17 +283,20 @@ export function FileWindow({
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
     }
 
-    autoSaveTimerRef.current = setTimeout(async () => {
-      try {
-        await handleSave(newContent);
-        toast.success(t("fileManager.fileAutoSaved"));
-      } catch (error) {
-        console.error("Auto-save failed:", error);
-        toast.error(t("fileManager.autoSaveFailed"));
-      }
-    }, 60000);
+    if (newContent !== content) {
+      autoSaveTimerRef.current = setTimeout(async () => {
+        try {
+          await handleSave(newContent);
+          toast.success(t("fileManager.fileAutoSaved"));
+        } catch (error) {
+          console.error("Auto-save failed:", error);
+          toast.error(t("fileManager.autoSaveFailed"));
+        }
+      }, 60000);
+    }
   };
 
   useEffect(() => {
@@ -363,6 +397,7 @@ export function FileWindow({
         content={pendingContent || content}
         savedContent={content}
         isLoading={isLoading}
+        onRevert={handleRevert}
         isEditable={isEditable}
         onContentChange={handleContentChange}
         onSave={(newContent) => handleSave(newContent)}

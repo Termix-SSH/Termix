@@ -86,7 +86,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [currentHost, setCurrentHost] = useState<SSHHost | null>(
     initialHost || null,
   );
-  const [currentPath, setCurrentPath] = useState("/");
+  const [currentPath, setCurrentPath] = useState(
+    initialHost?.defaultPath || "/"
+  );
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sshSessionId, setSshSessionId] = useState<string | null>(null);
@@ -754,8 +756,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       await recordRecentFile(file);
 
       const windowCount = Date.now() % 10;
-      const offsetX = 120 + windowCount * 30;
-      const offsetY = 120 + windowCount * 30;
+      const baseOffsetX = 120 + windowCount * 30;
+      const baseOffsetY = 120 + windowCount * 30;
+      
+      const maxOffsetX = Math.max(0, window.innerWidth - 800 - 100);
+      const maxOffsetY = Math.max(0, window.innerHeight - 600 - 100);
+      
+      const offsetX = Math.min(baseOffsetX, maxOffsetX);
+      const offsetY = Math.min(baseOffsetY, maxOffsetY);
 
       const windowTitle = file.name;
 

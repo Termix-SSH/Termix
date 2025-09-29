@@ -90,6 +90,7 @@ interface FileViewerProps {
   isEditable?: boolean;
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void;
+  onRevert?: () => void;
   onDownload?: () => void;
   onMediaDimensionsChange?: (dimensions: {
     width: number;
@@ -304,6 +305,7 @@ export function FileViewer({
   isEditable = false,
   onContentChange,
   onSave,
+  onRevert,
   onDownload,
   onMediaDimensionsChange,
 }: FileViewerProps) {
@@ -352,7 +354,12 @@ export function FileViewer({
     } else {
       setShowLargeFileWarning(false);
     }
-  }, [content, savedContent, fileTypeInfo.type, isLargeFile, forceShowAsText]);
+
+    if (fileTypeInfo.type === "image" && file.name.toLowerCase().endsWith('.svg') && content) {
+      setImageLoading(false);
+      setImageLoadError(false);
+    }
+  }, [content, savedContent, fileTypeInfo.type, isLargeFile, forceShowAsText, file.name]);
 
   const handleContentChange = (newContent: string) => {
     setEditedContent(newContent);
@@ -365,9 +372,12 @@ export function FileViewer({
   };
 
   const handleRevert = () => {
-    setEditedContent(savedContent);
-    setHasChanges(false);
-    onContentChange?.(savedContent);
+    if (onRevert) {
+      onRevert();
+    } else {
+      setEditedContent(savedContent);
+      setHasChanges(false);
+    }
   };
 
   useEffect(() => {
@@ -696,6 +706,16 @@ export function FileViewer({
                   </Button>
                 )}
               </div>
+            ) : file.name.toLowerCase().endsWith('.svg') ? (
+              <div 
+                className="max-w-full max-h-full flex items-center justify-center"
+                style={{ maxHeight: "calc(100vh - 200px)" }}
+                dangerouslySetInnerHTML={{ __html: content }}
+                onLoad={() => {
+                  setImageLoading(false);
+                  setImageLoadError(false);
+                }}
+              />
             ) : (
               <PhotoProvider maskOpacity={0.7}>
                 <PhotoView src={`data:image/*;base64,${content}`}>

@@ -75,10 +75,6 @@ export function useFileSelection() {
   }, [selectedFiles]);
 
   const setSelection = useCallback((files: FileItem[]) => {
-    console.log(
-      "Setting selection to:",
-      files.map((f) => f.name),
-    );
     setSelectedFiles(files);
   }, []);
 

@@ -332,7 +332,7 @@ export function DraggableWindow({
       </div>
 
       <div
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-hidden"
         style={{ height: "calc(100% - 40px)" }}
       >
         {children}

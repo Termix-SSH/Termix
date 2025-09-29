@@ -40,9 +40,15 @@ export function WindowManager({ children }: WindowManagerProps) {
       const id = `window-${++windowCounter.current}`;
       const zIndex = ++nextZIndex.current;
 
-      const offset = (windows.length % 5) * 30;
-      const adjustedX = windowData.x + offset;
-      const adjustedY = windowData.y + offset;
+      const offset = (windows.length % 5) * 20;
+      let adjustedX = windowData.x + offset;
+      let adjustedY = windowData.y + offset;
+
+      const maxX = Math.max(0, window.innerWidth - windowData.width - 20);
+      const maxY = Math.max(0, window.innerHeight - windowData.height - 20);
+
+      adjustedX = Math.max(20, Math.min(adjustedX, maxX));
+      adjustedY = Math.max(20, Math.min(adjustedY, maxY));
 
       const newWindow: WindowInstance = {
         ...windowData,

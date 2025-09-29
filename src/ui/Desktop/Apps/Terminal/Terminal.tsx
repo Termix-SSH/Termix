@@ -692,10 +692,10 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   }, [splitScreen, isVisible, terminal]);
 
   return (
-    <div className="h-full w-full m-1 relative">
+    <div className="h-full w-full relative">
       <div
         ref={xtermRef}
-        className={`h-full w-full transition-opacity duration-200 ${visible && isVisible && !isConnecting ? "opacity-100" : "opacity-0"} overflow-hidden`}
+        className={`h-full w-full transition-opacity duration-200 ${visible && isVisible && !isConnecting ? "opacity-100" : "opacity-0"}`}
         onClick={() => {
           if (terminal && !splitScreen) {
             terminal.focus();

@@ -143,11 +143,12 @@ function AppContent() {
           isAdmin={isAdmin}
           username={username}
         >
-          {showTerminalView && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <AppView isTopbarOpen={isTopbarOpen} />
-            </div>
-          )}
+          <div 
+            className="h-screen w-full visible pointer-events-auto static overflow-hidden"
+            style={{ display: showTerminalView ? "block" : "none" }}
+          >
+            <AppView isTopbarOpen={isTopbarOpen} />
+          </div>
 
           {showHome && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">

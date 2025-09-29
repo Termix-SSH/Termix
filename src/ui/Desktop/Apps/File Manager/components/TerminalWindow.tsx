@@ -79,7 +79,6 @@ export function TerminalWindow({
       minWidth={600}
       minHeight={400}
       onClose={handleClose}
-      onMinimize={handleMinimize}
       onMaximize={handleMaximize}
       onFocus={handleFocus}
       isMaximized={currentWindow.isMaximized}

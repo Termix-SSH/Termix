@@ -23,6 +23,7 @@ import {
   getCookie,
   getServerConfig,
   isElectron,
+  logoutUser,
 } from "../../main-axios.ts";
 import { ServerConfig as ServerConfigComponent } from "@/ui/Desktop/Electron Only/ServerConfig.tsx";
 
@@ -100,6 +101,17 @@ export function HomepageAuth({
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
   }, [loggedIn]);
+
+  useEffect(() => {
+    const clearJWTOnLoad = async () => {
+      try {
+        await logoutUser();
+      } catch (error) {
+      }
+    };
+
+    clearJWTOnLoad();
+  }, []);
 
   useEffect(() => {
     getRegistrationAllowed().then((res) => {

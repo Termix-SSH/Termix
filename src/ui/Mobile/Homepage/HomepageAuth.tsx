@@ -21,6 +21,7 @@ import {
   verifyTOTPLogin,
   setCookie,
   getCookie,
+  logoutUser,
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 
@@ -87,6 +88,18 @@ export function HomepageAuth({
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
   }, [loggedIn]);
+
+  useEffect(() => {
+    const clearJWTOnLoad = async () => {
+      try {
+        await logoutUser();
+      } catch (error) {
+        console.log("JWT cleanup on HomepageAuth load:", error);
+      }
+    };
+
+    clearJWTOnLoad();
+  }, []);
 
   useEffect(() => {
     getRegistrationAllowed().then((res) => {
