@@ -275,7 +275,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     },
   };
 
-  if (resolvedCredentials.sshKey && resolvedCredentials.sshKey.trim()) {
+  if (resolvedCredentials.authType === "password" && resolvedCredentials.password && resolvedCredentials.password.trim()) {
+    config.password = resolvedCredentials.password;
+  } else if (resolvedCredentials.authType === "key" && resolvedCredentials.sshKey && resolvedCredentials.sshKey.trim()) {
     try {
       if (
         !resolvedCredentials.sshKey.includes("-----BEGIN") ||
@@ -302,16 +304,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       });
       return res.status(400).json({ error: "Invalid SSH key format" });
     }
-  } else if (
-    resolvedCredentials.password &&
-    resolvedCredentials.password.trim()
-  ) {
-    config.password = resolvedCredentials.password;
   } else {
-    fileLogger.warn("No authentication method provided for file manager", {
+    fileLogger.warn("No valid authentication method provided for file manager", {
       operation: "file_connect",
       sessionId,
       hostId,
+      authType: resolvedCredentials.authType,
+      hasPassword: !!resolvedCredentials.password,
+      hasKey: !!resolvedCredentials.sshKey,
     });
     return res
       .status(400)

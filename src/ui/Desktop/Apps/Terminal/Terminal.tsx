@@ -598,6 +598,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     resizeObserver.observe(xtermRef.current);
 
     setVisible(true);
+    setIsConnecting(true); // Show connecting state immediately
 
     const readyFonts =
       (document as any).fonts?.ready instanceof Promise

@@ -62,16 +62,6 @@ function createWindow() {
     mainWindow.show();
   });
 
-  mainWindow.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
-    callback({ requestHeaders: details.requestHeaders });
-  });
-
-  mainWindow.webContents.session.cookies.onChanged((event, cookie, cause, removed) => {
-    if (!removed) {
-      console.log('Cookie set:', cookie.name, 'for domain:', cookie.domain);
-    }
-  });
-
   mainWindow.webContents.on(
     "did-fail-load",
     (event, errorCode, errorDescription, validatedURL) => {

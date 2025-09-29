@@ -914,9 +914,6 @@ export function CredentialsManager({
                         setDropdownOpen(false);
                       }
                     }}
-                    onFocus={() => {
-                      setDropdownOpen(true);
-                    }}
                     className="w-full"
                     autoFocus={false}
                   />
