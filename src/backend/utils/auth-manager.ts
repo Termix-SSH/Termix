@@ -152,7 +152,7 @@ class AuthManager {
 
   getSecureCookieOptions(req: any, maxAge: number = 24 * 60 * 60 * 1000) {
     return {
-      httpOnly: true,
+      httpOnly: false,
       secure: req.secure || req.headers["x-forwarded-proto"] === "https",
       sameSite: "strict" as const,
       maxAge: maxAge,

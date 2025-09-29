@@ -105,12 +105,12 @@ export function CredentialsManager({
     if (showDeployDialog) {
       setDropdownOpen(false);
       setHostSearchQuery("");
+      setSelectedHostId("");
       setTimeout(() => {
-        const activeElement = document.activeElement as HTMLElement;
-        if (activeElement && activeElement.blur) {
-          activeElement.blur();
+        if (document.activeElement && (document.activeElement as HTMLElement).blur) {
+          (document.activeElement as HTMLElement).blur();
         }
-      }, 100);
+      }, 50);
     }
   }, [showDeployDialog]);
 
@@ -908,14 +908,13 @@ export function CredentialsManager({
                     value={hostSearchQuery}
                     onChange={(e) => {
                       setHostSearchQuery(e.target.value);
-                      if (e.target.value.trim() !== "") {
-                        setDropdownOpen(true);
-                      } else {
-                        setDropdownOpen(false);
-                      }
+                    }}
+                    onClick={() => {
+                      setDropdownOpen(true);
                     }}
                     className="w-full"
                     autoFocus={false}
+                    tabIndex={0}
                   />
                   {dropdownOpen && (
                     <div className="absolute top-full left-0 z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">

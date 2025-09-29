@@ -493,7 +493,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   }
 
   useEffect(() => {
-    if (!terminal || !xtermRef.current || !hostConfig) return;
+    if (!terminal || !xtermRef.current) return;
 
     terminal.options = {
       cursorBlink: true,
@@ -598,7 +598,35 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     resizeObserver.observe(xtermRef.current);
 
     setVisible(true);
-    setIsConnecting(true); // Show connecting state immediately
+
+    return () => {
+      isUnmountingRef.current = true;
+      shouldNotReconnectRef.current = true;
+      isReconnectingRef.current = false;
+      setIsConnecting(false);
+      resizeObserver.disconnect();
+      element?.removeEventListener("contextmenu", handleContextMenu);
+      element?.removeEventListener("keydown", handleMacKeyboard, true);
+      if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
+      if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
+      if (reconnectTimeoutRef.current)
+        clearTimeout(reconnectTimeoutRef.current);
+      if (connectionTimeoutRef.current)
+        clearTimeout(connectionTimeoutRef.current);
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      webSocketRef.current?.close();
+    };
+  }, [xtermRef, terminal]);
+
+  useEffect(() => {
+    if (!terminal || !hostConfig || !visible) return;
+
+    if (isConnected || isConnecting) return;
+
+    setIsConnecting(true);
 
     const readyFonts =
       (document as any).fonts?.ready instanceof Promise
@@ -607,7 +635,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
     readyFonts.then(() => {
       setTimeout(() => {
-        fitAddon.fit();
+        fitAddonRef.current?.fit();
         if (terminal) scheduleNotify(terminal.cols, terminal.rows);
         hardRefresh();
 
@@ -630,28 +658,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         connectToHost(cols, rows);
       }, 200);
     });
-
-    return () => {
-      isUnmountingRef.current = true;
-      shouldNotReconnectRef.current = true;
-      isReconnectingRef.current = false;
-      setIsConnecting(false);
-      resizeObserver.disconnect();
-      element?.removeEventListener("contextmenu", handleContextMenu);
-      element?.removeEventListener("keydown", handleMacKeyboard, true);
-      if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
-      if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-      if (reconnectTimeoutRef.current)
-        clearTimeout(reconnectTimeoutRef.current);
-      if (connectionTimeoutRef.current)
-        clearTimeout(connectionTimeoutRef.current);
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = null;
-      }
-      webSocketRef.current?.close();
-    };
-  }, [xtermRef, terminal, hostConfig]);
+  }, [terminal, hostConfig, visible, isConnected, isConnecting, splitScreen]);
 
   useEffect(() => {
     if (isVisible && fitAddonRef.current) {
@@ -686,7 +693,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
   return (
     <div className="h-full w-full m-1 relative">
-      {/* Terminal */}
       <div
         ref={xtermRef}
         className={`h-full w-full transition-opacity duration-200 ${visible && isVisible && !isConnecting ? "opacity-100" : "opacity-0"} overflow-hidden`}
@@ -697,7 +703,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         }}
       />
 
-      {/* Connecting State */}
       {isConnecting && (
         <div className="absolute inset-0 flex items-center justify-center bg-dark-bg">
           <div className="flex items-center gap-3">

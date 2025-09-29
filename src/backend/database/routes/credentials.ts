@@ -1124,36 +1124,98 @@ async function deploySSHKeyToHost(
     connectionTimeout = setTimeout(() => {
       conn.destroy();
       resolve({ success: false, error: "Connection timeout" });
-    }, 30000);
+    }, 120000);
 
     conn.on("ready", async () => {
       clearTimeout(connectionTimeout);
+      authLogger.info("SSH connection established for key deployment", {
+        host: hostConfig.ip,
+        username: hostConfig.username,
+        authType: hostConfig.authType,
+      });
 
       try {
+        authLogger.info("Ensuring .ssh directory exists", { host: hostConfig.ip });
         await new Promise<void>((resolveCmd, rejectCmd) => {
-          conn.exec("mkdir -p ~/.ssh && chmod 700 ~/.ssh", (err, stream) => {
-            if (err) return rejectCmd(err);
+          const cmdTimeout = setTimeout(() => {
+            rejectCmd(new Error("mkdir command timeout"));
+          }, 10000); // Reduced to 10 seconds
+
+          // Use a more robust command that handles existing directories
+          conn.exec("test -d ~/.ssh || mkdir -p ~/.ssh; chmod 700 ~/.ssh", (err, stream) => {
+            if (err) {
+              clearTimeout(cmdTimeout);
+              authLogger.error("mkdir command error", { host: hostConfig.ip, error: err.message });
+              return rejectCmd(err);
+            }
 
             stream.on("close", (code) => {
+              clearTimeout(cmdTimeout);
+              authLogger.info("mkdir command completed", { host: hostConfig.ip, code });
               if (code === 0) {
                 resolveCmd();
               } else {
                 rejectCmd(new Error(`mkdir command failed with code ${code}`));
               }
             });
+
+            stream.on("data", (data) => {
+              authLogger.info("mkdir command output", { host: hostConfig.ip, output: data.toString() });
+            });
           });
         });
 
         const keyExists = await new Promise<boolean>(
           (resolveCheck, rejectCheck) => {
-            const keyPattern = publicKey.split(" ")[1];
+            const checkTimeout = setTimeout(() => {
+              rejectCheck(new Error("Key check timeout"));
+            }, 5000); // Reduced to 5 seconds
+
+            // Parse public key - handle both JSON and plain text formats
+            let actualPublicKey = publicKey;
+            try {
+              // Try to parse as JSON first
+              const parsed = JSON.parse(publicKey);
+              if (parsed.data) {
+                actualPublicKey = parsed.data;
+                authLogger.info("Parsed public key from JSON format", { host: hostConfig.ip });
+              }
+            } catch (e) {
+              // Not JSON, use as-is
+              authLogger.info("Using public key as plain text", { host: hostConfig.ip });
+            }
+
+            // Validate public key format
+            const keyParts = actualPublicKey.trim().split(" ");
+            if (keyParts.length < 2) {
+              clearTimeout(checkTimeout);
+              authLogger.error("Invalid public key format", { host: hostConfig.ip, publicKey: actualPublicKey.substring(0, 50) + "..." });
+              return rejectCheck(new Error("Invalid public key format - must contain at least 2 parts"));
+            }
+
+            const keyPattern = keyParts[1];
+            authLogger.info("Checking for existing key", { host: hostConfig.ip, keyPattern: keyPattern.substring(0, 20) + "..." });
+            
+            // Use a simpler approach - just check if the file exists and has content
             conn.exec(
-              `grep -q "${keyPattern}" ~/.ssh/authorized_keys 2>/dev/null`,
+              `if [ -f ~/.ssh/authorized_keys ]; then grep -F "${keyPattern}" ~/.ssh/authorized_keys >/dev/null 2>&1; echo $?; else echo 1; fi`,
               (err, stream) => {
-                if (err) return rejectCheck(err);
+                if (err) {
+                  clearTimeout(checkTimeout);
+                  authLogger.error("Key check error", { host: hostConfig.ip, error: err.message });
+                  return rejectCheck(err);
+                }
+
+                let output = '';
+                stream.on('data', (data) => {
+                  output += data.toString();
+                });
 
                 stream.on("close", (code) => {
-                  resolveCheck(code === 0);
+                  clearTimeout(checkTimeout);
+                  const exists = output.trim() === '0';
+                  authLogger.info("Key check completed", { host: hostConfig.ip, code, output: output.trim(), exists });
+                  resolveCheck(exists);
                 });
               },
             );
@@ -1166,14 +1228,40 @@ async function deploySSHKeyToHost(
           return;
         }
 
+        authLogger.info("Adding SSH key to authorized_keys", { host: hostConfig.ip });
         await new Promise<void>((resolveAdd, rejectAdd) => {
-          const escapedKey = publicKey.replace(/'/g, "'\\''");
+          const addTimeout = setTimeout(() => {
+            rejectAdd(new Error("Key add timeout"));
+          }, 10000); // Reduced to 10 seconds
+
+          // Parse public key - handle both JSON and plain text formats
+          let actualPublicKey = publicKey;
+          try {
+            // Try to parse as JSON first
+            const parsed = JSON.parse(publicKey);
+            if (parsed.data) {
+              actualPublicKey = parsed.data;
+            }
+          } catch (e) {
+            // Not JSON, use as-is
+          }
+
+          // Use printf instead of echo for more reliable key addition
+          const escapedKey = actualPublicKey.replace(/\\/g, '\\\\').replace(/'/g, "'\\''");
+          authLogger.info("Adding key to authorized_keys", { host: hostConfig.ip, keyLength: actualPublicKey.length });
+          
           conn.exec(
-            `echo '${escapedKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
+            `printf '%s\\n' '${escapedKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
             (err, stream) => {
-              if (err) return rejectAdd(err);
+              if (err) {
+                clearTimeout(addTimeout);
+                authLogger.error("Key add error", { host: hostConfig.ip, error: err.message });
+                return rejectAdd(err);
+              }
 
               stream.on("close", (code) => {
+                clearTimeout(addTimeout);
+                authLogger.info("Key add completed", { host: hostConfig.ip, code });
                 if (code === 0) {
                   resolveAdd();
                 } else {
@@ -1182,20 +1270,61 @@ async function deploySSHKeyToHost(
                   );
                 }
               });
+
+              stream.on("data", (data) => {
+                authLogger.info("Key add output", { host: hostConfig.ip, output: data.toString() });
+              });
             },
           );
         });
 
+        authLogger.info("Verifying key deployment", { host: hostConfig.ip });
         const verifySuccess = await new Promise<boolean>(
           (resolveVerify, rejectVerify) => {
-            const keyPattern = publicKey.split(" ")[1];
+            const verifyTimeout = setTimeout(() => {
+              rejectVerify(new Error("Key verification timeout"));
+            }, 5000); // Reduced to 5 seconds
+
+            // Parse public key - handle both JSON and plain text formats
+            let actualPublicKey = publicKey;
+            try {
+              // Try to parse as JSON first
+              const parsed = JSON.parse(publicKey);
+              if (parsed.data) {
+                actualPublicKey = parsed.data;
+              }
+            } catch (e) {
+              // Not JSON, use as-is
+            }
+
+            // Use the same key pattern extraction as above
+            const keyParts = actualPublicKey.trim().split(" ");
+            if (keyParts.length < 2) {
+              clearTimeout(verifyTimeout);
+              authLogger.error("Invalid public key format for verification", { host: hostConfig.ip, publicKey: actualPublicKey.substring(0, 50) + "..." });
+              return rejectVerify(new Error("Invalid public key format - must contain at least 2 parts"));
+            }
+
+            const keyPattern = keyParts[1];
             conn.exec(
-              `grep -q "${keyPattern}" ~/.ssh/authorized_keys`,
+              `grep -F "${keyPattern}" ~/.ssh/authorized_keys >/dev/null 2>&1; echo $?`,
               (err, stream) => {
-                if (err) return rejectVerify(err);
+                if (err) {
+                  clearTimeout(verifyTimeout);
+                  authLogger.error("Key verification error", { host: hostConfig.ip, error: err.message });
+                  return rejectVerify(err);
+                }
+
+                let output = '';
+                stream.on('data', (data) => {
+                  output += data.toString();
+                });
 
                 stream.on("close", (code) => {
-                  resolveVerify(code === 0);
+                  clearTimeout(verifyTimeout);
+                  const verified = output.trim() === '0';
+                  authLogger.info("Key verification completed", { host: hostConfig.ip, code, output: output.trim(), verified });
+                  resolveVerify(verified);
                 });
               },
             );
@@ -1223,7 +1352,32 @@ async function deploySSHKeyToHost(
 
     conn.on("error", (err) => {
       clearTimeout(connectionTimeout);
-      resolve({ success: false, error: err.message });
+      let errorMessage = err.message;
+      
+      // Log detailed error information for debugging
+      authLogger.error("SSH connection failed during key deployment", {
+        host: hostConfig.ip,
+        username: hostConfig.username,
+        authType: hostConfig.authType,
+        hasPassword: !!hostConfig.password,
+        hasPrivateKey: !!hostConfig.privateKey,
+        error: err.message,
+        errorCode: (err as any).code,
+      });
+      
+      if (err.message.includes("All configured authentication methods failed")) {
+        errorMessage = "Authentication failed. Please check your credentials and ensure the SSH service is running.";
+      } else if (err.message.includes("ENOTFOUND") || err.message.includes("ENOENT")) {
+        errorMessage = "Could not resolve hostname or connect to server.";
+      } else if (err.message.includes("ECONNREFUSED")) {
+        errorMessage = "Connection refused. The server may not be running or the port may be incorrect.";
+      } else if (err.message.includes("ETIMEDOUT")) {
+        errorMessage = "Connection timed out. Check your network connection and server availability.";
+      } else if (err.message.includes("authentication failed") || err.message.includes("Permission denied")) {
+        errorMessage = "Authentication failed. Please check your username and password/key.";
+      }
+      
+      resolve({ success: false, error: errorMessage });
     });
 
     try {
@@ -1231,26 +1385,101 @@ async function deploySSHKeyToHost(
         host: hostConfig.ip,
         port: hostConfig.port || 22,
         username: hostConfig.username,
+        readyTimeout: 60000,
+        keepaliveInterval: 30000,
+        keepaliveCountMax: 3,
+        tcpKeepAlive: true,
+        tcpKeepAliveInitialDelay: 30000,
+        algorithms: {
+          kex: [
+            "diffie-hellman-group14-sha256",
+            "diffie-hellman-group14-sha1",
+            "diffie-hellman-group1-sha1",
+            "diffie-hellman-group-exchange-sha256",
+            "diffie-hellman-group-exchange-sha1",
+            "ecdh-sha2-nistp256",
+            "ecdh-sha2-nistp384",
+            "ecdh-sha2-nistp521",
+          ],
+          cipher: [
+            "aes128-ctr",
+            "aes192-ctr",
+            "aes256-ctr",
+            "aes128-gcm@openssh.com",
+            "aes256-gcm@openssh.com",
+            "aes128-cbc",
+            "aes192-cbc",
+            "aes256-cbc",
+            "3des-cbc",
+          ],
+          hmac: [
+            "hmac-sha2-256-etm@openssh.com",
+            "hmac-sha2-512-etm@openssh.com",
+            "hmac-sha2-256",
+            "hmac-sha2-512",
+            "hmac-sha1",
+            "hmac-md5",
+          ],
+          compress: ["none", "zlib@openssh.com", "zlib"],
+        },
       };
 
       if (hostConfig.authType === "password" && hostConfig.password) {
         connectionConfig.password = hostConfig.password;
       } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
-        connectionConfig.privateKey = hostConfig.privateKey;
-        if (hostConfig.keyPassword) {
-          connectionConfig.passphrase = hostConfig.keyPassword;
+        try {
+          if (
+            !hostConfig.privateKey.includes("-----BEGIN") ||
+            !hostConfig.privateKey.includes("-----END")
+          ) {
+            throw new Error("Invalid private key format");
+          }
+
+          const cleanKey = hostConfig.privateKey
+            .trim()
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n");
+
+          connectionConfig.privateKey = Buffer.from(cleanKey, "utf8");
+
+          if (hostConfig.keyPassword) {
+            connectionConfig.passphrase = hostConfig.keyPassword;
+          }
+        } catch (keyError) {
+          clearTimeout(connectionTimeout);
+          resolve({
+            success: false,
+            error: `Invalid SSH key format: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
+          });
+          return;
         }
       } else {
+        clearTimeout(connectionTimeout);
         resolve({
           success: false,
-          error: "Invalid authentication configuration",
+          error: `Invalid authentication configuration. Auth type: ${hostConfig.authType}, has password: ${!!hostConfig.password}, has key: ${!!hostConfig.privateKey}`,
         });
         return;
       }
 
+      // Log connection attempt
+      authLogger.info("Attempting SSH connection for key deployment", {
+        host: connectionConfig.host,
+        port: connectionConfig.port,
+        username: connectionConfig.username,
+        authType: hostConfig.authType,
+        hasPassword: !!connectionConfig.password,
+        hasPrivateKey: !!connectionConfig.privateKey,
+        hasPassphrase: !!connectionConfig.passphrase,
+      });
+
       conn.connect(connectionConfig);
     } catch (error) {
       clearTimeout(connectionTimeout);
+      authLogger.error("Failed to initiate SSH connection", {
+        host: hostConfig.ip,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
       resolve({
         success: false,
         error: error instanceof Error ? error.message : "Connection failed",
@@ -1276,11 +1505,24 @@ router.post(
     }
 
     try {
-      const credential = await db
-        .select()
-        .from(sshCredentials)
-        .where(eq(sshCredentials.id, credentialId))
-        .limit(1);
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: "Authentication required",
+        });
+      }
+
+      const { SimpleDBOps } = await import("../../utils/simple-db-ops.js");
+      const credential = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshCredentials)
+          .where(eq(sshCredentials.id, credentialId))
+          .limit(1),
+        "ssh_credentials",
+        userId,
+      );
 
       if (!credential || credential.length === 0) {
         return res.status(404).json({
@@ -1304,12 +1546,15 @@ router.post(
           error: "Public key is required for deployment",
         });
       }
-
-      const targetHost = await db
-        .select()
-        .from(sshData)
-        .where(eq(sshData.id, targetHostId))
-        .limit(1);
+      const targetHost = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshData)
+          .where(eq(sshData.id, targetHostId))
+          .limit(1),
+        "ssh_data",
+        userId,
+      );
 
       if (!targetHost || targetHost.length === 0) {
         return res.status(404).json({
@@ -1330,29 +1575,84 @@ router.post(
         keyPassword: hostData.keyPassword,
       };
 
+      authLogger.info("Host configuration for SSH key deployment", {
+        hostId: targetHostId,
+        ip: hostConfig.ip,
+        port: hostConfig.port,
+        username: hostConfig.username,
+        authType: hostConfig.authType,
+        hasPassword: !!hostConfig.password,
+        hasPrivateKey: !!hostConfig.privateKey,
+        hasKeyPassword: !!hostConfig.keyPassword,
+        passwordLength: hostConfig.password ? hostConfig.password.length : 0,
+      });
+
       if (hostData.authType === "credential" && hostData.credentialId) {
-        const hostCredential = await db
-          .select()
-          .from(sshCredentials)
-          .where(eq(sshCredentials.id, hostData.credentialId))
-          .limit(1);
-
-        if (hostCredential && hostCredential.length > 0) {
-          const cred = hostCredential[0];
-
-          hostConfig.authType = cred.authType;
-          hostConfig.username = cred.username;
-
-          if (cred.authType === "password") {
-            hostConfig.password = cred.password;
-          } else if (cred.authType === "key") {
-            hostConfig.privateKey = cred.privateKey || cred.key;
-            hostConfig.keyPassword = cred.keyPassword;
-          }
-        } else {
+        const userId = (req as any).userId;
+        if (!userId) {
+          authLogger.error("Missing userId for credential resolution", {
+            hostId: targetHostId,
+            credentialId: hostData.credentialId,
+          });
           return res.status(400).json({
             success: false,
-            error: "Host credential not found",
+            error: "Authentication required for credential resolution",
+          });
+        }
+
+        try {
+          const { SimpleDBOps } = await import("../../utils/simple-db-ops.js");
+          const hostCredential = await SimpleDBOps.select(
+            db
+              .select()
+              .from(sshCredentials)
+              .where(eq(sshCredentials.id, hostData.credentialId))
+              .limit(1),
+            "ssh_credentials",
+            userId,
+          );
+
+          if (hostCredential && hostCredential.length > 0) {
+            const cred = hostCredential[0];
+
+            hostConfig.authType = cred.authType;
+            hostConfig.username = cred.username;
+
+            if (cred.authType === "password") {
+              hostConfig.password = cred.password;
+            } else if (cred.authType === "key") {
+              hostConfig.privateKey = cred.privateKey || cred.key;
+              hostConfig.keyPassword = cred.keyPassword;
+            }
+            
+            authLogger.info("Resolved host credentials for SSH key deployment", {
+              hostId: targetHostId,
+              credentialId: hostData.credentialId,
+              authType: hostConfig.authType,
+              username: hostConfig.username,
+              hasPassword: !!hostConfig.password,
+              hasPrivateKey: !!hostConfig.privateKey,
+              hasKeyPassword: !!hostConfig.keyPassword,
+            });
+          } else {
+            authLogger.error("Host credential not found", {
+              hostId: targetHostId,
+              credentialId: hostData.credentialId,
+            });
+            return res.status(400).json({
+              success: false,
+              error: "Host credential not found",
+            });
+          }
+        } catch (error) {
+          authLogger.error("Failed to resolve host credentials", {
+            hostId: targetHostId,
+            credentialId: hostData.credentialId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+          return res.status(500).json({
+            success: false,
+            error: "Failed to resolve host credentials",
           });
         }
       }
