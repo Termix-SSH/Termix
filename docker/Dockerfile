@@ -1,5 +1,5 @@
-# Stage 1: Install dependencies and build frontend
-FROM node:22-bullseye AS deps
+# Stage 1: Install dependencies
+FROM node:22-slim AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/* 
@@ -23,7 +23,7 @@ COPY . .
 RUN npm cache clean --force && \
     npm run build
 
-# Stage 3: Build backend TypeScript
+# Stage 3: Build backend
 FROM deps AS backend-builder
 WORKDIR /app
 
@@ -38,7 +38,7 @@ RUN npm rebuild better-sqlite3 --force
 RUN npm run build:backend
 
 # Stage 4: Production dependencies only
-FROM node:22-bullseye AS production-deps
+FROM node:22-slim AS production-deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -54,7 +54,7 @@ RUN npm ci --only=production --ignore-scripts --force && \
     npm cache clean --force
 
 # Stage 5: Final optimized image
-FROM node:22-bullseye
+FROM node:22-slim
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
