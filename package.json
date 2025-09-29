@@ -80,7 +80,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.60.0",
-    "react-i18next": "^15.7.3",
+    "react-i18next": "^16.0.0",
     "react-resizable-panels": "^3.0.3",
     "react-simple-keyboard": "^3.8.120",
     "react-xtermjs": "^1.0.10",
