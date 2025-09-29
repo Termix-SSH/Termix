@@ -107,7 +107,10 @@ export function CredentialsManager({
       setHostSearchQuery("");
       setSelectedHostId("");
       setTimeout(() => {
-        if (document.activeElement && (document.activeElement as HTMLElement).blur) {
+        if (
+          document.activeElement &&
+          (document.activeElement as HTMLElement).blur
+        ) {
           (document.activeElement as HTMLElement).blur();
         }
       }, 50);

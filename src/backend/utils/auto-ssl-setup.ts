@@ -37,13 +37,13 @@ export class AutoSSLSetup {
       try {
         await fs.access(this.CERT_FILE);
         await fs.access(this.KEY_FILE);
-        
+
         systemLogger.info("SSL certificates found from entrypoint script", {
           operation: "ssl_cert_found_entrypoint",
           cert_path: this.CERT_FILE,
           key_path: this.KEY_FILE,
         });
-        
+
         await this.logCertificateInfo();
         await this.setupEnvironmentVariables();
         return;

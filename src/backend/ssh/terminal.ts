@@ -588,9 +588,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
         compress: ["none", "zlib@openssh.com", "zlib"],
       },
     };
-    if (resolvedCredentials.authType === "password" && resolvedCredentials.password) {
+    if (
+      resolvedCredentials.authType === "password" &&
+      resolvedCredentials.password
+    ) {
       connectConfig.password = resolvedCredentials.password;
-    } else if (resolvedCredentials.authType === "key" && resolvedCredentials.key) {
+    } else if (
+      resolvedCredentials.authType === "key" &&
+      resolvedCredentials.key
+    ) {
       try {
         if (
           !resolvedCredentials.key.includes("-----BEGIN") ||

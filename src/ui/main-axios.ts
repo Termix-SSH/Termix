@@ -168,10 +168,10 @@ function createApiInstance(
     if (process.env.NODE_ENV === "development") {
       logger.requestStart(method, fullUrl, context);
     }
-    
+
     if (isElectron()) {
       config.headers["X-Electron-App"] = "true";
-      
+
       const token = localStorage.getItem("jwt");
       if (token) {
         config.headers["Authorization"] = `Bearer ${token}`;
@@ -304,7 +304,7 @@ function isDev(): boolean {
   if (isElectron()) {
     return false;
   }
-  
+
   return (
     process.env.NODE_ENV === "development" &&
     (window.location.port === "3000" ||
@@ -463,16 +463,21 @@ export let statsApi: AxiosInstance;
 export let authApi: AxiosInstance;
 
 if (isElectron()) {
-  getServerConfig().then((config) => {
-    if (config?.serverUrl) {
-      configuredServerUrl = config.serverUrl;
-      (window as any).configuredServerUrl = configuredServerUrl;
-    }
-    initializeApiInstances();
-  }).catch((error) => {
-    console.error("Failed to load server config, initializing with default:", error);
-    initializeApiInstances();
-  });
+  getServerConfig()
+    .then((config) => {
+      if (config?.serverUrl) {
+        configuredServerUrl = config.serverUrl;
+        (window as any).configuredServerUrl = configuredServerUrl;
+      }
+      initializeApiInstances();
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load server config, initializing with default:",
+        error,
+      );
+      initializeApiInstances();
+    });
 } else {
   initializeApiInstances();
 }
@@ -535,15 +540,13 @@ function handleApiError(error: unknown, operation: string): never {
         `Auth failed: ${method} ${url} - ${message}`,
         errorContext,
       );
-      
-      const isLoginEndpoint = url?.includes('/users/login');
-      const errorMessage = isLoginEndpoint ? message : "Authentication required. Please log in again.";
-      
-      throw new ApiError(
-        errorMessage,
-        401,
-        "AUTH_REQUIRED",
-      );
+
+      const isLoginEndpoint = url?.includes("/users/login");
+      const errorMessage = isLoginEndpoint
+        ? message
+        : "Authentication required. Please log in again.";
+
+      throw new ApiError(errorMessage, 401, "AUTH_REQUIRED");
     } else if (status === 403) {
       authLogger.warn(`Access denied: ${method} ${url}`, errorContext);
       throw new ApiError(
@@ -1527,11 +1530,11 @@ export async function loginUser(
 ): Promise<AuthResponse> {
   try {
     const response = await authApi.post("/users/login", { username, password });
-    
+
     if (isElectron() && response.data.token) {
       localStorage.setItem("jwt", response.data.token);
     }
-    
+
     return {
       token: response.data.token || "cookie-based",
       success: response.data.success,

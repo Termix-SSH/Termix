@@ -926,8 +926,10 @@ router.post("/login", async (req, res) => {
       username: userRecord.username,
     };
 
-    const isElectron = req.headers['x-electron-app'] === 'true' || req.headers['X-Electron-App'] === 'true';
-    
+    const isElectron =
+      req.headers["x-electron-app"] === "true" ||
+      req.headers["X-Electron-App"] === "true";
+
     if (isElectron) {
       response.token = token;
     }
@@ -1507,7 +1509,7 @@ router.post("/totp/verify-login", async (req, res) => {
         success: true,
         is_admin: !!userRecord.is_admin,
         username: userRecord.username,
-        token: req.headers['x-electron-app'] === 'true' ? token : undefined,
+        token: req.headers["x-electron-app"] === "true" ? token : undefined,
       });
   } catch (err) {
     authLogger.error("TOTP verification failed", err);

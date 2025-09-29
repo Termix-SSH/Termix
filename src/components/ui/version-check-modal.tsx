@@ -11,7 +11,11 @@ interface VersionCheckModalProps {
   isAuthenticated?: boolean;
 }
 
-export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = false }: VersionCheckModalProps) {
+export function VersionCheckModal({
+  onDismiss,
+  onContinue,
+  isAuthenticated = false,
+}: VersionCheckModalProps) {
   const { t } = useTranslation();
   const [versionInfo, setVersionInfo] = useState<any>(null);
   const [versionChecking, setVersionChecking] = useState(false);
@@ -30,7 +34,7 @@ export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = fal
     try {
       const updateInfo = await checkElectronUpdate();
       setVersionInfo(updateInfo);
-      
+
       if (updateInfo?.status === "up_to_date") {
         onContinue();
         return;
@@ -65,7 +69,7 @@ export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = fal
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
         {!isAuthenticated && (
-          <div 
+          <div
             className="absolute inset-0"
             style={{
               backgroundImage: `linear-gradient(
@@ -93,12 +97,11 @@ export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = fal
     );
   }
 
-
   if (!versionInfo || versionDismissed) {
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
         {!isAuthenticated && (
-          <div 
+          <div
             className="absolute inset-0"
             style={{
               backgroundImage: `linear-gradient(
@@ -120,7 +123,7 @@ export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = fal
               {t("versionCheck.checkUpdates")}
             </h2>
           </div>
-          
+
           {versionInfo && !versionDismissed && (
             <div className="mb-4">
               <VersionAlert
@@ -131,10 +134,7 @@ export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = fal
           )}
 
           <div className="flex gap-2">
-            <Button
-              onClick={handleContinue}
-              className="flex-1 h-10"
-            >
+            <Button onClick={handleContinue} className="flex-1 h-10">
               {t("common.continue")}
             </Button>
           </div>
@@ -146,7 +146,7 @@ export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = fal
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       {!isAuthenticated && (
-        <div 
+        <div
           className="absolute inset-0"
           style={{
             backgroundImage: `linear-gradient(
@@ -168,7 +168,7 @@ export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = fal
             {t("versionCheck.updateRequired")}
           </h2>
         </div>
-        
+
         <div className="mb-4">
           <VersionAlert
             updateInfo={versionInfo}
@@ -177,10 +177,7 @@ export function VersionCheckModal({ onDismiss, onContinue, isAuthenticated = fal
         </div>
 
         <div className="flex gap-2">
-          <Button
-            onClick={handleContinue}
-            className="flex-1 h-10"
-          >
+          <Button onClick={handleContinue} className="flex-1 h-10">
             {t("common.continue")}
           </Button>
         </div>

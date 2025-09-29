@@ -245,7 +245,7 @@ app.get("/version", authenticateJWT, async (req, res) => {
         } catch {
           return null;
         }
-      }
+      },
     ];
 
     for (const getVersion of versionSources) {

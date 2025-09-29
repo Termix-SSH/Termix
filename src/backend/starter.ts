@@ -24,13 +24,15 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     } catch {}
 
     let version = "unknown";
-    
+
     const versionSources = [
       () => process.env.VERSION,
       () => {
         try {
           const packageJsonPath = path.join(process.cwd(), "package.json");
-          const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+          const packageJson = JSON.parse(
+            readFileSync(packageJsonPath, "utf-8"),
+          );
           return packageJson.version;
         } catch {
           return null;
@@ -43,7 +45,9 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
             path.dirname(__filename),
             "../../../package.json",
           );
-          const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+          const packageJson = JSON.parse(
+            readFileSync(packageJsonPath, "utf-8"),
+          );
           return packageJson.version;
         } catch {
           return null;
@@ -52,12 +56,14 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       () => {
         try {
           const packageJsonPath = path.join("/app", "package.json");
-          const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+          const packageJson = JSON.parse(
+            readFileSync(packageJsonPath, "utf-8"),
+          );
           return packageJson.version;
         } catch {
           return null;
         }
-      }
+      },
     ];
 
     for (const getVersion of versionSources) {

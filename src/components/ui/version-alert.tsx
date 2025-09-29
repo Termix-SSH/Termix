@@ -24,10 +24,7 @@ interface VersionAlertProps {
   onDownload?: () => void;
 }
 
-export function VersionAlert({
-  updateInfo,
-  onDownload,
-}: VersionAlertProps) {
+export function VersionAlert({ updateInfo, onDownload }: VersionAlertProps) {
   const { t } = useTranslation();
 
   if (!updateInfo.success) {

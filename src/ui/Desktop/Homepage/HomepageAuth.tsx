@@ -222,7 +222,8 @@ export function HomepageAuth({
       setTotpCode("");
       setTotpTempToken("");
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.error || err?.message || t("errors.unknownError");
+      const errorMessage =
+        err?.response?.data?.error || err?.message || t("errors.unknownError");
       toast.error(errorMessage);
       setInternalLoggedIn(false);
       setLoggedIn(false);
@@ -370,7 +371,10 @@ export function HomepageAuth({
       setTotpTempToken("");
       toast.success(t("messages.loginSuccess"));
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.error || err?.message || t("errors.invalidTotpCode");
+      const errorMessage =
+        err?.response?.data?.error ||
+        err?.message ||
+        t("errors.invalidTotpCode");
       toast.error(errorMessage);
     } finally {
       setTotpLoading(false);
@@ -390,7 +394,10 @@ export function HomepageAuth({
 
       window.location.replace(authUrl);
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.error || err?.message || t("errors.failedOidcLogin");
+      const errorMessage =
+        err?.response?.data?.error ||
+        err?.message ||
+        t("errors.failedOidcLogin");
       toast.error(errorMessage);
       setOidcLoading(false);
     }

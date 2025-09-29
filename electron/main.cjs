@@ -3,10 +3,10 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 
-app.commandLine.appendSwitch('--ignore-certificate-errors');
-app.commandLine.appendSwitch('--ignore-ssl-errors');
-app.commandLine.appendSwitch('--ignore-certificate-errors-spki-list');
-app.commandLine.appendSwitch('--enable-features=NetworkService');
+app.commandLine.appendSwitch("--ignore-certificate-errors");
+app.commandLine.appendSwitch("--ignore-ssl-errors");
+app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
+app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
 
@@ -141,9 +141,9 @@ async function fetchGitHubAPI(endpoint, cacheKey) {
             requestOptions.rejectUnauthorized = false;
             requestOptions.agent = new https.Agent({
               rejectUnauthorized: false,
-              secureProtocol: 'TLSv1_2_method',
+              secureProtocol: "TLSv1_2_method",
               checkServerIdentity: () => undefined,
-              ciphers: 'ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH',
+              ciphers: "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH",
               honorCipherOrder: true,
             });
           }
@@ -315,9 +315,9 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
           requestOptions.rejectUnauthorized = false;
           requestOptions.agent = new https.Agent({
             rejectUnauthorized: false,
-            secureProtocol: 'TLSv1_2_method',
+            secureProtocol: "TLSv1_2_method",
             checkServerIdentity: () => undefined,
-            ciphers: 'ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH',
+            ciphers: "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH",
             honorCipherOrder: true,
           });
         }
