@@ -75,12 +75,8 @@ async function verifyOIDCToken(
             );
           }
         } else {
-          authLogger.error(
-            `JWKS fetch failed from ${url}: ${response.status} ${response.statusText}`,
-          );
         }
       } catch (error) {
-        authLogger.error(`JWKS fetch error from ${url}:`, error);
         continue;
       }
     }
@@ -117,7 +113,6 @@ async function verifyOIDCToken(
 
     return payload;
   } catch (error) {
-    authLogger.error("OIDC token verification failed:", error);
     throw error;
   }
 }
@@ -655,10 +650,6 @@ router.get("/oidc/callback", async (req, res) => {
           config.client_id,
         );
       } catch (error) {
-        authLogger.error(
-          "OIDC token verification failed, trying userinfo endpoints",
-          error,
-        );
         try {
           const parts = tokenData.id_token.split(".");
           if (parts.length === 3) {
@@ -767,6 +758,23 @@ router.get("/oidc/callback", async (req, res) => {
         scopes: config.scopes,
       });
 
+      try {
+        await authManager.registerOIDCUser(id);
+      } catch (encryptionError) {
+        await db.delete(users).where(eq(users.id, id));
+        authLogger.error(
+          "Failed to setup OIDC user encryption, user creation rolled back",
+          encryptionError,
+          {
+            operation: "oidc_user_create_encryption_failed",
+            userId: id,
+          },
+        );
+        return res.status(500).json({
+          error: "Failed to setup user security - user creation cancelled",
+        });
+      }
+
       user = await db.select().from(users).where(eq(users.id, id));
     } else {
       await db
@@ -778,6 +786,15 @@ router.get("/oidc/callback", async (req, res) => {
     }
 
     const userRecord = user[0];
+
+    try {
+      await authManager.authenticateOIDCUser(userRecord.id);
+    } catch (setupError) {
+      authLogger.error("Failed to setup OIDC user encryption", setupError, {
+        operation: "oidc_user_encryption_setup_failed",
+        userId: userRecord.id,
+      });
+    }
 
     const token = await authManager.generateJWTToken(userRecord.id, {
       expiresIn: "50d",

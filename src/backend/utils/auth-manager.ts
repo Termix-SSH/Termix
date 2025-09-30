@@ -53,6 +53,20 @@ class AuthManager {
     await this.userCrypto.setupUserEncryption(userId, password);
   }
 
+  async registerOIDCUser(userId: string): Promise<void> {
+    await this.userCrypto.setupOIDCUserEncryption(userId);
+  }
+
+  async authenticateOIDCUser(userId: string): Promise<boolean> {
+    const authenticated = await this.userCrypto.authenticateOIDCUser(userId);
+
+    if (authenticated) {
+      await this.performLazyEncryptionMigration(userId);
+    }
+
+    return authenticated;
+  }
+
   async authenticateUser(userId: string, password: string): Promise<boolean> {
     const authenticated = await this.userCrypto.authenticateUser(
       userId,

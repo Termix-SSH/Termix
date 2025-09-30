@@ -51,6 +51,18 @@ repo-images/
 # Uploads directory
 uploads/
 
+# Electron files (not needed for Docker)
+electron/
+electron-builder.json
+
+# Development and build artifacts
+*.log
+*.tmp
+*.temp
+
+# Font files (we'll optimize these in Dockerfile)
+# public/fonts/*.ttf
+
 # Logs
 logs
 *.log

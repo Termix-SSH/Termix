@@ -69,6 +69,19 @@ class UserCrypto {
     DEK.fill(0);
   }
 
+  async setupOIDCUserEncryption(userId: string): Promise<void> {
+    const DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
+    
+    const now = Date.now();
+    this.userSessions.set(userId, {
+      dataKey: Buffer.from(DEK),
+      lastActivity: now,
+      expiresAt: now + UserCrypto.SESSION_DURATION,
+    });
+
+    DEK.fill(0);
+  }
+
   async authenticateUser(userId: string, password: string): Promise<boolean> {
     try {
       const kekSalt = await this.getKEKSalt(userId);
@@ -116,6 +129,52 @@ class UserCrypto {
         error: error instanceof Error ? error.message : "Unknown",
       });
       return false;
+    }
+  }
+
+  async authenticateOIDCUser(userId: string): Promise<boolean> {
+    try {
+      const kekSalt = await this.getKEKSalt(userId);
+      if (!kekSalt) {
+        await this.setupOIDCUserEncryption(userId);
+        return true;
+      }
+
+      const systemKey = this.deriveOIDCSystemKey(userId);
+      const encryptedDEK = await this.getEncryptedDEK(userId);
+      if (!encryptedDEK) {
+        systemKey.fill(0);
+        await this.setupOIDCUserEncryption(userId);
+        return true;
+      }
+
+      const DEK = this.decryptDEK(encryptedDEK, systemKey);
+      systemKey.fill(0);
+
+      if (!DEK || DEK.length === 0) {
+        await this.setupOIDCUserEncryption(userId);
+        return true;
+      }
+
+      const now = Date.now();
+
+      const oldSession = this.userSessions.get(userId);
+      if (oldSession) {
+        oldSession.dataKey.fill(0);
+      }
+
+      this.userSessions.set(userId, {
+        dataKey: Buffer.from(DEK),
+        lastActivity: now,
+        expiresAt: now + UserCrypto.SESSION_DURATION,
+      });
+
+      DEK.fill(0);
+
+      return true;
+    } catch (error) {
+      await this.setupOIDCUserEncryption(userId);
+      return true;
     }
   }
 
@@ -254,6 +313,18 @@ class UserCrypto {
       password,
       Buffer.from(kekSalt.salt, "hex"),
       kekSalt.iterations,
+      UserCrypto.KEK_LENGTH,
+      "sha256",
+    );
+  }
+
+  private deriveOIDCSystemKey(userId: string): Buffer {
+    const systemSecret = process.env.OIDC_SYSTEM_SECRET || "termix-oidc-system-secret-default";
+    const salt = Buffer.from(userId, "utf8");
+    return crypto.pbkdf2Sync(
+      systemSecret,
+      salt,
+      100000,
       UserCrypto.KEK_LENGTH,
       "sha256",
     );

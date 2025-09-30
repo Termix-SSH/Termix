@@ -20,6 +20,8 @@ WORKDIR /app
 
 COPY . .
 
+RUN find public/fonts -name "*.ttf" ! -name "*Regular.ttf" ! -name "*Bold.ttf" ! -name "*Italic.ttf" -delete
+
 RUN npm cache clean --force && \
     npm run build
 
@@ -69,16 +71,14 @@ RUN apt-get update && apt-get install -y nginx gettext-base openssl && \
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/nginx-https.conf /etc/nginx/nginx-https.conf
-COPY --from=frontend-builder /app/dist /usr/share/nginx/html
-COPY --from=frontend-builder /app/src/locales /usr/share/nginx/html/locales
-COPY --from=frontend-builder /app/public/fonts /usr/share/nginx/html/fonts
-RUN chown -R nginx:nginx /usr/share/nginx/html
 
-COPY --from=production-deps /app/node_modules /app/node_modules
-COPY --from=backend-builder /app/dist/backend ./dist/backend
+COPY --chown=nginx:nginx --from=frontend-builder /app/dist /usr/share/nginx/html
+COPY --chown=nginx:nginx --from=frontend-builder /app/src/locales /usr/share/nginx/html/locales
+COPY --chown=nginx:nginx --from=frontend-builder /app/public/fonts /usr/share/nginx/html/fonts
 
-COPY package.json ./
-RUN chown -R node:node /app
+COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
+COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
+COPY --chown=node:node package.json ./
 
 VOLUME ["/app/data"]
 

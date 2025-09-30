@@ -428,12 +428,10 @@ export function HomepageAuth({
       return;
     }
 
-    if (success && token) {
+    if (success) {
       setOidcLoading(true);
       setError(null);
 
-      // JWT token is now automatically set as HttpOnly cookie by backend
-      console.log("OIDC login successful - JWT set as secure HttpOnly cookie");
       getUserInfo()
         .then((meRes) => {
           setInternalLoggedIn(true);
@@ -455,13 +453,11 @@ export function HomepageAuth({
           );
         })
         .catch((err) => {
-          toast.error(t("errors.failedUserInfo"));
           setInternalLoggedIn(false);
           setLoggedIn(false);
           setIsAdmin(false);
           setUsername(null);
           setUserId(null);
-          // HttpOnly cookies cannot be cleared from JavaScript - backend handles this
           window.history.replaceState(
             {},
             document.title,
