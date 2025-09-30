@@ -65,8 +65,8 @@ ENV DATA_DIR=/app/data \
 
 RUN apt-get update && apt-get install -y nginx gettext-base openssl && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /app/data && \
-    chown -R node:node /app/data && \
+    mkdir -p /app/data /app/uploads && \
+    chown -R node:node /app/data /app/uploads && \
     useradd -r -s /bin/false nginx
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf

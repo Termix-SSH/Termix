@@ -20,9 +20,9 @@ fi
 envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /etc/nginx/nginx.conf.tmp
 mv /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
 
-mkdir -p /app/data
-chown -R node:node /app/data
-chmod 755 /app/data
+mkdir -p /app/data /app/uploads
+chown -R node:node /app/data /app/uploads
+chmod 755 /app/data /app/uploads
 
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "Checking SSL certificate configuration..."
