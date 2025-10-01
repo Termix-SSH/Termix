@@ -105,16 +105,17 @@ repo.
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
   <img src="./repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
+  <img src="./repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 3.png" width="250" alt="Termix Demo 3"/>
   <img src="./repo-images/Image 4.png" width="250" alt="Termix Demo 4"/>
   <img src="./repo-images/Image 5.png" width="250" alt="Termix Demo 5"/>
+  <img src="./repo-images/Image 6.png" width="250" alt="Termix Demo 6"/>
 </p>
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/f9caa061-10dc-4173-ae7d-c6d42f05cf56" width="800" controls>
+  <video src="https://github.com/user-attachments/assets/88936e0d-2399-4122-8eee-c255c25da48c" width="800" controls>
     Your browser does not support the video tag.
   </video>
 </p>
