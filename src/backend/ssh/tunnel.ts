@@ -17,6 +17,7 @@ import type {
 import { CONNECTION_STATES } from "../../types/index.js";
 import { tunnelLogger } from "../utils/logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
+import { SimpleDBOps } from "../utils/simple-db-ops.js";
 
 const app = express();
 app.use(
@@ -490,15 +491,19 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.sourceCredentialId && tunnelConfig.sourceUserId) {
     try {
-      const credentials = await getDb()
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
-            eq(sshCredentials.userId, tunnelConfig.sourceUserId),
+      const credentials = await SimpleDBOps.select(
+        getDb()
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
+              eq(sshCredentials.userId, tunnelConfig.sourceUserId),
+            ),
           ),
-        );
+        "ssh_credentials",
+        tunnelConfig.sourceUserId,
+      );
 
       if (credentials.length > 0) {
         const credential = credentials[0];
@@ -564,15 +569,19 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.endpointCredentialId && tunnelConfig.endpointUserId) {
     try {
-      const credentials = await getDb()
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, tunnelConfig.endpointCredentialId),
-            eq(sshCredentials.userId, tunnelConfig.endpointUserId),
+      const credentials = await SimpleDBOps.select(
+        getDb()
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, tunnelConfig.endpointCredentialId),
+              eq(sshCredentials.userId, tunnelConfig.endpointUserId),
+            ),
           ),
-        );
+        "ssh_credentials",
+        tunnelConfig.endpointUserId,
+      );
 
       if (credentials.length > 0) {
         const credential = credentials[0];
@@ -990,15 +999,19 @@ async function killRemoteTunnelByMarker(
 
   if (tunnelConfig.sourceCredentialId && tunnelConfig.sourceUserId) {
     try {
-      const credentials = await getDb()
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
-            eq(sshCredentials.userId, tunnelConfig.sourceUserId),
+      const credentials = await SimpleDBOps.select(
+        getDb()
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
+              eq(sshCredentials.userId, tunnelConfig.sourceUserId),
+            ),
           ),
-        );
+        "ssh_credentials",
+        tunnelConfig.sourceUserId,
+      );
 
       if (credentials.length > 0) {
         const credential = credentials[0];
