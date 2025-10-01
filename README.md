@@ -103,9 +103,9 @@ repo.
 # Show-off
 
 <p align="center">
-  <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
-  <img src="./repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
-  <img src="./repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
+  <img src="./repo-images/Image 1.png" width="250" alt="Termix Demo 1"/>
+  <img src="./repo-images/Image 2.png" width="250" alt="Termix Demo 2"/>
+  <img src="./repo-images/Image 3.png" width="250" alt="Termix Demo 3"/>
 </p>
 
 <p align="center">
