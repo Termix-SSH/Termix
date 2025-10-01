@@ -18,7 +18,9 @@ import QRCode from "qrcode";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { UserCrypto } from "../../utils/user-crypto.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -893,11 +895,7 @@ router.post("/login", async (req, res) => {
         await authManager.registerUser(userRecord.id, password);
       }
     } catch (setupError) {
-      authLogger.error("Failed to initialize user encryption", setupError, {
-        operation: "user_encryption_setup_failed",
-        username,
-        userId: userRecord.id,
-      });
+      // Continue if setup fails - authenticateUser will handle it
     }
 
     const dataUnlocked = await authManager.authenticateUser(
@@ -905,14 +903,7 @@ router.post("/login", async (req, res) => {
       password,
     );
     if (!dataUnlocked) {
-      authLogger.error("Failed to unlock user data during login", undefined, {
-        operation: "user_login_data_unlock_failed",
-        username,
-        userId: userRecord.id,
-      });
-      return res.status(500).json({
-        error: "Failed to unlock user data - please contact administrator",
-      });
+      return res.status(401).json({ error: "Incorrect password" });
     }
 
     if (userRecord.totp_enabled) {
@@ -921,6 +912,7 @@ router.post("/login", async (req, res) => {
         expiresIn: "10m",
       });
       return res.json({
+        success: true,
         requires_totp: true,
         temp_token: tempToken,
       });
@@ -1488,17 +1480,42 @@ router.post("/totp/verify-login", async (req, res) => {
       return res.status(400).json({ error: "TOTP not enabled for this user" });
     }
 
+    const userDataKey = authManager.getUserDataKey(userRecord.id);
+    if (!userDataKey) {
+      return res.status(401).json({
+        error: "Session expired - please log in again",
+        code: "SESSION_EXPIRED",
+      });
+    }
+
+    const totpSecret = LazyFieldEncryption.safeGetFieldValue(
+      userRecord.totp_secret,
+      userDataKey,
+      userRecord.id,
+      "totp_secret",
+    );
+
     const verified = speakeasy.totp.verify({
-      secret: userRecord.totp_secret,
+      secret: totpSecret,
       encoding: "base32",
       token: totp_code,
       window: 2,
     });
 
     if (!verified) {
-      const backupCodes = userRecord.totp_backup_codes
-        ? JSON.parse(userRecord.totp_backup_codes)
-        : [];
+      let backupCodes = [];
+      try {
+        backupCodes = userRecord.totp_backup_codes
+          ? JSON.parse(userRecord.totp_backup_codes)
+          : [];
+      } catch (parseError) {
+        backupCodes = [];
+      }
+
+      if (!Array.isArray(backupCodes)) {
+        backupCodes = [];
+      }
+
       const backupIndex = backupCodes.indexOf(totp_code);
 
       if (backupIndex === -1) {
@@ -1516,18 +1533,40 @@ router.post("/totp/verify-login", async (req, res) => {
       expiresIn: "50d",
     });
 
+    const isElectron =
+      req.headers["x-electron-app"] === "true" ||
+      req.headers["X-Electron-App"] === "true";
+
+    const isDataUnlocked = authManager.isUserUnlocked(userRecord.id);
+
+    if (!isDataUnlocked) {
+      return res.status(401).json({
+        error: "Session expired - please log in again",
+        code: "SESSION_EXPIRED",
+      });
+    }
+
+    const response: any = {
+      success: true,
+      is_admin: !!userRecord.is_admin,
+      username: userRecord.username,
+      userId: userRecord.id,
+      is_oidc: !!userRecord.is_oidc,
+      totp_enabled: !!userRecord.totp_enabled,
+      data_unlocked: isDataUnlocked,
+    };
+
+    if (isElectron) {
+      response.token = token;
+    }
+
     return res
       .cookie(
         "jwt",
         token,
         authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000),
       )
-      .json({
-        success: true,
-        is_admin: !!userRecord.is_admin,
-        username: userRecord.username,
-        token: req.headers["x-electron-app"] === "true" ? token : undefined,
-      });
+      .json(response);
   } catch (err) {
     authLogger.error("TOTP verification failed", err);
     return res.status(500).json({ error: "TOTP verification failed" });

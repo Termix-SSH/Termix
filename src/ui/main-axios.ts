@@ -65,6 +65,10 @@ interface AuthResponse {
   success?: boolean;
   is_admin?: boolean;
   username?: string;
+  userId?: string;
+  is_oidc?: boolean;
+  totp_enabled?: boolean;
+  data_unlocked?: boolean;
 }
 
 interface UserInfo {
@@ -1540,6 +1544,8 @@ export async function loginUser(
       success: response.data.success,
       is_admin: response.data.is_admin,
       username: response.data.username,
+      requires_totp: response.data.requires_totp,
+      temp_token: response.data.temp_token,
     };
   } catch (error) {
     handleApiError(error, "login user");

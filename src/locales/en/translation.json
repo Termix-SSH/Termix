@@ -1174,6 +1174,7 @@
     "networkError": "Network error",
     "databaseConnection": "Could not connect to the database.",
     "unknownError": "Unknown error",
+    "loginFailed": "Login failed",
     "failedPasswordReset": "Failed to initiate password reset",
     "failedVerifyCode": "Failed to verify reset code",
     "failedCompleteReset": "Failed to complete password reset",
@@ -1193,7 +1194,8 @@
     "usernameExists": "Username already exists",
     "emailExists": "Email already exists",
     "loadFailed": "Failed to load data",
-    "saveError": "Failed to save"
+    "saveError": "Failed to save",
+    "sessionExpired": "Session expired - please log in again"
   },
   "messages": {
     "saveSuccess": "Saved successfully",

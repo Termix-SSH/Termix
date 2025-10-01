@@ -1151,6 +1151,7 @@
     "networkError": "网络错误",
     "databaseConnection": "无法连接到数据库。",
     "unknownError": "未知错误",
+    "loginFailed": "登录失败",
     "failedPasswordReset": "无法启动密码重置",
     "failedVerifyCode": "验证重置代码失败",
     "failedCompleteReset": "无法完成密码重置",
@@ -1170,7 +1171,8 @@
     "usernameExists": "用户名已存在",
     "emailExists": "邮箱已存在",
     "loadFailed": "加载数据失败",
-    "saveError": "保存失败"
+    "saveError": "保存失败",
+    "sessionExpired": "会话已过期 - 请重新登录"
   },
   "messages": {
     "saveSuccess": "保存成功",

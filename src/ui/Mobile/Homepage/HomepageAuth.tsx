@@ -22,6 +22,7 @@ import {
   setCookie,
   getCookie,
   logoutUser,
+  isElectron,
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 
@@ -341,30 +342,46 @@ export function HomepageAuth({
         throw new Error(t("errors.loginFailed"));
       }
 
-      const meRes = await getUserInfo();
+      if (isElectron() && res.token) {
+        localStorage.setItem("jwt", res.token);
+      }
 
       setInternalLoggedIn(true);
       setLoggedIn(true);
-      setIsAdmin(!!meRes.is_admin);
-      setUsername(meRes.username || null);
-      setUserId(meRes.userId || null);
+      setIsAdmin(!!res.is_admin);
+      setUsername(res.username || null);
+      setUserId(res.userId || null);
       setDbError(null);
-      onAuthSuccess({
-        isAdmin: !!meRes.is_admin,
-        username: meRes.username || null,
-        userId: meRes.userId || null,
-      });
+      
+      setTimeout(() => {
+        onAuthSuccess({
+          isAdmin: !!res.is_admin,
+          username: res.username || null,
+          userId: res.userId || null,
+        });
+      }, 100);
+      
       setInternalLoggedIn(true);
       setTotpRequired(false);
       setTotpCode("");
       setTotpTempToken("");
       toast.success(t("messages.loginSuccess"));
     } catch (err: any) {
+      const errorCode = err?.response?.data?.code;
       const errorMessage =
         err?.response?.data?.error ||
         err?.message ||
         t("errors.invalidTotpCode");
-      toast.error(errorMessage);
+      
+      if (errorCode === "SESSION_EXPIRED") {
+        setTotpRequired(false);
+        setTotpCode("");
+        setTotpTempToken("");
+        setTab("login");
+        toast.error(t("errors.sessionExpired"));
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setTotpLoading(false);
     }
