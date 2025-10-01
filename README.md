@@ -74,7 +74,7 @@ Supported Devices:
 - Linux (app)
 - iOS (coming in a few days)
 - Android (coming in a few days)
-- iPadOS and macOS comming soon
+- iPadOS and macOS coming soon
 
 Visit the Termix [Docs](https://docs.termix.site/install) for more information on how to install Termix on all platforms. Otherwise, view
 a sample docker-compose file here:
