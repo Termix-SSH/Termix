@@ -264,6 +264,7 @@
     "newVersionAvailable": "有新版本 ({{version}}) 可用。",
     "failedToFetchUpdateInfo": "获取更新信息失败",
     "preRelease": "预发布版本",
+    "loginFailed": "登录失败",
     "noReleasesFound": "未找到发布版本。",
     "yourBackupCodes": "您的备份代码",
     "sendResetCode": "发送重置代码",
@@ -1313,6 +1314,10 @@
   },
   "mobile": {
     "selectHostToStart": "选择一个主机以开始您的终端会话",
-    "limitedSupportMessage": "移动端支持目前有限。我们即将推出专门的移动应用以提升您的体验。"
+    "limitedSupportMessage": "网站移动端支持仍在开发中。使用移动应用以获得更好的体验。",
+    "mobileAppInProgress": "移动应用开发中",
+    "mobileAppInProgressDesc": "我们正在开发专门的移动应用，为移动设备提供更好的体验。",
+    "viewMobileAppDocs": "安装移动应用",
+    "mobileAppDocumentation": "移动应用文档"
   }
 }

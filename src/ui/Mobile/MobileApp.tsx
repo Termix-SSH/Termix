@@ -162,6 +162,12 @@ const AppContent: FC = () => {
             <p className="text-sm text-gray-300 max-w-xs">
               {t("mobile.limitedSupportMessage")}
             </p>
+            <button
+              className="mt-4 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+              onClick={() => window.open("https://docs.termix.site/install", "_blank")}
+            >
+              {t("mobile.viewMobileAppDocs")}
+            </button>
           </div>
         )}
       </div>

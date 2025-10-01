@@ -54,9 +54,29 @@ export class DatabaseMigration {
     let reason = "";
 
     if (hasEncryptedDb && hasUnencryptedDb) {
-      needsMigration = false;
-      reason =
-        "Both encrypted and unencrypted databases exist. Skipping migration for safety. Manual intervention may be required.";
+      const unencryptedSize = fs.statSync(this.unencryptedDbPath).size;
+      const encryptedSize = fs.statSync(this.encryptedDbPath).size;
+      
+      if (unencryptedSize === 0) {
+        needsMigration = false;
+        reason = "Empty unencrypted database found alongside encrypted database. Removing empty file.";
+        try {
+          fs.unlinkSync(this.unencryptedDbPath);
+          databaseLogger.info("Removed empty unencrypted database file", {
+            operation: "migration_cleanup_empty",
+            path: this.unencryptedDbPath,
+          });
+        } catch (error) {
+          databaseLogger.warn("Failed to remove empty unencrypted database", {
+            operation: "migration_cleanup_empty_failed",
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      } else {
+        needsMigration = false;
+        reason =
+          "Both encrypted and unencrypted databases exist. Skipping migration for safety. Manual intervention may be required.";
+      }
     } else if (hasEncryptedDb && !hasUnencryptedDb) {
       needsMigration = false;
       reason = "Only encrypted database exists. No migration needed.";

@@ -184,7 +184,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       isUnmountingRef.current ||
       shouldNotReconnectRef.current ||
       isReconnectingRef.current ||
-      isConnectingRef.current
+      isConnectingRef.current ||
+      wasDisconnectedBySSH.current
     ) {
       return;
     }
@@ -213,7 +214,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     );
 
     reconnectTimeoutRef.current = setTimeout(() => {
-      if (isUnmountingRef.current || shouldNotReconnectRef.current) {
+      if (isUnmountingRef.current || shouldNotReconnectRef.current || wasDisconnectedBySSH.current) {
         isReconnectingRef.current = false;
         return;
       }
@@ -384,6 +385,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
               terminal.clear();
             }
             setIsConnecting(true);
+            wasDisconnectedBySSH.current = false;
             attemptReconnection();
             return;
           }
@@ -408,9 +410,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           if (terminal) {
             terminal.clear();
           }
-          setIsConnecting(true);
-          if (!isUnmountingRef.current && !shouldNotReconnectRef.current) {
-            attemptReconnection();
+          setIsConnecting(false);
+          if (onClose) {
+            onClose();
           }
         }
       } catch (error) {
@@ -438,12 +440,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         return;
       }
 
-      setIsConnecting(true);
+      setIsConnecting(false);
       if (
         !wasDisconnectedBySSH.current &&
         !isUnmountingRef.current &&
         !shouldNotReconnectRef.current
       ) {
+        wasDisconnectedBySSH.current = false;
         attemptReconnection();
       }
     });
@@ -455,8 +458,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       if (terminal) {
         terminal.clear();
       }
-      setIsConnecting(true);
+      setIsConnecting(false);
       if (!isUnmountingRef.current && !shouldNotReconnectRef.current) {
+        wasDisconnectedBySSH.current = false;
         attemptReconnection();
       }
     });

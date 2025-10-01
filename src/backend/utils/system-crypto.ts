@@ -26,6 +26,20 @@ class SystemCrypto {
         return;
       }
 
+      const dataDir = process.env.DATA_DIR || "./db/data";
+      const envPath = path.join(dataDir, ".env");
+      
+      try {
+        const envContent = await fs.readFile(envPath, "utf8");
+        const jwtMatch = envContent.match(/^JWT_SECRET=(.+)$/m);
+        if (jwtMatch && jwtMatch[1] && jwtMatch[1].length >= 64) {
+          this.jwtSecret = jwtMatch[1];
+          process.env.JWT_SECRET = jwtMatch[1];
+          return;
+        }
+      } catch {
+      }
+
       await this.generateAndGuideUser();
     } catch (error) {
       databaseLogger.error("Failed to initialize JWT secret", error, {
@@ -50,6 +64,20 @@ class SystemCrypto {
         return;
       }
 
+      const dataDir = process.env.DATA_DIR || "./db/data";
+      const envPath = path.join(dataDir, ".env");
+      
+      try {
+        const envContent = await fs.readFile(envPath, "utf8");
+        const dbKeyMatch = envContent.match(/^DATABASE_KEY=(.+)$/m);
+        if (dbKeyMatch && dbKeyMatch[1] && dbKeyMatch[1].length >= 64) {
+          this.databaseKey = Buffer.from(dbKeyMatch[1], "hex");
+          process.env.DATABASE_KEY = dbKeyMatch[1];
+          return;
+        }
+      } catch {
+      }
+
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
       databaseLogger.error("Failed to initialize database key", error, {
@@ -72,6 +100,20 @@ class SystemCrypto {
       if (envToken && envToken.length >= 32) {
         this.internalAuthToken = envToken;
         return;
+      }
+
+      const dataDir = process.env.DATA_DIR || "./db/data";
+      const envPath = path.join(dataDir, ".env");
+      
+      try {
+        const envContent = await fs.readFile(envPath, "utf8");
+        const tokenMatch = envContent.match(/^INTERNAL_AUTH_TOKEN=(.+)$/m);
+        if (tokenMatch && tokenMatch[1] && tokenMatch[1].length >= 32) {
+          this.internalAuthToken = tokenMatch[1];
+          process.env.INTERNAL_AUTH_TOKEN = tokenMatch[1];
+          return;
+        }
+      } catch {
       }
 
       await this.generateAndGuideInternalAuthToken();

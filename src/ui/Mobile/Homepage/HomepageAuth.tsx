@@ -534,6 +534,28 @@ export function HomepageAuth({
         </div>
       )}
 
+      {internalLoggedIn && !authLoading && (
+        <div className="flex flex-col gap-5">
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold mb-1">
+              {t("homepage.loggedInTitle")}
+            </h2>
+            <p className="text-muted-foreground">
+              {t("mobile.mobileAppInProgressDesc")}
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11 text-base font-semibold"
+            onClick={() => window.open("https://docs.termix.site/install", "_blank")}
+          >
+            {t("mobile.viewMobileAppDocs")}
+          </Button>
+        </div>
+      )}
+
       {!internalLoggedIn && !authLoading && !totpRequired && (
         <>
           <div className="flex gap-2 mb-6">
@@ -854,6 +876,17 @@ export function HomepageAuth({
               </div>
               <LanguageSwitcher />
             </div>
+          </div>
+
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 text-base font-semibold"
+              onClick={() => window.open("https://docs.termix.site/install", "_blank")}
+            >
+              {t("mobile.viewMobileAppDocs")}
+            </Button>
           </div>
         </>
       )}

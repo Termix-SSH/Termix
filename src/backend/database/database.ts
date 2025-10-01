@@ -207,7 +207,9 @@ async function fetchGitHubAPI(
   }
 }
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "1gb" }));
+app.use(bodyParser.urlencoded({ limit: "1gb", extended: true }));
+app.use(bodyParser.raw({ limit: "5gb", type: "application/octet-stream" }));
 app.use(cookieParser());
 
 app.get("/health", (req, res) => {
@@ -494,13 +496,28 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       process.env.NODE_ENV === "production"
         ? path.join(process.env.DATA_DIR || "./db/data", ".temp", "exports")
         : path.join(os.tmpdir(), "termix-exports");
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
+    
+    try {
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+    } catch (dirError) {
+      apiLogger.error("Failed to create temp directory", dirError, {
+        operation: "export_temp_dir_error",
+        tempDir,
+      });
+      throw new Error(`Failed to create temp directory: ${dirError.message}`);
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const filename = `termix-export-${user[0].username}-${timestamp}.sqlite`;
     const tempPath = path.join(tempDir, filename);
+
+    apiLogger.info("Creating export database", {
+      operation: "export_db_creation",
+      userId,
+      tempPath,
+    });
 
     const exportDb = new Database(tempPath);
 
@@ -844,21 +861,40 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
     const fileStream = fs.createReadStream(tempPath);
-    fileStream.pipe(res);
+    
+    fileStream.on("error", (streamError) => {
+      apiLogger.error("File stream error during export", streamError, {
+        operation: "export_file_stream_error",
+        userId,
+        tempPath,
+      });
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: "Failed to stream export file",
+          details: streamError.message,
+        });
+      }
+    });
 
     fileStream.on("end", () => {
+      apiLogger.success("User data exported as SQLite successfully", {
+        operation: "user_data_sqlite_export_success",
+        userId,
+        filename,
+      });
+      
       fs.unlink(tempPath, (err) => {
         if (err) {
-          apiLogger.warn("Failed to clean up export file", { path: tempPath });
+          apiLogger.warn("Failed to clean up export file", { 
+            operation: "export_cleanup_failed",
+            path: tempPath,
+            error: err.message 
+          });
         }
       });
     });
 
-    apiLogger.success("User data exported as SQLite successfully", {
-      operation: "user_data_sqlite_export_success",
-      userId,
-      filename,
-    });
+    fileStream.pipe(res);
   } catch (error) {
     apiLogger.error("User data SQLite export failed", error, {
       operation: "user_data_sqlite_export_failed",

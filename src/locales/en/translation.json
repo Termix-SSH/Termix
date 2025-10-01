@@ -267,6 +267,7 @@
     "newVersionAvailable": "A new version ({{version}}) is available.",
     "failedToFetchUpdateInfo": "Failed to fetch update information",
     "preRelease": "Pre-release",
+    "loginFailed": "Login failed",
     "noReleasesFound": "No releases found.",
     "yourBackupCodes": "Your Backup Codes",
     "sendResetCode": "Send Reset Code",
@@ -1406,6 +1407,10 @@
   },
   "mobile": {
     "selectHostToStart": "Select a host to start your terminal session",
-    "limitedSupportMessage": "Mobile support is currently limited. A dedicated mobile app is coming soon to enhance your experience."
+    "limitedSupportMessage": "Website mobile support is still in progress. Use the mobile app for a better experience.",
+    "mobileAppInProgress": "Mobile app is in progress",
+    "mobileAppInProgressDesc": "We're working on a dedicated mobile app to provide a better experience on mobile devices.",
+    "viewMobileAppDocs": "Install Mobile App",
+    "mobileAppDocumentation": "Mobile App Documentation"
   }
 }

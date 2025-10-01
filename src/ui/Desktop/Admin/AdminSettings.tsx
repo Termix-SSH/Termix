@@ -273,7 +273,7 @@ export function AdminSettings({
     try {
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/export`
-        : "/database/export";
+        : `http://localhost:30001/database/export`;
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -333,7 +333,7 @@ export function AdminSettings({
     try {
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/import`
-        : "/database/import";
+        : `http://localhost:30001/database/import`;
 
       const formData = new FormData();
       formData.append("file", importFile);
