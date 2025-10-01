@@ -43,7 +43,7 @@ body:
     attributes:
       label: Version
       description: Find your version in the User Profile tab
-      placeholder: "e.g., 1.6.0"
+      placeholder: "e.g., 1.7.0"
     validations:
       required: true
   - type: checkboxes
