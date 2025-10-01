@@ -271,9 +271,18 @@ export function AdminSettings({
 
     setExportLoading(true);
     try {
+      const isDev = process.env.NODE_ENV === "development" &&
+        (window.location.port === "3000" ||
+          window.location.port === "5173" ||
+          window.location.port === "" ||
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/export`
-        : `http://localhost:30001/database/export`;
+        : isDev
+          ? `http://localhost:30001/database/export`
+          : `${window.location.protocol}//${window.location.host}/database/export`;
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -331,9 +340,18 @@ export function AdminSettings({
 
     setImportLoading(true);
     try {
+      const isDev = process.env.NODE_ENV === "development" &&
+        (window.location.port === "3000" ||
+          window.location.port === "5173" ||
+          window.location.port === "" ||
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+
       const apiUrl = isElectron()
         ? `${(window as any).configuredServerUrl}/database/import`
-        : `http://localhost:30001/database/import`;
+        : isDev
+          ? `http://localhost:30001/database/import`
+          : `${window.location.protocol}//${window.location.host}/database/import`;
 
       const formData = new FormData();
       formData.append("file", importFile);
