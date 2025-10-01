@@ -352,7 +352,7 @@ export function HomepageAuth({
       setUsername(res.username || null);
       setUserId(res.userId || null);
       setDbError(null);
-      
+
       setTimeout(() => {
         onAuthSuccess({
           isAdmin: !!res.is_admin,
@@ -360,7 +360,7 @@ export function HomepageAuth({
           userId: res.userId || null,
         });
       }, 100);
-      
+
       setInternalLoggedIn(true);
       setTotpRequired(false);
       setTotpCode("");
@@ -372,7 +372,7 @@ export function HomepageAuth({
         err?.response?.data?.error ||
         err?.message ||
         t("errors.invalidTotpCode");
-      
+
       if (errorCode === "SESSION_EXPIRED") {
         setTotpRequired(false);
         setTotpCode("");
@@ -566,7 +566,9 @@ export function HomepageAuth({
             type="button"
             variant="outline"
             className="w-full h-11 text-base font-semibold"
-            onClick={() => window.open("https://docs.termix.site/install", "_blank")}
+            onClick={() =>
+              window.open("https://docs.termix.site/install", "_blank")
+            }
           >
             {t("mobile.viewMobileAppDocs")}
           </Button>
@@ -900,7 +902,9 @@ export function HomepageAuth({
               type="button"
               variant="outline"
               className="w-full h-11 text-base font-semibold"
-              onClick={() => window.open("https://docs.termix.site/install", "_blank")}
+              onClick={() =>
+                window.open("https://docs.termix.site/install", "_blank")
+              }
             >
               {t("mobile.viewMobileAppDocs")}
             </Button>

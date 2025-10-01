@@ -355,11 +355,22 @@ export function FileViewer({
       setShowLargeFileWarning(false);
     }
 
-    if (fileTypeInfo.type === "image" && file.name.toLowerCase().endsWith('.svg') && content) {
+    if (
+      fileTypeInfo.type === "image" &&
+      file.name.toLowerCase().endsWith(".svg") &&
+      content
+    ) {
       setImageLoading(false);
       setImageLoadError(false);
     }
-  }, [content, savedContent, fileTypeInfo.type, isLargeFile, forceShowAsText, file.name]);
+  }, [
+    content,
+    savedContent,
+    fileTypeInfo.type,
+    isLargeFile,
+    forceShowAsText,
+    file.name,
+  ]);
 
   const handleContentChange = (newContent: string) => {
     setEditedContent(newContent);
@@ -706,8 +717,8 @@ export function FileViewer({
                   </Button>
                 )}
               </div>
-            ) : file.name.toLowerCase().endsWith('.svg') ? (
-              <div 
+            ) : file.name.toLowerCase().endsWith(".svg") ? (
+              <div
                 className="max-w-full max-h-full flex items-center justify-center"
                 style={{ maxHeight: "calc(100vh - 200px)" }}
                 dangerouslySetInnerHTML={{ __html: content }}

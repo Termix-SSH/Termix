@@ -45,7 +45,7 @@ If you would like, you can support the project here!\
 
 Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a web-based
 solution for managing your servers and infrastructure through a single, intuitive interface. Termix offers SSH terminal
-access, SSH tunneling capabilities, and remote file management, with many more tools to come.
+access, SSH tunneling capabilities, remote file management, with many more tools to come.
 
 # Features
 
@@ -69,12 +69,13 @@ See [Projects](https://github.com/users/LukeGus/projects/3) for all planned feat
 # Installation
 
 Supported Devices:
+
 - Website (any modern browser like Google, Safari, and Firefox)
 - Windows (app)
 - Linux (app)
 - iOS (coming in a few days)
 - Android (coming in a few days)
-- iPadOS and macOS coming soon
+- iPadOS and macOS are in progress
 
 Visit the Termix [Docs](https://docs.termix.site/install) for more information on how to install Termix on all platforms. Otherwise, view
 a sample docker-compose file here:

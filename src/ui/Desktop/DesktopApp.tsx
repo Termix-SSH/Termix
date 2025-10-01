@@ -143,7 +143,7 @@ function AppContent() {
           isAdmin={isAdmin}
           username={username}
         >
-          <div 
+          <div
             className="h-screen w-full visible pointer-events-auto static overflow-hidden"
             style={{ display: showTerminalView ? "block" : "none" }}
           >

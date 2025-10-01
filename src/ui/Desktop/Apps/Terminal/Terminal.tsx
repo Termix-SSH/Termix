@@ -214,7 +214,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     );
 
     reconnectTimeoutRef.current = setTimeout(() => {
-      if (isUnmountingRef.current || shouldNotReconnectRef.current || wasDisconnectedBySSH.current) {
+      if (
+        isUnmountingRef.current ||
+        shouldNotReconnectRef.current ||
+        wasDisconnectedBySSH.current
+      ) {
         isReconnectingRef.current = false;
         return;
       }

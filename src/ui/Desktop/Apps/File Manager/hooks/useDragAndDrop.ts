@@ -9,15 +9,15 @@ interface DragAndDropState {
 interface UseDragAndDropProps {
   onFilesDropped: (files: FileList) => void;
   onError?: (error: string) => void;
-  maxFileSize?: number; // in MB
+  maxFileSize?: number;
   allowedTypes?: string[];
 }
 
 export function useDragAndDrop({
   onFilesDropped,
   onError,
-  maxFileSize = 5120, // 5GB default - much more reasonable
-  allowedTypes = [], // empty means all types allowed
+  maxFileSize = 5120,
+  allowedTypes = [],
 }: UseDragAndDropProps) {
   const [state, setState] = useState<DragAndDropState>({
     isDragging: false,
@@ -32,28 +32,23 @@ export function useDragAndDrop({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
-        // Check file size
         if (file.size > maxSizeBytes) {
           return `File "${file.name}" is too large. Maximum size is ${maxFileSize}MB.`;
         }
 
-        // Check file type if restrictions exist
         if (allowedTypes.length > 0) {
           const fileExt = file.name.split(".").pop()?.toLowerCase();
           const mimeType = file.type.toLowerCase();
 
           const isAllowed = allowedTypes.some((type) => {
-            // Check by extension
             if (type.startsWith(".")) {
               return fileExt === type.slice(1);
             }
-            // Check by MIME type
             if (type.includes("/")) {
               return (
                 mimeType === type || mimeType.startsWith(type.replace("*", ""))
               );
             }
-            // Check by category
             switch (type) {
               case "image":
                 return mimeType.startsWith("image/");
@@ -114,7 +109,6 @@ export function useDragAndDrop({
     e.preventDefault();
     e.stopPropagation();
 
-    // Set dropEffect to indicate what operation is allowed
     e.dataTransfer.dropEffect = "copy";
   }, []);
 

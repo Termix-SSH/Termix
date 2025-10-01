@@ -496,7 +496,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       process.env.NODE_ENV === "production"
         ? path.join(process.env.DATA_DIR || "./db/data", ".temp", "exports")
         : path.join(os.tmpdir(), "termix-exports");
-    
+
     try {
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
@@ -861,7 +861,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
     const fileStream = fs.createReadStream(tempPath);
-    
+
     fileStream.on("error", (streamError) => {
       apiLogger.error("File stream error during export", streamError, {
         operation: "export_file_stream_error",
@@ -882,13 +882,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         userId,
         filename,
       });
-      
+
       fs.unlink(tempPath, (err) => {
         if (err) {
-          apiLogger.warn("Failed to clean up export file", { 
+          apiLogger.warn("Failed to clean up export file", {
             operation: "export_cleanup_failed",
             path: tempPath,
-            error: err.message 
+            error: err.message,
           });
         }
       });

@@ -58,14 +58,10 @@ interface LeftSidebarProps {
 
 async function handleLogout() {
   try {
-    // Call backend logout endpoint to clear HttpOnly cookie and data session
     await logoutUser();
-
-    // Reload the page to reset the application state
     window.location.reload();
   } catch (error) {
     console.error("Logout failed:", error);
-    // Even if logout fails, reload the page to reset state
     window.location.reload();
   }
 }

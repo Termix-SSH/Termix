@@ -71,7 +71,7 @@ class UserCrypto {
 
   async setupOIDCUserEncryption(userId: string): Promise<void> {
     const DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
-    
+
     const now = Date.now();
     this.userSessions.set(userId, {
       dataKey: Buffer.from(DEK),
@@ -319,7 +319,8 @@ class UserCrypto {
   }
 
   private deriveOIDCSystemKey(userId: string): Buffer {
-    const systemSecret = process.env.OIDC_SYSTEM_SECRET || "termix-oidc-system-secret-default";
+    const systemSecret =
+      process.env.OIDC_SYSTEM_SECRET || "termix-oidc-system-secret-default";
     const salt = Buffer.from(userId, "utf8");
     return crypto.pbkdf2Sync(
       systemSecret,

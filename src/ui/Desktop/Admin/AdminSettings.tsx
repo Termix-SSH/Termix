@@ -271,7 +271,8 @@ export function AdminSettings({
 
     setExportLoading(true);
     try {
-      const isDev = process.env.NODE_ENV === "development" &&
+      const isDev =
+        process.env.NODE_ENV === "development" &&
         (window.location.port === "3000" ||
           window.location.port === "5173" ||
           window.location.port === "" ||
@@ -340,7 +341,8 @@ export function AdminSettings({
 
     setImportLoading(true);
     try {
-      const isDev = process.env.NODE_ENV === "development" &&
+      const isDev =
+        process.env.NODE_ENV === "development" &&
         (window.location.port === "3000" ||
           window.location.port === "5173" ||
           window.location.port === "" ||

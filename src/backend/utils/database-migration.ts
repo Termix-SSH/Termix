@@ -56,10 +56,11 @@ export class DatabaseMigration {
     if (hasEncryptedDb && hasUnencryptedDb) {
       const unencryptedSize = fs.statSync(this.unencryptedDbPath).size;
       const encryptedSize = fs.statSync(this.encryptedDbPath).size;
-      
+
       if (unencryptedSize === 0) {
         needsMigration = false;
-        reason = "Empty unencrypted database found alongside encrypted database. Removing empty file.";
+        reason =
+          "Empty unencrypted database found alongside encrypted database. Removing empty file.";
         try {
           fs.unlinkSync(this.unencryptedDbPath);
           databaseLogger.info("Removed empty unencrypted database file", {

@@ -28,7 +28,7 @@ class SystemCrypto {
 
       const dataDir = process.env.DATA_DIR || "./db/data";
       const envPath = path.join(dataDir, ".env");
-      
+
       try {
         const envContent = await fs.readFile(envPath, "utf8");
         const jwtMatch = envContent.match(/^JWT_SECRET=(.+)$/m);
@@ -37,8 +37,7 @@ class SystemCrypto {
           process.env.JWT_SECRET = jwtMatch[1];
           return;
         }
-      } catch {
-      }
+      } catch {}
 
       await this.generateAndGuideUser();
     } catch (error) {
@@ -66,7 +65,7 @@ class SystemCrypto {
 
       const dataDir = process.env.DATA_DIR || "./db/data";
       const envPath = path.join(dataDir, ".env");
-      
+
       try {
         const envContent = await fs.readFile(envPath, "utf8");
         const dbKeyMatch = envContent.match(/^DATABASE_KEY=(.+)$/m);
@@ -75,8 +74,7 @@ class SystemCrypto {
           process.env.DATABASE_KEY = dbKeyMatch[1];
           return;
         }
-      } catch {
-      }
+      } catch {}
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
@@ -104,7 +102,7 @@ class SystemCrypto {
 
       const dataDir = process.env.DATA_DIR || "./db/data";
       const envPath = path.join(dataDir, ".env");
-      
+
       try {
         const envContent = await fs.readFile(envPath, "utf8");
         const tokenMatch = envContent.match(/^INTERNAL_AUTH_TOKEN=(.+)$/m);
@@ -113,8 +111,7 @@ class SystemCrypto {
           process.env.INTERNAL_AUTH_TOKEN = tokenMatch[1];
           return;
         }
-      } catch {
-      }
+      } catch {}
 
       await this.generateAndGuideInternalAuthToken();
     } catch (error) {

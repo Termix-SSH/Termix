@@ -87,7 +87,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     initialHost || null,
   );
   const [currentPath, setCurrentPath] = useState(
-    initialHost?.defaultPath || "/"
+    initialHost?.defaultPath || "/",
   );
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -184,7 +184,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const handleCloseWithError = useCallback(
     (errorMessage: string) => {
-      if (isClosing) return; // Prevent duplicate calls
+      if (isClosing) return;
       setIsClosing(true);
       toast.error(errorMessage);
       if (onClose) {
@@ -758,10 +758,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       const windowCount = Date.now() % 10;
       const baseOffsetX = 120 + windowCount * 30;
       const baseOffsetY = 120 + windowCount * 30;
-      
+
       const maxOffsetX = Math.max(0, window.innerWidth - 800 - 100);
       const maxOffsetY = Math.max(0, window.innerHeight - 600 - 100);
-      
+
       const offsetX = Math.min(baseOffsetX, maxOffsetX);
       const offsetY = Math.min(baseOffsetY, maxOffsetY);
 

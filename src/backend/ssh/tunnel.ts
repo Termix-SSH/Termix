@@ -569,7 +569,9 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.endpointCredentialId && tunnelConfig.endpointUserId) {
     try {
-      const userDataKey = DataCrypto.getUserDataKey(tunnelConfig.endpointUserId);
+      const userDataKey = DataCrypto.getUserDataKey(
+        tunnelConfig.endpointUserId,
+      );
       if (userDataKey) {
         const credentials = await SimpleDBOps.select(
           getDb()

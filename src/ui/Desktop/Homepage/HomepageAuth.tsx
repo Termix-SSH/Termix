@@ -82,7 +82,6 @@ export function HomepageAuth({
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
   const [oidcConfigured, setOidcConfigured] = useState(false);
 
-  // Legacy reset states (kept for compatibility)
   const [resetStep, setResetStep] = useState<
     "initiate" | "verify" | "newPassword"
   >("initiate");
@@ -106,8 +105,7 @@ export function HomepageAuth({
     const clearJWTOnLoad = async () => {
       try {
         await logoutUser();
-      } catch (error) {
-      }
+      } catch (error) {}
     };
 
     clearJWTOnLoad();
@@ -242,7 +240,6 @@ export function HomepageAuth({
       setIsAdmin(false);
       setUsername(null);
       setUserId(null);
-      // HttpOnly cookies cannot be cleared from JavaScript - backend handles this
       if (err?.response?.data?.error?.includes("Database")) {
         setDbConnectionFailed(true);
       } else {
@@ -252,8 +249,6 @@ export function HomepageAuth({
       setLoading(false);
     }
   }
-
-  // ===== Legacy password reset functions (deprecated) =====
 
   async function handleInitiatePasswordReset() {
     setError(null);
@@ -317,7 +312,6 @@ export function HomepageAuth({
       setResetSuccess(true);
       toast.success(t("messages.passwordResetSuccess"));
 
-      // Immediately redirect to login after successful reset
       setTab("login");
       resetPasswordState();
     } catch (err: any) {
@@ -372,7 +366,7 @@ export function HomepageAuth({
       setUsername(res.username || null);
       setUserId(res.userId || null);
       setDbError(null);
-      
+
       setTimeout(() => {
         onAuthSuccess({
           isAdmin: !!res.is_admin,
@@ -380,7 +374,7 @@ export function HomepageAuth({
           userId: res.userId || null,
         });
       }, 100);
-      
+
       setInternalLoggedIn(true);
       setTotpRequired(false);
       setTotpCode("");
@@ -392,7 +386,7 @@ export function HomepageAuth({
         err?.response?.data?.error ||
         err?.message ||
         t("errors.invalidTotpCode");
-      
+
       if (errorCode === "SESSION_EXPIRED") {
         setTotpRequired(false);
         setTotpCode("");
