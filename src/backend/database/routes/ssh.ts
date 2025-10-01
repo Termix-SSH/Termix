@@ -62,41 +62,53 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
       .select()
       .from(sshData)
       .where(
-        or(
-          isNotNull(sshData.autostartPassword),
-          isNotNull(sshData.autostartKey),
+        and(
+          eq(sshData.enableTunnel, true),
+          isNotNull(sshData.tunnelConnections),
         ),
       );
 
-    const result = autostartHosts.map((host) => {
-      const tunnelConnections = host.tunnelConnections
-        ? JSON.parse(host.tunnelConnections)
-        : [];
+    const result = autostartHosts
+      .map((host) => {
+        const tunnelConnections = host.tunnelConnections
+          ? JSON.parse(host.tunnelConnections)
+          : [];
 
-      return {
-        id: host.id,
-        userId: host.userId,
-        name: host.name || `autostart-${host.id}`,
-        ip: host.ip,
-        port: host.port,
-        username: host.username,
-        password: host.autostartPassword,
-        key: host.autostartKey,
-        keyPassword: host.autostartKeyPassword,
-        autostartPassword: host.autostartPassword,
-        autostartKey: host.autostartKey,
-        autostartKeyPassword: host.autostartKeyPassword,
-        authType: host.authType,
-        enableTunnel: true,
-        tunnelConnections: tunnelConnections.filter(
+        const hasAutoStartTunnels = tunnelConnections.some(
           (tunnel: any) => tunnel.autoStart,
-        ),
-        pin: false,
-        enableTerminal: false,
-        enableFileManager: false,
-        tags: ["autostart"],
-      };
-    });
+        );
+
+        if (!hasAutoStartTunnels) {
+          return null;
+        }
+
+        return {
+          id: host.id,
+          userId: host.userId,
+          name: host.name || `autostart-${host.id}`,
+          ip: host.ip,
+          port: host.port,
+          username: host.username,
+          password: host.autostartPassword,
+          key: host.autostartKey,
+          keyPassword: host.autostartKeyPassword,
+          autostartPassword: host.autostartPassword,
+          autostartKey: host.autostartKey,
+          autostartKeyPassword: host.autostartKeyPassword,
+          authType: host.authType,
+          keyType: host.keyType,
+          credentialId: host.credentialId,
+          enableTunnel: true,
+          tunnelConnections: tunnelConnections.filter(
+            (tunnel: any) => tunnel.autoStart,
+          ),
+          pin: !!host.pin,
+          enableTerminal: !!host.enableTerminal,
+          enableFileManager: !!host.enableFileManager,
+          tags: ["autostart"],
+        };
+      })
+      .filter(Boolean);
 
     res.json(result);
   } catch (err) {

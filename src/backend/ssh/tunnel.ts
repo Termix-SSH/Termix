@@ -18,6 +18,7 @@ import { CONNECTION_STATES } from "../../types/index.js";
 import { tunnelLogger } from "../utils/logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 
 const app = express();
 app.use(
@@ -491,35 +492,34 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.sourceCredentialId && tunnelConfig.sourceUserId) {
     try {
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
-              eq(sshCredentials.userId, tunnelConfig.sourceUserId),
+      const userDataKey = DataCrypto.getUserDataKey(tunnelConfig.sourceUserId);
+      if (userDataKey) {
+        const credentials = await SimpleDBOps.select(
+          getDb()
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
+                eq(sshCredentials.userId, tunnelConfig.sourceUserId),
+              ),
             ),
-          ),
-        "ssh_credentials",
-        tunnelConfig.sourceUserId,
-      );
+          "ssh_credentials",
+          tunnelConfig.sourceUserId,
+        );
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
-        resolvedSourceCredentials = {
-          password: credential.password,
-          sshKey: credential.privateKey || credential.key,
-          keyPassword: credential.keyPassword,
-          keyType: credential.keyType,
-          authMethod: credential.authType,
-        };
+        if (credentials.length > 0) {
+          const credential = credentials[0];
+          resolvedSourceCredentials = {
+            password: credential.password,
+            sshKey: credential.privateKey || credential.key,
+            keyPassword: credential.keyPassword,
+            keyType: credential.keyType,
+            authMethod: credential.authType,
+          };
+        } else {
+        }
       } else {
-        tunnelLogger.warn("No source credentials found in database", {
-          operation: "tunnel_connect",
-          tunnelName,
-          credentialId: tunnelConfig.sourceCredentialId,
-        });
       }
     } catch (error) {
       tunnelLogger.warn("Failed to resolve source credentials from database", {
@@ -569,31 +569,40 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.endpointCredentialId && tunnelConfig.endpointUserId) {
     try {
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, tunnelConfig.endpointCredentialId),
-              eq(sshCredentials.userId, tunnelConfig.endpointUserId),
+      const userDataKey = DataCrypto.getUserDataKey(tunnelConfig.endpointUserId);
+      if (userDataKey) {
+        const credentials = await SimpleDBOps.select(
+          getDb()
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, tunnelConfig.endpointCredentialId),
+                eq(sshCredentials.userId, tunnelConfig.endpointUserId),
+              ),
             ),
-          ),
-        "ssh_credentials",
-        tunnelConfig.endpointUserId,
-      );
+          "ssh_credentials",
+          tunnelConfig.endpointUserId,
+        );
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
-        resolvedEndpointCredentials = {
-          password: credential.password,
-          sshKey: credential.privateKey || credential.key,
-          keyPassword: credential.keyPassword,
-          keyType: credential.keyType,
-          authMethod: credential.authType,
-        };
+        if (credentials.length > 0) {
+          const credential = credentials[0];
+          resolvedEndpointCredentials = {
+            password: credential.password,
+            sshKey: credential.privateKey || credential.key,
+            keyPassword: credential.keyPassword,
+            keyType: credential.keyType,
+            authMethod: credential.authType,
+          };
+        } else {
+          tunnelLogger.warn("No endpoint credentials found in database", {
+            operation: "tunnel_connect",
+            tunnelName,
+            credentialId: tunnelConfig.endpointCredentialId,
+          });
+        }
       } else {
-        tunnelLogger.warn("No endpoint credentials found in database", {
+        tunnelLogger.warn("User data key not available for endpoint credentials, using tunnel config credentials", {
           operation: "tunnel_connect",
           tunnelName,
           credentialId: tunnelConfig.endpointCredentialId,
@@ -710,9 +719,9 @@ async function connectSSHTunnel(
       resolvedEndpointCredentials.sshKey
     ) {
       const keyFilePath = `/tmp/tunnel_key_${tunnelName.replace(/[^a-zA-Z0-9]/g, "_")}`;
-      tunnelCmd = `echo '${resolvedEndpointCredentials.sshKey}' > ${keyFilePath} && chmod 600 ${keyFilePath} && exec -a "${tunnelMarker}" ssh -i ${keyFilePath} -v -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} && rm -f ${keyFilePath}`;
+      tunnelCmd = `echo '${resolvedEndpointCredentials.sshKey}' > ${keyFilePath} && chmod 600 ${keyFilePath} && exec -a "${tunnelMarker}" ssh -i ${keyFilePath} -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} && rm -f ${keyFilePath}`;
     } else {
-      tunnelCmd = `exec -a "${tunnelMarker}" sshpass -p '${resolvedEndpointCredentials.password || ""}' ssh -v -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}`;
+      tunnelCmd = `exec -a "${tunnelMarker}" sshpass -p '${resolvedEndpointCredentials.password || ""}' ssh -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}`;
     }
 
     conn.exec(tunnelCmd, (err, stream) => {
@@ -999,29 +1008,33 @@ async function killRemoteTunnelByMarker(
 
   if (tunnelConfig.sourceCredentialId && tunnelConfig.sourceUserId) {
     try {
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
-              eq(sshCredentials.userId, tunnelConfig.sourceUserId),
+      const userDataKey = DataCrypto.getUserDataKey(tunnelConfig.sourceUserId);
+      if (userDataKey) {
+        const credentials = await SimpleDBOps.select(
+          getDb()
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
+                eq(sshCredentials.userId, tunnelConfig.sourceUserId),
+              ),
             ),
-          ),
-        "ssh_credentials",
-        tunnelConfig.sourceUserId,
-      );
+          "ssh_credentials",
+          tunnelConfig.sourceUserId,
+        );
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
-        resolvedSourceCredentials = {
-          password: credential.password,
-          sshKey: credential.privateKey || credential.key,
-          keyPassword: credential.keyPassword,
-          keyType: credential.keyType,
-          authMethod: credential.authType,
-        };
+        if (credentials.length > 0) {
+          const credential = credentials[0];
+          resolvedSourceCredentials = {
+            password: credential.password,
+            sshKey: credential.privateKey || credential.key,
+            keyPassword: credential.keyPassword,
+            keyType: credential.keyType,
+            authMethod: credential.authType,
+          };
+        }
+      } else {
       }
     } catch (error) {
       tunnelLogger.warn("Failed to resolve source credentials for cleanup", {
@@ -1417,18 +1430,6 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 endpointHost.autostartPassword;
               const hasEndpointKey =
                 tunnelConnection.endpointKey || endpointHost.autostartKey;
-
-              if (!hasSourcePassword && !hasSourceKey) {
-                tunnelLogger.warn(
-                  `Tunnel '${tunnelConfig.name}' may fail: source host '${host.name || `${host.username}@${host.ip}`}' has no plaintext credentials. Enable autostart for this host to use unattended tunneling.`,
-                );
-              }
-
-              if (!hasEndpointPassword && !hasEndpointKey) {
-                tunnelLogger.warn(
-                  `Tunnel '${tunnelConfig.name}' may fail: endpoint host '${endpointHost.name || `${endpointHost.username}@${endpointHost.ip}`}' has no plaintext credentials. Consider enabling autostart for this host or configuring credentials in tunnel connection.`,
-                );
-              }
 
               autoStartTunnels.push(tunnelConfig);
             } else {
