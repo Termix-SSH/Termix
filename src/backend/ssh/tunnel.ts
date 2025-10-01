@@ -602,11 +602,6 @@ async function connectSSHTunnel(
           });
         }
       } else {
-        tunnelLogger.warn("User data key not available for endpoint credentials, using tunnel config credentials", {
-          operation: "tunnel_connect",
-          tunnelName,
-          credentialId: tunnelConfig.endpointCredentialId,
-        });
       }
     } catch (error) {
       tunnelLogger.warn(
