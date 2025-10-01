@@ -1,13 +1,6 @@
 name: Build Electron App
 
 on:
-  push:
-    branches:
-      - development
-    paths-ignore:
-      - "**.md"
-      - ".gitignore"
-      - "docker/**"
   workflow_dispatch:
     inputs:
       build_type:
