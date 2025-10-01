@@ -103,15 +103,18 @@ repo.
 # Show-off
 
 <p align="center">
-  <img src="./repo-images/Image 1.png" width="250" alt="Termix Demo 1"/>
-  <img src="./repo-images/Image 2.png" width="250" alt="Termix Demo 2"/>
-  <img src="./repo-images/Image 3.png" width="250" alt="Termix Demo 3"/>
+  <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
+  <img src="./repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 4.png" width="250" alt="Termix Demo 4"/>
-  <img src="./repo-images/Image 5.png" width="250" alt="Termix Demo 5"/>
-  <img src="./repo-images/Image 6.png" width="250" alt="Termix Demo 6"/>
+  <img src="./repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
+  <img src="./repo-images/Image 4.png" width="400" alt="Termix Demo 4"/>
+</p>
+
+<p align="center">
+  <img src="./repo-images/Image 5.png" width="400" alt="Termix Demo 5"/>
+  <img src="./repo-images/Image 6.png" width="400" alt="Termix Demo 6"/>
 </p>
 
 <p align="center">
