@@ -2,6 +2,12 @@ import { FieldCrypto } from "./field-crypto.js";
 import { databaseLogger } from "./logger.js";
 
 export class LazyFieldEncryption {
+  private static readonly LEGACY_FIELD_NAME_MAP: Record<string, string> = {
+    key_password: "keyPassword",
+    private_key: "privateKey",
+    public_key: "publicKey",
+  };
+
   static isPlaintextField(value: string): boolean {
     if (!value) return false;
 
@@ -44,6 +50,20 @@ export class LazyFieldEncryption {
         );
         return decrypted;
       } catch (error) {
+        const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
+        if (legacyFieldName) {
+          try {
+            const decrypted = FieldCrypto.decryptField(
+              fieldValue,
+              userKEK,
+              recordId,
+              legacyFieldName,
+            );
+            return decrypted;
+          } catch (legacyError) {
+          }
+        }
+        
         databaseLogger.error("Failed to decrypt field", error, {
           operation: "lazy_encryption_decrypt_failed",
           recordId,
@@ -60,9 +80,9 @@ export class LazyFieldEncryption {
     userKEK: Buffer,
     recordId: string,
     fieldName: string,
-  ): { encrypted: string; wasPlaintext: boolean } {
+  ): { encrypted: string; wasPlaintext: boolean; wasLegacyEncryption: boolean } {
     if (!fieldValue) {
-      return { encrypted: "", wasPlaintext: false };
+      return { encrypted: "", wasPlaintext: false, wasLegacyEncryption: false };
     }
 
     if (this.isPlaintextField(fieldValue)) {
@@ -74,7 +94,7 @@ export class LazyFieldEncryption {
           fieldName,
         );
 
-        return { encrypted, wasPlaintext: true };
+        return { encrypted, wasPlaintext: true, wasLegacyEncryption: false };
       } catch (error) {
         databaseLogger.error("Failed to encrypt plaintext field", error, {
           operation: "lazy_encryption_migrate_failed",
@@ -85,7 +105,31 @@ export class LazyFieldEncryption {
         throw error;
       }
     } else {
-      return { encrypted: fieldValue, wasPlaintext: false };
+      try {
+        FieldCrypto.decryptField(fieldValue, userKEK, recordId, fieldName);
+        return { encrypted: fieldValue, wasPlaintext: false, wasLegacyEncryption: false };
+      } catch (error) {
+        const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
+        if (legacyFieldName) {
+          try {
+            const decrypted = FieldCrypto.decryptField(
+              fieldValue,
+              userKEK,
+              recordId,
+              legacyFieldName,
+            );
+            const reencrypted = FieldCrypto.encryptField(
+              decrypted,
+              userKEK,
+              recordId,
+              fieldName,
+            );
+            return { encrypted: reencrypted, wasPlaintext: false, wasLegacyEncryption: true };
+          } catch (legacyError) {
+          }
+        }
+        return { encrypted: fieldValue, wasPlaintext: false, wasLegacyEncryption: false };
+      }
     }
   }
 
@@ -106,18 +150,20 @@ export class LazyFieldEncryption {
     for (const fieldName of sensitiveFields) {
       const fieldValue = record[fieldName];
 
-      if (fieldValue && this.isPlaintextField(fieldValue)) {
+      if (fieldValue) {
         try {
-          const { encrypted } = this.migrateFieldToEncrypted(
+          const { encrypted, wasPlaintext, wasLegacyEncryption } = this.migrateFieldToEncrypted(
             fieldValue,
             userKEK,
             recordId,
             fieldName,
           );
 
-          updatedRecord[fieldName] = encrypted;
-          migratedFields.push(fieldName);
-          needsUpdate = true;
+          if (wasPlaintext || wasLegacyEncryption) {
+            updatedRecord[fieldName] = encrypted;
+            migratedFields.push(fieldName);
+            needsUpdate = true;
+          }
         } catch (error) {
           databaseLogger.error("Failed to migrate record field", error, {
             operation: "lazy_encryption_record_field_failed",
@@ -134,11 +180,40 @@ export class LazyFieldEncryption {
   static getSensitiveFieldsForTable(tableName: string): string[] {
     const sensitiveFieldsMap: Record<string, string[]> = {
       ssh_data: ["password", "key", "key_password"],
-      ssh_credentials: ["password", "key", "key_password", "private_key"],
+      ssh_credentials: ["password", "key", "key_password", "private_key", "public_key"],
       users: ["totp_secret", "totp_backup_codes"],
     };
 
     return sensitiveFieldsMap[tableName] || [];
+  }
+
+  static fieldNeedsMigration(
+    fieldValue: string,
+    userKEK: Buffer,
+    recordId: string,
+    fieldName: string,
+  ): boolean {
+    if (!fieldValue) return false;
+    
+    if (this.isPlaintextField(fieldValue)) {
+      return true;
+    }
+
+    try {
+      FieldCrypto.decryptField(fieldValue, userKEK, recordId, fieldName);
+      return false;
+    } catch (error) {
+      const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
+      if (legacyFieldName) {
+        try {
+          FieldCrypto.decryptField(fieldValue, userKEK, recordId, legacyFieldName);
+          return true;
+        } catch (legacyError) {
+          return false;
+        }
+      }
+      return false;
+    }
   }
 
   static async checkUserNeedsMigration(
@@ -169,7 +244,7 @@ export class LazyFieldEncryption {
         const hostPlaintextFields: string[] = [];
 
         for (const field of sensitiveFields) {
-          if (host[field] && this.isPlaintextField(host[field])) {
+          if (host[field] && this.fieldNeedsMigration(host[field], userKEK, host.id.toString(), field)) {
             hostPlaintextFields.push(field);
             needsMigration = true;
           }
@@ -193,7 +268,7 @@ export class LazyFieldEncryption {
         const credentialPlaintextFields: string[] = [];
 
         for (const field of sensitiveFields) {
-          if (credential[field] && this.isPlaintextField(credential[field])) {
+          if (credential[field] && this.fieldNeedsMigration(credential[field], userKEK, credential.id.toString(), field)) {
             credentialPlaintextFields.push(field);
             needsMigration = true;
           }
@@ -214,7 +289,7 @@ export class LazyFieldEncryption {
         const userPlaintextFields: string[] = [];
 
         for (const field of sensitiveFields) {
-          if (user[field] && this.isPlaintextField(user[field])) {
+          if (user[field] && this.fieldNeedsMigration(user[field], userKEK, userId, field)) {
             userPlaintextFields.push(field);
             needsMigration = true;
           }

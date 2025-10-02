@@ -969,7 +969,16 @@
     "move": "移动",
     "searchInFile": "在文件中搜索 (Ctrl+F)",
     "showKeyboardShortcuts": "显示键盘快捷键",
-    "startWritingMarkdown": "开始编写您的 markdown 内容..."
+    "startWritingMarkdown": "开始编写您的 markdown 内容...",
+    "loadingFileComparison": "正在加载文件对比...",
+    "reload": "重新加载",
+    "compare": "对比",
+    "sideBySide": "并排显示",
+    "inline": "内嵌显示",
+    "fileComparison": "文件对比：{{file1}} 与 {{file2}}",
+    "fileTooLarge": "文件过大：{{error}}",
+    "sshConnectionFailed": "SSH 连接失败。请检查与 {{name}} ({{ip}}:{{port}}) 的连接",
+    "loadFileFailed": "加载文件失败：{{error}}"
   },
   "tunnels": {
     "title": "SSH 隧道",

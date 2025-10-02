@@ -1257,17 +1257,6 @@ export function FileViewer({
                     </Button>
                   </div>
                 </div>
-                {onDownload && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onDownload}
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    {t("fileManager.download")}
-                  </Button>
-                )}
               </div>
             </div>
 

@@ -147,7 +147,7 @@ class DataCrypto {
         if (needsUpdate) {
           const updateQuery = `
             UPDATE ssh_credentials
-            SET password = ?, key = ?, key_password = ?, private_key = ?, updated_at = CURRENT_TIMESTAMP
+            SET password = ?, key = ?, key_password = ?, private_key = ?, public_key = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `;
           db.prepare(updateQuery).run(
@@ -155,6 +155,7 @@ class DataCrypto {
             updatedRecord.key || null,
             updatedRecord.key_password || null,
             updatedRecord.private_key || null,
+            updatedRecord.public_key || null,
             record.id,
           );
 

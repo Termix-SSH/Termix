@@ -22,13 +22,13 @@ class FieldCrypto {
       "totp_backup_codes",
       "oidc_identifier",
     ]),
-    ssh_data: new Set(["password", "key", "keyPassword"]),
+    ssh_data: new Set(["password", "key", "key_password"]),
     ssh_credentials: new Set([
       "password",
-      "privateKey",
-      "keyPassword",
+      "private_key",
+      "key_password",
       "key",
-      "publicKey",
+      "public_key",
     ]),
   };
 

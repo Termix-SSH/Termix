@@ -15,6 +15,7 @@ interface DraggableWindowProps {
   onClose: () => void;
   onMinimize?: () => void;
   onMaximize?: () => void;
+  onResize?: () => void;
   isMaximized?: boolean;
   zIndex?: number;
   onFocus?: () => void;
@@ -33,6 +34,7 @@ export function DraggableWindow({
   onClose,
   onMinimize,
   onMaximize,
+  onResize,
   isMaximized = false,
   zIndex = 1000,
   onFocus,
@@ -197,6 +199,10 @@ export function DraggableWindow({
 
         setSize({ width: newWidth, height: newHeight });
         setPosition({ x: newX, y: newY });
+        
+        if (onResize) {
+          onResize();
+        }
       }
     },
     [
@@ -211,6 +217,7 @@ export function DraggableWindow({
       minWidth,
       minHeight,
       resizeDirection,
+      onResize,
     ],
   );
 

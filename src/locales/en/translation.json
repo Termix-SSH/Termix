@@ -978,7 +978,16 @@
     "move": "Move",
     "searchInFile": "Search in file (Ctrl+F)",
     "showKeyboardShortcuts": "Show keyboard shortcuts",
-    "startWritingMarkdown": "Start writing your markdown content..."
+    "startWritingMarkdown": "Start writing your markdown content...",
+    "loadingFileComparison": "Loading file comparison...",
+    "reload": "Reload",
+    "compare": "Compare",
+    "sideBySide": "Side by Side",
+    "inline": "Inline",
+    "fileComparison": "File Comparison: {{file1}} vs {{file2}}",
+    "fileTooLarge": "File too large: {{error}}",
+    "sshConnectionFailed": "SSH connection failed. Please check your connection to {{name}} ({{ip}}:{{port}})",
+    "loadFileFailed": "Failed to load file: {{error}}"
   },
   "tunnels": {
     "title": "SSH Tunnels",
