@@ -427,7 +427,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
           sshStream = stream;
 
           stream.on("data", (data: Buffer) => {
-            ws.send(JSON.stringify({ type: "data", data: data.toString() }));
+            let decoded = data.toString("utf-8");
+
+            // Defensive fallback: if UTF-8 decode produces replacement characters
+            // and buffer contains high bytes, try latin1 (for legacy servers without UTF-8 locale)
+            if (
+              decoded.includes("\uFFFD") &&
+              data.some((byte) => byte >= 0x80 && byte <= 0xff)
+            ) {
+              decoded = data.toString("latin1");
+            }
+
+            ws.send(JSON.stringify({ type: "data", data: decoded }));
           });
 
           stream.on("close", () => {
