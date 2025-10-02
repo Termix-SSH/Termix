@@ -750,6 +750,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
       let diskPercent: number | null = null;
       let usedHuman: string | null = null;
       let totalHuman: string | null = null;
+      let availableHuman: string | null = null;
       try {
         const [diskOutHuman, diskOutBytes] = await Promise.all([
           execCommand(client, "df -h -P / | tail -n +2"),
@@ -773,6 +774,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         if (humanParts.length >= 6 && bytesParts.length >= 6) {
           totalHuman = humanParts[1] || null;
           usedHuman = humanParts[2] || null;
+          availableHuman = humanParts[3] || null; // Parse Available column from df output
 
           const totalBytes = Number(bytesParts[1]);
           const usedBytes = Number(bytesParts[2]);
@@ -796,6 +798,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         diskPercent = null;
         usedHuman = null;
         totalHuman = null;
+        availableHuman = null;
       }
 
       const result = {
@@ -805,7 +808,12 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
           totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null,
         },
-        disk: { percent: toFixedNum(diskPercent, 0), usedHuman, totalHuman },
+        disk: {
+          percent: toFixedNum(diskPercent, 0),
+          usedHuman,
+          totalHuman,
+          availableHuman, // Include available space in response
+        },
       };
 
       metricsCache.set(host.id, result);

@@ -51,6 +51,7 @@ interface DiskMetrics {
   percent: number | null;
   usedHuman: string | null;
   totalHuman: string | null;
+  availableHuman?: string | null; // Available disk space from df output
 }
 
 export type ServerMetrics = {
