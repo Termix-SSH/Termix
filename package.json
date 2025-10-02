@@ -45,7 +45,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.9",
-    "@types/jszip": "^3.4.0",
+    "@types/jszip": "^3.4.1",
     "@types/multer": "^2.0.0",
     "@types/qrcode": "^1.5.5",
     "@types/speakeasy": "^2.0.10",
