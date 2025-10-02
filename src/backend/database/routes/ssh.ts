@@ -670,6 +670,84 @@ router.get(
   },
 );
 
+// Route: Export SSH host with decrypted credentials (requires data access)
+// GET /ssh/db/host/:id/export
+router.get(
+  "/db/host/:id/export",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = req.params.id;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !hostId) {
+      return res.status(400).json({ error: "Invalid userId or hostId" });
+    }
+
+    try {
+      // Fetch decrypted host data using SimpleDBOps
+      const hosts = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshData)
+          .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId))),
+        "ssh_data",
+        userId,
+      );
+
+      if (hosts.length === 0) {
+        return res.status(404).json({ error: "SSH host not found" });
+      }
+
+      const host = hosts[0];
+
+      // Resolve credentials if using credential-based auth
+      const resolvedHost = (await resolveHostCredentials(host)) || host;
+
+      // Format for export (include all fields including sensitive data)
+      const exportData = {
+        name: resolvedHost.name,
+        ip: resolvedHost.ip,
+        port: resolvedHost.port,
+        username: resolvedHost.username,
+        authType: resolvedHost.authType,
+        password: resolvedHost.password || null,
+        key: resolvedHost.key || null,
+        keyPassword: resolvedHost.keyPassword || null,
+        keyType: resolvedHost.keyType || null,
+        folder: resolvedHost.folder,
+        tags:
+          typeof resolvedHost.tags === "string"
+            ? resolvedHost.tags.split(",").filter(Boolean)
+            : resolvedHost.tags || [],
+        pin: !!resolvedHost.pin,
+        enableTerminal: !!resolvedHost.enableTerminal,
+        enableTunnel: !!resolvedHost.enableTunnel,
+        enableFileManager: !!resolvedHost.enableFileManager,
+        defaultPath: resolvedHost.defaultPath,
+        tunnelConnections: resolvedHost.tunnelConnections
+          ? JSON.parse(resolvedHost.tunnelConnections)
+          : [],
+      };
+
+      sshLogger.success("Host exported with decrypted credentials", {
+        operation: "host_export",
+        hostId: parseInt(hostId),
+        userId,
+      });
+
+      res.json(exportData);
+    } catch (err) {
+      sshLogger.error("Failed to export SSH host", err, {
+        operation: "host_export",
+        hostId: parseInt(hostId),
+        userId,
+      });
+      res.status(500).json({ error: "Failed to export SSH host" });
+    }
+  },
+);
+
 // Route: Delete SSH host by id (requires JWT)
 // DELETE /ssh/host/:id
 router.delete(

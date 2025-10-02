@@ -21,6 +21,7 @@ import {
   bulkImportSSHHosts,
   updateSSHHost,
   renameFolder,
+  exportSSHHostWithCredentials,
 } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -159,46 +160,36 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     performExport(host, actualAuthType);
   };
 
-  const performExport = (host: SSHHost, actualAuthType: string) => {
-    const exportData: any = {
-      name: host.name,
-      ip: host.ip,
-      port: host.port,
-      username: host.username,
-      authType: actualAuthType,
-      folder: host.folder,
-      tags: host.tags,
-      pin: host.pin,
-      enableTerminal: host.enableTerminal,
-      enableTunnel: host.enableTunnel,
-      enableFileManager: host.enableFileManager,
-      defaultPath: host.defaultPath,
-      tunnelConnections: host.tunnelConnections,
-    };
+  const performExport = async (host: SSHHost, actualAuthType: string) => {
+    try {
+      // Fetch decrypted host data from backend
+      const decryptedHost = await exportSSHHostWithCredentials(host.id);
 
-    if (actualAuthType === "credential") {
-      exportData.credentialId = null;
+      // Use decrypted data for export (includes password, key, etc.)
+      const cleanExportData = Object.fromEntries(
+        Object.entries(decryptedHost).filter(
+          ([_, value]) => value !== undefined,
+        ),
+      );
+
+      const blob = new Blob([JSON.stringify(cleanExportData, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${host.name || host.username + "@" + host.ip}-host-config.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(
+        `Exported host configuration for ${host.name || host.username}@${host.ip}`,
+      );
+    } catch (error) {
+      toast.error(t("hosts.failedToExportHost"));
     }
-
-    const cleanExportData = Object.fromEntries(
-      Object.entries(exportData).filter(([_, value]) => value !== undefined),
-    );
-
-    const blob = new Blob([JSON.stringify(cleanExportData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${host.name || host.username + "@" + host.ip}-host-config.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast.success(
-      `Exported host configuration for ${host.name || host.username}@${host.ip}`,
-    );
   };
 
   const handleEdit = (host: SSHHost) => {
