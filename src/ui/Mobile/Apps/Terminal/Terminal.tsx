@@ -233,6 +233,10 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     terminal.loadAddon(clipboardAddon);
     terminal.loadAddon(unicode11Addon);
     terminal.loadAddon(webLinksAddon);
+
+    // Activate Unicode 11 for proper emoji rendering (prevents double-width artifacts)
+    terminal.unicode.activeVersion = "11";
+
     terminal.open(xtermRef.current);
 
     const textarea = xtermRef.current.querySelector(
