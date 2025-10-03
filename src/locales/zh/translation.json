@@ -732,7 +732,11 @@
     "reconnecting": "重新连接中... ({{attempt}}/{{max}})",
     "reconnected": "重新连接成功",
     "maxReconnectAttemptsReached": "已达到最大重连尝试次数",
-    "connectionTimeout": "连接超时"
+    "connectionTimeout": "连接超时",
+    "totpRequired": "需要双因素认证",
+    "totpPlaceholder": "000000",
+    "submit": "提交",
+    "cancel": "取消"
   },
   "fileManager": {
     "title": "文件管理器",

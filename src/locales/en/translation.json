@@ -711,7 +711,11 @@
     "connectionTimeout": "Connection timeout",
     "terminalTitle": "Terminal - {{host}}",
     "terminalWithPath": "Terminal - {{host}}:{{path}}",
-    "runTitle": "Running {{command}} - {{host}}"
+    "runTitle": "Running {{command}} - {{host}}",
+    "totpRequired": "Two-Factor Authentication Required",
+    "totpPlaceholder": "000000",
+    "submit": "Submit",
+    "cancel": "Cancel"
   },
   "fileManager": {
     "title": "File Manager",
