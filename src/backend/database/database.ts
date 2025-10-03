@@ -6,6 +6,7 @@ import userRoutes from "./routes/users.js";
 import sshRoutes from "./routes/ssh.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
+import snippetsRoutes from "./routes/snippets.js";
 import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
@@ -1411,6 +1412,7 @@ app.use("/users", userRoutes);
 app.use("/ssh", sshRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
+app.use("/snippets", snippetsRoutes);
 
 app.use(
   (

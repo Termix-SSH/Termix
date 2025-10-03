@@ -98,6 +98,26 @@ export interface CredentialData {
 }
 
 // ============================================================================
+// SNIPPET TYPES
+// ============================================================================
+
+export interface Snippet {
+  id: number;
+  userId: string;
+  name: string;
+  content: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SnippetData {
+  name: string;
+  content: string;
+  description?: string;
+}
+
+// ============================================================================
 // TUNNEL TYPES
 // ============================================================================
 

@@ -172,3 +172,19 @@ export const sshCredentialUsage = sqliteTable("ssh_credential_usage", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const snippets = sqliteTable("snippets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  content: text("content").notNull(),
+  description: text("description"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});

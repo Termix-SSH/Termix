@@ -13,6 +13,9 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getCookie, isElectron } from "@/ui/main-axios.ts";
+import { SnippetsSidebar } from "./SnippetsSidebar";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 
 interface SSHTerminalProps {
   hostConfig: any;
@@ -57,6 +60,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpPrompt, setTotpPrompt] = useState<string>("");
+  const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(() => {
+    // Load sidebar state from localStorage
+    const saved = localStorage.getItem("terminal-sidebar-open");
+    return saved === "true";
+  });
   const isVisibleRef = useRef<boolean>(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
@@ -116,6 +124,28 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       setTotpRequired(false);
       setTotpPrompt("");
     }
+  };
+
+  // Handle snippet execution
+  const handleSnippetExecute = (content: string) => {
+    if (terminal && webSocketRef.current?.readyState === WebSocket.OPEN) {
+      // Send command to terminal
+      webSocketRef.current.send(
+        JSON.stringify({
+          type: "input",
+          data: content + "\n",
+        }),
+      );
+    }
+  };
+
+  // Toggle snippets sidebar and persist state
+  const toggleSnippetsSidebar = () => {
+    setSnippetsSidebarOpen((prev) => {
+      const newState = !prev;
+      localStorage.setItem("terminal-sidebar-open", String(newState));
+      return newState;
+    });
   };
 
   function scheduleNotify(cols: number, rows: number) {
@@ -731,6 +761,19 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
   return (
     <div className="h-full w-full relative">
+      {/* Snippets toggle button */}
+      <div className="absolute top-2 right-2 z-10">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={toggleSnippetsSidebar}
+          className="bg-background/80 backdrop-blur-sm"
+        >
+          <FileText className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Terminal area - full width, not affected by sidebar */}
       <div
         ref={xtermRef}
         className={`h-full w-full transition-opacity duration-200 ${visible && isVisible && !isConnecting ? "opacity-100" : "opacity-0"}`}
@@ -806,6 +849,16 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           </div>
         </div>
       )}
+
+      {/* Snippets Sidebar - absolutely positioned */}
+      <SnippetsSidebar
+        isOpen={snippetsSidebarOpen}
+        onClose={() => {
+          setSnippetsSidebarOpen(false);
+          localStorage.setItem("terminal-sidebar-open", "false");
+        }}
+        onExecute={handleSnippetExecute}
+      />
     </div>
   );
 });
