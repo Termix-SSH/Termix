@@ -639,6 +639,8 @@
     "password": "Password",
     "key": "Key",
     "credential": "Credential",
+    "none": "None",
+    "noneDescription": "No authentication credentials required. You can add credentials later or use SSH agent for authentication.",
     "selectCredential": "Select Credential",
     "selectCredentialPlaceholder": "Choose a credential...",
     "credentialRequired": "Credential is required when using credential authentication",
