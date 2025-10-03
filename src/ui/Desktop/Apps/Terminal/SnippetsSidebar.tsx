@@ -11,10 +11,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Plus, Play, Edit, Trash2, X } from "lucide-react";
-import axios from "axios";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import {
+  getSnippets,
+  createSnippet,
+  updateSnippet,
+  deleteSnippet,
+} from "@/ui/main-axios";
 import type { Snippet, SnippetData } from "../../../../types/index.js";
 
 interface SnippetsSidebarProps {
@@ -53,9 +58,9 @@ export function SnippetsSidebar({
   const fetchSnippets = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/snippets");
-      // Defensive: ensure response.data is an array
-      setSnippets(Array.isArray(response.data) ? response.data : []);
+      const data = await getSnippets();
+      // Defensive: ensure data is an array
+      setSnippets(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error(t("snippets.failedToFetch"));
       setSnippets([]);
@@ -82,23 +87,20 @@ export function SnippetsSidebar({
     setShowDialog(true);
   };
 
-  const handleDelete = async (snippet: Snippet) => {
-    const confirmed = await confirmWithToast({
-      title: t("snippets.deleteConfirmTitle"),
-      description: t("snippets.deleteConfirmDescription", {
-        name: snippet.name,
-      }),
-    });
-
-    if (confirmed) {
-      try {
-        await axios.delete(`/snippets/${snippet.id}`);
-        toast.success(t("snippets.deleteSuccess"));
-        fetchSnippets();
-      } catch (err) {
-        toast.error(t("snippets.deleteFailed"));
-      }
-    }
+  const handleDelete = (snippet: Snippet) => {
+    confirmWithToast(
+      t("snippets.deleteConfirmDescription", { name: snippet.name }),
+      async () => {
+        try {
+          await deleteSnippet(snippet.id);
+          toast.success(t("snippets.deleteSuccess"));
+          fetchSnippets();
+        } catch (err) {
+          toast.error(t("snippets.deleteFailed"));
+        }
+      },
+      "destructive",
+    );
   };
 
   const handleSubmit = async () => {
@@ -116,10 +118,10 @@ export function SnippetsSidebar({
 
     try {
       if (editingSnippet) {
-        await axios.put(`/snippets/${editingSnippet.id}`, formData);
+        await updateSnippet(editingSnippet.id, formData);
         toast.success(t("snippets.updateSuccess"));
       } else {
-        await axios.post("/snippets", formData);
+        await createSnippet(formData);
         toast.success(t("snippets.createSuccess"));
       }
       setShowDialog(false);
