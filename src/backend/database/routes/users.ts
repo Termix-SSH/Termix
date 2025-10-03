@@ -1317,6 +1317,43 @@ router.post("/complete-reset", async (req, res) => {
       .set({ password_hash })
       .where(eq(users.username, username));
 
+    try {
+      await authManager.registerUser(userId, newPassword);
+      authManager.logoutUser(userId);
+
+      await db
+        .update(users)
+        .set({
+          totp_enabled: false,
+          totp_secret: null,
+          totp_backup_codes: null,
+        })
+        .where(eq(users.id, userId));
+
+      authLogger.warn(
+        `Password reset completed for user: ${username}. Existing encrypted data is now inaccessible and will need to be re-entered.`,
+        {
+          operation: "password_reset_data_inaccessible",
+          userId,
+          username,
+        },
+      );
+    } catch (encryptionError) {
+      authLogger.error(
+        "Failed to re-encrypt user data after password reset",
+        encryptionError,
+        {
+          operation: "password_reset_encryption_failed",
+          userId,
+          username,
+        },
+      );
+      return res.status(500).json({
+        error:
+          "Password reset completed but user data encryption failed. Please contact administrator.",
+      });
+    }
+
     authLogger.success(`Password successfully reset for user: ${username}`);
 
     db.$client
@@ -1494,6 +1531,22 @@ router.post("/totp/verify-login", async (req, res) => {
       userRecord.id,
       "totp_secret",
     );
+
+    if (!totpSecret) {
+      await db
+        .update(users)
+        .set({
+          totp_enabled: false,
+          totp_secret: null,
+          totp_backup_codes: null,
+        })
+        .where(eq(users.id, userRecord.id));
+
+      return res.status(400).json({
+        error:
+          "TOTP has been disabled due to password reset. Please set up TOTP again.",
+      });
+    }
 
     const verified = speakeasy.totp.verify({
       secret: totpSecret,

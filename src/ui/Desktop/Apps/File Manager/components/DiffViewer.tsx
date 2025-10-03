@@ -17,7 +17,7 @@ import {
   getSSHStatus,
   connectSSH,
 } from "@/ui/main-axios";
-import type { FileItem, SSHHost } from "../../../../types/index.js";
+import type { FileItem, SSHHost } from "@/types/index";
 
 interface DiffViewerProps {
   file1: FileItem;
@@ -62,8 +62,22 @@ export function DiffViewer({
         });
       }
     } catch (error) {
-      console.error("SSH connection check/reconnect failed:", error);
-      throw error;
+      try {
+        await connectSSH(sshSessionId, {
+          hostId: sshHost.id,
+          ip: sshHost.ip,
+          port: sshHost.port,
+          username: sshHost.username,
+          password: sshHost.password,
+          sshKey: sshHost.key,
+          keyPassword: sshHost.keyPassword,
+          authType: sshHost.authType,
+          credentialId: sshHost.credentialId,
+          userId: sshHost.userId,
+        });
+      } catch (reconnectError) {
+        throw reconnectError;
+      }
     }
   };
 
@@ -310,7 +324,6 @@ export function DiffViewer({
             automaticLayout: true,
             readOnly: true,
             originalEditable: false,
-            modifiedEditable: false,
             scrollbar: {
               vertical: "visible",
               horizontal: "visible",

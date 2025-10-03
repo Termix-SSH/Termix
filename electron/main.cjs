@@ -8,6 +8,12 @@ app.commandLine.appendSwitch("--ignore-ssl-errors");
 app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
+if (process.platform === "linux") {
+  app.commandLine.appendSwitch("--no-sandbox");
+  app.commandLine.appendSwitch("--disable-setuid-sandbox");
+  app.commandLine.appendSwitch("--disable-dev-shm-usage");
+}
+
 let mainWindow = null;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;

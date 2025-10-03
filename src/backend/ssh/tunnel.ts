@@ -512,10 +512,11 @@ async function connectSSHTunnel(
           const credential = credentials[0];
           resolvedSourceCredentials = {
             password: credential.password,
-            sshKey: credential.privateKey || credential.key,
-            keyPassword: credential.keyPassword,
-            keyType: credential.keyType,
-            authMethod: credential.authType,
+            sshKey:
+              credential.private_key || credential.privateKey || credential.key,
+            keyPassword: credential.key_password || credential.keyPassword,
+            keyType: credential.key_type || credential.keyType,
+            authMethod: credential.auth_type || credential.authType,
           };
         } else {
         }
@@ -591,10 +592,11 @@ async function connectSSHTunnel(
           const credential = credentials[0];
           resolvedEndpointCredentials = {
             password: credential.password,
-            sshKey: credential.privateKey || credential.key,
-            keyPassword: credential.keyPassword,
-            keyType: credential.keyType,
-            authMethod: credential.authType,
+            sshKey:
+              credential.private_key || credential.privateKey || credential.key,
+            keyPassword: credential.key_password || credential.keyPassword,
+            keyType: credential.key_type || credential.keyType,
+            authMethod: credential.auth_type || credential.authType,
           };
         } else {
           tunnelLogger.warn("No endpoint credentials found in database", {
@@ -1025,10 +1027,11 @@ async function killRemoteTunnelByMarker(
           const credential = credentials[0];
           resolvedSourceCredentials = {
             password: credential.password,
-            sshKey: credential.privateKey || credential.key,
-            keyPassword: credential.keyPassword,
-            keyType: credential.keyType,
-            authMethod: credential.authType,
+            sshKey:
+              credential.private_key || credential.privateKey || credential.key,
+            keyPassword: credential.key_password || credential.keyPassword,
+            keyType: credential.key_type || credential.keyType,
+            authMethod: credential.auth_type || credential.authType,
           };
         }
       } else {

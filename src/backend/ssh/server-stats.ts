@@ -280,10 +280,8 @@ const app = express();
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
 
-      // Allow localhost and 127.0.0.1 for development
       const allowedOrigins = [
         "http://localhost:5173",
         "http://localhost:3000",
@@ -291,22 +289,18 @@ app.use(
         "http://127.0.0.1:3000",
       ];
 
-      // Allow any HTTPS origin (production deployments)
       if (origin.startsWith("https://")) {
         return callback(null, true);
       }
 
-      // Allow any HTTP origin for self-hosted scenarios
       if (origin.startsWith("http://")) {
         return callback(null, true);
       }
 
-      // Check against allowed development origins
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      // Reject other origins
       callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -322,7 +316,6 @@ app.use(
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 
-// Add authentication middleware - Linus principle: eliminate special cases
 app.use(authManager.createAuthMiddleware());
 
 const hostStatuses: Map<number, StatusEntry> = new Map();
@@ -363,7 +356,6 @@ async function fetchHostById(
   userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    // Check if user data is unlocked before attempting to fetch
     if (!SimpleDBOps.isUserDataUnlocked(userId)) {
       statsLogger.debug("User data locked - cannot fetch host", {
         operation: "fetchHostById_data_locked",
@@ -446,7 +438,7 @@ async function resolveHostCredentials(
           const credential = credentials[0];
           baseHost.credentialId = credential.id;
           baseHost.username = credential.username;
-          baseHost.authType = credential.authType;
+          baseHost.authType = credential.auth_type || credential.authType;
 
           if (credential.password) {
             baseHost.password = credential.password;
@@ -454,11 +446,12 @@ async function resolveHostCredentials(
           if (credential.key) {
             baseHost.key = credential.key;
           }
-          if (credential.keyPassword) {
-            baseHost.keyPassword = credential.keyPassword;
+          if (credential.key_password || credential.keyPassword) {
+            baseHost.keyPassword =
+              credential.key_password || credential.keyPassword;
           }
-          if (credential.keyType) {
-            baseHost.keyType = credential.keyType;
+          if (credential.key_type || credential.keyType) {
+            baseHost.keyType = credential.key_type || credential.keyType;
           }
         } else {
           addLegacyCredentials(baseHost, host);
@@ -750,6 +743,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
       let diskPercent: number | null = null;
       let usedHuman: string | null = null;
       let totalHuman: string | null = null;
+      let availableHuman: string | null = null;
       try {
         const [diskOutHuman, diskOutBytes] = await Promise.all([
           execCommand(client, "df -h -P / | tail -n +2"),
@@ -773,6 +767,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         if (humanParts.length >= 6 && bytesParts.length >= 6) {
           totalHuman = humanParts[1] || null;
           usedHuman = humanParts[2] || null;
+          availableHuman = humanParts[3] || null;
 
           const totalBytes = Number(bytesParts[1]);
           const usedBytes = Number(bytesParts[2]);
@@ -796,6 +791,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         diskPercent = null;
         usedHuman = null;
         totalHuman = null;
+        availableHuman = null;
       }
 
       const result = {
@@ -805,7 +801,12 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
           totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null,
         },
-        disk: { percent: toFixedNum(diskPercent, 0), usedHuman, totalHuman },
+        disk: {
+          percent: toFixedNum(diskPercent, 0),
+          usedHuman,
+          totalHuman,
+          availableHuman,
+        },
       };
 
       metricsCache.set(host.id, result);
@@ -887,7 +888,6 @@ async function pollStatusesOnce(userId?: string): Promise<void> {
 app.get("/status", async (req, res) => {
   const userId = (req as any).userId;
 
-  // Check if user data is unlocked
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
       error: "Session expired - please log in again",
@@ -909,7 +909,6 @@ app.get("/status/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as any).userId;
 
-  // Check if user data is unlocked
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
       error: "Session expired - please log in again",
@@ -941,7 +940,6 @@ app.get("/status/:id", validateHostId, async (req, res) => {
 app.post("/refresh", async (req, res) => {
   const userId = (req as any).userId;
 
-  // Check if user data is unlocked
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
       error: "Session expired - please log in again",
@@ -957,7 +955,6 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as any).userId;
 
-  // Check if user data is unlocked
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
       error: "Session expired - please log in again",

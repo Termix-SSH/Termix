@@ -51,6 +51,7 @@ interface DiskMetrics {
   percent: number | null;
   usedHuman: string | null;
   totalHuman: string | null;
+  availableHuman?: string | null;
 }
 
 export type ServerMetrics = {
@@ -793,6 +794,17 @@ export async function getSSHHostById(hostId: number): Promise<SSHHost> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch SSH host");
+  }
+}
+
+export async function exportSSHHostWithCredentials(
+  hostId: number,
+): Promise<SSHHost> {
+  try {
+    const response = await sshHostApi.get(`/db/host/${hostId}/export`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "export SSH host with credentials");
   }
 }
 

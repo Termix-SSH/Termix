@@ -333,14 +333,14 @@ router.get(
       if (credential.key) {
         (output as any).key = credential.key;
       }
-      if (credential.privateKey) {
-        (output as any).privateKey = credential.privateKey;
+      if (credential.private_key) {
+        (output as any).privateKey = credential.private_key;
       }
-      if (credential.publicKey) {
-        (output as any).publicKey = credential.publicKey;
+      if (credential.public_key) {
+        (output as any).publicKey = credential.public_key;
       }
-      if (credential.keyPassword) {
-        (output as any).keyPassword = credential.keyPassword;
+      if (credential.key_password) {
+        (output as any).keyPassword = credential.key_password;
       }
 
       res.json(output);
@@ -605,15 +605,19 @@ router.post(
     }
 
     try {
-      const credentials = await db
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, parseInt(credentialId)),
-            eq(sshCredentials.userId, userId),
+      const credentials = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, parseInt(credentialId)),
+              eq(sshCredentials.userId, userId),
+            ),
           ),
-        );
+        "ssh_credentials",
+        userId,
+      );
 
       if (credentials.length === 0) {
         return res.status(404).json({ error: "Credential not found" });
@@ -626,7 +630,7 @@ router.post(
         .set({
           credentialId: parseInt(credentialId),
           username: credential.username,
-          authType: credential.authType,
+          authType: credential.auth_type || credential.authType,
           password: null,
           key: null,
           keyPassword: null,
@@ -715,15 +719,15 @@ function formatCredentialOutput(credential: any): any {
           ? credential.tags.split(",").filter(Boolean)
           : []
         : [],
-    authType: credential.authType,
+    authType: credential.authType || credential.auth_type,
     username: credential.username,
-    publicKey: credential.publicKey,
-    keyType: credential.keyType,
-    detectedKeyType: credential.detectedKeyType,
-    usageCount: credential.usageCount || 0,
-    lastUsed: credential.lastUsed,
-    createdAt: credential.createdAt,
-    updatedAt: credential.updatedAt,
+    publicKey: credential.public_key || credential.publicKey,
+    keyType: credential.key_type || credential.keyType,
+    detectedKeyType: credential.detected_key_type || credential.detectedKeyType,
+    usageCount: credential.usage_count || credential.usageCount || 0,
+    lastUsed: credential.last_used || credential.lastUsed,
+    createdAt: credential.created_at || credential.createdAt,
+    updatedAt: credential.updated_at || credential.updatedAt,
   };
 }
 
@@ -1551,14 +1555,15 @@ router.post(
           if (hostCredential && hostCredential.length > 0) {
             const cred = hostCredential[0];
 
-            hostConfig.authType = cred.authType;
+            hostConfig.authType = cred.auth_type || cred.authType;
             hostConfig.username = cred.username;
 
-            if (cred.authType === "password") {
+            if ((cred.auth_type || cred.authType) === "password") {
               hostConfig.password = cred.password;
-            } else if (cred.authType === "key") {
-              hostConfig.privateKey = cred.privateKey || cred.key;
-              hostConfig.keyPassword = cred.keyPassword;
+            } else if ((cred.auth_type || cred.authType) === "key") {
+              hostConfig.privateKey =
+                cred.private_key || cred.privateKey || cred.key;
+              hostConfig.keyPassword = cred.key_password || cred.keyPassword;
             }
           } else {
             return res.status(400).json({

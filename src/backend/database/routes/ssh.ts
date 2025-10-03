@@ -472,7 +472,6 @@ router.put(
       }
       sshDataObj.password = null;
     } else {
-      // For credential auth
       sshDataObj.password = null;
       sshDataObj.key = null;
       sshDataObj.keyPassword = null;
@@ -666,6 +665,83 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Failed to fetch SSH host" });
+    }
+  },
+);
+
+// Route: Export SSH host with decrypted credentials (requires data access)
+// GET /ssh/db/host/:id/export
+router.get(
+  "/db/host/:id/export",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = req.params.id;
+    const userId = (req as any).userId;
+
+    if (!isNonEmptyString(userId) || !hostId) {
+      return res.status(400).json({ error: "Invalid userId or hostId" });
+    }
+
+    try {
+      const hosts = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshData)
+          .where(
+            and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
+          ),
+        "ssh_data",
+        userId,
+      );
+
+      if (hosts.length === 0) {
+        return res.status(404).json({ error: "SSH host not found" });
+      }
+
+      const host = hosts[0];
+
+      const resolvedHost = (await resolveHostCredentials(host)) || host;
+
+      const exportData = {
+        name: resolvedHost.name,
+        ip: resolvedHost.ip,
+        port: resolvedHost.port,
+        username: resolvedHost.username,
+        authType: resolvedHost.authType,
+        password: resolvedHost.password || null,
+        key: resolvedHost.key || null,
+        keyPassword: resolvedHost.keyPassword || null,
+        keyType: resolvedHost.keyType || null,
+        folder: resolvedHost.folder,
+        tags:
+          typeof resolvedHost.tags === "string"
+            ? resolvedHost.tags.split(",").filter(Boolean)
+            : resolvedHost.tags || [],
+        pin: !!resolvedHost.pin,
+        enableTerminal: !!resolvedHost.enableTerminal,
+        enableTunnel: !!resolvedHost.enableTunnel,
+        enableFileManager: !!resolvedHost.enableFileManager,
+        defaultPath: resolvedHost.defaultPath,
+        tunnelConnections: resolvedHost.tunnelConnections
+          ? JSON.parse(resolvedHost.tunnelConnections)
+          : [],
+      };
+
+      sshLogger.success("Host exported with decrypted credentials", {
+        operation: "host_export",
+        hostId: parseInt(hostId),
+        userId,
+      });
+
+      res.json(exportData);
+    } catch (err) {
+      sshLogger.error("Failed to export SSH host", err, {
+        operation: "host_export",
+        hostId: parseInt(hostId),
+        userId,
+      });
+      res.status(500).json({ error: "Failed to export SSH host" });
     }
   },
 );
@@ -1136,26 +1212,30 @@ router.delete(
 async function resolveHostCredentials(host: any): Promise<any> {
   try {
     if (host.credentialId && host.userId) {
-      const credentials = await db
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, host.credentialId),
-            eq(sshCredentials.userId, host.userId),
+      const credentials = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, host.credentialId),
+              eq(sshCredentials.userId, host.userId),
+            ),
           ),
-        );
+        "ssh_credentials",
+        host.userId,
+      );
 
       if (credentials.length > 0) {
         const credential = credentials[0];
         return {
           ...host,
           username: credential.username,
-          authType: credential.authType,
+          authType: credential.auth_type || credential.authType,
           password: credential.password,
           key: credential.key,
-          keyPassword: credential.keyPassword,
-          keyType: credential.keyType,
+          keyPassword: credential.key_password || credential.keyPassword,
+          keyType: credential.key_type || credential.keyType,
         };
       }
     }
@@ -1214,7 +1294,6 @@ router.put(
         )
         .returning();
 
-      // Trigger database save after folder rename
       DatabaseSaveTrigger.triggerSave("folder_rename");
 
       res.json({

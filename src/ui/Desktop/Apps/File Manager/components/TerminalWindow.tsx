@@ -38,6 +38,8 @@ export function TerminalWindow({
   const { t } = useTranslation();
   const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } =
     useWindowManager();
+  const terminalRef = React.useRef<any>(null);
+  const resizeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const currentWindow = windows.find((w) => w.id === windowId);
   if (!currentWindow) {
@@ -60,6 +62,26 @@ export function TerminalWindow({
     focusWindow(windowId);
   };
 
+  const handleResize = () => {
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+
+    resizeTimeoutRef.current = setTimeout(() => {
+      if (terminalRef.current?.fit) {
+        terminalRef.current.fit();
+      }
+    }, 100);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const terminalTitle = executeCommand
     ? t("terminal.runTitle", { host: hostConfig.name, command: executeCommand })
     : initialPath
@@ -81,10 +103,12 @@ export function TerminalWindow({
       onClose={handleClose}
       onMaximize={handleMaximize}
       onFocus={handleFocus}
+      onResize={handleResize}
       isMaximized={currentWindow.isMaximized}
       zIndex={currentWindow.zIndex}
     >
       <Terminal
+        ref={terminalRef}
         hostConfig={hostConfig}
         isVisible={!currentWindow.isMinimized}
         initialPath={initialPath}

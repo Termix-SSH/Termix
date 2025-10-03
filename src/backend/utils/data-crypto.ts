@@ -147,7 +147,7 @@ class DataCrypto {
         if (needsUpdate) {
           const updateQuery = `
             UPDATE ssh_credentials
-            SET password = ?, key = ?, key_password = ?, private_key = ?, updated_at = CURRENT_TIMESTAMP
+            SET password = ?, key = ?, key_password = ?, private_key = ?, public_key = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `;
           db.prepare(updateQuery).run(
@@ -155,6 +155,7 @@ class DataCrypto {
             updatedRecord.key || null,
             updatedRecord.key_password || null,
             updatedRecord.private_key || null,
+            updatedRecord.public_key || null,
             record.id,
           );
 
@@ -214,6 +215,165 @@ class DataCrypto {
 
   static getUserDataKey(userId: string): Buffer | null {
     return this.userCrypto.getUserDataKey(userId);
+  }
+
+  static async reencryptUserDataAfterPasswordReset(
+    userId: string,
+    newUserDataKey: Buffer,
+    db: any,
+  ): Promise<{
+    success: boolean;
+    reencryptedTables: string[];
+    reencryptedFieldsCount: number;
+    errors: string[];
+  }> {
+    const result = {
+      success: false,
+      reencryptedTables: [] as string[],
+      reencryptedFieldsCount: 0,
+      errors: [] as string[],
+    };
+
+    try {
+      const tablesToReencrypt = [
+        { table: "ssh_data", fields: ["password", "key", "key_password"] },
+        {
+          table: "ssh_credentials",
+          fields: [
+            "password",
+            "private_key",
+            "key_password",
+            "key",
+            "public_key",
+          ],
+        },
+        {
+          table: "users",
+          fields: [
+            "client_secret",
+            "totp_secret",
+            "totp_backup_codes",
+            "oidc_identifier",
+          ],
+        },
+      ];
+
+      for (const { table, fields } of tablesToReencrypt) {
+        try {
+          const records = db
+            .prepare(`SELECT * FROM ${table} WHERE user_id = ?`)
+            .all(userId);
+
+          for (const record of records) {
+            const recordId = record.id.toString();
+            let needsUpdate = false;
+            const updatedRecord = { ...record };
+
+            for (const fieldName of fields) {
+              const fieldValue = record[fieldName];
+
+              if (fieldValue && fieldValue.trim() !== "") {
+                try {
+                  const reencryptedValue = FieldCrypto.encryptField(
+                    fieldValue,
+                    newUserDataKey,
+                    recordId,
+                    fieldName,
+                  );
+
+                  updatedRecord[fieldName] = reencryptedValue;
+                  needsUpdate = true;
+                  result.reencryptedFieldsCount++;
+                } catch (error) {
+                  const errorMsg = `Failed to re-encrypt ${fieldName} for ${table} record ${recordId}: ${error instanceof Error ? error.message : "Unknown error"}`;
+                  result.errors.push(errorMsg);
+                  databaseLogger.warn(
+                    "Field re-encryption failed during password reset",
+                    {
+                      operation: "password_reset_reencrypt_failed",
+                      userId,
+                      table,
+                      recordId,
+                      fieldName,
+                      error:
+                        error instanceof Error
+                          ? error.message
+                          : "Unknown error",
+                    },
+                  );
+                }
+              }
+            }
+
+            if (needsUpdate) {
+              const updateFields = fields.filter(
+                (field) => updatedRecord[field] !== record[field],
+              );
+              if (updateFields.length > 0) {
+                const updateQuery = `UPDATE ${table} SET ${updateFields.map((f) => `${f} = ?`).join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+                const updateValues = updateFields.map(
+                  (field) => updatedRecord[field],
+                );
+                updateValues.push(record.id);
+
+                db.prepare(updateQuery).run(...updateValues);
+
+                if (!result.reencryptedTables.includes(table)) {
+                  result.reencryptedTables.push(table);
+                }
+              }
+            }
+          }
+        } catch (tableError) {
+          const errorMsg = `Failed to re-encrypt table ${table}: ${tableError instanceof Error ? tableError.message : "Unknown error"}`;
+          result.errors.push(errorMsg);
+          databaseLogger.error(
+            "Table re-encryption failed during password reset",
+            tableError,
+            {
+              operation: "password_reset_table_reencrypt_failed",
+              userId,
+              table,
+              error:
+                tableError instanceof Error
+                  ? tableError.message
+                  : "Unknown error",
+            },
+          );
+        }
+      }
+
+      result.success = result.errors.length === 0;
+
+      databaseLogger.info(
+        "User data re-encryption completed after password reset",
+        {
+          operation: "password_reset_reencrypt_completed",
+          userId,
+          success: result.success,
+          reencryptedTables: result.reencryptedTables,
+          reencryptedFieldsCount: result.reencryptedFieldsCount,
+          errorsCount: result.errors.length,
+        },
+      );
+
+      return result;
+    } catch (error) {
+      databaseLogger.error(
+        "User data re-encryption failed after password reset",
+        error,
+        {
+          operation: "password_reset_reencrypt_failed",
+          userId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+      );
+
+      result.errors.push(
+        `Critical error during re-encryption: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+      return result;
+    }
   }
 
   static validateUserAccess(userId: string): Buffer {

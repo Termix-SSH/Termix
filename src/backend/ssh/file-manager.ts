@@ -202,9 +202,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         const credential = credentials[0];
         resolvedCredentials = {
           password: credential.password,
-          sshKey: credential.privateKey || credential.key,
-          keyPassword: credential.keyPassword,
-          authType: credential.authType,
+          sshKey:
+            credential.private_key || credential.privateKey || credential.key,
+          keyPassword: credential.key_password || credential.keyPassword,
+          authType: credential.auth_type || credential.authType,
         };
       } else {
         fileLogger.warn(`No credentials found for host ${hostId}`, {

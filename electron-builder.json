@@ -37,8 +37,26 @@
     "uninstallDisplayName": "Termix"
   },
   "linux": {
-    "target": "AppImage",
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      {
+        "target": "tar.gz",
+        "arch": ["x64"]
+      }
+    ],
     "icon": "public/icon.png",
-    "category": "Development"
+    "category": "Development",
+    "executableName": "termix",
+    "desktop": {
+      "entry": {
+        "Name": "Termix",
+        "Comment": "A web-based server management platform",
+        "Keywords": "terminal;ssh;server;management;",
+        "StartupWMClass": "termix"
+      }
+    }
   }
 }

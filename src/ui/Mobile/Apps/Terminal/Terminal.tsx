@@ -158,8 +158,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     ws.addEventListener("message", (event) => {
       try {
         const msg = JSON.parse(event.data);
-        if (msg.type === "data") terminal.write(msg.data);
-        else if (msg.type === "error")
+        if (msg.type === "data") {
+          if (typeof msg.data === "string") {
+            terminal.write(msg.data);
+          } else {
+            terminal.write(String(msg.data));
+          }
+        } else if (msg.type === "error")
           terminal.writeln(`\r\n[${t("terminal.error")}] ${msg.message}`);
         else if (msg.type === "connected") {
           isConnectingRef.current = false;
@@ -221,6 +226,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       allowProposedApi: true,
       disableStdin: true,
       cursorInactiveStyle: "bar",
+      minimumContrastRatio: 1,
+      letterSpacing: 0,
+      lineHeight: 1.2,
     };
 
     const fitAddon = new FitAddon();
@@ -233,6 +241,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     terminal.loadAddon(clipboardAddon);
     terminal.loadAddon(unicode11Addon);
     terminal.loadAddon(webLinksAddon);
+
+    terminal.unicode.activeVersion = "11";
+
     terminal.open(xtermRef.current);
 
     const textarea = xtermRef.current.querySelector(
@@ -442,6 +453,66 @@ style.innerHTML = `
 }
 
 .xterm .xterm-screen .xterm-char[data-char-code^="\uE000"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE001"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE002"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE003"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE004"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE005"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE006"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE007"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE008"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE009"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE00A"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE00B"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE00C"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE00D"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE00E"] {
+  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
+}
+
+.xterm .xterm-screen .xterm-char[data-char-code^="\uE00F"] {
   font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
 }
 `;

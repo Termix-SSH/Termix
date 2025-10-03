@@ -239,7 +239,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
           } else if (data.startsWith("\x1b")) {
             sshStream.write(data);
           } else {
-            sshStream.write(Buffer.from(data, "utf8"));
+            try {
+              sshStream.write(Buffer.from(data, "utf8"));
+            } catch (error) {
+              sshLogger.error("Error writing input to SSH stream", error, {
+                operation: "ssh_input_encoding",
+                userId,
+                dataLength: data.length,
+              });
+              sshStream.write(Buffer.from(data, "latin1"));
+            }
           }
         }
         break;
@@ -367,10 +376,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const credential = credentials[0];
           resolvedCredentials = {
             password: credential.password,
-            key: credential.privateKey || credential.key,
-            keyPassword: credential.keyPassword,
-            keyType: credential.keyType,
-            authType: credential.authType,
+            key:
+              credential.private_key || credential.privateKey || credential.key,
+            keyPassword: credential.key_password || credential.keyPassword,
+            keyType: credential.key_type || credential.keyType,
+            authType: credential.auth_type || credential.authType,
           };
         } else {
           sshLogger.warn(`No credentials found for host ${id}`, {
@@ -427,7 +437,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
           sshStream = stream;
 
           stream.on("data", (data: Buffer) => {
-            ws.send(JSON.stringify({ type: "data", data: data.toString() }));
+            try {
+              const utf8String = data.toString("utf-8");
+              ws.send(JSON.stringify({ type: "data", data: utf8String }));
+            } catch (error) {
+              sshLogger.error("Error encoding terminal data", error, {
+                operation: "terminal_data_encoding",
+                hostId: id,
+                dataLength: data.length,
+              });
+              ws.send(
+                JSON.stringify({
+                  type: "data",
+                  data: data.toString("latin1"),
+                }),
+              );
+            }
           });
 
           stream.on("close", () => {

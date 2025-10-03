@@ -434,10 +434,9 @@ export function Server({
 
                     <div className="text-xs text-gray-500">
                       {(() => {
-                        const used = metrics?.disk?.usedHuman;
-                        const total = metrics?.disk?.totalHuman;
-                        return used && total
-                          ? `Available: ${total}`
+                        const available = metrics?.disk?.availableHuman;
+                        return available
+                          ? `Available: ${available}`
                           : "Available: N/A";
                       })()}
                     </div>
