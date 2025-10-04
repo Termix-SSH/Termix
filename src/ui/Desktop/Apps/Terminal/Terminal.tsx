@@ -587,6 +587,29 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     return "";
   }
 
+  // Separate WebSocket lifecycle from terminal instance to prevent disconnection on tab switch
+  useEffect(() => {
+    return () => {
+      // Only cleanup WebSocket on component unmount (tab close), not on re-render
+      isUnmountingRef.current = true;
+      shouldNotReconnectRef.current = true;
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
+      webSocketRef.current?.close();
+      updateConnectionDisconnectCall();
+    };
+  }, []); // Empty deps - only run on mount/unmount
+
   useEffect(() => {
     if (!terminal || !xtermRef.current) return;
 
@@ -701,8 +724,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     setVisible(true);
 
     return () => {
-      isUnmountingRef.current = true;
-      shouldNotReconnectRef.current = true;
+      // Cleanup terminal UI resources only, preserve WebSocket connection
       isReconnectingRef.current = false;
       setIsConnecting(false);
       resizeObserver.disconnect();
@@ -710,15 +732,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       element?.removeEventListener("keydown", handleMacKeyboard, true);
       if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
       if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-      if (reconnectTimeoutRef.current)
-        clearTimeout(reconnectTimeoutRef.current);
-      if (connectionTimeoutRef.current)
-        clearTimeout(connectionTimeoutRef.current);
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = null;
-      }
-      webSocketRef.current?.close();
     };
   }, [xtermRef, terminal]);
 
