@@ -2080,6 +2080,20 @@ export async function renameFolder(
   }
 }
 
+export async function deleteFolder(folderName: string): Promise<{
+  message: string;
+  deletedHosts: number;
+}> {
+  try {
+    const response = await authApi.delete(
+      `/ssh/folders/${encodeURIComponent(folderName)}`,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "delete folder");
+  }
+}
+
 export async function renameCredentialFolder(
   oldName: string,
   newName: string,

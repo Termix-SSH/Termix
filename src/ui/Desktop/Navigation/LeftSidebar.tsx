@@ -393,6 +393,7 @@ export function LeftSidebar({
                   hosts={getSortedHosts(hostsByFolder[folder])}
                   isFirst={idx === 0}
                   isLast={idx === sortedFolders.length - 1}
+                  onDelete={fetchHosts}
                 />
               ))}
             </SidebarGroup>
