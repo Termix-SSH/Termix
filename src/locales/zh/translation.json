@@ -187,6 +187,8 @@
     "commandsWillBeSent": "命令将发送到 {{count}} 个选中的终端。",
     "settings": "设置",
     "enableRightClickCopyPaste": "启用右键复制/粘贴",
+    "enableTmuxAutoAttach": "启用 tmux 自动附加",
+    "tmuxAutoAttachDesc": "自动附加到持久化的 tmux 会话。您的会话将在页面刷新后保持，并可从多个浏览器访问。",
     "shareIdeas": "对 SSH 工具有什么想法？在此分享"
   },
   "homepage": {

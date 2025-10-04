@@ -408,10 +408,11 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         }
       }, 10000);
 
+      const useTmux = getCookie("tmuxAutoAttach") === "true";
       ws.send(
         JSON.stringify({
           type: "connectToHost",
-          data: { cols, rows, hostConfig, initialPath, executeCommand },
+          data: { cols, rows, hostConfig, initialPath, executeCommand, useTmux },
         }),
       );
       terminal.onData((data) => {

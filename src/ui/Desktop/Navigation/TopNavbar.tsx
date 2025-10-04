@@ -465,6 +465,25 @@ export function TopNavbar({
                   </label>
                 </div>
 
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="enable-tmux-auto-attach"
+                    onCheckedChange={(checked) =>
+                      setCookie("tmuxAutoAttach", checked.toString())
+                    }
+                    defaultChecked={getCookie("tmuxAutoAttach") === "true"}
+                  />
+                  <label
+                    htmlFor="enable-tmux-auto-attach"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-white"
+                  >
+                    {t("sshTools.enableTmuxAutoAttach")}
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t("sshTools.tmuxAutoAttachDesc")}
+                </p>
+
                 <Separator className="my-4" />
 
                 <p className="pt-2 pb-2 text-sm text-gray-500">

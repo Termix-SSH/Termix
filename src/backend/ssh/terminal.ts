@@ -315,8 +315,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
     };
     initialPath?: string;
     executeCommand?: string;
+    useTmux?: boolean;
   }) {
-    const { cols, rows, hostConfig, initialPath, executeCommand } = data;
+    const { cols, rows, hostConfig, initialPath, executeCommand, useTmux } = data;
     const {
       id,
       ip,
@@ -513,7 +514,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           setupPingInterval();
 
-          if (initialPath && initialPath.trim() !== "") {
+          // Auto-attach to tmux session if enabled
+          if (useTmux) {
+            const sessionName = `termix-${id}`;
+            const tmuxCommand = `tmux new-session -A -s ${sessionName}\n`;
+            stream.write(tmuxCommand);
+          } else if (initialPath && initialPath.trim() !== "") {
             const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
             stream.write(cdCommand);
           }

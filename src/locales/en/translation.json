@@ -189,6 +189,8 @@
     "commandsWillBeSent": "Commands will be sent to {{count}} selected terminal(s).",
     "settings": "Settings",
     "enableRightClickCopyPaste": "Enable right‑click copy/paste",
+    "enableTmuxAutoAttach": "Enable tmux auto-attach",
+    "tmuxAutoAttachDesc": "Automatically attach to persistent tmux sessions. Your sessions will survive page refreshes and can be accessed from multiple browsers.",
     "shareIdeas": "Have ideas for what should come next for ssh tools? Share them on"
   },
   "homepage": {
