@@ -7,6 +7,7 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
+  sshConnections,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
@@ -1398,7 +1399,7 @@ router.delete(
       }
 
       // Delete all hosts in the folder
-      const deletedHosts = await SimpleDBOps.softDelete(
+      const deletedHosts = await SimpleDBOps.delete(
         sshData,
         "ssh_data",
         and(eq(sshData.userId, userId), eq(sshData.folder, folderName)),
