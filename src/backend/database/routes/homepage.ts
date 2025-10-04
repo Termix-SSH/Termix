@@ -79,12 +79,12 @@ router.post("/record-connection", authenticateJWT, async (req: Request, res: Res
 
     // Cleanup: Keep only the last 40 connections per user
     await db.$client.prepare(`
-      DELETE FROM ssh_connections 
-      WHERE userId = ? 
+      DELETE FROM ssh_connections
+      WHERE user_id = ?
       AND id NOT IN (
-        SELECT id FROM ssh_connections 
-        WHERE userId = ? 
-        ORDER BY connectedAt DESC 
+        SELECT id FROM ssh_connections
+        WHERE user_id = ?
+        ORDER BY connected_at DESC
         LIMIT 40
       )
     `).run(userId, userId);
