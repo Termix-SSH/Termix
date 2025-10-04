@@ -70,8 +70,24 @@ class UserCrypto {
   }
 
   async setupOIDCUserEncryption(userId: string): Promise<void> {
+    // Generate a deterministic system key for encrypting the DEK
+    // This allows OIDC users to decrypt their data across sessions
+    // without requiring a password (OIDC auth is sufficient)
+    const systemKey = this.deriveOIDCSystemKey(userId);
+
+    // Generate a random DEK for encrypting user data
     const DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
 
+    // Encrypt and persist the DEK using the system key
+    const encryptedDEK = this.encryptDEK(DEK, systemKey);
+    await this.storeEncryptedDEK(userId, encryptedDEK);
+
+    // Store a marker salt to indicate encryption has been initialized
+    // This allows authenticateOIDCUser to detect existing setup
+    const kekSalt = await this.generateKEKSalt();
+    await this.storeKEKSalt(userId, kekSalt);
+
+    // Load DEK into memory session
     const now = Date.now();
     this.userSessions.set(userId, {
       dataKey: Buffer.from(DEK),
@@ -79,6 +95,8 @@ class UserCrypto {
       expiresAt: now + UserCrypto.SESSION_DURATION,
     });
 
+    // Clean up sensitive data from memory
+    systemKey.fill(0);
     DEK.fill(0);
   }
 
