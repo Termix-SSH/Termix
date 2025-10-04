@@ -687,6 +687,7 @@ export function Auth({
               disabled={totpLoading}
               className="text-center text-2xl tracking-widest font-mono"
               autoComplete="one-time-code"
+              autoFocus
             />
             <p className="text-xs text-muted-foreground text-center">
               {t("auth.backupCode")}
@@ -881,6 +882,7 @@ export function Auth({
                             }
                             disabled={resetLoading}
                             placeholder="000000"
+                            autoFocus
                           />
                         </div>
                         <Button
