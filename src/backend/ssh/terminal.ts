@@ -260,22 +260,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
       case "totp_response":
         // Handle TOTP code submitted by user
-        if (keyboardInteractiveFinish && data.code) {
+        // Support both flat format {type, code} and nested format {type, data: {code}}
+        const totpCode = parsed.code || data?.code;
+        if (keyboardInteractiveFinish && totpCode) {
           sshLogger.info("TOTP code received from user", {
             operation: "totp_response",
             userId,
-            codeLength: data.code.length,
+            codeLength: totpCode.length,
           });
 
           // Call the finish callback with the TOTP code
-          keyboardInteractiveFinish([data.code]);
+          keyboardInteractiveFinish([totpCode]);
           keyboardInteractiveFinish = null;
         } else {
           sshLogger.warn("TOTP response received but no callback available", {
             operation: "totp_response_error",
             userId,
             hasCallback: !!keyboardInteractiveFinish,
-            hasCode: !!data.code,
+            hasCode: !!totpCode,
           });
           ws.send(
             JSON.stringify({
@@ -622,6 +624,23 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
         } else {
           // Non-TOTP keyboard-interactive (e.g., password prompt)
+          if (resolvedCredentials.authType === "none") {
+            // None auth should not provide credentials
+            sshLogger.warn("Server requires authentication but 'none' auth type was selected", {
+              operation: "ssh_keyboard_interactive_rejected",
+              hostId: id,
+              promptsCount: prompts.length,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Server requires authentication but 'none' authentication type was selected. Please use password or key authentication instead.",
+              }),
+            );
+            cleanupSSH();
+            return;
+          }
+
           // Provide password if available
           const responses = prompts.map(
             () => resolvedCredentials.password || "",
@@ -738,6 +757,29 @@ wss.on("connection", async (ws: WebSocket, req) => {
         JSON.stringify({
           type: "error",
           message: "SSH key authentication requested but no key provided",
+        }),
+      );
+      return;
+    } else if (resolvedCredentials.authType === "none") {
+      // Allow connection without stored credentials
+      // SSH2 will use keyboard-interactive or other interactive auth methods
+      sshLogger.info("Connecting without stored credentials - using interactive authentication", {
+        operation: "ssh_connect",
+        hostId: id,
+        ip,
+        username,
+      });
+    } else if (resolvedCredentials.authType === "credential") {
+      // Credential type but no credential resolved
+      sshLogger.warn("Credential auth type but no credentials resolved", {
+        operation: "ssh_connect",
+        hostId: id,
+        credentialId,
+      });
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "Failed to resolve credentials",
         }),
       );
       return;
