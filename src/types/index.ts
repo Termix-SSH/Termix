@@ -18,7 +18,7 @@ export interface SSHHost {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential";
+  authType: "password" | "key" | "credential" | "none";
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -47,7 +47,7 @@ export interface SSHHostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential";
+  authType: "password" | "key" | "credential" | "none";
   password?: string;
   key?: File | null;
   keyPassword?: string;
@@ -95,6 +95,26 @@ export interface CredentialData {
   publicKey?: string;
   keyPassword?: string;
   keyType?: string;
+}
+
+// ============================================================================
+// SNIPPET TYPES
+// ============================================================================
+
+export interface Snippet {
+  id: number;
+  userId: string;
+  name: string;
+  content: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SnippetData {
+  name: string;
+  content: string;
+  description?: string;
 }
 
 // ============================================================================

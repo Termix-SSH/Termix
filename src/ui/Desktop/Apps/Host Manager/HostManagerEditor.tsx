@@ -48,7 +48,7 @@ interface SSHHost {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: string;
+  authType: "password" | "key" | "credential" | "none";
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -79,9 +79,9 @@ export function HostManagerEditor({
   const [credentials, setCredentials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [authTab, setAuthTab] = useState<"password" | "key" | "credential">(
-    "password",
-  );
+  const [authTab, setAuthTab] = useState<
+    "password" | "key" | "credential" | "none"
+  >("password");
   const [keyInputMethod, setKeyInputMethod] = useState<"upload" | "paste">(
     "upload",
   );
@@ -174,7 +174,7 @@ export function HostManagerEditor({
       folder: z.string().optional(),
       tags: z.array(z.string().min(1)).default([]),
       pin: z.boolean().default(false),
-      authType: z.enum(["password", "key", "credential"]),
+      authType: z.enum(["password", "key", "credential", "none"]),
       credentialId: z.number().optional().nullable(),
       password: z.string().optional(),
       key: z.any().optional().nullable(),
@@ -210,6 +210,11 @@ export function HostManagerEditor({
       defaultPath: z.string().optional(),
     })
     .superRefine((data, ctx) => {
+      // Skip authentication validation for "none" type
+      if (data.authType === "none") {
+        return;
+      }
+
       if (data.authType === "key") {
         if (
           !data.key ||
@@ -313,7 +318,9 @@ export function HostManagerEditor({
         ? "credential"
         : cleanedHost.key
           ? "key"
-          : "password";
+          : cleanedHost.password
+            ? "password"
+            : "none";
       setAuthTab(defaultAuthType);
 
       const formData = {
@@ -324,7 +331,7 @@ export function HostManagerEditor({
         folder: cleanedHost.folder || "",
         tags: cleanedHost.tags || [],
         pin: Boolean(cleanedHost.pin),
-        authType: defaultAuthType as "password" | "key" | "credential",
+        authType: defaultAuthType as "password" | "key" | "credential" | "none",
         credentialId: null,
         password: "",
         key: null,
@@ -863,7 +870,8 @@ export function HostManagerEditor({
                     const newAuthType = value as
                       | "password"
                       | "key"
-                      | "credential";
+                      | "credential"
+                      | "none";
                     setAuthTab(newAuthType);
                     form.setValue("authType", newAuthType);
 
@@ -880,6 +888,13 @@ export function HostManagerEditor({
                       form.setValue("key", null);
                       form.setValue("keyPassword", "");
                       form.setValue("keyType", "auto");
+                    } else if (newAuthType === "none") {
+                      // Clear all authentication fields for "none" type
+                      form.setValue("password", "");
+                      form.setValue("key", null);
+                      form.setValue("keyPassword", "");
+                      form.setValue("keyType", "auto");
+                      form.setValue("credentialId", null);
                     }
                   }}
                   className="flex-1 flex flex-col h-full min-h-0"
@@ -892,6 +907,7 @@ export function HostManagerEditor({
                     <TabsTrigger value="credential">
                       {t("hosts.credential")}
                     </TabsTrigger>
+                    <TabsTrigger value="none">{t("hosts.none")}</TabsTrigger>
                   </TabsList>
                   <TabsContent value="password">
                     <FormField
@@ -1109,6 +1125,13 @@ export function HostManagerEditor({
                         </FormItem>
                       )}
                     />
+                  </TabsContent>
+                  <TabsContent value="none">
+                    <FormItem>
+                      <FormDescription>
+                        {t("hosts.noneDescription")}
+                      </FormDescription>
+                    </FormItem>
                   </TabsContent>
                 </Tabs>
               </TabsContent>

@@ -13,6 +13,9 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getCookie, isElectron } from "@/ui/main-axios.ts";
+import { SnippetsSidebar } from "./SnippetsSidebar";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 
 interface SSHTerminalProps {
   hostConfig: any;
@@ -55,6 +58,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpPrompt, setTotpPrompt] = useState<string>("");
+  const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(() => {
+    // Load sidebar state from localStorage
+    const saved = localStorage.getItem("terminal-sidebar-open");
+    return saved === "true";
+  });
   const isVisibleRef = useRef<boolean>(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
@@ -101,6 +111,42 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       }
     } catch (_) {}
   }
+
+  // Handle TOTP code submission
+  const handleTotpSubmit = (code: string) => {
+    if (webSocketRef.current && code.trim()) {
+      webSocketRef.current.send(
+        JSON.stringify({
+          type: "totp_response",
+          code: code.trim(),
+        }),
+      );
+      setTotpRequired(false);
+      setTotpPrompt("");
+    }
+  };
+
+  // Handle snippet execution
+  const handleSnippetExecute = (content: string) => {
+    if (terminal && webSocketRef.current?.readyState === WebSocket.OPEN) {
+      // Send command to terminal
+      webSocketRef.current.send(
+        JSON.stringify({
+          type: "input",
+          data: content + "\n",
+        }),
+      );
+    }
+  };
+
+  // Toggle snippets sidebar and persist state
+  const toggleSnippetsSidebar = () => {
+    setSnippetsSidebarOpen((prev) => {
+      const newState = !prev;
+      localStorage.setItem("terminal-sidebar-open", String(newState));
+      return newState;
+    });
+  };
 
   function scheduleNotify(cols: number, rows: number) {
     if (!(cols > 0 && rows > 0)) return;
@@ -422,6 +468,10 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           if (onClose) {
             onClose();
           }
+        } else if (msg.type === "totp_required") {
+          // TOTP/2FA verification required
+          setTotpRequired(true);
+          setTotpPrompt(msg.prompt || "Verification code:");
         }
       } catch (error) {
         toast.error(t("terminal.messageParseError"));
@@ -711,6 +761,19 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
   return (
     <div className="h-full w-full relative">
+      {/* Snippets toggle button */}
+      <div className="absolute top-2 right-2 z-10">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={toggleSnippetsSidebar}
+          className="bg-background/80 backdrop-blur-sm"
+        >
+          <FileText className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Terminal area - full width, not affected by sidebar */}
       <div
         ref={xtermRef}
         className={`h-full w-full transition-opacity duration-200 ${visible && isVisible && !isConnecting ? "opacity-100" : "opacity-0"}`}
@@ -729,6 +792,73 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           </div>
         </div>
       )}
+
+      {totpRequired && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-50">
+          <div className="bg-gray-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              {t("terminal.totpRequired")}
+            </h3>
+            <p className="text-gray-300 text-sm mb-4">{totpPrompt}</p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.currentTarget.elements.namedItem(
+                  "totpCode",
+                ) as HTMLInputElement;
+                if (input && input.value.trim()) {
+                  handleTotpSubmit(input.value);
+                }
+              }}
+            >
+              <input
+                type="text"
+                name="totpCode"
+                autoFocus
+                maxLength={6}
+                pattern="[0-9]*"
+                inputMode="numeric"
+                placeholder={t("terminal.totpPlaceholder")}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              />
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors"
+                >
+                  {t("terminal.submit")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTotpRequired(false);
+                    setTotpPrompt("");
+                    if (webSocketRef.current) {
+                      webSocketRef.current.close();
+                    }
+                    if (onClose) {
+                      onClose();
+                    }
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md font-medium transition-colors"
+                >
+                  {t("terminal.cancel")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Snippets Sidebar - absolutely positioned */}
+      <SnippetsSidebar
+        isOpen={snippetsSidebarOpen}
+        onClose={() => {
+          setSnippetsSidebarOpen(false);
+          localStorage.setItem("terminal-sidebar-open", "false");
+        }}
+        onExecute={handleSnippetExecute}
+      />
     </div>
   );
 });

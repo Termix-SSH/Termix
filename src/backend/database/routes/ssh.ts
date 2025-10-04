@@ -281,7 +281,14 @@ router.post(
       sshDataObj.keyPassword = keyPassword || null;
       sshDataObj.keyType = keyType;
       sshDataObj.password = null;
+    } else if (effectiveAuthType === "none") {
+      // No authentication credentials - set all to null
+      sshDataObj.password = null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else {
+      // credential type or fallback - set all to null except credentialId
       sshDataObj.password = null;
       sshDataObj.key = null;
       sshDataObj.keyPassword = null;
@@ -471,7 +478,14 @@ router.put(
         sshDataObj.keyType = keyType;
       }
       sshDataObj.password = null;
+    } else if (effectiveAuthType === "none") {
+      // No authentication credentials - set all to null
+      sshDataObj.password = null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else {
+      // credential type or fallback - set all to null except credentialId
       sshDataObj.password = null;
       sshDataObj.key = null;
       sshDataObj.keyPassword = null;
@@ -1356,10 +1370,12 @@ router.post(
           continue;
         }
 
-        if (!["password", "key", "credential"].includes(hostData.authType)) {
+        if (
+          !["password", "key", "credential", "none"].includes(hostData.authType)
+        ) {
           results.failed++;
           results.errors.push(
-            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', or 'credential'`,
+            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', or 'none'`,
           );
           continue;
         }
@@ -1390,6 +1406,8 @@ router.post(
           );
           continue;
         }
+
+        // "none" authType requires no validation - no credentials needed
 
         const sshDataObj: any = {
           userId: userId,
