@@ -450,6 +450,9 @@ function initializeApiInstances() {
 
   // Authentication API (port 30001)
   authApi = createApiInstance(getApiUrl("", 30001), "AUTH");
+
+  // Homepage Dashboard API (port 30001)
+  homepageApi = createApiInstance(getApiUrl("/homepage", 30001), "HOMEPAGE");
 }
 
 // SSH Host Management API (port 30001)
@@ -466,6 +469,9 @@ export let statsApi: AxiosInstance;
 
 // Authentication API (port 30001)
 export let authApi: AxiosInstance;
+
+// Homepage Dashboard API (port 30001)
+export let homepageApi: AxiosInstance;
 
 if (isElectron()) {
   getServerConfig()
@@ -1503,12 +1509,22 @@ export async function getAllServerStatuses(): Promise<
   }
 }
 
-export async function getServerStatusById(id: number): Promise<ServerStatus> {
+export async function getServerStatusById(id: number): Promise<ServerStatus | null> {
   try {
     const response = await statsApi.get(`/status/${id}`);
+    return response.data || null;
+  } catch (error) {
+    handleApiError(error, "fetch server status by id");
+    return null;
+  }
+}
+
+export async function getSystemStatus(): Promise<any> {
+  try {
+    const response = await homepageApi.get("/system-status");
     return response.data;
   } catch (error) {
-    handleApiError(error, "fetch server status");
+    handleApiError(error, "fetch system status");
   }
 }
 
@@ -1556,8 +1572,10 @@ export async function loginUser(
       success: response.data.success,
       is_admin: response.data.is_admin,
       username: response.data.username,
-      requires_totp: response.data.requires_totp,
-      temp_token: response.data.temp_token,
+      userId: response.data.userId,
+      is_oidc: response.data.is_oidc,
+      totp_enabled: response.data.totp_enabled,
+      data_unlocked: response.data.data_unlocked,
     };
   } catch (error) {
     handleApiError(error, "login user");
@@ -2196,5 +2214,110 @@ export async function deleteSnippet(snippetId: number): Promise<any> {
     return response.data;
   } catch (error) {
     throw handleApiError(error, "delete snippet");
+  }
+}
+
+// ============================================================================
+// HOMEPAGE DASHBOARD API
+// ============================================================================
+
+export async function getRecentConnections(limit: number = 10): Promise<any> {
+  try {
+    const response = await homepageApi.get(`/recent-connections?limit=${limit}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch recent connections");
+  }
+}
+
+export async function recordConnection(connectionData: {
+  hostId: number;
+  connectionType: string;
+}): Promise<any> {
+  try {
+    const response = await homepageApi.post("/record-connection", connectionData);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "record connection");
+  }
+}
+
+export async function updateConnectionDisconnect(
+  connectionId: number,
+): Promise<any> {
+  try {
+    const response = await homepageApi.put(`/update-connection/${connectionId}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update connection disconnect");
+  }
+}
+
+export async function getServerStats(): Promise<any> {
+  try {
+    const response = await homepageApi.get("/server-stats");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch server stats");
+  }
+}
+
+export async function getActiveTunnels(): Promise<any> {
+  try {
+    const response = await homepageApi.get("/active-tunnels");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch active tunnels");
+  }
+}
+
+export async function getRecentFilesFromHomepage(limit: number = 10): Promise<any> {
+  try {
+    const response = await homepageApi.get(`/recent-files?limit=${limit}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch recent files");
+  }
+}
+
+export async function getQuickAccessData(): Promise<any> {
+  try {
+    const response = await homepageApi.get("/quick-access");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch quick access data");
+  }
+}
+
+// ============================================================================
+// DATABASE MANAGEMENT API
+// ============================================================================
+
+export async function exportDatabase(password: string): Promise<Blob> {
+  try {
+    const response = await authApi.post("/database/export", { password }, {
+      responseType: "blob",
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "export database");
+  }
+}
+
+export async function importDatabase(
+  file: File,
+  password: string,
+): Promise<any> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("password", password);
+
+    const response = await authApi.post("/database/import", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "import database");
   }
 }

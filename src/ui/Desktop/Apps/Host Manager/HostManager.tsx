@@ -17,9 +17,10 @@ import type { SSHHost, HostManagerProps } from "../../../types/index";
 export function HostManager({
   onSelectView,
   isTopbarOpen,
+  initialTab = "host_viewer",
 }: HostManagerProps): React.ReactElement {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState("host_viewer");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [editingHost, setEditingHost] = useState<SSHHost | null>(null);
 
   const [editingCredential, setEditingCredential] = useState<any | null>(null);

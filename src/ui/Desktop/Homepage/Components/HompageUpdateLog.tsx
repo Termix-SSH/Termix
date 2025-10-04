@@ -83,35 +83,26 @@ export function HomepageUpdateLog({ loggedIn }: HomepageUpdateLogProps) {
   };
 
   return (
-    <div className="w-[400px] h-[600px] flex flex-col border-2 border-dark-border rounded-lg bg-dark-bg p-4 shadow-lg">
-      <div>
-        <h3 className="text-lg font-bold mb-3 text-white">
-          {t("common.updatesAndReleases")}
-        </h3>
-
-        <Separator className="p-0.25 mt-3 mb-3 bg-dark-border" />
-
+    <div className="w-full h-full flex flex-col">
+      <div className={`flex-1 overflow-y-auto thin-scrollbar ${releases?.items.length || versionInfo?.status === "requires_update" ? '-mt-4 pb-16' : ''}`}>
         {versionInfo && versionInfo.status === "requires_update" && (
-          <Alert className="bg-dark-bg-darker border-dark-border text-white">
-            <AlertTitle className="text-white">
+          <div 
+            className="border border-dark-border rounded-lg p-3 hover:bg-dark-bg-darker transition-colors cursor-pointer bg-dark-bg-darker/50 mb-3"
+            onClick={() => window.open(versionInfo.latest_release.html_url, "_blank")}
+          >
+            <h4 className="font-semibold text-sm leading-tight text-white mb-2">
               {t("common.updateAvailable")}
-            </AlertTitle>
-            <AlertDescription className="text-gray-300">
+            </h4>
+            <p className="text-xs text-gray-300 leading-relaxed">
               {t("common.newVersionAvailable", {
                 version: versionInfo.version,
               })}
-            </AlertDescription>
-          </Alert>
+            </p>
+          </div>
         )}
-      </div>
 
-      {versionInfo && versionInfo.status === "requires_update" && (
-        <Separator className="p-0.25 mt-3 mb-3 bg-dark-border" />
-      )}
-
-      <div className="flex-1 overflow-y-auto space-y-3 pr-2">
         {loading && (
-          <div className="flex items-center justify-center h-32">
+          <div className="flex items-center justify-center h-32 mb-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         )}
@@ -119,7 +110,7 @@ export function HomepageUpdateLog({ loggedIn }: HomepageUpdateLogProps) {
         {error && (
           <Alert
             variant="destructive"
-            className="bg-red-900/20 border-red-500 text-red-300"
+            className="bg-red-900/20 border-red-500 text-red-300 mb-3"
           >
             <AlertTitle className="text-red-300">
               {t("common.error")}
@@ -130,10 +121,12 @@ export function HomepageUpdateLog({ loggedIn }: HomepageUpdateLogProps) {
           </Alert>
         )}
 
-        {releases?.items.map((release) => (
+        {releases?.items.map((release, index) => (
           <div
             key={release.id}
-            className="border border-dark-border rounded-lg p-3 hover:bg-dark-bg-darker transition-colors cursor-pointer bg-dark-bg-darker/50"
+            className={`border border-dark-border rounded-lg p-3 hover:bg-dark-bg-darker transition-colors cursor-pointer bg-dark-bg-darker/50 ${
+              index < releases.items.length - 1 ? 'mb-3' : 'mb-4'
+            }`}
             onClick={() => window.open(release.link, "_blank")}
           >
             <div className="flex items-start justify-between mb-2">

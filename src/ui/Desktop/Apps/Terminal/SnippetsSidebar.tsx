@@ -128,7 +128,9 @@ export function SnippetsSidebar({
       fetchSnippets();
     } catch (err) {
       toast.error(
-        editingSnippet ? t("snippets.updateFailed") : t("snippets.createFailed"),
+        editingSnippet
+          ? t("snippets.updateFailed")
+          : t("snippets.createFailed"),
       );
     }
   };
@@ -172,7 +174,10 @@ export function SnippetsSidebar({
           ) : (
             <div className="p-4 space-y-3">
               {snippets.map((snippet) => (
-                <Card key={snippet.id} className="hover:bg-accent/50 transition">
+                <Card
+                  key={snippet.id}
+                  className="hover:bg-accent/50 transition"
+                >
                   <CardHeader className="p-3 pb-2">
                     <CardTitle className="text-sm font-medium">
                       {snippet.name}
@@ -236,69 +241,71 @@ export function SnippetsSidebar({
                   : t("snippets.createDescription")}
               </p>
             </div>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">
-                {t("snippets.name")} <span className="text-destructive">*</span>
-              </label>
-              <Input
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder={t("snippets.namePlaceholder")}
-                className={formErrors.name ? "border-destructive" : ""}
-              />
-              {formErrors.name && (
-                <p className="text-xs text-destructive mt-1">
-                  {t("snippets.nameRequired")}
-                </p>
-              )}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">
+                  {t("snippets.name")}{" "}
+                  <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  placeholder={t("snippets.namePlaceholder")}
+                  className={formErrors.name ? "border-destructive" : ""}
+                />
+                {formErrors.name && (
+                  <p className="text-xs text-destructive mt-1">
+                    {t("snippets.nameRequired")}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="text-sm font-medium">
+                  {t("snippets.description")}
+                </label>
+                <Input
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder={t("snippets.descriptionPlaceholder")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">
+                  {t("snippets.content")}{" "}
+                  <span className="text-destructive">*</span>
+                </label>
+                <Textarea
+                  value={formData.content}
+                  onChange={(e) =>
+                    setFormData({ ...formData, content: e.target.value })
+                  }
+                  placeholder={t("snippets.contentPlaceholder")}
+                  className={`font-mono ${formErrors.content ? "border-destructive" : ""}`}
+                  rows={8}
+                />
+                {formErrors.content && (
+                  <p className="text-xs text-destructive mt-1">
+                    {t("snippets.contentRequired")}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">
-                {t("snippets.description")}
-              </label>
-              <Input
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                placeholder={t("snippets.descriptionPlaceholder")}
-              />
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowDialog(false)}
+                className="flex-1"
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={handleSubmit} className="flex-1">
+                {editingSnippet ? t("common.update") : t("common.create")}
+              </Button>
             </div>
-            <div>
-              <label className="text-sm font-medium">
-                {t("snippets.content")} <span className="text-destructive">*</span>
-              </label>
-              <Textarea
-                value={formData.content}
-                onChange={(e) =>
-                  setFormData({ ...formData, content: e.target.value })
-                }
-                placeholder={t("snippets.contentPlaceholder")}
-                className={`font-mono ${formErrors.content ? "border-destructive" : ""}`}
-                rows={8}
-              />
-              {formErrors.content && (
-                <p className="text-xs text-destructive mt-1">
-                  {t("snippets.contentRequired")}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-3 mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setShowDialog(false)}
-              className="flex-1"
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={handleSubmit} className="flex-1">
-              {editingSnippet ? t("common.update") : t("common.create")}
-            </Button>
-          </div>
           </div>
         </div>
       )}

@@ -11,7 +11,7 @@ import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
-import { isElectron, getCookie } from "@/ui/main-axios.ts";
+import { isElectron, getCookie, recordConnection, updateConnectionDisconnect } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
 
 interface SSHTerminalProps {
@@ -42,6 +42,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionIdRef = useRef<number | null>(null);
   const DEBOUNCE_MS = 140;
 
   useEffect(() => {
@@ -75,6 +76,35 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       }
     } catch (_) {}
   }
+
+  // Record SSH connection
+  const recordConnectionCall = async () => {
+    if (!hostConfig?.id) return;
+    
+    try {
+      const data = await recordConnection({
+        hostId: hostConfig.id,
+        connectionType: "terminal",
+      });
+      
+      if (data?.id) {
+        connectionIdRef.current = data.id;
+      }
+    } catch (error) {
+      console.warn("Failed to record connection:", error);
+    }
+  };
+
+  // Update connection disconnect
+  const updateConnectionDisconnectCall = async () => {
+    if (!connectionIdRef.current) return;
+    
+    try {
+      await updateConnectionDisconnect(connectionIdRef.current);
+    } catch (error) {
+      console.warn("Failed to update connection disconnect:", error);
+    }
+  };
 
   function scheduleNotify(cols: number, rows: number) {
     if (!(cols > 0 && rows > 0)) return;
@@ -168,6 +198,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           terminal.writeln(`\r\n[${t("terminal.error")}] ${msg.message}`);
         else if (msg.type === "connected") {
           isConnectingRef.current = false;
+          recordConnectionCall();
         } else if (msg.type === "disconnected") {
           wasDisconnectedBySSH.current = true;
           isConnectingRef.current = false;
@@ -180,6 +211,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
     ws.addEventListener("close", (event) => {
       isConnectingRef.current = false;
+      updateConnectionDisconnectCall();
 
       if (event.code === 1008) {
         console.error("WebSocket authentication failed:", event.reason);

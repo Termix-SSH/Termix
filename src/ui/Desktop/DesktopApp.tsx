@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { LeftSidebar } from "@/ui/Desktop/Navigation/LeftSidebar.tsx";
 import { Homepage } from "@/ui/Desktop/Homepage/Homepage.tsx";
+import { HomepageProvider } from "@/ui/Desktop/Homepage/HomepageContext.tsx";
 import { AppView } from "@/ui/Desktop/Navigation/AppView.tsx";
 import { HostManager } from "@/ui/Desktop/Apps/Host Manager/HostManager.tsx";
 import {
@@ -132,41 +133,45 @@ function AppContent() {
             authLoading={authLoading}
             onAuthSuccess={handleAuthSuccess}
             isTopbarOpen={isTopbarOpen}
+            isAdmin={isAdmin}
           />
         </div>
       )}
 
       {isAuthenticated && (
-        <LeftSidebar
-          onSelectView={handleSelectView}
-          disabled={!isAuthenticated || authLoading}
-          isAdmin={isAdmin}
-          username={username}
-        >
-          <div
-            className="h-screen w-full visible pointer-events-auto static overflow-hidden"
-            style={{ display: showTerminalView ? "block" : "none" }}
+        <HomepageProvider isAuthenticated={isAuthenticated}>
+          <LeftSidebar
+            onSelectView={handleSelectView}
+            disabled={!isAuthenticated || authLoading}
+            isAdmin={isAdmin}
+            username={username}
           >
-            <AppView isTopbarOpen={isTopbarOpen} />
-          </div>
-
-          {showHome && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <Homepage
-                onSelectView={handleSelectView}
-                isAuthenticated={isAuthenticated}
-                authLoading={authLoading}
-                onAuthSuccess={handleAuthSuccess}
-                isTopbarOpen={isTopbarOpen}
-              />
+            <div
+              className="h-screen w-full visible pointer-events-auto static overflow-hidden"
+              style={{ display: showTerminalView ? "block" : "none" }}
+            >
+              <AppView isTopbarOpen={isTopbarOpen} />
             </div>
-          )}
+
+            {showHome && (
+              <div className="h-screen w-full visible pointer-events-auto static">
+                <Homepage
+                  onSelectView={handleSelectView}
+                  isAuthenticated={isAuthenticated}
+                  authLoading={authLoading}
+                  onAuthSuccess={handleAuthSuccess}
+                  isTopbarOpen={isTopbarOpen}
+                  isAdmin={isAdmin}
+                />
+              </div>
+            )}
 
           {showSshManager && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
               <HostManager
                 onSelectView={handleSelectView}
                 isTopbarOpen={isTopbarOpen}
+                initialTab={currentTabData?.initialTab}
               />
             </div>
           )}
@@ -188,6 +193,7 @@ function AppContent() {
             setIsTopbarOpen={setIsTopbarOpen}
           />
         </LeftSidebar>
+        </HomepageProvider>
       )}
       <Toaster
         position="bottom-right"

@@ -623,7 +623,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         } else {
           // Non-TOTP keyboard-interactive (e.g., password prompt)
           // Provide password if available
-          const responses = prompts.map(() => resolvedCredentials.password || "");
+          const responses = prompts.map(
+            () => resolvedCredentials.password || "",
+          );
           finish(responses);
         }
       },

@@ -64,9 +64,7 @@ router.get(
       const result = await db
         .select()
         .from(snippets)
-        .where(
-          and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)),
-        );
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
 
       if (result.length === 0) {
         return res.status(404).json({ error: "Snippet not found" });
@@ -153,9 +151,7 @@ router.put(
       const existing = await db
         .select()
         .from(snippets)
-        .where(
-          and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)),
-        );
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
 
       if (existing.length === 0) {
         return res.status(404).json({ error: "Snippet not found" });
@@ -175,9 +171,7 @@ router.put(
       await db
         .update(snippets)
         .set(updateFields)
-        .where(
-          and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)),
-        );
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
 
       const updated = await db
         .select()
@@ -223,9 +217,7 @@ router.delete(
       const existing = await db
         .select()
         .from(snippets)
-        .where(
-          and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)),
-        );
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
 
       if (existing.length === 0) {
         return res.status(404).json({ error: "Snippet not found" });
@@ -233,9 +225,7 @@ router.delete(
 
       await db
         .delete(snippets)
-        .where(
-          and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)),
-        );
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
 
       authLogger.success(
         `Snippet deleted: ${existing[0].name} by user ${userId}`,

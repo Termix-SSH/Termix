@@ -3,7 +3,7 @@ import { HomepageAlertCard } from "./HomepageAlertCard.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getUserAlerts, dismissAlert } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
-import type { TermixAlert } from "../../../types/index.js";
+import type { TermixAlert } from "../../../../types";
 
 interface AlertManagerProps {
   userId: string | null;

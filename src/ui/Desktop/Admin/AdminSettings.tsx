@@ -46,6 +46,8 @@ import {
   deleteUser,
   getCookie,
   isElectron,
+  exportDatabase,
+  importDatabase,
 } from "@/ui/main-axios.ts";
 
 interface AdminSettingsProps {
@@ -152,7 +154,12 @@ export function AdminSettings({
     setUsersLoading(true);
     try {
       const response = await getUserList();
-      setUsers(response.users);
+      setUsers(response.users.map((user: any) => ({
+        id: user.userId,
+        username: user.username,
+        is_admin: user.is_admin,
+        is_oidc: user.is_oidc,
+      })));
     } catch (err) {
       if (!err.message?.includes("No server configured")) {
         toast.error(t("admin.failedToFetchUsers"));
@@ -271,58 +278,27 @@ export function AdminSettings({
 
     setExportLoading(true);
     try {
-      const isDev =
-        process.env.NODE_ENV === "development" &&
-        (window.location.port === "3000" ||
-          window.location.port === "5173" ||
-          window.location.port === "" ||
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1");
+      const blob = await exportDatabase(exportPassword);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "termix-export.sqlite";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-      const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/export`
-        : isDev
-          ? `http://localhost:30001/database/export`
-          : `${window.location.protocol}//${window.location.host}/database/export`;
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ password: exportPassword }),
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const contentDisposition = response.headers.get("content-disposition");
-        const filename =
-          contentDisposition?.match(/filename="([^"]+)"/)?.[1] ||
-          "termix-export.sqlite";
-
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-
-        toast.success(t("admin.databaseExportedSuccessfully"));
-        setExportPassword("");
-        setShowPasswordInput(false);
+      toast.success(t("admin.databaseExportedSuccessfully"));
+      setExportPassword("");
+      setShowPasswordInput(false);
+    } catch (error: any) {
+      if (error.response?.data?.code === "PASSWORD_REQUIRED") {
+        toast.error(t("admin.passwordRequired"));
       } else {
-        const error = await response.json();
-        if (error.code === "PASSWORD_REQUIRED") {
-          toast.error(t("admin.passwordRequired"));
-        } else {
-          toast.error(error.error || t("admin.databaseExportFailed"));
-        }
+        toast.error(error.response?.data?.error || t("admin.databaseExportFailed"));
       }
-    } catch (err) {
-      toast.error(t("admin.databaseExportFailed"));
     } finally {
       setExportLoading(false);
     }
@@ -341,80 +317,52 @@ export function AdminSettings({
 
     setImportLoading(true);
     try {
-      const isDev =
-        process.env.NODE_ENV === "development" &&
-        (window.location.port === "3000" ||
-          window.location.port === "5173" ||
-          window.location.port === "" ||
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1");
+      const result = await importDatabase(importFile, importPassword);
+      
+      if (result.success) {
+        const summary = result.summary;
+        const imported =
+          summary.sshHostsImported +
+          summary.sshCredentialsImported +
+          summary.fileManagerItemsImported +
+          summary.dismissedAlertsImported +
+          (summary.settingsImported || 0);
+        const skipped = summary.skippedItems;
 
-      const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/import`
-        : isDev
-          ? `http://localhost:30001/database/import`
-          : `${window.location.protocol}//${window.location.host}/database/import`;
-
-      const formData = new FormData();
-      formData.append("file", importFile);
-      formData.append("password", importPassword);
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          const summary = result.summary;
-          const imported =
-            summary.sshHostsImported +
-            summary.sshCredentialsImported +
-            summary.fileManagerItemsImported +
-            summary.dismissedAlertsImported +
-            (summary.settingsImported || 0);
-          const skipped = summary.skippedItems;
-
-          const details = [];
-          if (summary.sshHostsImported > 0)
-            details.push(`${summary.sshHostsImported} SSH hosts`);
-          if (summary.sshCredentialsImported > 0)
-            details.push(`${summary.sshCredentialsImported} credentials`);
-          if (summary.fileManagerItemsImported > 0)
-            details.push(
-              `${summary.fileManagerItemsImported} file manager items`,
-            );
-          if (summary.dismissedAlertsImported > 0)
-            details.push(`${summary.dismissedAlertsImported} alerts`);
-          if (summary.settingsImported > 0)
-            details.push(`${summary.settingsImported} settings`);
-
-          toast.success(
-            `Import completed: ${imported} items imported${details.length > 0 ? ` (${details.join(", ")})` : ""}, ${skipped} items skipped`,
+        const details = [];
+        if (summary.sshHostsImported > 0)
+          details.push(`${summary.sshHostsImported} SSH hosts`);
+        if (summary.sshCredentialsImported > 0)
+          details.push(`${summary.sshCredentialsImported} credentials`);
+        if (summary.fileManagerItemsImported > 0)
+          details.push(
+            `${summary.fileManagerItemsImported} file manager items`,
           );
-          setImportFile(null);
-          setImportPassword("");
+        if (summary.dismissedAlertsImported > 0)
+          details.push(`${summary.dismissedAlertsImported} alerts`);
+        if (summary.settingsImported > 0)
+          details.push(`${summary.settingsImported} settings`);
 
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
-        } else {
-          toast.error(
-            `${t("admin.databaseImportFailed")}: ${result.summary?.errors?.join(", ") || "Unknown error"}`,
-          );
-        }
+        toast.success(
+          `Import completed: ${imported} items imported${details.length > 0 ? ` (${details.join(", ")})` : ""}, ${skipped} items skipped`,
+        );
+        setImportFile(null);
+        setImportPassword("");
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
-        const error = await response.json();
-        if (error.code === "PASSWORD_REQUIRED") {
-          toast.error(t("admin.passwordRequired"));
-        } else {
-          toast.error(error.error || t("admin.databaseImportFailed"));
-        }
+        toast.error(
+          `${t("admin.databaseImportFailed")}: ${result.summary?.errors?.join(", ") || "Unknown error"}`,
+        );
       }
-    } catch (err) {
-      toast.error(t("admin.databaseImportFailed"));
+    } catch (error: any) {
+      if (error.response?.data?.code === "PASSWORD_REQUIRED") {
+        toast.error(t("admin.passwordRequired"));
+      } else {
+        toast.error(error.response?.data?.error || t("admin.databaseImportFailed"));
+      }
     } finally {
       setImportLoading(false);
     }

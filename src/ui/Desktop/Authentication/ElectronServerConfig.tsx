@@ -18,7 +18,7 @@ interface ServerConfigProps {
   isFirstTime?: boolean;
 }
 
-export function ServerConfig({
+export function ElectronServerConfig({
   onServerConfigured,
   onCancel,
   isFirstTime = false,

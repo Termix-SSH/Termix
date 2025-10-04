@@ -12,7 +12,7 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { getCookie, isElectron } from "@/ui/main-axios.ts";
+import { getCookie, isElectron, recordConnection, updateConnectionDisconnect } from "@/ui/main-axios.ts";
 import { SnippetsSidebar } from "./SnippetsSidebar";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -78,6 +78,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionIdRef = useRef<number | null>(null);
   const DEBOUNCE_MS = 140;
 
   useEffect(() => {
@@ -148,6 +149,35 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     });
   };
 
+  // Record SSH connection
+  const recordConnectionCall = async () => {
+    if (!hostConfig?.id) return;
+    
+    try {
+      const data = await recordConnection({
+        hostId: hostConfig.id,
+        connectionType: "terminal",
+      });
+      
+      if (data?.id) {
+        connectionIdRef.current = data.id;
+      }
+    } catch (error) {
+      console.warn("Failed to record connection:", error);
+    }
+  };
+
+  // Update connection disconnect
+  const updateConnectionDisconnectCall = async () => {
+    if (!connectionIdRef.current) return;
+    
+    try {
+      await updateConnectionDisconnect(connectionIdRef.current);
+    } catch (error) {
+      console.warn("Failed to update connection disconnect:", error);
+    }
+  };
+
   function scheduleNotify(cols: number, rows: number) {
     if (!(cols > 0 && rows > 0)) return;
     pendingSizeRef.current = { cols, rows };
@@ -186,6 +216,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           connectionTimeoutRef.current = null;
         }
         webSocketRef.current?.close();
+        updateConnectionDisconnectCall();
         setIsConnected(false);
         setIsConnecting(false);
       },
@@ -449,6 +480,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           setIsConnected(true);
           setIsConnecting(false);
           isConnectingRef.current = false;
+          recordConnectionCall();
           if (connectionTimeoutRef.current) {
             clearTimeout(connectionTimeoutRef.current);
             connectionTimeoutRef.current = null;
@@ -481,6 +513,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     ws.addEventListener("close", (event) => {
       setIsConnected(false);
       isConnectingRef.current = false;
+      updateConnectionDisconnectCall();
       if (terminal) {
         terminal.clear();
       }

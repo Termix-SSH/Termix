@@ -283,6 +283,7 @@ export interface TabContextTab {
   title: string;
   hostConfig?: any;
   terminalRef?: React.RefObject<any>;
+  initialTab?: string;
 }
 
 // ============================================================================
@@ -357,6 +358,7 @@ export interface CredentialSelectorProps {
 export interface HostManagerProps {
   onSelectView?: (view: string) => void;
   isTopbarOpen?: boolean;
+  initialTab?: string;
 }
 
 export interface SSHManagerHostEditorProps {

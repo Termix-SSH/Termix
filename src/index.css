@@ -2,6 +2,154 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Force homepage to be scrollable */
+main > div:last-child {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+main > div:last-child > div {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+main [data-slot="card"] {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  gap: 0 !important;
+}
+
+main [data-slot="card-header"] {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.25rem !important;
+  margin-top: 0.5rem !important;
+}
+
+main [data-slot="card-header"].pb-2 {
+  padding-bottom: 0.25rem !important;
+}
+
+main [data-slot="card-header"].pt-2 {
+  padding-top: 0.5rem !important;
+}
+
+main [data-slot="card"] {
+  position: relative !important;
+}
+
+main [data-slot="card-header"] {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+}
+
+/* Ensure homepage card headers never stick - more specific rules */
+main [data-slot="card"] [data-slot="card-header"] {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+  transform: none !important;
+}
+
+/* Force all card headers in homepage to be static */
+main [data-slot="card-header"] {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+  transform: none !important;
+}
+
+/* Additional specificity for resizable panels */
+main [data-slot="resizable-panel"] [data-slot="card-header"] {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+  transform: none !important;
+}
+
+main [data-slot="resizable-panel"] * {
+  position: static !important;
+}
+
+main [data-slot="resizable-panel"] [data-slot="card-header"] {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+}
+
+main [data-slot="card"] {
+  position: relative !important;
+}
+
+/* Ultra-specific rules to prevent any sticky behavior */
+main [data-slot="resizable-panel"] [data-slot="card"] [data-slot="card-header"] {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Target all possible sticky/fixed positions */
+main [data-slot="card-header"],
+main [data-slot="card"] [data-slot="card-header"],
+main [data-slot="resizable-panel"] [data-slot="card-header"],
+main [data-slot="resizable-panel"] [data-slot="card"] [data-slot="card-header"] {
+  position: static !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  z-index: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Nuclear option - prevent ANY sticky behavior in homepage */
+main .sticky,
+main [class*="sticky"],
+main [style*="position: sticky"],
+main [style*="position: fixed"] {
+  position: static !important;
+}
+
+/* Specifically target homepage card headers with any positioning */
+main [data-slot="card-header"][class*="sticky"],
+main [data-slot="card-header"][style*="position"],
+main [data-slot="card"] [data-slot="card-header"][class*="sticky"],
+main [data-slot="card"] [data-slot="card-header"][style*="position"] {
+  position: static !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  z-index: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -201,3 +349,4 @@
   scrollbar-width: thin;
   scrollbar-color: #434345 #18181b;
 }
+ */

@@ -7,6 +7,7 @@ import sshRoutes from "./routes/ssh.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import snippetsRoutes from "./routes/snippets.js";
+import homepageRoutes from "./routes/homepage.js";
 import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
@@ -31,6 +32,7 @@ import {
   dismissedAlerts,
   sshCredentialUsage,
   settings,
+  sshConnections,
 } from "./db/schema.js";
 import { getDb } from "./db/index.js";
 import Database from "better-sqlite3";
@@ -639,6 +641,26 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           host_id INTEGER NOT NULL,
           user_id TEXT NOT NULL,
           used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE snippets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          content TEXT NOT NULL,
+          description TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE ssh_connections (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          connected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          disconnected_at TEXT,
+          duration INTEGER,
+          connection_type TEXT NOT NULL DEFAULT 'terminal'
         );
       `);
 
@@ -1413,6 +1435,7 @@ app.use("/ssh", sshRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
 app.use("/snippets", snippetsRoutes);
+app.use("/homepage", homepageRoutes);
 
 app.use(
   (
