@@ -12,6 +12,11 @@ const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
 const hasSSL = fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath);
 const useHTTPS = process.env.VITE_HTTPS === "true" && hasSSL;
 
+// Support reverse proxy deployment under subpath
+// Example: VITE_BASE_PATH=/termix for https://example.com/termix/
+// Defaults to "./" for flexible deployment (file:// or any path)
+const basePath = process.env.VITE_BASE_PATH || process.env.BASE_PATH || "./";
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -20,7 +25,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  base: "./",
+  base: basePath,
   build: {
     sourcemap: false,
   },

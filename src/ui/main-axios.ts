@@ -428,7 +428,18 @@ function getApiUrl(path: string, defaultPort: number): string {
     }
     return "http://no-server-configured";
   } else {
-    return path;
+    // Production: Support reverse proxy deployment under subpath
+    // Example: BASE_URL="/termix/" → API paths become "/termix/ssh/..."
+    const basePath = import.meta.env.BASE_URL;
+
+    // If base path is relative (./) or root (/), don't add prefix
+    if (basePath === "./" || basePath === "/") {
+      return path;
+    }
+
+    // For subpath deployment, add base path prefix
+    // Remove trailing slash from basePath to avoid double slashes
+    return basePath.replace(/\/$/, "") + path;
   }
 }
 
