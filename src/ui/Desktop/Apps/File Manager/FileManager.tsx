@@ -603,7 +603,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         });
       }
     } else {
-      confirmMessage = t("fileManager.confirmDeleteMultipleItems", {
+      const hasDirectory = files.some((file) => file.type === "directory");
+      const translationKey = hasDirectory
+        ? "fileManager.confirmDeleteMultipleItemsWithFolders"
+        : "fileManager.confirmDeleteMultipleItems";
+
+      confirmMessage = t(translationKey, {
         count: files.length,
       });
     }

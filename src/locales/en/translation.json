@@ -846,6 +846,7 @@
     "confirmDeleteMessage": "Are you sure you want to delete <strong>{{name}}</strong>?",
     "confirmDeleteSingleItem": "Are you sure you want to permanently delete \"{{name}}\"?",
     "confirmDeleteMultipleItems": "Are you sure you want to permanently delete {{count}} items?",
+    "confirmDeleteMultipleItemsWithFolders": "Are you sure you want to permanently delete {{count}} items? This includes folders and their contents.",
     "confirmDeleteFolder": "Are you sure you want to permanently delete the folder \"{{name}}\" and all its contents?",
     "deleteDirectoryWarning": "This will delete the folder and all its contents.",
     "actionCannotBeUndone": "This action cannot be undone.",
