@@ -9,7 +9,7 @@ import {
   fileManagerShortcuts,
   sshConnections,
 } from "../db/schema.js";
-import { eq, and, desc, isNotNull, or } from "drizzle-orm";
+import { eq, and, desc, isNotNull, isNull, or } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import multer from "multer";
@@ -1344,11 +1344,17 @@ router.delete(
     }
 
     try {
+      // Handle "No Folder" special case - hosts with null/empty folder
+      const isNoFolder = folderName === "No Folder";
+      const folderCondition = isNoFolder
+        ? or(isNull(sshData.folder), eq(sshData.folder, ""))
+        : eq(sshData.folder, folderName);
+
       // Get all hosts in this folder to delete related data
       const hostsInFolder = await db
         .select()
         .from(sshData)
-        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+        .where(and(eq(sshData.userId, userId), folderCondition));
 
       if (hostsInFolder.length === 0) {
         return res.json({
@@ -1402,7 +1408,7 @@ router.delete(
       const deletedHosts = await SimpleDBOps.delete(
         sshData,
         "ssh_data",
-        and(eq(sshData.userId, userId), eq(sshData.folder, folderName)),
+        and(eq(sshData.userId, userId), folderCondition),
         userId,
       );
 
