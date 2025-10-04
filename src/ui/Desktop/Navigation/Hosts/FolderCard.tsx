@@ -6,16 +6,6 @@ import { Host } from "@/ui/Desktop/Navigation/Hosts/Host.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { deleteFolder } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog.tsx";
 
 interface SSHHost {
   id: number;
@@ -54,8 +44,6 @@ export function FolderCard({
   onDelete,
 }: FolderCardProps): React.ReactElement {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
@@ -63,26 +51,35 @@ export function FolderCard({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowDeleteDialog(true);
-  };
 
-  const handleDeleteConfirm = async () => {
-    setIsDeleting(true);
-    try {
-      const result = await deleteFolder(folderName);
-      toast.success(
-        `Folder "${folderName}" and ${result.deletedHosts} host(s) deleted successfully`,
-      );
-      setShowDeleteDialog(false);
-      if (onDelete) {
-        onDelete();
-      }
-    } catch (error) {
-      toast.error("Failed to delete folder");
-      console.error("Delete folder error:", error);
-    } finally {
-      setIsDeleting(false);
-    }
+    toast(
+      `Delete folder "${folderName}" and all ${hosts.length} host(s) inside it? This action cannot be undone.`,
+      {
+        action: {
+          label: "Delete",
+          onClick: async () => {
+            try {
+              const result = await deleteFolder(folderName);
+              toast.success(
+                `Folder "${folderName}" and ${result.deletedHosts} host(s) deleted successfully`,
+              );
+              if (onDelete) {
+                onDelete();
+              }
+            } catch (error) {
+              toast.error("Failed to delete folder");
+              console.error("Delete folder error:", error);
+            }
+          },
+        },
+        cancel: {
+          label: "Cancel",
+          onClick: () => {},
+        },
+        duration: 10000,
+        className: "border-red-500",
+      },
+    );
   };
 
   return (
@@ -138,28 +135,6 @@ export function FolderCard({
         </div>
       )}
       </div>
-
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the folder "{folderName}" and all{" "}
-              {hosts.length} host(s) inside it? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
