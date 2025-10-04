@@ -6,6 +6,10 @@ export class LazyFieldEncryption {
     key_password: "keyPassword",
     private_key: "privateKey",
     public_key: "publicKey",
+    // Reverse mappings for Drizzle ORM (camelCase -> snake_case)
+    keyPassword: "key_password",
+    privateKey: "private_key",
+    publicKey: "public_key",
   };
 
   static isPlaintextField(value: string): boolean {
