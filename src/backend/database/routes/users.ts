@@ -34,14 +34,14 @@ async function verifyOIDCToken(
   const possibleIssuers = [
     issuerUrl,
     normalizedIssuerUrl,
-    issuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
-    normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
+    issuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
+    normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
   ];
 
   const jwksUrls = [
     `${normalizedIssuerUrl}/.well-known/jwks.json`,
     `${normalizedIssuerUrl}/jwks/`,
-    `${normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, "")}/.well-known/jwks.json`,
+    `${normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, "")}/.well-known/jwks.json`,
   ];
 
   try {
@@ -491,7 +491,7 @@ router.get("/oidc/authorize", async (req, res) => {
 
     let origin =
       req.get("Origin") ||
-      req.get("Referer")?.replace(/\/[^\/]*$/, "") ||
+      req.get("Referer")?.replace(/\/[^/]*$/, "") ||
       "http://localhost:5173";
 
     if (origin.includes("localhost")) {
@@ -598,10 +598,7 @@ router.get("/oidc/callback", async (req, res) => {
     const normalizedIssuerUrl = config.issuer_url.endsWith("/")
       ? config.issuer_url.slice(0, -1)
       : config.issuer_url;
-    const baseUrl = normalizedIssuerUrl.replace(
-      /\/application\/o\/[^\/]+$/,
-      "",
-    );
+    const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, "");
 
     try {
       const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
