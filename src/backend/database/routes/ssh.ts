@@ -1364,17 +1364,6 @@ router.post(
           continue;
         }
 
-        if (
-          hostData.authType === "password" &&
-          !isNonEmptyString(hostData.password)
-        ) {
-          results.failed++;
-          results.errors.push(
-            `Host ${i + 1}: Password required for password authentication`,
-          );
-          continue;
-        }
-
         if (hostData.authType === "key" && !isNonEmptyString(hostData.key)) {
           results.failed++;
           results.errors.push(

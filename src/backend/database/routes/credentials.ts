@@ -120,17 +120,6 @@ router.post(
     }
 
     try {
-      if (authType === "password" && !password) {
-        authLogger.warn("Password required for password authentication", {
-          operation: "credential_create",
-          userId,
-          name,
-          authType,
-        });
-        return res
-          .status(400)
-          .json({ error: "Password is required for password authentication" });
-      }
       if (authType === "key" && !key) {
         authLogger.warn("SSH key required for key authentication", {
           operation: "credential_create",

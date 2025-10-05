@@ -906,6 +906,9 @@ export function HostManagerEditor({
                               {...field}
                             />
                           </FormControl>
+                          <FormDescription>
+                            {t("hosts.passwordHint")}
+                          </FormDescription>
                         </FormItem>
                       )}
                     />

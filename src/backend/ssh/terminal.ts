@@ -613,11 +613,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         compress: ["none", "zlib@openssh.com", "zlib"],
       },
     };
-    if (
-      resolvedCredentials.authType === "password" &&
-      resolvedCredentials.password
-    ) {
-      connectConfig.password = resolvedCredentials.password;
+    if (resolvedCredentials.authType === "password") {
+      connectConfig.password = resolvedCredentials.password || "";
     } else if (
       resolvedCredentials.authType === "key" &&
       resolvedCredentials.key
@@ -663,15 +660,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         JSON.stringify({
           type: "error",
           message: "SSH key authentication requested but no key provided",
-        }),
-      );
-      return;
-    } else {
-      sshLogger.error("No valid authentication method provided");
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: "No valid authentication method provided",
         }),
       );
       return;

@@ -276,12 +276,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     },
   };
 
-  if (
-    resolvedCredentials.authType === "password" &&
-    resolvedCredentials.password &&
-    resolvedCredentials.password.trim()
-  ) {
-    config.password = resolvedCredentials.password;
+  if (resolvedCredentials.authType === "password") {
+    config.password = resolvedCredentials.password || "";
   } else if (
     resolvedCredentials.authType === "key" &&
     resolvedCredentials.sshKey &&

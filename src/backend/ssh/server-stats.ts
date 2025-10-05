@@ -523,10 +523,7 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
   } as ConnectConfig;
 
   if (host.authType === "password") {
-    if (!host.password) {
-      throw new Error(`No password available for host ${host.ip}`);
-    }
-    (base as any).password = host.password;
+    (base as any).password = host.password || "";
   } else if (host.authType === "key") {
     if (!host.key) {
       throw new Error(`No SSH key available for host ${host.ip}`);
