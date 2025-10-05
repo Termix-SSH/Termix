@@ -37,8 +37,10 @@ import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   getOIDCConfig,
   getRegistrationAllowed,
+  getPasswordLoginAllowed,
   getUserList,
   updateRegistrationAllowed,
+  updatePasswordLoginAllowed,
   updateOIDCConfig,
   disableOIDCConfig,
   makeUserAdmin,
@@ -61,6 +63,9 @@ export function AdminSettings({
 
   const [allowRegistration, setAllowRegistration] = React.useState(true);
   const [regLoading, setRegLoading] = React.useState(false);
+
+  const [allowPasswordLogin, setAllowPasswordLogin] = React.useState(true);
+  const [passwordLoginLoading, setPasswordLoginLoading] = React.useState(false);
 
   const [oidcConfig, setOidcConfig] = React.useState({
     client_id: "",
@@ -141,6 +146,27 @@ export function AdminSettings({
       });
   }, []);
 
+  React.useEffect(() => {
+    if (isElectron()) {
+      const serverUrl = (window as any).configuredServerUrl;
+      if (!serverUrl) {
+        return;
+      }
+    }
+
+    getPasswordLoginAllowed()
+      .then((res) => {
+        if (typeof res?.allowed === "boolean") {
+          setAllowPasswordLogin(res.allowed);
+        }
+      })
+      .catch((err) => {
+        if (!err.message?.includes("No server configured")) {
+          toast.error(t("admin.failedToFetchPasswordLoginStatus"));
+        }
+      });
+  }, []);
+
   const fetchUsers = async () => {
     if (isElectron()) {
       const serverUrl = (window as any).configuredServerUrl;
@@ -169,6 +195,16 @@ export function AdminSettings({
       setAllowRegistration(checked);
     } finally {
       setRegLoading(false);
+    }
+  };
+
+  const handleTogglePasswordLogin = async (checked: boolean) => {
+    setPasswordLoginLoading(true);
+    try {
+      await updatePasswordLoginAllowed(checked);
+      setAllowPasswordLogin(checked);
+    } finally {
+      setPasswordLoginLoading(false);
     }
   };
 
@@ -482,6 +518,14 @@ export function AdminSettings({
                     disabled={regLoading}
                   />
                   {t("admin.allowNewAccountRegistration")}
+                </label>
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allowPasswordLogin}
+                    onCheckedChange={handleTogglePasswordLogin}
+                    disabled={passwordLoginLoading}
+                  />
+                  {t("admin.allowPasswordLogin")}
                 </label>
               </div>
             </TabsContent>
