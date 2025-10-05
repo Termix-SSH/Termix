@@ -105,7 +105,9 @@ export function HomepageAuth({
     const clearJWTOnLoad = async () => {
       try {
         await logoutUser();
-      } catch (error) {}
+      } catch {
+        // Ignore logout errors on initial load
+      }
     };
 
     clearJWTOnLoad();
