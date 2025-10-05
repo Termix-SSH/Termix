@@ -709,7 +709,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     }
 
     try {
-      let currentSessionId = sshSessionId;
+      const currentSessionId = sshSessionId;
       try {
         const status = await getSSHStatus(currentSessionId);
         if (!status.connected) {

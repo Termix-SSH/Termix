@@ -606,7 +606,7 @@ router.get("/oidc/callback", async (req, res) => {
     const tokenData = (await tokenResponse.json()) as any;
 
     let userInfo: any = null;
-    let userInfoUrls: string[] = [];
+    const userInfoUrls: string[] = [];
 
     const normalizedIssuerUrl = config.issuer_url.endsWith("/")
       ? config.issuer_url.slice(0, -1)

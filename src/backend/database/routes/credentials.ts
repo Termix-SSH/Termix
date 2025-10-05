@@ -970,7 +970,7 @@ router.post(
 
     try {
       let privateKeyObj;
-      let parseAttempts = [];
+      const parseAttempts = [];
 
       try {
         privateKeyObj = crypto.createPrivateKey({
@@ -1521,7 +1521,7 @@ router.post(
 
       const hostData = targetHost[0];
 
-      let hostConfig = {
+      const hostConfig = {
         ip: hostData.ip,
         port: hostData.port,
         username: hostData.username,

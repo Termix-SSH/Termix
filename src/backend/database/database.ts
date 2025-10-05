@@ -257,7 +257,7 @@ app.get("/version", authenticateJWT, async (req, res) => {
           localVersion = foundVersion;
           break;
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
@@ -372,7 +372,6 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
 
 app.get("/encryption/status", requireAdmin, async (req, res) => {
   try {
-    const authManager = AuthManager.getInstance();
     const securityStatus = {
       initialized: true,
       system: { hasSecret: true, isValid: true },
@@ -417,8 +416,6 @@ app.post("/encryption/initialize", requireAdmin, async (req, res) => {
 
 app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
   try {
-    const authManager = AuthManager.getInstance();
-
     apiLogger.warn("System JWT secret regenerated via API", {
       operation: "jwt_regenerate_api",
     });
@@ -440,8 +437,6 @@ app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
 
 app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
   try {
-    const authManager = AuthManager.getInstance();
-
     apiLogger.warn("JWT secret regenerated via API", {
       operation: "jwt_secret_regenerate_api",
     });
@@ -968,7 +963,7 @@ app.post(
       try {
         importDb = new Database(req.file.path, { readonly: true });
 
-        const tables = importDb
+        importDb
           .prepare("SELECT name FROM sqlite_master WHERE type='table'")
           .all();
       } catch (sqliteError) {
@@ -1059,7 +1054,7 @@ app.post(
               );
             }
           }
-        } catch (tableError) {
+        } catch {
           apiLogger.info("ssh_data table not found in import file, skipping");
         }
 
@@ -1120,7 +1115,7 @@ app.post(
               );
             }
           }
-        } catch (tableError) {
+        } catch {
           apiLogger.info(
             "ssh_credentials table not found in import file, skipping",
           );
@@ -1191,7 +1186,7 @@ app.post(
                 );
               }
             }
-          } catch (tableError) {
+          } catch {
             apiLogger.info(`${table} table not found in import file, skipping`);
           }
         }
@@ -1229,7 +1224,7 @@ app.post(
               );
             }
           }
-        } catch (tableError) {
+        } catch {
           apiLogger.info(
             "dismissed_alerts table not found in import file, skipping",
           );
@@ -1270,7 +1265,7 @@ app.post(
                 );
               }
             }
-          } catch (tableError) {
+          } catch {
             apiLogger.info("settings table not found in import file, skipping");
           }
         } else {
@@ -1288,7 +1283,7 @@ app.post(
 
       try {
         fs.unlinkSync(req.file.path);
-      } catch (cleanupError) {
+      } catch {
         apiLogger.warn("Failed to clean up uploaded file", {
           operation: "file_cleanup_warning",
           filePath: req.file.path,
@@ -1314,7 +1309,7 @@ app.post(
       if (req.file?.path && fs.existsSync(req.file.path)) {
         try {
           fs.unlinkSync(req.file.path);
-        } catch (cleanupError) {
+        } catch {
           apiLogger.warn("Failed to clean up uploaded file after error", {
             operation: "file_cleanup_error",
             filePath: req.file.path,
@@ -1337,11 +1332,7 @@ app.post(
 app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const {
-      format = "encrypted",
-      scope = "user_data",
-      includeCredentials = true,
-    } = req.body;
+    const { scope = "user_data", includeCredentials = true } = req.body;
 
     const exportData = await UserDataExport.exportUserData(userId, {
       format: "encrypted",
@@ -1417,7 +1408,8 @@ app.use(
     err: unknown,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _next: express.NextFunction,
   ) => {
     apiLogger.error("Unhandled error in request", err, {
       operation: "error_handler",
@@ -1430,7 +1422,6 @@ app.use(
 );
 
 const HTTP_PORT = 30001;
-const HTTPS_PORT = process.env.SSL_PORT || 8443;
 
 async function initializeSecurity() {
   try {
@@ -1443,13 +1434,6 @@ async function initializeSecurity() {
     if (!isValid) {
       throw new Error("Security system validation failed");
     }
-
-    const securityStatus = {
-      initialized: true,
-      system: { hasSecret: true, isValid: true },
-      activeSessions: {},
-      activeSessionCount: 0,
-    };
   } catch (error) {
     databaseLogger.error("Failed to initialize security system", error, {
       operation: "security_init_error",
@@ -1481,13 +1465,17 @@ app.get(
       if (status.hasUnencryptedDb) {
         try {
           unencryptedSize = fs.statSync(dbPath).size;
-        } catch (error) {}
+        } catch {
+          // Ignore file access errors
+        }
       }
 
       if (status.hasEncryptedDb) {
         try {
           encryptedSize = fs.statSync(encryptedDbPath).size;
-        } catch (error) {}
+        } catch {
+          // Ignore file access errors
+        }
       }
 
       res.json({

@@ -461,7 +461,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           const size = parseInt(parts[4], 10);
 
           let dateStr = "";
-          let nameStartIndex = 8;
+          const nameStartIndex = 8;
 
           if (parts[5] && parts[6] && parts[7]) {
             dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;

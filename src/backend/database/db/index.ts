@@ -23,7 +23,7 @@ const enableFileEncryption = process.env.DB_FILE_ENCRYPTION !== "false";
 const dbPath = path.join(dataDir, "db.sqlite");
 const encryptedDbPath = `${dbPath}.encrypted`;
 
-let actualDbPath = ":memory:";
+const actualDbPath = ":memory:";
 let memoryDatabase: Database.Database;
 let isNewDatabase = false;
 let sqlite: Database.Database;
@@ -31,7 +31,8 @@ let sqlite: Database.Database;
 async function initializeDatabaseAsync(): Promise<void> {
   const systemCrypto = SystemCrypto.getInstance();
 
-  const dbKey = await systemCrypto.getDatabaseKey();
+  // Ensure database key is initialized
+  await systemCrypto.getDatabaseKey();
   if (enableFileEncryption) {
     try {
       if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
@@ -277,7 +278,7 @@ const addColumnIfNotExists = (
                         FROM ${table} LIMIT 1`,
       )
       .get();
-  } catch (e) {
+  } catch {
     try {
       sqlite.exec(`ALTER TABLE ${table}
                 ADD COLUMN ${column} ${definition};`);
@@ -476,21 +477,29 @@ async function cleanupDatabase() {
       for (const file of files) {
         try {
           fs.unlinkSync(path.join(tempDir, file));
-        } catch {}
+        } catch {
+          // Ignore cleanup errors
+        }
       }
 
       try {
         fs.rmdirSync(tempDir);
-      } catch {}
+      } catch {
+        // Ignore cleanup errors
+      }
     }
-  } catch (error) {}
+  } catch {
+    // Ignore cleanup errors
+  }
 }
 
 process.on("exit", () => {
   if (sqlite) {
     try {
       sqlite.close();
-    } catch {}
+    } catch {
+      // Ignore close errors on exit
+    }
   }
 });
 
