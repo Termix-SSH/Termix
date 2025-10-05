@@ -37,7 +37,9 @@ class SystemCrypto {
           process.env.JWT_SECRET = jwtMatch[1];
           return;
         }
-      } catch {}
+      } catch {
+        // Ignore file read errors, will generate new secret
+      }
 
       await this.generateAndGuideUser();
     } catch (error) {

@@ -1124,9 +1124,8 @@ async function deploySSHKeyToHost(
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   return new Promise((resolve) => {
     const conn = new Client();
-    let connectionTimeout: NodeJS.Timeout;
 
-    connectionTimeout = setTimeout(() => {
+    const connectionTimeout = setTimeout(() => {
       conn.destroy();
       resolve({ success: false, error: "Connection timeout" });
     }, 120000);

@@ -108,7 +108,6 @@ class AuthManager {
 
       if (migrationResult.migrated) {
         await saveMemoryDatabaseToFile();
-      } else {
       }
     } catch (error) {
       databaseLogger.error("Lazy encryption migration failed", error, {

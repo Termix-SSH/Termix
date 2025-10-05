@@ -60,7 +60,7 @@ class SSHConnectionPool {
       return client;
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       const checkAvailable = () => {
         const available = connections.find((conn) => !conn.inUse);
         if (available) {
