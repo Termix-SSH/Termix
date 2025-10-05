@@ -79,7 +79,8 @@ export function CredentialEditor({
         ].sort() as string[];
 
         setFolders(uniqueFolders);
-      } catch (error) {
+      } catch {
+        // Failed to load credentials
       } finally {
         setLoading(false);
       }
@@ -636,10 +637,6 @@ export function CredentialEditor({
                     form.setValue("key", null);
                     form.setValue("keyPassword", "");
                     form.setValue("keyType", "auto");
-
-                    if (newAuthType === "password") {
-                    } else if (newAuthType === "key") {
-                    }
                   }}
                   className="flex-1 flex flex-col h-full min-h-0"
                 >
