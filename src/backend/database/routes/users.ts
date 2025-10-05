@@ -28,93 +28,89 @@ async function verifyOIDCToken(
   issuerUrl: string,
   clientId: string,
 ): Promise<any> {
+  const normalizedIssuerUrl = issuerUrl.endsWith("/")
+    ? issuerUrl.slice(0, -1)
+    : issuerUrl;
+  const possibleIssuers = [
+    issuerUrl,
+    normalizedIssuerUrl,
+    issuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
+    normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
+  ];
+
+  const jwksUrls = [
+    `${normalizedIssuerUrl}/.well-known/jwks.json`,
+    `${normalizedIssuerUrl}/jwks/`,
+    `${normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, "")}/.well-known/jwks.json`,
+  ];
+
   try {
-    const normalizedIssuerUrl = issuerUrl.endsWith("/")
-      ? issuerUrl.slice(0, -1)
-      : issuerUrl;
-    const possibleIssuers = [
-      issuerUrl,
-      normalizedIssuerUrl,
-      issuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
-      normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
-    ];
-
-    const jwksUrls = [
-      `${normalizedIssuerUrl}/.well-known/jwks.json`,
-      `${normalizedIssuerUrl}/jwks/`,
-      `${normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, "")}/.well-known/jwks.json`,
-    ];
-
-    try {
-      const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
-      const discoveryResponse = await fetch(discoveryUrl);
-      if (discoveryResponse.ok) {
-        const discovery = (await discoveryResponse.json()) as any;
-        if (discovery.jwks_uri) {
-          jwksUrls.unshift(discovery.jwks_uri);
-        }
-      }
-    } catch (discoveryError) {
-      authLogger.error(`OIDC discovery failed: ${discoveryError}`);
-    }
-
-    let jwks: any = null;
-
-    for (const url of jwksUrls) {
-      try {
-        const response = await fetch(url);
-        if (response.ok) {
-          const jwksData = (await response.json()) as any;
-          if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
-            jwks = jwksData;
-            break;
-          } else {
-            authLogger.error(
-              `Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`,
-            );
-          }
-        } else {
-          // Non-200 response
-        }
-      } catch {
-        continue;
+    const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
+    const discoveryResponse = await fetch(discoveryUrl);
+    if (discoveryResponse.ok) {
+      const discovery = (await discoveryResponse.json()) as any;
+      if (discovery.jwks_uri) {
+        jwksUrls.unshift(discovery.jwks_uri);
       }
     }
-
-    if (!jwks) {
-      throw new Error("Failed to fetch JWKS from any URL");
-    }
-
-    if (!jwks.keys || !Array.isArray(jwks.keys)) {
-      throw new Error(
-        `Invalid JWKS response structure. Expected 'keys' array, got: ${JSON.stringify(jwks)}`,
-      );
-    }
-
-    const header = JSON.parse(
-      Buffer.from(idToken.split(".")[0], "base64").toString(),
-    );
-    const keyId = header.kid;
-
-    const publicKey = jwks.keys.find((key: any) => key.kid === keyId);
-    if (!publicKey) {
-      throw new Error(
-        `No matching public key found for key ID: ${keyId}. Available keys: ${jwks.keys.map((k: any) => k.kid).join(", ")}`,
-      );
-    }
-
-    const { importJWK, jwtVerify } = await import("jose");
-    const key = await importJWK(publicKey);
-
-    const { payload } = await jwtVerify(idToken, key, {
-      issuer: possibleIssuers,
-      audience: clientId,
-    });
-
-    return payload;
-  } catch (error) {
-    throw error;
+  } catch (discoveryError) {
+    authLogger.error(`OIDC discovery failed: ${discoveryError}`);
   }
+
+  let jwks: any = null;
+
+  for (const url of jwksUrls) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const jwksData = (await response.json()) as any;
+        if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
+          jwks = jwksData;
+          break;
+        } else {
+          authLogger.error(
+            `Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`,
+          );
+        }
+      } else {
+        // Non-200 response
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  if (!jwks) {
+    throw new Error("Failed to fetch JWKS from any URL");
+  }
+
+  if (!jwks.keys || !Array.isArray(jwks.keys)) {
+    throw new Error(
+      `Invalid JWKS response structure. Expected 'keys' array, got: ${JSON.stringify(jwks)}`,
+    );
+  }
+
+  const header = JSON.parse(
+    Buffer.from(idToken.split(".")[0], "base64").toString(),
+  );
+  const keyId = header.kid;
+
+  const publicKey = jwks.keys.find((key: any) => key.kid === keyId);
+  if (!publicKey) {
+    throw new Error(
+      `No matching public key found for key ID: ${keyId}. Available keys: ${jwks.keys.map((k: any) => k.kid).join(", ")}`,
+    );
+  }
+
+  const { importJWK, jwtVerify } = await import("jose");
+  const key = await importJWK(publicKey);
+
+  const { payload } = await jwtVerify(idToken, key, {
+    issuer: possibleIssuers,
+    audience: clientId,
+  });
+
+  return payload;
 }
 
 const router = express.Router();

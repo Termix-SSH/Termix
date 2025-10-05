@@ -62,22 +62,18 @@ export function DiffViewer({
         });
       }
     } catch (error) {
-      try {
-        await connectSSH(sshSessionId, {
-          hostId: sshHost.id,
-          ip: sshHost.ip,
-          port: sshHost.port,
-          username: sshHost.username,
-          password: sshHost.password,
-          sshKey: sshHost.key,
-          keyPassword: sshHost.keyPassword,
-          authType: sshHost.authType,
-          credentialId: sshHost.credentialId,
-          userId: sshHost.userId,
-        });
-      } catch (reconnectError) {
-        throw reconnectError;
-      }
+      await connectSSH(sshSessionId, {
+        hostId: sshHost.id,
+        ip: sshHost.ip,
+        port: sshHost.port,
+        username: sshHost.username,
+        password: sshHost.password,
+        sshKey: sshHost.key,
+        keyPassword: sshHost.keyPassword,
+        authType: sshHost.authType,
+        credentialId: sshHost.credentialId,
+        userId: sshHost.userId,
+      });
     }
   };
 
