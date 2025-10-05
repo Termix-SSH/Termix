@@ -18,7 +18,6 @@ import QRCode from "qrcode";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { UserCrypto } from "../../utils/user-crypto.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 
@@ -60,7 +59,6 @@ async function verifyOIDCToken(
     }
 
     let jwks: any = null;
-    let jwksUrl: string | null = null;
 
     for (const url of jwksUrls) {
       try {
@@ -69,7 +67,6 @@ async function verifyOIDCToken(
           const jwksData = (await response.json()) as any;
           if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
             jwks = jwksData;
-            jwksUrl = url;
             break;
           } else {
             authLogger.error(
@@ -77,8 +74,9 @@ async function verifyOIDCToken(
             );
           }
         } else {
+          // Non-200 response
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
@@ -125,15 +123,8 @@ function isNonEmptyString(val: any): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
-interface JWTPayload {
-  userId: string;
-  iat?: number;
-  exp?: number;
-}
-
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
-const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Route: Create traditional user (username/password)
 // POST /users/create
@@ -451,7 +442,7 @@ router.get("/oidc-config", async (req, res) => {
                 } else {
                   config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
                 }
-              } catch (decryptError) {
+              } catch {
                 authLogger.warn("Failed to decrypt OIDC config for admin", {
                   operation: "oidc_config_decrypt_failed",
                   userId,
@@ -651,7 +642,8 @@ router.get("/oidc/callback", async (req, res) => {
           config.issuer_url,
           config.client_id,
         );
-      } catch (error) {
+      } catch {
+        // Fallback to manual decoding
         try {
           const parts = tokenData.id_token.split(".");
           if (parts.length === 3) {
@@ -894,7 +886,7 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch (setupError) {
+    } catch {
       // Continue if setup fails - authenticateUser will handle it
     }
 
@@ -1561,7 +1553,7 @@ router.post("/totp/verify-login", async (req, res) => {
         backupCodes = userRecord.totp_backup_codes
           ? JSON.parse(userRecord.totp_backup_codes)
           : [];
-      } catch (parseError) {
+      } catch {
         backupCodes = [];
       }
 
