@@ -53,7 +53,7 @@ export class LazyFieldEncryption {
           fieldName,
         );
         return decrypted;
-      } catch {
+      } catch (error) {
         const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
         if (legacyFieldName) {
           try {
