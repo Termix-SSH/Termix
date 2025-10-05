@@ -73,7 +73,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       if (terminal && typeof (terminal as any).refresh === "function") {
         (terminal as any).refresh(0, terminal.rows - 1);
       }
-    } catch (_) {}
+    } catch {
+      // Ignore terminal refresh errors
+    }
   }
 
   function scheduleNotify(cols: number, rows: number) {
@@ -122,7 +124,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             scheduleNotify(cols, rows);
             hardRefresh();
           }
-        } catch (_) {}
+        } catch {
+          // Ignore resize notification errors
+        }
       },
       refresh: () => hardRefresh(),
     }),
@@ -175,7 +179,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             `\r\n[${msg.message || t("terminal.disconnected")}]`,
           );
         }
-      } catch (error) {}
+      } catch {
+        // Ignore message parsing errors
+      }
     });
 
     ws.addEventListener("close", (event) => {
