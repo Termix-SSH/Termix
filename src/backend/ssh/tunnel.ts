@@ -607,7 +607,6 @@ async function connectSSHTunnel(
             credentialId: tunnelConfig.endpointCredentialId,
           });
         }
-      } else {
       }
     } catch (error) {
       tunnelLogger.warn(
@@ -829,12 +828,12 @@ async function connectSSHTunnel(
       });
 
       stream.stdout?.on("data", (data: Buffer) => {
-        const output = data.toString().trim();
-        if (output) {
-        }
+        // Silently consume stdout data
       });
 
-      stream.on("error", (err: Error) => {});
+      stream.on("error", () => {
+        // Silently consume stream errors
+      });
 
       stream.stderr.on("data", (data) => {
         const errorMsg = data.toString().trim();
@@ -1040,7 +1039,6 @@ async function killRemoteTunnelByMarker(
             authMethod: credential.auth_type || credential.authType,
           };
         }
-      } else {
       }
     } catch (error) {
       tunnelLogger.warn("Failed to resolve source credentials for cleanup", {
@@ -1128,7 +1126,7 @@ async function killRemoteTunnelByMarker(
   conn.on("ready", () => {
     const checkCmd = `ps aux | grep -E '(${tunnelMarker}|ssh.*-R.*${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}|sshpass.*ssh.*-R.*${tunnelConfig.endpointPort})' | grep -v grep`;
 
-    conn.exec(checkCmd, (err, stream) => {
+    conn.exec(checkCmd, (_err, stream) => {
       let foundProcesses = false;
 
       stream.on("data", (data) => {
@@ -1156,7 +1154,7 @@ async function killRemoteTunnelByMarker(
 
         function executeNextKillCommand() {
           if (commandIndex >= killCmds.length) {
-            conn.exec(checkCmd, (err, verifyStream) => {
+            conn.exec(checkCmd, (_err, verifyStream) => {
               let stillRunning = false;
 
               verifyStream.on("data", (data) => {
@@ -1189,7 +1187,6 @@ async function killRemoteTunnelByMarker(
               tunnelLogger.warn(
                 `Kill command ${commandIndex + 1} failed for '${tunnelName}': ${err.message}`,
               );
-            } else {
             }
 
             stream.on("close", () => {
@@ -1197,10 +1194,8 @@ async function killRemoteTunnelByMarker(
               executeNextKillCommand();
             });
 
-            stream.on("data", (data) => {
-              const output = data.toString().trim();
-              if (output) {
-              }
+            stream.on("data", () => {
+              // Silently consume stream data
             });
 
             stream.stderr.on("data", (data) => {
