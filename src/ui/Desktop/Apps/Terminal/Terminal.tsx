@@ -13,6 +13,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getCookie, isElectron } from "@/ui/main-axios.ts";
+import { TOTPDialog } from "@/ui/components/TOTPDialog";
 
 interface SSHTerminalProps {
   hostConfig: any;
@@ -55,6 +56,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpPrompt, setTotpPrompt] = useState<string>("");
   const isVisibleRef = useRef<boolean>(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
@@ -100,6 +103,25 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         (terminal as any).refresh(0, terminal.rows - 1);
       }
     } catch (_) {}
+  }
+
+  function handleTotpSubmit(code: string) {
+    if (webSocketRef.current && code) {
+      webSocketRef.current.send(
+        JSON.stringify({
+          type: "totp_response",
+          data: { code },
+        }),
+      );
+      setTotpRequired(false);
+      setTotpPrompt("");
+    }
+  }
+
+  function handleTotpCancel() {
+    setTotpRequired(false);
+    setTotpPrompt("");
+    if (onClose) onClose();
   }
 
   function scheduleNotify(cols: number, rows: number) {
@@ -422,6 +444,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           if (onClose) {
             onClose();
           }
+        } else if (msg.type === "totp_required") {
+          setTotpRequired(true);
+          setTotpPrompt(msg.prompt || "Verification code:");
         }
       } catch (error) {
         toast.error(t("terminal.messageParseError"));
@@ -729,6 +754,13 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           </div>
         </div>
       )}
+
+      <TOTPDialog
+        isOpen={totpRequired}
+        prompt={totpPrompt}
+        onSubmit={handleTotpSubmit}
+        onCancel={handleTotpCancel}
+      />
     </div>
   );
 });

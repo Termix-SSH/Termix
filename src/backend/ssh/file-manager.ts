@@ -94,7 +94,16 @@ interface SSHSession {
   timeout?: NodeJS.Timeout;
 }
 
+interface PendingTOTPSession {
+  client: SSHClient;
+  finish: (responses: string[]) => void;
+  config: any;
+  createdAt: number;
+  sessionId: string;
+}
+
 const sshSessions: Record<string, SSHSession> = {};
+const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
 
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
@@ -239,6 +248,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     host: ip,
     port: port || 22,
     username,
+    tryKeyboard: true,
     readyTimeout: 60000,
     keepaliveInterval: 30000,
     keepaliveCountMax: 3,
@@ -364,7 +374,140 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     cleanupSession(sessionId);
   });
 
+  client.on(
+    "keyboard-interactive",
+    (
+      name: string,
+      instructions: string,
+      instructionsLang: string,
+      prompts: Array<{ prompt: string; echo: boolean }>,
+      finish: (responses: string[]) => void,
+    ) => {
+      fileLogger.info("Keyboard-interactive authentication requested", {
+        operation: "file_keyboard_interactive",
+        hostId,
+        sessionId,
+        promptsCount: prompts.length,
+      });
+
+      const totpPrompt = prompts.find((p) =>
+        /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
+          p.prompt,
+        ),
+      );
+
+      if (totpPrompt) {
+        if (responseSent) return;
+        responseSent = true;
+
+        pendingTOTPSessions[sessionId] = {
+          client,
+          finish,
+          config,
+          createdAt: Date.now(),
+          sessionId,
+        };
+
+        res.json({
+          requires_totp: true,
+          sessionId,
+          prompt: totpPrompt.prompt,
+        });
+      } else {
+        if (resolvedCredentials.password) {
+          const responses = prompts.map(() => resolvedCredentials.password || "");
+          finish(responses);
+        } else {
+          finish(prompts.map(() => ""));
+        }
+      }
+    },
+  );
+
   client.connect(config);
+});
+
+app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
+  const { sessionId, totpCode } = req.body;
+
+  const userId = (req as any).userId;
+
+  if (!userId) {
+    fileLogger.error("TOTP verification rejected: no authenticated user", {
+      operation: "file_totp_auth",
+      sessionId,
+    });
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!sessionId || !totpCode) {
+    return res.status(400).json({ error: "Session ID and TOTP code required" });
+  }
+
+  const session = pendingTOTPSessions[sessionId];
+
+  if (!session) {
+    fileLogger.warn("TOTP session not found or expired", {
+      operation: "file_totp_verify",
+      sessionId,
+      userId,
+    });
+    return res.status(404).json({ error: "TOTP session expired. Please reconnect." });
+  }
+
+  delete pendingTOTPSessions[sessionId];
+
+  if (Date.now() - session.createdAt > 120000) {
+    try {
+      session.client.end();
+    } catch {}
+    return res.status(408).json({ error: "TOTP session timeout. Please reconnect." });
+  }
+
+  session.finish([totpCode]);
+
+  let responseSent = false;
+
+  session.client.on("ready", () => {
+    if (responseSent) return;
+    responseSent = true;
+
+    sshSessions[sessionId] = {
+      client: session.client,
+      isConnected: true,
+      lastActive: Date.now(),
+    };
+    scheduleSessionCleanup(sessionId);
+
+    fileLogger.success("TOTP verification successful", {
+      operation: "file_totp_verify",
+      sessionId,
+      userId,
+    });
+
+    res.json({ status: "success", message: "TOTP verified, SSH connection established" });
+  });
+
+  session.client.on("error", (err) => {
+    if (responseSent) return;
+    responseSent = true;
+
+    fileLogger.error("TOTP verification failed", {
+      operation: "file_totp_verify",
+      sessionId,
+      userId,
+      error: err.message,
+    });
+
+    res.status(401).json({ status: "error", message: "Invalid TOTP code" });
+  });
+
+  setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      res.status(408).json({ error: "TOTP verification timeout" });
+    }
+  }, 60000);
 });
 
 app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
