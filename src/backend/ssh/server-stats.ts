@@ -123,7 +123,9 @@ class SSHConnectionPool {
         if (!conn.inUse && now - conn.lastUsed > maxAge) {
           try {
             conn.client.end();
-          } catch {}
+          } catch {
+            // Ignore errors when closing stale connections
+          }
           return false;
         }
         return true;
@@ -143,7 +145,9 @@ class SSHConnectionPool {
       for (const conn of connections) {
         try {
           conn.client.end();
-        } catch {}
+        } catch {
+          // Ignore errors when closing connections during cleanup
+        }
       }
     }
     this.connections.clear();
@@ -181,7 +185,9 @@ class RequestQueue {
       if (request) {
         try {
           await request();
-        } catch (error) {}
+        } catch {
+          // Ignore errors from queued requests
+        }
       }
     }
 
@@ -829,7 +835,9 @@ function tcpPing(
       settled = true;
       try {
         socket.destroy();
-      } catch {}
+      } catch {
+        // Ignore errors when destroying socket
+      }
       resolve(result);
     };
 

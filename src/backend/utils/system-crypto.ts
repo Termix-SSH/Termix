@@ -115,7 +115,9 @@ class SystemCrypto {
           process.env.INTERNAL_AUTH_TOKEN = tokenMatch[1];
           return;
         }
-      } catch {}
+      } catch {
+        // Ignore file read errors, will generate new token
+      }
 
       await this.generateAndGuideInternalAuthToken();
     } catch (error) {

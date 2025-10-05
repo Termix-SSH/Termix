@@ -234,7 +234,9 @@ IP.3 = 0.0.0.0
     let envContent = "";
     try {
       envContent = await fs.readFile(this.ENV_FILE, "utf8");
-    } catch {}
+    } catch {
+      // File doesn't exist yet, will create with SSL config
+    }
 
     let updatedContent = envContent;
     let hasChanges = false;
