@@ -9,6 +9,7 @@ import { FileWindow } from "./components/FileWindow";
 import { DiffWindow } from "./components/DiffWindow";
 import { useDragToDesktop } from "../../../hooks/useDragToDesktop";
 import { useDragToSystemDesktop } from "../../../hooks/useDragToSystemDesktop";
+import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -82,6 +83,7 @@ function formatFileSize(bytes?: number): string {
 function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const { openWindow } = useWindowManager();
   const { t } = useTranslation();
+  const { confirmWithToast } = useConfirmation();
 
   const [currentHost, setCurrentHost] = useState<SSHHost | null>(
     initialHost || null,
@@ -587,54 +589,88 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   async function handleDeleteFiles(files: FileItem[]) {
     if (!sshSessionId || files.length === 0) return;
 
-    try {
-      await ensureSSHConnection();
-
-      for (const file of files) {
-        await deleteSSHItem(
-          sshSessionId,
-          file.path,
-          file.type === "directory",
-          currentHost?.id,
-          currentHost?.userId?.toString(),
-        );
-      }
-
-      const deletedFiles = files.map((file) => ({
-        path: file.path,
-        name: file.name,
-      }));
-
-      const undoAction: UndoAction = {
-        type: "delete",
-        description: t("fileManager.deletedItems", { count: files.length }),
-        data: {
-          operation: "cut",
-          deletedFiles,
-          targetDirectory: currentPath,
-        },
-        timestamp: Date.now(),
-      };
-      setUndoHistory((prev) => [...prev.slice(-9), undoAction]);
-
-      toast.success(
-        t("fileManager.itemsDeletedSuccessfully", { count: files.length }),
-      );
-      handleRefreshDirectory();
-      clearSelection();
-    } catch (error: any) {
-      if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
-      ) {
-        toast.error(
-          `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
-        );
+    // Determine the confirmation message based on file count and type
+    let confirmMessage: string;
+    if (files.length === 1) {
+      const file = files[0];
+      if (file.type === "directory") {
+        confirmMessage = t("fileManager.confirmDeleteFolder", {
+          name: file.name,
+        });
       } else {
-        toast.error(t("fileManager.failedToDeleteItems"));
+        confirmMessage = t("fileManager.confirmDeleteSingleItem", {
+          name: file.name,
+        });
       }
-      console.error("Delete failed:", error);
+    } else {
+      const hasDirectory = files.some((file) => file.type === "directory");
+      const translationKey = hasDirectory
+        ? "fileManager.confirmDeleteMultipleItemsWithFolders"
+        : "fileManager.confirmDeleteMultipleItems";
+
+      confirmMessage = t(translationKey, {
+        count: files.length,
+      });
     }
+
+    // Add permanent deletion warning
+    const fullMessage = `${confirmMessage}\n\n${t("fileManager.permanentDeleteWarning")}`;
+
+    // Show confirmation dialog
+    confirmWithToast(
+      fullMessage,
+      async () => {
+        try {
+          await ensureSSHConnection();
+
+          for (const file of files) {
+            await deleteSSHItem(
+              sshSessionId,
+              file.path,
+              file.type === "directory",
+              currentHost?.id,
+              currentHost?.userId?.toString(),
+            );
+          }
+
+          const deletedFiles = files.map((file) => ({
+            path: file.path,
+            name: file.name,
+          }));
+
+          const undoAction: UndoAction = {
+            type: "delete",
+            description: t("fileManager.deletedItems", { count: files.length }),
+            data: {
+              operation: "cut",
+              deletedFiles,
+              targetDirectory: currentPath,
+            },
+            timestamp: Date.now(),
+          };
+          setUndoHistory((prev) => [...prev.slice(-9), undoAction]);
+
+          toast.success(
+            t("fileManager.itemsDeletedSuccessfully", { count: files.length }),
+          );
+          handleRefreshDirectory();
+          clearSelection();
+        } catch (error: any) {
+          if (
+            error.message?.includes("connection") ||
+            error.message?.includes("established")
+          ) {
+            toast.error(
+              `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
+            );
+          } else {
+            toast.error(t("fileManager.failedToDeleteItems"));
+          }
+          console.error("Delete failed:", error);
+        }
+      },
+      "destructive",
+    );
   }
 
   function handleCreateNewFolder() {
