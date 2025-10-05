@@ -43,7 +43,9 @@ export function ServerConfig({
         setServerUrl(config.serverUrl);
         setConnectionStatus("success");
       }
-    } catch (error) {}
+    } catch {
+      // Ignore config loading errors
+    }
   };
 
   const handleTestConnection = async () => {

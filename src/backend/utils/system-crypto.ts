@@ -76,7 +76,9 @@ class SystemCrypto {
           process.env.DATABASE_KEY = dbKeyMatch[1];
           return;
         }
-      } catch {}
+      } catch {
+        // Ignore file read errors, will generate new key
+      }
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
