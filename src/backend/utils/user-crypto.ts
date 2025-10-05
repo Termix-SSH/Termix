@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { getDb } from "../database/db/index.js";
-import { settings, users } from "../database/db/schema.js";
+import { settings } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
 
