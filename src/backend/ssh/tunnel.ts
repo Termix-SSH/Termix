@@ -217,7 +217,9 @@ function cleanupTunnelResources(
     if (verification?.timeout) clearTimeout(verification.timeout);
     try {
       verification?.conn.end();
-    } catch (e) {}
+    } catch {
+      // Ignore errors
+    }
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -282,7 +284,9 @@ function handleDisconnect(
       const verification = tunnelVerifications.get(tunnelName);
       if (verification?.timeout) clearTimeout(verification.timeout);
       verification?.conn.end();
-    } catch (e) {}
+    } catch {
+      // Ignore errors
+    }
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -518,9 +522,7 @@ async function connectSSHTunnel(
             keyType: credential.key_type || credential.keyType,
             authMethod: credential.auth_type || credential.authType,
           };
-        } else {
         }
-      } else {
       }
     } catch (error) {
       tunnelLogger.warn("Failed to resolve source credentials from database", {
@@ -631,7 +633,9 @@ async function connectSSHTunnel(
 
       try {
         conn.end();
-      } catch (e) {}
+      } catch {
+        // Ignore errors
+      }
 
       activeTunnels.delete(tunnelName);
 
@@ -771,7 +775,9 @@ async function connectSSHTunnel(
             const verification = tunnelVerifications.get(tunnelName);
             if (verification?.timeout) clearTimeout(verification.timeout);
             verification?.conn.end();
-          } catch (e) {}
+          } catch {
+            // Ignore errors
+          }
           tunnelVerifications.delete(tunnelName);
         }
 
@@ -1186,7 +1192,7 @@ async function killRemoteTunnelByMarker(
             } else {
             }
 
-            stream.on("close", (code) => {
+            stream.on("close", () => {
               commandIndex++;
               executeNextKillCommand();
             });
