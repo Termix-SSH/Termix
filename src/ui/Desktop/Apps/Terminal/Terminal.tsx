@@ -512,8 +512,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       cursorStyle: "bar",
       scrollback: 10000,
       fontSize: 14,
-      fontFamily:
-        '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontFamily: "Caskaydia Cove Nerd Font Mono",
       theme: { background: "#18181b", foreground: "#f7f7f7" },
       allowTransparency: true,
       convertEol: true,
@@ -737,7 +736,30 @@ const style = document.createElement("style");
 style.innerHTML = `
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
-/* Load NerdFonts locally with fallback handling */
+@font-face {
+  font-family: 'Caskaydia Cove Nerd Font Mono';
+  src: url('./fonts/CaskaydiaCoveNerdFontMono-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Caskaydia Cove Nerd Font Mono';
+  src: url('./fonts/CaskaydiaCoveNerdFontMono-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Caskaydia Cove Nerd Font Mono';
+  src: url('./fonts/CaskaydiaCoveNerdFontMono-Italic.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
   src: url('./fonts/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
@@ -762,7 +784,6 @@ style.innerHTML = `
   font-display: swap;
 }
 
-/* Fallback fonts for when custom fonts fail to load */
 @font-face {
   font-family: 'Terminal Fallback';
   src: local('SF Mono'), local('Monaco'), local('Consolas'), local('Liberation Mono'), local('Courier New');
@@ -795,7 +816,7 @@ style.innerHTML = `
 }
 
 .xterm .xterm-screen {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
+  font-family: 'Caskaydia Cove Nerd Font Mono', 'MesloLGS NF', 'FiraCode Nerd Font', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
   font-variant-ligatures: contextual;
 }
 
