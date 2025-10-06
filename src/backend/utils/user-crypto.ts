@@ -94,7 +94,9 @@ class UserCrypto {
           DEK.fill(0);
           DEK = this.decryptDEK(storedEncryptedDEK, systemKey);
         } else if (!storedEncryptedDEK) {
-          throw new Error("Failed to store and retrieve user encryption key.");
+          throw new Error(
+            "Failed to store and retrieve user encryption key.",
+          );
         }
       } finally {
         systemKey.fill(0);
