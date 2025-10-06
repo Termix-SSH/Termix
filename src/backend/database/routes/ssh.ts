@@ -226,7 +226,7 @@ router.post(
       authType,
       credentialId,
       key,
-      keyPassword,
+      key_password,
       keyType,
       pin,
       enableTerminal,
@@ -274,7 +274,7 @@ router.post(
     if (effectiveAuthType === "password") {
       sshDataObj.password = password || null;
       sshDataObj.key = null;
-      sshDataObj.key_password = null;
+      sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       sshDataObj.key = key || null;
@@ -284,7 +284,7 @@ router.post(
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
-      sshDataObj.key_password = null;
+      sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
 
@@ -407,7 +407,7 @@ router.put(
       authType,
       credentialId,
       key,
-      keyPassword,
+      key_password,
       keyType,
       pin,
       enableTerminal,
@@ -458,7 +458,7 @@ router.put(
         sshDataObj.password = password;
       }
       sshDataObj.key = null;
-      sshDataObj.key_password = null;
+      sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key) {
@@ -474,7 +474,7 @@ router.put(
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
-      sshDataObj.key_password = null;
+      sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
 
@@ -711,7 +711,7 @@ router.get(
         authType: resolvedHost.authType,
         password: resolvedHost.password || null,
         key: resolvedHost.key || null,
-        keyPassword: resolvedHost.keyPassword || null,
+        key_password: resolvedHost.key_password || null,
         keyType: resolvedHost.keyType || null,
         folder: resolvedHost.folder,
         tags:
