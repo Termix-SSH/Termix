@@ -163,9 +163,10 @@ class UserCrypto {
 
   async authenticateOIDCUser(userId: string): Promise<boolean> {
     try {
+      const kekSalt = await this.getKEKSalt(userId);
       const encryptedDEK = await this.getEncryptedDEK(userId);
 
-      if (!encryptedDEK) {
+      if (!kekSalt || !encryptedDEK) {
         await this.setupOIDCUserEncryption(userId);
         return true;
       }
