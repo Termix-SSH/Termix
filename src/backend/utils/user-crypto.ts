@@ -70,7 +70,34 @@ class UserCrypto {
   }
 
   async setupOIDCUserEncryption(userId: string): Promise<void> {
-    const DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
+    // Check if DEK already exists for this OIDC user
+    const existingKEKSalt = await this.getKEKSalt(userId);
+    const existingEncryptedDEK = await this.getEncryptedDEK(userId);
+
+    let DEK: Buffer;
+
+    if (existingKEKSalt && existingEncryptedDEK) {
+      // User already has a persisted DEK, retrieve it
+      const systemKey = this.deriveOIDCSystemKey(userId);
+      DEK = this.decryptDEK(existingEncryptedDEK, systemKey);
+      systemKey.fill(0);
+    } else {
+      // First time setup - create and persist new DEK
+      DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
+
+      // Generate a KEK salt for OIDC user (using a deterministic approach)
+      const kekSalt = await this.generateKEKSalt();
+      await this.storeKEKSalt(userId, kekSalt);
+
+      // Derive system key for OIDC user
+      const systemKey = this.deriveOIDCSystemKey(userId);
+
+      // Encrypt and store the DEK
+      const encryptedDEK = this.encryptDEK(DEK, systemKey);
+      await this.storeEncryptedDEK(userId, encryptedDEK);
+
+      systemKey.fill(0);
+    }
 
     const now = Date.now();
     this.userSessions.set(userId, {
@@ -135,34 +162,34 @@ class UserCrypto {
   async authenticateOIDCUser(userId: string): Promise<boolean> {
     try {
       const kekSalt = await this.getKEKSalt(userId);
-      if (!kekSalt) {
-        await this.setupOIDCUserEncryption(userId);
-        return true;
-      }
-
-      const systemKey = this.deriveOIDCSystemKey(userId);
       const encryptedDEK = await this.getEncryptedDEK(userId);
-      if (!encryptedDEK) {
-        systemKey.fill(0);
+
+      if (!kekSalt || !encryptedDEK) {
+        // First time login or missing encryption data - set up encryption
         await this.setupOIDCUserEncryption(userId);
         return true;
       }
 
+      // Retrieve persisted DEK
+      const systemKey = this.deriveOIDCSystemKey(userId);
       const DEK = this.decryptDEK(encryptedDEK, systemKey);
       systemKey.fill(0);
 
       if (!DEK || DEK.length === 0) {
+        // DEK decryption failed - recreate encryption
         await this.setupOIDCUserEncryption(userId);
         return true;
       }
 
       const now = Date.now();
 
+      // Clear any existing session
       const oldSession = this.userSessions.get(userId);
       if (oldSession) {
         oldSession.dataKey.fill(0);
       }
 
+      // Create new session with the persisted DEK
       this.userSessions.set(userId, {
         dataKey: Buffer.from(DEK),
         lastActivity: now,
@@ -173,6 +200,7 @@ class UserCrypto {
 
       return true;
     } catch (error) {
+      // On error, set up fresh encryption
       await this.setupOIDCUserEncryption(userId);
       return true;
     }
