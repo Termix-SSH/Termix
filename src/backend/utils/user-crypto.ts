@@ -70,13 +70,11 @@ class UserCrypto {
   }
 
   async setupOIDCUserEncryption(userId: string): Promise<void> {
-    // Check if DEK already exists for this OIDC user
-    const existingKEKSalt = await this.getKEKSalt(userId);
     const existingEncryptedDEK = await this.getEncryptedDEK(userId);
 
     let DEK: Buffer;
 
-    if (existingKEKSalt && existingEncryptedDEK) {
+    if (existingEncryptedDEK) {
       // User already has a persisted DEK, retrieve it
       const systemKey = this.deriveOIDCSystemKey(userId);
       DEK = this.decryptDEK(existingEncryptedDEK, systemKey);
@@ -84,19 +82,30 @@ class UserCrypto {
     } else {
       // First time setup - create and persist new DEK
       DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
-
-      // Generate a KEK salt for OIDC user (using a deterministic approach)
-      const kekSalt = await this.generateKEKSalt();
-      await this.storeKEKSalt(userId, kekSalt);
-
-      // Derive system key for OIDC user
       const systemKey = this.deriveOIDCSystemKey(userId);
 
-      // Encrypt and store the DEK
-      const encryptedDEK = this.encryptDEK(DEK, systemKey);
-      await this.storeEncryptedDEK(userId, encryptedDEK);
+      try {
+        const encryptedDEK = this.encryptDEK(DEK, systemKey);
+        await this.storeEncryptedDEK(userId, encryptedDEK);
 
-      systemKey.fill(0);
+        // MITIGATION: Read back the stored DEK to ensure we use the one that won the race.
+        const storedEncryptedDEK = await this.getEncryptedDEK(userId);
+        if (
+          storedEncryptedDEK &&
+          storedEncryptedDEK.data !== encryptedDEK.data
+        ) {
+          // We lost the race. Use the DEK from the database.
+          DEK.fill(0); // Discard our generated DEK.
+          DEK = this.decryptDEK(storedEncryptedDEK, systemKey);
+        } else if (!storedEncryptedDEK) {
+          // This is an unexpected state; the store operation should have worked.
+          throw new Error(
+            "Failed to store and retrieve user encryption key.",
+          );
+        }
+      } finally {
+        systemKey.fill(0);
+      }
     }
 
     const now = Date.now();
@@ -161,10 +170,9 @@ class UserCrypto {
 
   async authenticateOIDCUser(userId: string): Promise<boolean> {
     try {
-      const kekSalt = await this.getKEKSalt(userId);
       const encryptedDEK = await this.getEncryptedDEK(userId);
 
-      if (!kekSalt || !encryptedDEK) {
+      if (!encryptedDEK) {
         // First time login or missing encryption data - set up encryption
         await this.setupOIDCUserEncryption(userId);
         return true;
