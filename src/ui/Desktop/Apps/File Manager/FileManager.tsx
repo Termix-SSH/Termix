@@ -619,39 +619,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       async () => {
         try {
           await ensureSSHConnection();
-    // Determine the confirmation message based on file count and type
-    let confirmMessage: string;
-    if (files.length === 1) {
-      const file = files[0];
-      if (file.type === "directory") {
-        confirmMessage = t("fileManager.confirmDeleteFolder", {
-          name: file.name,
-        });
-      } else {
-        confirmMessage = t("fileManager.confirmDeleteSingleItem", {
-          name: file.name,
-        });
-      }
-    } else {
-      const hasDirectory = files.some((file) => file.type === "directory");
-      const translationKey = hasDirectory
-        ? "fileManager.confirmDeleteMultipleItemsWithFolders"
-        : "fileManager.confirmDeleteMultipleItems";
-
-      confirmMessage = t(translationKey, {
-        count: files.length,
-      });
-    }
-
-    // Add permanent deletion warning
-    const fullMessage = `${confirmMessage}\n\n${t("fileManager.permanentDeleteWarning")}`;
-
-    // Show confirmation dialog
-    confirmWithToast(
-      fullMessage,
-      async () => {
-        try {
-          await ensureSSHConnection();
 
           for (const file of files) {
             await deleteSSHItem(
