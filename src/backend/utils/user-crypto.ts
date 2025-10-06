@@ -75,12 +75,10 @@ class UserCrypto {
     let DEK: Buffer;
 
     if (existingEncryptedDEK) {
-      // User already has a persisted DEK, retrieve it
       const systemKey = this.deriveOIDCSystemKey(userId);
       DEK = this.decryptDEK(existingEncryptedDEK, systemKey);
       systemKey.fill(0);
     } else {
-      // First time setup - create and persist new DEK
       DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
       const systemKey = this.deriveOIDCSystemKey(userId);
 
@@ -88,20 +86,15 @@ class UserCrypto {
         const encryptedDEK = this.encryptDEK(DEK, systemKey);
         await this.storeEncryptedDEK(userId, encryptedDEK);
 
-        // MITIGATION: Read back the stored DEK to ensure we use the one that won the race.
         const storedEncryptedDEK = await this.getEncryptedDEK(userId);
         if (
           storedEncryptedDEK &&
           storedEncryptedDEK.data !== encryptedDEK.data
         ) {
-          // We lost the race. Use the DEK from the database.
-          DEK.fill(0); // Discard our generated DEK.
+          DEK.fill(0);
           DEK = this.decryptDEK(storedEncryptedDEK, systemKey);
         } else if (!storedEncryptedDEK) {
-          // This is an unexpected state; the store operation should have worked.
-          throw new Error(
-            "Failed to store and retrieve user encryption key.",
-          );
+          throw new Error("Failed to store and retrieve user encryption key.");
         }
       } finally {
         systemKey.fill(0);
@@ -173,31 +166,26 @@ class UserCrypto {
       const encryptedDEK = await this.getEncryptedDEK(userId);
 
       if (!encryptedDEK) {
-        // First time login or missing encryption data - set up encryption
         await this.setupOIDCUserEncryption(userId);
         return true;
       }
 
-      // Retrieve persisted DEK
       const systemKey = this.deriveOIDCSystemKey(userId);
       const DEK = this.decryptDEK(encryptedDEK, systemKey);
       systemKey.fill(0);
 
       if (!DEK || DEK.length === 0) {
-        // DEK decryption failed - recreate encryption
         await this.setupOIDCUserEncryption(userId);
         return true;
       }
 
       const now = Date.now();
 
-      // Clear any existing session
       const oldSession = this.userSessions.get(userId);
       if (oldSession) {
         oldSession.dataKey.fill(0);
       }
 
-      // Create new session with the persisted DEK
       this.userSessions.set(userId, {
         dataKey: Buffer.from(DEK),
         lastActivity: now,
@@ -208,7 +196,6 @@ class UserCrypto {
 
       return true;
     } catch (error) {
-      // On error, set up fresh encryption
       await this.setupOIDCUserEncryption(userId);
       return true;
     }
