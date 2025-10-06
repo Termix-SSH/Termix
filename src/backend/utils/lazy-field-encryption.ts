@@ -6,10 +6,20 @@ export class LazyFieldEncryption {
     key_password: "keyPassword",
     private_key: "privateKey",
     public_key: "publicKey",
+    password_hash: "passwordHash",
+    client_secret: "clientSecret",
+    totp_secret: "totpSecret",
+    totp_backup_codes: "totpBackupCodes",
+    oidc_identifier: "oidcIdentifier",
 
     keyPassword: "key_password",
     privateKey: "private_key",
     publicKey: "public_key",
+    passwordHash: "password_hash",
+    clientSecret: "client_secret",
+    totpSecret: "totp_secret",
+    totpBackupCodes: "totp_backup_codes",
+    oidcIdentifier: "oidc_identifier",
   };
 
   static isPlaintextField(value: string): boolean {
