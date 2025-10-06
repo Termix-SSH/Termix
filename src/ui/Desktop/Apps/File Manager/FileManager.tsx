@@ -589,7 +589,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   async function handleDeleteFiles(files: FileItem[]) {
     if (!sshSessionId || files.length === 0) return;
 
-    // Determine the confirmation message based on file count and type
     let confirmMessage: string;
     if (files.length === 1) {
       const file = files[0];
@@ -613,10 +612,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       });
     }
 
-    // Add permanent deletion warning
     const fullMessage = `${confirmMessage}\n\n${t("fileManager.permanentDeleteWarning")}`;
 
-    // Show confirmation dialog
     confirmWithToast(
       fullMessage,
       async () => {

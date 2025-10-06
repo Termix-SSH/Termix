@@ -210,7 +210,18 @@ export function HostManagerEditor({
       defaultPath: z.string().optional(),
     })
     .superRefine((data, ctx) => {
-      if (data.authType === "key") {
+      if (data.authType === "password") {
+        if (
+          !data.password ||
+          (typeof data.password === "string" && data.password.trim() === "")
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("hosts.passwordRequired"),
+            path: ["password"],
+          });
+        }
+      } else if (data.authType === "key") {
         if (
           !data.key ||
           (typeof data.key === "string" && data.key.trim() === "")

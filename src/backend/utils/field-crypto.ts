@@ -27,12 +27,7 @@ class FieldCrypto {
       "oidc_identifier",
       "oidcIdentifier",
     ]),
-    ssh_data: new Set([
-      "password",
-      "key",
-      "key_password",
-      "keyPassword",
-    ]),
+    ssh_data: new Set(["password", "key", "key_password", "keyPassword"]),
     ssh_credentials: new Set([
       "password",
       "private_key",

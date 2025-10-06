@@ -101,7 +101,10 @@ export function LeftSidebar({
   const [deleteLoading, setDeleteLoading] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem("leftSidebarOpen");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
 
   const {
     tabs: tabList,
@@ -181,7 +184,6 @@ export function LeftSidebar({
             newHost.key !== existingHost.key ||
             newHost.keyPassword !== existingHost.keyPassword ||
             newHost.keyType !== existingHost.keyType ||
-            newHost.credentialId !== existingHost.credentialId ||
             newHost.defaultPath !== existingHost.defaultPath ||
             JSON.stringify(newHost.tags) !==
               JSON.stringify(existingHost.tags) ||
@@ -246,6 +248,10 @@ export function LeftSidebar({
     const handler = setTimeout(() => setDebouncedSearch(search), 200);
     return () => clearTimeout(handler);
   }, [search]);
+
+  React.useEffect(() => {
+    localStorage.setItem("leftSidebarOpen", JSON.stringify(isSidebarOpen));
+  }, [isSidebarOpen]);
 
   const filteredHosts = React.useMemo(() => {
     if (!debouncedSearch.trim()) return hosts;
