@@ -877,8 +877,6 @@ export function HostManagerEditor({
                       | "credential";
                     setAuthTab(newAuthType);
                     form.setValue("authType", newAuthType);
-                    // Don't clear other auth fields - let them persist
-                    // The backend will only use the fields relevant to the selected authType
                   }}
                   className="flex-1 flex flex-col h-full min-h-0"
                 >

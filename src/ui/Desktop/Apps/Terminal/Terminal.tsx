@@ -512,7 +512,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       cursorStyle: "bar",
       scrollback: 10000,
       fontSize: 14,
-      fontFamily: '"Caskaydia Cove Nerd Font Mono", "SF Mono", Consolas, "Liberation Mono", monospace',
+      fontFamily:
+        '"Caskaydia Cove Nerd Font Mono", "SF Mono", Consolas, "Liberation Mono", monospace',
       theme: { background: "#18181b", foreground: "#f7f7f7" },
       allowTransparency: true,
       convertEol: true,
