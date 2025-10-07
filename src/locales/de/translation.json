@@ -1122,7 +1122,7 @@
         "externalNotSupportedInElectron": "Externe Authentifizierung wird in der Electron-App noch nicht unterstützt. Bitte verwenden Sie die Webversion für die OIDC-Anmeldung.",
         "resetPasswordButton": "Passwort zurücksetzen",
         "sendResetCode": "Reset-Code senden",
-        "resetCodeDesc": "Geben Sie Ihren Benutzernamen ein, um einen Code zum Zurücksetzen des Passworts zu erhalten. Der Code wird in den Docker-Container-Protokollen \/ Logs angezeigt.",
+        "resetCodeDesc": "Geben Sie Ihren Benutzernamen ein, um einen Code zum Zurücksetzen des Passworts zu erhalten. Der Code wird in den Docker-Container-Protokollen angezeigt.",
         "resetCode": "Code zurücksetzen",
         "verifyCodeButton": "Code bestätigen",
         "enterResetCode": "Geben Sie den 6-stelligen Code aus den Docker-Container-Protokollen \/ logs für den Benutzer ein:",
