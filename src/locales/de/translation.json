@@ -983,7 +983,7 @@
         "port": "Port",
         "attempt": "Versuch {{current}} von {{max}}",
         "nextRetryIn": "Nächster Wiederholungsversuch in {{seconds}} Sekunden",
-        "checkDockerLogs": "Überprüfen Sie Ihre Docker-Protokolle auf den Fehlergrund, treten Sie dem",
+        "checkDockerLogs": "Überprüfen Sie Ihre Docker-Protokolle auf den Fehlergrund und treten Sie dem Discord bei",
         "noTunnelConnections": "Keine Tunnelverbindungen konfiguriert",
         "tunnelConnections": "Tunnel-Verbindungen",
         "addTunnel": "Tunnel hinzufügen",
