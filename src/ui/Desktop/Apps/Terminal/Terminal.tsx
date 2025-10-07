@@ -512,7 +512,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       cursorStyle: "bar",
       scrollback: 10000,
       fontSize: 14,
-      fontFamily: "Caskaydia Cove Nerd Font Mono",
+      fontFamily: '"Caskaydia Cove Nerd Font Mono", "SF Mono", Consolas, "Liberation Mono", monospace',
       theme: { background: "#18181b", foreground: "#f7f7f7" },
       allowTransparency: true,
       convertEol: true,
@@ -734,8 +734,6 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
 
 const style = document.createElement("style");
 style.innerHTML = `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
-
 @font-face {
   font-family: 'Caskaydia Cove Nerd Font Mono';
   src: url('./fonts/CaskaydiaCoveNerdFontMono-Regular.ttf') format('truetype');
@@ -761,34 +759,10 @@ style.innerHTML = `
 }
 
 @font-face {
-  font-family: 'JetBrains Mono Nerd Font';
-  src: url('./fonts/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'JetBrains Mono Nerd Font';
-  src: url('./fonts/JetBrainsMonoNerdFont-Bold.ttf') format('truetype');
+  font-family: 'Caskaydia Cove Nerd Font Mono';
+  src: url('./fonts/CaskaydiaCoveNerdFontMono-BoldItalic.ttf') format('truetype');
   font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'JetBrains Mono Nerd Font';
-  src: url('./fonts/JetBrainsMonoNerdFont-Italic.ttf') format('truetype');
-  font-weight: normal;
   font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Terminal Fallback';
-  src: local('SF Mono'), local('Monaco'), local('Consolas'), local('Liberation Mono'), local('Courier New');
-  font-weight: normal;
-  font-style: normal;
   font-display: swap;
 }
 
@@ -816,80 +790,12 @@ style.innerHTML = `
 }
 
 .xterm .xterm-screen {
-  font-family: 'Caskaydia Cove Nerd Font Mono', 'MesloLGS NF', 'FiraCode Nerd Font', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
+  font-family: 'Caskaydia Cove Nerd Font Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
   font-variant-ligatures: contextual;
 }
 
 .xterm .xterm-screen .xterm-char {
   font-feature-settings: "liga" 1, "calt" 1;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE000"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE001"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE002"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE003"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE004"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE005"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE006"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE007"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE008"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE009"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00A"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00B"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00C"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00D"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00E"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00F"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
 }
 `;
 document.head.appendChild(style);
