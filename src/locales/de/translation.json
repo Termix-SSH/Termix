@@ -221,7 +221,7 @@
         "updateAvailable": "Update verfügbar",
         "newVersionAvailable": "Eine neue Version ist verfügbar! Sie verwenden {{current}}, aber {{latest}} ist verfügbar.",
         "releasedOn": "Veröffentlicht am {{date}}",
-        "downloadUpdate": "Herunterladen-Update",
+        "downloadUpdate": "Update herunterladen",
         "dismiss": "Schließen",
         "checking": "Suche nach Updates...",
         "checkUpdates": "Nach Updates suchen",
