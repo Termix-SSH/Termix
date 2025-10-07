@@ -135,7 +135,7 @@
         "listView": "Liste",
         "folderView": "Ordner",
         "unknownCredential": "Unbekannt",
-        "confirmRemoveFromFolder": "Sind Sie sicher, dass Sie \"{{name}}\" aus Ordner \"{{folder}}\"? Die Zugangsdaten werden in den Bereich \"Nicht kategorisiert\" verschoben.",
+        "confirmRemoveFromFolder": "Sind Sie sicher, dass Sie \"{{name}}\" aus Ordner \"{{folder}}\" entfernen möchten? Die Zugangsdaten werden in den Bereich \"Nicht kategorisiert\" verschoben.",
         "removedFromFolder": "Anmeldeinformationen „ {{name}} “ erfolgreich aus dem Ordner entfernt",
         "failedToRemoveFromFolder": "Anmeldeinformationen konnten nicht aus dem Ordner entfernt werden",
         "folderRenamed": "Ordner „ {{oldName}} “ erfolgreich in „ {{newName}} “ umbenannt",
