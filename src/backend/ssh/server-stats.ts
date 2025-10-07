@@ -478,7 +478,7 @@ async function resolveHostCredentials(
 function addLegacyCredentials(baseHost: any, host: any): void {
   baseHost.password = host.password || null;
   baseHost.key = host.key || null;
-  baseHost.keyPassword = host.keyPassword || null;
+  baseHost.keyPassword = host.key_password || host.keyPassword || null;
   baseHost.keyType = host.keyType;
 }
 
