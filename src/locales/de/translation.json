@@ -1301,7 +1301,7 @@
         "confirmPassword": "Passwort bestätigen",
         "deleting": "Löschen...",
         "externalAuth": "Externe Authentifizierung (OIDC)",
-        "configureExternalProvider": "Konfigurieren Sie den externen Identitätsanbieter für",
+        "configureExternalProvider": "Konfigurieren Sie den externen Identitätsanbieter für die OIDC/OAuth2-Authentifizierung.",
         "waitingForRetry": "Warten auf erneuten Versuch",
         "retryingConnection": "Erneuter Verbindungsversuch",
         "resetSplitSizes": "Split-Größen zurücksetzen",
