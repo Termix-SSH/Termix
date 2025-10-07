@@ -877,21 +877,8 @@ export function HostManagerEditor({
                       | "credential";
                     setAuthTab(newAuthType);
                     form.setValue("authType", newAuthType);
-
-                    if (newAuthType === "password") {
-                      form.setValue("key", null);
-                      form.setValue("keyPassword", "");
-                      form.setValue("keyType", "auto");
-                      form.setValue("credentialId", null);
-                    } else if (newAuthType === "key") {
-                      form.setValue("password", "");
-                      form.setValue("credentialId", null);
-                    } else if (newAuthType === "credential") {
-                      form.setValue("password", "");
-                      form.setValue("key", null);
-                      form.setValue("keyPassword", "");
-                      form.setValue("keyType", "auto");
-                    }
+                    // Don't clear other auth fields - let them persist
+                    // The backend will only use the fields relevant to the selected authType
                   }}
                   className="flex-1 flex flex-col h-full min-h-0"
                 >

@@ -711,7 +711,7 @@ router.get(
         authType: resolvedHost.authType,
         password: resolvedHost.password || null,
         key: resolvedHost.key || null,
-        key_password: resolvedHost.key_password || null,
+        keyPassword: resolvedHost.keyPassword || null,
         keyType: resolvedHost.keyType || null,
         folder: resolvedHost.folder,
         tags:
@@ -1243,7 +1243,11 @@ async function resolveHostCredentials(host: any): Promise<any> {
     // Convert snake_case to camelCase for hosts without credentials
     const result = { ...host };
     if (host.key_password !== undefined) {
-      result.keyPassword = host.key_password;
+      // Only use the inline key_password if keyPassword hasn't been set by credential resolution
+      if (result.keyPassword === undefined) {
+        result.keyPassword = host.key_password;
+      }
+      // Always remove the snake_case version to standardize the output
       delete result.key_password;
     }
     return result;
