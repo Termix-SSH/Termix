@@ -187,7 +187,7 @@
         "commandsWillBeSent": "Befehle werden an {{count}} ausgewählte Terminals gesendet.",
         "settings": "Einstellungen",
         "enableRightClickCopyPaste": "Rechtsklick-Kopieren\/Einfügen aktivieren",
-        "shareIdeas": "Haben Sie Ideen, was als nächstes für SSH-Tools kommen sollte? Teilen Sie sie diese mit uns"
+        "shareIdeas": "Haben Sie Ideen, was als nächstes für SSH-Tools kommen sollte? Teilen Sie diese mit uns"
     },
     "homepage": {
         "loggedInTitle": "Eingeloggt!",
