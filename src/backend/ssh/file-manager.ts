@@ -97,7 +97,7 @@ interface SSHSession {
 interface PendingTOTPSession {
   client: SSHClient;
   finish: (responses: string[]) => void;
-  config: any;
+  config: import("ssh2").ConnectConfig;
   createdAt: number;
   sessionId: string;
 }
