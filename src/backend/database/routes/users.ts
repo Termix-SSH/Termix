@@ -858,10 +858,11 @@ router.post("/login", async (req, res) => {
         .json({ error: "Password authentication is currently disabled" });
     }
   } catch (e) {
-    authLogger.warn("Failed to check password login status", {
+    authLogger.error("Failed to check password login status", {
       operation: "login_check",
       error: e,
     });
+    return res.status(500).json({ error: "Failed to check login status" });
   }
 
   try {
