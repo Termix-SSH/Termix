@@ -852,7 +852,7 @@ router.post("/login", async (req, res) => {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
       .get();
-    if (row && (row as any).value !== "true") {
+    if (row && (row as { value: string }).value !== "true") {
       return res
         .status(403)
         .json({ error: "Password authentication is currently disabled" });
