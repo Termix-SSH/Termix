@@ -286,8 +286,7 @@ class UserCrypto {
       newKEK.fill(0);
 
       // Create a copy of DEK for the session before zeroing it out
-      const dekCopy = Buffer.allocUnsafe(DEK.length);
-      DEK.copy(dekCopy);
+      const dekCopy = Buffer.from(DEK);
 
       // Keep user session active with the same DEK
       const now = Date.now();
@@ -327,11 +326,6 @@ class UserCrypto {
       // Check if user has an active session with DEK
       const existingDEK = this.getUserDataKey(userId);
       if (!existingDEK) {
-        return false;
-      }
-
-      const kekSalt = await this.getKEKSalt(userId);
-      if (!kekSalt) {
         return false;
       }
 

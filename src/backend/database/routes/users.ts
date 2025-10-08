@@ -1339,6 +1339,7 @@ router.post("/complete-reset", async (req, res) => {
             },
           );
           await authManager.registerUser(userId, newPassword);
+          authManager.logoutUser(userId);
         } else {
           authLogger.success(
             `Password reset completed for user: ${username}. Data preserved using existing session.`,
