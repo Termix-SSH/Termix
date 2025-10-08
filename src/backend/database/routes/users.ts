@@ -1122,7 +1122,7 @@ router.get("/password-login-allowed", async (req, res) => {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
       .get();
-    res.json({ allowed: row ? (row as any).value === "true" : true });
+    res.json({ allowed: row ? (row as { value: string }).value === "true" : true });
   } catch (err) {
     authLogger.error("Failed to get password login allowed", err);
     res.status(500).json({ error: "Failed to get password login allowed" });
