@@ -2196,3 +2196,46 @@ export async function deployCredentialToHost(
     throw handleApiError(error, "deploy credential to host");
   }
 }
+
+// ============================================================================
+// SNIPPETS API
+// ============================================================================
+
+export async function getSnippets(): Promise<any> {
+  try {
+    const response = await authApi.get("/snippets");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch snippets");
+  }
+}
+
+export async function createSnippet(snippetData: any): Promise<any> {
+  try {
+    const response = await authApi.post("/snippets", snippetData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "create snippet");
+  }
+}
+
+export async function updateSnippet(
+  snippetId: number,
+  snippetData: any,
+): Promise<any> {
+  try {
+    const response = await authApi.put(`/snippets/${snippetId}`, snippetData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update snippet");
+  }
+}
+
+export async function deleteSnippet(snippetId: number): Promise<any> {
+  try {
+    const response = await authApi.delete(`/snippets/${snippetId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete snippet");
+  }
+}

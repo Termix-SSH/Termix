@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronDown, ChevronUpIcon, Hammer } from "lucide-react";
+import { ChevronDown, ChevronUpIcon, Hammer, FileText } from "lucide-react";
 import { Tab } from "@/ui/Desktop/Navigation/Tabs/Tab.tsx";
 import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import {
@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/Desktop/Navigation/Tabs/TabDropdown.tsx";
 import { getCookie, setCookie } from "@/ui/main-axios.ts";
+import { SnippetsSidebar } from "@/ui/Desktop/Apps/Terminal/SnippetsSidebar.tsx";
 
 interface TopNavbarProps {
   isTopbarOpen: boolean;
@@ -41,6 +42,7 @@ export function TopNavbar({
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
+  const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(false);
 
   const handleTabActivate = (tabId: number) => {
     setCurrentTab(tabId);
@@ -212,6 +214,13 @@ export function TopNavbar({
     }
   };
 
+  const handleSnippetExecute = (content: string) => {
+    const tab = tabs.find((t: any) => t.id === currentTab);
+    if (tab?.terminalRef?.current?.sendInput) {
+      tab.terminalRef.current.sendInput(content + "\n");
+    }
+  };
+
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
   const currentTabObj = tabs.find((t: any) => t.id === currentTab);
@@ -315,6 +324,16 @@ export function TopNavbar({
             onClick={() => setToolsSheetOpen(true)}
           >
             <Hammer className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-[30px] h-[30px]"
+            title={t("nav.snippets")}
+            onClick={() => setSnippetsSidebarOpen(true)}
+            disabled={!currentTabObj || currentTabObj.type !== "terminal"}
+          >
+            <FileText className="h-4 w-4" />
           </Button>
 
           <Button
@@ -484,6 +503,12 @@ export function TopNavbar({
           </div>
         </div>
       )}
+
+      <SnippetsSidebar
+        isOpen={snippetsSidebarOpen}
+        onClose={() => setSnippetsSidebarOpen(false)}
+        onExecute={handleSnippetExecute}
+      />
     </div>
   );
 }
