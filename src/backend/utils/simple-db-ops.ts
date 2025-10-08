@@ -127,7 +127,7 @@ class SimpleDBOps {
     table: SQLiteTable<any>,
     tableName: TableName,
     where: any,
-    userId: string,
+    _userId: string,
   ): Promise<any[]> {
     const result = await getDb().delete(table).where(where).returning();
 
@@ -146,7 +146,7 @@ class SimpleDBOps {
 
   static async selectEncrypted(
     query: any,
-    tableName: TableName,
+    _tableName: TableName,
   ): Promise<any[]> {
     const results = await query;
 

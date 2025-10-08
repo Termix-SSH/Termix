@@ -170,7 +170,7 @@ router.post("/dismiss", authenticateJWT, async (req, res) => {
       return res.status(409).json({ error: "Alert already dismissed" });
     }
 
-    const result = await db.insert(dismissedAlerts).values({
+    await db.insert(dismissedAlerts).values({
       userId,
       alertId,
     });

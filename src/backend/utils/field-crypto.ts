@@ -21,8 +21,9 @@ class FieldCrypto {
       "totp_secret",
       "totp_backup_codes",
       "oidc_identifier",
+      "oidcIdentifier",
     ]),
-    ssh_data: new Set(["password", "key", "key_password"]),
+    ssh_data: new Set(["password", "key", "key_password", "keyPassword"]),
     ssh_credentials: new Set([
       "password",
       "private_key",
@@ -47,7 +48,11 @@ class FieldCrypto {
     );
 
     const iv = crypto.randomBytes(this.IV_LENGTH);
-    const cipher = crypto.createCipheriv(this.ALGORITHM, fieldKey, iv) as any;
+    const cipher = crypto.createCipheriv(
+      this.ALGORITHM,
+      fieldKey,
+      iv,
+    ) as crypto.CipherGCM;
 
     let encrypted = cipher.update(plaintext, "utf8", "hex");
     encrypted += cipher.final("hex");
@@ -89,7 +94,7 @@ class FieldCrypto {
       this.ALGORITHM,
       fieldKey,
       Buffer.from(encrypted.iv, "hex"),
-    ) as any;
+    ) as crypto.DecipherGCM;
     decipher.setAuthTag(Buffer.from(encrypted.tag, "hex"));
 
     let decrypted = decipher.update(encrypted.data, "hex", "utf8");

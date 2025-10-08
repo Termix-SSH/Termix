@@ -450,7 +450,7 @@ router.get("/oidc-config", async (req, res) => {
                 } else {
                   config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
                 }
-              } catch (decryptError) {
+              } catch {
                 authLogger.warn("Failed to decrypt OIDC config for admin", {
                   operation: "oidc_config_decrypt_failed",
                   userId,
@@ -503,7 +503,7 @@ router.get("/oidc/authorize", async (req, res) => {
 
     let origin =
       req.get("Origin") ||
-      req.get("Referer")?.replace(/\/[^\/]*$/, "") ||
+      req.get("Referer")?.replace(/\/[^/]*$/, "") ||
       "http://localhost:5173";
 
     if (origin.includes("localhost")) {
@@ -605,15 +605,12 @@ router.get("/oidc/callback", async (req, res) => {
     const tokenData = (await tokenResponse.json()) as any;
 
     let userInfo: any = null;
-    let userInfoUrls: string[] = [];
+    const userInfoUrls: string[] = [];
 
     const normalizedIssuerUrl = config.issuer_url.endsWith("/")
       ? config.issuer_url.slice(0, -1)
       : config.issuer_url;
-    const baseUrl = normalizedIssuerUrl.replace(
-      /\/application\/o\/[^\/]+$/,
-      "",
-    );
+    const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, "");
 
     try {
       const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
@@ -650,7 +647,8 @@ router.get("/oidc/callback", async (req, res) => {
           config.issuer_url,
           config.client_id,
         );
-      } catch (error) {
+      } catch {
+        // Fallback to manual decoding
         try {
           const parts = tokenData.id_token.split(".");
           if (parts.length === 3) {
@@ -1641,7 +1639,7 @@ router.post("/totp/verify-login", async (req, res) => {
         backupCodes = userRecord.totp_backup_codes
           ? JSON.parse(userRecord.totp_backup_codes)
           : [];
-      } catch (parseError) {
+      } catch {
         backupCodes = [];
       }
 

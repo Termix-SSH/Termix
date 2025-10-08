@@ -2,15 +2,13 @@ import express from "express";
 import { db } from "../db/index.js";
 import { sshCredentials, sshCredentialUsage, sshData } from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
-import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import {
   parseSSHKey,
   parsePublicKey,
-  detectKeyType,
   validateKeyPair,
 } from "../../utils/ssh-key-utils.js";
 import crypto from "crypto";
@@ -970,7 +968,7 @@ router.post(
 
     try {
       let privateKeyObj;
-      let parseAttempts = [];
+      const parseAttempts = [];
 
       try {
         privateKeyObj = crypto.createPrivateKey({
@@ -1093,7 +1091,9 @@ router.post(
           finalPublicKey = `${keyType} ${base64Data}`;
           formatType = "ssh";
         }
-      } catch (sshError) {}
+      } catch {
+        // Ignore validation errors
+      }
 
       const response = {
         success: true,
@@ -1119,13 +1119,13 @@ router.post(
 async function deploySSHKeyToHost(
   hostConfig: any,
   publicKey: string,
-  credentialData: any,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _credentialData: any,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   return new Promise((resolve) => {
     const conn = new Client();
-    let connectionTimeout: NodeJS.Timeout;
 
-    connectionTimeout = setTimeout(() => {
+    const connectionTimeout = setTimeout(() => {
       conn.destroy();
       resolve({ success: false, error: "Connection timeout" });
     }, 120000);
@@ -1158,7 +1158,9 @@ async function deploySSHKeyToHost(
                 }
               });
 
-              stream.on("data", (data) => {});
+              stream.on("data", () => {
+                // Ignore output
+              });
             },
           );
         });
@@ -1175,7 +1177,9 @@ async function deploySSHKeyToHost(
               if (parsed.data) {
                 actualPublicKey = parsed.data;
               }
-            } catch (e) {}
+            } catch {
+              // Ignore parse errors
+            }
 
             const keyParts = actualPublicKey.trim().split(" ");
             if (keyParts.length < 2) {
@@ -1202,7 +1206,7 @@ async function deploySSHKeyToHost(
                   output += data.toString();
                 });
 
-                stream.on("close", (code) => {
+                stream.on("close", () => {
                   clearTimeout(checkTimeout);
                   const exists = output.trim() === "0";
                   resolveCheck(exists);
@@ -1229,7 +1233,9 @@ async function deploySSHKeyToHost(
             if (parsed.data) {
               actualPublicKey = parsed.data;
             }
-          } catch (e) {}
+          } catch {
+            // Ignore parse errors
+          }
 
           const escapedKey = actualPublicKey
             .replace(/\\/g, "\\\\")
@@ -1269,7 +1275,9 @@ async function deploySSHKeyToHost(
               if (parsed.data) {
                 actualPublicKey = parsed.data;
               }
-            } catch (e) {}
+            } catch {
+              // Ignore parse errors
+            }
 
             const keyParts = actualPublicKey.trim().split(" ");
             if (keyParts.length < 2) {
@@ -1295,7 +1303,7 @@ async function deploySSHKeyToHost(
                   output += data.toString();
                 });
 
-                stream.on("close", (code) => {
+                stream.on("close", () => {
                   clearTimeout(verifyTimeout);
                   const verified = output.trim() === "0";
                   resolveVerify(verified);
@@ -1521,7 +1529,7 @@ router.post(
 
       const hostData = targetHost[0];
 
-      let hostConfig = {
+      const hostConfig = {
         ip: hostData.ip,
         port: hostData.port,
         username: hostData.username,
@@ -1571,7 +1579,7 @@ router.post(
               error: "Host credential not found",
             });
           }
-        } catch (error) {
+        } catch {
           return res.status(500).json({
             success: false,
             error: "Failed to resolve host credentials",

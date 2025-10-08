@@ -327,7 +327,6 @@ export function FileManagerGrid({
       dragState.files[0].type === "file"
     ) {
       onFileDiff?.(dragState.files[0], targetFile);
-    } else {
     }
 
     setDragState({ type: "none", files: [], counter: 0 });
@@ -458,8 +457,6 @@ export function FileManagerGrid({
           type: "external",
           counter: prev.counter + 1,
         }));
-        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-        }
       }
     },
     [dragState.type],

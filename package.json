@@ -8,6 +8,11 @@
   "type": "module",
   "scripts": {
     "clean": "npx prettier . --write",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "type-check": "tsc --noEmit",
     "dev": "vite",
     "build": "vite build && tsc -p tsconfig.node.json",
     "build:backend": "tsc -p tsconfig.node.json",
@@ -20,7 +25,8 @@
     "build:linux-appimage": "npm run build && electron-builder --linux AppImage",
     "build:linux-targz": "npm run build && electron-builder --linux tar.gz",
     "test:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-test.js",
-    "migrate:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-migration.js"
+    "migrate:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-migration.js",
+    "prepare": "husky"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.7",
@@ -105,6 +111,8 @@
     "zod": "^4.0.5"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
     "@eslint/js": "^9.34.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
@@ -123,9 +131,19 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.3",
     "prettier": "3.6.2",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.40.0",
     "vite": "^7.1.5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
   }
 }

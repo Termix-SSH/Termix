@@ -39,7 +39,7 @@ export class LazyFieldEncryption {
         return false;
       }
       return true;
-    } catch (jsonError) {
+    } catch {
       return true;
     }
   }
@@ -74,7 +74,9 @@ export class LazyFieldEncryption {
               legacyFieldName,
             );
             return decrypted;
-          } catch (legacyError) {}
+          } catch {
+            // Ignore legacy format errors
+          }
         }
 
         const sensitiveFields = [
@@ -145,7 +147,7 @@ export class LazyFieldEncryption {
           wasPlaintext: false,
           wasLegacyEncryption: false,
         };
-      } catch (error) {
+      } catch {
         const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
         if (legacyFieldName) {
           try {
@@ -166,7 +168,9 @@ export class LazyFieldEncryption {
               wasPlaintext: false,
               wasLegacyEncryption: true,
             };
-          } catch (legacyError) {}
+          } catch {
+            // Ignore legacy format errors
+          }
         }
         return {
           encrypted: fieldValue,
@@ -253,7 +257,7 @@ export class LazyFieldEncryption {
     try {
       FieldCrypto.decryptField(fieldValue, userKEK, recordId, fieldName);
       return false;
-    } catch (error) {
+    } catch {
       const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
       if (legacyFieldName) {
         try {
@@ -264,7 +268,7 @@ export class LazyFieldEncryption {
             legacyFieldName,
           );
           return true;
-        } catch (legacyError) {
+        } catch {
           return false;
         }
       }
