@@ -1605,6 +1605,15 @@ export async function getRegistrationAllowed(): Promise<{ allowed: boolean }> {
   }
 }
 
+export async function getPasswordLoginAllowed(): Promise<{ allowed: boolean }> {
+  try {
+    const response = await authApi.get("/users/password-login-allowed");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "check password login status");
+  }
+}
+
 export async function getOIDCConfig(): Promise<any> {
   try {
     const response = await authApi.get("/users/oidc-config");
@@ -1749,6 +1758,19 @@ export async function updateRegistrationAllowed(
     return response.data;
   } catch (error) {
     handleApiError(error, "update registration allowed");
+  }
+}
+
+export async function updatePasswordLoginAllowed(
+  allowed: boolean,
+): Promise<{ allowed: boolean }> {
+  try {
+    const response = await authApi.patch("/users/password-login-allowed", {
+      allowed,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update password login allowed");
   }
 }
 
