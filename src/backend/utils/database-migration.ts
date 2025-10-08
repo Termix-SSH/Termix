@@ -55,7 +55,6 @@ export class DatabaseMigration {
 
     if (hasEncryptedDb && hasUnencryptedDb) {
       const unencryptedSize = fs.statSync(this.unencryptedDbPath).size;
-      const encryptedSize = fs.statSync(this.encryptedDbPath).size;
 
       if (unencryptedSize === 0) {
         needsMigration = false;
@@ -168,9 +167,6 @@ export class DatabaseMigration {
         return false;
       }
 
-      let totalOriginalRows = 0;
-      let totalMemoryRows = 0;
-
       for (const table of originalTables) {
         const originalCount = originalDb
           .prepare(`SELECT COUNT(*) as count FROM ${table.name}`)
@@ -178,9 +174,6 @@ export class DatabaseMigration {
         const memoryCount = memoryDb
           .prepare(`SELECT COUNT(*) as count FROM ${table.name}`)
           .get() as { count: number };
-
-        totalOriginalRows += originalCount.count;
-        totalMemoryRows += memoryCount.count;
 
         if (originalCount.count !== memoryCount.count) {
           databaseLogger.error(

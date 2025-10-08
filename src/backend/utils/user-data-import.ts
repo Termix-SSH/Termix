@@ -12,7 +12,6 @@ import { eq, and } from "drizzle-orm";
 import { DataCrypto } from "./data-crypto.js";
 import { UserDataExport, type UserExportData } from "./user-data-export.js";
 import { databaseLogger } from "./logger.js";
-import { nanoid } from "nanoid";
 
 interface ImportOptions {
   replaceExisting?: boolean;

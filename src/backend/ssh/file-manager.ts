@@ -110,7 +110,9 @@ function cleanupSession(sessionId: string) {
   if (session) {
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // Ignore connection close errors
+    }
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -598,13 +600,12 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
         const parts = line.split(/\s+/);
         if (parts.length >= 9) {
           const permissions = parts[0];
-          const linkCount = parts[1];
           const owner = parts[2];
           const group = parts[3];
           const size = parseInt(parts[4], 10);
 
           let dateStr = "";
-          let nameStartIndex = 8;
+          const nameStartIndex = 8;
 
           if (parts[5] && parts[6] && parts[7]) {
             dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
@@ -837,7 +838,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
-  const { sessionId, path: filePath, content, hostId, userId } = req.body;
+  const { sessionId, path: filePath, content } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1024,14 +1025,7 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
-  const {
-    sessionId,
-    path: filePath,
-    content,
-    fileName,
-    hostId,
-    userId,
-  } = req.body;
+  const { sessionId, path: filePath, content, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1165,8 +1159,6 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
       }
 
       if (chunks.length === 1) {
-        const tempFile = `/tmp/upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const escapedTempFile = tempFile.replace(/'/g, "'\"'\"'");
         const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
 
         const writeCommand = `echo '${chunks[0]}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
@@ -1231,13 +1223,11 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
           });
         });
       } else {
-        const tempFile = `/tmp/upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const escapedTempFile = tempFile.replace(/'/g, "'\"'\"'");
         const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
 
         let writeCommand = `> '${escapedPath}'`;
 
-        chunks.forEach((chunk, index) => {
+        chunks.forEach((chunk) => {
           writeCommand += ` && echo '${chunk}' | base64 -d >> '${escapedPath}'`;
         });
 
@@ -1320,14 +1310,7 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
-  const {
-    sessionId,
-    path: filePath,
-    fileName,
-    content = "",
-    hostId,
-    userId,
-  } = req.body;
+  const { sessionId, path: filePath, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1428,7 +1411,7 @@ app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
-  const { sessionId, path: folderPath, folderName, hostId, userId } = req.body;
+  const { sessionId, path: folderPath, folderName } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1529,7 +1512,7 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
 });
 
 app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
-  const { sessionId, path: itemPath, isDirectory, hostId, userId } = req.body;
+  const { sessionId, path: itemPath, isDirectory } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1631,7 +1614,7 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
 });
 
 app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
-  const { sessionId, oldPath, newName, hostId, userId } = req.body;
+  const { sessionId, oldPath, newName } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1739,7 +1722,7 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
 });
 
 app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
-  const { sessionId, oldPath, newPath, hostId, userId } = req.body;
+  const { sessionId, oldPath, newPath } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -2128,7 +2111,7 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
-  const { sessionId, filePath, hostId, userId } = req.body;
+  const { sessionId, filePath } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sshConn || !sshConn.isConnected) {
@@ -2165,7 +2148,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
       checkResult += data.toString();
     });
 
-    checkStream.on("close", (code) => {
+    checkStream.on("close", () => {
       if (!checkResult.includes("EXECUTABLE")) {
         return res.status(400).json({ error: "File is not executable" });
       }

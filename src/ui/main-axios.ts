@@ -320,7 +320,7 @@ function isDev(): boolean {
   );
 }
 
-let apiHost = import.meta.env.VITE_API_HOST || "localhost";
+const apiHost = import.meta.env.VITE_API_HOST || "localhost";
 let apiPort = 30001;
 let configuredServerUrl: string | null = null;
 

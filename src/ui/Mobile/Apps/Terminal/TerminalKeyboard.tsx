@@ -110,7 +110,9 @@ export function TerminalKeyboard({
         if (navigator.vibrate) {
           navigator.vibrate(20);
         }
-      } catch (e) {}
+      } catch {
+        // Ignore vibration errors on unsupported devices
+      }
 
       onSendInput(input);
     },

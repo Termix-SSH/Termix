@@ -59,7 +59,9 @@ export function useDragToSystemDesktop({
           };
         });
       }
-    } catch (error) {}
+    } catch {
+      // IndexedDB not available or failed to retrieve directory
+    }
     return null;
   };
 
@@ -75,7 +77,9 @@ export function useDragToSystemDesktop({
           store.put({ handle: dirHandle }, "lastSaveDir");
         };
       }
-    } catch (error) {}
+    } catch {
+      // Failed to save directory handle
+    }
   };
 
   const isFileSystemAPISupported = () => {

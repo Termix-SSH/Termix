@@ -719,28 +719,24 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     }
 
     try {
-      let currentSessionId = sshSessionId;
-      try {
-        const status = await getSSHStatus(currentSessionId);
-        if (!status.connected) {
-          const result = await connectSSH(currentSessionId, {
-            hostId: currentHost.id,
-            host: currentHost.ip,
-            port: currentHost.port,
-            username: currentHost.username,
-            authType: currentHost.authType,
-            password: currentHost.password,
-            key: currentHost.key,
-            keyPassword: currentHost.keyPassword,
-            credentialId: currentHost.credentialId,
-          });
+      const currentSessionId = sshSessionId;
+      const status = await getSSHStatus(currentSessionId);
+      if (!status.connected) {
+        const result = await connectSSH(currentSessionId, {
+          hostId: currentHost.id,
+          host: currentHost.ip,
+          port: currentHost.port,
+          username: currentHost.username,
+          authType: currentHost.authType,
+          password: currentHost.password,
+          key: currentHost.key,
+          keyPassword: currentHost.keyPassword,
+          credentialId: currentHost.credentialId,
+        });
 
-          if (!result.success) {
-            throw new Error(t("fileManager.failedToReconnectSSH"));
-          }
+        if (!result.success) {
+          throw new Error(t("fileManager.failedToReconnectSSH"));
         }
-      } catch (sessionErr) {
-        throw sessionErr;
       }
 
       const symlinkInfo = await identifySSHSymlink(currentSessionId, file.path);

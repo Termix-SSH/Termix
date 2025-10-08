@@ -118,7 +118,8 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch (error) {
+      } catch {
+        // Failed to load hosts data
       } finally {
         setLoading(false);
       }
@@ -152,7 +153,8 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch (error) {
+      } catch {
+        // Failed to reload hosts after credential change
       } finally {
         setLoading(false);
       }

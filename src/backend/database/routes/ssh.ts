@@ -9,8 +9,7 @@ import {
   fileManagerShortcuts,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
-import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import type { Request, Response } from "express";
 import multer from "multer";
 import { sshLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
@@ -816,7 +815,7 @@ router.delete(
           ),
         );
 
-      const result = await db
+      await db
         .delete(sshData)
         .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
 
@@ -943,7 +942,7 @@ router.delete(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const { hostId, path, name } = req.body;
+    const { hostId, path } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
       sshLogger.warn("Invalid data for recent file deletion");
@@ -1063,7 +1062,7 @@ router.delete(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const { hostId, path, name } = req.body;
+    const { hostId, path } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
       sshLogger.warn("Invalid data for pinned file deletion");
@@ -1183,7 +1182,7 @@ router.delete(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const { hostId, path, name } = req.body;
+    const { hostId, path } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
       sshLogger.warn("Invalid data for shortcut deletion");
@@ -1573,7 +1572,7 @@ router.post(
         }
       }
 
-      const updateResult = await db
+      await db
         .update(sshData)
         .set({
           autostartPassword: decryptedConfig.password || null,
@@ -1630,7 +1629,7 @@ router.delete(
     }
 
     try {
-      const result = await db
+      await db
         .update(sshData)
         .set({
           autostartPassword: null,

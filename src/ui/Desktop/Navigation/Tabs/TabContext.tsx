@@ -69,7 +69,7 @@ export function TabProvider({ children }: TabProviderProps) {
       }
       const m = t.title.match(
         new RegExp(
-          `^${root.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")} \\((\\d+)\\)$`,
+          `^${root.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")} \\((\\d+)\\)$`,
         ),
       );
       if (m) {

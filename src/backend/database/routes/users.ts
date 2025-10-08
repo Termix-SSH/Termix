@@ -18,7 +18,6 @@ import QRCode from "qrcode";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { UserCrypto } from "../../utils/user-crypto.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 
@@ -29,94 +28,89 @@ async function verifyOIDCToken(
   issuerUrl: string,
   clientId: string,
 ): Promise<any> {
+  const normalizedIssuerUrl = issuerUrl.endsWith("/")
+    ? issuerUrl.slice(0, -1)
+    : issuerUrl;
+  const possibleIssuers = [
+    issuerUrl,
+    normalizedIssuerUrl,
+    issuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
+    normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
+  ];
+
+  const jwksUrls = [
+    `${normalizedIssuerUrl}/.well-known/jwks.json`,
+    `${normalizedIssuerUrl}/jwks/`,
+    `${normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, "")}/.well-known/jwks.json`,
+  ];
+
   try {
-    const normalizedIssuerUrl = issuerUrl.endsWith("/")
-      ? issuerUrl.slice(0, -1)
-      : issuerUrl;
-    const possibleIssuers = [
-      issuerUrl,
-      normalizedIssuerUrl,
-      issuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
-      normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
-    ];
-
-    const jwksUrls = [
-      `${normalizedIssuerUrl}/.well-known/jwks.json`,
-      `${normalizedIssuerUrl}/jwks/`,
-      `${normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, "")}/.well-known/jwks.json`,
-    ];
-
-    try {
-      const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
-      const discoveryResponse = await fetch(discoveryUrl);
-      if (discoveryResponse.ok) {
-        const discovery = (await discoveryResponse.json()) as any;
-        if (discovery.jwks_uri) {
-          jwksUrls.unshift(discovery.jwks_uri);
-        }
-      }
-    } catch (discoveryError) {
-      authLogger.error(`OIDC discovery failed: ${discoveryError}`);
-    }
-
-    let jwks: any = null;
-    let jwksUrl: string | null = null;
-
-    for (const url of jwksUrls) {
-      try {
-        const response = await fetch(url);
-        if (response.ok) {
-          const jwksData = (await response.json()) as any;
-          if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
-            jwks = jwksData;
-            jwksUrl = url;
-            break;
-          } else {
-            authLogger.error(
-              `Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`,
-            );
-          }
-        } else {
-        }
-      } catch (error) {
-        continue;
+    const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
+    const discoveryResponse = await fetch(discoveryUrl);
+    if (discoveryResponse.ok) {
+      const discovery = (await discoveryResponse.json()) as any;
+      if (discovery.jwks_uri) {
+        jwksUrls.unshift(discovery.jwks_uri);
       }
     }
-
-    if (!jwks) {
-      throw new Error("Failed to fetch JWKS from any URL");
-    }
-
-    if (!jwks.keys || !Array.isArray(jwks.keys)) {
-      throw new Error(
-        `Invalid JWKS response structure. Expected 'keys' array, got: ${JSON.stringify(jwks)}`,
-      );
-    }
-
-    const header = JSON.parse(
-      Buffer.from(idToken.split(".")[0], "base64").toString(),
-    );
-    const keyId = header.kid;
-
-    const publicKey = jwks.keys.find((key: any) => key.kid === keyId);
-    if (!publicKey) {
-      throw new Error(
-        `No matching public key found for key ID: ${keyId}. Available keys: ${jwks.keys.map((k: any) => k.kid).join(", ")}`,
-      );
-    }
-
-    const { importJWK, jwtVerify } = await import("jose");
-    const key = await importJWK(publicKey);
-
-    const { payload } = await jwtVerify(idToken, key, {
-      issuer: possibleIssuers,
-      audience: clientId,
-    });
-
-    return payload;
-  } catch (error) {
-    throw error;
+  } catch (discoveryError) {
+    authLogger.error(`OIDC discovery failed: ${discoveryError}`);
   }
+
+  let jwks: any = null;
+
+  for (const url of jwksUrls) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const jwksData = (await response.json()) as any;
+        if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
+          jwks = jwksData;
+          break;
+        } else {
+          authLogger.error(
+            `Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`,
+          );
+        }
+      } else {
+        // Non-200 response
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  if (!jwks) {
+    throw new Error("Failed to fetch JWKS from any URL");
+  }
+
+  if (!jwks.keys || !Array.isArray(jwks.keys)) {
+    throw new Error(
+      `Invalid JWKS response structure. Expected 'keys' array, got: ${JSON.stringify(jwks)}`,
+    );
+  }
+
+  const header = JSON.parse(
+    Buffer.from(idToken.split(".")[0], "base64").toString(),
+  );
+  const keyId = header.kid;
+
+  const publicKey = jwks.keys.find((key: any) => key.kid === keyId);
+  if (!publicKey) {
+    throw new Error(
+      `No matching public key found for key ID: ${keyId}. Available keys: ${jwks.keys.map((k: any) => k.kid).join(", ")}`,
+    );
+  }
+
+  const { importJWK, jwtVerify } = await import("jose");
+  const key = await importJWK(publicKey);
+
+  const { payload } = await jwtVerify(idToken, key, {
+    issuer: possibleIssuers,
+    audience: clientId,
+  });
+
+  return payload;
 }
 
 const router = express.Router();
@@ -125,15 +119,8 @@ function isNonEmptyString(val: any): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
-interface JWTPayload {
-  userId: string;
-  iat?: number;
-  exp?: number;
-}
-
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
-const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Route: Create traditional user (username/password)
 // POST /users/create
@@ -451,7 +438,7 @@ router.get("/oidc-config", async (req, res) => {
                 } else {
                   config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
                 }
-              } catch (decryptError) {
+              } catch {
                 authLogger.warn("Failed to decrypt OIDC config for admin", {
                   operation: "oidc_config_decrypt_failed",
                   userId,
@@ -504,7 +491,7 @@ router.get("/oidc/authorize", async (req, res) => {
 
     let origin =
       req.get("Origin") ||
-      req.get("Referer")?.replace(/\/[^\/]*$/, "") ||
+      req.get("Referer")?.replace(/\/[^/]*$/, "") ||
       "http://localhost:5173";
 
     if (origin.includes("localhost")) {
@@ -606,15 +593,12 @@ router.get("/oidc/callback", async (req, res) => {
     const tokenData = (await tokenResponse.json()) as any;
 
     let userInfo: any = null;
-    let userInfoUrls: string[] = [];
+    const userInfoUrls: string[] = [];
 
     const normalizedIssuerUrl = config.issuer_url.endsWith("/")
       ? config.issuer_url.slice(0, -1)
       : config.issuer_url;
-    const baseUrl = normalizedIssuerUrl.replace(
-      /\/application\/o\/[^\/]+$/,
-      "",
-    );
+    const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, "");
 
     try {
       const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
@@ -651,7 +635,8 @@ router.get("/oidc/callback", async (req, res) => {
           config.issuer_url,
           config.client_id,
         );
-      } catch (error) {
+      } catch {
+        // Fallback to manual decoding
         try {
           const parts = tokenData.id_token.split(".");
           if (parts.length === 3) {
@@ -911,7 +896,7 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch (setupError) {
+    } catch {
       // Continue if setup fails - authenticateUser will handle it
     }
 
@@ -1615,7 +1600,7 @@ router.post("/totp/verify-login", async (req, res) => {
         backupCodes = userRecord.totp_backup_codes
           ? JSON.parse(userRecord.totp_backup_codes)
           : [];
-      } catch (parseError) {
+      } catch {
         backupCodes = [];
       }
 

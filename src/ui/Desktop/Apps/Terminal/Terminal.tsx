@@ -102,7 +102,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       if (terminal && typeof (terminal as any).refresh === "function") {
         (terminal as any).refresh(0, terminal.rows - 1);
       }
-    } catch (_) {}
+    } catch {
+      // Ignore terminal refresh errors
+    }
   }
 
   function handleTotpSubmit(code: string) {
@@ -183,7 +185,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
             scheduleNotify(cols, rows);
             hardRefresh();
           }
-        } catch (_) {}
+        } catch {
+          // Ignore resize notification errors
+        }
       },
       refresh: () => hardRefresh(),
     }),
@@ -505,7 +509,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
         await navigator.clipboard.writeText(text);
         return;
       }
-    } catch (_) {}
+    } catch {
+      // Clipboard API not available, fallback to textarea method
+    }
     const textarea = document.createElement("textarea");
     textarea.value = text;
     textarea.style.position = "fixed";
@@ -525,7 +531,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       if (navigator.clipboard && navigator.clipboard.readText) {
         return await navigator.clipboard.readText();
       }
-    } catch (_) {}
+    } catch {
+      // Clipboard read not available or not permitted
+    }
     return "";
   }
 
@@ -585,7 +593,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           const pasteText = await readTextFromClipboard();
           if (pasteText) terminal.paste(pasteText);
         }
-      } catch (_) {}
+      } catch {
+        // Ignore clipboard operation errors
+      }
     };
     element?.addEventListener("contextmenu", handleContextMenu);
 
