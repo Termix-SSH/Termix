@@ -124,7 +124,7 @@ class SSHConnectionPool {
             const responses = prompts.map(() => host.password || "");
             finish(responses);
           } else {
-            finish([]);
+            finish(prompts.map(() => ""));
           }
         },
       );
