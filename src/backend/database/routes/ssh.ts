@@ -1239,14 +1239,6 @@ async function resolveHostCredentials(host: any): Promise<any> {
         };
       }
     }
-
-    const result = { ...host };
-    if (host.key_password !== undefined) {
-      if (result.keyPassword === undefined) {
-        result.keyPassword = host.key_password;
-      }
-      delete result.key_password;
-    }
     const result = { ...host };
     if (host.key_password !== undefined) {
       if (result.keyPassword === undefined) {
