@@ -848,6 +848,23 @@ router.post("/login", async (req, res) => {
   }
 
   try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
+      .get();
+    if (row && (row as { value: string }).value !== "true") {
+      return res
+        .status(403)
+        .json({ error: "Password authentication is currently disabled" });
+    }
+  } catch (e) {
+    authLogger.error("Failed to check password login status", {
+      operation: "login_check",
+      error: e,
+    });
+    return res.status(500).json({ error: "Failed to check login status" });
+  }
+
+  try {
     const user = await db
       .select()
       .from(users)
@@ -1092,6 +1109,43 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to set registration allowed", err);
     res.status(500).json({ error: "Failed to set registration allowed" });
+  }
+});
+
+// Route: Get password login allowed status (public - needed for login page)
+// GET /users/password-login-allowed
+router.get("/password-login-allowed", async (req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
+      .get();
+    res.json({ allowed: row ? (row as { value: string }).value === "true" : true });
+  } catch (err) {
+    authLogger.error("Failed to get password login allowed", err);
+    res.status(500).json({ error: "Failed to get password login allowed" });
+  }
+});
+
+// Route: Set password login allowed status (admin only)
+// PATCH /users/password-login-allowed
+router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
+  const userId = (req as any).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].is_admin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { allowed } = req.body;
+    if (typeof allowed !== "boolean") {
+      return res.status(400).json({ error: "Invalid value for allowed" });
+    }
+    db.$client
+      .prepare("UPDATE settings SET value = ? WHERE key = 'allow_password_login'")
+      .run(allowed ? "true" : "false");
+    res.json({ allowed });
+  } catch (err) {
+    authLogger.error("Failed to set password login allowed", err);
+    res.status(500).json({ error: "Failed to set password login allowed" });
   }
 });
 
