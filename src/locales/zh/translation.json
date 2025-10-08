@@ -706,6 +706,10 @@
     "terminalTitle": "终端 - {{host}}",
     "terminalWithPath": "终端 - {{host}}:{{path}}",
     "runTitle": "运行 {{command}} - {{host}}",
+    "totpRequired": "需要双因素认证",
+    "totpCodeLabel": "验证码",
+    "totpPlaceholder": "000000",
+    "totpVerify": "验证",
     "connect": "连接主机",
     "disconnect": "断开连接",
     "clear": "清屏",
@@ -987,7 +991,9 @@
     "fileComparison": "文件对比：{{file1}} 与 {{file2}}",
     "fileTooLarge": "文件过大：{{error}}",
     "sshConnectionFailed": "SSH 连接失败。请检查与 {{name}} ({{ip}}:{{port}}) 的连接",
-    "loadFileFailed": "加载文件失败：{{error}}"
+    "loadFileFailed": "加载文件失败：{{error}}",
+    "connectedSuccessfully": "连接成功",
+    "totpVerificationFailed": "TOTP 验证失败"
   },
   "tunnels": {
     "title": "SSH 隧道",
@@ -1075,6 +1081,8 @@
     "refreshing": "正在刷新...",
     "serverOffline": "服务器离线",
     "cannotFetchMetrics": "无法从离线服务器获取指标",
+    "totpRequired": "需要 TOTP 认证",
+    "totpUnavailable": "启用了 TOTP 的服务器无法使用服务器统计功能",
     "load": "负载"
   },
   "auth": {

@@ -526,8 +526,8 @@ function handleApiError(error: unknown, operation: string): never {
 
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
-    const message = error.response?.data?.error || error.message;
-    const code = error.response?.data?.code;
+    const message = error.response?.data?.message || error.response?.data?.error || error.message;
+    const code = error.response?.data?.code || error.response?.data?.error;
     const url = error.config?.url;
     const method = error.config?.method?.toUpperCase();
 
@@ -554,11 +554,15 @@ function handleApiError(error: unknown, operation: string): never {
       throw new ApiError(errorMessage, 401, "AUTH_REQUIRED");
     } else if (status === 403) {
       authLogger.warn(`Access denied: ${method} ${url}`, errorContext);
-      throw new ApiError(
-        "Access denied. You do not have permission to perform this action.",
+      const apiError = new ApiError(
+        code === "TOTP_REQUIRED"
+          ? message
+          : "Access denied. You do not have permission to perform this action.",
         403,
-        "ACCESS_DENIED",
+        code || "ACCESS_DENIED",
       );
+      (apiError as any).response = error.response;
+      throw apiError;
     } else if (status === 404) {
       apiLogger.warn(`Not found: ${method} ${url}`, errorContext);
       throw new ApiError(
@@ -1054,6 +1058,21 @@ export async function disconnectSSH(sessionId: string): Promise<any> {
     return response.data;
   } catch (error) {
     handleApiError(error, "disconnect SSH");
+  }
+}
+
+export async function verifySSHTOTP(
+  sessionId: string,
+  totpCode: string,
+): Promise<any> {
+  try {
+    const response = await fileManagerApi.post("/ssh/connect-totp", {
+      sessionId,
+      totpCode,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "verify SSH TOTP");
   }
 }
 
