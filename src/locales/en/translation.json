@@ -712,7 +712,11 @@
     "connectionTimeout": "Connection timeout",
     "terminalTitle": "Terminal - {{host}}",
     "terminalWithPath": "Terminal - {{host}}:{{path}}",
-    "runTitle": "Running {{command}} - {{host}}"
+    "runTitle": "Running {{command}} - {{host}}",
+    "totpRequired": "Two-Factor Authentication Required",
+    "totpCodeLabel": "Verification Code",
+    "totpPlaceholder": "000000",
+    "totpVerify": "Verify"
   },
   "fileManager": {
     "title": "File Manager",
@@ -996,7 +1000,9 @@
     "fileComparison": "File Comparison: {{file1}} vs {{file2}}",
     "fileTooLarge": "File too large: {{error}}",
     "sshConnectionFailed": "SSH connection failed. Please check your connection to {{name}} ({{ip}}:{{port}})",
-    "loadFileFailed": "Failed to load file: {{error}}"
+    "loadFileFailed": "Failed to load file: {{error}}",
+    "connectedSuccessfully": "Connected successfully",
+    "totpVerificationFailed": "TOTP verification failed"
   },
   "tunnels": {
     "title": "SSH Tunnels",
@@ -1096,6 +1102,8 @@
     "refreshing": "Refreshing...",
     "serverOffline": "Server Offline",
     "cannotFetchMetrics": "Cannot fetch metrics from offline server",
+    "totpRequired": "TOTP Authentication Required",
+    "totpUnavailable": "Server Stats unavailable for TOTP-enabled servers",
     "load": "Load",
     "free": "Free",
     "available": "Available"

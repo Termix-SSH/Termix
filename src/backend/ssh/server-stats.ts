@@ -95,6 +95,40 @@ class SSHConnectionPool {
         reject(err);
       });
 
+      client.on(
+        "keyboard-interactive",
+        (
+          name: string,
+          instructions: string,
+          instructionsLang: string,
+          prompts: Array<{ prompt: string; echo: boolean }>,
+          finish: (responses: string[]) => void,
+        ) => {
+          const totpPrompt = prompts.find((p) =>
+            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
+              p.prompt,
+            ),
+          );
+
+          if (totpPrompt) {
+            statsLogger.warn(
+              `Server Stats cannot handle TOTP for host ${host.ip}. Connection will fail.`,
+              {
+                operation: "server_stats_totp_detected",
+                hostId: host.id,
+              },
+            );
+            client.end();
+            reject(new Error("TOTP authentication required but not supported in Server Stats"));
+          } else if (host.password) {
+            const responses = prompts.map(() => host.password || "");
+            finish(responses);
+          } else {
+            finish(prompts.map(() => ""));
+          }
+        },
+      );
+
       try {
         client.connect(buildSshConfig(host));
       } catch (err) {
@@ -487,6 +521,7 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     host: host.ip,
     port: host.port || 22,
     username: host.username || "root",
+    tryKeyboard: true,
     readyTimeout: 10_000,
     algorithms: {
       kex: [
@@ -651,7 +686,8 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
   }
 
   return requestQueue.queueRequest(host.id, async () => {
-    return withSshConnection(host, async (client) => {
+    try {
+      return await withSshConnection(host, async (client) => {
       let cpuPercent: number | null = null;
       let cores: number | null = null;
       let loadTriplet: [number, number, number] | null = null;
@@ -812,6 +848,12 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
       metricsCache.set(host.id, result);
       return result;
     });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("TOTP authentication required")) {
+        throw error;
+      }
+      throw error;
+    }
   });
 }
 
@@ -982,6 +1024,17 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
     const metrics = await collectMetrics(host);
     res.json({ ...metrics, lastChecked: new Date().toISOString() });
   } catch (err) {
+    if (err instanceof Error && err.message.includes("TOTP authentication required")) {
+      return res.status(403).json({
+        error: "TOTP_REQUIRED",
+        message: "Server Stats unavailable for TOTP-enabled servers",
+        cpu: { percent: null, cores: null, load: null },
+        memory: { percent: null, usedGiB: null, totalGiB: null },
+        disk: { percent: null, usedHuman: null, totalHuman: null },
+        lastChecked: new Date().toISOString(),
+      });
+    }
+
     statsLogger.error("Failed to collect metrics", err);
 
     if (err instanceof Error && err.message.includes("timeout")) {
