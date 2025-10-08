@@ -249,7 +249,6 @@ class UserCrypto {
     newPassword: string,
   ): Promise<boolean> {
     try {
-      // Validate current password
       const isValid = await this.validatePassword(userId, oldPassword);
       if (!isValid) return false;
 
@@ -260,35 +259,24 @@ class UserCrypto {
       const encryptedDEK = await this.getEncryptedDEK(userId);
       if (!encryptedDEK) return false;
 
-      // Decrypt DEK with old password's KEK
       const DEK = this.decryptDEK(encryptedDEK, oldKEK);
 
-      // The DEK stays the same - only the KEK changes with the new password
-      // This preserves all encrypted user data
-      
-      // Generate new KEK from new password
       const newKekSalt = await this.generateKEKSalt();
       const newKEK = this.deriveKEK(newPassword, newKekSalt);
       
-      // Re-encrypt the same DEK with new KEK
       const newEncryptedDEK = this.encryptDEK(DEK, newKEK);
 
-      // Store new KEK salt and new encrypted DEK
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      // Trigger database save to persist the encryption key changes
       const { saveMemoryDatabaseToFile } = await import("../database/db/index.js");
       await saveMemoryDatabaseToFile();
 
-      // Clean up sensitive data from memory
       oldKEK.fill(0);
       newKEK.fill(0);
 
-      // Create a copy of DEK for the session before zeroing it out
       const dekCopy = Buffer.from(DEK);
 
-      // Keep user session active with the same DEK
       const now = Date.now();
       const oldSession = this.userSessions.get(userId);
       if (oldSession) {
@@ -301,7 +289,6 @@ class UserCrypto {
         expiresAt: now + UserCrypto.SESSION_DURATION,
       });
 
-      // Zero out the original DEK from memory
       DEK.fill(0);
 
       return true;
@@ -320,36 +307,26 @@ class UserCrypto {
     newPassword: string,
   ): Promise<boolean> {
     try {
-      // This method preserves the existing DEK by re-encrypting it with the new password
-      // Used for password reset when user is logged in
-
-      // Check if user has an active session with DEK
       const existingDEK = this.getUserDataKey(userId);
       if (!existingDEK) {
         return false;
       }
 
-      // Generate new KEK from new password
       const newKekSalt = await this.generateKEKSalt();
       const newKEK = this.deriveKEK(newPassword, newKekSalt);
 
-      // Re-encrypt the existing DEK with new KEK
       const newEncryptedDEK = this.encryptDEK(existingDEK, newKEK);
 
-      // Store new KEK salt and new encrypted DEK
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      // Trigger database save to persist the encryption key changes
       const { saveMemoryDatabaseToFile } = await import(
         "../database/db/index.js"
       );
       await saveMemoryDatabaseToFile();
 
-      // Clean up sensitive data
       newKEK.fill(0);
 
-      // Update session activity timestamp
       const session = this.userSessions.get(userId);
       if (session) {
         session.lastActivity = Date.now();

@@ -1317,19 +1317,15 @@ router.post("/complete-reset", async (req, res) => {
       .where(eq(users.username, username));
 
     try {
-      // Check if user has an active session with DEK (logged in while resetting)
       const hasActiveSession = authManager.isUserUnlocked(userId);
       
       if (hasActiveSession) {
-        // User is logged in - preserve their data by keeping the same DEK
-        // This happens when user resets password from settings page
         const success = await authManager.resetUserPasswordWithPreservedDEK(
           userId,
           newPassword,
         );
 
         if (!success) {
-          // If preservation fails, fall back to new DEK (will lose data)
           authLogger.warn(
             `Failed to preserve DEK during password reset for ${username}. Creating new DEK - data will be lost.`,
             {
@@ -1351,7 +1347,6 @@ router.post("/complete-reset", async (req, res) => {
           );
         }
       } else {
-        // User is NOT logged in - create new DEK (data will be inaccessible)
         await authManager.registerUser(userId, newPassword);
         authManager.logoutUser(userId);
 
@@ -2049,7 +2044,6 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
         .set({ password_hash: newPasswordHash })
         .where(eq(users.id, userId));
 
-      // Trigger database save to persist password hash
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");
       await saveMemoryDatabaseToFile();
 
