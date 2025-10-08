@@ -161,7 +161,7 @@ export function AdminSettings({
         }
       })
       .catch((err) => {
-        if (!err.message?.includes("No server configured")) {
+        if (err.code !== "NO_SERVER_CONFIGURED") {
           toast.error(t("admin.failedToFetchPasswordLoginStatus"));
         }
       });
