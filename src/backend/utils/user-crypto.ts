@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { getDb } from "../database/db/index.js";
-import { settings, users } from "../database/db/schema.js";
+import { settings } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
 
@@ -249,6 +249,7 @@ class UserCrypto {
     newPassword: string,
   ): Promise<boolean> {
     try {
+      // Validate current password
       const isValid = await this.validatePassword(userId, oldPassword);
       if (!isValid) return false;
 
@@ -259,23 +260,114 @@ class UserCrypto {
       const encryptedDEK = await this.getEncryptedDEK(userId);
       if (!encryptedDEK) return false;
 
+      // Decrypt DEK with old password's KEK
       const DEK = this.decryptDEK(encryptedDEK, oldKEK);
 
+      // The DEK stays the same - only the KEK changes with the new password
+      // This preserves all encrypted user data
+      
+      // Generate new KEK from new password
       const newKekSalt = await this.generateKEKSalt();
       const newKEK = this.deriveKEK(newPassword, newKekSalt);
+      
+      // Re-encrypt the same DEK with new KEK
       const newEncryptedDEK = this.encryptDEK(DEK, newKEK);
 
+      // Store new KEK salt and new encrypted DEK
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
+      // Trigger database save to persist the encryption key changes
+      const { saveMemoryDatabaseToFile } = await import("../database/db/index.js");
+      await saveMemoryDatabaseToFile();
+
+      // Clean up sensitive data from memory
       oldKEK.fill(0);
       newKEK.fill(0);
-      DEK.fill(0);
 
-      this.logoutUser(userId);
+      // Create a copy of DEK for the session before zeroing it out
+      const dekCopy = Buffer.allocUnsafe(DEK.length);
+      DEK.copy(dekCopy);
+
+      // Keep user session active with the same DEK
+      const now = Date.now();
+      const oldSession = this.userSessions.get(userId);
+      if (oldSession) {
+        oldSession.dataKey.fill(0);
+      }
+      
+      this.userSessions.set(userId, {
+        dataKey: dekCopy,
+        lastActivity: now,
+        expiresAt: now + UserCrypto.SESSION_DURATION,
+      });
+
+      // Zero out the original DEK from memory
+      DEK.fill(0);
 
       return true;
     } catch (error) {
+      databaseLogger.error("Password change failed", error, {
+        operation: "password_change_error",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      return false;
+    }
+  }
+
+  async resetUserPasswordWithPreservedDEK(
+    userId: string,
+    newPassword: string,
+  ): Promise<boolean> {
+    try {
+      // This method preserves the existing DEK by re-encrypting it with the new password
+      // Used for password reset when user is logged in
+
+      // Check if user has an active session with DEK
+      const existingDEK = this.getUserDataKey(userId);
+      if (!existingDEK) {
+        return false;
+      }
+
+      const kekSalt = await this.getKEKSalt(userId);
+      if (!kekSalt) {
+        return false;
+      }
+
+      // Generate new KEK from new password
+      const newKekSalt = await this.generateKEKSalt();
+      const newKEK = this.deriveKEK(newPassword, newKekSalt);
+
+      // Re-encrypt the existing DEK with new KEK
+      const newEncryptedDEK = this.encryptDEK(existingDEK, newKEK);
+
+      // Store new KEK salt and new encrypted DEK
+      await this.storeKEKSalt(userId, newKekSalt);
+      await this.storeEncryptedDEK(userId, newEncryptedDEK);
+
+      // Trigger database save to persist the encryption key changes
+      const { saveMemoryDatabaseToFile } = await import(
+        "../database/db/index.js"
+      );
+      await saveMemoryDatabaseToFile();
+
+      // Clean up sensitive data
+      newKEK.fill(0);
+
+      // Update session activity timestamp
+      const session = this.userSessions.get(userId);
+      if (session) {
+        session.lastActivity = Date.now();
+      }
+
+      return true;
+    } catch (error) {
+      databaseLogger.error("Password reset with preserved DEK failed", error, {
+        operation: "password_reset_preserve_error",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
       return false;
     }
   }

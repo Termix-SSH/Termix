@@ -18,7 +18,6 @@ import QRCode from "qrcode";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { UserCrypto } from "../../utils/user-crypto.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 
@@ -1318,8 +1317,52 @@ router.post("/complete-reset", async (req, res) => {
       .where(eq(users.username, username));
 
     try {
-      await authManager.registerUser(userId, newPassword);
-      authManager.logoutUser(userId);
+      // Check if user has an active session with DEK (logged in while resetting)
+      const hasActiveSession = authManager.isUserUnlocked(userId);
+      
+      if (hasActiveSession) {
+        // User is logged in - preserve their data by keeping the same DEK
+        // This happens when user resets password from settings page
+        const success = await authManager.resetUserPasswordWithPreservedDEK(
+          userId,
+          newPassword,
+        );
+
+        if (!success) {
+          // If preservation fails, fall back to new DEK (will lose data)
+          authLogger.warn(
+            `Failed to preserve DEK during password reset for ${username}. Creating new DEK - data will be lost.`,
+            {
+              operation: "password_reset_preserve_failed",
+              userId,
+              username,
+            },
+          );
+          await authManager.registerUser(userId, newPassword);
+        } else {
+          authLogger.success(
+            `Password reset completed for user: ${username}. Data preserved using existing session.`,
+            {
+              operation: "password_reset_data_preserved",
+              userId,
+              username,
+            },
+          );
+        }
+      } else {
+        // User is NOT logged in - create new DEK (data will be inaccessible)
+        await authManager.registerUser(userId, newPassword);
+        authManager.logoutUser(userId);
+
+        authLogger.warn(
+          `Password reset completed for user: ${username}. Existing encrypted data is now inaccessible and will need to be re-entered.`,
+          {
+            operation: "password_reset_data_inaccessible",
+            userId,
+            username,
+          },
+        );
+      }
 
       await db
         .update(users)
@@ -1329,15 +1372,6 @@ router.post("/complete-reset", async (req, res) => {
           totp_backup_codes: null,
         })
         .where(eq(users.id, userId));
-
-      authLogger.warn(
-        `Password reset completed for user: ${username}. Existing encrypted data is now inaccessible and will need to be re-entered.`,
-        {
-          operation: "password_reset_data_inaccessible",
-          userId,
-          username,
-        },
-      );
     } catch (encryptionError) {
       authLogger.error(
         "Failed to re-encrypt user data after password reset",
@@ -2013,6 +2047,10 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
         .update(users)
         .set({ password_hash: newPasswordHash })
         .where(eq(users.id, userId));
+
+      // Trigger database save to persist password hash
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
 
       authLogger.success("User password changed successfully", {
         operation: "password_change_success",
