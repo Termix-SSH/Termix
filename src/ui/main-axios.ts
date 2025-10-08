@@ -1763,7 +1763,7 @@ export async function updateRegistrationAllowed(
 
 export async function updatePasswordLoginAllowed(
   allowed: boolean,
-): Promise<any> {
+): Promise<{ allowed: boolean }> {
   try {
     const response = await authApi.patch("/users/password-login-allowed", {
       allowed,
