@@ -54,10 +54,11 @@ router.get(
   async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { id } = req.params;
+    const snippetId = parseInt(id, 10);
 
-    if (!isNonEmptyString(userId) || !id) {
-      authLogger.warn("Invalid request for snippet fetch");
-      return res.status(400).json({ error: "Invalid request" });
+    if (!isNonEmptyString(userId) || isNaN(snippetId)) {
+      authLogger.warn("Invalid request for snippet fetch: invalid ID", { userId, id });
+      return res.status(400).json({ error: "Invalid request parameters" });
     }
 
     try {
