@@ -24,7 +24,10 @@ function AppContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [showVersionCheck, setShowVersionCheck] = useState(true);
-  const [isTopbarOpen, setIsTopbarOpen] = useState<boolean>(true);
+  const [isTopbarOpen, setIsTopbarOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem("topNavbarOpen");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const { currentTab, tabs } = useTabs();
 
   useEffect(() => {
@@ -63,6 +66,10 @@ function AppContent() {
 
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("topNavbarOpen", JSON.stringify(isTopbarOpen));
+  }, [isTopbarOpen]);
 
   const handleSelectView = (nextView: string) => {
     setMountedViews((prev) => {

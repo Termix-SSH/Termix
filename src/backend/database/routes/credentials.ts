@@ -172,9 +172,9 @@ router.post(
         username: username.trim(),
         password: plainPassword,
         key: plainKey,
-        privateKey: keyInfo?.privateKey || plainKey,
-        publicKey: keyInfo?.publicKey || null,
-        keyPassword: plainKeyPassword,
+        private_key: keyInfo?.privateKey || plainKey,
+        public_key: keyInfo?.publicKey || null,
+        key_password: plainKeyPassword,
         keyType: keyType || null,
         detectedKeyType: keyInfo?.keyType || null,
         usageCount: 0,
@@ -422,13 +422,13 @@ router.put(
               error: `Invalid SSH key: ${keyInfo.error}`,
             });
           }
-          updateFields.privateKey = keyInfo.privateKey;
-          updateFields.publicKey = keyInfo.publicKey;
+          updateFields.private_key = keyInfo.privateKey;
+          updateFields.public_key = keyInfo.publicKey;
           updateFields.detectedKeyType = keyInfo.keyType;
         }
       }
       if (updateData.keyPassword !== undefined) {
-        updateFields.keyPassword = updateData.keyPassword || null;
+        updateFields.key_password = updateData.keyPassword || null;
       }
 
       if (Object.keys(updateFields).length === 0) {
@@ -535,7 +535,7 @@ router.delete(
             credentialId: null,
             password: null,
             key: null,
-            keyPassword: null,
+            key_password: null,
             authType: "password",
           })
           .where(
@@ -631,7 +631,7 @@ router.post(
           authType: credential.auth_type || credential.authType,
           password: null,
           key: null,
-          keyPassword: null,
+          key_password: null,
           keyType: null,
           updatedAt: new Date().toISOString(),
         })

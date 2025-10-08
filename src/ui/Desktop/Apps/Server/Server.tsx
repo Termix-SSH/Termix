@@ -119,11 +119,16 @@ export function Server({
           setMetrics(data);
           setShowStatsUI(true);
         }
-      } catch (error) {
+      } catch (error: any) {
         if (!cancelled) {
           setMetrics(null);
           setShowStatsUI(false);
-          toast.error(t("serverStats.failedToFetchMetrics"));
+          if (error?.code === "TOTP_REQUIRED" ||
+              (error?.response?.status === 403 && error?.response?.data?.error === "TOTP_REQUIRED")) {
+            toast.error(t("serverStats.totpUnavailable"));
+          } else {
+            toast.error(t("serverStats.failedToFetchMetrics"));
+          }
         }
       } finally {
         if (!cancelled) {
@@ -210,17 +215,28 @@ export function Server({
                     setMetrics(data);
                     setShowStatsUI(true);
                   } catch (error: any) {
-                    if (error?.response?.status === 503) {
+                    if (error?.code === "TOTP_REQUIRED" ||
+                        (error?.response?.status === 403 && error?.response?.data?.error === "TOTP_REQUIRED")) {
+                      toast.error(t("serverStats.totpUnavailable"));
+                      setMetrics(null);
+                      setShowStatsUI(false);
+                    } else if (error?.response?.status === 503 || error?.status === 503) {
                       setServerStatus("offline");
-                    } else if (error?.response?.status === 504) {
+                      setMetrics(null);
+                      setShowStatsUI(false);
+                    } else if (error?.response?.status === 504 || error?.status === 504) {
                       setServerStatus("offline");
-                    } else if (error?.response?.status === 404) {
+                      setMetrics(null);
+                      setShowStatsUI(false);
+                    } else if (error?.response?.status === 404 || error?.status === 404) {
                       setServerStatus("offline");
+                      setMetrics(null);
+                      setShowStatsUI(false);
                     } else {
                       setServerStatus("offline");
+                      setMetrics(null);
+                      setShowStatsUI(false);
                     }
-                    setMetrics(null);
-                    setShowStatsUI(false);
                   } finally {
                     setIsRefreshing(false);
                   }

@@ -150,7 +150,7 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
         username: host.username,
         password: host.autostartPassword || host.password,
         key: host.autostartKey || host.key,
-        keyPassword: host.autostartKeyPassword || host.keyPassword,
+        keyPassword: host.autostartKeyPassword || host.key_password,
         autostartPassword: host.autostartPassword,
         autostartKey: host.autostartKey,
         autostartKeyPassword: host.autostartKeyPassword,
@@ -273,17 +273,17 @@ router.post(
     if (effectiveAuthType === "password") {
       sshDataObj.password = password || null;
       sshDataObj.key = null;
-      sshDataObj.keyPassword = null;
+      sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       sshDataObj.key = key || null;
-      sshDataObj.keyPassword = keyPassword || null;
+      sshDataObj.key_password = keyPassword || null;
       sshDataObj.keyType = keyType;
       sshDataObj.password = null;
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
-      sshDataObj.keyPassword = null;
+      sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     }
 
@@ -457,14 +457,14 @@ router.put(
         sshDataObj.password = password;
       }
       sshDataObj.key = null;
-      sshDataObj.keyPassword = null;
+      sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key) {
         sshDataObj.key = key;
       }
       if (keyPassword !== undefined) {
-        sshDataObj.keyPassword = keyPassword || null;
+        sshDataObj.key_password = keyPassword || null;
       }
       if (keyType) {
         sshDataObj.keyType = keyType;
@@ -473,7 +473,7 @@ router.put(
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
-      sshDataObj.keyPassword = null;
+      sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     }
 
@@ -1238,7 +1238,22 @@ async function resolveHostCredentials(host: any): Promise<any> {
         };
       }
     }
-    return host;
+
+    const result = { ...host };
+    if (host.key_password !== undefined) {
+      if (result.keyPassword === undefined) {
+        result.keyPassword = host.key_password;
+      }
+      delete result.key_password;
+    }
+    const result = { ...host };
+    if (host.key_password !== undefined) {
+      if (result.keyPassword === undefined) {
+        result.keyPassword = host.key_password;
+      }
+      delete result.key_password;
+    }
+    return result;
   } catch (error) {
     sshLogger.warn(
       `Failed to resolve credentials for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1403,8 +1418,8 @@ router.post(
           credentialId:
             hostData.authType === "credential" ? hostData.credentialId : null,
           key: hostData.authType === "key" ? hostData.key : null,
-          keyPassword:
-            hostData.authType === "key" ? hostData.keyPassword : null,
+          key_password:
+            hostData.authType === "key" ? hostData.key_password : null,
           keyType:
             hostData.authType === "key" ? hostData.keyType || "auto" : null,
           pin: hostData.pin || false,
@@ -1539,7 +1554,7 @@ router.post(
                     ...tunnel,
                     endpointPassword: decryptedEndpoint.password || null,
                     endpointKey: decryptedEndpoint.key || null,
-                    endpointKeyPassword: decryptedEndpoint.keyPassword || null,
+                    endpointKeyPassword: decryptedEndpoint.key_password || null,
                     endpointAuthType: endpointHost.authType,
                   };
                 }
@@ -1562,7 +1577,7 @@ router.post(
         .set({
           autostartPassword: decryptedConfig.password || null,
           autostartKey: decryptedConfig.key || null,
-          autostartKeyPassword: decryptedConfig.keyPassword || null,
+          autostartKeyPassword: decryptedConfig.key_password || null,
           tunnelConnections: updatedTunnelConnections,
         })
         .where(eq(sshData.id, sshConfigId));

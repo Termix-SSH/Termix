@@ -46,7 +46,7 @@ export const sshData = sqliteTable("ssh_data", {
 
   password: text("password"),
   key: text("key", { length: 8192 }),
-  keyPassword: text("key_password"),
+  key_password: text("key_password"),
   keyType: text("key_type"),
 
   autostartPassword: text("autostart_password"),
@@ -142,9 +142,9 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   username: text("username").notNull(),
   password: text("password"),
   key: text("key", { length: 16384 }),
-  privateKey: text("private_key", { length: 16384 }),
-  publicKey: text("public_key", { length: 4096 }),
-  keyPassword: text("key_password"),
+  private_key: text("private_key", { length: 16384 }),
+  public_key: text("public_key", { length: 4096 }),
+  key_password: text("key_password"),
   keyType: text("key_type"),
   detectedKeyType: text("detected_key_type"),
   usageCount: integer("usage_count").notNull().default(0),
@@ -169,6 +169,22 @@ export const sshCredentialUsage = sqliteTable("ssh_credential_usage", {
     .notNull()
     .references(() => users.id),
   usedAt: text("used_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const snippets = sqliteTable("snippets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  content: text("content").notNull(),
+  description: text("description"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { TOTPDialog } from "@/ui/components/TOTPDialog";
 import {
   Upload,
   FolderPlus,
@@ -38,6 +39,7 @@ import {
   renameSSHItem,
   moveSSHItem,
   connectSSH,
+  verifySSHTOTP,
   getSSHStatus,
   keepSSHAlive,
   identifySSHSymlink,
@@ -98,6 +100,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpSessionId, setTotpSessionId] = useState<string | null>(null);
+  const [totpPrompt, setTotpPrompt] = useState<string>("");
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
   const [isClosing, setIsClosing] = useState<boolean>(false);
@@ -287,6 +292,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         credentialId: currentHost.credentialId,
         userId: currentHost.userId,
       });
+
+      if (result?.requires_totp) {
+        setTotpRequired(true);
+        setTotpSessionId(sessionId);
+        setTotpPrompt(result.prompt || "Verification code:");
+        setIsLoading(false);
+        return;
+      }
 
       setSshSessionId(sessionId);
 
@@ -589,7 +602,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   async function handleDeleteFiles(files: FileItem[]) {
     if (!sshSessionId || files.length === 0) return;
 
-    // Determine the confirmation message based on file count and type
     let confirmMessage: string;
     if (files.length === 1) {
       const file = files[0];
@@ -613,10 +625,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       });
     }
 
-    // Add permanent deletion warning
     const fullMessage = `${confirmMessage}\n\n${t("fileManager.permanentDeleteWarning")}`;
 
-    // Show confirmation dialog
     confirmWithToast(
       fullMessage,
       async () => {
@@ -1237,6 +1247,47 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     setEditingFile(null);
   }
 
+  async function handleTotpSubmit(code: string) {
+    if (!totpSessionId || !code) return;
+
+    try {
+      setIsLoading(true);
+      const result = await verifySSHTOTP(totpSessionId, code);
+
+      if (result?.status === "success") {
+        setTotpRequired(false);
+        setTotpPrompt("");
+        setSshSessionId(totpSessionId);
+        setTotpSessionId(null);
+
+        try {
+          const response = await listSSHFiles(totpSessionId, currentPath);
+          const files = Array.isArray(response)
+            ? response
+            : response?.files || [];
+          setFiles(files);
+          clearSelection();
+          initialLoadDoneRef.current = true;
+          toast.success(t("fileManager.connectedSuccessfully"));
+        } catch (dirError: any) {
+          console.error("Failed to load initial directory:", dirError);
+        }
+      }
+    } catch (error: any) {
+      console.error("TOTP verification failed:", error);
+      toast.error(t("fileManager.totpVerificationFailed"));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleTotpCancel() {
+    setTotpRequired(false);
+    setTotpPrompt("");
+    setTotpSessionId(null);
+    if (onClose) onClose();
+  }
+
   function generateUniqueName(
     baseName: string,
     type: "file" | "directory",
@@ -1805,6 +1856,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           />
         </div>
       </div>
+
+      <TOTPDialog
+        isOpen={totpRequired}
+        prompt={totpPrompt}
+        onSubmit={handleTotpSubmit}
+        onCancel={handleTotpCancel}
+      />
     </div>
   );
 }

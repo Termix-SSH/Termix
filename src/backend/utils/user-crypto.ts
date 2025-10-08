@@ -70,7 +70,36 @@ class UserCrypto {
   }
 
   async setupOIDCUserEncryption(userId: string): Promise<void> {
-    const DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
+    const existingEncryptedDEK = await this.getEncryptedDEK(userId);
+
+    let DEK: Buffer;
+
+    if (existingEncryptedDEK) {
+      const systemKey = this.deriveOIDCSystemKey(userId);
+      DEK = this.decryptDEK(existingEncryptedDEK, systemKey);
+      systemKey.fill(0);
+    } else {
+      DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
+      const systemKey = this.deriveOIDCSystemKey(userId);
+
+      try {
+        const encryptedDEK = this.encryptDEK(DEK, systemKey);
+        await this.storeEncryptedDEK(userId, encryptedDEK);
+
+        const storedEncryptedDEK = await this.getEncryptedDEK(userId);
+        if (
+          storedEncryptedDEK &&
+          storedEncryptedDEK.data !== encryptedDEK.data
+        ) {
+          DEK.fill(0);
+          DEK = this.decryptDEK(storedEncryptedDEK, systemKey);
+        } else if (!storedEncryptedDEK) {
+          throw new Error("Failed to store and retrieve user encryption key.");
+        }
+      } finally {
+        systemKey.fill(0);
+      }
+    }
 
     const now = Date.now();
     this.userSessions.set(userId, {
@@ -134,20 +163,14 @@ class UserCrypto {
 
   async authenticateOIDCUser(userId: string): Promise<boolean> {
     try {
-      const kekSalt = await this.getKEKSalt(userId);
-      if (!kekSalt) {
+      const encryptedDEK = await this.getEncryptedDEK(userId);
+
+      if (!encryptedDEK) {
         await this.setupOIDCUserEncryption(userId);
         return true;
       }
 
       const systemKey = this.deriveOIDCSystemKey(userId);
-      const encryptedDEK = await this.getEncryptedDEK(userId);
-      if (!encryptedDEK) {
-        systemKey.fill(0);
-        await this.setupOIDCUserEncryption(userId);
-        return true;
-      }
-
       const DEK = this.decryptDEK(encryptedDEK, systemKey);
       systemKey.fill(0);
 

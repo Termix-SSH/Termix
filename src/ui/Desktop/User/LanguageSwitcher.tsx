@@ -12,6 +12,7 @@ import { Globe } from "lucide-react";
 const languages = [
   { code: "en", name: "English", nativeName: "English" },
   { code: "zh", name: "Chinese", nativeName: "中文" },
+  { code: "de", name: "German", nativeName: "Deutsch" },
 ];
 
 export function LanguageSwitcher() {

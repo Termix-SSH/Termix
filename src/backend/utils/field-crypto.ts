@@ -17,13 +17,9 @@ class FieldCrypto {
   private static readonly ENCRYPTED_FIELDS = {
     users: new Set([
       "password_hash",
-      "passwordHash",
       "client_secret",
-      "clientSecret",
       "totp_secret",
-      "totpSecret",
       "totp_backup_codes",
-      "totpBackupCodes",
       "oidc_identifier",
       "oidcIdentifier",
     ]),
@@ -31,12 +27,9 @@ class FieldCrypto {
     ssh_credentials: new Set([
       "password",
       "private_key",
-      "privateKey",
       "key_password",
-      "keyPassword",
       "key",
       "public_key",
-      "publicKey",
     ]),
   };
 

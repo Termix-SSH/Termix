@@ -13,6 +13,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getCookie, isElectron } from "@/ui/main-axios.ts";
+import { TOTPDialog } from "@/ui/components/TOTPDialog";
 
 interface SSHTerminalProps {
   hostConfig: any;
@@ -55,6 +56,8 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpPrompt, setTotpPrompt] = useState<string>("");
   const isVisibleRef = useRef<boolean>(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
@@ -102,6 +105,25 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
     } catch {
       // Ignore terminal refresh errors
     }
+  }
+
+  function handleTotpSubmit(code: string) {
+    if (webSocketRef.current && code) {
+      webSocketRef.current.send(
+        JSON.stringify({
+          type: "totp_response",
+          data: { code },
+        }),
+      );
+      setTotpRequired(false);
+      setTotpPrompt("");
+    }
+  }
+
+  function handleTotpCancel() {
+    setTotpRequired(false);
+    setTotpPrompt("");
+    if (onClose) onClose();
   }
 
   function scheduleNotify(cols: number, rows: number) {
@@ -426,6 +448,9 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           if (onClose) {
             onClose();
           }
+        } else if (msg.type === "totp_required") {
+          setTotpRequired(true);
+          setTotpPrompt(msg.prompt || "Verification code:");
         }
       } catch (error) {
         toast.error(t("terminal.messageParseError"));
@@ -521,7 +546,7 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
       scrollback: 10000,
       fontSize: 14,
       fontFamily:
-        '"JetBrains Mono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Cascadia Code", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+        '"Caskaydia Cove Nerd Font Mono", "SF Mono", Consolas, "Liberation Mono", monospace',
       theme: { background: "#18181b", foreground: "#f7f7f7" },
       allowTransparency: true,
       convertEol: true,
@@ -739,45 +764,48 @@ export const Terminal = forwardRef<any, SSHTerminalProps>(function SSHTerminal(
           </div>
         </div>
       )}
+
+      <TOTPDialog
+        isOpen={totpRequired}
+        prompt={totpPrompt}
+        onSubmit={handleTotpSubmit}
+        onCancel={handleTotpCancel}
+      />
     </div>
   );
 });
 
 const style = document.createElement("style");
 style.innerHTML = `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
-
-/* Load NerdFonts locally with fallback handling */
 @font-face {
-  font-family: 'JetBrains Mono Nerd Font';
-  src: url('./fonts/JetBrainsMonoNerdFont-Regular.ttf') format('truetype');
+  font-family: 'Caskaydia Cove Nerd Font Mono';
+  src: url('./fonts/CaskaydiaCoveNerdFontMono-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'JetBrains Mono Nerd Font';
-  src: url('./fonts/JetBrainsMonoNerdFont-Bold.ttf') format('truetype');
+  font-family: 'Caskaydia Cove Nerd Font Mono';
+  src: url('./fonts/CaskaydiaCoveNerdFontMono-Bold.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'JetBrains Mono Nerd Font';
-  src: url('./fonts/JetBrainsMonoNerdFont-Italic.ttf') format('truetype');
+  font-family: 'Caskaydia Cove Nerd Font Mono';
+  src: url('./fonts/CaskaydiaCoveNerdFontMono-Italic.ttf') format('truetype');
   font-weight: normal;
   font-style: italic;
   font-display: swap;
 }
 
-/* Fallback fonts for when custom fonts fail to load */
 @font-face {
-  font-family: 'Terminal Fallback';
-  src: local('SF Mono'), local('Monaco'), local('Consolas'), local('Liberation Mono'), local('Courier New');
-  font-weight: normal;
-  font-style: normal;
+  font-family: 'Caskaydia Cove Nerd Font Mono';
+  src: url('./fonts/CaskaydiaCoveNerdFontMono-BoldItalic.ttf') format('truetype');
+  font-weight: bold;
+  font-style: italic;
   font-display: swap;
 }
 
@@ -805,80 +833,12 @@ style.innerHTML = `
 }
 
 .xterm .xterm-screen {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
+  font-family: 'Caskaydia Cove Nerd Font Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
   font-variant-ligatures: contextual;
 }
 
 .xterm .xterm-screen .xterm-char {
   font-feature-settings: "liga" 1, "calt" 1;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE000"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE001"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE002"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE003"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE004"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE005"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE006"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE007"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE008"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE009"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00A"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00B"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00C"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00D"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00E"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
-}
-
-.xterm .xterm-screen .xterm-char[data-char-code^="\\uE00F"] {
-  font-family: 'JetBrains Mono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font' !important;
 }
 `;
 document.head.appendChild(style);
