@@ -67,7 +67,11 @@ export function Server({
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
 
   const statsConfig = React.useMemo((): StatsConfig => {
+    console.log("[Load] Current host config:", currentHostConfig);
+    console.log("[Load] statsConfig field:", currentHostConfig?.statsConfig);
+
     if (!currentHostConfig?.statsConfig) {
+      console.log("[Load] No statsConfig found, using default");
       return DEFAULT_STATS_CONFIG;
     }
     try {
@@ -75,8 +79,10 @@ export function Server({
         typeof currentHostConfig.statsConfig === "string"
           ? JSON.parse(currentHostConfig.statsConfig)
           : currentHostConfig.statsConfig;
+      console.log("[Load] Parsed statsConfig:", parsed);
       return parsed?.widgets ? parsed : DEFAULT_STATS_CONFIG;
-    } catch {
+    } catch (error) {
+      console.error("[Load] Failed to parse statsConfig:", error);
       return DEFAULT_STATS_CONFIG;
     }
   }, [currentHostConfig?.statsConfig]);
@@ -128,17 +134,20 @@ export function Server({
 
     try {
       const newConfig: StatsConfig = { widgets };
+      console.log("[Save] Saving layout:", newConfig);
       const { updateSSHHost } = await import("@/ui/main-axios.ts");
 
-      await updateSSHHost(currentHostConfig.id, {
+      const result = await updateSSHHost(currentHostConfig.id, {
         ...currentHostConfig,
         statsConfig: JSON.stringify(newConfig),
       } as any);
 
+      console.log("[Save] Server response:", result);
       setHasUnsavedChanges(false);
       toast.success(t("serverStats.layoutSaved"));
       window.dispatchEvent(new Event("ssh-hosts:changed"));
     } catch (error) {
+      console.error("[Save] Failed to save layout:", error);
       toast.error(t("serverStats.failedToSaveLayout"));
     }
   };
@@ -153,13 +162,17 @@ export function Server({
             {isEditMode && (
               <button
                 onClick={(e) => handleDeleteWidget(widget.id, e)}
-                className="absolute top-2 right-2 z-[9999] w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer"
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="absolute top-2 right-2 z-[9999] w-7 h-7 bg-red-500/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg"
                 type="button"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
-            <div className="flex items-center gap-2 mb-3">
+            <div
+              className={`flex items-center gap-2 mb-3 ${isEditMode ? "drag-handle cursor-move" : ""}`}
+            >
               <Cpu className="h-5 w-5 text-blue-400" />
               <h3 className="font-semibold text-lg text-white">
                 {config.label}
@@ -205,13 +218,17 @@ export function Server({
             {isEditMode && (
               <button
                 onClick={(e) => handleDeleteWidget(widget.id, e)}
-                className="absolute top-2 right-2 z-[9999] w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer"
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="absolute top-2 right-2 z-[9999] w-7 h-7 bg-red-500/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg"
                 type="button"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
-            <div className="flex items-center gap-2 mb-3">
+            <div
+              className={`flex items-center gap-2 mb-3 ${isEditMode ? "drag-handle cursor-move" : ""}`}
+            >
               <MemoryStick className="h-5 w-5 text-green-400" />
               <h3 className="font-semibold text-lg text-white">
                 {config.label}
@@ -268,13 +285,17 @@ export function Server({
             {isEditMode && (
               <button
                 onClick={(e) => handleDeleteWidget(widget.id, e)}
-                className="absolute top-2 right-2 z-[9999] w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer"
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="absolute top-2 right-2 z-[9999] w-7 h-7 bg-red-500/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg"
                 type="button"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
-            <div className="flex items-center gap-2 mb-3">
+            <div
+              className={`flex items-center gap-2 mb-3 ${isEditMode ? "drag-handle cursor-move" : ""}`}
+            >
               <HardDrive className="h-5 w-5 text-orange-400" />
               <h3 className="font-semibold text-lg text-white">
                 {config.label}
@@ -663,7 +684,7 @@ export function Server({
                 isDraggable={isEditMode}
                 isResizable={isEditMode}
                 onLayoutChange={handleLayoutChange}
-                draggableHandle={isEditMode ? undefined : ".no-drag"}
+                draggableHandle={isEditMode ? ".drag-handle" : ".no-drag"}
               >
                 {widgets.map((widget) => (
                   <div key={widget.id} className="relative">
