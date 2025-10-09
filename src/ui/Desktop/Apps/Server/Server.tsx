@@ -3,16 +3,7 @@ import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Status, StatusIndicator } from "@/components/ui/shadcn-io/status";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Progress } from "@/components/ui/progress.tsx";
-import {
-  Cpu,
-  HardDrive,
-  MemoryStick,
-  Edit3,
-  Plus,
-  Save,
-  X,
-} from "lucide-react";
+import { Edit3, Plus, Save } from "lucide-react";
 import { Tunnel } from "@/ui/Desktop/Apps/Tunnel/Tunnel.tsx";
 import {
   getServerStatusById,
@@ -27,8 +18,15 @@ import {
   type Widget,
   type StatsConfig,
   DEFAULT_STATS_CONFIG,
-  WIDGET_TYPE_CONFIG,
 } from "@/types/stats-widgets";
+import {
+  CpuWidget,
+  MemoryWidget,
+  DiskWidget,
+  generateWidgetId,
+  getWidgetConfig,
+} from "./widgets";
+import { AddWidgetDialog } from "./widgets/AddWidgetDialog";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -65,6 +63,7 @@ export function Server({
     DEFAULT_STATS_CONFIG.widgets,
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
+  const [showAddWidgetDialog, setShowAddWidgetDialog] = React.useState(false);
 
   const statsConfig = React.useMemo((): StatsConfig => {
     if (!currentHostConfig?.statsConfig) {
@@ -121,6 +120,28 @@ export function Server({
     setHasUnsavedChanges(true);
   };
 
+  const handleAddWidget = (widgetType: string) => {
+    const existingIds = widgets.map((w) => w.id);
+    const newId = generateWidgetId(widgetType as any, existingIds);
+    const config = getWidgetConfig(widgetType as any);
+
+    // Find the next available position
+    const maxY = widgets.reduce((max, w) => Math.max(max, w.y + w.h), 0);
+
+    const newWidget: Widget = {
+      id: newId,
+      type: widgetType as any,
+      x: 0,
+      y: maxY,
+      w: config.defaultSize.w,
+      h: config.defaultSize.h,
+    };
+
+    setWidgets((prev) => [...prev, newWidget]);
+    setHasUnsavedChanges(true);
+    toast.success(`${config.label} widget added`);
+  };
+
   const handleSaveLayout = async () => {
     if (!currentHostConfig?.id) {
       toast.error(t("serverStats.failedToSaveLayout"));
@@ -146,188 +167,35 @@ export function Server({
   };
 
   const renderWidget = (widget: Widget) => {
-    const config = WIDGET_TYPE_CONFIG[widget.type];
-
     switch (widget.type) {
       case "cpu":
         return (
-          <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-            {isEditMode && (
-              <button
-                onClick={(e) => handleDeleteWidget(widget.id, e)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="absolute top-2 right-2 z-[9999] w-7 h-7 bg-red-500/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg"
-                type="button"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-            <div
-              className={`flex items-center gap-2 mb-3 ${isEditMode ? "drag-handle cursor-move" : ""}`}
-            >
-              <Cpu className="h-5 w-5 text-blue-400" />
-              <h3 className="font-semibold text-lg text-white">
-                {config.label}
-              </h3>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-300">
-                  {(() => {
-                    const pct = metrics?.cpu?.percent;
-                    const cores = metrics?.cpu?.cores;
-                    const pctText = typeof pct === "number" ? `${pct}%` : "N/A";
-                    const coresText =
-                      typeof cores === "number"
-                        ? t("serverStats.cpuCores", { count: cores })
-                        : t("serverStats.naCpus");
-                    return `${pctText} ${t("serverStats.of")} ${coresText}`;
-                  })()}
-                </span>
-              </div>
-              <div className="relative">
-                <Progress
-                  value={
-                    typeof metrics?.cpu?.percent === "number"
-                      ? metrics!.cpu!.percent!
-                      : 0
-                  }
-                  className="h-2"
-                />
-              </div>
-              <div className="text-xs text-gray-500">
-                {metrics?.cpu?.load
-                  ? `Load: ${metrics.cpu.load[0].toFixed(2)}, ${metrics.cpu.load[1].toFixed(2)}, ${metrics.cpu.load[2].toFixed(2)}`
-                  : "Load: N/A"}
-              </div>
-            </div>
-          </div>
+          <CpuWidget
+            metrics={metrics}
+            isEditMode={isEditMode}
+            widgetId={widget.id}
+            onDelete={handleDeleteWidget}
+          />
         );
 
       case "memory":
         return (
-          <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-            {isEditMode && (
-              <button
-                onClick={(e) => handleDeleteWidget(widget.id, e)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="absolute top-2 right-2 z-[9999] w-7 h-7 bg-red-500/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg"
-                type="button"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-            <div
-              className={`flex items-center gap-2 mb-3 ${isEditMode ? "drag-handle cursor-move" : ""}`}
-            >
-              <MemoryStick className="h-5 w-5 text-green-400" />
-              <h3 className="font-semibold text-lg text-white">
-                {config.label}
-              </h3>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-300">
-                  {(() => {
-                    const pct = metrics?.memory?.percent;
-                    const used = metrics?.memory?.usedGiB;
-                    const total = metrics?.memory?.totalGiB;
-                    const pctText = typeof pct === "number" ? `${pct}%` : "N/A";
-                    const usedText =
-                      typeof used === "number"
-                        ? `${used.toFixed(1)} GiB`
-                        : "N/A";
-                    const totalText =
-                      typeof total === "number"
-                        ? `${total.toFixed(1)} GiB`
-                        : "N/A";
-                    return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
-                  })()}
-                </span>
-              </div>
-              <div className="relative">
-                <Progress
-                  value={
-                    typeof metrics?.memory?.percent === "number"
-                      ? metrics!.memory!.percent!
-                      : 0
-                  }
-                  className="h-2"
-                />
-              </div>
-              <div className="text-xs text-gray-500">
-                {(() => {
-                  const used = metrics?.memory?.usedGiB;
-                  const total = metrics?.memory?.totalGiB;
-                  const free =
-                    typeof used === "number" && typeof total === "number"
-                      ? (total - used).toFixed(1)
-                      : "N/A";
-                  return `Free: ${free} GiB`;
-                })()}
-              </div>
-            </div>
-          </div>
+          <MemoryWidget
+            metrics={metrics}
+            isEditMode={isEditMode}
+            widgetId={widget.id}
+            onDelete={handleDeleteWidget}
+          />
         );
 
       case "disk":
         return (
-          <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-            {isEditMode && (
-              <button
-                onClick={(e) => handleDeleteWidget(widget.id, e)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="absolute top-2 right-2 z-[9999] w-7 h-7 bg-red-500/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg"
-                type="button"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-            <div
-              className={`flex items-center gap-2 mb-3 ${isEditMode ? "drag-handle cursor-move" : ""}`}
-            >
-              <HardDrive className="h-5 w-5 text-orange-400" />
-              <h3 className="font-semibold text-lg text-white">
-                {config.label}
-              </h3>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-300">
-                  {(() => {
-                    const pct = metrics?.disk?.percent;
-                    const used = metrics?.disk?.usedHuman;
-                    const total = metrics?.disk?.totalHuman;
-                    const pctText = typeof pct === "number" ? `${pct}%` : "N/A";
-                    const usedText = used ?? "N/A";
-                    const totalText = total ?? "N/A";
-                    return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
-                  })()}
-                </span>
-              </div>
-              <div className="relative">
-                <Progress
-                  value={
-                    typeof metrics?.disk?.percent === "number"
-                      ? metrics!.disk!.percent!
-                      : 0
-                  }
-                  className="h-2"
-                />
-              </div>
-              <div className="text-xs text-gray-500">
-                {(() => {
-                  const available = metrics?.disk?.availableHuman;
-                  return available
-                    ? `Available: ${available}`
-                    : "Available: N/A";
-                })()}
-              </div>
-            </div>
-          </div>
+          <DiskWidget
+            metrics={metrics}
+            isEditMode={isEditMode}
+            widgetId={widget.id}
+            onDelete={handleDeleteWidget}
+          />
         );
 
       default:
@@ -473,250 +341,269 @@ export function Server({
     : "bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden";
 
   return (
-    <div style={wrapperStyle} className={containerClass}>
-      <div className="h-full w-full flex flex-col">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="min-w-0">
-              <h1 className="font-bold text-lg truncate">
-                {currentHostConfig?.folder} / {title}
-              </h1>
+    <>
+      <AddWidgetDialog
+        open={showAddWidgetDialog}
+        onOpenChange={setShowAddWidgetDialog}
+        onAddWidget={handleAddWidget}
+        existingWidgetTypes={widgets.map((w) => w.type)}
+      />
+      <div style={wrapperStyle} className={containerClass}>
+        <div className="h-full w-full flex flex-col">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="min-w-0">
+                <h1 className="font-bold text-lg truncate">
+                  {currentHostConfig?.folder} / {title}
+                </h1>
+              </div>
+              <Status
+                status={serverStatus}
+                className="!bg-transparent !p-0.75 flex-shrink-0"
+              >
+                <StatusIndicator />
+              </Status>
             </div>
-            <Status
-              status={serverStatus}
-              className="!bg-transparent !p-0.75 flex-shrink-0"
-            >
-              <StatusIndicator />
-            </Status>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              disabled={isRefreshing}
-              onClick={async () => {
-                if (currentHostConfig?.id) {
-                  try {
-                    setIsRefreshing(true);
-                    const res = await getServerStatusById(currentHostConfig.id);
-                    setServerStatus(
-                      res?.status === "online" ? "online" : "offline",
-                    );
-                    const data = await getServerMetricsById(
-                      currentHostConfig.id,
-                    );
-                    setMetrics(data);
-                    setShowStatsUI(true);
-                  } catch (error: any) {
-                    if (
-                      error?.code === "TOTP_REQUIRED" ||
-                      (error?.response?.status === 403 &&
-                        error?.response?.data?.error === "TOTP_REQUIRED")
-                    ) {
-                      toast.error(t("serverStats.totpUnavailable"));
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    } else if (
-                      error?.response?.status === 503 ||
-                      error?.status === 503
-                    ) {
-                      setServerStatus("offline");
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    } else if (
-                      error?.response?.status === 504 ||
-                      error?.status === 504
-                    ) {
-                      setServerStatus("offline");
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    } else if (
-                      error?.response?.status === 404 ||
-                      error?.status === 404
-                    ) {
-                      setServerStatus("offline");
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    } else {
-                      setServerStatus("offline");
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    }
-                  } finally {
-                    setIsRefreshing(false);
-                  }
-                }
-              }}
-              title={t("serverStats.refreshStatusAndMetrics")}
-            >
-              {isRefreshing ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
-                  {t("serverStats.refreshing")}
-                </div>
-              ) : (
-                t("serverStats.refreshStatus")
-              )}
-            </Button>
-            {currentHostConfig?.enableFileManager && (
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
-                className="font-semibold"
-                disabled={isFileManagerAlreadyOpen}
-                title={
-                  isFileManagerAlreadyOpen
-                    ? t("serverStats.fileManagerAlreadyOpen")
-                    : t("serverStats.openFileManager")
-                }
-                onClick={() => {
-                  if (!currentHostConfig || isFileManagerAlreadyOpen) return;
-                  const titleBase =
-                    currentHostConfig?.name &&
-                    currentHostConfig.name.trim() !== ""
-                      ? currentHostConfig.name.trim()
-                      : `${currentHostConfig.username}@${currentHostConfig.ip}`;
-                  addTab({
-                    type: "file_manager",
-                    title: titleBase,
-                    hostConfig: currentHostConfig,
-                  });
+                disabled={isRefreshing}
+                onClick={async () => {
+                  if (currentHostConfig?.id) {
+                    try {
+                      setIsRefreshing(true);
+                      const res = await getServerStatusById(
+                        currentHostConfig.id,
+                      );
+                      setServerStatus(
+                        res?.status === "online" ? "online" : "offline",
+                      );
+                      const data = await getServerMetricsById(
+                        currentHostConfig.id,
+                      );
+                      setMetrics(data);
+                      setShowStatsUI(true);
+                    } catch (error: any) {
+                      if (
+                        error?.code === "TOTP_REQUIRED" ||
+                        (error?.response?.status === 403 &&
+                          error?.response?.data?.error === "TOTP_REQUIRED")
+                      ) {
+                        toast.error(t("serverStats.totpUnavailable"));
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      } else if (
+                        error?.response?.status === 503 ||
+                        error?.status === 503
+                      ) {
+                        setServerStatus("offline");
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      } else if (
+                        error?.response?.status === 504 ||
+                        error?.status === 504
+                      ) {
+                        setServerStatus("offline");
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      } else if (
+                        error?.response?.status === 404 ||
+                        error?.status === 404
+                      ) {
+                        setServerStatus("offline");
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      } else {
+                        setServerStatus("offline");
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      }
+                    } finally {
+                      setIsRefreshing(false);
+                    }
+                  }
                 }}
+                title={t("serverStats.refreshStatusAndMetrics")}
               >
-                {t("nav.fileManager")}
-              </Button>
-            )}
-          </div>
-        </div>
-        <Separator className="p-0.25 w-full" />
-
-        {showStatsUI && (
-          <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4">
-            {/* Toolbar */}
-            <div className="flex items-center justify-between mb-4 gap-2">
-              <div className="flex items-center gap-2">
-                {!isEditMode ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditMode(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    {t("serverStats.editLayout")}
-                  </Button>
+                {isRefreshing ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+                    {t("serverStats.refreshing")}
+                  </div>
                 ) : (
-                  <>
+                  t("serverStats.refreshStatus")
+                )}
+              </Button>
+              {currentHostConfig?.enableFileManager && (
+                <Button
+                  variant="outline"
+                  className="font-semibold"
+                  disabled={isFileManagerAlreadyOpen}
+                  title={
+                    isFileManagerAlreadyOpen
+                      ? t("serverStats.fileManagerAlreadyOpen")
+                      : t("serverStats.openFileManager")
+                  }
+                  onClick={() => {
+                    if (!currentHostConfig || isFileManagerAlreadyOpen) return;
+                    const titleBase =
+                      currentHostConfig?.name &&
+                      currentHostConfig.name.trim() !== ""
+                        ? currentHostConfig.name.trim()
+                        : `${currentHostConfig.username}@${currentHostConfig.ip}`;
+                    addTab({
+                      type: "file_manager",
+                      title: titleBase,
+                      hostConfig: currentHostConfig,
+                    });
+                  }}
+                >
+                  {t("nav.fileManager")}
+                </Button>
+              )}
+            </div>
+          </div>
+          <Separator className="p-0.25 w-full" />
+
+          {showStatsUI && (
+            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4">
+              {/* Toolbar */}
+              <div className="flex items-center justify-between mb-4 gap-2">
+                <div className="flex items-center gap-2">
+                  {!isEditMode ? (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setIsEditMode(false);
-                        setHasUnsavedChanges(false);
-                        setWidgets(statsConfig.widgets);
-                      }}
+                      onClick={() => setIsEditMode(true)}
                       className="flex items-center gap-2"
                     >
-                      {t("serverStats.cancelEdit")}
+                      <Edit3 className="h-4 w-4" />
+                      {t("serverStats.editLayout")}
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveLayout}
-                      disabled={!hasUnsavedChanges}
-                      className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
-                    >
-                      <Save className="h-4 w-4" />
-                      {t("serverStats.saveLayout")}
-                    </Button>
-                  </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditMode(false);
+                          setHasUnsavedChanges(false);
+                          setWidgets(statsConfig.widgets);
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        {t("serverStats.cancelEdit")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddWidgetDialog(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        {t("serverStats.addWidget")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveLayout}
+                        disabled={!hasUnsavedChanges}
+                        className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+                      >
+                        <Save className="h-4 w-4" />
+                        {t("serverStats.saveLayout")}
+                      </Button>
+                    </>
+                  )}
+                </div>
+                {hasUnsavedChanges && (
+                  <span className="text-sm text-yellow-400">
+                    {t("serverStats.unsavedChanges")}
+                  </span>
                 )}
               </div>
-              {hasUnsavedChanges && (
-                <span className="text-sm text-yellow-400">
-                  {t("serverStats.unsavedChanges")}
-                </span>
+
+              {isLoadingMetrics && !metrics ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-gray-300">
+                      {t("serverStats.loadingMetrics")}
+                    </span>
+                  </div>
+                </div>
+              ) : !metrics && serverStatus === "offline" ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
+                    </div>
+                    <p className="text-gray-300 mb-1">
+                      {t("serverStats.serverOffline")}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {t("serverStats.cannotFetchMetrics")}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <ResponsiveGridLayout
+                  className="layout"
+                  layouts={{
+                    lg: widgets.map((w) => ({
+                      i: w.id,
+                      x: w.x,
+                      y: w.y,
+                      w: w.w,
+                      h: w.h,
+                    })),
+                  }}
+                  breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                  cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+                  rowHeight={100}
+                  isDraggable={isEditMode}
+                  isResizable={isEditMode}
+                  onLayoutChange={handleLayoutChange}
+                  draggableHandle={isEditMode ? ".drag-handle" : ".no-drag"}
+                >
+                  {widgets.map((widget) => (
+                    <div key={widget.id} className="relative">
+                      {renderWidget(widget)}
+                    </div>
+                  ))}
+                </ResponsiveGridLayout>
               )}
-            </div>
-
-            {isLoadingMetrics && !metrics ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-gray-300">
-                    {t("serverStats.loadingMetrics")}
-                  </span>
-                </div>
-              </div>
-            ) : !metrics && serverStatus === "offline" ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
-                  </div>
-                  <p className="text-gray-300 mb-1">
-                    {t("serverStats.serverOffline")}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {t("serverStats.cannotFetchMetrics")}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <ResponsiveGridLayout
-                className="layout"
-                layouts={{
-                  lg: widgets.map((w) => ({
-                    i: w.id,
-                    x: w.x,
-                    y: w.y,
-                    w: w.w,
-                    h: w.h,
-                  })),
-                }}
-                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-                rowHeight={100}
-                isDraggable={isEditMode}
-                isResizable={isEditMode}
-                onLayoutChange={handleLayoutChange}
-                draggableHandle={isEditMode ? ".drag-handle" : ".no-drag"}
-              >
-                {widgets.map((widget) => (
-                  <div key={widget.id} className="relative">
-                    {renderWidget(widget)}
-                  </div>
-                ))}
-              </ResponsiveGridLayout>
-            )}
-          </div>
-        )}
-
-        {/* SSH Tunnels */}
-        {currentHostConfig?.tunnelConnections &&
-          currentHostConfig.tunnelConnections.length > 0 && (
-            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker h-[360px] overflow-hidden flex flex-col min-h-0">
-              <Tunnel
-                filterHostKey={
-                  currentHostConfig?.name &&
-                  currentHostConfig.name.trim() !== ""
-                    ? currentHostConfig.name
-                    : `${currentHostConfig?.username}@${currentHostConfig?.ip}`
-                }
-              />
             </div>
           )}
 
-        <p className="px-4 pt-2 pb-2 text-sm text-gray-500">
-          {t("serverStats.feedbackMessage")}{" "}
-          <a
-            href="https://github.com/LukeGus/Termix/issues/new"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
-          >
-            GitHub
-          </a>
-          !
-        </p>
+          {/* SSH Tunnels */}
+          {currentHostConfig?.tunnelConnections &&
+            currentHostConfig.tunnelConnections.length > 0 && (
+              <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker h-[360px] overflow-hidden flex flex-col min-h-0">
+                <Tunnel
+                  filterHostKey={
+                    currentHostConfig?.name &&
+                    currentHostConfig.name.trim() !== ""
+                      ? currentHostConfig.name
+                      : `${currentHostConfig?.username}@${currentHostConfig?.ip}`
+                  }
+                />
+              </div>
+            )}
+
+          <p className="px-4 pt-2 pb-2 text-sm text-gray-500">
+            {t("serverStats.feedbackMessage")}{" "}
+            <a
+              href="https://github.com/LukeGus/Termix/issues/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline"
+            >
+              GitHub
+            </a>
+            !
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

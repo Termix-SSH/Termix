@@ -1161,6 +1161,7 @@
     "available": "Available",
     "editLayout": "Edit Layout",
     "cancelEdit": "Cancel",
+    "addWidget": "Add Widget",
     "saveLayout": "Save Layout",
     "unsavedChanges": "Unsaved changes",
     "layoutSaved": "Layout saved successfully",

@@ -1141,6 +1141,7 @@
     "available": "可用",
     "editLayout": "编辑布局",
     "cancelEdit": "取消",
+    "addWidget": "添加小组件",
     "saveLayout": "保存布局",
     "unsavedChanges": "有未保存的更改",
     "layoutSaved": "布局保存成功",
