@@ -36,7 +36,7 @@ export function TerminalWindow({
   executeCommand,
 }: TerminalWindowProps) {
   const { t } = useTranslation();
-  const { closeWindow, minimizeWindow, maximizeWindow, focusWindow, windows } =
+  const { closeWindow, maximizeWindow, focusWindow, windows } =
     useWindowManager();
   const terminalRef = React.useRef<any>(null);
   const resizeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);

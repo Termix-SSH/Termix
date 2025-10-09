@@ -1,12 +1,7 @@
 import React, { useState } from "react";
 import { ChevronUp, User2, HardDrive, Menu, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  getCookie,
-  setCookie,
-  isElectron,
-  logoutUser,
-} from "@/ui/main-axios.ts";
+import { isElectron, logoutUser } from "@/ui/main-axios.ts";
 
 import {
   Sidebar,
@@ -63,8 +58,6 @@ interface SSHHost {
 }
 
 interface SidebarProps {
-  onSelectView: (view: string) => void;
-  getView?: () => string;
   disabled?: boolean;
   isAdmin?: boolean;
   username?: string | null;
@@ -87,8 +80,6 @@ async function handleLogout() {
 }
 
 export function LeftSidebar({
-  onSelectView,
-  getView,
   disabled,
   isAdmin,
   username,
@@ -149,7 +140,7 @@ export function LeftSidebar({
   };
 
   const [hosts, setHosts] = useState<SSHHost[]>([]);
-  const [hostsLoading, setHostsLoading] = useState(false);
+  const [hostsLoading] = useState(false);
   const [hostsError, setHostsError] = useState<string | null>(null);
   const prevHostsRef = React.useRef<SSHHost[]>([]);
   const [search, setSearch] = useState("");
