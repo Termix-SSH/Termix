@@ -13,7 +13,6 @@ import {
   RefreshCw,
   Clipboard,
   Eye,
-  Share,
   ExternalLink,
   Terminal,
   Play,

@@ -66,7 +66,6 @@ interface FileManagerSidebarProps {
   currentHost: SSHHost;
   currentPath: string;
   onPathChange: (path: string) => void;
-  onLoadDirectory?: (path: string) => void;
   onFileOpen?: (file: SidebarItem) => void;
   sshSessionId?: string;
   refreshTrigger?: number;
@@ -76,7 +75,6 @@ export function FileManagerSidebar({
   currentHost,
   currentPath,
   onPathChange,
-  onLoadDirectory,
   onFileOpen,
   sshSessionId,
   refreshTrigger,

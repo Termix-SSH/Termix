@@ -56,7 +56,7 @@ export function FileWindow({
   initialY = 100,
   onFileNotFound,
 }: FileWindowProps) {
-  const { closeWindow, maximizeWindow, focusWindow, updateWindow, windows } =
+  const { closeWindow, maximizeWindow, focusWindow, windows } =
     useWindowManager();
 
   const { t } = useTranslation();
