@@ -301,7 +301,6 @@ class DatabaseFileEncryption {
       const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
 
       const fileStats = fs.statSync(encryptedPath);
-      const currentFingerprint = "termix-v1-file";
 
       return {
         version: metadata.version,

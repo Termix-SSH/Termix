@@ -13,7 +13,6 @@ import {
   RefreshCw,
   Clipboard,
   Eye,
-  ExternalLink,
   Terminal,
   Play,
   Star,
@@ -189,7 +188,6 @@ export function FileManagerContextMenu({
   const isSingleFile = files.length === 1;
   const isMultipleFiles = files.length > 1;
   const hasFiles = files.some((f) => f.type === "file");
-  const hasDirectories = files.some((f) => f.type === "directory");
   const hasExecutableFiles = files.some(
     (f) => f.type === "file" && f.executable,
   );
