@@ -1383,8 +1383,6 @@ router.post("/complete-reset", async (req, res) => {
       });
     }
 
-    authLogger.success(`Password successfully reset for user: ${username}`);
-
     db.$client
       .prepare("DELETE FROM settings WHERE key = ?")
       .run(`reset_code_${username}`);
