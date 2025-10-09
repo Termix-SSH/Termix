@@ -24,7 +24,7 @@ export function Homepage({
   isTopbarOpen,
 }: HomepageProps): React.ReactElement {
   const [loggedIn, setLoggedIn] = useState(isAuthenticated);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [, setIsAdmin] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -39,8 +39,7 @@ export function Homepage({
 
   useEffect(() => {
     if (isAuthenticated) {
-      const jwt = getCookie("jwt");
-      if (jwt) {
+      if (getCookie("jwt")) {
         getUserInfo()
           .then((meRes) => {
             setIsAdmin(!!meRes.is_admin);
