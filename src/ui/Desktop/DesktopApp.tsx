@@ -12,13 +12,9 @@ import { AdminSettings } from "@/ui/Desktop/Admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/Desktop/User/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { VersionCheckModal } from "@/components/ui/version-check-modal.tsx";
-import { getUserInfo, getCookie } from "@/ui/main-axios.ts";
+import { getUserInfo } from "@/ui/main-axios.ts";
 
 function AppContent() {
-  const [view, setView] = useState<string>("homepage");
-  const [mountedViews, setMountedViews] = useState<Set<string>>(
-    new Set(["homepage"]),
-  );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -71,14 +67,8 @@ function AppContent() {
     localStorage.setItem("topNavbarOpen", JSON.stringify(isTopbarOpen));
   }, [isTopbarOpen]);
 
-  const handleSelectView = (nextView: string) => {
-    setMountedViews((prev) => {
-      if (prev.has(nextView)) return prev;
-      const next = new Set(prev);
-      next.add(nextView);
-      return next;
-    });
-    setView(nextView);
+  const handleSelectView = (_nextView: string) => {
+    // View switching is now handled by tabs context
   };
 
   const handleAuthSuccess = (authData: {

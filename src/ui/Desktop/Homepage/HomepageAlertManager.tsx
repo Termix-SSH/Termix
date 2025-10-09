@@ -52,7 +52,7 @@ export function HomepageAlertManager({
 
       setAlerts(sortedAlerts);
       setCurrentAlertIndex(0);
-    } catch (err) {
+    } catch {
       const { toast } = await import("sonner");
       toast.error(t("homepage.failedToLoadAlerts"));
       setError(t("homepage.failedToLoadAlerts"));
@@ -77,7 +77,7 @@ export function HomepageAlertManager({
           return Math.max(0, newAlertsLength - 1);
         return prevIndex;
       });
-    } catch (err) {
+    } catch {
       setError(t("homepage.failedToDismissAlert"));
     }
   };

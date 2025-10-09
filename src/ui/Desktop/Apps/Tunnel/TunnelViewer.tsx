@@ -59,7 +59,7 @@ export function TunnelViewer({
               }}
               tunnelStatuses={tunnelStatuses}
               tunnelActions={tunnelActions}
-              onTunnelAction={(action, _host, _index) =>
+              onTunnelAction={(action) =>
                 onTunnelAction(action, activeHost, idx)
               }
               compact
