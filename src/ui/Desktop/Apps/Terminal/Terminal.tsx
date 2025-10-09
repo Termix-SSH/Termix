@@ -80,8 +80,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [visible, setVisible] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
-    const [connectionError, setConnectionError] = useState<string | null>(null);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [, setConnectionError] = useState<string | null>(null);
+    const [, setIsAuthenticated] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
     const isVisibleRef = useRef<boolean>(false);
@@ -226,13 +226,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       }),
       [terminal],
     );
-
-    function handleWindowResize() {
-      if (!isVisibleRef.current) return;
-      fitAddonRef.current?.fit();
-      if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-      hardRefresh();
-    }
 
     function getUseRightClickCopyPaste() {
       return getCookie("rightClickCopyPaste") === "true";
@@ -490,7 +483,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || "Verification code:");
           }
-        } catch (error) {
+        } catch {
           toast.error(t("terminal.messageParseError"));
         }
       });
@@ -526,7 +519,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
       });
 
-      ws.addEventListener("error", (event) => {
+      ws.addEventListener("error", () => {
         setIsConnected(false);
         isConnectingRef.current = false;
         setConnectionError(t("terminal.websocketError"));

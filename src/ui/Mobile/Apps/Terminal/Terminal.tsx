@@ -12,7 +12,6 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { isElectron, getCookie } from "@/ui/main-axios.ts";
-import { toast } from "sonner";
 
 interface HostConfig {
   id?: number;
@@ -52,9 +51,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [visible, setVisible] = useState(false);
-    const [isConnected, setIsConnected] = useState(false);
-    const [isConnecting, setIsConnecting] = useState(false);
-    const [connectionError, setConnectionError] = useState<string | null>(null);
+    const [, setIsConnected] = useState(false);
+    const [, setIsConnecting] = useState(false);
+    const [, setConnectionError] = useState<string | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const isVisibleRef = useRef<boolean>(false);
     const isConnectingRef = useRef(false);
@@ -159,13 +158,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       }),
       [terminal],
     );
-
-    function handleWindowResize() {
-      if (!isVisibleRef.current) return;
-      fitAddonRef.current?.fit();
-      if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-      hardRefresh();
-    }
 
     function setupWebSocketListeners(
       ws: WebSocket,

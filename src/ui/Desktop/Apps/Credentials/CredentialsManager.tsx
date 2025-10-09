@@ -9,21 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Tooltip,
   TooltipContent,
@@ -37,7 +23,6 @@ import {
   Edit,
   Trash2,
   Shield,
-  Pin,
   Tag,
   Info,
   FolderMinus,
@@ -75,9 +60,7 @@ export function CredentialsManager({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showViewer, setShowViewer] = useState(false);
-  const [viewingCredential, setViewingCredential] = useState<Credential | null>(
-    null,
-  );
+  const [viewingCredential] = useState<Credential | null>(null);
   const [draggedCredential, setDraggedCredential] = useState<Credential | null>(
     null,
   );
@@ -153,7 +136,7 @@ export function CredentialsManager({
       const data = await getCredentials();
       setCredentials(data);
       setError(null);
-    } catch (err) {
+    } catch {
       setError(t("credentials.failedToFetchCredentials"));
     } finally {
       setLoading(false);
@@ -256,7 +239,7 @@ export function CredentialsManager({
           );
           await fetchCredentials();
           window.dispatchEvent(new CustomEvent("credentials:changed"));
-        } catch (err) {
+        } catch {
           toast.error(t("credentials.failedToRemoveFromFolder"));
         } finally {
           setOperationLoading(false);
@@ -285,7 +268,7 @@ export function CredentialsManager({
       window.dispatchEvent(new CustomEvent("credentials:changed"));
       setEditingFolder(null);
       setEditingFolderName("");
-    } catch (err) {
+    } catch {
       toast.error(t("credentials.failedToRenameFolder"));
     } finally {
       setOperationLoading(false);
@@ -359,7 +342,7 @@ export function CredentialsManager({
       );
       await fetchCredentials();
       window.dispatchEvent(new CustomEvent("credentials:changed"));
-    } catch (err) {
+    } catch {
       toast.error(t("credentials.failedToMoveToFolder"));
     } finally {
       setOperationLoading(false);

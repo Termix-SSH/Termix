@@ -23,8 +23,6 @@ import {
   Search,
   Grid3X3,
   List,
-  Eye,
-  Settings,
 } from "lucide-react";
 import { TerminalWindow } from "./components/TerminalWindow";
 import type { SSHHost, FileItem } from "../../../types/index.js";
@@ -87,9 +85,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
 
-  const [currentHost, setCurrentHost] = useState<SSHHost | null>(
-    initialHost || null,
-  );
+  const [currentHost] = useState<SSHHost | null>(initialHost || null);
   const [currentPath, setCurrentPath] = useState(
     initialHost?.defaultPath || "/",
   );
@@ -145,10 +141,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [createIntent, setCreateIntent] = useState<CreateIntent | null>(null);
   const [editingFile, setEditingFile] = useState<FileItem | null>(null);
 
-  const { selectedFiles, selectFile, selectAll, clearSelection, setSelection } =
-    useFileSelection();
+  const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
-  const { isDragging, dragHandlers } = useDragAndDrop({
+  const { dragHandlers } = useDragAndDrop({
     onFilesDropped: handleFilesDropped,
     onError: (error) => toast.error(error),
     maxFileSize: 5120,
@@ -784,7 +779,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     }
   };
 
-  async function handleFileOpen(file: FileItem, editMode: boolean = false) {
+  async function handleFileOpen(file: FileItem) {
     if (file.type === "directory") {
       setCurrentPath(file.path);
     } else if (file.type === "link") {
@@ -832,14 +827,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         component: createWindowComponent,
       });
     }
-  }
-
-  function handleFileEdit(file: FileItem) {
-    handleFileOpen(file, true);
-  }
-
-  function handleFileView(file: FileItem) {
-    handleFileOpen(file, false);
   }
 
   function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
@@ -1351,18 +1338,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
 
       if (successCount > 0) {
-        const movedFiles = draggedFiles
-          .slice(0, successCount)
-          .map((file, index) => {
-            const targetPath = targetFolder.path.endsWith("/")
-              ? `${targetFolder.path}${file.name}`
-              : `${targetFolder.path}/${file.name}`;
-            return {
-              originalPath: file.path,
-              targetPath: targetPath,
-              targetName: file.name,
-            };
-          });
+        const movedFiles = draggedFiles.slice(0, successCount).map((file) => {
+          const targetPath = targetFolder.path.endsWith("/")
+            ? `${targetFolder.path}${file.name}`
+            : `${targetFolder.path}/${file.name}`;
+          return {
+            originalPath: file.path,
+            targetPath: targetPath,
+            targetName: file.name,
+          };
+        });
 
         const undoAction: UndoAction = {
           type: "cut",
