@@ -21,10 +21,7 @@ interface DragToSystemOptions {
   onError?: (error: string) => void;
 }
 
-export function useDragToSystemDesktop({
-  sshSessionId,
-  sshHost,
-}: UseDragToSystemProps) {
+export function useDragToSystemDesktop({ sshSessionId }: UseDragToSystemProps) {
   const [state, setState] = useState<DragToSystemState>({
     isDragging: false,
     isDownloading: false,
@@ -36,34 +33,6 @@ export function useDragToSystemDesktop({
     files: FileItem[];
     options: DragToSystemOptions;
   } | null>(null);
-
-  const getLastSaveDirectory = async () => {
-    try {
-      if ("indexedDB" in window) {
-        const request = indexedDB.open("termix-dirs", 1);
-        return new Promise((resolve) => {
-          request.onsuccess = () => {
-            const db = request.result;
-            const transaction = db.transaction(["directories"], "readonly");
-            const store = transaction.objectStore("directories");
-            const getRequest = store.get("lastSaveDir");
-            getRequest.onsuccess = () =>
-              resolve(getRequest.result?.handle || null);
-          };
-          request.onerror = () => resolve(null);
-          request.onupgradeneeded = () => {
-            const db = request.result;
-            if (!db.objectStoreNames.contains("directories")) {
-              db.createObjectStore("directories");
-            }
-          };
-        });
-      }
-    } catch {
-      // IndexedDB not available or failed to retrieve directory
-    }
-    return null;
-  };
 
   const saveLastDirectory = async (fileHandle: any) => {
     try {

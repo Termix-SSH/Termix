@@ -21,10 +21,7 @@ interface DragToDesktopOptions {
   onError?: (error: string) => void;
 }
 
-export function useDragToDesktop({
-  sshSessionId,
-  sshHost,
-}: UseDragToDesktopProps) {
+export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
   const [state, setState] = useState<DragToDesktopState>({
     isDragging: false,
     isDownloading: false,
@@ -137,7 +134,7 @@ export function useDragToDesktop({
         return false;
       }
     },
-    [sshSessionId, sshHost],
+    [sshSessionId],
   );
 
   const dragFilesToDesktop = useCallback(
@@ -246,7 +243,7 @@ export function useDragToDesktop({
         return false;
       }
     },
-    [sshSessionId, sshHost, dragFileToDesktop],
+    [sshSessionId, dragFileToDesktop],
   );
 
   const dragFolderToDesktop = useCallback(
@@ -274,7 +271,7 @@ export function useDragToDesktop({
 
       return false;
     },
-    [sshSessionId, sshHost],
+    [],
   );
 
   return {
