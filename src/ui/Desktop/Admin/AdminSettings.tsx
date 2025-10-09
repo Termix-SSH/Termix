@@ -26,7 +26,6 @@ import {
   Trash2,
   Users,
   Database,
-  Key,
   Lock,
   Download,
   Upload,
@@ -46,7 +45,6 @@ import {
   makeUserAdmin,
   removeAdminStatus,
   deleteUser,
-  getCookie,
   isElectron,
 } from "@/ui/main-axios.ts";
 
@@ -95,8 +93,6 @@ export function AdminSettings({
   const [makeAdminError, setMakeAdminError] = React.useState<string | null>(
     null,
   );
-
-  const [securityInitialized, setSecurityInitialized] = React.useState(true);
 
   const [exportLoading, setExportLoading] = React.useState(false);
   const [importLoading, setImportLoading] = React.useState(false);
@@ -278,7 +274,7 @@ export function AdminSettings({
         await removeAdminStatus(username);
         toast.success(t("admin.adminStatusRemoved", { username }));
         fetchUsers();
-      } catch (err: unknown) {
+      } catch {
         toast.error(t("admin.failedToRemoveAdminStatus"));
       }
     });
@@ -292,7 +288,7 @@ export function AdminSettings({
           await deleteUser(username);
           toast.success(t("admin.userDeletedSuccessfully", { username }));
           fetchUsers();
-        } catch (err: unknown) {
+        } catch {
           toast.error(t("admin.failedToDeleteUser"));
         }
       },
@@ -363,7 +359,7 @@ export function AdminSettings({
           toast.error(error.error || t("admin.databaseExportFailed"));
         }
       }
-    } catch (err) {
+    } catch {
       toast.error(t("admin.databaseExportFailed"));
     } finally {
       setExportLoading(false);
@@ -455,7 +451,7 @@ export function AdminSettings({
           toast.error(error.error || t("admin.databaseImportFailed"));
         }
       }
-    } catch (err) {
+    } catch {
       toast.error(t("admin.databaseImportFailed"));
     } finally {
       setImportLoading(false);

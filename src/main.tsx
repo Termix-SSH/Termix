@@ -9,7 +9,6 @@ import { isElectron } from "./ui/main-axios.ts";
 
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const lastSwitchTime = useRef(0);
   const isCurrentlyMobile = useRef(window.innerWidth < 768);
   const hasSwitchedOnce = useRef(false);
@@ -36,7 +35,6 @@ function useWindowWidth() {
           isCurrentlyMobile.current = newIsMobile;
           hasSwitchedOnce.current = true;
           setWidth(newWidth);
-          setIsMobile(newIsMobile);
         } else {
           setWidth(newWidth);
         }
