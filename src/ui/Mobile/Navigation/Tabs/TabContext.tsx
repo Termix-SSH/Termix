@@ -5,7 +5,6 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
-import { useTranslation } from "react-i18next";
 import type { TabContextTab } from "../../../types/index.js";
 
 export type Tab = TabContextTab;
@@ -34,7 +33,6 @@ interface TabProviderProps {
 }
 
 export function TabProvider({ children }: TabProviderProps) {
-  const { t } = useTranslation();
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [currentTab, setCurrentTab] = useState<number | null>(null);
   const nextTabId = useRef(1);

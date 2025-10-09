@@ -248,7 +248,7 @@ export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
 
   const dragFolderToDesktop = useCallback(
     async (folder: FileItem, options: DragToDesktopOptions = {}) => {
-      const { enableToast = true, onSuccess, onError } = options;
+      const { enableToast = true, onError } = options;
 
       if (!isElectron()) {
         const error =
