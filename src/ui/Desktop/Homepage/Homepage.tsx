@@ -25,7 +25,7 @@ export function Homepage({
 }: HomepageProps): React.ReactElement {
   const [loggedIn, setLoggedIn] = useState(isAuthenticated);
   const [, setIsAdmin] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
+  const [, setUsername] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
 

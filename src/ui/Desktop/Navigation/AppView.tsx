@@ -10,12 +10,7 @@ import {
 } from "@/components/ui/resizable.tsx";
 import * as ResizablePrimitive from "react-resizable-panels";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
-import {
-  LucideRefreshCcw,
-  LucideRefreshCw,
-  RefreshCcw,
-  RefreshCcwDot,
-} from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 
 interface TabData {

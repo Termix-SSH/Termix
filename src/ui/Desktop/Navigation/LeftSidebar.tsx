@@ -212,7 +212,7 @@ export function LeftSidebar({
           });
         }, 50);
       }
-    } catch (err: unknown) {
+    } catch {
       setHostsError(t("leftSidebar.failedToLoadHosts"));
     }
   }, [updateHostConfig]);
@@ -320,7 +320,6 @@ export function LeftSidebar({
       return;
     }
 
-    const jwt = getCookie("jwt");
     try {
       await deleteAccount(deletePassword);
 

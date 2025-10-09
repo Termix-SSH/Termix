@@ -4,12 +4,6 @@ import { Button } from "@/components/ui/button.tsx";
 import { ChevronDown, ChevronUpIcon, Hammer, FileText } from "lucide-react";
 import { Tab } from "@/ui/Desktop/Navigation/Tabs/Tab.tsx";
 import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
