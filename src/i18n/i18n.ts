@@ -4,12 +4,13 @@ import LanguageDetector from "i18next-browser-languagedetector";
 
 import enTranslation from "../locales/en/translation.json";
 import zhTranslation from "../locales/zh/translation.json";
+import deTranslation from "../locales/de/translation.json";
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    supportedLngs: ["en", "zh"],
+    supportedLngs: ["en", "zh", "de"],
     fallbackLng: "en",
     debug: false,
 
@@ -27,6 +28,9 @@ i18n
       },
       zh: {
         translation: zhTranslation,
+      },
+      de: {
+        translation: deTranslation,
       },
     },
 

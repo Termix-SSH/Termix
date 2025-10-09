@@ -42,8 +42,8 @@ export function Homepage({
     if (isAuthenticated) {
       const jwt = getCookie("jwt");
       if (jwt) {
-        Promise.all([getUserInfo(), getDatabaseHealth()])
-          .then(([meRes]) => {
+        getUserInfo()
+          .then((meRes) => {
             setIsAdmin(!!meRes.is_admin);
             setUsername(meRes.username || null);
             setUserId(meRes.userId || null);
@@ -58,12 +58,20 @@ export function Homepage({
             if (errorCode === "SESSION_EXPIRED") {
               console.warn("Session expired - please log in again");
               setDbError("Session expired - please log in again");
-            } else if (err?.response?.data?.error?.includes("Database")) {
+            } else {
+              setDbError(null);
+            }
+          });
+
+        getDatabaseHealth()
+          .then(() => {
+            setDbError(null);
+          })
+          .catch((err) => {
+            if (err?.response?.data?.error?.includes("Database")) {
               setDbError(
                 "Could not connect to the database. Please try again later.",
               );
-            } else {
-              setDbError(null);
             }
           });
       }

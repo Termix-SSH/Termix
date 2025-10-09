@@ -295,6 +295,16 @@ class AuthManager {
       newPassword,
     );
   }
+
+  async resetUserPasswordWithPreservedDEK(
+    userId: string,
+    newPassword: string,
+  ): Promise<boolean> {
+    return await this.userCrypto.resetUserPasswordWithPreservedDEK(
+      userId,
+      newPassword,
+    );
+  }
 }
 
 export { AuthManager, type AuthenticationResult, type JWTPayload };

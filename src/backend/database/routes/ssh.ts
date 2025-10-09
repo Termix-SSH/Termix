@@ -91,7 +91,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
           username: host.username,
           password: host.autostartPassword,
           key: host.autostartKey,
-          key_password: host.autostartKeyPassword,
+          keyPassword: host.autostartKeyPassword,
           autostartPassword: host.autostartPassword,
           autostartKey: host.autostartKey,
           autostartKeyPassword: host.autostartKeyPassword,
@@ -151,7 +151,7 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
         username: host.username,
         password: host.autostartPassword || host.password,
         key: host.autostartKey || host.key,
-        key_password: host.autostartKeyPassword || host.key_password,
+        keyPassword: host.autostartKeyPassword || host.key_password,
         autostartPassword: host.autostartPassword,
         autostartKey: host.autostartKey,
         autostartKeyPassword: host.autostartKeyPassword,
@@ -226,7 +226,7 @@ router.post(
       authType,
       credentialId,
       key,
-      key_password,
+      keyPassword,
       keyType,
       pin,
       enableTerminal,
@@ -278,7 +278,7 @@ router.post(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       sshDataObj.key = key || null;
-      sshDataObj.key_password = key_password || null;
+      sshDataObj.key_password = keyPassword || null;
       sshDataObj.keyType = keyType;
       sshDataObj.password = null;
     } else {
@@ -407,7 +407,7 @@ router.put(
       authType,
       credentialId,
       key,
-      key_password,
+      keyPassword,
       keyType,
       pin,
       enableTerminal,
@@ -464,8 +464,8 @@ router.put(
       if (key) {
         sshDataObj.key = key;
       }
-      if (key_password !== undefined) {
-        sshDataObj.key_password = key_password || null;
+      if (keyPassword !== undefined) {
+        sshDataObj.key_password = keyPassword || null;
       }
       if (keyType) {
         sshDataObj.keyType = keyType;
@@ -711,7 +711,7 @@ router.get(
         authType: resolvedHost.authType,
         password: resolvedHost.password || null,
         key: resolvedHost.key || null,
-        key_password: resolvedHost.key_password || null,
+        keyPassword: resolvedHost.keyPassword || null,
         keyType: resolvedHost.keyType || null,
         folder: resolvedHost.folder,
         tags:
@@ -1234,12 +1234,19 @@ async function resolveHostCredentials(host: any): Promise<any> {
           authType: credential.auth_type || credential.authType,
           password: credential.password,
           key: credential.key,
-          key_password: credential.key_password || credential.key_password,
+          keyPassword: credential.key_password || credential.keyPassword,
           keyType: credential.key_type || credential.keyType,
         };
       }
     }
-    return host;
+    const result = { ...host };
+    if (host.key_password !== undefined) {
+      if (result.keyPassword === undefined) {
+        result.keyPassword = host.key_password;
+      }
+      delete result.key_password;
+    }
+    return result;
   } catch (error) {
     sshLogger.warn(
       `Failed to resolve credentials for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1405,7 +1412,9 @@ router.post(
             hostData.authType === "credential" ? hostData.credentialId : null,
           key: hostData.authType === "key" ? hostData.key : null,
           key_password:
-            hostData.authType === "key" ? hostData.key_password : null,
+            hostData.authType === "key"
+              ? hostData.keyPassword || hostData.key_password || null
+              : null,
           keyType:
             hostData.authType === "key" ? hostData.keyType || "auto" : null,
           pin: hostData.pin || false,
