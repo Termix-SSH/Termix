@@ -269,7 +269,7 @@ router.post(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
-      statsConfig: statsConfig || null,
+      statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -324,7 +324,9 @@ router.post(
           ? JSON.parse(createdHost.tunnelConnections)
           : [],
         enableFileManager: !!createdHost.enableFileManager,
-        statsConfig: createdHost.statsConfig || undefined,
+        statsConfig: createdHost.statsConfig
+          ? JSON.parse(createdHost.statsConfig)
+          : undefined,
       };
 
       const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
@@ -454,7 +456,7 @@ router.put(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
-      statsConfig: statsConfig || null,
+      statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -527,7 +529,9 @@ router.put(
           ? JSON.parse(updatedHost.tunnelConnections)
           : [],
         enableFileManager: !!updatedHost.enableFileManager,
-        statsConfig: updatedHost.statsConfig || undefined,
+        statsConfig: updatedHost.statsConfig
+          ? JSON.parse(updatedHost.statsConfig)
+          : undefined,
       };
 
       const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
@@ -596,7 +600,9 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
             ? JSON.parse(row.tunnelConnections)
             : [],
           enableFileManager: !!row.enableFileManager,
-          statsConfig: row.statsConfig || undefined,
+          statsConfig: row.statsConfig
+            ? JSON.parse(row.statsConfig)
+            : undefined,
         };
 
         return (await resolveHostCredentials(baseHost)) || baseHost;
@@ -661,7 +667,9 @@ router.get(
           ? JSON.parse(host.tunnelConnections)
           : [],
         enableFileManager: !!host.enableFileManager,
-        statsConfig: host.statsConfig || undefined,
+        statsConfig: host.statsConfig
+          ? JSON.parse(host.statsConfig)
+          : undefined,
       };
 
       res.json((await resolveHostCredentials(result)) || result);
@@ -1431,6 +1439,9 @@ router.post(
           tunnelConnections: hostData.tunnelConnections
             ? JSON.stringify(hostData.tunnelConnections)
             : "[]",
+          statsConfig: hostData.statsConfig
+            ? JSON.stringify(hostData.statsConfig)
+            : null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };

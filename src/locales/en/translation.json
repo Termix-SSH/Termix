@@ -730,7 +730,10 @@
     "folderRenamed": "Folder \"{{oldName}}\" renamed to \"{{newName}}\" successfully",
     "failedToRenameFolder": "Failed to rename folder",
     "movedToFolder": "Host \"{{name}}\" moved to \"{{folder}}\" successfully",
-    "failedToMoveToFolder": "Failed to move host to folder"
+    "failedToMoveToFolder": "Failed to move host to folder",
+    "statistics": "Statistics",
+    "enabledWidgets": "Enabled Widgets",
+    "enabledWidgetsDesc": "Select which statistics widgets to display for this host"
   },
   "terminal": {
     "title": "Terminal",
@@ -1143,6 +1146,7 @@
     "loadAverageNA": "Avg: N/A",
     "cpuUsage": "CPU Usage",
     "memoryUsage": "Memory Usage",
+    "diskUsage": "Disk Usage",
     "rootStorageSpace": "Root Storage Space",
     "of": "of",
     "feedbackMessage": "Have ideas for what should come next for server management? Share them on",

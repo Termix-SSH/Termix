@@ -38,6 +38,9 @@ import { CredentialSelector } from "@/ui/Desktop/Apps/Credentials/CredentialSele
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
+import type { StatsConfig, WidgetType } from "@/types/stats-widgets";
+import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
+import { Checkbox } from "@/components/ui/checkbox.tsx";
 
 interface SSHHost {
   id: number;
@@ -58,6 +61,7 @@ interface SSHHost {
   enableFileManager: boolean;
   defaultPath: string;
   tunnelConnections: any[];
+  statsConfig?: StatsConfig;
   createdAt: string;
   updatedAt: string;
   credentialId?: number;
@@ -210,6 +214,13 @@ export function HostManagerEditor({
         .default([]),
       enableFileManager: z.boolean().default(true),
       defaultPath: z.string().optional(),
+      statsConfig: z
+        .object({
+          enabledWidgets: z
+            .array(z.enum(["cpu", "memory", "disk"]))
+            .default(["cpu", "memory", "disk"]),
+        })
+        .default({ enabledWidgets: ["cpu", "memory", "disk"] }),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "password") {
@@ -292,6 +303,7 @@ export function HostManagerEditor({
       enableFileManager: true,
       defaultPath: "/",
       tunnelConnections: [],
+      statsConfig: DEFAULT_STATS_CONFIG,
     },
   });
 
@@ -348,6 +360,7 @@ export function HostManagerEditor({
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
         tunnelConnections: cleanedHost.tunnelConnections || [],
+        statsConfig: cleanedHost.statsConfig || DEFAULT_STATS_CONFIG,
       };
 
       if (defaultAuthType === "password") {
@@ -383,6 +396,7 @@ export function HostManagerEditor({
         enableFileManager: true,
         defaultPath: "/",
         tunnelConnections: [],
+        statsConfig: DEFAULT_STATS_CONFIG,
       };
 
       form.reset(defaultFormData);
@@ -421,6 +435,7 @@ export function HostManagerEditor({
         enableFileManager: Boolean(data.enableFileManager),
         defaultPath: data.defaultPath || "/",
         tunnelConnections: data.tunnelConnections || [],
+        statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
       };
 
       submitData.credentialId = null;
@@ -668,6 +683,9 @@ export function HostManagerEditor({
                 <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
                 <TabsTrigger value="file_manager">
                   {t("hosts.fileManager")}
+                </TabsTrigger>
+                <TabsTrigger value="statistics">
+                  {t("hosts.statistics")}
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="general" className="pt-2">
@@ -1532,6 +1550,48 @@ export function HostManagerEditor({
                     />
                   </div>
                 )}
+              </TabsContent>
+              <TabsContent value="statistics">
+                <FormField
+                  control={form.control}
+                  name="statsConfig.enabledWidgets"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("hosts.enabledWidgets")}</FormLabel>
+                      <FormDescription>
+                        {t("hosts.enabledWidgetsDesc")}
+                      </FormDescription>
+                      <div className="space-y-3 mt-3">
+                        {(["cpu", "memory", "disk"] as const).map((widget) => (
+                          <div
+                            key={widget}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              checked={field.value?.includes(widget)}
+                              onCheckedChange={(checked) => {
+                                const currentWidgets = field.value || [];
+                                if (checked) {
+                                  field.onChange([...currentWidgets, widget]);
+                                } else {
+                                  field.onChange(
+                                    currentWidgets.filter((w) => w !== widget),
+                                  );
+                                }
+                              }}
+                            />
+                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                              {widget === "cpu" && t("serverStats.cpuUsage")}
+                              {widget === "memory" &&
+                                t("serverStats.memoryUsage")}
+                              {widget === "disk" && t("serverStats.diskUsage")}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </TabsContent>
             </Tabs>
           </ScrollArea>

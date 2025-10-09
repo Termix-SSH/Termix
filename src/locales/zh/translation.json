@@ -752,7 +752,10 @@
     "folderRenamed": "文件夹\"{{oldName}}\"已成功重命名为\"{{newName}}\"",
     "failedToRenameFolder": "重命名文件夹失败",
     "movedToFolder": "主机\"{{name}}\"已成功移动到\"{{folder}}\"",
-    "failedToMoveToFolder": "移动主机到文件夹失败"
+    "failedToMoveToFolder": "移动主机到文件夹失败",
+    "statistics": "统计",
+    "enabledWidgets": "已启用组件",
+    "enabledWidgetsDesc": "选择要为此主机显示的统计组件"
   },
   "terminal": {
     "title": "终端",
@@ -1124,6 +1127,7 @@
     "loadAverageNA": "平均: N/A",
     "cpuUsage": "CPU 使用率",
     "memoryUsage": "内存使用率",
+    "diskUsage": "磁盘使用率",
     "rootStorageSpace": "根目录存储空间",
     "of": "的",
     "feedbackMessage": "对服务器管理的下一步功能有想法？在这里分享吧",
