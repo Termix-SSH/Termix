@@ -4,7 +4,15 @@ import { Status, StatusIndicator } from "@/components/ui/shadcn-io/status";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Progress } from "@/components/ui/progress.tsx";
-import { Cpu, HardDrive, MemoryStick } from "lucide-react";
+import {
+  Cpu,
+  HardDrive,
+  MemoryStick,
+  Edit3,
+  Plus,
+  Save,
+  X,
+} from "lucide-react";
 import { Tunnel } from "@/ui/Desktop/Apps/Tunnel/Tunnel.tsx";
 import {
   getServerStatusById,
@@ -14,6 +22,17 @@ import {
 import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Responsive, WidthProvider, type Layout } from "react-grid-layout";
+import {
+  type Widget,
+  type StatsConfig,
+  DEFAULT_STATS_CONFIG,
+  WIDGET_TYPE_CONFIG,
+} from "@/types/stats-widgets";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface ServerProps {
   hostConfig?: any;
@@ -41,10 +60,258 @@ export function Server({
   const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [showStatsUI, setShowStatsUI] = React.useState(true);
+  const [isEditMode, setIsEditMode] = React.useState(false);
+  const [widgets, setWidgets] = React.useState<Widget[]>(
+    DEFAULT_STATS_CONFIG.widgets,
+  );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
+
+  const statsConfig = React.useMemo((): StatsConfig => {
+    if (!currentHostConfig?.statsConfig) {
+      return DEFAULT_STATS_CONFIG;
+    }
+    try {
+      const parsed =
+        typeof currentHostConfig.statsConfig === "string"
+          ? JSON.parse(currentHostConfig.statsConfig)
+          : currentHostConfig.statsConfig;
+      return parsed?.widgets ? parsed : DEFAULT_STATS_CONFIG;
+    } catch {
+      return DEFAULT_STATS_CONFIG;
+    }
+  }, [currentHostConfig?.statsConfig]);
+
+  React.useEffect(() => {
+    setWidgets(statsConfig.widgets);
+  }, [statsConfig]);
 
   React.useEffect(() => {
     setCurrentHostConfig(hostConfig);
   }, [hostConfig]);
+
+  const handleLayoutChange = (layout: Layout[]) => {
+    if (!isEditMode) return;
+
+    const updatedWidgets = widgets.map((widget) => {
+      const layoutItem = layout.find((item) => item.i === widget.id);
+      if (layoutItem) {
+        return {
+          ...widget,
+          x: layoutItem.x,
+          y: layoutItem.y,
+          w: layoutItem.w,
+          h: layoutItem.h,
+        };
+      }
+      return widget;
+    });
+
+    setWidgets(updatedWidgets);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleDeleteWidget = (widgetId: string) => {
+    setWidgets((prev) => prev.filter((w) => w.id !== widgetId));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSaveLayout = async () => {
+    if (!currentHostConfig?.id) {
+      toast.error(t("serverStats.failedToSaveLayout"));
+      return;
+    }
+
+    try {
+      const newConfig: StatsConfig = { widgets };
+      const { updateSSHHost } = await import("@/ui/main-axios.ts");
+
+      await updateSSHHost(currentHostConfig.id, {
+        ...currentHostConfig,
+        statsConfig: JSON.stringify(newConfig),
+      } as any);
+
+      setHasUnsavedChanges(false);
+      toast.success(t("serverStats.layoutSaved"));
+      window.dispatchEvent(new Event("ssh-hosts:changed"));
+    } catch (error) {
+      toast.error(t("serverStats.failedToSaveLayout"));
+    }
+  };
+
+  const renderWidget = (widget: Widget) => {
+    const config = WIDGET_TYPE_CONFIG[widget.type];
+
+    switch (widget.type) {
+      case "cpu":
+        return (
+          <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+            {isEditMode && (
+              <button
+                onClick={() => handleDeleteWidget(widget.id)}
+                className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            <div className="flex items-center gap-2 mb-3">
+              <Cpu className="h-5 w-5 text-blue-400" />
+              <h3 className="font-semibold text-lg text-white">
+                {config.label}
+              </h3>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-300">
+                  {(() => {
+                    const pct = metrics?.cpu?.percent;
+                    const cores = metrics?.cpu?.cores;
+                    const pctText = typeof pct === "number" ? `${pct}%` : "N/A";
+                    const coresText =
+                      typeof cores === "number"
+                        ? t("serverStats.cpuCores", { count: cores })
+                        : t("serverStats.naCpus");
+                    return `${pctText} ${t("serverStats.of")} ${coresText}`;
+                  })()}
+                </span>
+              </div>
+              <div className="relative">
+                <Progress
+                  value={
+                    typeof metrics?.cpu?.percent === "number"
+                      ? metrics!.cpu!.percent!
+                      : 0
+                  }
+                  className="h-2"
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                {metrics?.cpu?.load
+                  ? `Load: ${metrics.cpu.load[0].toFixed(2)}, ${metrics.cpu.load[1].toFixed(2)}, ${metrics.cpu.load[2].toFixed(2)}`
+                  : "Load: N/A"}
+              </div>
+            </div>
+          </div>
+        );
+
+      case "memory":
+        return (
+          <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+            {isEditMode && (
+              <button
+                onClick={() => handleDeleteWidget(widget.id)}
+                className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            <div className="flex items-center gap-2 mb-3">
+              <MemoryStick className="h-5 w-5 text-green-400" />
+              <h3 className="font-semibold text-lg text-white">
+                {config.label}
+              </h3>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-300">
+                  {(() => {
+                    const pct = metrics?.memory?.percent;
+                    const used = metrics?.memory?.usedGiB;
+                    const total = metrics?.memory?.totalGiB;
+                    const pctText = typeof pct === "number" ? `${pct}%` : "N/A";
+                    const usedText =
+                      typeof used === "number"
+                        ? `${used.toFixed(1)} GiB`
+                        : "N/A";
+                    const totalText =
+                      typeof total === "number"
+                        ? `${total.toFixed(1)} GiB`
+                        : "N/A";
+                    return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
+                  })()}
+                </span>
+              </div>
+              <div className="relative">
+                <Progress
+                  value={
+                    typeof metrics?.memory?.percent === "number"
+                      ? metrics!.memory!.percent!
+                      : 0
+                  }
+                  className="h-2"
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                {(() => {
+                  const used = metrics?.memory?.usedGiB;
+                  const total = metrics?.memory?.totalGiB;
+                  const free =
+                    typeof used === "number" && typeof total === "number"
+                      ? (total - used).toFixed(1)
+                      : "N/A";
+                  return `Free: ${free} GiB`;
+                })()}
+              </div>
+            </div>
+          </div>
+        );
+
+      case "disk":
+        return (
+          <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
+            {isEditMode && (
+              <button
+                onClick={() => handleDeleteWidget(widget.id)}
+                className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            <div className="flex items-center gap-2 mb-3">
+              <HardDrive className="h-5 w-5 text-orange-400" />
+              <h3 className="font-semibold text-lg text-white">
+                {config.label}
+              </h3>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-300">
+                  {(() => {
+                    const pct = metrics?.disk?.percent;
+                    const used = metrics?.disk?.usedHuman;
+                    const total = metrics?.disk?.totalHuman;
+                    const pctText = typeof pct === "number" ? `${pct}%` : "N/A";
+                    const usedText = used ?? "N/A";
+                    const totalText = total ?? "N/A";
+                    return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
+                  })()}
+                </span>
+              </div>
+              <div className="relative">
+                <Progress
+                  value={
+                    typeof metrics?.disk?.percent === "number"
+                      ? metrics!.disk!.percent!
+                      : 0
+                  }
+                  className="h-2"
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                {(() => {
+                  const available = metrics?.disk?.availableHuman;
+                  return available
+                    ? `Available: ${available}`
+                    : "Available: N/A";
+                })()}
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   React.useEffect(() => {
     const fetchLatestHostConfig = async () => {
@@ -123,8 +390,11 @@ export function Server({
         if (!cancelled) {
           setMetrics(null);
           setShowStatsUI(false);
-          if (error?.code === "TOTP_REQUIRED" ||
-              (error?.response?.status === 403 && error?.response?.data?.error === "TOTP_REQUIRED")) {
+          if (
+            error?.code === "TOTP_REQUIRED" ||
+            (error?.response?.status === 403 &&
+              error?.response?.data?.error === "TOTP_REQUIRED")
+          ) {
             toast.error(t("serverStats.totpUnavailable"));
           } else {
             toast.error(t("serverStats.failedToFetchMetrics"));
@@ -215,20 +485,32 @@ export function Server({
                     setMetrics(data);
                     setShowStatsUI(true);
                   } catch (error: any) {
-                    if (error?.code === "TOTP_REQUIRED" ||
-                        (error?.response?.status === 403 && error?.response?.data?.error === "TOTP_REQUIRED")) {
+                    if (
+                      error?.code === "TOTP_REQUIRED" ||
+                      (error?.response?.status === 403 &&
+                        error?.response?.data?.error === "TOTP_REQUIRED")
+                    ) {
                       toast.error(t("serverStats.totpUnavailable"));
                       setMetrics(null);
                       setShowStatsUI(false);
-                    } else if (error?.response?.status === 503 || error?.status === 503) {
+                    } else if (
+                      error?.response?.status === 503 ||
+                      error?.status === 503
+                    ) {
                       setServerStatus("offline");
                       setMetrics(null);
                       setShowStatsUI(false);
-                    } else if (error?.response?.status === 504 || error?.status === 504) {
+                    } else if (
+                      error?.response?.status === 504 ||
+                      error?.status === 504
+                    ) {
                       setServerStatus("offline");
                       setMetrics(null);
                       setShowStatsUI(false);
-                    } else if (error?.response?.status === 404 || error?.status === 404) {
+                    } else if (
+                      error?.response?.status === 404 ||
+                      error?.status === 404
+                    ) {
                       setServerStatus("offline");
                       setMetrics(null);
                       setShowStatsUI(false);
@@ -286,6 +568,52 @@ export function Server({
 
         {showStatsUI && (
           <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <div className="flex items-center gap-2">
+                {!isEditMode ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditMode(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    {t("serverStats.editLayout")}
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditMode(false);
+                        setHasUnsavedChanges(false);
+                        setWidgets(statsConfig.widgets);
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      {t("serverStats.cancelEdit")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveLayout}
+                      disabled={!hasUnsavedChanges}
+                      className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+                    >
+                      <Save className="h-4 w-4" />
+                      {t("serverStats.saveLayout")}
+                    </Button>
+                  </>
+                )}
+              </div>
+              {hasUnsavedChanges && (
+                <span className="text-sm text-yellow-400">
+                  {t("serverStats.unsavedChanges")}
+                </span>
+              )}
+            </div>
+
             {isLoadingMetrics && !metrics ? (
               <div className="flex items-center justify-center py-8">
                 <div className="flex items-center gap-3">
@@ -310,155 +638,31 @@ export function Server({
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-                {/* CPU Stats */}
-                <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Cpu className="h-5 w-5 text-blue-400" />
-                    <h3 className="font-semibold text-lg text-white">
-                      {t("serverStats.cpuUsage")}
-                    </h3>
+              <ResponsiveGridLayout
+                className="layout"
+                layouts={{
+                  lg: widgets.map((w) => ({
+                    i: w.id,
+                    x: w.x,
+                    y: w.y,
+                    w: w.w,
+                    h: w.h,
+                  })),
+                }}
+                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+                rowHeight={100}
+                isDraggable={isEditMode}
+                isResizable={isEditMode}
+                onLayoutChange={handleLayoutChange}
+                draggableHandle={isEditMode ? undefined : ".no-drag"}
+              >
+                {widgets.map((widget) => (
+                  <div key={widget.id} className="relative">
+                    {renderWidget(widget)}
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-300">
-                        {(() => {
-                          const pct = metrics?.cpu?.percent;
-                          const cores = metrics?.cpu?.cores;
-                          const pctText =
-                            typeof pct === "number" ? `${pct}%` : "N/A";
-                          const coresText =
-                            typeof cores === "number"
-                              ? t("serverStats.cpuCores", { count: cores })
-                              : t("serverStats.naCpus");
-                          return `${pctText} ${t("serverStats.of")} ${coresText}`;
-                        })()}
-                      </span>
-                    </div>
-
-                    <div className="relative">
-                      <Progress
-                        value={
-                          typeof metrics?.cpu?.percent === "number"
-                            ? metrics!.cpu!.percent!
-                            : 0
-                        }
-                        className="h-2"
-                      />
-                    </div>
-
-                    <div className="text-xs text-gray-500">
-                      {metrics?.cpu?.load
-                        ? `Load: ${metrics.cpu.load[0].toFixed(2)}, ${metrics.cpu.load[1].toFixed(2)}, ${metrics.cpu.load[2].toFixed(2)}`
-                        : "Load: N/A"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Memory Stats */}
-                <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <MemoryStick className="h-5 w-5 text-green-400" />
-                    <h3 className="font-semibold text-lg text-white">
-                      {t("serverStats.memoryUsage")}
-                    </h3>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-300">
-                        {(() => {
-                          const pct = metrics?.memory?.percent;
-                          const used = metrics?.memory?.usedGiB;
-                          const total = metrics?.memory?.totalGiB;
-                          const pctText =
-                            typeof pct === "number" ? `${pct}%` : "N/A";
-                          const usedText =
-                            typeof used === "number"
-                              ? `${used.toFixed(1)} GiB`
-                              : "N/A";
-                          const totalText =
-                            typeof total === "number"
-                              ? `${total.toFixed(1)} GiB`
-                              : "N/A";
-                          return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
-                        })()}
-                      </span>
-                    </div>
-
-                    <div className="relative">
-                      <Progress
-                        value={
-                          typeof metrics?.memory?.percent === "number"
-                            ? metrics!.memory!.percent!
-                            : 0
-                        }
-                        className="h-2"
-                      />
-                    </div>
-
-                    <div className="text-xs text-gray-500">
-                      {(() => {
-                        const used = metrics?.memory?.usedGiB;
-                        const total = metrics?.memory?.totalGiB;
-                        const free =
-                          typeof used === "number" && typeof total === "number"
-                            ? (total - used).toFixed(1)
-                            : "N/A";
-                        return `Free: ${free} GiB`;
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Disk Stats */}
-                <div className="space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <HardDrive className="h-5 w-5 text-orange-400" />
-                    <h3 className="font-semibold text-lg text-white">
-                      {t("serverStats.rootStorageSpace")}
-                    </h3>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-300">
-                        {(() => {
-                          const pct = metrics?.disk?.percent;
-                          const used = metrics?.disk?.usedHuman;
-                          const total = metrics?.disk?.totalHuman;
-                          const pctText =
-                            typeof pct === "number" ? `${pct}%` : "N/A";
-                          const usedText = used ?? "N/A";
-                          const totalText = total ?? "N/A";
-                          return `${pctText} (${usedText} ${t("serverStats.of")} ${totalText})`;
-                        })()}
-                      </span>
-                    </div>
-
-                    <div className="relative">
-                      <Progress
-                        value={
-                          typeof metrics?.disk?.percent === "number"
-                            ? metrics!.disk!.percent!
-                            : 0
-                        }
-                        className="h-2"
-                      />
-                    </div>
-
-                    <div className="text-xs text-gray-500">
-                      {(() => {
-                        const available = metrics?.disk?.availableHuman;
-                        return available
-                          ? `Available: ${available}`
-                          : "Available: N/A";
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                ))}
+              </ResponsiveGridLayout>
             )}
           </div>
         )}
