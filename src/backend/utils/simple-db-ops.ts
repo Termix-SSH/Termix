@@ -131,11 +131,10 @@ class SimpleDBOps {
     table: SQLiteTable<any>,
     tableName: TableName,
     where: unknown,
-    _userId: string,
   ): Promise<unknown[]> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await getDb()
       .delete(table)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .where(where as any)
       .returning();
 
@@ -152,10 +151,7 @@ class SimpleDBOps {
     return DataCrypto.getUserDataKey(userId) !== null;
   }
 
-  static async selectEncrypted(
-    query: unknown,
-    _tableName: TableName,
-  ): Promise<unknown[]> {
+  static async selectEncrypted(query: unknown): Promise<unknown[]> {
     const results = await query;
 
     return results as unknown[];

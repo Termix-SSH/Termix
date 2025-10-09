@@ -97,7 +97,7 @@ class DataCrypto {
     let migratedFieldsCount = 0;
 
     try {
-      const { needsMigration, plaintextFields } =
+      const { needsMigration } =
         await LazyFieldEncryption.checkUserNeedsMigration(
           userId,
           userDataKey,
@@ -452,7 +452,7 @@ class DataCrypto {
       );
 
       return decrypted === testData;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

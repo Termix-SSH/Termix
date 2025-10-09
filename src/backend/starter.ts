@@ -75,7 +75,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
           version = foundVersion;
           break;
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
@@ -128,7 +128,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       process.exit(1);
     });
 
-    process.on("unhandledRejection", (reason, promise) => {
+    process.on("unhandledRejection", (reason, _promise) => {
       systemLogger.error("Unhandled promise rejection", reason, {
         operation: "error_handling",
       });
