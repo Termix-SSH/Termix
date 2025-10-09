@@ -11,7 +11,7 @@ import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
-import { AuthManager, type JWTPayload } from "../utils/auth-manager.js";
+import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 
 interface ConnectToHostData {
