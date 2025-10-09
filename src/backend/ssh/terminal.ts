@@ -120,7 +120,6 @@ const wss = new WebSocketServer({
 
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
-  let userPayload: JWTPayload | undefined;
 
   try {
     const url = parseUrl(req.url!, true);
@@ -154,7 +153,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     userId = payload.userId;
-    userPayload = payload;
   } catch (error) {
     sshLogger.error(
       "WebSocket JWT verification failed during connection",
@@ -347,7 +345,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   async function handleConnectToHost(data: ConnectToHostData) {
-    const { cols, rows, hostConfig, initialPath, executeCommand } = data;
+    const { hostConfig, initialPath, executeCommand } = data;
     const {
       id,
       ip,
