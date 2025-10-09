@@ -119,7 +119,11 @@ class SSHConnectionPool {
               },
             );
             client.end();
-            reject(new Error("TOTP authentication required but not supported in Server Stats"));
+            reject(
+              new Error(
+                "TOTP authentication required but not supported in Server Stats",
+              ),
+            );
           } else if (host.password) {
             const responses = prompts.map(() => host.password || "");
             finish(responses);
@@ -294,6 +298,7 @@ interface SSHHostWithCredentials {
   enableFileManager: boolean;
   defaultPath: string;
   tunnelConnections: any[];
+  statsConfig?: string;
   createdAt: string;
   updatedAt: string;
   userId: string;
@@ -453,6 +458,7 @@ async function resolveHostCredentials(
       tunnelConnections: host.tunnelConnections
         ? JSON.parse(host.tunnelConnections)
         : [],
+      statsConfig: host.statsConfig || undefined,
       createdAt: host.createdAt,
       updatedAt: host.updatedAt,
       userId: host.userId,
@@ -694,168 +700,171 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
   return requestQueue.queueRequest(host.id, async () => {
     try {
       return await withSshConnection(host, async (client) => {
-      let cpuPercent: number | null = null;
-      let cores: number | null = null;
-      let loadTriplet: [number, number, number] | null = null;
+        let cpuPercent: number | null = null;
+        let cores: number | null = null;
+        let loadTriplet: [number, number, number] | null = null;
 
-      try {
-        const [stat1, loadAvgOut, coresOut] = await Promise.all([
-          execCommand(client, "cat /proc/stat"),
-          execCommand(client, "cat /proc/loadavg"),
-          execCommand(
-            client,
-            "nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo",
-          ),
-        ]);
+        try {
+          const [stat1, loadAvgOut, coresOut] = await Promise.all([
+            execCommand(client, "cat /proc/stat"),
+            execCommand(client, "cat /proc/loadavg"),
+            execCommand(
+              client,
+              "nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo",
+            ),
+          ]);
 
-        await new Promise((r) => setTimeout(r, 500));
-        const stat2 = await execCommand(client, "cat /proc/stat");
+          await new Promise((r) => setTimeout(r, 500));
+          const stat2 = await execCommand(client, "cat /proc/stat");
 
-        const cpuLine1 = (
-          stat1.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
-        ).trim();
-        const cpuLine2 = (
-          stat2.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
-        ).trim();
-        const a = parseCpuLine(cpuLine1);
-        const b = parseCpuLine(cpuLine2);
-        if (a && b) {
-          const totalDiff = b.total - a.total;
-          const idleDiff = b.idle - a.idle;
-          const used = totalDiff - idleDiff;
-          if (totalDiff > 0)
-            cpuPercent = Math.max(0, Math.min(100, (used / totalDiff) * 100));
-        }
-
-        const laParts = loadAvgOut.stdout.trim().split(/\s+/);
-        if (laParts.length >= 3) {
-          loadTriplet = [
-            Number(laParts[0]),
-            Number(laParts[1]),
-            Number(laParts[2]),
-          ].map((v) => (Number.isFinite(v) ? Number(v) : 0)) as [
-            number,
-            number,
-            number,
-          ];
-        }
-
-        const coresNum = Number((coresOut.stdout || "").trim());
-        cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
-      } catch (e) {
-        statsLogger.warn(
-          `Failed to collect CPU metrics for host ${host.id}`,
-          e,
-        );
-        cpuPercent = null;
-        cores = null;
-        loadTriplet = null;
-      }
-
-      let memPercent: number | null = null;
-      let usedGiB: number | null = null;
-      let totalGiB: number | null = null;
-      try {
-        const memInfo = await execCommand(client, "cat /proc/meminfo");
-        const lines = memInfo.stdout.split("\n");
-        const getVal = (key: string) => {
-          const line = lines.find((l) => l.startsWith(key));
-          if (!line) return null;
-          const m = line.match(/\d+/);
-          return m ? Number(m[0]) : null;
-        };
-        const totalKb = getVal("MemTotal:");
-        const availKb = getVal("MemAvailable:");
-        if (totalKb && availKb && totalKb > 0) {
-          const usedKb = totalKb - availKb;
-          memPercent = Math.max(0, Math.min(100, (usedKb / totalKb) * 100));
-          usedGiB = kibToGiB(usedKb);
-          totalGiB = kibToGiB(totalKb);
-        }
-      } catch (e) {
-        statsLogger.warn(
-          `Failed to collect memory metrics for host ${host.id}`,
-          e,
-        );
-        memPercent = null;
-        usedGiB = null;
-        totalGiB = null;
-      }
-
-      let diskPercent: number | null = null;
-      let usedHuman: string | null = null;
-      let totalHuman: string | null = null;
-      let availableHuman: string | null = null;
-      try {
-        const [diskOutHuman, diskOutBytes] = await Promise.all([
-          execCommand(client, "df -h -P / | tail -n +2"),
-          execCommand(client, "df -B1 -P / | tail -n +2"),
-        ]);
-
-        const humanLine =
-          diskOutHuman.stdout
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean)[0] || "";
-        const bytesLine =
-          diskOutBytes.stdout
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean)[0] || "";
-
-        const humanParts = humanLine.split(/\s+/);
-        const bytesParts = bytesLine.split(/\s+/);
-
-        if (humanParts.length >= 6 && bytesParts.length >= 6) {
-          totalHuman = humanParts[1] || null;
-          usedHuman = humanParts[2] || null;
-          availableHuman = humanParts[3] || null;
-
-          const totalBytes = Number(bytesParts[1]);
-          const usedBytes = Number(bytesParts[2]);
-
-          if (
-            Number.isFinite(totalBytes) &&
-            Number.isFinite(usedBytes) &&
-            totalBytes > 0
-          ) {
-            diskPercent = Math.max(
-              0,
-              Math.min(100, (usedBytes / totalBytes) * 100),
-            );
+          const cpuLine1 = (
+            stat1.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
+          ).trim();
+          const cpuLine2 = (
+            stat2.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
+          ).trim();
+          const a = parseCpuLine(cpuLine1);
+          const b = parseCpuLine(cpuLine2);
+          if (a && b) {
+            const totalDiff = b.total - a.total;
+            const idleDiff = b.idle - a.idle;
+            const used = totalDiff - idleDiff;
+            if (totalDiff > 0)
+              cpuPercent = Math.max(0, Math.min(100, (used / totalDiff) * 100));
           }
+
+          const laParts = loadAvgOut.stdout.trim().split(/\s+/);
+          if (laParts.length >= 3) {
+            loadTriplet = [
+              Number(laParts[0]),
+              Number(laParts[1]),
+              Number(laParts[2]),
+            ].map((v) => (Number.isFinite(v) ? Number(v) : 0)) as [
+              number,
+              number,
+              number,
+            ];
+          }
+
+          const coresNum = Number((coresOut.stdout || "").trim());
+          cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect CPU metrics for host ${host.id}`,
+            e,
+          );
+          cpuPercent = null;
+          cores = null;
+          loadTriplet = null;
         }
-      } catch (e) {
-        statsLogger.warn(
-          `Failed to collect disk metrics for host ${host.id}`,
-          e,
-        );
-        diskPercent = null;
-        usedHuman = null;
-        totalHuman = null;
-        availableHuman = null;
-      }
 
-      const result = {
-        cpu: { percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet },
-        memory: {
-          percent: toFixedNum(memPercent, 0),
-          usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
-          totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null,
-        },
-        disk: {
-          percent: toFixedNum(diskPercent, 0),
-          usedHuman,
-          totalHuman,
-          availableHuman,
-        },
-      };
+        let memPercent: number | null = null;
+        let usedGiB: number | null = null;
+        let totalGiB: number | null = null;
+        try {
+          const memInfo = await execCommand(client, "cat /proc/meminfo");
+          const lines = memInfo.stdout.split("\n");
+          const getVal = (key: string) => {
+            const line = lines.find((l) => l.startsWith(key));
+            if (!line) return null;
+            const m = line.match(/\d+/);
+            return m ? Number(m[0]) : null;
+          };
+          const totalKb = getVal("MemTotal:");
+          const availKb = getVal("MemAvailable:");
+          if (totalKb && availKb && totalKb > 0) {
+            const usedKb = totalKb - availKb;
+            memPercent = Math.max(0, Math.min(100, (usedKb / totalKb) * 100));
+            usedGiB = kibToGiB(usedKb);
+            totalGiB = kibToGiB(totalKb);
+          }
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect memory metrics for host ${host.id}`,
+            e,
+          );
+          memPercent = null;
+          usedGiB = null;
+          totalGiB = null;
+        }
 
-      metricsCache.set(host.id, result);
-      return result;
-    });
+        let diskPercent: number | null = null;
+        let usedHuman: string | null = null;
+        let totalHuman: string | null = null;
+        let availableHuman: string | null = null;
+        try {
+          const [diskOutHuman, diskOutBytes] = await Promise.all([
+            execCommand(client, "df -h -P / | tail -n +2"),
+            execCommand(client, "df -B1 -P / | tail -n +2"),
+          ]);
+
+          const humanLine =
+            diskOutHuman.stdout
+              .split("\n")
+              .map((l) => l.trim())
+              .filter(Boolean)[0] || "";
+          const bytesLine =
+            diskOutBytes.stdout
+              .split("\n")
+              .map((l) => l.trim())
+              .filter(Boolean)[0] || "";
+
+          const humanParts = humanLine.split(/\s+/);
+          const bytesParts = bytesLine.split(/\s+/);
+
+          if (humanParts.length >= 6 && bytesParts.length >= 6) {
+            totalHuman = humanParts[1] || null;
+            usedHuman = humanParts[2] || null;
+            availableHuman = humanParts[3] || null;
+
+            const totalBytes = Number(bytesParts[1]);
+            const usedBytes = Number(bytesParts[2]);
+
+            if (
+              Number.isFinite(totalBytes) &&
+              Number.isFinite(usedBytes) &&
+              totalBytes > 0
+            ) {
+              diskPercent = Math.max(
+                0,
+                Math.min(100, (usedBytes / totalBytes) * 100),
+              );
+            }
+          }
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect disk metrics for host ${host.id}`,
+            e,
+          );
+          diskPercent = null;
+          usedHuman = null;
+          totalHuman = null;
+          availableHuman = null;
+        }
+
+        const result = {
+          cpu: { percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet },
+          memory: {
+            percent: toFixedNum(memPercent, 0),
+            usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
+            totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null,
+          },
+          disk: {
+            percent: toFixedNum(diskPercent, 0),
+            usedHuman,
+            totalHuman,
+            availableHuman,
+          },
+        };
+
+        metricsCache.set(host.id, result);
+        return result;
+      });
     } catch (error) {
-      if (error instanceof Error && error.message.includes("TOTP authentication required")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("TOTP authentication required")
+      ) {
         throw error;
       }
       throw error;
@@ -1032,7 +1041,10 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
     const metrics = await collectMetrics(host);
     res.json({ ...metrics, lastChecked: new Date().toISOString() });
   } catch (err) {
-    if (err instanceof Error && err.message.includes("TOTP authentication required")) {
+    if (
+      err instanceof Error &&
+      err.message.includes("TOTP authentication required")
+    ) {
       return res.status(403).json({
         error: "TOTP_REQUIRED",
         message: "Server Stats unavailable for TOTP-enabled servers",
