@@ -690,6 +690,36 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     percent: number | null;
     usedHuman: string | null;
     totalHuman: string | null;
+    availableHuman: string | null;
+  };
+  network: {
+    interfaces: Array<{
+      name: string;
+      ip: string;
+      state: string;
+      rxBytes: string | null;
+      txBytes: string | null;
+    }>;
+  };
+  uptime: {
+    seconds: number | null;
+    formatted: string | null;
+  };
+  processes: {
+    total: number | null;
+    running: number | null;
+    top: Array<{
+      pid: string;
+      user: string;
+      cpu: string;
+      mem: string;
+      command: string;
+    }>;
+  };
+  system: {
+    hostname: string | null;
+    kernel: string | null;
+    os: string | null;
   };
 }> {
   const cached = metricsCache.get(host.id);
@@ -842,6 +872,159 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           availableHuman = null;
         }
 
+        // Collect network interfaces
+        let interfaces: Array<{
+          name: string;
+          ip: string;
+          state: string;
+          rxBytes: string | null;
+          txBytes: string | null;
+        }> = [];
+        try {
+          const ifconfigOut = await execCommand(
+            client,
+            "ip -o addr show | awk '{print $2,$4}' | grep -v '^lo'",
+          );
+          const netStatOut = await execCommand(
+            client,
+            "ip -o link show | awk '{print $2,$9}' | sed 's/:$//'",
+          );
+
+          const addrs = ifconfigOut.stdout
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+          const states = netStatOut.stdout
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+
+          const ifMap = new Map<string, { ip: string; state: string }>();
+          for (const line of addrs) {
+            const parts = line.split(/\s+/);
+            if (parts.length >= 2) {
+              const name = parts[0];
+              const ip = parts[1].split("/")[0];
+              if (!ifMap.has(name)) ifMap.set(name, { ip, state: "UNKNOWN" });
+            }
+          }
+          for (const line of states) {
+            const parts = line.split(/\s+/);
+            if (parts.length >= 2) {
+              const name = parts[0];
+              const state = parts[1];
+              const existing = ifMap.get(name);
+              if (existing) {
+                existing.state = state;
+              }
+            }
+          }
+
+          for (const [name, data] of ifMap.entries()) {
+            interfaces.push({
+              name,
+              ip: data.ip,
+              state: data.state,
+              rxBytes: null,
+              txBytes: null,
+            });
+          }
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect network metrics for host ${host.id}`,
+            e,
+          );
+        }
+
+        // Collect uptime
+        let uptimeSeconds: number | null = null;
+        let uptimeFormatted: string | null = null;
+        try {
+          const uptimeOut = await execCommand(client, "cat /proc/uptime");
+          const uptimeParts = uptimeOut.stdout.trim().split(/\s+/);
+          if (uptimeParts.length >= 1) {
+            uptimeSeconds = Number(uptimeParts[0]);
+            if (Number.isFinite(uptimeSeconds)) {
+              const days = Math.floor(uptimeSeconds / 86400);
+              const hours = Math.floor((uptimeSeconds % 86400) / 3600);
+              const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+              uptimeFormatted = `${days}d ${hours}h ${minutes}m`;
+            }
+          }
+        } catch (e) {
+          statsLogger.warn(`Failed to collect uptime for host ${host.id}`, e);
+        }
+
+        // Collect process information
+        let totalProcesses: number | null = null;
+        let runningProcesses: number | null = null;
+        let topProcesses: Array<{
+          pid: string;
+          user: string;
+          cpu: string;
+          mem: string;
+          command: string;
+        }> = [];
+        try {
+          const psOut = await execCommand(
+            client,
+            "ps aux --sort=-%cpu | head -n 11",
+          );
+          const psLines = psOut.stdout
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+          if (psLines.length > 1) {
+            for (let i = 1; i < Math.min(psLines.length, 11); i++) {
+              const parts = psLines[i].split(/\s+/);
+              if (parts.length >= 11) {
+                topProcesses.push({
+                  pid: parts[1],
+                  user: parts[0],
+                  cpu: parts[2],
+                  mem: parts[3],
+                  command: parts.slice(10).join(" ").substring(0, 50),
+                });
+              }
+            }
+          }
+
+          const procCount = await execCommand(client, "ps aux | wc -l");
+          const runningCount = await execCommand(
+            client,
+            "ps aux | grep -c ' R '",
+          );
+          totalProcesses = Number(procCount.stdout.trim()) - 1;
+          runningProcesses = Number(runningCount.stdout.trim());
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect process info for host ${host.id}`,
+            e,
+          );
+        }
+
+        // Collect system information
+        let hostname: string | null = null;
+        let kernel: string | null = null;
+        let os: string | null = null;
+        try {
+          const hostnameOut = await execCommand(client, "hostname");
+          const kernelOut = await execCommand(client, "uname -r");
+          const osOut = await execCommand(
+            client,
+            "cat /etc/os-release | grep '^PRETTY_NAME=' | cut -d'\"' -f2",
+          );
+
+          hostname = hostnameOut.stdout.trim() || null;
+          kernel = kernelOut.stdout.trim() || null;
+          os = osOut.stdout.trim() || null;
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect system info for host ${host.id}`,
+            e,
+          );
+        }
+
         const result = {
           cpu: { percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet },
           memory: {
@@ -854,6 +1037,23 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
             usedHuman,
             totalHuman,
             availableHuman,
+          },
+          network: {
+            interfaces,
+          },
+          uptime: {
+            seconds: uptimeSeconds,
+            formatted: uptimeFormatted,
+          },
+          processes: {
+            total: totalProcesses,
+            running: runningProcesses,
+            top: topProcesses,
+          },
+          system: {
+            hostname,
+            kernel,
+            os,
           },
         };
 
@@ -1033,7 +1233,16 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
         error: "Host is offline",
         cpu: { percent: null, cores: null, load: null },
         memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: { percent: null, usedHuman: null, totalHuman: null },
+        disk: {
+          percent: null,
+          usedHuman: null,
+          totalHuman: null,
+          availableHuman: null,
+        },
+        network: { interfaces: [] },
+        uptime: { seconds: null, formatted: null },
+        processes: { total: null, running: null, top: [] },
+        system: { hostname: null, kernel: null, os: null },
         lastChecked: new Date().toISOString(),
       });
     }
@@ -1050,7 +1259,16 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
         message: "Server Stats unavailable for TOTP-enabled servers",
         cpu: { percent: null, cores: null, load: null },
         memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: { percent: null, usedHuman: null, totalHuman: null },
+        disk: {
+          percent: null,
+          usedHuman: null,
+          totalHuman: null,
+          availableHuman: null,
+        },
+        network: { interfaces: [] },
+        uptime: { seconds: null, formatted: null },
+        processes: { total: null, running: null, top: [] },
+        system: { hostname: null, kernel: null, os: null },
         lastChecked: new Date().toISOString(),
       });
     }
@@ -1062,7 +1280,16 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
         error: "Metrics collection timeout",
         cpu: { percent: null, cores: null, load: null },
         memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: { percent: null, usedHuman: null, totalHuman: null },
+        disk: {
+          percent: null,
+          usedHuman: null,
+          totalHuman: null,
+          availableHuman: null,
+        },
+        network: { interfaces: [] },
+        uptime: { seconds: null, formatted: null },
+        processes: { total: null, running: null, top: [] },
+        system: { hostname: null, kernel: null, os: null },
         lastChecked: new Date().toISOString(),
       });
     }
@@ -1071,7 +1298,16 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
       error: "Failed to collect metrics",
       cpu: { percent: null, cores: null, load: null },
       memory: { percent: null, usedGiB: null, totalGiB: null },
-      disk: { percent: null, usedHuman: null, totalHuman: null },
+      disk: {
+        percent: null,
+        usedHuman: null,
+        totalHuman: null,
+        availableHuman: null,
+      },
+      network: { interfaces: [] },
+      uptime: { seconds: null, formatted: null },
+      processes: { total: null, running: null, top: [] },
+      system: { hostname: null, kernel: null, os: null },
       lastChecked: new Date().toISOString(),
     });
   }

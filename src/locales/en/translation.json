@@ -1169,7 +1169,18 @@
     "saveLayout": "Save Layout",
     "unsavedChanges": "Unsaved changes",
     "layoutSaved": "Layout saved successfully",
-    "failedToSaveLayout": "Failed to save layout"
+    "failedToSaveLayout": "Failed to save layout",
+    "systemInfo": "System Information",
+    "hostname": "Hostname",
+    "operatingSystem": "Operating System",
+    "kernel": "Kernel",
+    "totalUptime": "Total Uptime",
+    "seconds": "seconds",
+    "networkInterfaces": "Network Interfaces",
+    "noInterfacesFound": "No network interfaces found",
+    "totalProcesses": "Total Processes",
+    "running": "Running",
+    "noProcessesFound": "No processes found"
   },
   "auth": {
     "loginTitle": "Login to Termix",

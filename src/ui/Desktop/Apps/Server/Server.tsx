@@ -17,7 +17,15 @@ import {
   type StatsConfig,
   DEFAULT_STATS_CONFIG,
 } from "@/types/stats-widgets";
-import { CpuWidget, MemoryWidget, DiskWidget } from "./widgets";
+import {
+  CpuWidget,
+  MemoryWidget,
+  DiskWidget,
+  NetworkWidget,
+  UptimeWidget,
+  ProcessesWidget,
+  SystemWidget,
+} from "./widgets";
 
 interface ServerProps {
   hostConfig?: any;
@@ -81,6 +89,26 @@ export function Server({
 
       case "disk":
         return <DiskWidget metrics={metrics} metricsHistory={metricsHistory} />;
+
+      case "network":
+        return (
+          <NetworkWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
+
+      case "uptime":
+        return (
+          <UptimeWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
+
+      case "processes":
+        return (
+          <ProcessesWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
+
+      case "system":
+        return (
+          <SystemWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
 
       default:
         return null;
@@ -373,7 +401,7 @@ export function Server({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {enabledWidgets.map((widgetType) => (
-                  <div key={widgetType} className="min-h-[200px]">
+                  <div key={widgetType} className="h-[280px]">
                     {renderWidget(widgetType)}
                   </div>
                 ))}

@@ -217,10 +217,29 @@ export function HostManagerEditor({
       statsConfig: z
         .object({
           enabledWidgets: z
-            .array(z.enum(["cpu", "memory", "disk"]))
-            .default(["cpu", "memory", "disk"]),
+            .array(
+              z.enum([
+                "cpu",
+                "memory",
+                "disk",
+                "network",
+                "uptime",
+                "processes",
+                "system",
+              ]),
+            )
+            .default(["cpu", "memory", "disk", "network", "uptime", "system"]),
         })
-        .default({ enabledWidgets: ["cpu", "memory", "disk"] }),
+        .default({
+          enabledWidgets: [
+            "cpu",
+            "memory",
+            "disk",
+            "network",
+            "uptime",
+            "system",
+          ],
+        }),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "password") {
@@ -1562,7 +1581,17 @@ export function HostManagerEditor({
                         {t("hosts.enabledWidgetsDesc")}
                       </FormDescription>
                       <div className="space-y-3 mt-3">
-                        {(["cpu", "memory", "disk"] as const).map((widget) => (
+                        {(
+                          [
+                            "cpu",
+                            "memory",
+                            "disk",
+                            "network",
+                            "uptime",
+                            "processes",
+                            "system",
+                          ] as const
+                        ).map((widget) => (
                           <div
                             key={widget}
                             className="flex items-center space-x-2"
@@ -1585,6 +1614,13 @@ export function HostManagerEditor({
                               {widget === "memory" &&
                                 t("serverStats.memoryUsage")}
                               {widget === "disk" && t("serverStats.diskUsage")}
+                              {widget === "network" &&
+                                t("serverStats.networkInterfaces")}
+                              {widget === "uptime" && t("serverStats.uptime")}
+                              {widget === "processes" &&
+                                t("serverStats.processes")}
+                              {widget === "system" &&
+                                t("serverStats.systemInfo")}
                             </label>
                           </div>
                         ))}

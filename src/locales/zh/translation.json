@@ -1149,7 +1149,18 @@
     "saveLayout": "保存布局",
     "unsavedChanges": "有未保存的更改",
     "layoutSaved": "布局保存成功",
-    "failedToSaveLayout": "保存布局失败"
+    "failedToSaveLayout": "保存布局失败",
+    "systemInfo": "系统信息",
+    "hostname": "主机名",
+    "operatingSystem": "操作系统",
+    "kernel": "内核",
+    "totalUptime": "总运行时间",
+    "seconds": "秒",
+    "networkInterfaces": "网络接口",
+    "noInterfacesFound": "未找到网络接口",
+    "totalProcesses": "总进程数",
+    "running": "运行中",
+    "noProcessesFound": "未找到进程"
   },
   "auth": {
     "loginTitle": "登录 Termix",
