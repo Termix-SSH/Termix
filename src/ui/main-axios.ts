@@ -4,10 +4,6 @@ import type {
   SSHHostData,
   TunnelConfig,
   TunnelStatus,
-  Credential,
-  CredentialData,
-  HostInfo,
-  ApiResponse,
   FileManagerFile,
   FileManagerShortcut,
 } from "../types/index.js";
@@ -339,12 +335,7 @@ function isDev(): boolean {
 }
 
 const apiHost = import.meta.env.VITE_API_HOST || "localhost";
-let apiPort = 30001;
 let configuredServerUrl: string | null = null;
-
-if (isElectron()) {
-  apiPort = 30001;
-}
 
 export interface ServerConfig {
   serverUrl: string;
@@ -991,7 +982,7 @@ export async function getFileManagerRecent(
       `/file_manager/recent?hostId=${hostId}`,
     );
     return response.data || [];
-  } catch (error) {
+  } catch {
     return [];
   }
 }
@@ -1028,7 +1019,7 @@ export async function getFileManagerPinned(
       `/file_manager/pinned?hostId=${hostId}`,
     );
     return response.data || [];
-  } catch (error) {
+  } catch {
     return [];
   }
 }
@@ -1065,7 +1056,7 @@ export async function getFileManagerShortcuts(
       `/file_manager/shortcuts?hostId=${hostId}`,
     );
     return response.data || [];
-  } catch (error) {
+  } catch {
     return [];
   }
 }
