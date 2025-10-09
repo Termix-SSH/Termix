@@ -61,7 +61,7 @@ class SSHConnectionPool {
       return client;
     }
 
-    return new Promise((resolve, _reject) => {
+    return new Promise((resolve) => {
       const checkAvailable = () => {
         const available = connections.find((conn) => !conn.inUse);
         if (available) {
@@ -1126,8 +1126,6 @@ async function pollStatusesOnce(userId?: string): Promise<void> {
     });
     return;
   }
-
-  const now = new Date().toISOString();
 
   const checks = hosts.map(async (h) => {
     const isOnline = await tcpPing(h.ip, h.port, 5000);
