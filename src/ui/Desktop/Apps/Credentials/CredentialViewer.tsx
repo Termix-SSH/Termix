@@ -70,7 +70,7 @@ const CredentialViewer: React.FC<CredentialViewerProps> = ({
     try {
       const response = await getCredentialDetails(credential.id);
       setCredentialDetails(response);
-    } catch (error) {
+    } catch {
       toast.error(t("credentials.failedToFetchCredentialDetails"));
     }
   };
@@ -79,7 +79,7 @@ const CredentialViewer: React.FC<CredentialViewerProps> = ({
     try {
       const response = await getCredentialHosts(credential.id);
       setHostsUsing(response);
-    } catch (error) {
+    } catch {
       toast.error(t("credentials.failedToFetchHostsUsing"));
     } finally {
       setLoading(false);
@@ -97,7 +97,7 @@ const CredentialViewer: React.FC<CredentialViewerProps> = ({
     try {
       await navigator.clipboard.writeText(text);
       toast.success(t("copiedToClipboard", { field: fieldName }));
-    } catch (error) {
+    } catch {
       toast.error(t("credentials.failedToCopy"));
     }
   };

@@ -38,7 +38,7 @@ import { CredentialSelector } from "@/ui/Desktop/Apps/Credentials/CredentialSele
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
-import type { StatsConfig, WidgetType } from "@/types/stats-widgets";
+import type { StatsConfig } from "@/types/stats-widgets";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 
@@ -77,11 +77,9 @@ export function HostManagerEditor({
   onFormSubmit,
 }: SSHManagerHostEditorProps) {
   const { t } = useTranslation();
-  const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
   const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
   const [credentials, setCredentials] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const [authTab, setAuthTab] = useState<"password" | "key" | "credential">(
     "password",
@@ -96,12 +94,10 @@ export function HostManagerEditor({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
         const [hostsData, credentialsData] = await Promise.all([
           getSSHHosts(),
           getCredentials(),
         ]);
-        setHosts(hostsData);
         setCredentials(credentialsData);
 
         const uniqueFolders = [
@@ -124,8 +120,6 @@ export function HostManagerEditor({
         setSshConfigurations(uniqueConfigurations);
       } catch {
         // Failed to load hosts data
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -135,9 +129,7 @@ export function HostManagerEditor({
   useEffect(() => {
     const handleCredentialChange = async () => {
       try {
-        setLoading(true);
         const hostsData = await getSSHHosts();
-        setHosts(hostsData);
 
         const uniqueFolders = [
           ...new Set(
@@ -159,8 +151,6 @@ export function HostManagerEditor({
         setSshConfigurations(uniqueConfigurations);
       } catch {
         // Failed to reload hosts after credential change
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -533,7 +523,7 @@ export function HostManagerEditor({
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
       form.reset();
-    } catch (error) {
+    } catch {
       toast.error(t("hosts.failedToSaveHost"));
     } finally {
       isSubmittingRef.current = false;

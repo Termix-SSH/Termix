@@ -148,7 +148,7 @@ export function Server({
           if (updatedHost) {
             setCurrentHostConfig(updatedHost);
           }
-        } catch (error) {
+        } catch {
           toast.error(t("serverStats.failedToFetchHostConfig"));
         }
       }
@@ -165,7 +165,7 @@ export function Server({
           if (updatedHost) {
             setCurrentHostConfig(updatedHost);
           }
-        } catch (error) {
+        } catch {
           toast.error(t("serverStats.failedToFetchHostConfig"));
         }
       }
