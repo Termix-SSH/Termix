@@ -59,7 +59,7 @@ access, SSH tunneling capabilities, and remote file management, with many more t
 - **Data Export/Import** - Export and import SSH hosts, credentials, and file manager data with incremental sync
 - **Automatic SSL Setup** - Built-in SSL certificate generation and management with HTTPS redirects
 - **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn
-- **Languages** - Built-in support for English and Chinese
+- **Languages** - Built-in support for English, Chinese, and German
 - **Platform Support** - Available as a web app, desktop application (Windows & Linux), and dedicated mobile app for iOS and Android. macOS and iPadOS support is planned.
 
 # Planned Features
