@@ -837,7 +837,7 @@ async function connectSSHTunnel(
         }
       });
 
-      stream.stdout?.on("data", (data: Buffer) => {
+      stream.stdout?.on("data", () => {
         // Silently consume stdout data
       });
 
@@ -1438,14 +1438,6 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 autoStart: tunnelConnection.autoStart,
                 isPinned: host.pin,
               };
-
-              const hasSourcePassword = host.autostartPassword;
-              const hasSourceKey = host.autostartKey;
-              const hasEndpointPassword =
-                tunnelConnection.endpointPassword ||
-                endpointHost.autostartPassword;
-              const hasEndpointKey =
-                tunnelConnection.endpointKey || endpointHost.autostartKey;
 
               autoStartTunnels.push(tunnelConfig);
             } else {
