@@ -19,7 +19,6 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  getCookie,
   logoutUser,
   isElectron,
 } from "@/ui/main-axios.ts";
@@ -63,7 +62,7 @@ export function HomepageAuth({
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [internalLoggedIn, setInternalLoggedIn] = useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [firstUserToastShown, setFirstUserToastShown] = useState(false);
@@ -239,7 +238,7 @@ export function HomepageAuth({
     setError(null);
     setResetLoading(true);
     try {
-      const result = await initiatePasswordReset(localUsername);
+      await initiatePasswordReset(localUsername);
       setResetStep("verify");
       toast.success(t("messages.resetCodeSent"));
     } catch (err: any) {
@@ -411,7 +410,6 @@ export function HomepageAuth({
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get("success");
-    const token = urlParams.get("token");
     const error = urlParams.get("error");
 
     if (error) {
@@ -445,7 +443,7 @@ export function HomepageAuth({
             window.location.pathname,
           );
         })
-        .catch((err) => {
+        .catch(() => {
           toast.error(t("errors.failedUserInfo"));
           setInternalLoggedIn(false);
           setLoggedIn(false);
