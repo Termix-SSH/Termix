@@ -526,7 +526,10 @@ function handleApiError(error: unknown, operation: string): never {
 
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
-    const message = error.response?.data?.message || error.response?.data?.error || error.message;
+    const message =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message;
     const code = error.response?.data?.code || error.response?.data?.error;
     const url = error.config?.url;
     const method = error.config?.method?.toUpperCase();
@@ -683,6 +686,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       enableFileManager: Boolean(hostData.enableFileManager),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
+      statsConfig: hostData.statsConfig || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -739,6 +743,7 @@ export async function updateSSHHost(
       enableFileManager: Boolean(hostData.enableFileManager),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
+      statsConfig: hostData.statsConfig || null,
     };
 
     if (!submitData.enableTunnel) {
