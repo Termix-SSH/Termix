@@ -19,7 +19,6 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  getCookie,
   getServerConfig,
   isElectron,
   logoutUser,
@@ -33,7 +32,6 @@ interface HomepageAuthProps extends React.ComponentProps<"div"> {
   setUserId: (userId: string | null) => void;
   loggedIn: boolean;
   authLoading: boolean;
-  dbError: string | null;
   setDbError: (error: string | null) => void;
   onAuthSuccess: (authData: {
     isAdmin: boolean;
@@ -50,7 +48,6 @@ export function HomepageAuth({
   setUserId,
   loggedIn,
   authLoading,
-  dbError,
   setDbError,
   onAuthSuccess,
   ...props
@@ -64,17 +61,6 @@ export function HomepageAuth({
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
-  const [visibility, setVisibility] = useState({
-    password: false,
-    signupConfirm: false,
-    resetNew: false,
-    resetConfirm: false,
-  });
-  const toggleVisibility = (field: keyof typeof visibility) => {
-    setVisibility((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  const [error, setError] = useState<string | null>(null);
   const [internalLoggedIn, setInternalLoggedIn] = useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [firstUserToastShown, setFirstUserToastShown] = useState(false);
@@ -169,7 +155,6 @@ export function HomepageAuth({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
     if (!localUsername.trim()) {
@@ -252,10 +237,9 @@ export function HomepageAuth({
   }
 
   async function handleInitiatePasswordReset() {
-    setError(null);
     setResetLoading(true);
     try {
-      const result = await initiatePasswordReset(localUsername);
+      await initiatePasswordReset(localUsername);
       setResetStep("verify");
       toast.success(t("messages.resetCodeSent"));
     } catch (err: any) {
@@ -270,7 +254,6 @@ export function HomepageAuth({
   }
 
   async function handleVerifyResetCode() {
-    setError(null);
     setResetLoading(true);
     try {
       const response = await verifyPasswordResetCode(localUsername, resetCode);
@@ -285,7 +268,6 @@ export function HomepageAuth({
   }
 
   async function handleCompletePasswordReset() {
-    setError(null);
     setResetLoading(true);
 
     if (newPassword !== confirmPassword) {
@@ -308,7 +290,6 @@ export function HomepageAuth({
       setNewPassword("");
       setConfirmPassword("");
       setTempToken("");
-      setError(null);
 
       setResetSuccess(true);
       toast.success(t("messages.passwordResetSuccess"));
@@ -330,7 +311,6 @@ export function HomepageAuth({
     setNewPassword("");
     setConfirmPassword("");
     setTempToken("");
-    setError(null);
     setResetSuccess(false);
     setSignupConfirmPassword("");
   }
@@ -338,7 +318,6 @@ export function HomepageAuth({
   function clearFormFields() {
     setPassword("");
     setSignupConfirmPassword("");
-    setError(null);
   }
 
   async function handleTOTPVerification() {
@@ -347,7 +326,6 @@ export function HomepageAuth({
       return;
     }
 
-    setError(null);
     setTotpLoading(true);
 
     try {
@@ -403,7 +381,6 @@ export function HomepageAuth({
   }
 
   async function handleOIDCLogin() {
-    setError(null);
     setOidcLoading(true);
     try {
       const authResponse = await getOIDCAuthorizeUrl();
@@ -427,7 +404,6 @@ export function HomepageAuth({
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get("success");
-    const token = urlParams.get("token");
     const error = urlParams.get("error");
 
     if (error) {
@@ -439,7 +415,6 @@ export function HomepageAuth({
 
     if (success) {
       setOidcLoading(true);
-      setError(null);
 
       getUserInfo()
         .then((meRes) => {
@@ -461,7 +436,7 @@ export function HomepageAuth({
             window.location.pathname,
           );
         })
-        .catch((err) => {
+        .catch(() => {
           setInternalLoggedIn(false);
           setLoggedIn(false);
           setIsAdmin(false);
@@ -514,26 +489,6 @@ export function HomepageAuth({
     }
   }, [dbConnectionFailed, t]);
 
-  const retryDatabaseConnection = async () => {
-    setDbHealthChecking(true);
-    setDbConnectionFailed(false);
-    try {
-      const res = await getSetupRequired();
-      if (res.setup_required) {
-        setFirstUser(true);
-        setTab("signup");
-      } else {
-        setFirstUser(false);
-      }
-      setDbError(null);
-      toast.success(t("messages.databaseConnected"));
-    } catch (error) {
-      setDbConnectionFailed(true);
-    } finally {
-      setDbHealthChecking(false);
-    }
-  };
-
   useEffect(() => {
     const checkServerConfig = async () => {
       if (isElectron()) {
@@ -541,7 +496,7 @@ export function HomepageAuth({
           const config = await getServerConfig();
           setCurrentServerUrl(config?.serverUrl || "");
           setShowServerConfig(!config || !config.serverUrl);
-        } catch (error) {
+        } catch {
           setShowServerConfig(true);
         }
       } else {
@@ -712,7 +667,6 @@ export function HomepageAuth({
               setTotpRequired(false);
               setTotpCode("");
               setTotpTempToken("");
-              setError(null);
             }}
           >
             {t("common.cancel")}
