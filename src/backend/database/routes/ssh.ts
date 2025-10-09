@@ -233,6 +233,7 @@ router.post(
       enableFileManager,
       defaultPath,
       tunnelConnections,
+      statsConfig,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -268,6 +269,7 @@ router.post(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
+      statsConfig: statsConfig || null,
     };
 
     if (effectiveAuthType === "password") {
@@ -322,6 +324,7 @@ router.post(
           ? JSON.parse(createdHost.tunnelConnections)
           : [],
         enableFileManager: !!createdHost.enableFileManager,
+        statsConfig: createdHost.statsConfig || undefined,
       };
 
       const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;

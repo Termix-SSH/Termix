@@ -210,16 +210,6 @@ export function HostManagerEditor({
         .default([]),
       enableFileManager: z.boolean().default(true),
       defaultPath: z.string().optional(),
-      statsConfig: z
-        .object({
-          enabled: z.boolean().default(true),
-          displayItems: z.object({
-            cpu: z.boolean().default(true),
-            memory: z.boolean().default(true),
-            disk: z.boolean().default(true),
-          }),
-        })
-        .optional(),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "password") {
@@ -302,14 +292,6 @@ export function HostManagerEditor({
       enableFileManager: true,
       defaultPath: "/",
       tunnelConnections: [],
-      statsConfig: {
-        enabled: true,
-        displayItems: {
-          cpu: true,
-          memory: true,
-          disk: true,
-        },
-      },
     },
   });
 
@@ -366,14 +348,6 @@ export function HostManagerEditor({
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
         tunnelConnections: cleanedHost.tunnelConnections || [],
-        statsConfig: cleanedHost.statsConfig
-          ? typeof cleanedHost.statsConfig === "string"
-            ? JSON.parse(cleanedHost.statsConfig)
-            : cleanedHost.statsConfig
-          : {
-              enabled: true,
-              displayItems: { cpu: true, memory: true, disk: true },
-            },
       };
 
       if (defaultAuthType === "password") {
@@ -409,10 +383,6 @@ export function HostManagerEditor({
         enableFileManager: true,
         defaultPath: "/",
         tunnelConnections: [],
-        statsConfig: {
-          enabled: true,
-          displayItems: { cpu: true, memory: true, disk: true },
-        },
       };
 
       form.reset(defaultFormData);
@@ -451,12 +421,6 @@ export function HostManagerEditor({
         enableFileManager: Boolean(data.enableFileManager),
         defaultPath: data.defaultPath || "/",
         tunnelConnections: data.tunnelConnections || [],
-        statsConfig: JSON.stringify(
-          data.statsConfig || {
-            enabled: true,
-            displayItems: { cpu: true, memory: true, disk: true },
-          },
-        ),
       };
 
       submitData.credentialId = null;
