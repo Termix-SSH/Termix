@@ -263,13 +263,15 @@ class UserCrypto {
 
       const newKekSalt = await this.generateKEKSalt();
       const newKEK = this.deriveKEK(newPassword, newKekSalt);
-      
+
       const newEncryptedDEK = this.encryptDEK(DEK, newKEK);
 
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      const { saveMemoryDatabaseToFile } = await import("../database/db/index.js");
+      const { saveMemoryDatabaseToFile } = await import(
+        "../database/db/index.js"
+      );
       await saveMemoryDatabaseToFile();
 
       oldKEK.fill(0);
@@ -282,7 +284,7 @@ class UserCrypto {
       if (oldSession) {
         oldSession.dataKey.fill(0);
       }
-      
+
       this.userSessions.set(userId, {
         dataKey: dekCopy,
         lastActivity: now,

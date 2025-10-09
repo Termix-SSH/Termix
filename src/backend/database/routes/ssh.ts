@@ -1412,7 +1412,9 @@ router.post(
             hostData.authType === "credential" ? hostData.credentialId : null,
           key: hostData.authType === "key" ? hostData.key : null,
           key_password:
-              hostData.authType === "key" ? (hostData.keyPassword || hostData.key_password || null) : null,
+            hostData.authType === "key"
+              ? hostData.keyPassword || hostData.key_password || null
+              : null,
           keyType:
             hostData.authType === "key" ? hostData.keyType || "auto" : null,
           pin: hostData.pin || false,

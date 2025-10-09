@@ -893,8 +893,7 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch (setupError) {
-    }
+    } catch (setupError) {}
 
     const dataUnlocked = await authManager.authenticateUser(
       userRecord.id,
@@ -1317,7 +1316,7 @@ router.post("/complete-reset", async (req, res) => {
 
     try {
       const hasActiveSession = authManager.isUserUnlocked(userId);
-      
+
       if (hasActiveSession) {
         const success = await authManager.resetUserPasswordWithPreservedDEK(
           userId,
