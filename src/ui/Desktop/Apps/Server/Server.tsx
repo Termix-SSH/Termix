@@ -27,8 +27,28 @@ import {
   SystemWidget,
 } from "./widgets";
 
+interface HostConfig {
+  id: number;
+  name: string;
+  ip: string;
+  username: string;
+  folder?: string;
+  enableFileManager?: boolean;
+  tunnelConnections?: unknown[];
+  statsConfig?: string | StatsConfig;
+  [key: string]: unknown;
+}
+
+interface TabData {
+  id: number;
+  type: string;
+  title?: string;
+  hostConfig?: HostConfig;
+  [key: string]: unknown;
+}
+
 interface ServerProps {
-  hostConfig?: any;
+  hostConfig?: HostConfig;
   title?: string;
   isVisible?: boolean;
   isTopbarOpen?: boolean;
@@ -44,7 +64,10 @@ export function Server({
 }: ServerProps): React.ReactElement {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
-  const { addTab, tabs } = useTabs() as any;
+  const { addTab, tabs } = useTabs() as {
+    addTab: (tab: { type: string; [key: string]: unknown }) => number;
+    tabs: TabData[];
+  };
   const [serverStatus, setServerStatus] = React.useState<"online" | "offline">(
     "offline",
   );
@@ -163,13 +186,16 @@ export function Server({
         if (!cancelled) {
           setServerStatus(res?.status === "online" ? "online" : "offline");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!cancelled) {
-          if (error?.response?.status === 503) {
+          const err = error as {
+            response?: { status?: number };
+          };
+          if (err?.response?.status === 503) {
             setServerStatus("offline");
-          } else if (error?.response?.status === 504) {
+          } else if (err?.response?.status === 504) {
             setServerStatus("offline");
-          } else if (error?.response?.status === 404) {
+          } else if (err?.response?.status === 404) {
             setServerStatus("offline");
           } else {
             setServerStatus("offline");
@@ -193,14 +219,18 @@ export function Server({
           });
           setShowStatsUI(true);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!cancelled) {
           setMetrics(null);
           setShowStatsUI(false);
+          const err = error as {
+            code?: string;
+            response?: { status?: number; data?: { error?: string } };
+          };
           if (
-            error?.code === "TOTP_REQUIRED" ||
-            (error?.response?.status === 403 &&
-              error?.response?.data?.error === "TOTP_REQUIRED")
+            err?.code === "TOTP_REQUIRED" ||
+            (err?.response?.status === 403 &&
+              err?.response?.data?.error === "TOTP_REQUIRED")
           ) {
             toast.error(t("serverStats.totpUnavailable"));
           } else {
@@ -236,7 +266,7 @@ export function Server({
   const isFileManagerAlreadyOpen = React.useMemo(() => {
     if (!currentHostConfig) return false;
     return tabs.some(
-      (tab: any) =>
+      (tab: TabData) =>
         tab.type === "file_manager" &&
         tab.hostConfig?.id === currentHostConfig.id,
     );
@@ -291,32 +321,37 @@ export function Server({
                     );
                     setMetrics(data);
                     setShowStatsUI(true);
-                  } catch (error: any) {
+                  } catch (error: unknown) {
+                    const err = error as {
+                      code?: string;
+                      status?: number;
+                      response?: { status?: number; data?: { error?: string } };
+                    };
                     if (
-                      error?.code === "TOTP_REQUIRED" ||
-                      (error?.response?.status === 403 &&
-                        error?.response?.data?.error === "TOTP_REQUIRED")
+                      err?.code === "TOTP_REQUIRED" ||
+                      (err?.response?.status === 403 &&
+                        err?.response?.data?.error === "TOTP_REQUIRED")
                     ) {
                       toast.error(t("serverStats.totpUnavailable"));
                       setMetrics(null);
                       setShowStatsUI(false);
                     } else if (
-                      error?.response?.status === 503 ||
-                      error?.status === 503
+                      err?.response?.status === 503 ||
+                      err?.status === 503
                     ) {
                       setServerStatus("offline");
                       setMetrics(null);
                       setShowStatsUI(false);
                     } else if (
-                      error?.response?.status === 504 ||
-                      error?.status === 504
+                      err?.response?.status === 504 ||
+                      err?.status === 504
                     ) {
                       setServerStatus("offline");
                       setMetrics(null);
                       setShowStatsUI(false);
                     } else if (
-                      error?.response?.status === 404 ||
-                      error?.status === 404
+                      err?.response?.status === 404 ||
+                      err?.status === 404
                     ) {
                       setServerStatus("offline");
                       setMetrics(null);
