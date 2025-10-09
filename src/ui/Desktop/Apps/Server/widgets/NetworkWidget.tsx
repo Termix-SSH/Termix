@@ -23,38 +23,40 @@ export function NetworkWidget({ metrics }: NetworkWidgetProps) {
         </h3>
       </div>
 
-      <div className="space-y-2 overflow-auto flex-1">
+      <div className="space-y-2.5 overflow-auto flex-1">
         {interfaces.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-            <WifiOff className="h-8 w-8 mb-2" />
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+            <WifiOff className="h-10 w-10 mb-3 opacity-50" />
             <p className="text-sm">{t("serverStats.noInterfacesFound")}</p>
           </div>
         ) : (
           interfaces.map((iface: any, index: number) => (
             <div
               key={index}
-              className="p-3 rounded-md bg-dark-bg/50 border border-dark-border/30"
+              className="p-3 rounded-lg bg-dark-bg/50 border border-dark-border/30 hover:bg-dark-bg/60 transition-colors"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Wifi
-                    className={`h-4 w-4 ${iface.state === "UP" ? "text-green-400" : "text-gray-400"}`}
+                    className={`h-4 w-4 ${iface.state === "UP" ? "text-green-400" : "text-gray-500"}`}
                   />
                   <span className="text-sm font-semibold text-white font-mono">
                     {iface.name}
                   </span>
                 </div>
                 <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
+                  className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                     iface.state === "UP"
                       ? "bg-green-500/20 text-green-400"
-                      : "bg-gray-500/20 text-gray-400"
+                      : "bg-gray-500/20 text-gray-500"
                   }`}
                 >
                   {iface.state}
                 </span>
               </div>
-              <div className="text-xs text-gray-400 font-mono">{iface.ip}</div>
+              <div className="text-xs text-gray-400 font-mono font-medium">
+                {iface.ip}
+              </div>
             </div>
           ))
         )}

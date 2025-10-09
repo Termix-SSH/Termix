@@ -22,38 +22,38 @@ export function SystemWidget({ metrics }: SystemWidgetProps) {
         </h3>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-start gap-3">
-          <Info className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+          <Info className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-gray-400 mb-1">
+            <p className="text-xs text-gray-400 mb-1.5">
               {t("serverStats.hostname")}
             </p>
-            <p className="text-sm text-white font-mono truncate">
+            <p className="text-sm text-white font-mono truncate font-medium">
               {system?.hostname || "N/A"}
             </p>
           </div>
         </div>
 
         <div className="flex items-start gap-3">
-          <Info className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+          <Info className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-gray-400 mb-1">
+            <p className="text-xs text-gray-400 mb-1.5">
               {t("serverStats.operatingSystem")}
             </p>
-            <p className="text-sm text-white font-mono truncate">
+            <p className="text-sm text-white font-mono truncate font-medium">
               {system?.os || "N/A"}
             </p>
           </div>
         </div>
 
         <div className="flex items-start gap-3">
-          <Info className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+          <Info className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-gray-400 mb-1">
+            <p className="text-xs text-gray-400 mb-1.5">
               {t("serverStats.kernel")}
             </p>
-            <p className="text-sm text-white font-mono truncate">
+            <p className="text-sm text-white font-mono truncate font-medium">
               {system?.kernel || "N/A"}
             </p>
           </div>

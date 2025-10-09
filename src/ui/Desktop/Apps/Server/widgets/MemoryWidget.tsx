@@ -34,7 +34,9 @@ export function MemoryWidget({ metrics, metricsHistory }: MemoryWidgetProps) {
     <div className="h-full w-full p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200 flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <MemoryStick className="h-5 w-5 text-green-400" />
-        <h3 className="font-semibold text-lg text-white">Memory Usage</h3>
+        <h3 className="font-semibold text-lg text-white">
+          {t("serverStats.memoryUsage")}
+        </h3>
       </div>
 
       <div className="flex flex-col flex-1 min-h-0 gap-2">
@@ -63,7 +65,7 @@ export function MemoryWidget({ metrics, metricsHistory }: MemoryWidgetProps) {
               typeof used === "number" && typeof total === "number"
                 ? (total - used).toFixed(1)
                 : "N/A";
-            return `Free: ${free} GiB`;
+            return `${t("serverStats.free")}: ${free} GiB`;
           })()}
         </div>
         <div className="flex-1 min-h-0">

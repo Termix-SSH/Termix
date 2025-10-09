@@ -34,7 +34,9 @@ export function CpuWidget({ metrics, metricsHistory }: CpuWidgetProps) {
     <div className="h-full w-full p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200 flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <Cpu className="h-5 w-5 text-blue-400" />
-        <h3 className="font-semibold text-lg text-white">CPU Usage</h3>
+        <h3 className="font-semibold text-lg text-white">
+          {t("serverStats.cpuUsage")}
+        </h3>
       </div>
 
       <div className="flex flex-col flex-1 min-h-0 gap-2">
@@ -52,8 +54,12 @@ export function CpuWidget({ metrics, metricsHistory }: CpuWidgetProps) {
         </div>
         <div className="text-xs text-gray-500 flex-shrink-0">
           {metrics?.cpu?.load
-            ? `Load: ${metrics.cpu.load[0].toFixed(2)} / ${metrics.cpu.load[1].toFixed(2)} / ${metrics.cpu.load[2].toFixed(2)}`
-            : "Load: N/A"}
+            ? t("serverStats.loadAverage", {
+                avg1: metrics.cpu.load[0].toFixed(2),
+                avg5: metrics.cpu.load[1].toFixed(2),
+                avg15: metrics.cpu.load[2].toFixed(2),
+              })
+            : t("serverStats.loadAverageNA")}
         </div>
         <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">

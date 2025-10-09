@@ -40,32 +40,30 @@ export function ProcessesWidget({ metrics }: ProcessesWidgetProps) {
 
       <div className="overflow-auto flex-1">
         {topProcesses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-            <Activity className="h-8 w-8 mb-2" />
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+            <Activity className="h-10 w-10 mb-3 opacity-50" />
             <p className="text-sm">{t("serverStats.noProcessesFound")}</p>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-2">
             {topProcesses.map((proc: any, index: number) => (
               <div
                 key={index}
-                className="p-2 rounded-md bg-dark-bg/30 hover:bg-dark-bg/50 transition-colors"
+                className="p-2.5 rounded-lg bg-dark-bg/30 hover:bg-dark-bg/50 transition-colors border border-dark-border/20"
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono text-gray-400">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-mono text-gray-400 font-medium">
                     PID: {proc.pid}
                   </span>
-                  <div className="flex gap-3 text-xs">
+                  <div className="flex gap-3 text-xs font-medium">
                     <span className="text-blue-400">CPU: {proc.cpu}%</span>
                     <span className="text-green-400">MEM: {proc.mem}%</span>
                   </div>
                 </div>
-                <div className="text-xs text-white font-mono truncate">
+                <div className="text-xs text-white font-mono truncate mb-1">
                   {proc.command}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  User: {proc.user}
-                </div>
+                <div className="text-xs text-gray-500">User: {proc.user}</div>
               </div>
             ))}
           </div>
