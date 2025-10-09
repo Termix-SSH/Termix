@@ -18,6 +18,18 @@ import { TabDropdown } from "@/ui/Desktop/Navigation/Tabs/TabDropdown.tsx";
 import { getCookie, setCookie } from "@/ui/main-axios.ts";
 import { SnippetsSidebar } from "@/ui/Desktop/Apps/Terminal/SnippetsSidebar.tsx";
 
+interface TabData {
+  id: number;
+  type: string;
+  title: string;
+  terminalRef?: {
+    current?: {
+      sendInput?: (data: string) => void;
+    };
+  };
+  [key: string]: unknown;
+}
+
 interface TopNavbarProps {
   isTopbarOpen: boolean;
   setIsTopbarOpen: (open: boolean) => void;
@@ -35,7 +47,14 @@ export function TopNavbar({
     setSplitScreenTab,
     removeTab,
     allSplitScreenTab,
-  } = useTabs() as any;
+  } = useTabs() as {
+    tabs: TabData[];
+    currentTab: number;
+    setCurrentTab: (id: number) => void;
+    setSplitScreenTab: (id: number) => void;
+    removeTab: (id: number) => void;
+    allSplitScreenTab: number[];
+  };
   const leftPosition = state === "collapsed" ? "26px" : "264px";
   const { t } = useTranslation();
 
@@ -192,7 +211,7 @@ export function TopNavbar({
 
     if (commandToSend) {
       selectedTabIds.forEach((tabId) => {
-        const tab = tabs.find((t: any) => t.id === tabId);
+        const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
           tab.terminalRef.current.sendInput(commandToSend);
         }
@@ -206,7 +225,7 @@ export function TopNavbar({
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
       const char = e.key;
       selectedTabIds.forEach((tabId) => {
-        const tab = tabs.find((t: any) => t.id === tabId);
+        const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
           tab.terminalRef.current.sendInput(char);
         }
@@ -215,7 +234,7 @@ export function TopNavbar({
   };
 
   const handleSnippetExecute = (content: string) => {
-    const tab = tabs.find((t: any) => t.id === currentTab);
+    const tab = tabs.find((t: TabData) => t.id === currentTab);
     if (tab?.terminalRef?.current?.sendInput) {
       tab.terminalRef.current.sendInput(content + "\n");
     }
@@ -223,13 +242,13 @@ export function TopNavbar({
 
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
-  const currentTabObj = tabs.find((t: any) => t.id === currentTab);
+  const currentTabObj = tabs.find((t: TabData) => t.id === currentTab);
   const currentTabIsHome = currentTabObj?.type === "home";
   const currentTabIsSshManager = currentTabObj?.type === "ssh_manager";
   const currentTabIsAdmin = currentTabObj?.type === "admin";
   const currentTabIsUserProfile = currentTabObj?.type === "user_profile";
 
-  const terminalTabs = tabs.filter((tab: any) => tab.type === "terminal");
+  const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
 
   const updateRightClickCopyPaste = (checked: boolean) => {
     setCookie("rightClickCopyPaste", checked.toString());
@@ -246,7 +265,7 @@ export function TopNavbar({
         }}
       >
         <div className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-2 thin-scrollbar">
-          {tabs.map((tab: any) => {
+          {tabs.map((tab: TabData) => {
             const isActive = tab.id === currentTab;
             const isSplit =
               Array.isArray(allSplitScreenTab) &&

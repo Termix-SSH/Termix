@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import type { AuthenticatedRequest } from "../../types/index.js";
 
 interface PooledConnection {
   client: Client;
@@ -237,7 +238,7 @@ class RequestQueue {
 }
 
 interface CachedMetrics {
-  data: any;
+  data: unknown;
   timestamp: number;
   hostId: number;
 }
@@ -246,7 +247,7 @@ class MetricsCache {
   private cache = new Map<number, CachedMetrics>();
   private ttl = 30000;
 
-  get(hostId: number): any | null {
+  get(hostId: number): unknown | null {
     const cached = this.cache.get(hostId);
     if (cached && Date.now() - cached.timestamp < this.ttl) {
       return cached.data;
@@ -254,7 +255,7 @@ class MetricsCache {
     return null;
   }
 
-  set(hostId: number, data: any): void {
+  set(hostId: number, data: unknown): void {
     this.cache.set(hostId, {
       data,
       timestamp: Date.now(),
@@ -297,7 +298,7 @@ interface SSHHostWithCredentials {
   enableTunnel: boolean;
   enableFileManager: boolean;
   defaultPath: string;
-  tunnelConnections: any[];
+  tunnelConnections: unknown[];
   statsConfig?: string;
   createdAt: string;
   updatedAt: string;
@@ -432,11 +433,11 @@ async function fetchHostById(
 }
 
 async function resolveHostCredentials(
-  host: any,
+  host: Record<string, unknown>,
   userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    const baseHost: any = {
+    const baseHost: Record<string, unknown> = {
       id: host.id,
       name: host.name,
       ip: host.ip,
@@ -456,7 +457,7 @@ async function resolveHostCredentials(
       enableFileManager: !!host.enableFileManager,
       defaultPath: host.defaultPath || "/",
       tunnelConnections: host.tunnelConnections
-        ? JSON.parse(host.tunnelConnections)
+        ? JSON.parse(host.tunnelConnections as string)
         : [],
       statsConfig: host.statsConfig || undefined,
       createdAt: host.createdAt,
@@ -472,7 +473,7 @@ async function resolveHostCredentials(
             .from(sshCredentials)
             .where(
               and(
-                eq(sshCredentials.id, host.credentialId),
+                eq(sshCredentials.id, host.credentialId as number),
                 eq(sshCredentials.userId, userId),
               ),
             ),
@@ -512,7 +513,7 @@ async function resolveHostCredentials(
       addLegacyCredentials(baseHost, host);
     }
 
-    return baseHost;
+    return baseHost as unknown as SSHHostWithCredentials;
   } catch (error) {
     statsLogger.error(
       `Failed to resolve host credentials for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -521,7 +522,10 @@ async function resolveHostCredentials(
   }
 }
 
-function addLegacyCredentials(baseHost: any, host: any): void {
+function addLegacyCredentials(
+  baseHost: Record<string, unknown>,
+  host: Record<string, unknown>,
+): void {
   baseHost.password = host.password || null;
   baseHost.key = host.key || null;
   baseHost.keyPassword = host.key_password || host.keyPassword || null;
@@ -573,7 +577,7 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     if (!host.password) {
       throw new Error(`No password available for host ${host.ip}`);
     }
-    (base as any).password = host.password;
+    (base as Record<string, unknown>).password = host.password;
   } else if (host.authType === "key") {
     if (!host.key) {
       throw new Error(`No SSH key available for host ${host.ip}`);
@@ -589,10 +593,13 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
         .replace(/\r\n/g, "\n")
         .replace(/\r/g, "\n");
 
-      (base as any).privateKey = Buffer.from(cleanKey, "utf8");
+      (base as Record<string, unknown>).privateKey = Buffer.from(
+        cleanKey,
+        "utf8",
+      );
 
       if (host.keyPassword) {
-        (base as any).passphrase = host.keyPassword;
+        (base as Record<string, unknown>).passphrase = host.keyPassword;
       }
     } catch (keyError) {
       statsLogger.error(
@@ -724,7 +731,9 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
 }> {
   const cached = metricsCache.get(host.id);
   if (cached) {
-    return cached;
+    return cached as ReturnType<typeof collectMetrics> extends Promise<infer T>
+      ? T
+      : never;
   }
 
   return requestQueue.queueRequest(host.id, async () => {
@@ -873,7 +882,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         }
 
         // Collect network interfaces
-        let interfaces: Array<{
+        const interfaces: Array<{
           name: string;
           ip: string;
           state: string;
@@ -958,7 +967,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         // Collect process information
         let totalProcesses: number | null = null;
         let runningProcesses: number | null = null;
-        let topProcesses: Array<{
+        const topProcesses: Array<{
           pid: string;
           user: string;
           cpu: string;
@@ -1145,7 +1154,7 @@ async function pollStatusesOnce(userId?: string): Promise<void> {
 }
 
 app.get("/status", async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
@@ -1166,7 +1175,7 @@ app.get("/status", async (req, res) => {
 
 app.get("/status/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
@@ -1197,7 +1206,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
 });
 
 app.post("/refresh", async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
@@ -1212,7 +1221,7 @@ app.post("/refresh", async (req, res) => {
 
 app.get("/metrics/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({

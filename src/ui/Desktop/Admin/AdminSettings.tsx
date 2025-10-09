@@ -107,7 +107,8 @@ export function AdminSettings({
 
   React.useEffect(() => {
     if (isElectron()) {
-      const serverUrl = (window as any).configuredServerUrl;
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
       if (!serverUrl) {
         return;
       }
@@ -127,7 +128,8 @@ export function AdminSettings({
 
   React.useEffect(() => {
     if (isElectron()) {
-      const serverUrl = (window as any).configuredServerUrl;
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
       if (!serverUrl) {
         return;
       }
@@ -148,7 +150,8 @@ export function AdminSettings({
 
   React.useEffect(() => {
     if (isElectron()) {
-      const serverUrl = (window as any).configuredServerUrl;
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
       if (!serverUrl) {
         return;
       }
@@ -169,7 +172,8 @@ export function AdminSettings({
 
   const fetchUsers = async () => {
     if (isElectron()) {
-      const serverUrl = (window as any).configuredServerUrl;
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
       if (!serverUrl) {
         return;
       }
@@ -234,9 +238,10 @@ export function AdminSettings({
     try {
       await updateOIDCConfig(oidcConfig);
       toast.success(t("admin.oidcConfigurationUpdated"));
-    } catch (err: any) {
+    } catch (err: unknown) {
       setOidcError(
-        err?.response?.data?.error || t("admin.failedToUpdateOidcConfig"),
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || t("admin.failedToUpdateOidcConfig"),
       );
     } finally {
       setOidcLoading(false);
@@ -257,9 +262,10 @@ export function AdminSettings({
       toast.success(t("admin.userIsNowAdmin", { username: newAdminUsername }));
       setNewAdminUsername("");
       fetchUsers();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMakeAdminError(
-        err?.response?.data?.error || t("admin.failedToMakeUserAdmin"),
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || t("admin.failedToMakeUserAdmin"),
       );
     } finally {
       setMakeAdminLoading(false);
@@ -272,7 +278,7 @@ export function AdminSettings({
         await removeAdminStatus(username);
         toast.success(t("admin.adminStatusRemoved", { username }));
         fetchUsers();
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast.error(t("admin.failedToRemoveAdminStatus"));
       }
     });
@@ -286,7 +292,7 @@ export function AdminSettings({
           await deleteUser(username);
           toast.success(t("admin.userDeletedSuccessfully", { username }));
           fetchUsers();
-        } catch (err: any) {
+        } catch (err: unknown) {
           toast.error(t("admin.failedToDeleteUser"));
         }
       },
@@ -316,7 +322,7 @@ export function AdminSettings({
           window.location.hostname === "127.0.0.1");
 
       const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/export`
+        ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/database/export`
         : isDev
           ? `http://localhost:30001/database/export`
           : `${window.location.protocol}//${window.location.host}/database/export`;
@@ -386,7 +392,7 @@ export function AdminSettings({
           window.location.hostname === "127.0.0.1");
 
       const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/import`
+        ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/database/import`
         : isDev
           ? `http://localhost:30001/database/import`
           : `${window.location.protocol}//${window.location.host}/database/import`;
@@ -713,9 +719,13 @@ export function AdminSettings({
                         try {
                           await disableOIDCConfig();
                           toast.success(t("admin.oidcConfigurationDisabled"));
-                        } catch (err: any) {
+                        } catch (err: unknown) {
                           setOidcError(
-                            err?.response?.data?.error ||
+                            (
+                              err as {
+                                response?: { data?: { error?: string } };
+                              }
+                            )?.response?.data?.error ||
                               t("admin.failedToDisableOidcConfig"),
                           );
                         } finally {

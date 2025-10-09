@@ -403,12 +403,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedCredentials = {
-            password: credential.password,
-            key:
-              credential.private_key || credential.privateKey || credential.key,
-            keyPassword: credential.key_password || credential.keyPassword,
-            keyType: credential.key_type || credential.keyType,
-            authType: credential.auth_type || credential.authType,
+            password: credential.password as string | undefined,
+            key: (credential.private_key ||
+              credential.privateKey ||
+              credential.key) as string | undefined,
+            keyPassword: (credential.key_password || credential.keyPassword) as
+              | string
+              | undefined,
+            keyType: (credential.key_type || credential.keyType) as
+              | string
+              | undefined,
+            authType: (credential.auth_type || credential.authType) as
+              | string
+              | undefined,
           };
         } else {
           sshLogger.warn(`No credentials found for host ${id}`, {
@@ -617,13 +624,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
         } else {
           if (resolvedCredentials.password) {
-            const responses = prompts.map(() => resolvedCredentials.password || "");
+            const responses = prompts.map(
+              () => resolvedCredentials.password || "",
+            );
             finish(responses);
           } else {
-            sshLogger.warn("Keyboard-interactive requires password but none available", {
-              operation: "ssh_keyboard_interactive_no_password",
-              hostId: id,
-            });
+            sshLogger.warn(
+              "Keyboard-interactive requires password but none available",
+              {
+                operation: "ssh_keyboard_interactive_no_password",
+                hostId: id,
+              },
+            );
             finish(prompts.map(() => ""));
           }
         }

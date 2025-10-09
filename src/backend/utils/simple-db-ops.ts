@@ -5,7 +5,8 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 type TableName = "users" | "ssh_data" | "ssh_credentials";
 
 class SimpleDBOps {
-  static async insert<T extends Record<string, any>>(
+  static async insert<T extends Record<string, unknown>>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     table: SQLiteTable<any>,
     tableName: TableName,
     data: T,
@@ -44,8 +45,8 @@ class SimpleDBOps {
     return decryptedResult as T;
   }
 
-  static async select<T extends Record<string, any>>(
-    query: any,
+  static async select<T extends Record<string, unknown>>(
+    query: unknown,
     tableName: TableName,
     userId: string,
   ): Promise<T[]> {
@@ -58,16 +59,16 @@ class SimpleDBOps {
 
     const decryptedResults = DataCrypto.decryptRecords(
       tableName,
-      results,
+      results as unknown[],
       userId,
       userDataKey,
     );
 
-    return decryptedResults;
+    return decryptedResults as T[];
   }
 
-  static async selectOne<T extends Record<string, any>>(
-    query: any,
+  static async selectOne<T extends Record<string, unknown>>(
+    query: unknown,
     tableName: TableName,
     userId: string,
   ): Promise<T | undefined> {
@@ -81,7 +82,7 @@ class SimpleDBOps {
 
     const decryptedResult = DataCrypto.decryptRecord(
       tableName,
-      result,
+      result as Record<string, unknown>,
       userId,
       userDataKey,
     );
@@ -89,10 +90,11 @@ class SimpleDBOps {
     return decryptedResult;
   }
 
-  static async update<T extends Record<string, any>>(
+  static async update<T extends Record<string, unknown>>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     table: SQLiteTable<any>,
     tableName: TableName,
-    where: any,
+    where: unknown,
     data: Partial<T>,
     userId: string,
   ): Promise<T[]> {
@@ -108,7 +110,8 @@ class SimpleDBOps {
     const result = await getDb()
       .update(table)
       .set(encryptedData)
-      .where(where)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .where(where as any)
       .returning();
 
     DatabaseSaveTrigger.triggerSave(`update_${tableName}`);
@@ -124,12 +127,17 @@ class SimpleDBOps {
   }
 
   static async delete(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     table: SQLiteTable<any>,
     tableName: TableName,
-    where: any,
+    where: unknown,
     _userId: string,
-  ): Promise<any[]> {
-    const result = await getDb().delete(table).where(where).returning();
+  ): Promise<unknown[]> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await getDb()
+      .delete(table)
+      .where(where as any)
+      .returning();
 
     DatabaseSaveTrigger.triggerSave(`delete_${tableName}`);
 
@@ -145,12 +153,12 @@ class SimpleDBOps {
   }
 
   static async selectEncrypted(
-    query: any,
+    query: unknown,
     _tableName: TableName,
-  ): Promise<any[]> {
+  ): Promise<unknown[]> {
     const results = await query;
 
-    return results;
+    return results as unknown[];
   }
 }
 

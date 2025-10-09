@@ -12,7 +12,7 @@ class DataCrypto {
 
   static encryptRecord(
     tableName: string,
-    record: any,
+    record: Record<string, unknown>,
     userId: string,
     userDataKey: Buffer,
   ): any {
@@ -24,7 +24,7 @@ class DataCrypto {
         encryptedRecord[fieldName] = FieldCrypto.encryptField(
           value as string,
           userDataKey,
-          recordId,
+          recordId as string,
           fieldName,
         );
       }
@@ -35,7 +35,7 @@ class DataCrypto {
 
   static decryptRecord(
     tableName: string,
-    record: any,
+    record: Record<string, unknown>,
     userId: string,
     userDataKey: Buffer,
   ): any {
@@ -49,7 +49,7 @@ class DataCrypto {
         decryptedRecord[fieldName] = LazyFieldEncryption.safeGetFieldValue(
           value as string,
           userDataKey,
-          recordId,
+          recordId as string,
           fieldName,
         );
       }
@@ -60,13 +60,18 @@ class DataCrypto {
 
   static decryptRecords(
     tableName: string,
-    records: any[],
+    records: unknown[],
     userId: string,
     userDataKey: Buffer,
-  ): any[] {
+  ): unknown[] {
     if (!Array.isArray(records)) return records;
     return records.map((record) =>
-      this.decryptRecord(tableName, record, userId, userDataKey),
+      this.decryptRecord(
+        tableName,
+        record as Record<string, unknown>,
+        userId,
+        userDataKey,
+      ),
     );
   }
 
@@ -386,7 +391,7 @@ class DataCrypto {
 
   static encryptRecordForUser(
     tableName: string,
-    record: any,
+    record: Record<string, unknown>,
     userId: string,
   ): any {
     const userDataKey = this.validateUserAccess(userId);
@@ -395,7 +400,7 @@ class DataCrypto {
 
   static decryptRecordForUser(
     tableName: string,
-    record: any,
+    record: Record<string, unknown>,
     userId: string,
   ): any {
     const userDataKey = this.validateUserAccess(userId);
@@ -404,9 +409,9 @@ class DataCrypto {
 
   static decryptRecordsForUser(
     tableName: string,
-    records: any[],
+    records: unknown[],
     userId: string,
-  ): any[] {
+  ): unknown[] {
     const userDataKey = this.validateUserAccess(userId);
     return this.decryptRecords(tableName, records, userId, userDataKey);
   }

@@ -1,22 +1,49 @@
+interface ServerConfig {
+  serverUrl?: string;
+  [key: string]: unknown;
+}
+
+interface ConnectionTestResult {
+  success: boolean;
+  error?: string;
+  [key: string]: unknown;
+}
+
+interface DialogOptions {
+  title?: string;
+  defaultPath?: string;
+  buttonLabel?: string;
+  filters?: Array<{ name: string; extensions: string[] }>;
+  properties?: string[];
+  [key: string]: unknown;
+}
+
+interface DialogResult {
+  canceled: boolean;
+  filePath?: string;
+  filePaths?: string[];
+  [key: string]: unknown;
+}
+
 export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
 
-  getServerConfig: () => Promise<any>;
-  saveServerConfig: (config: any) => Promise<any>;
-  testServerConnection: (serverUrl: string) => Promise<any>;
+  getServerConfig: () => Promise<ServerConfig>;
+  saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;
+  testServerConnection: (serverUrl: string) => Promise<ConnectionTestResult>;
 
-  showSaveDialog: (options: any) => Promise<any>;
-  showOpenDialog: (options: any) => Promise<any>;
+  showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;
+  showOpenDialog: (options: DialogOptions) => Promise<DialogResult>;
 
-  onUpdateAvailable: (callback: Function) => void;
-  onUpdateDownloaded: (callback: Function) => void;
+  onUpdateAvailable: (callback: () => void) => void;
+  onUpdateDownloaded: (callback: () => void) => void;
 
   removeAllListeners: (channel: string) => void;
   isElectron: boolean;
   isDev: boolean;
 
-  invoke: (channel: string, ...args: any[]) => Promise<any>;
+  invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
 
   createTempFile: (fileData: {
     fileName: string;

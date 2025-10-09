@@ -95,8 +95,22 @@ interface OIDCAuthorize {
 
 export function isElectron(): boolean {
   return (
-    (window as any).IS_ELECTRON === true ||
-    (window as any).electronAPI?.isElectron === true
+    (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: unknown;
+          configuredServerUrl?: string;
+        }
+    ).IS_ELECTRON === true ||
+    (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: unknown;
+          configuredServerUrl?: string;
+        }
+    ).electronAPI?.isElectron === true
   );
 }
 
@@ -154,8 +168,8 @@ function createApiInstance(
     const startTime = performance.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    (config as any).startTime = startTime;
-    (config as any).requestId = requestId;
+    (config as Record<string, unknown>).startTime = startTime;
+    (config as Record<string, unknown>).requestId = requestId;
 
     const method = config.method?.toUpperCase() || "UNKNOWN";
     const url = config.url || "UNKNOWN";
@@ -189,8 +203,8 @@ function createApiInstance(
   instance.interceptors.response.use(
     (response) => {
       const endTime = performance.now();
-      const startTime = (response.config as any).startTime;
-      const requestId = (response.config as any).requestId;
+      const startTime = (response.config as Record<string, unknown>).startTime;
+      const requestId = (response.config as Record<string, unknown>).requestId;
       const responseTime = Math.round(endTime - startTime);
 
       const method = response.config.method?.toUpperCase() || "UNKNOWN";
@@ -227,8 +241,10 @@ function createApiInstance(
     },
     (error: AxiosError) => {
       const endTime = performance.now();
-      const startTime = (error.config as any)?.startTime;
-      const requestId = (error.config as any)?.requestId;
+      const startTime = (error.config as Record<string, unknown> | undefined)
+        ?.startTime;
+      const requestId = (error.config as Record<string, unknown> | undefined)
+        ?.requestId;
       const responseTime = startTime
         ? Math.round(endTime - startTime)
         : undefined;
@@ -238,10 +254,11 @@ function createApiInstance(
       const fullUrl = error.config ? `${error.config.baseURL}${url}` : url;
       const status = error.response?.status;
       const message =
-        (error.response?.data as any)?.error ||
+        (error.response?.data as Record<string, unknown>)?.error ||
         (error as Error).message ||
         "Unknown error";
-      const errorCode = (error.response?.data as any)?.code || error.code;
+      const errorCode =
+        (error.response?.data as Record<string, unknown>)?.code || error.code;
 
       const context: LogContext = {
         requestId,
@@ -274,7 +291,8 @@ function createApiInstance(
       }
 
       if (status === 401) {
-        const errorCode = (error.response?.data as any)?.code;
+        const errorCode = (error.response?.data as Record<string, unknown>)
+          ?.code;
         const isSessionExpired = errorCode === "SESSION_EXPIRED";
 
         if (isElectron()) {
@@ -337,9 +355,14 @@ export async function getServerConfig(): Promise<ServerConfig | null> {
   if (!isElectron()) return null;
 
   try {
-    const result = await (window as any).electronAPI?.invoke(
-      "get-server-config",
-    );
+    const result = await (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: unknown;
+          configuredServerUrl?: string;
+        }
+    ).electronAPI?.invoke("get-server-config");
     return result;
   } catch (error) {
     console.error("Failed to get server config:", error);
@@ -351,13 +374,24 @@ export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
   if (!isElectron()) return false;
 
   try {
-    const result = await (window as any).electronAPI?.invoke(
-      "save-server-config",
-      config,
-    );
+    const result = await (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: unknown;
+          configuredServerUrl?: string;
+        }
+    ).electronAPI?.invoke("save-server-config", config);
     if (result?.success) {
       configuredServerUrl = config.serverUrl;
-      (window as any).configuredServerUrl = configuredServerUrl;
+      (
+        window as Window &
+          typeof globalThis & {
+            IS_ELECTRON?: boolean;
+            electronAPI?: unknown;
+            configuredServerUrl?: string;
+          }
+      ).configuredServerUrl = configuredServerUrl;
       updateApiInstances();
       return true;
     }
@@ -375,10 +409,14 @@ export async function testServerConnection(
     return { success: false, error: "Not in Electron environment" };
 
   try {
-    const result = await (window as any).electronAPI?.invoke(
-      "test-server-connection",
-      serverUrl,
-    );
+    const result = await (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: unknown;
+          configuredServerUrl?: string;
+        }
+    ).electronAPI?.invoke("test-server-connection", serverUrl);
     return result;
   } catch (error) {
     console.error("Failed to test server connection:", error);
@@ -406,9 +444,14 @@ export async function checkElectronUpdate(): Promise<{
     return { success: false, error: "Not in Electron environment" };
 
   try {
-    const result = await (window as any).electronAPI?.invoke(
-      "check-electron-update",
-    );
+    const result = await (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: unknown;
+          configuredServerUrl?: string;
+        }
+    ).electronAPI?.invoke("check-electron-update");
     return result;
   } catch (error) {
     console.error("Failed to check Electron update:", error);
@@ -472,7 +515,14 @@ if (isElectron()) {
     .then((config) => {
       if (config?.serverUrl) {
         configuredServerUrl = config.serverUrl;
-        (window as any).configuredServerUrl = configuredServerUrl;
+        (
+          window as Window &
+            typeof globalThis & {
+              IS_ELECTRON?: boolean;
+              electronAPI?: unknown;
+              configuredServerUrl?: string;
+            }
+        ).configuredServerUrl = configuredServerUrl;
       }
       initializeApiInstances();
     })
@@ -495,7 +545,14 @@ function updateApiInstances() {
 
   initializeApiInstances();
 
-  (window as any).configuredServerUrl = configuredServerUrl;
+  (
+    window as Window &
+      typeof globalThis & {
+        IS_ELECTRON?: boolean;
+        electronAPI?: unknown;
+        configuredServerUrl?: string;
+      }
+  ).configuredServerUrl = configuredServerUrl;
 
   systemLogger.success("All API instances updated successfully", {
     operation: "api_instance_update_complete",
@@ -564,7 +621,7 @@ function handleApiError(error: unknown, operation: string): never {
         403,
         code || "ACCESS_DENIED",
       );
-      (apiError as any).response = error.response;
+      (apiError as ApiError & { response?: unknown }).response = error.response;
       throw apiError;
     } else if (status === 404) {
       apiLogger.warn(`Not found: ${method} ${url}`, errorContext);
@@ -788,7 +845,9 @@ export async function bulkImportSSHHosts(hosts: SSHHostData[]): Promise<{
   }
 }
 
-export async function deleteSSHHost(hostId: number): Promise<any> {
+export async function deleteSSHHost(
+  hostId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.delete(`/db/host/${hostId}`);
     return response.data;
@@ -821,7 +880,9 @@ export async function exportSSHHostWithCredentials(
 // SSH AUTOSTART MANAGEMENT
 // ============================================================================
 
-export async function enableAutoStart(sshConfigId: number): Promise<any> {
+export async function enableAutoStart(
+  sshConfigId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.post("/autostart/enable", {
       sshConfigId,
@@ -832,7 +893,9 @@ export async function enableAutoStart(sshConfigId: number): Promise<any> {
   }
 }
 
-export async function disableAutoStart(sshConfigId: number): Promise<any> {
+export async function disableAutoStart(
+  sshConfigId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.delete("/autostart/disable", {
       data: { sshConfigId },
@@ -883,7 +946,9 @@ export async function getTunnelStatusByName(
   return statuses[tunnelName];
 }
 
-export async function connectTunnel(tunnelConfig: TunnelConfig): Promise<any> {
+export async function connectTunnel(
+  tunnelConfig: TunnelConfig,
+): Promise<Record<string, unknown>> {
   try {
     const response = await tunnelApi.post("/tunnel/connect", tunnelConfig);
     return response.data;
@@ -892,7 +957,9 @@ export async function connectTunnel(tunnelConfig: TunnelConfig): Promise<any> {
   }
 }
 
-export async function disconnectTunnel(tunnelName: string): Promise<any> {
+export async function disconnectTunnel(
+  tunnelName: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await tunnelApi.post("/tunnel/disconnect", { tunnelName });
     return response.data;
@@ -901,7 +968,9 @@ export async function disconnectTunnel(tunnelName: string): Promise<any> {
   }
 }
 
-export async function cancelTunnel(tunnelName: string): Promise<any> {
+export async function cancelTunnel(
+  tunnelName: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await tunnelApi.post("/tunnel/cancel", { tunnelName });
     return response.data;
@@ -929,7 +998,7 @@ export async function getFileManagerRecent(
 
 export async function addFileManagerRecent(
   file: FileManagerOperation,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.post("/file_manager/recent", file);
     return response.data;
@@ -940,7 +1009,7 @@ export async function addFileManagerRecent(
 
 export async function removeFileManagerRecent(
   file: FileManagerOperation,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.delete("/file_manager/recent", {
       data: file,
@@ -966,7 +1035,7 @@ export async function getFileManagerPinned(
 
 export async function addFileManagerPinned(
   file: FileManagerOperation,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.post("/file_manager/pinned", file);
     return response.data;
@@ -977,7 +1046,7 @@ export async function addFileManagerPinned(
 
 export async function removeFileManagerPinned(
   file: FileManagerOperation,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.delete("/file_manager/pinned", {
       data: file,
@@ -1003,7 +1072,7 @@ export async function getFileManagerShortcuts(
 
 export async function addFileManagerShortcut(
   shortcut: FileManagerOperation,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.post("/file_manager/shortcuts", shortcut);
     return response.data;
@@ -1014,7 +1083,7 @@ export async function addFileManagerShortcut(
 
 export async function removeFileManagerShortcut(
   shortcut: FileManagerOperation,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.delete("/file_manager/shortcuts", {
       data: shortcut,
@@ -1043,7 +1112,7 @@ export async function connectSSH(
     credentialId?: number;
     userId?: string;
   },
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/connect", {
       sessionId,
@@ -1055,7 +1124,9 @@ export async function connectSSH(
   }
 }
 
-export async function disconnectSSH(sessionId: string): Promise<any> {
+export async function disconnectSSH(
+  sessionId: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/disconnect", {
       sessionId,
@@ -1069,7 +1140,7 @@ export async function disconnectSSH(sessionId: string): Promise<any> {
 export async function verifySSHTOTP(
   sessionId: string,
   totpCode: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/connect-totp", {
       sessionId,
@@ -1094,7 +1165,9 @@ export async function getSSHStatus(
   }
 }
 
-export async function keepSSHAlive(sessionId: string): Promise<any> {
+export async function keepSSHAlive(
+  sessionId: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/keepalive", {
       sessionId,
@@ -1108,7 +1181,7 @@ export async function keepSSHAlive(sessionId: string): Promise<any> {
 export async function listSSHFiles(
   sessionId: string,
   path: string,
-): Promise<{ files: any[]; path: string }> {
+): Promise<{ files: unknown[]; path: string }> {
   try {
     const response = await fileManagerApi.get("/ssh/listFiles", {
       params: { sessionId, path },
@@ -1143,12 +1216,15 @@ export async function readSSHFile(
       params: { sessionId, path },
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error.response?.status === 404) {
       const customError = new Error("File not found");
-      (customError as any).response = error.response;
-      (customError as any).isFileNotFound =
-        error.response.data?.fileNotFound || true;
+      (
+        customError as Error & { response?: unknown; isFileNotFound?: boolean }
+      ).response = error.response;
+      (
+        customError as Error & { response?: unknown; isFileNotFound?: boolean }
+      ).isFileNotFound = error.response.data?.fileNotFound || true;
       throw customError;
     }
     handleApiError(error, "read SSH file");
@@ -1161,7 +1237,7 @@ export async function writeSSHFile(
   content: string,
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/writeFile", {
       sessionId,
@@ -1192,7 +1268,7 @@ export async function uploadSSHFile(
   content: string,
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/uploadFile", {
       sessionId,
@@ -1213,7 +1289,7 @@ export async function downloadSSHFile(
   filePath: string,
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/downloadFile", {
       sessionId,
@@ -1234,7 +1310,7 @@ export async function createSSHFile(
   content: string = "",
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/createFile", {
       sessionId,
@@ -1256,7 +1332,7 @@ export async function createSSHFolder(
   folderName: string,
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post("/ssh/createFolder", {
       sessionId,
@@ -1277,7 +1353,7 @@ export async function deleteSSHItem(
   isDirectory: boolean,
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.delete("/ssh/deleteItem", {
       data: {
@@ -1300,7 +1376,7 @@ export async function copySSHItem(
   targetDir: string,
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.post(
       "/ssh/copyItem",
@@ -1328,7 +1404,7 @@ export async function renameSSHItem(
   newName: string,
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.put("/ssh/renameItem", {
       sessionId,
@@ -1350,7 +1426,7 @@ export async function moveSSHItem(
   newPath: string,
   hostId?: number,
   userId?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await fileManagerApi.put(
       "/ssh/moveItem",
@@ -1377,7 +1453,9 @@ export async function moveSSHItem(
 // ============================================================================
 
 // Recent Files
-export async function getRecentFiles(hostId: number): Promise<any> {
+export async function getRecentFiles(
+  hostId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/ssh/file_manager/recent", {
       params: { hostId },
@@ -1393,7 +1471,7 @@ export async function addRecentFile(
   hostId: number,
   path: string,
   name?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/ssh/file_manager/recent", {
       hostId,
@@ -1410,7 +1488,7 @@ export async function addRecentFile(
 export async function removeRecentFile(
   hostId: number,
   path: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete("/ssh/file_manager/recent", {
       data: { hostId, path },
@@ -1422,7 +1500,9 @@ export async function removeRecentFile(
   }
 }
 
-export async function getPinnedFiles(hostId: number): Promise<any> {
+export async function getPinnedFiles(
+  hostId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/ssh/file_manager/pinned", {
       params: { hostId },
@@ -1438,7 +1518,7 @@ export async function addPinnedFile(
   hostId: number,
   path: string,
   name?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/ssh/file_manager/pinned", {
       hostId,
@@ -1455,7 +1535,7 @@ export async function addPinnedFile(
 export async function removePinnedFile(
   hostId: number,
   path: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete("/ssh/file_manager/pinned", {
       data: { hostId, path },
@@ -1467,7 +1547,9 @@ export async function removePinnedFile(
   }
 }
 
-export async function getFolderShortcuts(hostId: number): Promise<any> {
+export async function getFolderShortcuts(
+  hostId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/ssh/file_manager/shortcuts", {
       params: { hostId },
@@ -1483,7 +1565,7 @@ export async function addFolderShortcut(
   hostId: number,
   path: string,
   name?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/ssh/file_manager/shortcuts", {
       hostId,
@@ -1500,7 +1582,7 @@ export async function addFolderShortcut(
 export async function removeFolderShortcut(
   hostId: number,
   path: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete("/ssh/file_manager/shortcuts", {
       data: { hostId, path },
@@ -1552,7 +1634,7 @@ export async function getServerMetricsById(id: number): Promise<ServerMetrics> {
 export async function registerUser(
   username: string,
   password: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/create", {
       username,
@@ -1638,11 +1720,11 @@ export async function getPasswordLoginAllowed(): Promise<{ allowed: boolean }> {
   }
 }
 
-export async function getOIDCConfig(): Promise<any> {
+export async function getOIDCConfig(): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/users/oidc-config");
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.warn(
       "Failed to fetch OIDC config:",
       error.response?.data?.error || error.message,
@@ -1669,7 +1751,9 @@ export async function getUserCount(): Promise<UserCount> {
   }
 }
 
-export async function initiatePasswordReset(username: string): Promise<any> {
+export async function initiatePasswordReset(
+  username: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/initiate-reset", { username });
     return response.data;
@@ -1681,7 +1765,7 @@ export async function initiatePasswordReset(username: string): Promise<any> {
 export async function verifyPasswordResetCode(
   username: string,
   resetCode: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/verify-reset-code", {
       username,
@@ -1697,7 +1781,7 @@ export async function completePasswordReset(
   username: string,
   tempToken: string,
   newPassword: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/complete-reset", {
       username,
@@ -1732,7 +1816,9 @@ export async function getUserList(): Promise<{ users: UserInfo[] }> {
   }
 }
 
-export async function makeUserAdmin(username: string): Promise<any> {
+export async function makeUserAdmin(
+  username: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/make-admin", { username });
     return response.data;
@@ -1741,7 +1827,9 @@ export async function makeUserAdmin(username: string): Promise<any> {
   }
 }
 
-export async function removeAdminStatus(username: string): Promise<any> {
+export async function removeAdminStatus(
+  username: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/remove-admin", { username });
     return response.data;
@@ -1750,7 +1838,9 @@ export async function removeAdminStatus(username: string): Promise<any> {
   }
 }
 
-export async function deleteUser(username: string): Promise<any> {
+export async function deleteUser(
+  username: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete("/users/delete-user", {
       data: { username },
@@ -1761,7 +1851,9 @@ export async function deleteUser(username: string): Promise<any> {
   }
 }
 
-export async function deleteAccount(password: string): Promise<any> {
+export async function deleteAccount(
+  password: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete("/users/delete-account", {
       data: { password },
@@ -1774,7 +1866,7 @@ export async function deleteAccount(password: string): Promise<any> {
 
 export async function updateRegistrationAllowed(
   allowed: boolean,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.patch("/users/registration-allowed", {
       allowed,
@@ -1798,7 +1890,9 @@ export async function updatePasswordLoginAllowed(
   }
 }
 
-export async function updateOIDCConfig(config: any): Promise<any> {
+export async function updateOIDCConfig(
+  config: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/oidc-config", config);
     return response.data;
@@ -1807,7 +1901,7 @@ export async function updateOIDCConfig(config: any): Promise<any> {
   }
 }
 
-export async function disableOIDCConfig(): Promise<any> {
+export async function disableOIDCConfig(): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete("/users/oidc-config");
     return response.data;
@@ -1893,7 +1987,9 @@ export async function generateBackupCodes(
   }
 }
 
-export async function getUserAlerts(): Promise<{ alerts: any[] }> {
+export async function getUserAlerts(): Promise<{
+  alerts: Array<Record<string, unknown>>;
+}> {
   try {
     const response = await authApi.get(`/alerts`);
     return response.data;
@@ -1902,7 +1998,9 @@ export async function getUserAlerts(): Promise<{ alerts: any[] }> {
   }
 }
 
-export async function dismissAlert(alertId: string): Promise<any> {
+export async function dismissAlert(
+  alertId: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/alerts/dismiss", { alertId });
     return response.data;
@@ -1915,7 +2013,9 @@ export async function dismissAlert(alertId: string): Promise<any> {
 // UPDATES & RELEASES
 // ============================================================================
 
-export async function getReleasesRSS(perPage: number = 100): Promise<any> {
+export async function getReleasesRSS(
+  perPage: number = 100,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get(`/releases/rss?per_page=${perPage}`);
     return response.data;
@@ -1924,7 +2024,7 @@ export async function getReleasesRSS(perPage: number = 100): Promise<any> {
   }
 }
 
-export async function getVersionInfo(): Promise<any> {
+export async function getVersionInfo(): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/version");
     return response.data;
@@ -1937,7 +2037,7 @@ export async function getVersionInfo(): Promise<any> {
 // DATABASE HEALTH
 // ============================================================================
 
-export async function getDatabaseHealth(): Promise<any> {
+export async function getDatabaseHealth(): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/users/db-health");
     return response.data;
@@ -1950,7 +2050,7 @@ export async function getDatabaseHealth(): Promise<any> {
 // SSH CREDENTIALS MANAGEMENT
 // ============================================================================
 
-export async function getCredentials(): Promise<any> {
+export async function getCredentials(): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/credentials");
     return response.data;
@@ -1959,7 +2059,9 @@ export async function getCredentials(): Promise<any> {
   }
 }
 
-export async function getCredentialDetails(credentialId: number): Promise<any> {
+export async function getCredentialDetails(
+  credentialId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get(`/credentials/${credentialId}`);
     return response.data;
@@ -1968,7 +2070,9 @@ export async function getCredentialDetails(credentialId: number): Promise<any> {
   }
 }
 
-export async function createCredential(credentialData: any): Promise<any> {
+export async function createCredential(
+  credentialData: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/credentials", credentialData);
     return response.data;
@@ -1979,8 +2083,8 @@ export async function createCredential(credentialData: any): Promise<any> {
 
 export async function updateCredential(
   credentialId: number,
-  credentialData: any,
-): Promise<any> {
+  credentialData: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.put(
       `/credentials/${credentialId}`,
@@ -1992,7 +2096,9 @@ export async function updateCredential(
   }
 }
 
-export async function deleteCredential(credentialId: number): Promise<any> {
+export async function deleteCredential(
+  credentialId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete(`/credentials/${credentialId}`);
     return response.data;
@@ -2001,7 +2107,9 @@ export async function deleteCredential(credentialId: number): Promise<any> {
   }
 }
 
-export async function getCredentialHosts(credentialId: number): Promise<any> {
+export async function getCredentialHosts(
+  credentialId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get(`/credentials/${credentialId}/hosts`);
     return response.data;
@@ -2010,7 +2118,7 @@ export async function getCredentialHosts(credentialId: number): Promise<any> {
   }
 }
 
-export async function getCredentialFolders(): Promise<any> {
+export async function getCredentialFolders(): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/credentials/folders");
     return response.data;
@@ -2019,7 +2127,9 @@ export async function getCredentialFolders(): Promise<any> {
   }
 }
 
-export async function getSSHHostWithCredentials(hostId: number): Promise<any> {
+export async function getSSHHostWithCredentials(
+  hostId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.get(
       `/db/host/${hostId}/with-credentials`,
@@ -2033,7 +2143,7 @@ export async function getSSHHostWithCredentials(hostId: number): Promise<any> {
 export async function applyCredentialToHost(
   hostId: number,
   credentialId: number,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.post(
       `/db/host/${hostId}/apply-credential`,
@@ -2045,7 +2155,9 @@ export async function applyCredentialToHost(
   }
 }
 
-export async function removeCredentialFromHost(hostId: number): Promise<any> {
+export async function removeCredentialFromHost(
+  hostId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.delete(`/db/host/${hostId}/credential`);
     return response.data;
@@ -2057,7 +2169,7 @@ export async function removeCredentialFromHost(hostId: number): Promise<any> {
 export async function migrateHostToCredential(
   hostId: number,
   credentialName: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.post(
       `/db/host/${hostId}/migrate-to-credential`,
@@ -2073,7 +2185,7 @@ export async function migrateHostToCredential(
 // SSH FOLDER MANAGEMENT
 // ============================================================================
 
-export async function getFoldersWithStats(): Promise<any> {
+export async function getFoldersWithStats(): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/ssh/db/folders/with-stats");
     return response.data;
@@ -2085,7 +2197,7 @@ export async function getFoldersWithStats(): Promise<any> {
 export async function renameFolder(
   oldName: string,
   newName: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.put("/ssh/folders/rename", {
       oldName,
@@ -2100,7 +2212,7 @@ export async function renameFolder(
 export async function renameCredentialFolder(
   oldName: string,
   newName: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.put("/credentials/folders/rename", {
       oldName,
@@ -2115,7 +2227,7 @@ export async function renameCredentialFolder(
 export async function detectKeyType(
   privateKey: string,
   keyPassword?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/credentials/detect-key-type", {
       privateKey,
@@ -2127,7 +2239,9 @@ export async function detectKeyType(
   }
 }
 
-export async function detectPublicKeyType(publicKey: string): Promise<any> {
+export async function detectPublicKeyType(
+  publicKey: string,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/credentials/detect-public-key-type", {
       publicKey,
@@ -2142,7 +2256,7 @@ export async function validateKeyPair(
   privateKey: string,
   publicKey: string,
   keyPassword?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/credentials/validate-key-pair", {
       privateKey,
@@ -2158,7 +2272,7 @@ export async function validateKeyPair(
 export async function generatePublicKeyFromPrivate(
   privateKey: string,
   keyPassword?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/credentials/generate-public-key", {
       privateKey,
@@ -2174,7 +2288,7 @@ export async function generateKeyPair(
   keyType: "ssh-ed25519" | "ssh-rsa" | "ecdsa-sha2-nistp256",
   keySize?: number,
   passphrase?: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/credentials/generate-key-pair", {
       keyType,
@@ -2190,7 +2304,7 @@ export async function generateKeyPair(
 export async function deployCredentialToHost(
   credentialId: number,
   targetHostId: number,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post(
       `/credentials/${credentialId}/deploy-to-host`,
@@ -2206,7 +2320,7 @@ export async function deployCredentialToHost(
 // SNIPPETS API
 // ============================================================================
 
-export async function getSnippets(): Promise<any> {
+export async function getSnippets(): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.get("/snippets");
     return response.data;
@@ -2215,7 +2329,9 @@ export async function getSnippets(): Promise<any> {
   }
 }
 
-export async function createSnippet(snippetData: any): Promise<any> {
+export async function createSnippet(
+  snippetData: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/snippets", snippetData);
     return response.data;
@@ -2226,8 +2342,8 @@ export async function createSnippet(snippetData: any): Promise<any> {
 
 export async function updateSnippet(
   snippetId: number,
-  snippetData: any,
-): Promise<any> {
+  snippetData: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.put(`/snippets/${snippetId}`, snippetData);
     return response.data;
@@ -2236,7 +2352,9 @@ export async function updateSnippet(
   }
 }
 
-export async function deleteSnippet(snippetId: number): Promise<any> {
+export async function deleteSnippet(
+  snippetId: number,
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete(`/snippets/${snippetId}`);
     return response.data;

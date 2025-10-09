@@ -311,10 +311,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         setFiles(files);
         clearSelection();
         initialLoadDoneRef.current = true;
-      } catch (dirError: any) {
+      } catch (dirError: unknown) {
         console.error("Failed to load initial directory:", dirError);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("SSH connection failed:", error);
       handleCloseWithError(
         t("fileManager.failedToConnect") + ": " + (error.message || error),
@@ -353,7 +353,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
         setFiles(files);
         clearSelection();
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (currentLoadingPathRef.current === path) {
           console.error("Failed to load directory:", error);
 
@@ -535,7 +535,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         t("fileManager.fileUploadedSuccessfully", { name: file.name }),
       );
       handleRefreshDirectory();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.dismiss(progressToast);
 
       if (
@@ -584,7 +584,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (
         error.message?.includes("connection") ||
         error.message?.includes("established")
@@ -665,7 +665,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           );
           handleRefreshDirectory();
           clearSelection();
-        } catch (error: any) {
+        } catch (error: unknown) {
           if (
             error.message?.includes("connection") ||
             error.message?.includes("established")
@@ -775,7 +775,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           component: createWindowComponent,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -914,7 +914,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
               successCount++;
             }
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error(`Failed to ${operation} file ${file.name}:`, error);
           toast.error(
             t("fileManager.operationFailed", {
@@ -1015,7 +1015,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       if (operation === "cut") {
         setClipboard(null);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(
         `${t("fileManager.pasteFailed")}: ${error.message || t("fileManager.unknownError")}`,
       );
@@ -1050,7 +1050,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                   currentHost?.userId?.toString(),
                 );
                 successCount++;
-              } catch (error: any) {
+              } catch (error: unknown) {
                 console.error(
                   `Failed to delete copied file ${copiedFile.targetName}:`,
                   error,
@@ -1092,7 +1092,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                   currentHost?.userId?.toString(),
                 );
                 successCount++;
-              } catch (error: any) {
+              } catch (error: unknown) {
                 console.error(
                   `Failed to move back file ${movedFile.targetName}:`,
                   error,
@@ -1132,7 +1132,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
 
       handleRefreshDirectory();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(
         `${t("fileManager.undoOperationFailed")}: ${error.message || t("fileManager.unknownError")}`,
       );
@@ -1204,7 +1204,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       setCreateIntent(null);
       handleRefreshDirectory();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Create failed:", error);
       toast.error(t("fileManager.failedToCreateItem"));
     }
@@ -1233,7 +1233,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       );
       setEditingFile(null);
       handleRefreshDirectory();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Rename failed:", error);
       toast.error(t("fileManager.failedToRenameItem"));
     }
@@ -1269,11 +1269,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           clearSelection();
           initialLoadDoneRef.current = true;
           toast.success(t("fileManager.connectedSuccessfully"));
-        } catch (dirError: any) {
+        } catch (dirError: unknown) {
           console.error("Failed to load initial directory:", dirError);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("TOTP verification failed:", error);
       toast.error(t("fileManager.totpVerificationFailed"));
     } finally {
@@ -1340,7 +1340,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             movedItems.push(file.name);
             successCount++;
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error(`Failed to move file ${file.name}:`, error);
           toast.error(
             t("fileManager.moveFileFailed", { name: file.name }) +
@@ -1388,7 +1388,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         handleRefreshDirectory();
         clearSelection();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Drag move operation failed:", error);
       toast.error(t("fileManager.moveOperationFailed") + ": " + error.message);
     }
@@ -1459,7 +1459,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           await dragToDesktop.dragFilesToDesktop(files);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Drag to desktop failed:", error);
       toast.error(
         t("fileManager.dragFailed") +
@@ -1554,7 +1554,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
     try {
       const pinnedData = await getPinnedFiles(currentHost.id);
-      const pinnedPaths = new Set(pinnedData.map((item: any) => item.path));
+      const pinnedPaths = new Set(
+        pinnedData.map((item: Record<string, unknown>) => item.path),
+      );
       setPinnedFiles(pinnedPaths);
     } catch (error) {
       console.error("Failed to load pinned files:", error);

@@ -31,8 +31,13 @@ import {
   dismissedAlerts,
   sshCredentialUsage,
   settings,
-  snippets,
 } from "./db/schema.js";
+import type {
+  CacheEntry,
+  GitHubRelease,
+  GitHubAPIResponse,
+  AuthenticatedRequest,
+} from "../../types/index.js";
 import { getDb } from "./db/index.js";
 import Database from "better-sqlite3";
 
@@ -107,17 +112,11 @@ const upload = multer({
   },
 });
 
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-  expiresAt: number;
-}
-
 class GitHubCache {
   private cache: Map<string, CacheEntry> = new Map();
   private readonly CACHE_DURATION = 30 * 60 * 1000;
 
-  set(key: string, data: any): void {
+  set<T>(key: string, data: T): void {
     const now = Date.now();
     this.cache.set(key, {
       data,
@@ -126,7 +125,7 @@ class GitHubCache {
     });
   }
 
-  get(key: string): any | null {
+  get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) {
       return null;
@@ -137,7 +136,7 @@ class GitHubCache {
       return null;
     }
 
-    return entry.data;
+    return entry.data as T;
   }
 }
 
@@ -147,34 +146,16 @@ const GITHUB_API_BASE = "https://api.github.com";
 const REPO_OWNER = "LukeGus";
 const REPO_NAME = "Termix";
 
-interface GitHubRelease {
-  id: number;
-  tag_name: string;
-  name: string;
-  body: string;
-  published_at: string;
-  html_url: string;
-  assets: Array<{
-    id: number;
-    name: string;
-    size: number;
-    download_count: number;
-    browser_download_url: string;
-  }>;
-  prerelease: boolean;
-  draft: boolean;
-}
-
-async function fetchGitHubAPI(
+async function fetchGitHubAPI<T>(
   endpoint: string,
   cacheKey: string,
-): Promise<any> {
-  const cachedData = githubCache.get(cacheKey);
-  if (cachedData) {
+): Promise<GitHubAPIResponse<T>> {
+  const cachedEntry = githubCache.get<CacheEntry<T>>(cacheKey);
+  if (cachedEntry) {
     return {
-      data: cachedData,
+      data: cachedEntry.data,
       cached: true,
-      cache_age: Date.now() - cachedData.timestamp,
+      cache_age: Date.now() - cachedEntry.timestamp,
     };
   }
 
@@ -193,8 +174,13 @@ async function fetchGitHubAPI(
       );
     }
 
-    const data = await response.json();
-    githubCache.set(cacheKey, data);
+    const data = (await response.json()) as T;
+    const cacheData: CacheEntry<T> = {
+      data,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + 30 * 60 * 1000,
+    };
+    githubCache.set(cacheKey, cacheData);
 
     return {
       data: data,
@@ -274,7 +260,7 @@ app.get("/version", authenticateJWT, async (req, res) => {
 
   try {
     const cacheKey = "latest_release";
-    const releaseData = await fetchGitHubAPI(
+    const releaseData = await fetchGitHubAPI<GitHubRelease>(
       `/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
       cacheKey,
     );
@@ -325,12 +311,12 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
     );
     const cacheKey = `releases_rss_${page}_${per_page}`;
 
-    const releasesData = await fetchGitHubAPI(
+    const releasesData = await fetchGitHubAPI<GitHubRelease[]>(
       `/repos/${REPO_OWNER}/${REPO_NAME}/releases?page=${page}&per_page=${per_page}`,
       cacheKey,
     );
 
-    const rssItems = releasesData.data.map((release: GitHubRelease) => ({
+    const rssItems = releasesData.data.map((release) => ({
       id: release.id,
       title: release.name || release.tag_name,
       description: release.body,
@@ -459,7 +445,7 @@ app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
 
 app.post("/database/export", authenticateJWT, async (req, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { password } = req.body;
 
     if (!password) {
@@ -913,7 +899,7 @@ app.post(
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      const userId = (req as any).userId;
+      const userId = (req as AuthenticatedRequest).userId;
       const { password } = req.body;
 
       if (!password) {
@@ -1321,7 +1307,7 @@ app.post(
 
       apiLogger.error("SQLite import failed", error, {
         operation: "sqlite_import_api_failed",
-        userId: (req as any).userId,
+        userId: (req as AuthenticatedRequest).userId,
       });
       res.status(500).json({
         error: "Failed to import SQLite data",
@@ -1333,7 +1319,7 @@ app.post(
 
 app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { scope = "user_data", includeCredentials = true } = req.body;
 
     const exportData = await UserDataExport.exportUserData(userId, {

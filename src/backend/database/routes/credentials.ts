@@ -1,3 +1,4 @@
+import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { sshCredentials, sshCredentialUsage, sshData } from "../db/schema.js";
@@ -27,7 +28,11 @@ function generateSSHKeyPair(
 } {
   try {
     let ssh2Type = keyType;
-    const options: any = {};
+    const options: {
+      bits?: number;
+      passphrase?: string;
+      cipher?: string;
+    } = {};
 
     if (keyType === "ssh-rsa") {
       ssh2Type = "rsa";
@@ -44,6 +49,7 @@ function generateSSHKeyPair(
       options.cipher = "aes128-cbc";
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const keyPair = ssh2Utils.generateKeyPairSync(ssh2Type as any, options);
 
     return {
@@ -62,7 +68,7 @@ function generateSSHKeyPair(
 
 const router = express.Router();
 
-function isNonEmptyString(val: any): val is string {
+function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
@@ -77,7 +83,7 @@ router.post(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const {
       name,
       description,
@@ -224,7 +230,7 @@ router.get(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId)) {
       authLogger.warn("Invalid userId for credential fetch");
@@ -257,7 +263,7 @@ router.get(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId)) {
       authLogger.warn("Invalid userId for credential folder fetch");
@@ -295,7 +301,7 @@ router.get(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { id } = req.params;
 
     if (!isNonEmptyString(userId) || !id) {
@@ -326,19 +332,19 @@ router.get(
       const output = formatCredentialOutput(credential);
 
       if (credential.password) {
-        (output as any).password = credential.password;
+        output.password = credential.password;
       }
       if (credential.key) {
-        (output as any).key = credential.key;
+        output.key = credential.key;
       }
       if (credential.private_key) {
-        (output as any).privateKey = credential.private_key;
+        output.privateKey = credential.private_key;
       }
       if (credential.public_key) {
-        (output as any).publicKey = credential.public_key;
+        output.publicKey = credential.public_key;
       }
       if (credential.key_password) {
-        (output as any).keyPassword = credential.key_password;
+        output.keyPassword = credential.key_password;
       }
 
       res.json(output);
@@ -359,7 +365,7 @@ router.put(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { id } = req.params;
     const updateData = req.body;
 
@@ -383,7 +389,7 @@ router.put(
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      const updateFields: any = {};
+      const updateFields: Record<string, string | null | undefined> = {};
 
       if (updateData.name !== undefined)
         updateFields.name = updateData.name.trim();
@@ -495,7 +501,7 @@ router.delete(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { id } = req.params;
 
     if (!isNonEmptyString(userId) || !id) {
@@ -594,7 +600,7 @@ router.post(
   "/:id/apply-to-host/:hostId",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { id: credentialId, hostId } = req.params;
 
     if (!isNonEmptyString(userId) || !credentialId || !hostId) {
@@ -627,8 +633,8 @@ router.post(
         .update(sshData)
         .set({
           credentialId: parseInt(credentialId),
-          username: credential.username,
-          authType: credential.auth_type || credential.authType,
+          username: credential.username as string,
+          authType: (credential.auth_type || credential.authType) as string,
           password: null,
           key: null,
           key_password: null,
@@ -673,7 +679,7 @@ router.get(
   "/:id/hosts",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { id: credentialId } = req.params;
 
     if (!isNonEmptyString(userId) || !credentialId) {
@@ -705,7 +711,9 @@ router.get(
   },
 );
 
-function formatCredentialOutput(credential: any): any {
+function formatCredentialOutput(
+  credential: Record<string, unknown>,
+): Record<string, unknown> {
   return {
     id: credential.id,
     name: credential.name,
@@ -729,7 +737,9 @@ function formatCredentialOutput(credential: any): any {
   };
 }
 
-function formatSSHHostOutput(host: any): any {
+function formatSSHHostOutput(
+  host: Record<string, unknown>,
+): Record<string, unknown> {
   return {
     id: host.id,
     userId: host.userId,
@@ -749,7 +759,7 @@ function formatSSHHostOutput(host: any): any {
     enableTerminal: !!host.enableTerminal,
     enableTunnel: !!host.enableTunnel,
     tunnelConnections: host.tunnelConnections
-      ? JSON.parse(host.tunnelConnections)
+      ? JSON.parse(host.tunnelConnections as string)
       : [],
     enableFileManager: !!host.enableFileManager,
     defaultPath: host.defaultPath,
@@ -764,7 +774,7 @@ router.put(
   "/folders/rename",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { oldName, newName } = req.body;
 
     if (!isNonEmptyString(oldName) || !isNonEmptyString(newName)) {
@@ -1117,10 +1127,10 @@ router.post(
 );
 
 async function deploySSHKeyToHost(
-  hostConfig: any,
+  hostConfig: Record<string, unknown>,
   publicKey: string,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _credentialData: any,
+  _credentialData: Record<string, unknown>,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   return new Promise((resolve) => {
     const conn = new Client();
@@ -1364,7 +1374,7 @@ async function deploySSHKeyToHost(
     });
 
     try {
-      const connectionConfig: any = {
+      const connectionConfig: Record<string, unknown> = {
         host: hostConfig.ip,
         port: hostConfig.port || 22,
         username: hostConfig.username,
@@ -1411,14 +1421,15 @@ async function deploySSHKeyToHost(
         connectionConfig.password = hostConfig.password;
       } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
         try {
+          const privateKey = hostConfig.privateKey as string;
           if (
-            !hostConfig.privateKey.includes("-----BEGIN") ||
-            !hostConfig.privateKey.includes("-----END")
+            !privateKey.includes("-----BEGIN") ||
+            !privateKey.includes("-----END")
           ) {
             throw new Error("Invalid private key format");
           }
 
-          const cleanKey = hostConfig.privateKey
+          const cleanKey = privateKey
             .trim()
             .replace(/\r\n/g, "\n")
             .replace(/\r/g, "\n");
@@ -1473,7 +1484,7 @@ router.post(
     }
 
     try {
-      const userId = (req as any).userId;
+      const userId = (req as AuthenticatedRequest).userId;
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -1540,7 +1551,7 @@ router.post(
       };
 
       if (hostData.authType === "credential" && hostData.credentialId) {
-        const userId = (req as any).userId;
+        const userId = (req as AuthenticatedRequest).userId;
         if (!userId) {
           return res.status(400).json({
             success: false,
@@ -1554,7 +1565,7 @@ router.post(
             db
               .select()
               .from(sshCredentials)
-              .where(eq(sshCredentials.id, hostData.credentialId))
+              .where(eq(sshCredentials.id, hostData.credentialId as number))
               .limit(1),
             "ssh_credentials",
             userId,
@@ -1589,7 +1600,7 @@ router.post(
 
       const deployResult = await deploySSHKeyToHost(
         hostConfig,
-        credData.publicKey,
+        credData.publicKey as string,
         credData,
       );
 
