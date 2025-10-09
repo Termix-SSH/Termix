@@ -75,7 +75,7 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   const { t } = useTranslation();
   const [hosts, setHosts] = useState<SSHHost[]>([]);
-  const [hostsLoading, setHostsLoading] = useState(false);
+  const [hostsLoading] = useState(false);
   const [hostsError, setHostsError] = useState<string | null>(null);
   const prevHostsRef = React.useRef<SSHHost[]>([]);
   const [search, setSearch] = useState("");
@@ -90,7 +90,7 @@ export function LeftSidebar({
         setHosts(newHosts);
         prevHostsRef.current = newHosts;
       }
-    } catch (err: any) {
+    } catch {
       setHostsError(t("leftSidebar.failedToLoadHosts"));
     }
   }, [t]);

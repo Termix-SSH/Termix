@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Status, StatusIndicator } from "@/components/ui/shadcn-io/status";
 import { Button } from "@/components/ui/button.tsx";
 import { ButtonGroup } from "@/components/ui/button-group.tsx";
-import { Server, Terminal } from "lucide-react";
+import { Terminal } from "lucide-react";
 import { getServerStatusById } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 import type { HostProps } from "../../../../types/index.js";
