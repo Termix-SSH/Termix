@@ -414,6 +414,7 @@ router.put(
       enableFileManager,
       defaultPath,
       tunnelConnections,
+      statsConfig,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -450,6 +451,7 @@ router.put(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
+      statsConfig: statsConfig || null,
     };
 
     if (effectiveAuthType === "password") {

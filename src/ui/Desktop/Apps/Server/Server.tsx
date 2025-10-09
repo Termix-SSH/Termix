@@ -110,7 +110,12 @@ export function Server({
     setHasUnsavedChanges(true);
   };
 
-  const handleDeleteWidget = (widgetId: string) => {
+  const handleDeleteWidget = (
+    widgetId: string,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
     setWidgets((prev) => prev.filter((w) => w.id !== widgetId));
     setHasUnsavedChanges(true);
   };
@@ -147,8 +152,9 @@ export function Server({
           <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
             {isEditMode && (
               <button
-                onClick={() => handleDeleteWidget(widget.id)}
-                className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center"
+                onClick={(e) => handleDeleteWidget(widget.id, e)}
+                className="absolute top-2 right-2 z-[9999] w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer"
+                type="button"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -198,8 +204,9 @@ export function Server({
           <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
             {isEditMode && (
               <button
-                onClick={() => handleDeleteWidget(widget.id)}
-                className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center"
+                onClick={(e) => handleDeleteWidget(widget.id, e)}
+                className="absolute top-2 right-2 z-[9999] w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer"
+                type="button"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -260,8 +267,9 @@ export function Server({
           <div className="h-full w-full space-y-3 p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200">
             {isEditMode && (
               <button
-                onClick={() => handleDeleteWidget(widget.id)}
-                className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center"
+                onClick={(e) => handleDeleteWidget(widget.id, e)}
+                className="absolute top-2 right-2 z-[9999] w-6 h-6 bg-red-500/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer"
+                type="button"
               >
                 <X className="h-4 w-4" />
               </button>

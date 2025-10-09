@@ -35,6 +35,7 @@ export interface SSHHost {
   enableFileManager: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
+  statsConfig?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +59,7 @@ export interface SSHHostData {
   enableFileManager?: boolean;
   defaultPath?: string;
   tunnelConnections?: any[];
+  statsConfig?: string;
 }
 
 // ============================================================================
