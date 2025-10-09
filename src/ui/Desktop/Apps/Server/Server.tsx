@@ -158,6 +158,7 @@ export function Server({
       } as any);
 
       setHasUnsavedChanges(false);
+      setIsEditMode(false);
       toast.success(t("serverStats.layoutSaved"));
       window.dispatchEvent(new Event("ssh-hosts:changed"));
     } catch (error) {
