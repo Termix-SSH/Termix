@@ -57,14 +57,14 @@ class SimpleDBOps {
 
     const results = await query;
 
-    const decryptedResults = DataCrypto.decryptRecords(
+    const decryptedResults = DataCrypto.decryptRecords<T>(
       tableName,
-      results as unknown[],
+      results as T[],
       userId,
       userDataKey,
     );
 
-    return decryptedResults as T[];
+    return decryptedResults;
   }
 
   static async selectOne<T extends Record<string, unknown>>(
@@ -80,9 +80,9 @@ class SimpleDBOps {
     const result = await query;
     if (!result) return undefined;
 
-    const decryptedResult = DataCrypto.decryptRecord(
+    const decryptedResult = DataCrypto.decryptRecord<T>(
       tableName,
-      result as Record<string, unknown>,
+      result as T,
       userId,
       userDataKey,
     );
