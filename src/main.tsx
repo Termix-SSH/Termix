@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { StrictMode, useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
