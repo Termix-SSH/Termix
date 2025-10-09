@@ -17,7 +17,7 @@ export function HomepageAlertManager({
   const { t } = useTranslation();
   const [alerts, setAlerts] = useState<TermixAlert[]>([]);
   const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

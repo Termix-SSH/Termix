@@ -19,7 +19,6 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  setCookie,
   getCookie,
   logoutUser,
   isElectron,

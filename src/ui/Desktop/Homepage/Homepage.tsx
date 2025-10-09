@@ -4,7 +4,6 @@ import { HomepageUpdateLog } from "@/ui/Desktop/Homepage/HompageUpdateLog.tsx";
 import { HomepageAlertManager } from "@/ui/Desktop/Homepage/HomepageAlertManager.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getUserInfo, getDatabaseHealth, getCookie } from "@/ui/main-axios.ts";
-import { useTranslation } from "react-i18next";
 
 interface HomepageProps {
   onSelectView: (view: string) => void;

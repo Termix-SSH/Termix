@@ -12,7 +12,7 @@ interface DiskWidgetProps {
   metricsHistory: ServerMetrics[];
 }
 
-export function DiskWidget({ metrics, metricsHistory }: DiskWidgetProps) {
+export function DiskWidget({ metrics }: DiskWidgetProps) {
   const { t } = useTranslation();
 
   // Prepare radial chart data
