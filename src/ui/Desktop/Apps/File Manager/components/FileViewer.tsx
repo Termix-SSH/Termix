@@ -60,7 +60,6 @@ import {
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
-import ReactPlayer from "react-player";
 import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import ReactMarkdown from "react-markdown";
@@ -311,9 +310,7 @@ export function FileViewer({
 }: FileViewerProps) {
   const { t } = useTranslation();
   const [editedContent, setEditedContent] = useState(content);
-  const [originalContent, setOriginalContent] = useState(
-    savedContent || content,
-  );
+  const [, setOriginalContent] = useState(savedContent || content);
   const [hasChanges, setHasChanges] = useState(false);
   const [showLargeFileWarning, setShowLargeFileWarning] = useState(false);
   const [forceShowAsText, setForceShowAsText] = useState(false);
@@ -1097,7 +1094,7 @@ export function FileViewer({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code({ node, inline, className, children, ...props }) {
+                        code({ inline, className, children, ...props }) {
                           const match = /language-(\w+)/.exec(className || "");
                           return !inline && match ? (
                             <SyntaxHighlighter
@@ -1380,8 +1377,7 @@ export function FileViewer({
                     <div className="rounded-lg overflow-hidden">
                       <AudioPlayer
                         src={audioUrl}
-                        onLoadedMetadata={(e) => {
-                          const audio = e.currentTarget;
+                        onLoadedMetadata={() => {
                           if (onMediaDimensionsChange) {
                             onMediaDimensionsChange({
                               width: 600,

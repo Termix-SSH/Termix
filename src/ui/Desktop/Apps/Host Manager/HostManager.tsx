@@ -15,7 +15,6 @@ import { useTranslation } from "react-i18next";
 import type { SSHHost, HostManagerProps } from "../../../types/index";
 
 export function HostManager({
-  onSelectView,
   isTopbarOpen,
 }: HostManagerProps): React.ReactElement {
   const { t } = useTranslation();
@@ -30,7 +29,7 @@ export function HostManager({
     setActiveTab("add_host");
   };
 
-  const handleFormSubmit = (updatedHost?: SSHHost) => {
+  const handleFormSubmit = () => {
     setEditingHost(null);
     setActiveTab("host_viewer");
   };

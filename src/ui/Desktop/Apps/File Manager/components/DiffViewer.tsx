@@ -61,7 +61,7 @@ export function DiffViewer({
           userId: sshHost.userId,
         });
       }
-    } catch (error) {
+    } catch {
       await connectSSH(sshSessionId, {
         hostId: sshHost.id,
         ip: sshHost.ip,
