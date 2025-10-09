@@ -30,7 +30,11 @@ class DatabaseFileEncryption {
 
       const iv = crypto.randomBytes(16);
 
-      const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv) as any;
+      const cipher = crypto.createCipheriv(
+        this.ALGORITHM,
+        key,
+        iv,
+      ) as crypto.CipherGCM;
       const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
       const tag = cipher.getAuthTag();
 
@@ -78,7 +82,11 @@ class DatabaseFileEncryption {
 
       const iv = crypto.randomBytes(16);
 
-      const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv) as any;
+      const cipher = crypto.createCipheriv(
+        this.ALGORITHM,
+        key,
+        iv,
+      ) as crypto.CipherGCM;
       const encrypted = Buffer.concat([
         cipher.update(sourceData),
         cipher.final(),
@@ -163,7 +171,7 @@ class DatabaseFileEncryption {
         metadata.algorithm,
         key,
         Buffer.from(metadata.iv, "hex"),
-      ) as any;
+      ) as crypto.DecipherGCM;
       decipher.setAuthTag(Buffer.from(metadata.tag, "hex"));
 
       const decryptedBuffer = Buffer.concat([
@@ -233,7 +241,7 @@ class DatabaseFileEncryption {
         metadata.algorithm,
         key,
         Buffer.from(metadata.iv, "hex"),
-      ) as any;
+      ) as crypto.DecipherGCM;
       decipher.setAuthTag(Buffer.from(metadata.tag, "hex"));
 
       const decrypted = Buffer.concat([

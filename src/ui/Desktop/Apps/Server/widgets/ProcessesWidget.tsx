@@ -11,7 +11,20 @@ interface ProcessesWidgetProps {
 export function ProcessesWidget({ metrics }: ProcessesWidgetProps) {
   const { t } = useTranslation();
 
-  const processes = (metrics as any)?.processes;
+  const metricsWithProcesses = metrics as ServerMetrics & {
+    processes?: {
+      total?: number;
+      running?: number;
+      top?: Array<{
+        pid: number;
+        cpu: number;
+        mem: number;
+        command: string;
+        user: string;
+      }>;
+    };
+  };
+  const processes = metricsWithProcesses?.processes;
   const topProcesses = processes?.top || [];
 
   return (
@@ -46,7 +59,7 @@ export function ProcessesWidget({ metrics }: ProcessesWidgetProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {topProcesses.map((proc: any, index: number) => (
+            {topProcesses.map((proc, index: number) => (
               <div
                 key={index}
                 className="p-2.5 rounded-lg bg-dark-bg/30 hover:bg-dark-bg/50 transition-colors border border-dark-border/20"

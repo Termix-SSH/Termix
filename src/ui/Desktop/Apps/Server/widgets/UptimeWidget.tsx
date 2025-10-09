@@ -11,7 +11,13 @@ interface UptimeWidgetProps {
 export function UptimeWidget({ metrics }: UptimeWidgetProps) {
   const { t } = useTranslation();
 
-  const uptime = (metrics as any)?.uptime;
+  const metricsWithUptime = metrics as ServerMetrics & {
+    uptime?: {
+      formatted?: string;
+      seconds?: number;
+    };
+  };
+  const uptime = metricsWithUptime?.uptime;
 
   return (
     <div className="h-full w-full p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200 flex flex-col overflow-hidden">

@@ -19,7 +19,16 @@ interface TabContextType {
   setCurrentTab: (tabId: number) => void;
   setSplitScreenTab: (tabId: number) => void;
   getTab: (tabId: number) => Tab | undefined;
-  updateHostConfig: (hostId: number, newHostConfig: any) => void;
+  updateHostConfig: (
+    hostId: number,
+    newHostConfig: {
+      id: number;
+      name?: string;
+      username: string;
+      ip: string;
+      port: number;
+    },
+  ) => void;
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
@@ -98,7 +107,9 @@ export function TabProvider({ children }: TabProviderProps) {
       id,
       title: effectiveTitle,
       terminalRef:
-        tabData.type === "terminal" ? React.createRef<any>() : undefined,
+        tabData.type === "terminal"
+          ? React.createRef<{ disconnect?: () => void }>()
+          : undefined,
     };
     setTabs((prev) => [...prev, newTab]);
     setCurrentTab(id);
@@ -140,7 +151,16 @@ export function TabProvider({ children }: TabProviderProps) {
     return tabs.find((tab) => tab.id === tabId);
   };
 
-  const updateHostConfig = (hostId: number, newHostConfig: any) => {
+  const updateHostConfig = (
+    hostId: number,
+    newHostConfig: {
+      id: number;
+      name?: string;
+      username: string;
+      ip: string;
+      port: number;
+    },
+  ) => {
     setTabs((prev) =>
       prev.map((tab) => {
         if (tab.hostConfig && tab.hostConfig.id === hostId) {

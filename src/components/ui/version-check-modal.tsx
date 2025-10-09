@@ -14,7 +14,10 @@ export function VersionCheckModal({
   isAuthenticated = false,
 }: VersionCheckModalProps) {
   const { t } = useTranslation();
-  const [versionInfo, setVersionInfo] = useState<any>(null);
+  const [versionInfo, setVersionInfo] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [versionChecking, setVersionChecking] = useState(false);
   const [versionDismissed] = useState(false);
 

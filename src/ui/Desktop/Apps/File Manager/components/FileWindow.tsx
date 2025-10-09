@@ -157,28 +157,40 @@ export function FileWindow({
 
         const extension = file.name.split(".").pop()?.toLowerCase();
         setIsEditable(!mediaExtensions.includes(extension || ""));
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Failed to load file:", error);
 
-        const errorData = error?.response?.data;
+        const err = error as {
+          message?: string;
+          isFileNotFound?: boolean;
+          response?: {
+            status?: number;
+            data?: {
+              tooLarge?: boolean;
+              error?: string;
+              fileNotFound?: boolean;
+            };
+          };
+        };
+        const errorData = err?.response?.data;
         if (errorData?.tooLarge) {
           toast.error(`File too large: ${errorData.error}`, {
             duration: 10000,
           });
         } else if (
-          error.message?.includes("connection") ||
-          error.message?.includes("established")
+          err.message?.includes("connection") ||
+          err.message?.includes("established")
         ) {
           toast.error(
             `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
           );
         } else {
           const errorMessage =
-            errorData?.error || error.message || "Unknown error";
+            errorData?.error || err.message || "Unknown error";
           const isFileNotFound =
-            (error as any).isFileNotFound ||
+            err.isFileNotFound ||
             errorData?.fileNotFound ||
-            error.response?.status === 404 ||
+            err.response?.status === 404 ||
             errorMessage.includes("File not found") ||
             errorMessage.includes("No such file or directory") ||
             errorMessage.includes("cannot access") ||
@@ -229,10 +241,11 @@ export function FileWindow({
           const contentSize = new Blob([fileContent]).size;
           file.size = contentSize;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Failed to load file content:", error);
+        const err = error as { message?: string };
         toast.error(
-          `${t("fileManager.failedToLoadFile")}: ${error.message || t("fileManager.unknownError")}`,
+          `${t("fileManager.failedToLoadFile")}: ${err.message || t("fileManager.unknownError")}`,
         );
       } finally {
         setIsLoading(false);
@@ -258,19 +271,20 @@ export function FileWindow({
       }
 
       toast.success(t("fileManager.fileSavedSuccessfully"));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save file:", error);
 
+      const err = error as { message?: string };
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        err.message?.includes("connection") ||
+        err.message?.includes("established")
       ) {
         toast.error(
           `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
         );
       } else {
         toast.error(
-          `${t("fileManager.failedToSaveFile")}: ${error.message || t("fileManager.unknownError")}`,
+          `${t("fileManager.failedToSaveFile")}: ${err.message || t("fileManager.unknownError")}`,
         );
       }
     } finally {
@@ -335,19 +349,20 @@ export function FileWindow({
 
         toast.success(t("fileManager.fileDownloadedSuccessfully"));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to download file:", error);
 
+      const err = error as { message?: string };
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        err.message?.includes("connection") ||
+        err.message?.includes("established")
       ) {
         toast.error(
           `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
         );
       } else {
         toast.error(
-          `Failed to download file: ${error.message || "Unknown error"}`,
+          `Failed to download file: ${err.message || "Unknown error"}`,
         );
       }
     }

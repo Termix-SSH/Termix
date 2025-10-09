@@ -11,7 +11,7 @@ interface SSHTunnelViewerProps {
     action: "connect" | "disconnect" | "cancel",
     host: SSHHost,
     tunnelIndex: number,
-  ) => Promise<any>;
+  ) => Promise<unknown>;
 }
 
 export function TunnelViewer({

@@ -194,7 +194,7 @@ class SSHConnectionPool {
 }
 
 class RequestQueue {
-  private queues = new Map<number, Array<() => Promise<any>>>();
+  private queues = new Map<number, Array<() => Promise<unknown>>>();
   private processing = new Set<number>();
 
   async queueRequest<T>(hostId: number, request: () => Promise<T>): Promise<T> {

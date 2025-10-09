@@ -702,24 +702,22 @@ router.get("/oidc/callback", async (req, res) => {
     const getNestedValue = (
       obj: Record<string, unknown>,
       path: string,
-    ): any => {
+    ): unknown => {
       if (!path || !obj) return null;
       return path.split(".").reduce((current, key) => current?.[key], obj);
     };
 
-    const identifier =
-      getNestedValue(userInfo, config.identifier_path) ||
+    const identifier = (getNestedValue(userInfo, config.identifier_path) ||
       userInfo[config.identifier_path] ||
       userInfo.sub ||
       userInfo.email ||
-      userInfo.preferred_username;
+      userInfo.preferred_username) as string;
 
-    const name =
-      getNestedValue(userInfo, config.name_path) ||
+    const name = (getNestedValue(userInfo, config.name_path) ||
       userInfo[config.name_path] ||
       userInfo.name ||
       userInfo.given_name ||
-      identifier;
+      identifier) as string;
 
     if (!identifier) {
       authLogger.error(
@@ -753,14 +751,14 @@ router.get("/oidc/callback", async (req, res) => {
         is_admin: isFirstUser,
         is_oidc: true,
         oidc_identifier: identifier,
-        client_id: config.client_id,
-        client_secret: config.client_secret,
-        issuer_url: config.issuer_url,
-        authorization_url: config.authorization_url,
-        token_url: config.token_url,
-        identifier_path: config.identifier_path,
-        name_path: config.name_path,
-        scopes: config.scopes,
+        client_id: String(config.client_id),
+        client_secret: String(config.client_secret),
+        issuer_url: String(config.issuer_url),
+        authorization_url: String(config.authorization_url),
+        token_url: String(config.token_url),
+        identifier_path: String(config.identifier_path),
+        name_path: String(config.name_path),
+        scopes: String(config.scopes),
       });
 
       try {

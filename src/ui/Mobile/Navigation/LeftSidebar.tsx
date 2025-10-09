@@ -43,7 +43,14 @@ interface SSHHost {
   enableTunnel: boolean;
   enableFileManager: boolean;
   defaultPath: string;
-  tunnelConnections: any[];
+  tunnelConnections: Array<{
+    sourcePort: number;
+    endpointPort: number;
+    endpointHost: string;
+    maxRetries: number;
+    retryInterval: number;
+    autoStart: boolean;
+  }>;
   createdAt: string;
   updatedAt: string;
 }

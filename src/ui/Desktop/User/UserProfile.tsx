@@ -62,8 +62,9 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
         is_oidc: info.is_oidc,
         totp_enabled: info.totp_enabled || false,
       });
-    } catch (err: any) {
-      setError(err?.response?.data?.error || t("errors.loadFailed"));
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error?.response?.data?.error || t("errors.loadFailed"));
     } finally {
       setLoading(false);
     }

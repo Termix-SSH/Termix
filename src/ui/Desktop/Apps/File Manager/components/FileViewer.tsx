@@ -289,7 +289,7 @@ function getLanguageExtension(filename: string) {
   return language ? loadLanguage(language) : null;
 }
 
-function formatFileSize(bytes?: number, t?: any): string {
+function formatFileSize(bytes?: number, t?: (key: string) => string): string {
   if (!bytes) return t ? t("fileManager.unknownSize") : "Unknown size";
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -323,7 +323,9 @@ export function FileViewer({
   const [pdfScale, setPdfScale] = useState(1.2);
   const [pdfError, setPdfError] = useState(false);
   const [markdownEditMode, setMarkdownEditMode] = useState(false);
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<{
+    view?: { dispatch: (transaction: unknown) => void };
+  } | null>(null);
 
   const fileTypeInfo = getFileType(file.name);
 

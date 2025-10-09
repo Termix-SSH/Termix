@@ -155,7 +155,9 @@ export function CredentialEditor({
   type FormData = z.infer<typeof formSchema>;
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema) as unknown as Parameters<
+      typeof useForm<FormData>
+    >[0]["resolver"],
     defaultValues: {
       name: "",
       description: "",
@@ -198,7 +200,7 @@ export function CredentialEditor({
           formData.publicKey = fullCredentialDetails.publicKey || "";
           formData.keyPassword = fullCredentialDetails.keyPassword || "";
           formData.keyType =
-            (fullCredentialDetails.keyType as any) || ("auto" as const);
+            (fullCredentialDetails.keyType as string) || ("auto" as const);
         }
 
         form.reset(formData);

@@ -21,7 +21,11 @@ export function HostManager({
   const [activeTab, setActiveTab] = useState("host_viewer");
   const [editingHost, setEditingHost] = useState<SSHHost | null>(null);
 
-  const [editingCredential, setEditingCredential] = useState<any | null>(null);
+  const [editingCredential, setEditingCredential] = useState<{
+    id: number;
+    name?: string;
+    username: string;
+  } | null>(null);
   const { state: sidebarState } = useSidebar();
 
   const handleEditHost = (host: SSHHost) => {
@@ -34,7 +38,11 @@ export function HostManager({
     setActiveTab("host_viewer");
   };
 
-  const handleEditCredential = (credential: any) => {
+  const handleEditCredential = (credential: {
+    id: number;
+    name?: string;
+    username: string;
+  }) => {
     setEditingCredential(credential);
     setActiveTab("add_credential");
   };

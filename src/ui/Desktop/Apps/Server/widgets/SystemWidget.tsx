@@ -11,7 +11,14 @@ interface SystemWidgetProps {
 export function SystemWidget({ metrics }: SystemWidgetProps) {
   const { t } = useTranslation();
 
-  const system = (metrics as any)?.system;
+  const metricsWithSystem = metrics as ServerMetrics & {
+    system?: {
+      hostname?: string;
+      os?: string;
+      kernel?: string;
+    };
+  };
+  const system = metricsWithSystem?.system;
 
   return (
     <div className="h-full w-full p-4 rounded-lg bg-dark-bg/50 border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200 flex flex-col overflow-hidden">

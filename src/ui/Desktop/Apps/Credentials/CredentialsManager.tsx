@@ -71,7 +71,15 @@ export function CredentialsManager({
   const [showDeployDialog, setShowDeployDialog] = useState(false);
   const [deployingCredential, setDeployingCredential] =
     useState<Credential | null>(null);
-  const [availableHosts, setAvailableHosts] = useState<any[]>([]);
+  const [availableHosts, setAvailableHosts] = useState<
+    Array<{
+      id: number;
+      name: string;
+      ip: string;
+      port: number;
+      username: string;
+    }>
+  >([]);
   const [selectedHostId, setSelectedHostId] = useState<string>("");
   const [deployLoading, setDeployLoading] = useState(false);
   const [hostSearchQuery, setHostSearchQuery] = useState("");
@@ -207,10 +215,13 @@ export function CredentialsManager({
           );
           await fetchCredentials();
           window.dispatchEvent(new CustomEvent("credentials:changed"));
-        } catch (err: any) {
-          if (err.response?.data?.details) {
+        } catch (err: unknown) {
+          const error = err as {
+            response?: { data?: { error?: string; details?: string } };
+          };
+          if (error.response?.data?.details) {
             toast.error(
-              `${err.response.data.error}\n${err.response.data.details}`,
+              `${error.response.data.error}\n${error.response.data.details}`,
             );
           } else {
             toast.error(t("credentials.failedToDeleteCredential"));

@@ -11,7 +11,16 @@ interface NetworkWidgetProps {
 export function NetworkWidget({ metrics }: NetworkWidgetProps) {
   const { t } = useTranslation();
 
-  const network = (metrics as any)?.network;
+  const metricsWithNetwork = metrics as ServerMetrics & {
+    network?: {
+      interfaces?: Array<{
+        name: string;
+        state: string;
+        ip: string;
+      }>;
+    };
+  };
+  const network = metricsWithNetwork?.network;
   const interfaces = network?.interfaces || [];
 
   return (
@@ -30,7 +39,7 @@ export function NetworkWidget({ metrics }: NetworkWidgetProps) {
             <p className="text-sm">{t("serverStats.noInterfacesFound")}</p>
           </div>
         ) : (
-          interfaces.map((iface: any, index: number) => (
+          interfaces.map((iface, index: number) => (
             <div
               key={index}
               className="p-3 rounded-lg bg-dark-bg/50 border border-dark-border/30 hover:bg-dark-bg/60 transition-colors"

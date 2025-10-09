@@ -56,7 +56,7 @@ export function TabProvider({ children }: TabProviderProps) {
       ...tabData,
       id,
       title: computeUniqueTitle(tabData.title),
-      terminalRef: React.createRef<any>(),
+      terminalRef: React.createRef<{ disconnect?: () => void }>(),
     };
     setTabs((prev) => [...prev, newTab]);
     setCurrentTab(id);

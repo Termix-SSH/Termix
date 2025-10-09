@@ -60,7 +60,14 @@ interface SSHHost {
   enableTunnel: boolean;
   enableFileManager: boolean;
   defaultPath: string;
-  tunnelConnections: any[];
+  tunnelConnections: Array<{
+    sourcePort: number;
+    endpointPort: number;
+    endpointHost: string;
+    maxRetries: number;
+    retryInterval: number;
+    autoStart: boolean;
+  }>;
   statsConfig?: StatsConfig;
   createdAt: string;
   updatedAt: string;
@@ -79,7 +86,9 @@ export function HostManagerEditor({
   const { t } = useTranslation();
   const [folders, setFolders] = useState<string[]>([]);
   const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
-  const [credentials, setCredentials] = useState<any[]>([]);
+  const [credentials, setCredentials] = useState<
+    Array<{ id: number; username: string; authType: string }>
+  >([]);
 
   const [authTab, setAuthTab] = useState<"password" | "key" | "credential">(
     "password",
@@ -292,7 +301,7 @@ export function HostManagerEditor({
   type FormData = z.infer<typeof formSchema>;
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       ip: "",
@@ -377,7 +386,17 @@ export function HostManagerEditor({
       } else if (defaultAuthType === "key") {
         formData.key = editingHost.id ? "existing_key" : editingHost.key;
         formData.keyPassword = cleanedHost.keyPassword || "";
-        formData.keyType = (cleanedHost.keyType as any) || "auto";
+        formData.keyType =
+          (cleanedHost.keyType as
+            | "auto"
+            | "ssh-rsa"
+            | "ssh-ed25519"
+            | "ecdsa-sha2-nistp256"
+            | "ecdsa-sha2-nistp384"
+            | "ecdsa-sha2-nistp521"
+            | "ssh-dss"
+            | "ssh-rsa-sha2-256"
+            | "ssh-rsa-sha2-512") || "auto";
       } else if (defaultAuthType === "credential") {
         formData.credentialId =
           cleanedHost.credentialId || "existing_credential";
@@ -430,7 +449,7 @@ export function HostManagerEditor({
         data.name = `${data.username}@${data.ip}`;
       }
 
-      const submitData: any = {
+      const submitData: Record<string, unknown> = {
         name: data.name,
         ip: data.ip,
         port: data.port,

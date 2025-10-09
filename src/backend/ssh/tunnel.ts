@@ -903,7 +903,7 @@ async function connectSSHTunnel(
     });
   });
 
-  const connOptions: any = {
+  const connOptions: Record<string, unknown> = {
     host: tunnelConfig.sourceIP,
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
@@ -1065,7 +1065,7 @@ async function killRemoteTunnelByMarker(
   }
 
   const conn = new Client();
-  const connOptions: any = {
+  const connOptions: Record<string, unknown> = {
     host: tunnelConfig.sourceIP,
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
@@ -1461,10 +1461,10 @@ async function initializeAutoStartTunnels(): Promise<void> {
         });
       }, 1000);
     }
-  } catch (error: any) {
+  } catch (error) {
     tunnelLogger.error(
       "Failed to initialize auto-start tunnels:",
-      error.message,
+      error instanceof Error ? error.message : "Unknown error",
     );
   }
 }
