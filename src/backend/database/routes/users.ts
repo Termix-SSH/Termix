@@ -894,7 +894,6 @@ router.post("/login", async (req, res) => {
         await authManager.registerUser(userRecord.id, password);
       }
     } catch (setupError) {
-      // Continue if setup fails - authenticateUser will handle it
     }
 
     const dataUnlocked = await authManager.authenticateUser(
