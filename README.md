@@ -52,7 +52,7 @@ access, SSH tunneling capabilities, and remote file management, with many more t
 - **SSH Terminal Access** - Full-featured terminal with split-screen support (up to 4 panels) and tab system
 - **SSH Tunnel Management** - Create and manage SSH tunnels with automatic reconnection and health monitoring
 - **Remote File Manager** - Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly.
-- **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys
+- **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders and easily save reusable login info while being able to automate the deploying of SSH keys
 - **Server Stats** - View CPU, memory, and HDD usage on any SSH server
 - **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support
 - **Database Encryption** - SQLite database files encrypted at rest with automatic encryption/decryption
