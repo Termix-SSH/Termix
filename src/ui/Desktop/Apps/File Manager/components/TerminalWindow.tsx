@@ -50,10 +50,6 @@ export function TerminalWindow({
     closeWindow(windowId);
   };
 
-  const handleMinimize = () => {
-    minimizeWindow(windowId);
-  };
-
   const handleMaximize = () => {
     maximizeWindow(windowId);
   };
