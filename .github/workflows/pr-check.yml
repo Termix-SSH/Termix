@@ -21,8 +21,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Fix rollup optional dependencies
-        run: npm install rollup --force
+      - name: Fix optional dependencies
+        run: |
+          npm install rollup --force
+          npm install lightningcss --force
 
       - name: Run ESLint
         run: npx eslint .
