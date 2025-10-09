@@ -5,6 +5,7 @@ export {
   WIDGET_REGISTRY,
   getAvailableWidgets,
   getWidgetConfig,
+  getWidgetSize,
   generateWidgetId,
   type WidgetRegistryItem,
 } from "./registry";

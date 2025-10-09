@@ -25,6 +25,7 @@ import {
   DiskWidget,
   generateWidgetId,
   getWidgetConfig,
+  getWidgetSize,
 } from "./widgets";
 import { AddWidgetDialog } from "./widgets/AddWidgetDialog";
 import "react-grid-layout/css/styles.css";
@@ -54,6 +55,9 @@ export function Server({
     "offline",
   );
   const [metrics, setMetrics] = React.useState<ServerMetrics | null>(null);
+  const [metricsHistory, setMetricsHistory] = React.useState<ServerMetrics[]>(
+    [],
+  );
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -120,10 +124,36 @@ export function Server({
     setHasUnsavedChanges(true);
   };
 
-  const handleAddWidget = (widgetType: string) => {
+  const handleChangeWidgetSize = (
+    widgetId: string,
+    newSize: any,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    setWidgets((prev) =>
+      prev.map((widget) => {
+        if (widget.id === widgetId) {
+          const sizeConfig = getWidgetSize(widget.type, newSize);
+          return {
+            ...widget,
+            size: newSize,
+            w: sizeConfig.w,
+            h: sizeConfig.h,
+          };
+        }
+        return widget;
+      }),
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  const handleAddWidget = (widgetType: string, size: any) => {
     const existingIds = widgets.map((w) => w.id);
     const newId = generateWidgetId(widgetType as any, existingIds);
     const config = getWidgetConfig(widgetType as any);
+    const sizeConfig = getWidgetSize(widgetType as any, size);
 
     // Find the next available position
     const maxY = widgets.reduce((max, w) => Math.max(max, w.y + w.h), 0);
@@ -131,10 +161,11 @@ export function Server({
     const newWidget: Widget = {
       id: newId,
       type: widgetType as any,
+      size: size,
       x: 0,
       y: maxY,
-      w: config.defaultSize.w,
-      h: config.defaultSize.h,
+      w: sizeConfig.w,
+      h: sizeConfig.h,
     };
 
     setWidgets((prev) => [...prev, newWidget]);
@@ -173,9 +204,12 @@ export function Server({
         return (
           <CpuWidget
             metrics={metrics}
+            metricsHistory={metricsHistory}
             isEditMode={isEditMode}
             widgetId={widget.id}
+            widgetSize={widget.size}
             onDelete={handleDeleteWidget}
+            onChangeSize={handleChangeWidgetSize}
           />
         );
 
@@ -183,9 +217,12 @@ export function Server({
         return (
           <MemoryWidget
             metrics={metrics}
+            metricsHistory={metricsHistory}
             isEditMode={isEditMode}
             widgetId={widget.id}
+            widgetSize={widget.size}
             onDelete={handleDeleteWidget}
+            onChangeSize={handleChangeWidgetSize}
           />
         );
 
@@ -193,9 +230,12 @@ export function Server({
         return (
           <DiskWidget
             metrics={metrics}
+            metricsHistory={metricsHistory}
             isEditMode={isEditMode}
             widgetId={widget.id}
+            widgetSize={widget.size}
             onDelete={handleDeleteWidget}
+            onChangeSize={handleChangeWidgetSize}
           />
         );
 
@@ -275,6 +315,11 @@ export function Server({
         const data = await getServerMetricsById(currentHostConfig.id);
         if (!cancelled) {
           setMetrics(data);
+          setMetricsHistory((prev) => {
+            const newHistory = [...prev, data];
+            // Keep last 20 data points for chart
+            return newHistory.slice(-20);
+          });
           setShowStatsUI(true);
         }
       } catch (error: any) {
