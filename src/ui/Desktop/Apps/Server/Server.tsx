@@ -67,11 +67,7 @@ export function Server({
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
 
   const statsConfig = React.useMemo((): StatsConfig => {
-    console.log("[Load] Current host config:", currentHostConfig);
-    console.log("[Load] statsConfig field:", currentHostConfig?.statsConfig);
-
     if (!currentHostConfig?.statsConfig) {
-      console.log("[Load] No statsConfig found, using default");
       return DEFAULT_STATS_CONFIG;
     }
     try {
@@ -79,10 +75,9 @@ export function Server({
         typeof currentHostConfig.statsConfig === "string"
           ? JSON.parse(currentHostConfig.statsConfig)
           : currentHostConfig.statsConfig;
-      console.log("[Load] Parsed statsConfig:", parsed);
       return parsed?.widgets ? parsed : DEFAULT_STATS_CONFIG;
     } catch (error) {
-      console.error("[Load] Failed to parse statsConfig:", error);
+      console.error("Failed to parse statsConfig:", error);
       return DEFAULT_STATS_CONFIG;
     }
   }, [currentHostConfig?.statsConfig]);
@@ -134,20 +129,18 @@ export function Server({
 
     try {
       const newConfig: StatsConfig = { widgets };
-      console.log("[Save] Saving layout:", newConfig);
       const { updateSSHHost } = await import("@/ui/main-axios.ts");
 
-      const result = await updateSSHHost(currentHostConfig.id, {
+      await updateSSHHost(currentHostConfig.id, {
         ...currentHostConfig,
         statsConfig: JSON.stringify(newConfig),
       } as any);
 
-      console.log("[Save] Server response:", result);
       setHasUnsavedChanges(false);
       toast.success(t("serverStats.layoutSaved"));
       window.dispatchEvent(new Event("ssh-hosts:changed"));
     } catch (error) {
-      console.error("[Save] Failed to save layout:", error);
+      console.error("Failed to save layout:", error);
       toast.error(t("serverStats.failedToSaveLayout"));
     }
   };

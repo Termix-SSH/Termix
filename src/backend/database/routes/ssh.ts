@@ -524,6 +524,7 @@ router.put(
           ? JSON.parse(updatedHost.tunnelConnections)
           : [],
         enableFileManager: !!updatedHost.enableFileManager,
+        statsConfig: updatedHost.statsConfig || undefined,
       };
 
       const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
@@ -592,6 +593,7 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
             ? JSON.parse(row.tunnelConnections)
             : [],
           enableFileManager: !!row.enableFileManager,
+          statsConfig: row.statsConfig || undefined,
         };
 
         return (await resolveHostCredentials(baseHost)) || baseHost;
@@ -656,6 +658,7 @@ router.get(
           ? JSON.parse(host.tunnelConnections)
           : [],
         enableFileManager: !!host.enableFileManager,
+        statsConfig: host.statsConfig || undefined,
       };
 
       res.json((await resolveHostCredentials(result)) || result);
