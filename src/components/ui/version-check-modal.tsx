@@ -16,7 +16,7 @@ export function VersionCheckModal({
   const { t } = useTranslation();
   const [versionInfo, setVersionInfo] = useState<any>(null);
   const [versionChecking, setVersionChecking] = useState(false);
-  const [versionDismissed, setVersionDismissed] = useState(false);
+  const [versionDismissed] = useState(false);
 
   useEffect(() => {
     if (isElectron()) {

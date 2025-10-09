@@ -46,7 +46,7 @@ export function PasswordReset({ userInfo }: PasswordResetProps) {
     setError(null);
     setResetLoading(true);
     try {
-      const result = await initiatePasswordReset(userInfo.username);
+      await initiatePasswordReset(userInfo.username);
       setResetStep("verify");
       setError(null);
     } catch (err: any) {

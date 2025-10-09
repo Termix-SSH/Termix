@@ -308,7 +308,7 @@ export function CredentialsManager({
     setDragOverFolder(folderName);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = () => {
     dragCounter.current--;
     if (dragCounter.current === 0) {
       setDragOverFolder(null);
