@@ -101,7 +101,7 @@ export class AutoSSLSetup {
     try {
       try {
         execSync("openssl version", { stdio: "pipe" });
-      } catch (error) {
+      } catch {
         throw new Error(
           "OpenSSL is not installed or not available in PATH. Please install OpenSSL to enable SSL certificate generation.",
         );

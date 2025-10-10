@@ -1,3 +1,4 @@
+import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { snippets } from "../db/schema.js";
@@ -8,7 +9,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 
 const router = express.Router();
 
-function isNonEmptyString(val: any): val is string {
+function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
@@ -23,7 +24,7 @@ router.get(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId)) {
       authLogger.warn("Invalid userId for snippets fetch");
@@ -52,12 +53,15 @@ router.get(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { id } = req.params;
     const snippetId = parseInt(id, 10);
 
     if (!isNonEmptyString(userId) || isNaN(snippetId)) {
-      authLogger.warn("Invalid request for snippet fetch: invalid ID", { userId, id });
+      authLogger.warn("Invalid request for snippet fetch: invalid ID", {
+        userId,
+        id,
+      });
       return res.status(400).json({ error: "Invalid request parameters" });
     }
 
@@ -88,7 +92,7 @@ router.post(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { name, content, description } = req.body;
 
     if (
@@ -139,7 +143,7 @@ router.put(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { id } = req.params;
     const updateData = req.body;
 
@@ -158,7 +162,12 @@ router.put(
         return res.status(404).json({ error: "Snippet not found" });
       }
 
-      const updateFields: any = {
+      const updateFields: Partial<{
+        updatedAt: ReturnType<typeof sql.raw>;
+        name: string;
+        content: string;
+        description: string | null;
+      }> = {
         updatedAt: sql`CURRENT_TIMESTAMP`,
       };
 
@@ -206,7 +215,7 @@ router.delete(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { id } = req.params;
 
     if (!isNonEmptyString(userId) || !id) {

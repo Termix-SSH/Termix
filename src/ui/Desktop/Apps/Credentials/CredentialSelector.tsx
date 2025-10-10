@@ -35,7 +35,7 @@ export function CredentialSelector({
           ? data
           : data.credentials || data.data || [];
         setCredentials(credentialsArray);
-      } catch (error) {
+      } catch {
         const { toast } = await import("sonner");
         toast.error(t("credentials.failedToFetchCredentials"));
         setCredentials([]);

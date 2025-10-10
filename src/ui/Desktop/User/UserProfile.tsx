@@ -8,7 +8,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
-import { User, Shield, Key, AlertCircle } from "lucide-react";
+import { User, Shield, AlertCircle } from "lucide-react";
 import { TOTPSetup } from "@/ui/Desktop/User/TOTPSetup.tsx";
 import { getUserInfo } from "@/ui/main-axios.ts";
 import { getVersionInfo } from "@/ui/main-axios.ts";
@@ -45,7 +45,7 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
     try {
       const info = await getVersionInfo();
       setVersionInfo({ version: info.localVersion });
-    } catch (err) {
+    } catch {
       const { toast } = await import("sonner");
       toast.error(t("user.failedToLoadVersionInfo"));
     }
@@ -62,8 +62,9 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
         is_oidc: info.is_oidc,
         totp_enabled: info.totp_enabled || false,
       });
-    } catch (err: any) {
-      setError(err?.response?.data?.error || t("errors.loadFailed"));
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error?.response?.data?.error || t("errors.loadFailed"));
     } finally {
       setLoading(false);
     }

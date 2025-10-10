@@ -46,9 +46,7 @@ export function TOTPDialog({
           className="space-y-4"
         >
           <div>
-            <Label htmlFor="totpCode">
-              {t("terminal.totpCodeLabel")}
-            </Label>
+            <Label htmlFor="totpCode">{t("terminal.totpCodeLabel")}</Label>
             <Input
               id="totpCode"
               name="totpCode"

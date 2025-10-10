@@ -3,6 +3,19 @@ import { LazyFieldEncryption } from "./lazy-field-encryption.js";
 import { UserCrypto } from "./user-crypto.js";
 import { databaseLogger } from "./logger.js";
 
+interface DatabaseInstance {
+  prepare: (sql: string) => {
+    all: (param?: unknown) => DatabaseRecord[];
+    get: (param?: unknown) => DatabaseRecord;
+    run: (...params: unknown[]) => unknown;
+  };
+}
+
+interface DatabaseRecord {
+  id: number | string;
+  [key: string]: unknown;
+}
+
 class DataCrypto {
   private static userCrypto: UserCrypto;
 
@@ -10,13 +23,13 @@ class DataCrypto {
     this.userCrypto = UserCrypto.getInstance();
   }
 
-  static encryptRecord(
+  static encryptRecord<T extends Record<string, unknown>>(
     tableName: string,
-    record: any,
+    record: T,
     userId: string,
     userDataKey: Buffer,
-  ): any {
-    const encryptedRecord = { ...record };
+  ): T {
+    const encryptedRecord: Record<string, unknown> = { ...record };
     const recordId = record.id || "temp-" + Date.now();
 
     for (const [fieldName, value] of Object.entries(record)) {
@@ -24,24 +37,24 @@ class DataCrypto {
         encryptedRecord[fieldName] = FieldCrypto.encryptField(
           value as string,
           userDataKey,
-          recordId,
+          recordId as string,
           fieldName,
         );
       }
     }
 
-    return encryptedRecord;
+    return encryptedRecord as T;
   }
 
-  static decryptRecord(
+  static decryptRecord<T extends Record<string, unknown>>(
     tableName: string,
-    record: any,
+    record: T,
     userId: string,
     userDataKey: Buffer,
-  ): any {
+  ): T {
     if (!record) return record;
 
-    const decryptedRecord = { ...record };
+    const decryptedRecord: Record<string, unknown> = { ...record };
     const recordId = record.id;
 
     for (const [fieldName, value] of Object.entries(record)) {
@@ -49,21 +62,21 @@ class DataCrypto {
         decryptedRecord[fieldName] = LazyFieldEncryption.safeGetFieldValue(
           value as string,
           userDataKey,
-          recordId,
+          recordId as string,
           fieldName,
         );
       }
     }
 
-    return decryptedRecord;
+    return decryptedRecord as T;
   }
 
-  static decryptRecords(
+  static decryptRecords<T extends Record<string, unknown>>(
     tableName: string,
-    records: any[],
+    records: T[],
     userId: string,
     userDataKey: Buffer,
-  ): any[] {
+  ): T[] {
     if (!Array.isArray(records)) return records;
     return records.map((record) =>
       this.decryptRecord(tableName, record, userId, userDataKey),
@@ -73,7 +86,7 @@ class DataCrypto {
   static async migrateUserSensitiveFields(
     userId: string,
     userDataKey: Buffer,
-    db: any,
+    db: DatabaseInstance,
   ): Promise<{
     migrated: boolean;
     migratedTables: string[];
@@ -84,7 +97,7 @@ class DataCrypto {
     let migratedFieldsCount = 0;
 
     try {
-      const { needsMigration, plaintextFields } =
+      const { needsMigration } =
         await LazyFieldEncryption.checkUserNeedsMigration(
           userId,
           userDataKey,
@@ -97,7 +110,7 @@ class DataCrypto {
 
       const sshDataRecords = db
         .prepare("SELECT * FROM ssh_data WHERE user_id = ?")
-        .all(userId);
+        .all(userId) as DatabaseRecord[];
       for (const record of sshDataRecords) {
         const sensitiveFields =
           LazyFieldEncryption.getSensitiveFieldsForTable("ssh_data");
@@ -132,7 +145,7 @@ class DataCrypto {
 
       const sshCredentialsRecords = db
         .prepare("SELECT * FROM ssh_credentials WHERE user_id = ?")
-        .all(userId);
+        .all(userId) as DatabaseRecord[];
       for (const record of sshCredentialsRecords) {
         const sensitiveFields =
           LazyFieldEncryption.getSensitiveFieldsForTable("ssh_credentials");
@@ -169,7 +182,7 @@ class DataCrypto {
 
       const userRecord = db
         .prepare("SELECT * FROM users WHERE id = ?")
-        .get(userId);
+        .get(userId) as DatabaseRecord | undefined;
       if (userRecord) {
         const sensitiveFields =
           LazyFieldEncryption.getSensitiveFieldsForTable("users");
@@ -220,7 +233,7 @@ class DataCrypto {
   static async reencryptUserDataAfterPasswordReset(
     userId: string,
     newUserDataKey: Buffer,
-    db: any,
+    db: DatabaseInstance,
   ): Promise<{
     success: boolean;
     reencryptedTables: string[];
@@ -262,17 +275,21 @@ class DataCrypto {
         try {
           const records = db
             .prepare(`SELECT * FROM ${table} WHERE user_id = ?`)
-            .all(userId);
+            .all(userId) as DatabaseRecord[];
 
           for (const record of records) {
             const recordId = record.id.toString();
+            const updatedRecord: DatabaseRecord = { ...record };
             let needsUpdate = false;
-            const updatedRecord = { ...record };
 
             for (const fieldName of fields) {
               const fieldValue = record[fieldName];
 
-              if (fieldValue && fieldValue.trim() !== "") {
+              if (
+                fieldValue &&
+                typeof fieldValue === "string" &&
+                fieldValue.trim() !== ""
+              ) {
                 try {
                   const reencryptedValue = FieldCrypto.encryptField(
                     fieldValue,
@@ -384,29 +401,29 @@ class DataCrypto {
     return userDataKey;
   }
 
-  static encryptRecordForUser(
+  static encryptRecordForUser<T extends Record<string, unknown>>(
     tableName: string,
-    record: any,
+    record: T,
     userId: string,
-  ): any {
+  ): T {
     const userDataKey = this.validateUserAccess(userId);
     return this.encryptRecord(tableName, record, userId, userDataKey);
   }
 
-  static decryptRecordForUser(
+  static decryptRecordForUser<T extends Record<string, unknown>>(
     tableName: string,
-    record: any,
+    record: T,
     userId: string,
-  ): any {
+  ): T {
     const userDataKey = this.validateUserAccess(userId);
     return this.decryptRecord(tableName, record, userId, userDataKey);
   }
 
-  static decryptRecordsForUser(
+  static decryptRecordsForUser<T extends Record<string, unknown>>(
     tableName: string,
-    records: any[],
+    records: T[],
     userId: string,
-  ): any[] {
+  ): T[] {
     const userDataKey = this.validateUserAccess(userId);
     return this.decryptRecords(tableName, records, userId, userDataKey);
   }
@@ -435,7 +452,7 @@ class DataCrypto {
       );
 
       return decrypted === testData;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

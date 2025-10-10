@@ -46,13 +46,17 @@ export function PasswordReset({ userInfo }: PasswordResetProps) {
     setError(null);
     setResetLoading(true);
     try {
-      const result = await initiatePasswordReset(userInfo.username);
+      await initiatePasswordReset(userInfo.username);
       setResetStep("verify");
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
       setError(
-        err?.response?.data?.error ||
-          err?.message ||
+        error?.response?.data?.error ||
+          error?.message ||
           t("common.failedToInitiatePasswordReset"),
       );
     } finally {
@@ -80,9 +84,10 @@ export function PasswordReset({ userInfo }: PasswordResetProps) {
       setTempToken(response.tempToken);
       setResetStep("newPassword");
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
       setError(
-        err?.response?.data?.error || t("common.failedToVerifyResetCode"),
+        error?.response?.data?.error || t("common.failedToVerifyResetCode"),
       );
     } finally {
       setResetLoading(false);
@@ -110,9 +115,11 @@ export function PasswordReset({ userInfo }: PasswordResetProps) {
 
       toast.success(t("common.passwordResetSuccess"));
       resetPasswordState();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
       setError(
-        err?.response?.data?.error || t("common.failedToCompletePasswordReset"),
+        error?.response?.data?.error ||
+          t("common.failedToCompletePasswordReset"),
       );
     } finally {
       setResetLoading(false);

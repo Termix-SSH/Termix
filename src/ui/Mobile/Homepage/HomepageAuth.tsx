@@ -19,8 +19,6 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  setCookie,
-  getCookie,
   logoutUser,
   isElectron,
 } from "@/ui/main-axios.ts";
@@ -64,7 +62,7 @@ export function HomepageAuth({
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [internalLoggedIn, setInternalLoggedIn] = useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [firstUserToastShown, setFirstUserToastShown] = useState(false);
@@ -164,7 +162,7 @@ export function HomepageAuth({
     }
 
     try {
-      let res, meRes;
+      let res;
       if (tab === "login") {
         res = await loginUser(localUsername, password);
       } else {
@@ -194,7 +192,7 @@ export function HomepageAuth({
         throw new Error(t("errors.loginFailed"));
       }
 
-      [meRes] = await Promise.all([getUserInfo()]);
+      const [meRes] = await Promise.all([getUserInfo()]);
 
       setInternalLoggedIn(true);
       setLoggedIn(true);
@@ -217,16 +215,22 @@ export function HomepageAuth({
       setTotpRequired(false);
       setTotpCode("");
       setTotpTempToken("");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
       const errorMessage =
-        err?.response?.data?.error || err?.message || t("errors.unknownError");
+        error?.response?.data?.error ||
+        error?.message ||
+        t("errors.unknownError");
       toast.error(errorMessage);
       setInternalLoggedIn(false);
       setLoggedIn(false);
       setIsAdmin(false);
       setUsername(null);
       setUserId(null);
-      if (err?.response?.data?.error?.includes("Database")) {
+      if (error?.response?.data?.error?.includes("Database")) {
         setDbError(t("errors.databaseConnection"));
       } else {
         setDbError(null);
@@ -240,13 +244,17 @@ export function HomepageAuth({
     setError(null);
     setResetLoading(true);
     try {
-      const result = await initiatePasswordReset(localUsername);
+      await initiatePasswordReset(localUsername);
       setResetStep("verify");
       toast.success(t("messages.resetCodeSent"));
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
       toast.error(
-        err?.response?.data?.error ||
-          err?.message ||
+        error?.response?.data?.error ||
+          error?.message ||
           t("errors.failedPasswordReset"),
       );
     } finally {
@@ -262,8 +270,9 @@ export function HomepageAuth({
       setTempToken(response.tempToken);
       setResetStep("newPassword");
       toast.success(t("messages.codeVerified"));
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || t("errors.failedVerifyCode"));
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      toast.error(error?.response?.data?.error || t("errors.failedVerifyCode"));
     } finally {
       setResetLoading(false);
     }
@@ -300,9 +309,10 @@ export function HomepageAuth({
 
       setTab("login");
       resetPasswordState();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
       toast.error(
-        err?.response?.data?.error || t("errors.failedCompleteReset"),
+        error?.response?.data?.error || t("errors.failedCompleteReset"),
       );
     } finally {
       setResetLoading(false);
@@ -366,11 +376,15 @@ export function HomepageAuth({
       setTotpCode("");
       setTotpTempToken("");
       toast.success(t("messages.loginSuccess"));
-    } catch (err: any) {
-      const errorCode = err?.response?.data?.code;
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { code?: string; error?: string } };
+      };
+      const errorCode = error?.response?.data?.code;
       const errorMessage =
-        err?.response?.data?.error ||
-        err?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
         t("errors.invalidTotpCode");
 
       if (errorCode === "SESSION_EXPIRED") {
@@ -399,10 +413,14 @@ export function HomepageAuth({
       }
 
       window.location.replace(authUrl);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
       const errorMessage =
-        err?.response?.data?.error ||
-        err?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
         t("errors.failedOidcLogin");
       toast.error(errorMessage);
       setOidcLoading(false);
@@ -412,7 +430,6 @@ export function HomepageAuth({
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get("success");
-    const token = urlParams.get("token");
     const error = urlParams.get("error");
 
     if (error) {
@@ -446,7 +463,7 @@ export function HomepageAuth({
             window.location.pathname,
           );
         })
-        .catch((err) => {
+        .catch(() => {
           toast.error(t("errors.failedUserInfo"));
           setInternalLoggedIn(false);
           setLoggedIn(false);

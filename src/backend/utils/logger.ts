@@ -11,7 +11,7 @@ export interface LogContext {
   sessionId?: string;
   requestId?: string;
   duration?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const SENSITIVE_FIELDS = [

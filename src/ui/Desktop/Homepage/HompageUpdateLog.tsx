@@ -66,7 +66,7 @@ export function HomepageUpdateLog({ loggedIn }: HomepageUpdateLogProps) {
           setVersionInfo(versionRes);
           setError(null);
         })
-        .catch((err) => {
+        .catch(() => {
           setError(t("common.failedToFetchUpdateInfo"));
         })
         .finally(() => setLoading(false));

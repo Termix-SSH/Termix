@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { VersionAlert } from "@/components/ui/version-alert.tsx";
-import { RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { checkElectronUpdate, isElectron } from "@/ui/main-axios.ts";
 
 interface VersionCheckModalProps {
-  onDismiss: () => void;
   onContinue: () => void;
   isAuthenticated?: boolean;
 }
 
 export function VersionCheckModal({
-  onDismiss,
   onContinue,
   isAuthenticated = false,
 }: VersionCheckModalProps) {
   const { t } = useTranslation();
-  const [versionInfo, setVersionInfo] = useState<any>(null);
+  const [versionInfo, setVersionInfo] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [versionChecking, setVersionChecking] = useState(false);
-  const [versionDismissed, setVersionDismissed] = useState(false);
+  const [versionDismissed] = useState(false);
 
   useEffect(() => {
     if (isElectron()) {
@@ -45,10 +45,6 @@ export function VersionCheckModal({
     } finally {
       setVersionChecking(false);
     }
-  };
-
-  const handleVersionDismiss = () => {
-    setVersionDismissed(true);
   };
 
   const handleDownloadUpdate = () => {
