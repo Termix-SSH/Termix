@@ -265,7 +265,7 @@ export interface TabContextTab {
     | "user_profile";
   title: string;
   hostConfig?: SSHHost;
-  terminalRef?: React.RefObject<HTMLElement>;
+  terminalRef?: React.RefObject<TerminalHandle>;
 }
 
 // ============================================================================
