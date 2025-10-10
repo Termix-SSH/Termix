@@ -682,7 +682,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
       readyTimeout: 60000,
-
+      env: {
+        TERM: "xterm-256color",
+        LANG: "en_US.UTF-8",
+        LC_ALL: "en_US.UTF-8",
+        LC_CTYPE: "en_US.UTF-8",
+        LC_MESSAGES: "en_US.UTF-8",
+        LC_MONETARY: "en_US.UTF-8",
+        LC_NUMERIC: "en_US.UTF-8",
+        LC_TIME: "en_US.UTF-8",
+        LC_COLLATE: "en_US.UTF-8",
+        COLORTERM: "truecolor",
+      },
       algorithms: {
         kex: [
           "diffie-hellman-group14-sha256",
