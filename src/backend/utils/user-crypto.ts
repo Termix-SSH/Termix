@@ -198,7 +198,7 @@ class UserCrypto {
       DEK.fill(0);
 
       return true;
-    } catch (error) {
+    } catch {
       await this.setupOIDCUserEncryption(userId);
       return true;
     }
@@ -366,7 +366,7 @@ class UserCrypto {
       DEK.fill(0);
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -485,7 +485,7 @@ class UserCrypto {
       }
 
       return JSON.parse(result[0].value);
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -525,7 +525,7 @@ class UserCrypto {
       }
 
       return JSON.parse(result[0].value);
-    } catch (error) {
+    } catch {
       return null;
     }
   }

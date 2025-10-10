@@ -60,7 +60,7 @@ export function SnippetsSidebar({
       const data = await getSnippets();
       // Defensive: ensure data is an array
       setSnippets(Array.isArray(data) ? data : []);
-    } catch (err) {
+    } catch {
       toast.error(t("snippets.failedToFetch"));
       setSnippets([]);
     } finally {
@@ -94,7 +94,7 @@ export function SnippetsSidebar({
           await deleteSnippet(snippet.id);
           toast.success(t("snippets.deleteSuccess"));
           fetchSnippets();
-        } catch (err) {
+        } catch {
           toast.error(t("snippets.deleteFailed"));
         }
       },
@@ -125,7 +125,7 @@ export function SnippetsSidebar({
       }
       setShowDialog(false);
       fetchSnippets();
-    } catch (err) {
+    } catch {
       toast.error(
         editingSnippet
           ? t("snippets.updateFailed")
@@ -155,10 +155,7 @@ export function SnippetsSidebar({
           transform: "translateZ(0)",
         }}
       >
-        <div
-          className="flex-1 cursor-pointer"
-          onClick={onClose}
-        />
+        <div className="flex-1 cursor-pointer" onClick={onClose} />
 
         <div
           className="w-[400px] h-full bg-dark-bg border-l-2 border-dark-border flex flex-col shadow-2xl relative isolate z-[999999]"

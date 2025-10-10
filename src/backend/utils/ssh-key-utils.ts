@@ -49,7 +49,7 @@ function detectKeyTypeFromContent(keyContent: string): string {
       }
 
       return "ssh-rsa";
-    } catch (error) {
+    } catch {
       return "ssh-rsa";
     }
   }
@@ -240,7 +240,7 @@ export function parseSSHKey(
             } else {
               publicKey = "";
             }
-          } catch (error) {
+          } catch {
             publicKey = "";
           }
 
@@ -318,7 +318,7 @@ export function detectKeyType(privateKeyData: string): string {
       return "unknown";
     }
     return parsedKey.type || "unknown";
-  } catch (error) {
+  } catch {
     return "unknown";
   }
 }

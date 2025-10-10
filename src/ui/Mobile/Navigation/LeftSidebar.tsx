@@ -43,7 +43,14 @@ interface SSHHost {
   enableTunnel: boolean;
   enableFileManager: boolean;
   defaultPath: string;
-  tunnelConnections: any[];
+  tunnelConnections: Array<{
+    sourcePort: number;
+    endpointPort: number;
+    endpointHost: string;
+    maxRetries: number;
+    retryInterval: number;
+    autoStart: boolean;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,7 +82,7 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   const { t } = useTranslation();
   const [hosts, setHosts] = useState<SSHHost[]>([]);
-  const [hostsLoading, setHostsLoading] = useState(false);
+  const [hostsLoading] = useState(false);
   const [hostsError, setHostsError] = useState<string | null>(null);
   const prevHostsRef = React.useRef<SSHHost[]>([]);
   const [search, setSearch] = useState("");
@@ -90,7 +97,7 @@ export function LeftSidebar({
         setHosts(newHosts);
         prevHostsRef.current = newHosts;
       }
-    } catch (err: any) {
+    } catch {
       setHostsError(t("leftSidebar.failedToLoadHosts"));
     }
   }, [t]);

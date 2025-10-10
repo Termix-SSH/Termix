@@ -38,6 +38,9 @@ import { CredentialSelector } from "@/ui/Desktop/Apps/Credentials/CredentialSele
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
+import type { StatsConfig } from "@/types/stats-widgets";
+import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
+import { Checkbox } from "@/components/ui/checkbox.tsx";
 
 interface SSHHost {
   id: number;
@@ -57,7 +60,15 @@ interface SSHHost {
   enableTunnel: boolean;
   enableFileManager: boolean;
   defaultPath: string;
-  tunnelConnections: any[];
+  tunnelConnections: Array<{
+    sourcePort: number;
+    endpointPort: number;
+    endpointHost: string;
+    maxRetries: number;
+    retryInterval: number;
+    autoStart: boolean;
+  }>;
+  statsConfig?: StatsConfig;
   createdAt: string;
   updatedAt: string;
   credentialId?: number;
@@ -73,11 +84,11 @@ export function HostManagerEditor({
   onFormSubmit,
 }: SSHManagerHostEditorProps) {
   const { t } = useTranslation();
-  const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
   const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
-  const [credentials, setCredentials] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [credentials, setCredentials] = useState<
+    Array<{ id: number; username: string; authType: string }>
+  >([]);
 
   const [authTab, setAuthTab] = useState<"password" | "key" | "credential">(
     "password",
@@ -92,12 +103,10 @@ export function HostManagerEditor({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
         const [hostsData, credentialsData] = await Promise.all([
           getSSHHosts(),
           getCredentials(),
         ]);
-        setHosts(hostsData);
         setCredentials(credentialsData);
 
         const uniqueFolders = [
@@ -120,8 +129,6 @@ export function HostManagerEditor({
         setSshConfigurations(uniqueConfigurations);
       } catch {
         // Failed to load hosts data
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -131,9 +138,7 @@ export function HostManagerEditor({
   useEffect(() => {
     const handleCredentialChange = async () => {
       try {
-        setLoading(true);
         const hostsData = await getSSHHosts();
-        setHosts(hostsData);
 
         const uniqueFolders = [
           ...new Set(
@@ -155,8 +160,6 @@ export function HostManagerEditor({
         setSshConfigurations(uniqueConfigurations);
       } catch {
         // Failed to reload hosts after credential change
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -210,6 +213,32 @@ export function HostManagerEditor({
         .default([]),
       enableFileManager: z.boolean().default(true),
       defaultPath: z.string().optional(),
+      statsConfig: z
+        .object({
+          enabledWidgets: z
+            .array(
+              z.enum([
+                "cpu",
+                "memory",
+                "disk",
+                "network",
+                "uptime",
+                "processes",
+                "system",
+              ]),
+            )
+            .default(["cpu", "memory", "disk", "network", "uptime", "system"]),
+        })
+        .default({
+          enabledWidgets: [
+            "cpu",
+            "memory",
+            "disk",
+            "network",
+            "uptime",
+            "system",
+          ],
+        }),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "password") {
@@ -272,7 +301,7 @@ export function HostManagerEditor({
   type FormData = z.infer<typeof formSchema>;
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       ip: "",
@@ -292,6 +321,7 @@ export function HostManagerEditor({
       enableFileManager: true,
       defaultPath: "/",
       tunnelConnections: [],
+      statsConfig: DEFAULT_STATS_CONFIG,
     },
   });
 
@@ -348,6 +378,7 @@ export function HostManagerEditor({
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
         tunnelConnections: cleanedHost.tunnelConnections || [],
+        statsConfig: cleanedHost.statsConfig || DEFAULT_STATS_CONFIG,
       };
 
       if (defaultAuthType === "password") {
@@ -355,7 +386,17 @@ export function HostManagerEditor({
       } else if (defaultAuthType === "key") {
         formData.key = editingHost.id ? "existing_key" : editingHost.key;
         formData.keyPassword = cleanedHost.keyPassword || "";
-        formData.keyType = (cleanedHost.keyType as any) || "auto";
+        formData.keyType =
+          (cleanedHost.keyType as
+            | "auto"
+            | "ssh-rsa"
+            | "ssh-ed25519"
+            | "ecdsa-sha2-nistp256"
+            | "ecdsa-sha2-nistp384"
+            | "ecdsa-sha2-nistp521"
+            | "ssh-dss"
+            | "ssh-rsa-sha2-256"
+            | "ssh-rsa-sha2-512") || "auto";
       } else if (defaultAuthType === "credential") {
         formData.credentialId =
           cleanedHost.credentialId || "existing_credential";
@@ -383,6 +424,7 @@ export function HostManagerEditor({
         enableFileManager: true,
         defaultPath: "/",
         tunnelConnections: [],
+        statsConfig: DEFAULT_STATS_CONFIG,
       };
 
       form.reset(defaultFormData);
@@ -407,7 +449,7 @@ export function HostManagerEditor({
         data.name = `${data.username}@${data.ip}`;
       }
 
-      const submitData: any = {
+      const submitData: Record<string, unknown> = {
         name: data.name,
         ip: data.ip,
         port: data.port,
@@ -421,6 +463,7 @@ export function HostManagerEditor({
         enableFileManager: Boolean(data.enableFileManager),
         defaultPath: data.defaultPath || "/",
         tunnelConnections: data.tunnelConnections || [],
+        statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
       };
 
       submitData.credentialId = null;
@@ -499,7 +542,7 @@ export function HostManagerEditor({
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
       form.reset();
-    } catch (error) {
+    } catch {
       toast.error(t("hosts.failedToSaveHost"));
     } finally {
       isSubmittingRef.current = false;
@@ -668,6 +711,9 @@ export function HostManagerEditor({
                 <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
                 <TabsTrigger value="file_manager">
                   {t("hosts.fileManager")}
+                </TabsTrigger>
+                <TabsTrigger value="statistics">
+                  {t("hosts.statistics")}
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="general" className="pt-2">
@@ -1532,6 +1578,65 @@ export function HostManagerEditor({
                     />
                   </div>
                 )}
+              </TabsContent>
+              <TabsContent value="statistics">
+                <FormField
+                  control={form.control}
+                  name="statsConfig.enabledWidgets"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("hosts.enabledWidgets")}</FormLabel>
+                      <FormDescription>
+                        {t("hosts.enabledWidgetsDesc")}
+                      </FormDescription>
+                      <div className="space-y-3 mt-3">
+                        {(
+                          [
+                            "cpu",
+                            "memory",
+                            "disk",
+                            "network",
+                            "uptime",
+                            "processes",
+                            "system",
+                          ] as const
+                        ).map((widget) => (
+                          <div
+                            key={widget}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              checked={field.value?.includes(widget)}
+                              onCheckedChange={(checked) => {
+                                const currentWidgets = field.value || [];
+                                if (checked) {
+                                  field.onChange([...currentWidgets, widget]);
+                                } else {
+                                  field.onChange(
+                                    currentWidgets.filter((w) => w !== widget),
+                                  );
+                                }
+                              }}
+                            />
+                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                              {widget === "cpu" && t("serverStats.cpuUsage")}
+                              {widget === "memory" &&
+                                t("serverStats.memoryUsage")}
+                              {widget === "disk" && t("serverStats.diskUsage")}
+                              {widget === "network" &&
+                                t("serverStats.networkInterfaces")}
+                              {widget === "uptime" && t("serverStats.uptime")}
+                              {widget === "processes" &&
+                                t("serverStats.processes")}
+                              {widget === "system" &&
+                                t("serverStats.systemInfo")}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </TabsContent>
             </Tabs>
           </ScrollArea>

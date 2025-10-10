@@ -4,6 +4,7 @@
 // This file contains all shared interfaces and types used across the application
 
 import type { Client } from "ssh2";
+import type { Request } from "express";
 
 // ============================================================================
 // SSH HOST TYPES
@@ -35,6 +36,7 @@ export interface SSHHost {
   enableFileManager: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
+  statsConfig?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,7 +59,8 @@ export interface SSHHostData {
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   defaultPath?: string;
-  tunnelConnections?: any[];
+  tunnelConnections?: TunnelConnection[];
+  statsConfig?: string;
 }
 
 // ============================================================================
@@ -261,8 +264,8 @@ export interface TabContextTab {
     | "file_manager"
     | "user_profile";
   title: string;
-  hostConfig?: any;
-  terminalRef?: React.RefObject<any>;
+  hostConfig?: SSHHost;
+  terminalRef?: React.RefObject<TerminalHandle>;
 }
 
 // ============================================================================
@@ -303,7 +306,7 @@ export type KeyType = "rsa" | "ecdsa" | "ed25519";
 // API RESPONSE TYPES
 // ============================================================================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
@@ -366,13 +369,13 @@ export interface SSHTunnelViewerProps {
       action: "connect" | "disconnect" | "cancel",
       host: SSHHost,
       tunnelIndex: number,
-    ) => Promise<any>
+    ) => Promise<void>
   >;
   onTunnelAction?: (
     action: "connect" | "disconnect" | "cancel",
     host: SSHHost,
     tunnelIndex: number,
-  ) => Promise<any>;
+  ) => Promise<void>;
 }
 
 export interface FileManagerProps {
@@ -400,7 +403,7 @@ export interface SSHTunnelObjectProps {
     action: "connect" | "disconnect" | "cancel",
     host: SSHHost,
     tunnelIndex: number,
-  ) => Promise<any>;
+  ) => Promise<void>;
   compact?: boolean;
   bare?: boolean;
 }
@@ -459,3 +462,95 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
 export type PartialExcept<T, K extends keyof T> = Partial<T> & Pick<T, K>;
+
+// ============================================================================
+// EXPRESS REQUEST TYPES
+// ============================================================================
+
+export interface AuthenticatedRequest extends Request {
+  userId: string;
+  user?: {
+    id: string;
+    username: string;
+    isAdmin: boolean;
+  };
+}
+
+// ============================================================================
+// GITHUB API TYPES
+// ============================================================================
+
+export interface GitHubAsset {
+  id: number;
+  name: string;
+  size: number;
+  download_count: number;
+  browser_download_url: string;
+}
+
+export interface GitHubRelease {
+  id: number;
+  tag_name: string;
+  name: string;
+  body: string;
+  published_at: string;
+  html_url: string;
+  assets: GitHubAsset[];
+  prerelease: boolean;
+  draft: boolean;
+}
+
+export interface GitHubAPIResponse<T> {
+  data: T;
+  cached: boolean;
+  cache_age?: number;
+  timestamp?: number;
+}
+
+// ============================================================================
+// CACHE TYPES
+// ============================================================================
+
+export interface CacheEntry<T = unknown> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
+// ============================================================================
+// DATABASE EXPORT/IMPORT TYPES
+// ============================================================================
+
+export interface ExportSummary {
+  sshHostsImported: number;
+  sshCredentialsImported: number;
+  fileManagerItemsImported: number;
+  dismissedAlertsImported: number;
+  credentialUsageImported: number;
+  settingsImported: number;
+  skippedItems: number;
+  errors: string[];
+}
+
+export interface ImportResult {
+  success: boolean;
+  summary: ExportSummary;
+}
+
+export interface ExportRequestBody {
+  password: string;
+}
+
+export interface ImportRequestBody {
+  password: string;
+}
+
+export interface ExportPreviewBody {
+  scope?: string;
+  includeCredentials?: boolean;
+}
+
+export interface RestoreRequestBody {
+  backupPath: string;
+  targetPath?: string;
+}

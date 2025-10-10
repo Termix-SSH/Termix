@@ -234,7 +234,9 @@ export class DatabaseMigration {
         memoryDb.exec("PRAGMA foreign_keys = OFF");
 
         for (const table of tables) {
-          const rows = originalDb.prepare(`SELECT * FROM ${table.name}`).all();
+          const rows = originalDb
+            .prepare(`SELECT * FROM ${table.name}`)
+            .all() as Record<string, unknown>[];
 
           if (rows.length > 0) {
             const columns = Object.keys(rows[0]);
@@ -244,7 +246,7 @@ export class DatabaseMigration {
             );
 
             const insertTransaction = memoryDb.transaction(
-              (dataRows: any[]) => {
+              (dataRows: Record<string, unknown>[]) => {
                 for (const row of dataRows) {
                   const values = columns.map((col) => row[col]);
                   insertStmt.run(values);

@@ -106,7 +106,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
 
       setHosts(cleanedHosts);
       setError(null);
-    } catch (err) {
+    } catch {
       setError(t("hosts.failedToLoadHosts"));
     } finally {
       setLoading(false);
@@ -122,7 +122,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           toast.success(t("hosts.hostDeletedSuccessfully", { name: hostName }));
           await fetchHosts();
           window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
-        } catch (err) {
+        } catch {
           toast.error(t("hosts.failedToDeleteHost"));
         }
       },
@@ -143,7 +143,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       });
 
       confirmWithToast(confirmMessage, () => {
-        performExport(host, actualAuthType);
+        performExport(host);
       });
       return;
     } else if (actualAuthType === "password" || actualAuthType === "key") {
@@ -152,21 +152,21 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       });
 
       confirmWithToast(confirmMessage, () => {
-        performExport(host, actualAuthType);
+        performExport(host);
       });
       return;
     }
 
-    performExport(host, actualAuthType);
+    performExport(host);
   };
 
-  const performExport = async (host: SSHHost, actualAuthType: string) => {
+  const performExport = async (host: SSHHost) => {
     try {
       const decryptedHost = await exportSSHHostWithCredentials(host.id);
 
       const cleanExportData = Object.fromEntries(
         Object.entries(decryptedHost).filter(
-          ([_, value]) => value !== undefined,
+          ([, value]) => value !== undefined,
         ),
       );
 
@@ -185,7 +185,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       toast.success(
         `Exported host configuration for ${host.name || host.username}@${host.ip}`,
       );
-    } catch (error) {
+    } catch {
       toast.error(t("hosts.failedToExportHost"));
     }
   };
@@ -222,7 +222,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           );
           await fetchHosts();
           window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
-        } catch (err) {
+        } catch {
           toast.error(t("hosts.failedToRemoveFromFolder"));
         } finally {
           setOperationLoading(false);
@@ -251,7 +251,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
       setEditingFolder(null);
       setEditingFolderName("");
-    } catch (err) {
+    } catch {
       toast.error(t("hosts.failedToRenameFolder"));
     } finally {
       setOperationLoading(false);
@@ -291,7 +291,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     setDragOverFolder(folderName);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = () => {
     dragCounter.current--;
     if (dragCounter.current === 0) {
       setDragOverFolder(null);
@@ -325,7 +325,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       );
       await fetchHosts();
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
-    } catch (err) {
+    } catch {
       toast.error(t("hosts.failedToMoveToFolder"));
     } finally {
       setOperationLoading(false);

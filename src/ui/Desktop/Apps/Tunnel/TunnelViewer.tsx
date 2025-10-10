@@ -1,11 +1,7 @@
 import React from "react";
 import { TunnelObject } from "./TunnelObject.tsx";
 import { useTranslation } from "react-i18next";
-import type {
-  SSHHost,
-  TunnelConnection,
-  TunnelStatus,
-} from "../../../types/index.js";
+import type { SSHHost, TunnelStatus } from "../../../types/index.js";
 
 interface SSHTunnelViewerProps {
   hosts: SSHHost[];
@@ -15,7 +11,7 @@ interface SSHTunnelViewerProps {
     action: "connect" | "disconnect" | "cancel",
     host: SSHHost,
     tunnelIndex: number,
-  ) => Promise<any>;
+  ) => Promise<unknown>;
 }
 
 export function TunnelViewer({
@@ -63,7 +59,7 @@ export function TunnelViewer({
               }}
               tunnelStatuses={tunnelStatuses}
               tunnelActions={tunnelActions}
-              onTunnelAction={(action, _host, _index) =>
+              onTunnelAction={(action) =>
                 onTunnelAction(action, activeHost, idx)
               }
               compact

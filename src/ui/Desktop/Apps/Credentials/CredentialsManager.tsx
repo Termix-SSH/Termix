@@ -9,21 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Tooltip,
   TooltipContent,
@@ -37,7 +23,6 @@ import {
   Edit,
   Trash2,
   Shield,
-  Pin,
   Tag,
   Info,
   FolderMinus,
@@ -75,9 +60,7 @@ export function CredentialsManager({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showViewer, setShowViewer] = useState(false);
-  const [viewingCredential, setViewingCredential] = useState<Credential | null>(
-    null,
-  );
+  const [viewingCredential] = useState<Credential | null>(null);
   const [draggedCredential, setDraggedCredential] = useState<Credential | null>(
     null,
   );
@@ -88,7 +71,15 @@ export function CredentialsManager({
   const [showDeployDialog, setShowDeployDialog] = useState(false);
   const [deployingCredential, setDeployingCredential] =
     useState<Credential | null>(null);
-  const [availableHosts, setAvailableHosts] = useState<any[]>([]);
+  const [availableHosts, setAvailableHosts] = useState<
+    Array<{
+      id: number;
+      name: string;
+      ip: string;
+      port: number;
+      username: string;
+    }>
+  >([]);
   const [selectedHostId, setSelectedHostId] = useState<string>("");
   const [deployLoading, setDeployLoading] = useState(false);
   const [hostSearchQuery, setHostSearchQuery] = useState("");
@@ -153,7 +144,7 @@ export function CredentialsManager({
       const data = await getCredentials();
       setCredentials(data);
       setError(null);
-    } catch (err) {
+    } catch {
       setError(t("credentials.failedToFetchCredentials"));
     } finally {
       setLoading(false);
@@ -224,10 +215,13 @@ export function CredentialsManager({
           );
           await fetchCredentials();
           window.dispatchEvent(new CustomEvent("credentials:changed"));
-        } catch (err: any) {
-          if (err.response?.data?.details) {
+        } catch (err: unknown) {
+          const error = err as {
+            response?: { data?: { error?: string; details?: string } };
+          };
+          if (error.response?.data?.details) {
             toast.error(
-              `${err.response.data.error}\n${err.response.data.details}`,
+              `${error.response.data.error}\n${error.response.data.details}`,
             );
           } else {
             toast.error(t("credentials.failedToDeleteCredential"));
@@ -256,7 +250,7 @@ export function CredentialsManager({
           );
           await fetchCredentials();
           window.dispatchEvent(new CustomEvent("credentials:changed"));
-        } catch (err) {
+        } catch {
           toast.error(t("credentials.failedToRemoveFromFolder"));
         } finally {
           setOperationLoading(false);
@@ -285,7 +279,7 @@ export function CredentialsManager({
       window.dispatchEvent(new CustomEvent("credentials:changed"));
       setEditingFolder(null);
       setEditingFolderName("");
-    } catch (err) {
+    } catch {
       toast.error(t("credentials.failedToRenameFolder"));
     } finally {
       setOperationLoading(false);
@@ -325,7 +319,7 @@ export function CredentialsManager({
     setDragOverFolder(folderName);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = () => {
     dragCounter.current--;
     if (dragCounter.current === 0) {
       setDragOverFolder(null);
@@ -359,7 +353,7 @@ export function CredentialsManager({
       );
       await fetchCredentials();
       window.dispatchEvent(new CustomEvent("credentials:changed"));
-    } catch (err) {
+    } catch {
       toast.error(t("credentials.failedToMoveToFolder"));
     } finally {
       setOperationLoading(false);

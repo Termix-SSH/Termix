@@ -8,6 +8,7 @@ import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import type { AuthenticatedRequest } from "../../types/index.js";
 
 function isExecutableFile(permissions: string, fileName: string): boolean {
   const hasExecutePermission =
@@ -166,7 +167,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     credentialId,
   } = req.body;
 
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!userId) {
     fileLogger.error("SSH connection rejected: no authenticated user", {
@@ -246,7 +247,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     );
   }
 
-  const config: any = {
+  const config: Record<string, unknown> = {
     host: ip,
     port: port || 22,
     username,
@@ -417,7 +418,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         });
       } else {
         if (resolvedCredentials.password) {
-          const responses = prompts.map(() => resolvedCredentials.password || "");
+          const responses = prompts.map(
+            () => resolvedCredentials.password || "",
+          );
           finish(responses);
         } else {
           finish(prompts.map(() => ""));
@@ -432,7 +435,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
 
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!userId) {
     fileLogger.error("TOTP verification rejected: no authenticated user", {
@@ -454,7 +457,9 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       sessionId,
       userId,
     });
-    return res.status(404).json({ error: "TOTP session expired. Please reconnect." });
+    return res
+      .status(404)
+      .json({ error: "TOTP session expired. Please reconnect." });
   }
 
   delete pendingTOTPSessions[sessionId];
@@ -462,8 +467,12 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   if (Date.now() - session.createdAt > 120000) {
     try {
       session.client.end();
-    } catch {}
-    return res.status(408).json({ error: "TOTP session timeout. Please reconnect." });
+    } catch {
+      // Ignore errors when closing timed out session
+    }
+    return res
+      .status(408)
+      .json({ error: "TOTP session timeout. Please reconnect." });
   }
 
   session.finish([totpCode]);
@@ -487,7 +496,10 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       userId,
     });
 
-    res.json({ status: "success", message: "TOTP verified, SSH connection established" });
+    res.json({
+      status: "success",
+      message: "TOTP verified, SSH connection established",
+    });
   });
 
   session.client.on("error", (err) => {

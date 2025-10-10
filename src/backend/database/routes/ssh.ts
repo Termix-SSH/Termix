@@ -1,3 +1,4 @@
+import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import {
@@ -22,11 +23,11 @@ const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-function isNonEmptyString(value: any): value is string {
+function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isValidPort(port: any): port is number {
+function isValidPort(port: unknown): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
@@ -74,7 +75,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
           : [];
 
         const hasAutoStartTunnels = tunnelConnections.some(
-          (tunnel: any) => tunnel.autoStart,
+          (tunnel: Record<string, unknown>) => tunnel.autoStart,
         );
 
         if (!hasAutoStartTunnels) {
@@ -99,7 +100,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
           credentialId: host.credentialId,
           enableTunnel: true,
           tunnelConnections: tunnelConnections.filter(
-            (tunnel: any) => tunnel.autoStart,
+            (tunnel: Record<string, unknown>) => tunnel.autoStart,
           ),
           pin: !!host.pin,
           enableTerminal: !!host.enableTerminal,
@@ -183,8 +184,8 @@ router.post(
   requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
-    let hostData: any;
+    const userId = (req as AuthenticatedRequest).userId;
+    let hostData: Record<string, unknown>;
 
     if (req.headers["content-type"]?.includes("multipart/form-data")) {
       if (req.body.data) {
@@ -233,6 +234,7 @@ router.post(
       enableFileManager,
       defaultPath,
       tunnelConnections,
+      statsConfig,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -250,7 +252,7 @@ router.post(
     }
 
     const effectiveAuthType = authType || authMethod;
-    const sshDataObj: any = {
+    const sshDataObj: Record<string, unknown> = {
       userId: userId,
       name,
       folder: folder || null,
@@ -268,6 +270,7 @@ router.post(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
+      statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -319,9 +322,12 @@ router.post(
         enableTerminal: !!createdHost.enableTerminal,
         enableTunnel: !!createdHost.enableTunnel,
         tunnelConnections: createdHost.tunnelConnections
-          ? JSON.parse(createdHost.tunnelConnections)
+          ? JSON.parse(createdHost.tunnelConnections as string)
           : [],
         enableFileManager: !!createdHost.enableFileManager,
+        statsConfig: createdHost.statsConfig
+          ? JSON.parse(createdHost.statsConfig as string)
+          : undefined,
       };
 
       const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
@@ -331,7 +337,7 @@ router.post(
         {
           operation: "host_create_success",
           userId,
-          hostId: createdHost.id,
+          hostId: createdHost.id as number,
           name,
           ip,
           port,
@@ -362,8 +368,8 @@ router.put(
   upload.single("key"),
   async (req: Request, res: Response) => {
     const hostId = req.params.id;
-    const userId = (req as any).userId;
-    let hostData: any;
+    const userId = (req as AuthenticatedRequest).userId;
+    let hostData: Record<string, unknown>;
 
     if (req.headers["content-type"]?.includes("multipart/form-data")) {
       if (req.body.data) {
@@ -414,6 +420,7 @@ router.put(
       enableFileManager,
       defaultPath,
       tunnelConnections,
+      statsConfig,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -433,7 +440,7 @@ router.put(
     }
 
     const effectiveAuthType = authType || authMethod;
-    const sshDataObj: any = {
+    const sshDataObj: Record<string, unknown> = {
       name,
       folder,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
@@ -450,6 +457,7 @@ router.put(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
+      statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -519,9 +527,12 @@ router.put(
         enableTerminal: !!updatedHost.enableTerminal,
         enableTunnel: !!updatedHost.enableTunnel,
         tunnelConnections: updatedHost.tunnelConnections
-          ? JSON.parse(updatedHost.tunnelConnections)
+          ? JSON.parse(updatedHost.tunnelConnections as string)
           : [],
         enableFileManager: !!updatedHost.enableFileManager,
+        statsConfig: updatedHost.statsConfig
+          ? JSON.parse(updatedHost.statsConfig as string)
+          : undefined,
       };
 
       const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
@@ -558,7 +569,7 @@ router.put(
 // Route: Get SSH data for the authenticated user (requires JWT)
 // GET /ssh/host
 router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   if (!isNonEmptyString(userId)) {
     sshLogger.warn("Invalid userId for SSH data fetch", {
       operation: "host_fetch",
@@ -574,7 +585,7 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
     );
 
     const result = await Promise.all(
-      data.map(async (row: any) => {
+      data.map(async (row: Record<string, unknown>) => {
         const baseHost = {
           ...row,
           tags:
@@ -587,9 +598,12 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
           enableTerminal: !!row.enableTerminal,
           enableTunnel: !!row.enableTunnel,
           tunnelConnections: row.tunnelConnections
-            ? JSON.parse(row.tunnelConnections)
+            ? JSON.parse(row.tunnelConnections as string)
             : [],
           enableFileManager: !!row.enableFileManager,
+          statsConfig: row.statsConfig
+            ? JSON.parse(row.statsConfig as string)
+            : undefined,
         };
 
         return (await resolveHostCredentials(baseHost)) || baseHost;
@@ -613,7 +627,7 @@ router.get(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const hostId = req.params.id;
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId) || !hostId) {
       sshLogger.warn("Invalid userId or hostId for SSH host fetch by ID", {
@@ -654,6 +668,9 @@ router.get(
           ? JSON.parse(host.tunnelConnections)
           : [],
         enableFileManager: !!host.enableFileManager,
+        statsConfig: host.statsConfig
+          ? JSON.parse(host.statsConfig)
+          : undefined,
       };
 
       res.json((await resolveHostCredentials(result)) || result);
@@ -676,7 +693,7 @@ router.get(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = req.params.id;
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId) || !hostId) {
       return res.status(400).json({ error: "Invalid userId or hostId" });
@@ -723,7 +740,7 @@ router.get(
         enableFileManager: !!resolvedHost.enableFileManager,
         defaultPath: resolvedHost.defaultPath,
         tunnelConnections: resolvedHost.tunnelConnections
-          ? JSON.parse(resolvedHost.tunnelConnections)
+          ? JSON.parse(resolvedHost.tunnelConnections as string)
           : [],
       };
 
@@ -751,7 +768,7 @@ router.delete(
   "/db/host/:id",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const hostId = req.params.id;
 
     if (!isNonEmptyString(userId) || !hostId) {
@@ -850,7 +867,7 @@ router.get(
   "/file_manager/recent",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const hostId = req.query.hostId
       ? parseInt(req.query.hostId as string)
       : null;
@@ -892,7 +909,7 @@ router.post(
   "/file_manager/recent",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { hostId, path, name } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
@@ -941,7 +958,7 @@ router.delete(
   "/file_manager/recent",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { hostId, path } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
@@ -974,7 +991,7 @@ router.get(
   "/file_manager/pinned",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const hostId = req.query.hostId
       ? parseInt(req.query.hostId as string)
       : null;
@@ -1015,7 +1032,7 @@ router.post(
   "/file_manager/pinned",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { hostId, path, name } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
@@ -1061,7 +1078,7 @@ router.delete(
   "/file_manager/pinned",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { hostId, path } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
@@ -1094,7 +1111,7 @@ router.get(
   "/file_manager/shortcuts",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const hostId = req.query.hostId
       ? parseInt(req.query.hostId as string)
       : null;
@@ -1135,7 +1152,7 @@ router.post(
   "/file_manager/shortcuts",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { hostId, path, name } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
@@ -1181,7 +1198,7 @@ router.delete(
   "/file_manager/shortcuts",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { hostId, path } = req.body;
 
     if (!isNonEmptyString(userId) || !hostId || !path) {
@@ -1208,21 +1225,26 @@ router.delete(
   },
 );
 
-async function resolveHostCredentials(host: any): Promise<any> {
+async function resolveHostCredentials(
+  host: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   try {
     if (host.credentialId && host.userId) {
+      const credentialId = host.credentialId as number;
+      const userId = host.userId as string;
+
       const credentials = await SimpleDBOps.select(
         db
           .select()
           .from(sshCredentials)
           .where(
             and(
-              eq(sshCredentials.id, host.credentialId),
-              eq(sshCredentials.userId, host.userId),
+              eq(sshCredentials.id, credentialId),
+              eq(sshCredentials.userId, userId),
             ),
           ),
         "ssh_credentials",
-        host.userId,
+        userId,
       );
 
       if (credentials.length > 0) {
@@ -1238,6 +1260,7 @@ async function resolveHostCredentials(host: any): Promise<any> {
         };
       }
     }
+
     const result = { ...host };
     if (host.key_password !== undefined) {
       if (result.keyPassword === undefined) {
@@ -1260,7 +1283,7 @@ router.put(
   "/folders/rename",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { oldName, newName } = req.body;
 
     if (!isNonEmptyString(userId) || !oldName || !newName) {
@@ -1325,7 +1348,7 @@ router.post(
   "/bulk-import",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { hosts } = req.body;
 
     if (!Array.isArray(hosts) || hosts.length === 0) {
@@ -1397,7 +1420,7 @@ router.post(
           continue;
         }
 
-        const sshDataObj: any = {
+        const sshDataObj: Record<string, unknown> = {
           userId: userId,
           name: hostData.name || `${hostData.username}@${hostData.ip}`,
           folder: hostData.folder || "Default",
@@ -1424,6 +1447,9 @@ router.post(
           tunnelConnections: hostData.tunnelConnections
             ? JSON.stringify(hostData.tunnelConnections)
             : "[]",
+          statsConfig: hostData.statsConfig
+            ? JSON.stringify(hostData.statsConfig)
+            : null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -1454,7 +1480,7 @@ router.post(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { sshConfigId } = req.body;
 
     if (!sshConfigId || typeof sshConfigId !== "number") {
@@ -1518,7 +1544,7 @@ router.post(
           const tunnelConnections = JSON.parse(config.tunnelConnections);
 
           const resolvedConnections = await Promise.all(
-            tunnelConnections.map(async (tunnel: any) => {
+            tunnelConnections.map(async (tunnel: Record<string, unknown>) => {
               if (
                 tunnel.autoStart &&
                 tunnel.endpointHost &&
@@ -1607,7 +1633,7 @@ router.delete(
   "/autostart/disable",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { sshConfigId } = req.body;
 
     if (!sshConfigId || typeof sshConfigId !== "number") {
@@ -1653,7 +1679,7 @@ router.get(
   "/autostart/status",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     try {
       const autostartConfigs = await db

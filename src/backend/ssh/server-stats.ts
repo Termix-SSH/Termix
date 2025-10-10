@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import type { AuthenticatedRequest } from "../../types/index.js";
 
 interface PooledConnection {
   client: Client;
@@ -60,7 +61,7 @@ class SSHConnectionPool {
       return client;
     }
 
-    return new Promise((resolve, _reject) => {
+    return new Promise((resolve) => {
       const checkAvailable = () => {
         const available = connections.find((conn) => !conn.inUse);
         if (available) {
@@ -119,7 +120,11 @@ class SSHConnectionPool {
               },
             );
             client.end();
-            reject(new Error("TOTP authentication required but not supported in Server Stats"));
+            reject(
+              new Error(
+                "TOTP authentication required but not supported in Server Stats",
+              ),
+            );
           } else if (host.password) {
             const responses = prompts.map(() => host.password || "");
             finish(responses);
@@ -189,7 +194,7 @@ class SSHConnectionPool {
 }
 
 class RequestQueue {
-  private queues = new Map<number, Array<() => Promise<any>>>();
+  private queues = new Map<number, Array<() => Promise<unknown>>>();
   private processing = new Set<number>();
 
   async queueRequest<T>(hostId: number, request: () => Promise<T>): Promise<T> {
@@ -233,7 +238,7 @@ class RequestQueue {
 }
 
 interface CachedMetrics {
-  data: any;
+  data: unknown;
   timestamp: number;
   hostId: number;
 }
@@ -242,7 +247,7 @@ class MetricsCache {
   private cache = new Map<number, CachedMetrics>();
   private ttl = 30000;
 
-  get(hostId: number): any | null {
+  get(hostId: number): unknown | null {
     const cached = this.cache.get(hostId);
     if (cached && Date.now() - cached.timestamp < this.ttl) {
       return cached.data;
@@ -250,7 +255,7 @@ class MetricsCache {
     return null;
   }
 
-  set(hostId: number, data: any): void {
+  set(hostId: number, data: unknown): void {
     this.cache.set(hostId, {
       data,
       timestamp: Date.now(),
@@ -293,7 +298,8 @@ interface SSHHostWithCredentials {
   enableTunnel: boolean;
   enableFileManager: boolean;
   defaultPath: string;
-  tunnelConnections: any[];
+  tunnelConnections: unknown[];
+  statsConfig?: string;
   createdAt: string;
   updatedAt: string;
   userId: string;
@@ -427,11 +433,11 @@ async function fetchHostById(
 }
 
 async function resolveHostCredentials(
-  host: any,
+  host: Record<string, unknown>,
   userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    const baseHost: any = {
+    const baseHost: Record<string, unknown> = {
       id: host.id,
       name: host.name,
       ip: host.ip,
@@ -451,8 +457,9 @@ async function resolveHostCredentials(
       enableFileManager: !!host.enableFileManager,
       defaultPath: host.defaultPath || "/",
       tunnelConnections: host.tunnelConnections
-        ? JSON.parse(host.tunnelConnections)
+        ? JSON.parse(host.tunnelConnections as string)
         : [],
+      statsConfig: host.statsConfig || undefined,
       createdAt: host.createdAt,
       updatedAt: host.updatedAt,
       userId: host.userId,
@@ -466,7 +473,7 @@ async function resolveHostCredentials(
             .from(sshCredentials)
             .where(
               and(
-                eq(sshCredentials.id, host.credentialId),
+                eq(sshCredentials.id, host.credentialId as number),
                 eq(sshCredentials.userId, userId),
               ),
             ),
@@ -506,7 +513,7 @@ async function resolveHostCredentials(
       addLegacyCredentials(baseHost, host);
     }
 
-    return baseHost;
+    return baseHost as unknown as SSHHostWithCredentials;
   } catch (error) {
     statsLogger.error(
       `Failed to resolve host credentials for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -515,7 +522,10 @@ async function resolveHostCredentials(
   }
 }
 
-function addLegacyCredentials(baseHost: any, host: any): void {
+function addLegacyCredentials(
+  baseHost: Record<string, unknown>,
+  host: Record<string, unknown>,
+): void {
   baseHost.password = host.password || null;
   baseHost.key = host.key || null;
   baseHost.keyPassword = host.key_password || host.keyPassword || null;
@@ -567,7 +577,7 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     if (!host.password) {
       throw new Error(`No password available for host ${host.ip}`);
     }
-    (base as any).password = host.password;
+    (base as Record<string, unknown>).password = host.password;
   } else if (host.authType === "key") {
     if (!host.key) {
       throw new Error(`No SSH key available for host ${host.ip}`);
@@ -583,10 +593,13 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
         .replace(/\r\n/g, "\n")
         .replace(/\r/g, "\n");
 
-      (base as any).privateKey = Buffer.from(cleanKey, "utf8");
+      (base as Record<string, unknown>).privateKey = Buffer.from(
+        cleanKey,
+        "utf8",
+      );
 
       if (host.keyPassword) {
-        (base as any).passphrase = host.keyPassword;
+        (base as Record<string, unknown>).passphrase = host.keyPassword;
       }
     } catch (keyError) {
       statsLogger.error(
@@ -684,178 +697,383 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     percent: number | null;
     usedHuman: string | null;
     totalHuman: string | null;
+    availableHuman: string | null;
+  };
+  network: {
+    interfaces: Array<{
+      name: string;
+      ip: string;
+      state: string;
+      rxBytes: string | null;
+      txBytes: string | null;
+    }>;
+  };
+  uptime: {
+    seconds: number | null;
+    formatted: string | null;
+  };
+  processes: {
+    total: number | null;
+    running: number | null;
+    top: Array<{
+      pid: string;
+      user: string;
+      cpu: string;
+      mem: string;
+      command: string;
+    }>;
+  };
+  system: {
+    hostname: string | null;
+    kernel: string | null;
+    os: string | null;
   };
 }> {
   const cached = metricsCache.get(host.id);
   if (cached) {
-    return cached;
+    return cached as ReturnType<typeof collectMetrics> extends Promise<infer T>
+      ? T
+      : never;
   }
 
   return requestQueue.queueRequest(host.id, async () => {
     try {
       return await withSshConnection(host, async (client) => {
-      let cpuPercent: number | null = null;
-      let cores: number | null = null;
-      let loadTriplet: [number, number, number] | null = null;
+        let cpuPercent: number | null = null;
+        let cores: number | null = null;
+        let loadTriplet: [number, number, number] | null = null;
 
-      try {
-        const [stat1, loadAvgOut, coresOut] = await Promise.all([
-          execCommand(client, "cat /proc/stat"),
-          execCommand(client, "cat /proc/loadavg"),
-          execCommand(
-            client,
-            "nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo",
-          ),
-        ]);
+        try {
+          const [stat1, loadAvgOut, coresOut] = await Promise.all([
+            execCommand(client, "cat /proc/stat"),
+            execCommand(client, "cat /proc/loadavg"),
+            execCommand(
+              client,
+              "nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo",
+            ),
+          ]);
 
-        await new Promise((r) => setTimeout(r, 500));
-        const stat2 = await execCommand(client, "cat /proc/stat");
+          await new Promise((r) => setTimeout(r, 500));
+          const stat2 = await execCommand(client, "cat /proc/stat");
 
-        const cpuLine1 = (
-          stat1.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
-        ).trim();
-        const cpuLine2 = (
-          stat2.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
-        ).trim();
-        const a = parseCpuLine(cpuLine1);
-        const b = parseCpuLine(cpuLine2);
-        if (a && b) {
-          const totalDiff = b.total - a.total;
-          const idleDiff = b.idle - a.idle;
-          const used = totalDiff - idleDiff;
-          if (totalDiff > 0)
-            cpuPercent = Math.max(0, Math.min(100, (used / totalDiff) * 100));
-        }
-
-        const laParts = loadAvgOut.stdout.trim().split(/\s+/);
-        if (laParts.length >= 3) {
-          loadTriplet = [
-            Number(laParts[0]),
-            Number(laParts[1]),
-            Number(laParts[2]),
-          ].map((v) => (Number.isFinite(v) ? Number(v) : 0)) as [
-            number,
-            number,
-            number,
-          ];
-        }
-
-        const coresNum = Number((coresOut.stdout || "").trim());
-        cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
-      } catch (e) {
-        statsLogger.warn(
-          `Failed to collect CPU metrics for host ${host.id}`,
-          e,
-        );
-        cpuPercent = null;
-        cores = null;
-        loadTriplet = null;
-      }
-
-      let memPercent: number | null = null;
-      let usedGiB: number | null = null;
-      let totalGiB: number | null = null;
-      try {
-        const memInfo = await execCommand(client, "cat /proc/meminfo");
-        const lines = memInfo.stdout.split("\n");
-        const getVal = (key: string) => {
-          const line = lines.find((l) => l.startsWith(key));
-          if (!line) return null;
-          const m = line.match(/\d+/);
-          return m ? Number(m[0]) : null;
-        };
-        const totalKb = getVal("MemTotal:");
-        const availKb = getVal("MemAvailable:");
-        if (totalKb && availKb && totalKb > 0) {
-          const usedKb = totalKb - availKb;
-          memPercent = Math.max(0, Math.min(100, (usedKb / totalKb) * 100));
-          usedGiB = kibToGiB(usedKb);
-          totalGiB = kibToGiB(totalKb);
-        }
-      } catch (e) {
-        statsLogger.warn(
-          `Failed to collect memory metrics for host ${host.id}`,
-          e,
-        );
-        memPercent = null;
-        usedGiB = null;
-        totalGiB = null;
-      }
-
-      let diskPercent: number | null = null;
-      let usedHuman: string | null = null;
-      let totalHuman: string | null = null;
-      let availableHuman: string | null = null;
-      try {
-        const [diskOutHuman, diskOutBytes] = await Promise.all([
-          execCommand(client, "df -h -P / | tail -n +2"),
-          execCommand(client, "df -B1 -P / | tail -n +2"),
-        ]);
-
-        const humanLine =
-          diskOutHuman.stdout
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean)[0] || "";
-        const bytesLine =
-          diskOutBytes.stdout
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean)[0] || "";
-
-        const humanParts = humanLine.split(/\s+/);
-        const bytesParts = bytesLine.split(/\s+/);
-
-        if (humanParts.length >= 6 && bytesParts.length >= 6) {
-          totalHuman = humanParts[1] || null;
-          usedHuman = humanParts[2] || null;
-          availableHuman = humanParts[3] || null;
-
-          const totalBytes = Number(bytesParts[1]);
-          const usedBytes = Number(bytesParts[2]);
-
-          if (
-            Number.isFinite(totalBytes) &&
-            Number.isFinite(usedBytes) &&
-            totalBytes > 0
-          ) {
-            diskPercent = Math.max(
-              0,
-              Math.min(100, (usedBytes / totalBytes) * 100),
-            );
+          const cpuLine1 = (
+            stat1.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
+          ).trim();
+          const cpuLine2 = (
+            stat2.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
+          ).trim();
+          const a = parseCpuLine(cpuLine1);
+          const b = parseCpuLine(cpuLine2);
+          if (a && b) {
+            const totalDiff = b.total - a.total;
+            const idleDiff = b.idle - a.idle;
+            const used = totalDiff - idleDiff;
+            if (totalDiff > 0)
+              cpuPercent = Math.max(0, Math.min(100, (used / totalDiff) * 100));
           }
+
+          const laParts = loadAvgOut.stdout.trim().split(/\s+/);
+          if (laParts.length >= 3) {
+            loadTriplet = [
+              Number(laParts[0]),
+              Number(laParts[1]),
+              Number(laParts[2]),
+            ].map((v) => (Number.isFinite(v) ? Number(v) : 0)) as [
+              number,
+              number,
+              number,
+            ];
+          }
+
+          const coresNum = Number((coresOut.stdout || "").trim());
+          cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect CPU metrics for host ${host.id}`,
+            e,
+          );
+          cpuPercent = null;
+          cores = null;
+          loadTriplet = null;
         }
-      } catch (e) {
-        statsLogger.warn(
-          `Failed to collect disk metrics for host ${host.id}`,
-          e,
-        );
-        diskPercent = null;
-        usedHuman = null;
-        totalHuman = null;
-        availableHuman = null;
-      }
 
-      const result = {
-        cpu: { percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet },
-        memory: {
-          percent: toFixedNum(memPercent, 0),
-          usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
-          totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null,
-        },
-        disk: {
-          percent: toFixedNum(diskPercent, 0),
-          usedHuman,
-          totalHuman,
-          availableHuman,
-        },
-      };
+        let memPercent: number | null = null;
+        let usedGiB: number | null = null;
+        let totalGiB: number | null = null;
+        try {
+          const memInfo = await execCommand(client, "cat /proc/meminfo");
+          const lines = memInfo.stdout.split("\n");
+          const getVal = (key: string) => {
+            const line = lines.find((l) => l.startsWith(key));
+            if (!line) return null;
+            const m = line.match(/\d+/);
+            return m ? Number(m[0]) : null;
+          };
+          const totalKb = getVal("MemTotal:");
+          const availKb = getVal("MemAvailable:");
+          if (totalKb && availKb && totalKb > 0) {
+            const usedKb = totalKb - availKb;
+            memPercent = Math.max(0, Math.min(100, (usedKb / totalKb) * 100));
+            usedGiB = kibToGiB(usedKb);
+            totalGiB = kibToGiB(totalKb);
+          }
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect memory metrics for host ${host.id}`,
+            e,
+          );
+          memPercent = null;
+          usedGiB = null;
+          totalGiB = null;
+        }
 
-      metricsCache.set(host.id, result);
-      return result;
-    });
+        let diskPercent: number | null = null;
+        let usedHuman: string | null = null;
+        let totalHuman: string | null = null;
+        let availableHuman: string | null = null;
+        try {
+          const [diskOutHuman, diskOutBytes] = await Promise.all([
+            execCommand(client, "df -h -P / | tail -n +2"),
+            execCommand(client, "df -B1 -P / | tail -n +2"),
+          ]);
+
+          const humanLine =
+            diskOutHuman.stdout
+              .split("\n")
+              .map((l) => l.trim())
+              .filter(Boolean)[0] || "";
+          const bytesLine =
+            diskOutBytes.stdout
+              .split("\n")
+              .map((l) => l.trim())
+              .filter(Boolean)[0] || "";
+
+          const humanParts = humanLine.split(/\s+/);
+          const bytesParts = bytesLine.split(/\s+/);
+
+          if (humanParts.length >= 6 && bytesParts.length >= 6) {
+            totalHuman = humanParts[1] || null;
+            usedHuman = humanParts[2] || null;
+            availableHuman = humanParts[3] || null;
+
+            const totalBytes = Number(bytesParts[1]);
+            const usedBytes = Number(bytesParts[2]);
+
+            if (
+              Number.isFinite(totalBytes) &&
+              Number.isFinite(usedBytes) &&
+              totalBytes > 0
+            ) {
+              diskPercent = Math.max(
+                0,
+                Math.min(100, (usedBytes / totalBytes) * 100),
+              );
+            }
+          }
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect disk metrics for host ${host.id}`,
+            e,
+          );
+          diskPercent = null;
+          usedHuman = null;
+          totalHuman = null;
+          availableHuman = null;
+        }
+
+        // Collect network interfaces
+        const interfaces: Array<{
+          name: string;
+          ip: string;
+          state: string;
+          rxBytes: string | null;
+          txBytes: string | null;
+        }> = [];
+        try {
+          const ifconfigOut = await execCommand(
+            client,
+            "ip -o addr show | awk '{print $2,$4}' | grep -v '^lo'",
+          );
+          const netStatOut = await execCommand(
+            client,
+            "ip -o link show | awk '{print $2,$9}' | sed 's/:$//'",
+          );
+
+          const addrs = ifconfigOut.stdout
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+          const states = netStatOut.stdout
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+
+          const ifMap = new Map<string, { ip: string; state: string }>();
+          for (const line of addrs) {
+            const parts = line.split(/\s+/);
+            if (parts.length >= 2) {
+              const name = parts[0];
+              const ip = parts[1].split("/")[0];
+              if (!ifMap.has(name)) ifMap.set(name, { ip, state: "UNKNOWN" });
+            }
+          }
+          for (const line of states) {
+            const parts = line.split(/\s+/);
+            if (parts.length >= 2) {
+              const name = parts[0];
+              const state = parts[1];
+              const existing = ifMap.get(name);
+              if (existing) {
+                existing.state = state;
+              }
+            }
+          }
+
+          for (const [name, data] of ifMap.entries()) {
+            interfaces.push({
+              name,
+              ip: data.ip,
+              state: data.state,
+              rxBytes: null,
+              txBytes: null,
+            });
+          }
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect network metrics for host ${host.id}`,
+            e,
+          );
+        }
+
+        // Collect uptime
+        let uptimeSeconds: number | null = null;
+        let uptimeFormatted: string | null = null;
+        try {
+          const uptimeOut = await execCommand(client, "cat /proc/uptime");
+          const uptimeParts = uptimeOut.stdout.trim().split(/\s+/);
+          if (uptimeParts.length >= 1) {
+            uptimeSeconds = Number(uptimeParts[0]);
+            if (Number.isFinite(uptimeSeconds)) {
+              const days = Math.floor(uptimeSeconds / 86400);
+              const hours = Math.floor((uptimeSeconds % 86400) / 3600);
+              const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+              uptimeFormatted = `${days}d ${hours}h ${minutes}m`;
+            }
+          }
+        } catch (e) {
+          statsLogger.warn(`Failed to collect uptime for host ${host.id}`, e);
+        }
+
+        // Collect process information
+        let totalProcesses: number | null = null;
+        let runningProcesses: number | null = null;
+        const topProcesses: Array<{
+          pid: string;
+          user: string;
+          cpu: string;
+          mem: string;
+          command: string;
+        }> = [];
+        try {
+          const psOut = await execCommand(
+            client,
+            "ps aux --sort=-%cpu | head -n 11",
+          );
+          const psLines = psOut.stdout
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+          if (psLines.length > 1) {
+            for (let i = 1; i < Math.min(psLines.length, 11); i++) {
+              const parts = psLines[i].split(/\s+/);
+              if (parts.length >= 11) {
+                topProcesses.push({
+                  pid: parts[1],
+                  user: parts[0],
+                  cpu: parts[2],
+                  mem: parts[3],
+                  command: parts.slice(10).join(" ").substring(0, 50),
+                });
+              }
+            }
+          }
+
+          const procCount = await execCommand(client, "ps aux | wc -l");
+          const runningCount = await execCommand(
+            client,
+            "ps aux | grep -c ' R '",
+          );
+          totalProcesses = Number(procCount.stdout.trim()) - 1;
+          runningProcesses = Number(runningCount.stdout.trim());
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect process info for host ${host.id}`,
+            e,
+          );
+        }
+
+        // Collect system information
+        let hostname: string | null = null;
+        let kernel: string | null = null;
+        let os: string | null = null;
+        try {
+          const hostnameOut = await execCommand(client, "hostname");
+          const kernelOut = await execCommand(client, "uname -r");
+          const osOut = await execCommand(
+            client,
+            "cat /etc/os-release | grep '^PRETTY_NAME=' | cut -d'\"' -f2",
+          );
+
+          hostname = hostnameOut.stdout.trim() || null;
+          kernel = kernelOut.stdout.trim() || null;
+          os = osOut.stdout.trim() || null;
+        } catch (e) {
+          statsLogger.warn(
+            `Failed to collect system info for host ${host.id}`,
+            e,
+          );
+        }
+
+        const result = {
+          cpu: { percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet },
+          memory: {
+            percent: toFixedNum(memPercent, 0),
+            usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
+            totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null,
+          },
+          disk: {
+            percent: toFixedNum(diskPercent, 0),
+            usedHuman,
+            totalHuman,
+            availableHuman,
+          },
+          network: {
+            interfaces,
+          },
+          uptime: {
+            seconds: uptimeSeconds,
+            formatted: uptimeFormatted,
+          },
+          processes: {
+            total: totalProcesses,
+            running: runningProcesses,
+            top: topProcesses,
+          },
+          system: {
+            hostname,
+            kernel,
+            os,
+          },
+        };
+
+        metricsCache.set(host.id, result);
+        return result;
+      });
     } catch (error) {
-      if (error instanceof Error && error.message.includes("TOTP authentication required")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("TOTP authentication required")
+      ) {
         throw error;
       }
       throw error;
@@ -909,8 +1127,6 @@ async function pollStatusesOnce(userId?: string): Promise<void> {
     return;
   }
 
-  const now = new Date().toISOString();
-
   const checks = hosts.map(async (h) => {
     const isOnline = await tcpPing(h.ip, h.port, 5000);
     const now = new Date().toISOString();
@@ -936,7 +1152,7 @@ async function pollStatusesOnce(userId?: string): Promise<void> {
 }
 
 app.get("/status", async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
@@ -957,7 +1173,7 @@ app.get("/status", async (req, res) => {
 
 app.get("/status/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
@@ -988,7 +1204,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
 });
 
 app.post("/refresh", async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
@@ -1003,7 +1219,7 @@ app.post("/refresh", async (req, res) => {
 
 app.get("/metrics/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
@@ -1024,7 +1240,16 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
         error: "Host is offline",
         cpu: { percent: null, cores: null, load: null },
         memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: { percent: null, usedHuman: null, totalHuman: null },
+        disk: {
+          percent: null,
+          usedHuman: null,
+          totalHuman: null,
+          availableHuman: null,
+        },
+        network: { interfaces: [] },
+        uptime: { seconds: null, formatted: null },
+        processes: { total: null, running: null, top: [] },
+        system: { hostname: null, kernel: null, os: null },
         lastChecked: new Date().toISOString(),
       });
     }
@@ -1032,13 +1257,25 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
     const metrics = await collectMetrics(host);
     res.json({ ...metrics, lastChecked: new Date().toISOString() });
   } catch (err) {
-    if (err instanceof Error && err.message.includes("TOTP authentication required")) {
+    if (
+      err instanceof Error &&
+      err.message.includes("TOTP authentication required")
+    ) {
       return res.status(403).json({
         error: "TOTP_REQUIRED",
         message: "Server Stats unavailable for TOTP-enabled servers",
         cpu: { percent: null, cores: null, load: null },
         memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: { percent: null, usedHuman: null, totalHuman: null },
+        disk: {
+          percent: null,
+          usedHuman: null,
+          totalHuman: null,
+          availableHuman: null,
+        },
+        network: { interfaces: [] },
+        uptime: { seconds: null, formatted: null },
+        processes: { total: null, running: null, top: [] },
+        system: { hostname: null, kernel: null, os: null },
         lastChecked: new Date().toISOString(),
       });
     }
@@ -1050,7 +1287,16 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
         error: "Metrics collection timeout",
         cpu: { percent: null, cores: null, load: null },
         memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: { percent: null, usedHuman: null, totalHuman: null },
+        disk: {
+          percent: null,
+          usedHuman: null,
+          totalHuman: null,
+          availableHuman: null,
+        },
+        network: { interfaces: [] },
+        uptime: { seconds: null, formatted: null },
+        processes: { total: null, running: null, top: [] },
+        system: { hostname: null, kernel: null, os: null },
         lastChecked: new Date().toISOString(),
       });
     }
@@ -1059,7 +1305,16 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
       error: "Failed to collect metrics",
       cpu: { percent: null, cores: null, load: null },
       memory: { percent: null, usedGiB: null, totalGiB: null },
-      disk: { percent: null, usedHuman: null, totalHuman: null },
+      disk: {
+        percent: null,
+        usedHuman: null,
+        totalHuman: null,
+        availableHuman: null,
+      },
+      network: { interfaces: [] },
+      uptime: { seconds: null, formatted: null },
+      processes: { total: null, running: null, top: [] },
+      system: { hostname: null, kernel: null, os: null },
       lastChecked: new Date().toISOString(),
     });
   }

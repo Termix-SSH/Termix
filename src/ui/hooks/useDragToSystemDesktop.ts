@@ -21,10 +21,7 @@ interface DragToSystemOptions {
   onError?: (error: string) => void;
 }
 
-export function useDragToSystemDesktop({
-  sshSessionId,
-  sshHost,
-}: UseDragToSystemProps) {
+export function useDragToSystemDesktop({ sshSessionId }: UseDragToSystemProps) {
   const [state, setState] = useState<DragToSystemState>({
     isDragging: false,
     isDownloading: false,
@@ -37,35 +34,9 @@ export function useDragToSystemDesktop({
     options: DragToSystemOptions;
   } | null>(null);
 
-  const getLastSaveDirectory = async () => {
-    try {
-      if ("indexedDB" in window) {
-        const request = indexedDB.open("termix-dirs", 1);
-        return new Promise((resolve) => {
-          request.onsuccess = () => {
-            const db = request.result;
-            const transaction = db.transaction(["directories"], "readonly");
-            const store = transaction.objectStore("directories");
-            const getRequest = store.get("lastSaveDir");
-            getRequest.onsuccess = () =>
-              resolve(getRequest.result?.handle || null);
-          };
-          request.onerror = () => resolve(null);
-          request.onupgradeneeded = () => {
-            const db = request.result;
-            if (!db.objectStoreNames.contains("directories")) {
-              db.createObjectStore("directories");
-            }
-          };
-        });
-      }
-    } catch {
-      // IndexedDB not available or failed to retrieve directory
-    }
-    return null;
-  };
-
-  const saveLastDirectory = async (fileHandle: any) => {
+  const saveLastDirectory = async (fileHandle: {
+    getParent?: () => Promise<unknown>;
+  }) => {
     try {
       if ("indexedDB" in window && fileHandle.getParent) {
         const dirHandle = await fileHandle.getParent();
@@ -164,10 +135,33 @@ export function useDragToSystemDesktop({
         const fileName =
           fileList.length === 1 ? fileList[0].name : `files_${Date.now()}.zip`;
 
-        let fileHandle: any = null;
+        let fileHandle: {
+          createWritable?: () => Promise<{
+            write: (data: Blob) => Promise<void>;
+            close: () => Promise<void>;
+          }>;
+          getParent?: () => Promise<unknown>;
+        } | null = null;
         if (isFileSystemAPISupported()) {
           try {
-            fileHandle = await (window as any).showSaveFilePicker({
+            fileHandle = await (
+              window as Window & {
+                showSaveFilePicker?: (options: {
+                  suggestedName: string;
+                  startIn: string;
+                  types: Array<{
+                    description: string;
+                    accept: Record<string, string[]>;
+                  }>;
+                }) => Promise<{
+                  createWritable?: () => Promise<{
+                    write: (data: Blob) => Promise<void>;
+                    close: () => Promise<void>;
+                  }>;
+                  getParent?: () => Promise<unknown>;
+                }>;
+              }
+            ).showSaveFilePicker!({
               suggestedName: fileName,
               startIn: "desktop",
               types: [
@@ -187,8 +181,9 @@ export function useDragToSystemDesktop({
                 },
               ],
             });
-          } catch (error: any) {
-            if (error.name === "AbortError") {
+          } catch (error: unknown) {
+            const err = error as { name?: string };
+            if (err.name === "AbortError") {
               setState((prev) => ({
                 ...prev,
                 isDownloading: false,
@@ -242,8 +237,9 @@ export function useDragToSystemDesktop({
         }, 1000);
 
         return true;
-      } catch (error: any) {
-        const errorMessage = error.message || "Save failed";
+      } catch (error: unknown) {
+        const err = error as { message?: string };
+        const errorMessage = err.message || "Save failed";
 
         setState((prev) => ({
           ...prev,
