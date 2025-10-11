@@ -24,6 +24,10 @@
     "build:linux-portable": "npm run build && electron-builder --linux --dir",
     "build:linux-appimage": "npm run build && electron-builder --linux AppImage",
     "build:linux-targz": "npm run build && electron-builder --linux tar.gz",
+    "build:mac-dmg": "npm run build && electron-builder --mac dmg",
+    "build:mac-zip": "npm run build && electron-builder --mac zip",
+    "build:mac-mas": "npm run build && electron-builder --mac mas",
+    "build:mac-universal": "npm run build && electron-builder --mac --universal",
     "test:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-test.js",
     "migrate:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-migration.js",
     "prepare": "husky"
@@ -114,6 +118,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
+    "@electron/notarize": "^2.5.0",
     "@eslint/js": "^9.34.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",

@@ -12,6 +12,7 @@ on:
           - all
           - windows
           - linux
+          - macos
 
 jobs:
   build-windows:
@@ -91,3 +92,105 @@ jobs:
           name: Termix-Linux-Portable
           path: Termix-Linux-Portable.zip
           retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    if: github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == ''
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS DMG
+        run: npm run build:mac-dmg
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Build macOS Zip
+        run: npm run build:mac-zip
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload macOS DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termix-macOS-DMG
+          path: release/*.dmg
+          retention-days: 30
+
+      - name: Upload macOS Zip Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termix-macOS-Zip
+          path: release/*.zip
+          retention-days: 30
+
+  build-macos-mas:
+    runs-on: macos-latest
+    if: github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all'
+    needs: []
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Import Code Signing Certificates
+        if: github.event_name == 'workflow_dispatch' && (vars.MAC_BUILD_CERTIFICATE_BASE64 != '' || secrets.MAC_BUILD_CERTIFICATE_BASE64 != '')
+        env:
+          MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
+          MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
+          MAC_KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$MAC_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERTIFICATE_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+      - name: Build macOS App Store Package
+        run: npm run build:mac-mas
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload macOS MAS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termix-macOS-MAS
+          path: release/mas/*.pkg
+          retention-days: 30
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
