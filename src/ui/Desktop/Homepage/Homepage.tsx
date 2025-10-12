@@ -115,7 +115,7 @@ export function Homepage({
                   size="sm"
                   className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
                   onClick={() =>
-                    window.open("https://github.com/LukeGus/Termix", "_blank")
+                    window.open("https://github.com/Termix-SSH/Termix", "_blank")
                   }
                 >
                   GitHub
@@ -127,7 +127,7 @@ export function Homepage({
                   className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
                   onClick={() =>
                     window.open(
-                      "https://github.com/LukeGus/Termix/issues/new",
+                      "https://github.com/Termix-SSH/Termix/issues/new",
                       "_blank",
                     )
                   }

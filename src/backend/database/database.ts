@@ -142,7 +142,7 @@ class GitHubCache {
 const githubCache = new GitHubCache();
 
 const GITHUB_API_BASE = "https://api.github.com";
-const REPO_OWNER = "LukeGus";
+const REPO_OWNER = "Termix-SSH";
 const REPO_NAME = "Termix";
 
 interface GitHubRelease {

@@ -106,11 +106,11 @@ ipcMain.handle("get-app-version", () => {
 });
 
 const GITHUB_API_BASE = "https://api.github.com";
-const REPO_OWNER = "LukeGus";
+const REPO_OWNER = "Termix-SSH";
 const REPO_NAME = "Termix";
 
 const githubCache = new Map();
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const CACHE_DURATION = 30 * 60 * 1000;
 
 async function fetchGitHubAPI(endpoint, cacheKey) {
   const cached = githubCache.get(cacheKey);

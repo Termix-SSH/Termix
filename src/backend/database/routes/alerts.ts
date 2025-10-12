@@ -43,8 +43,8 @@ class AlertCache {
 const alertCache = new AlertCache();
 
 const GITHUB_RAW_BASE = "https://raw.githubusercontent.com";
-const REPO_OWNER = "LukeGus";
-const REPO_NAME = "Termix-Docs";
+const REPO_OWNER = "Termix-SSH";
+const REPO_NAME = "Docs";
 const ALERTS_FILE = "main/termix-alerts.json";
 
 interface TermixAlert {

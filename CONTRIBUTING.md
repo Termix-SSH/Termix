@@ -10,7 +10,7 @@
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/LukeGus/Termix
+   git clone https://github.com/Termix-SSH/Termix
    ```
 2. Install the dependencies:
    ```sh
@@ -31,7 +31,7 @@ This will start the backend and the frontend Vite server. You can access Termix 
 ## Contributing
 
 1. **Fork the repository**: Click the "Fork" button at the top right of
-   the [repository page](https://github.com/LukeGus/Termix).
+   the [repository page](https://github.com/Termix-SSH/Termix).
 2. **Create a new branch**:
    ```sh
    git checkout -b feature/my-new-feature
@@ -101,6 +101,6 @@ This will start the backend and the frontend Vite server. You can access Termix 
 
 ## Support
 
-If you need help with Termix, you can join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support
-channel. You can also open an issue or open a pull request on the [GitHub](https://github.com/LukeGus/Termix/issues)
-repo.
+If you need help or want to request a feature with Termix, visit the [Issues](https://github.com/Termix-SSH/Support/issues) page, log in, and press `New Issue`.
+Please be as detailed as possible in your issue, preferably written in English. You can also join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support
+channel, however, response times may be longer.

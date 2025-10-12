@@ -5,9 +5,9 @@
   <img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文
 </p>
 
-![GitHub Repo stars](https://img.shields.io/github/stars/LukeGus/Termix?style=flat&label=Stars)
-![GitHub forks](https://img.shields.io/github/forks/LukeGus/Termix?style=flat&label=Forks)
-![GitHub Release](https://img.shields.io/github/v/release/LukeGus/Termix?style=flat&label=Release)
+![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
+![GitHub forks](https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks)
+![GitHub Release](https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release)
 <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720"></a>
 
 <p align="center">
@@ -29,7 +29,7 @@
 
 <br />
 <p align="center">
-  <a href="https://github.com/LukeGus/Termix">
+  <a href="https://github.com/Termix-SSH/Termix">
     <img alt="Termix Banner" src=./repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
@@ -39,34 +39,44 @@
 # 概览
 
 <p align="center">
-  <a href="https://github.com/LukeGus/Termix">
+  <a href="https://github.com/Termix-SSH/Termix">
     <img alt="Termix Banner" src=./public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
 Termix 是一个开源、永久免费、自托管的一体化服务器管理平台。它提供了一个基于网页的解决方案，通过一个直观的界面管理你的服务器和基础设施。Termix
-提供 SSH 终端访问、SSH 隧道功能以及远程文件编辑，还会陆续添加更多工具。
+提供 SSH 终端访问、SSH 隧道功能以及远程文件管理，还会陆续添加更多工具。
 
 # 功能
 
 - **SSH 终端访问** - 功能完整的终端，支持分屏（最多 4 个面板）和标签系统
 - **SSH 隧道管理** - 创建和管理 SSH 隧道，支持自动重连和健康监控
-- **远程文件编辑器** - 直接在远程服务器编辑文件，支持语法高亮和文件管理功能（上传、删除、重命名等）
-- **SSH 主机管理器** - 保存、组织和管理 SSH 连接，支持标签和文件夹
+- **远程文件管理器** - 直接在远程服务器上管理文件，支持查看和编辑代码、图片、音频和视频。无缝上传、下载、重命名、删除和移动文件。
+- **SSH 主机管理器** - 保存、组织和管理 SSH 连接，支持标签和文件夹，轻松保存可重用的登录信息，同时能够自动部署 SSH 密钥
 - **服务器统计** - 查看任意 SSH 服务器的 CPU、内存和硬盘使用情况
 - **用户认证** - 安全的用户管理，支持管理员控制、OIDC 和双因素认证（TOTP）
-- **现代化界面** - 使用 React、Tailwind CSS 和 Shadcn 构建的简洁界面
-- **语言支持** - 内置中英文支持
+- **数据库加密** - SQLite 数据库文件在静态时加密，支持自动加密/解密
+- **数据导出/导入** - 导出和导入 SSH 主机、凭据和文件管理器数据，支持增量同步
+- **自动 SSL 设置** - 内置 SSL 证书生成和管理，支持 HTTPS 重定向
+- **现代化界面** - 使用 React、Tailwind CSS 和 Shadcn 构建的简洁桌面/移动友好界面
+- **语言支持** - 内置英语、中文和德语支持
+- **平台支持** - 提供 Web 应用、桌面应用程序（Windows 和 Linux）以及 iOS 和 Android 专用移动应用。计划支持 macOS 和 iPadOS。
 
 # 计划功能
 
-- **增强管理员控制** - 提供更精细的用户和管理员权限控制、共享主机等功能
-- **主题定制** - 修改所有工具的主题风格
-- **增强终端支持** - 添加更多终端协议，如 VNC 和 RDP（有类似 Apache Guacamole 的 RDP 集成经验者请通过创建 issue 联系我）
-- **移动端支持** - 支持移动应用或 Termix 网站移动版，让你在手机上管理服务器
+查看 [项目](https://github.com/orgs/Termix-SSH/projects/2) 了解所有计划功能。如果你想贡献代码，请参阅 [贡献指南](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md)。
 
 # 安装
 
-访问 Termix [文档](https://docs.termix.site/install) 获取安装信息。或者可以参考以下示例 docker-compose 文件：
+支持的设备：
+
+- 网站（任何现代浏览器，如 Google、Safari 和 Firefox）
+- Windows（应用程序）
+- Linux（应用程序）
+- iOS（应用程序）
+- Android（应用程序）
+- iPadOS 和 macOS 正在开发中
+
+访问 Termix [文档](https://docs.termix.site/install) 获取所有平台的安装信息。或者可以参考以下示例 docker-compose 文件：
 
 ```yaml
 services:
@@ -88,8 +98,9 @@ volumes:
 
 # 支持
 
-如果你需要 Termix 的帮助，可以加入 [Discord](https://discord.gg/jVQGdvHDrf)
-服务器并访问支持频道。你也可以在 [GitHub](https://github.com/LukeGus/Termix/issues) 仓库提交 issue 或 pull request。
+如果你需要 Termix 的帮助或想要请求功能，请访问 [Issues](https://github.com/Termix-SSH/Support/issues) 页面，登录并点击 `New Issue`。
+请尽可能详细地描述你的问题，最好使用英语。你也可以加入 [Discord](https://discord.gg/jVQGdvHDrf) 服务器并访问支持
+频道，但响应时间可能较长。
 
 # 展示
 
@@ -99,17 +110,25 @@ volumes:
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 3.png" width="250" alt="Termix Demo 3"/>
-  <img src="./repo-images/Image 4.png" width="250" alt="Termix Demo 4"/>
-  <img src="./repo-images/Image 5.png" width="250" alt="Termix Demo 5"/>
+  <img src="./repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
+  <img src="./repo-images/Image 4.png" width="400" alt="Termix Demo 4"/>
 </p>
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/f9caa061-10dc-4173-ae7d-c6d42f05cf56" width="800" controls>
+  <img src="./repo-images/Image 5.png" width="400" alt="Termix Demo 5"/>
+  <img src="./repo-images/Image 6.png" width="400" alt="Termix Demo 6"/>
+</p>
+
+<p align="center">
+  <img src="./repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
+</p>
+
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/88936e0d-2399-4122-8eee-c255c25da48c" width="800" controls>
     你的浏览器不支持 video 标签。
   </video>
 </p>
 
 # 许可证
 
-根据 Apache 2.0 许可证发布。更多信息请参见 LICENSE。
+根据 Apache License Version 2.0 发布。更多信息请参见 LICENSE。
