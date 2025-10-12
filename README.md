@@ -5,9 +5,9 @@
   <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a>
 </p>
 
-![GitHub Repo stars](https://img.shields.io/github/stars/LukeGus/Termix?style=flat&label=Stars)
-![GitHub forks](https://img.shields.io/github/forks/LukeGus/Termix?style=flat&label=Forks)
-![GitHub Release](https://img.shields.io/github/v/release/LukeGus/Termix?style=flat&label=Release)
+![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
+![GitHub forks](https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks)
+![GitHub Release](https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release)
 <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720"></a>
 
 <p align="center">
@@ -29,7 +29,7 @@
 
 <br />
 <p align="center">
-  <a href="https://github.com/LukeGus/Termix">
+  <a href="https://github.com/Termix-SSH/Termix">
     <img alt="Termix Banner" src=./repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
@@ -39,7 +39,7 @@ If you would like, you can support the project here!\
 # Overview
 
 <p align="center">
-  <a href="https://github.com/LukeGus/Termix">
+  <a href="https://github.com/Termix-SSH/Termix">
     <img alt="Termix Banner" src=./public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
@@ -64,7 +64,7 @@ access, SSH tunneling capabilities, and remote file management, with many more t
 
 # Planned Features
 
-See [Projects](https://github.com/users/LukeGus/projects/3) for all planned features. If you are looking to contribute, see [Contributing](https://github.com/LukeGus/Termix/blob/main/CONTRIBUTING.md).
+See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned features. If you are looking to contribute, see [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 # Installation
 
