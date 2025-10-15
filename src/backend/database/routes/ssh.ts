@@ -226,7 +226,7 @@ router.post(
       authType,
       credentialId,
       key,
-      key_password,
+      keyPassword,
       keyType,
       pin,
       enableTerminal,
@@ -412,7 +412,7 @@ router.put(
       authType,
       credentialId,
       key,
-      key_password,
+      keyPassword,
       keyType,
       pin,
       enableTerminal,
@@ -727,7 +727,7 @@ router.get(
         authType: resolvedHost.authType,
         password: resolvedHost.password || null,
         key: resolvedHost.key || null,
-        key_password: resolvedHost.key_password || null,
+        keyPassword: resolvedHost.key_password || null,
         keyType: resolvedHost.keyType || null,
         folder: resolvedHost.folder,
         tags:
@@ -1433,7 +1433,7 @@ router.post(
           credentialId:
             hostData.authType === "credential" ? hostData.credentialId : null,
           key: hostData.authType === "key" ? hostData.key : null,
-          key_password:
+          keyPassword:
             hostData.authType === "key"
               ? hostData.keyPassword || hostData.key_password || null
               : null,

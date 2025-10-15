@@ -1,7 +1,6 @@
 // ============================================================================
 // CENTRAL TYPE DEFINITIONS
 // ============================================================================
-// This file contains all shared interfaces and types used across the application
 
 import type { Client } from "ssh2";
 import type { Request } from "express";
@@ -265,7 +264,7 @@ export interface TabContextTab {
     | "user_profile";
   title: string;
   hostConfig?: SSHHost;
-  terminalRef?: React.RefObject<TerminalHandle>;
+  terminalRef?: any;
 }
 
 // ============================================================================

@@ -674,7 +674,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     );
 
-    const connectConfig: ConnectConfig = {
+    const connectConfig: any = {
       host: ip,
       port,
       username,
@@ -682,6 +682,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
       readyTimeout: 60000,
+      tcpKeepAlive: true,
+      tcpKeepAliveInitialDelay: 30000,
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",
