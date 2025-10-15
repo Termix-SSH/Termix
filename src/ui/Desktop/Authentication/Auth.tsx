@@ -23,7 +23,7 @@ import {
   isElectron,
   logoutUser,
 } from "../../main-axios.ts";
-import { ServerConfig as ServerConfigComponent } from "@/ui/Desktop/Electron Only/ServerConfig.tsx";
+import { ElectronServerConfig as ServerConfigComponent } from "@/ui/Desktop/Authentication/ElectronServerConfig.tsx";
 
 interface HomepageAuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
@@ -40,7 +40,7 @@ interface HomepageAuthProps extends React.ComponentProps<"div"> {
   }) => void;
 }
 
-export function HomepageAuth({
+export function Auth({
   className,
   setLoggedIn,
   setIsAdmin,

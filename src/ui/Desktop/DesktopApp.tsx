@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { LeftSidebar } from "@/ui/Desktop/Navigation/LeftSidebar.tsx";
-import { Homepage } from "@/ui/Desktop/Homepage/Homepage.tsx";
+import { Homepage } from "@/ui/Desktop/Apps/Homepage/Homepage.tsx";
 import { AppView } from "@/ui/Desktop/Navigation/AppView.tsx";
 import { HostManager } from "@/ui/Desktop/Apps/Host Manager/HostManager.tsx";
 import {

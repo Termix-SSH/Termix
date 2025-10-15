@@ -374,7 +374,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     ) {
       ws.addEventListener("open", () => {
         connectionTimeoutRef.current = setTimeout(() => {
-          if (!isConnected) {
+          if (!isConnected && !totpRequired) {
             if (terminal) {
               terminal.clear();
             }
@@ -482,6 +482,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "totp_required") {
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || "Verification code:");
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
           }
         } catch {
           toast.error(t("terminal.messageParseError"));
@@ -788,6 +792,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           }}
         />
 
+        <TOTPDialog
+          isOpen={totpRequired}
+          prompt={totpPrompt}
+          onSubmit={handleTotpSubmit}
+          onCancel={handleTotpCancel}
+        />
+
         {isConnecting && (
           <div className="absolute inset-0 flex items-center justify-center bg-dark-bg">
             <div className="flex items-center gap-3">
@@ -796,13 +807,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             </div>
           </div>
         )}
-
-        <TOTPDialog
-          isOpen={totpRequired}
-          prompt={totpPrompt}
-          onSubmit={handleTotpSubmit}
-          onCancel={handleTotpCancel}
-        />
       </div>
     );
   },

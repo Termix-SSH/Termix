@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { HomepageAlertCard } from "./HomepageAlertCard.tsx";
+import { AlertCard } from "./AlertCard.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getUserAlerts, dismissAlert } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
-import type { TermixAlert } from "../../../types/index.js";
+import type { TermixAlert } from "../../../../../../types";
 
 interface AlertManagerProps {
   userId: string | null;
   loggedIn: boolean;
 }
 
-export function HomepageAlertManager({
+export function AlertManager({
   userId,
   loggedIn,
 }: AlertManagerProps): React.ReactElement {
@@ -129,7 +129,7 @@ export function HomepageAlertManager({
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-[99999]">
       <div className="relative w-full max-w-2xl mx-4">
-        <HomepageAlertCard
+        <AlertCard
           alert={currentAlert}
           onDismiss={handleDismissAlert}
           onClose={handleCloseCurrentAlert}

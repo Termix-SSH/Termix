@@ -194,6 +194,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let sshStream: ClientChannel | null = null;
   let pingInterval: NodeJS.Timeout | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
+  let totpPromptSent = false;
 
   ws.on("close", () => {
     const userWs = userConnections.get(userId);
@@ -633,43 +634,72 @@ wss.on("connection", async (ws: WebSocket, req) => {
         prompts: Array<{ prompt: string; echo: boolean }>,
         finish: (responses: string[]) => void,
       ) => {
+        const promptTexts = prompts.map((p) => p.prompt);
         sshLogger.info("Keyboard-interactive authentication requested", {
           operation: "ssh_keyboard_interactive",
           hostId: id,
           promptsCount: prompts.length,
           instructions: instructions || "none",
         });
+        console.log(
+          `[SSH Keyboard-Interactive] Host ${id}: ${prompts.length} prompts:`,
+          promptTexts,
+        );
 
-        const totpPrompt = prompts.find((p) =>
+        const totpPromptIndex = prompts.findIndex((p) =>
           /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
             p.prompt,
           ),
         );
 
-        if (totpPrompt) {
-          keyboardInteractiveFinish = finish;
+        if (totpPromptIndex !== -1) {
+          if (totpPromptSent) return;
+          totpPromptSent = true;
+
+          keyboardInteractiveFinish = (totpResponses: string[]) => {
+            const totpCode = (totpResponses[0] || "").trim();
+
+            sshLogger.info("TOTP response being sent to SSH server", {
+              operation: "totp_verification",
+              hostId: id,
+              responseLength: totpCode.length,
+            });
+
+            console.log(
+              `[SSH TOTP Response] Host ${id}: TOTP code: "${totpCode}" (length: ${totpCode.length})`,
+            );
+            console.log(`[SSH TOTP Response] Calling finish() with array:`, [
+              totpCode,
+            ]);
+
+            finish([totpCode]);
+          };
           ws.send(
             JSON.stringify({
               type: "totp_required",
-              prompt: totpPrompt.prompt,
+              prompt: prompts[totpPromptIndex].prompt,
             }),
           );
         } else {
-          if (resolvedCredentials.password) {
-            const responses = prompts.map(
-              () => resolvedCredentials.password || "",
-            );
-            finish(responses);
-          } else {
-            sshLogger.warn(
-              "Keyboard-interactive requires password but none available",
-              {
-                operation: "ssh_keyboard_interactive_no_password",
-                hostId: id,
-              },
-            );
-            finish(prompts.map(() => ""));
-          }
+          const responses = prompts.map((p) => {
+            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+              return resolvedCredentials.password;
+            }
+            return "";
+          });
+
+          sshLogger.info("Responding to keyboard-interactive prompts", {
+            operation: "ssh_keyboard_interactive_response",
+            hostId: id,
+            hasPassword: !!resolvedCredentials.password,
+            responsesProvided: responses.filter((r) => r !== "").length,
+            totalPrompts: prompts.length,
+          });
+
+          console.log(
+            `[SSH Auto Response] Host ${id}: Sending ${responses.length} responses, ${responses.filter((r) => r !== "").length} non-empty`,
+          );
+          finish(responses);
         }
       },
     );
@@ -840,6 +870,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
       sshConn = null;
     }
+
+    totpPromptSent = false;
+    keyboardInteractiveFinish = null;
   }
 
   function setupPingInterval() {

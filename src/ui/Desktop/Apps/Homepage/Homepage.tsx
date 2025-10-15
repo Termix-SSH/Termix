@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { HomepageAuth } from "@/ui/Desktop/Homepage/HomepageAuth.tsx";
-import { HomepageUpdateLog } from "@/ui/Desktop/Homepage/HompageUpdateLog.tsx";
-import { HomepageAlertManager } from "@/ui/Desktop/Homepage/HomepageAlertManager.tsx";
+import { Auth } from "@/ui/Desktop/Authentication/Auth.tsx";
+import { HomepageUpdateLog } from "@/ui/Desktop/Apps/Homepage/Apps/UpdateLog.tsx";
+import { AlertManager } from "@/ui/Desktop/Apps/Homepage/Apps/Alerts/AlertManager.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getUserInfo, getDatabaseHealth, getCookie } from "@/ui/main-axios.ts";
+import { useSidebar } from "@/components/ui/sidebar.tsx";
 
 interface HomepageProps {
   onSelectView: (view: string) => void;
@@ -29,8 +30,14 @@ export function Homepage({
   const [userId, setUserId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
 
+  let sidebarState: "expanded" | "collapsed" = "expanded";
+  try {
+    const sidebar = useSidebar();
+    sidebarState = sidebar.state;
+  } catch {}
+
   const topMarginPx = isTopbarOpen ? 74 : 26;
-  const leftMarginPx = 26;
+  const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
 
   useEffect(() => {
@@ -80,7 +87,7 @@ export function Homepage({
     <>
       {!loggedIn ? (
         <div className="w-full h-full flex items-center justify-center">
-          <HomepageAuth
+          <Auth
             setLoggedIn={setLoggedIn}
             setIsAdmin={setIsAdmin}
             setUsername={setUsername}
@@ -94,7 +101,7 @@ export function Homepage({
         </div>
       ) : (
         <div
-          className="w-full h-full flex items-center justify-center"
+          className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden flex items-center justify-center"
           style={{
             marginLeft: leftMarginPx,
             marginRight: 17,
@@ -103,67 +110,62 @@ export function Homepage({
             height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
           }}
         >
-          <div className="flex flex-row items-center justify-center gap-8 relative z-10">
-            <div className="flex flex-col items-center gap-6 w-[400px]">
-              <HomepageUpdateLog loggedIn={loggedIn} />
+          <div className="flex flex-col items-center justify-center gap-6 relative z-10">
+            <HomepageUpdateLog loggedIn={loggedIn} />
 
-              <div className="flex flex-row items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
-                  onClick={() =>
-                    window.open("https://github.com/Termix-SSH/Termix", "_blank")
-                  }
-                >
-                  GitHub
-                </Button>
-                <div className="w-px h-4 bg-dark-border"></div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
-                  onClick={() =>
-                    window.open(
-                      "https://github.com/Termix-SSH/Termix/issues/new",
-                      "_blank",
-                    )
-                  }
-                >
-                  Feedback
-                </Button>
-                <div className="w-px h-4 bg-dark-border"></div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
-                  onClick={() =>
-                    window.open(
-                      "https://discord.com/invite/jVQGdvHDrf",
-                      "_blank",
-                    )
-                  }
-                >
-                  Discord
-                </Button>
-                <div className="w-px h-4 bg-dark-border"></div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
-                  onClick={() =>
-                    window.open("https://github.com/sponsors/LukeGus", "_blank")
-                  }
-                >
-                  Donate
-                </Button>
-              </div>
+            <div className="flex flex-row items-center gap-3 flex-wrap justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
+                onClick={() =>
+                  window.open("https://github.com/Termix-SSH/Termix", "_blank")
+                }
+              >
+                GitHub
+              </Button>
+              <div className="w-px h-4 bg-dark-border"></div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
+                onClick={() =>
+                  window.open(
+                    "https://github.com/Termix-SSH/Termix/issues/new",
+                    "_blank",
+                  )
+                }
+              >
+                Feedback
+              </Button>
+              <div className="w-px h-4 bg-dark-border"></div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
+                onClick={() =>
+                  window.open("https://discord.com/invite/jVQGdvHDrf", "_blank")
+                }
+              >
+                Discord
+              </Button>
+              <div className="w-px h-4 bg-dark-border"></div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg transition-colors"
+                onClick={() =>
+                  window.open("https://github.com/sponsors/LukeGus", "_blank")
+                }
+              >
+                Donate
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      <HomepageAlertManager userId={userId} loggedIn={loggedIn} />
+      <AlertManager userId={userId} loggedIn={loggedIn} />
     </>
   );
 }

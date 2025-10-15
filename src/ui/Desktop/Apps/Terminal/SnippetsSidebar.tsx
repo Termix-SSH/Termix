@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Play, Edit, Trash2, Copy } from "lucide-react";
+import { Plus, Play, Edit, Trash2, Copy, X } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -177,7 +177,7 @@ export function SnippetsSidebar({
               className="h-8 w-8 p-0 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center"
               title={t("common.close")}
             >
-              <span className="text-lg font-bold leading-none">×</span>
+              <X />
             </Button>
           </div>
 

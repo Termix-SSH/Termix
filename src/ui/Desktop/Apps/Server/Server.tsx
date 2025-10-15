@@ -308,6 +308,7 @@ export function Server({
             <Button
               variant="outline"
               disabled={isRefreshing}
+              className="font-semibold"
               onClick={async () => {
                 if (currentHostConfig?.id) {
                   try {

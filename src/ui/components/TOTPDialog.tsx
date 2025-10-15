@@ -23,8 +23,8 @@ export function TOTPDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="absolute inset-0 bg-black/50" />
+    <div className="absolute inset-0 flex items-center justify-center z-50">
+      <div className="absolute inset-0 bg-dark-bg rounded-md" />
       <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
         <div className="mb-4 flex items-center gap-2">
           <Shield className="w-5 h-5 text-primary" />
