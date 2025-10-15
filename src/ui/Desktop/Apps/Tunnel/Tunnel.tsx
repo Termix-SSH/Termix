@@ -191,7 +191,8 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
       }
 
       await fetchTunnelStatuses();
-    } catch (err) {
+    } catch {
+      // Ignore tunnel action errors
     } finally {
       setTunnelActions((prev) => ({ ...prev, [tunnelName]: false }));
     }

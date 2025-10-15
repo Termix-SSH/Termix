@@ -17,7 +17,7 @@ export interface LogContext {
   errorCode?: string;
   errorMessage?: string;
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 class FrontendLogger {
@@ -218,7 +218,6 @@ class FrontendLogger {
     context?: LogContext,
   ): void {
     const cleanUrl = this.sanitizeUrl(url);
-    const shortUrl = this.getShortUrl(cleanUrl);
     const statusIcon = this.getStatusIcon(status);
     const performanceIcon = this.getPerformanceIcon(responseTime);
 
@@ -244,7 +243,6 @@ class FrontendLogger {
     context?: LogContext,
   ): void {
     const cleanUrl = this.sanitizeUrl(url);
-    const shortUrl = this.getShortUrl(cleanUrl);
     const statusIcon = this.getStatusIcon(status);
 
     this.error(`← ${statusIcon} ${status} ${errorMessage}`, undefined, {
@@ -265,7 +263,6 @@ class FrontendLogger {
     context?: LogContext,
   ): void {
     const cleanUrl = this.sanitizeUrl(url);
-    const shortUrl = this.getShortUrl(cleanUrl);
 
     this.error(`🌐 Network Error: ${errorMessage}`, undefined, {
       ...context,
@@ -279,7 +276,6 @@ class FrontendLogger {
 
   authError(method: string, url: string, context?: LogContext): void {
     const cleanUrl = this.sanitizeUrl(url);
-    const shortUrl = this.getShortUrl(cleanUrl);
 
     this.security(`🔐 Authentication Required`, {
       ...context,
@@ -298,7 +294,6 @@ class FrontendLogger {
     context?: LogContext,
   ): void {
     const cleanUrl = this.sanitizeUrl(url);
-    const shortUrl = this.getShortUrl(cleanUrl);
 
     this.retry(`🔄 Retry ${attempt}/${maxAttempts}`, {
       ...context,

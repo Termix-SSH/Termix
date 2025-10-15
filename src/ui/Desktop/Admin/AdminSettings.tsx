@@ -26,7 +26,6 @@ import {
   Trash2,
   Users,
   Database,
-  Key,
   Lock,
   Download,
   Upload,
@@ -37,14 +36,15 @@ import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   getOIDCConfig,
   getRegistrationAllowed,
+  getPasswordLoginAllowed,
   getUserList,
   updateRegistrationAllowed,
+  updatePasswordLoginAllowed,
   updateOIDCConfig,
   disableOIDCConfig,
   makeUserAdmin,
   removeAdminStatus,
   deleteUser,
-  getCookie,
   isElectron,
 } from "@/ui/main-axios.ts";
 
@@ -61,6 +61,9 @@ export function AdminSettings({
 
   const [allowRegistration, setAllowRegistration] = React.useState(true);
   const [regLoading, setRegLoading] = React.useState(false);
+
+  const [allowPasswordLogin, setAllowPasswordLogin] = React.useState(true);
+  const [passwordLoginLoading, setPasswordLoginLoading] = React.useState(false);
 
   const [oidcConfig, setOidcConfig] = React.useState({
     client_id: "",
@@ -91,8 +94,6 @@ export function AdminSettings({
     null,
   );
 
-  const [securityInitialized, setSecurityInitialized] = React.useState(true);
-
   const [exportLoading, setExportLoading] = React.useState(false);
   const [importLoading, setImportLoading] = React.useState(false);
   const [importFile, setImportFile] = React.useState<File | null>(null);
@@ -102,7 +103,8 @@ export function AdminSettings({
 
   React.useEffect(() => {
     if (isElectron()) {
-      const serverUrl = (window as any).configuredServerUrl;
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
       if (!serverUrl) {
         return;
       }
@@ -122,7 +124,8 @@ export function AdminSettings({
 
   React.useEffect(() => {
     if (isElectron()) {
-      const serverUrl = (window as any).configuredServerUrl;
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
       if (!serverUrl) {
         return;
       }
@@ -141,9 +144,32 @@ export function AdminSettings({
       });
   }, []);
 
+  React.useEffect(() => {
+    if (isElectron()) {
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
+      if (!serverUrl) {
+        return;
+      }
+    }
+
+    getPasswordLoginAllowed()
+      .then((res) => {
+        if (typeof res?.allowed === "boolean") {
+          setAllowPasswordLogin(res.allowed);
+        }
+      })
+      .catch((err) => {
+        if (err.code !== "NO_SERVER_CONFIGURED") {
+          toast.error(t("admin.failedToFetchPasswordLoginStatus"));
+        }
+      });
+  }, []);
+
   const fetchUsers = async () => {
     if (isElectron()) {
-      const serverUrl = (window as any).configuredServerUrl;
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
       if (!serverUrl) {
         return;
       }
@@ -169,6 +195,16 @@ export function AdminSettings({
       setAllowRegistration(checked);
     } finally {
       setRegLoading(false);
+    }
+  };
+
+  const handleTogglePasswordLogin = async (checked: boolean) => {
+    setPasswordLoginLoading(true);
+    try {
+      await updatePasswordLoginAllowed(checked);
+      setAllowPasswordLogin(checked);
+    } finally {
+      setPasswordLoginLoading(false);
     }
   };
 
@@ -198,9 +234,10 @@ export function AdminSettings({
     try {
       await updateOIDCConfig(oidcConfig);
       toast.success(t("admin.oidcConfigurationUpdated"));
-    } catch (err: any) {
+    } catch (err: unknown) {
       setOidcError(
-        err?.response?.data?.error || t("admin.failedToUpdateOidcConfig"),
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || t("admin.failedToUpdateOidcConfig"),
       );
     } finally {
       setOidcLoading(false);
@@ -221,9 +258,10 @@ export function AdminSettings({
       toast.success(t("admin.userIsNowAdmin", { username: newAdminUsername }));
       setNewAdminUsername("");
       fetchUsers();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMakeAdminError(
-        err?.response?.data?.error || t("admin.failedToMakeUserAdmin"),
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || t("admin.failedToMakeUserAdmin"),
       );
     } finally {
       setMakeAdminLoading(false);
@@ -236,7 +274,7 @@ export function AdminSettings({
         await removeAdminStatus(username);
         toast.success(t("admin.adminStatusRemoved", { username }));
         fetchUsers();
-      } catch (err: any) {
+      } catch {
         toast.error(t("admin.failedToRemoveAdminStatus"));
       }
     });
@@ -250,7 +288,7 @@ export function AdminSettings({
           await deleteUser(username);
           toast.success(t("admin.userDeletedSuccessfully", { username }));
           fetchUsers();
-        } catch (err: any) {
+        } catch {
           toast.error(t("admin.failedToDeleteUser"));
         }
       },
@@ -280,7 +318,7 @@ export function AdminSettings({
           window.location.hostname === "127.0.0.1");
 
       const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/export`
+        ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/database/export`
         : isDev
           ? `http://localhost:30001/database/export`
           : `${window.location.protocol}//${window.location.host}/database/export`;
@@ -321,7 +359,7 @@ export function AdminSettings({
           toast.error(error.error || t("admin.databaseExportFailed"));
         }
       }
-    } catch (err) {
+    } catch {
       toast.error(t("admin.databaseExportFailed"));
     } finally {
       setExportLoading(false);
@@ -350,7 +388,7 @@ export function AdminSettings({
           window.location.hostname === "127.0.0.1");
 
       const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/import`
+        ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/database/import`
         : isDev
           ? `http://localhost:30001/database/import`
           : `${window.location.protocol}//${window.location.host}/database/import`;
@@ -413,7 +451,7 @@ export function AdminSettings({
           toast.error(error.error || t("admin.databaseImportFailed"));
         }
       }
-    } catch (err) {
+    } catch {
       toast.error(t("admin.databaseImportFailed"));
     } finally {
       setImportLoading(false);
@@ -482,6 +520,14 @@ export function AdminSettings({
                     disabled={regLoading}
                   />
                   {t("admin.allowNewAccountRegistration")}
+                </label>
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allowPasswordLogin}
+                    onCheckedChange={handleTogglePasswordLogin}
+                    disabled={passwordLoginLoading}
+                  />
+                  {t("admin.allowPasswordLogin")}
                 </label>
               </div>
             </TabsContent>
@@ -669,9 +715,13 @@ export function AdminSettings({
                         try {
                           await disableOIDCConfig();
                           toast.success(t("admin.oidcConfigurationDisabled"));
-                        } catch (err: any) {
+                        } catch (err: unknown) {
                           setOidcError(
-                            err?.response?.data?.error ||
+                            (
+                              err as {
+                                response?: { data?: { error?: string } };
+                              }
+                            )?.response?.data?.error ||
                               t("admin.failedToDisableOidcConfig"),
                           );
                         } finally {

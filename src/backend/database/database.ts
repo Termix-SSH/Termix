@@ -6,6 +6,7 @@ import userRoutes from "./routes/users.js";
 import sshRoutes from "./routes/ssh.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
+import snippetsRoutes from "./routes/snippets.js";
 import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
@@ -31,6 +32,12 @@ import {
   sshCredentialUsage,
   settings,
 } from "./db/schema.js";
+import type {
+  CacheEntry,
+  GitHubRelease,
+  GitHubAPIResponse,
+  AuthenticatedRequest,
+} from "../../types/index.js";
 import { getDb } from "./db/index.js";
 import Database from "better-sqlite3";
 
@@ -105,17 +112,11 @@ const upload = multer({
   },
 });
 
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-  expiresAt: number;
-}
-
 class GitHubCache {
   private cache: Map<string, CacheEntry> = new Map();
   private readonly CACHE_DURATION = 30 * 60 * 1000;
 
-  set(key: string, data: any): void {
+  set<T>(key: string, data: T): void {
     const now = Date.now();
     this.cache.set(key, {
       data,
@@ -124,7 +125,7 @@ class GitHubCache {
     });
   }
 
-  get(key: string): any | null {
+  get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) {
       return null;
@@ -135,7 +136,7 @@ class GitHubCache {
       return null;
     }
 
-    return entry.data;
+    return entry.data as T;
   }
 }
 
@@ -145,34 +146,16 @@ const GITHUB_API_BASE = "https://api.github.com";
 const REPO_OWNER = "Termix-SSH";
 const REPO_NAME = "Termix";
 
-interface GitHubRelease {
-  id: number;
-  tag_name: string;
-  name: string;
-  body: string;
-  published_at: string;
-  html_url: string;
-  assets: Array<{
-    id: number;
-    name: string;
-    size: number;
-    download_count: number;
-    browser_download_url: string;
-  }>;
-  prerelease: boolean;
-  draft: boolean;
-}
-
-async function fetchGitHubAPI(
+async function fetchGitHubAPI<T>(
   endpoint: string,
   cacheKey: string,
-): Promise<any> {
-  const cachedData = githubCache.get(cacheKey);
-  if (cachedData) {
+): Promise<GitHubAPIResponse<T>> {
+  const cachedEntry = githubCache.get<CacheEntry<T>>(cacheKey);
+  if (cachedEntry) {
     return {
-      data: cachedData,
+      data: cachedEntry.data,
       cached: true,
-      cache_age: Date.now() - cachedData.timestamp,
+      cache_age: Date.now() - cachedEntry.timestamp,
     };
   }
 
@@ -191,8 +174,13 @@ async function fetchGitHubAPI(
       );
     }
 
-    const data = await response.json();
-    githubCache.set(cacheKey, data);
+    const data = (await response.json()) as T;
+    const cacheData: CacheEntry<T> = {
+      data,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + 30 * 60 * 1000,
+    };
+    githubCache.set(cacheKey, cacheData);
 
     return {
       data: data,
@@ -257,7 +245,7 @@ app.get("/version", authenticateJWT, async (req, res) => {
           localVersion = foundVersion;
           break;
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
@@ -272,7 +260,7 @@ app.get("/version", authenticateJWT, async (req, res) => {
 
   try {
     const cacheKey = "latest_release";
-    const releaseData = await fetchGitHubAPI(
+    const releaseData = await fetchGitHubAPI<GitHubRelease>(
       `/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
       cacheKey,
     );
@@ -323,12 +311,12 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
     );
     const cacheKey = `releases_rss_${page}_${per_page}`;
 
-    const releasesData = await fetchGitHubAPI(
+    const releasesData = await fetchGitHubAPI<GitHubRelease[]>(
       `/repos/${REPO_OWNER}/${REPO_NAME}/releases?page=${page}&per_page=${per_page}`,
       cacheKey,
     );
 
-    const rssItems = releasesData.data.map((release: GitHubRelease) => ({
+    const rssItems = releasesData.data.map((release) => ({
       id: release.id,
       title: release.name || release.tag_name,
       description: release.body,
@@ -372,7 +360,6 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
 
 app.get("/encryption/status", requireAdmin, async (req, res) => {
   try {
-    const authManager = AuthManager.getInstance();
     const securityStatus = {
       initialized: true,
       system: { hasSecret: true, isValid: true },
@@ -417,8 +404,6 @@ app.post("/encryption/initialize", requireAdmin, async (req, res) => {
 
 app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
   try {
-    const authManager = AuthManager.getInstance();
-
     apiLogger.warn("System JWT secret regenerated via API", {
       operation: "jwt_regenerate_api",
     });
@@ -440,8 +425,6 @@ app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
 
 app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
   try {
-    const authManager = AuthManager.getInstance();
-
     apiLogger.warn("JWT secret regenerated via API", {
       operation: "jwt_secret_regenerate_api",
     });
@@ -462,7 +445,7 @@ app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
 
 app.post("/database/export", authenticateJWT, async (req, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
     const { password } = req.body;
 
     if (!password) {
@@ -695,7 +678,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.authType,
           decrypted.password || null,
           decrypted.key || null,
-          decrypted.keyPassword || null,
+          decrypted.key_password || null,
           decrypted.keyType || null,
           decrypted.autostartPassword || null,
           decrypted.autostartKey || null,
@@ -738,9 +721,9 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.username,
           decrypted.password || null,
           decrypted.key || null,
-          decrypted.privateKey || null,
-          decrypted.publicKey || null,
-          decrypted.keyPassword || null,
+          decrypted.private_key || null,
+          decrypted.public_key || null,
+          decrypted.key_password || null,
           decrypted.keyType || null,
           decrypted.detectedKeyType || null,
           decrypted.usageCount || 0,
@@ -916,7 +899,7 @@ app.post(
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      const userId = (req as any).userId;
+      const userId = (req as AuthenticatedRequest).userId;
       const { password } = req.body;
 
       if (!password) {
@@ -968,7 +951,7 @@ app.post(
       try {
         importDb = new Database(req.file.path, { readonly: true });
 
-        const tables = importDb
+        importDb
           .prepare("SELECT name FROM sqlite_master WHERE type='table'")
           .all();
       } catch (sqliteError) {
@@ -1059,7 +1042,7 @@ app.post(
               );
             }
           }
-        } catch (tableError) {
+        } catch {
           apiLogger.info("ssh_data table not found in import file, skipping");
         }
 
@@ -1120,7 +1103,7 @@ app.post(
               );
             }
           }
-        } catch (tableError) {
+        } catch {
           apiLogger.info(
             "ssh_credentials table not found in import file, skipping",
           );
@@ -1191,7 +1174,7 @@ app.post(
                 );
               }
             }
-          } catch (tableError) {
+          } catch {
             apiLogger.info(`${table} table not found in import file, skipping`);
           }
         }
@@ -1229,7 +1212,7 @@ app.post(
               );
             }
           }
-        } catch (tableError) {
+        } catch {
           apiLogger.info(
             "dismissed_alerts table not found in import file, skipping",
           );
@@ -1270,7 +1253,7 @@ app.post(
                 );
               }
             }
-          } catch (tableError) {
+          } catch {
             apiLogger.info("settings table not found in import file, skipping");
           }
         } else {
@@ -1288,7 +1271,7 @@ app.post(
 
       try {
         fs.unlinkSync(req.file.path);
-      } catch (cleanupError) {
+      } catch {
         apiLogger.warn("Failed to clean up uploaded file", {
           operation: "file_cleanup_warning",
           filePath: req.file.path,
@@ -1314,7 +1297,7 @@ app.post(
       if (req.file?.path && fs.existsSync(req.file.path)) {
         try {
           fs.unlinkSync(req.file.path);
-        } catch (cleanupError) {
+        } catch {
           apiLogger.warn("Failed to clean up uploaded file after error", {
             operation: "file_cleanup_error",
             filePath: req.file.path,
@@ -1324,7 +1307,7 @@ app.post(
 
       apiLogger.error("SQLite import failed", error, {
         operation: "sqlite_import_api_failed",
-        userId: (req as any).userId,
+        userId: (req as AuthenticatedRequest).userId,
       });
       res.status(500).json({
         error: "Failed to import SQLite data",
@@ -1336,12 +1319,8 @@ app.post(
 
 app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   try {
-    const userId = (req as any).userId;
-    const {
-      format = "encrypted",
-      scope = "user_data",
-      includeCredentials = true,
-    } = req.body;
+    const userId = (req as AuthenticatedRequest).userId;
+    const { scope = "user_data", includeCredentials = true } = req.body;
 
     const exportData = await UserDataExport.exportUserData(userId, {
       format: "encrypted",
@@ -1411,13 +1390,15 @@ app.use("/users", userRoutes);
 app.use("/ssh", sshRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
+app.use("/snippets", snippetsRoutes);
 
 app.use(
   (
     err: unknown,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _next: express.NextFunction,
   ) => {
     apiLogger.error("Unhandled error in request", err, {
       operation: "error_handler",
@@ -1430,7 +1411,6 @@ app.use(
 );
 
 const HTTP_PORT = 30001;
-const HTTPS_PORT = process.env.SSL_PORT || 8443;
 
 async function initializeSecurity() {
   try {
@@ -1443,13 +1423,6 @@ async function initializeSecurity() {
     if (!isValid) {
       throw new Error("Security system validation failed");
     }
-
-    const securityStatus = {
-      initialized: true,
-      system: { hasSecret: true, isValid: true },
-      activeSessions: {},
-      activeSessionCount: 0,
-    };
   } catch (error) {
     databaseLogger.error("Failed to initialize security system", error, {
       operation: "security_init_error",
@@ -1481,13 +1454,17 @@ app.get(
       if (status.hasUnencryptedDb) {
         try {
           unencryptedSize = fs.statSync(dbPath).size;
-        } catch (error) {}
+        } catch {
+          // Ignore file access errors
+        }
       }
 
       if (status.hasEncryptedDb) {
         try {
           encryptedSize = fs.statSync(encryptedDbPath).size;
-        } catch (error) {}
+        } catch {
+          // Ignore file access errors
+        }
       }
 
       res.json({

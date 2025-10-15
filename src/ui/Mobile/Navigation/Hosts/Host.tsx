@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Status, StatusIndicator } from "@/components/ui/shadcn-io/status";
 import { Button } from "@/components/ui/button.tsx";
 import { ButtonGroup } from "@/components/ui/button-group.tsx";
-import { Server, Terminal } from "lucide-react";
+import { Terminal } from "lucide-react";
 import { getServerStatusById } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 import type { HostProps } from "../../../../types/index.js";
@@ -20,7 +20,6 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
     : `${host.username}@${host.ip}:${host.port}`;
 
   useEffect(() => {
-    let intervalId: number | undefined;
     let cancelled = false;
 
     const fetchStatus = async () => {
@@ -29,13 +28,14 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
         if (!cancelled) {
           setServerStatus(res?.status === "online" ? "online" : "offline");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!cancelled) {
-          if (error?.response?.status === 503) {
+          const err = error as { response?: { status?: number } };
+          if (err?.response?.status === 503) {
             setServerStatus("offline");
-          } else if (error?.response?.status === 504) {
+          } else if (err?.response?.status === 504) {
             setServerStatus("degraded");
-          } else if (error?.response?.status === 404) {
+          } else if (err?.response?.status === 404) {
             setServerStatus("offline");
           } else {
             setServerStatus("offline");
@@ -46,7 +46,7 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
 
     fetchStatus();
 
-    intervalId = window.setInterval(fetchStatus, 30000);
+    const intervalId = window.setInterval(fetchStatus, 30000);
 
     return () => {
       cancelled = true;

@@ -1,3 +1,4 @@
+import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import crypto from "crypto";
 import { db } from "../db/index.js";
@@ -27,48 +28,48 @@ async function verifyOIDCToken(
   idToken: string,
   issuerUrl: string,
   clientId: string,
-): Promise<any> {
+): Promise<Record<string, unknown>> {
+  const normalizedIssuerUrl = issuerUrl.endsWith("/")
+    ? issuerUrl.slice(0, -1)
+    : issuerUrl;
+  const possibleIssuers = [
+    issuerUrl,
+    normalizedIssuerUrl,
+    issuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
+    normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
+  ];
+
+  const jwksUrls = [
+    `${normalizedIssuerUrl}/.well-known/jwks.json`,
+    `${normalizedIssuerUrl}/jwks/`,
+    `${normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, "")}/.well-known/jwks.json`,
+  ];
+
   try {
-    const normalizedIssuerUrl = issuerUrl.endsWith("/")
-      ? issuerUrl.slice(0, -1)
-      : issuerUrl;
-    const possibleIssuers = [
-      issuerUrl,
-      normalizedIssuerUrl,
-      issuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
-      normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, ""),
-    ];
-
-    const jwksUrls = [
-      `${normalizedIssuerUrl}/.well-known/jwks.json`,
-      `${normalizedIssuerUrl}/jwks/`,
-      `${normalizedIssuerUrl.replace(/\/application\/o\/[^\/]+$/, "")}/.well-known/jwks.json`,
-    ];
-
-    try {
-      const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
-      const discoveryResponse = await fetch(discoveryUrl);
-      if (discoveryResponse.ok) {
-        const discovery = (await discoveryResponse.json()) as any;
-        if (discovery.jwks_uri) {
-          jwksUrls.unshift(discovery.jwks_uri);
-        }
+    const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
+    const discoveryResponse = await fetch(discoveryUrl);
+    if (discoveryResponse.ok) {
+      const discovery = (await discoveryResponse.json()) as Record<
+        string,
+        unknown
+      >;
+      if (discovery.jwks_uri) {
+        jwksUrls.unshift(discovery.jwks_uri as string);
       }
-    } catch (discoveryError) {
-      authLogger.error(`OIDC discovery failed: ${discoveryError}`);
     }
+  } catch (discoveryError) {
+    authLogger.error(`OIDC discovery failed: ${discoveryError}`);
+  }
 
-    let jwks: any = null;
-    let jwksUrl: string | null = null;
+    let jwks: Record<string, unknown> | null = null;
 
     for (const url of jwksUrls) {
       try {
         const response = await fetch(url);
         if (response.ok) {
-          const jwksData = (await response.json()) as any;
+          const jwksData = (await response.json()) as Record<string, unknown>;;
           if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
             jwks = jwksData;
-            jwksUrl = url;
             break;
           } else {
             authLogger.error(
@@ -77,62 +78,54 @@ async function verifyOIDCToken(
           }
         } else {
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
 
-    if (!jwks) {
-      throw new Error("Failed to fetch JWKS from any URL");
-    }
-
-    if (!jwks.keys || !Array.isArray(jwks.keys)) {
-      throw new Error(
-        `Invalid JWKS response structure. Expected 'keys' array, got: ${JSON.stringify(jwks)}`,
-      );
-    }
-
-    const header = JSON.parse(
-      Buffer.from(idToken.split(".")[0], "base64").toString(),
-    );
-    const keyId = header.kid;
-
-    const publicKey = jwks.keys.find((key: any) => key.kid === keyId);
-    if (!publicKey) {
-      throw new Error(
-        `No matching public key found for key ID: ${keyId}. Available keys: ${jwks.keys.map((k: any) => k.kid).join(", ")}`,
-      );
-    }
-
-    const { importJWK, jwtVerify } = await import("jose");
-    const key = await importJWK(publicKey);
-
-    const { payload } = await jwtVerify(idToken, key, {
-      issuer: possibleIssuers,
-      audience: clientId,
-    });
-
-    return payload;
-  } catch (error) {
-    throw error;
+  if (!jwks) {
+    throw new Error("Failed to fetch JWKS from any URL");
   }
+
+  if (!jwks.keys || !Array.isArray(jwks.keys)) {
+    throw new Error(
+      `Invalid JWKS response structure. Expected 'keys' array, got: ${JSON.stringify(jwks)}`,
+    );
+  }
+
+  const header = JSON.parse(
+    Buffer.from(idToken.split(".")[0], "base64").toString(),
+  );
+  const keyId = header.kid;
+
+  const publicKey = jwks.keys.find(
+    (key: Record<string, unknown>) => key.kid === keyId,
+  );
+  if (!publicKey) {
+    throw new Error(
+      `No matching public key found for key ID: ${keyId}. Available keys: ${jwks.keys.map((k: Record<string, unknown>) => k.kid).join(", ")}`,
+    );
+  }
+
+  const { importJWK, jwtVerify } = await import("jose");
+  const key = await importJWK(publicKey);
+
+  const { payload } = await jwtVerify(idToken, key, {
+    issuer: possibleIssuers,
+    audience: clientId,
+  });
+
+  return payload;
 }
 
 const router = express.Router();
 
-function isNonEmptyString(val: any): val is string {
+function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
-}
-
-interface JWTPayload {
-  userId: string;
-  iat?: number;
-  exp?: number;
 }
 
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
-const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Route: Create traditional user (username/password)
 // POST /users/create
@@ -141,7 +134,7 @@ router.post("/create", async (req, res) => {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
       .get();
-    if (row && (row as any).value !== "true") {
+    if (row && (row as Record<string, unknown>).value !== "true") {
       return res
         .status(403)
         .json({ error: "Registration is currently disabled" });
@@ -186,7 +179,7 @@ router.post("/create", async (req, res) => {
     const countResult = db.$client
       .prepare("SELECT COUNT(*) as count FROM users")
       .get();
-    isFirstUser = ((countResult as any)?.count || 0) === 0;
+    isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
 
     const saltRounds = parseInt(process.env.SALT || "10", 10);
     const password_hash = await bcrypt.hash(password, saltRounds);
@@ -250,7 +243,7 @@ router.post("/create", async (req, res) => {
 // Route: Create OIDC provider configuration (admin only)
 // POST /users/oidc-config
 router.post("/oidc-config", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
     if (!user || user.length === 0 || !user[0].is_admin) {
@@ -390,7 +383,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
 // Route: Disable OIDC configuration (admin only)
 // DELETE /users/oidc-config
 router.delete("/oidc-config", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
     if (!user || user.length === 0 || !user[0].is_admin) {
@@ -420,7 +413,7 @@ router.get("/oidc-config", async (req, res) => {
       return res.json(null);
     }
 
-    let config = JSON.parse((row as any).value);
+    let config = JSON.parse((row as Record<string, unknown>).value as string);
 
     if (config.client_secret) {
       if (config.client_secret.startsWith("encrypted:")) {
@@ -450,7 +443,7 @@ router.get("/oidc-config", async (req, res) => {
                 } else {
                   config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
                 }
-              } catch (decryptError) {
+              } catch {
                 authLogger.warn("Failed to decrypt OIDC config for admin", {
                   operation: "oidc_config_decrypt_failed",
                   userId,
@@ -497,13 +490,13 @@ router.get("/oidc/authorize", async (req, res) => {
       return res.status(404).json({ error: "OIDC not configured" });
     }
 
-    const config = JSON.parse((row as any).value);
+    const config = JSON.parse((row as Record<string, unknown>).value as string);
     const state = nanoid();
     const nonce = nanoid();
 
     let origin =
       req.get("Origin") ||
-      req.get("Referer")?.replace(/\/[^\/]*$/, "") ||
+      req.get("Referer")?.replace(/\/[^/]*$/, "") ||
       "http://localhost:5173";
 
     if (origin.includes("localhost")) {
@@ -552,7 +545,8 @@ router.get("/oidc/callback", async (req, res) => {
       .status(400)
       .json({ error: "Invalid state parameter - redirect URI not found" });
   }
-  const redirectUri = (storedRedirectRow as any).value;
+  const redirectUri = (storedRedirectRow as Record<string, unknown>)
+    .value as string;
 
   try {
     const storedNonce = db.$client
@@ -576,7 +570,9 @@ router.get("/oidc/callback", async (req, res) => {
       return res.status(500).json({ error: "OIDC not configured" });
     }
 
-    const config = JSON.parse((configRow as any).value);
+    const config = JSON.parse(
+      (configRow as Record<string, unknown>).value as string,
+    );
 
     const tokenResponse = await fetch(config.token_url, {
       method: "POST",
@@ -602,26 +598,26 @@ router.get("/oidc/callback", async (req, res) => {
         .json({ error: "Failed to exchange authorization code" });
     }
 
-    const tokenData = (await tokenResponse.json()) as any;
+    const tokenData = (await tokenResponse.json()) as Record<string, unknown>;
 
-    let userInfo: any = null;
-    let userInfoUrls: string[] = [];
+    let userInfo: Record<string, unknown> = null;
+    const userInfoUrls: string[] = [];
 
     const normalizedIssuerUrl = config.issuer_url.endsWith("/")
       ? config.issuer_url.slice(0, -1)
       : config.issuer_url;
-    const baseUrl = normalizedIssuerUrl.replace(
-      /\/application\/o\/[^\/]+$/,
-      "",
-    );
+    const baseUrl = normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, "");
 
     try {
       const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
       const discoveryResponse = await fetch(discoveryUrl);
       if (discoveryResponse.ok) {
-        const discovery = (await discoveryResponse.json()) as any;
+        const discovery = (await discoveryResponse.json()) as Record<
+          string,
+          unknown
+        >;
         if (discovery.userinfo_endpoint) {
-          userInfoUrls.push(discovery.userinfo_endpoint);
+          userInfoUrls.push(discovery.userinfo_endpoint as string);
         }
       }
     } catch (discoveryError) {
@@ -646,13 +642,14 @@ router.get("/oidc/callback", async (req, res) => {
     if (tokenData.id_token) {
       try {
         userInfo = await verifyOIDCToken(
-          tokenData.id_token,
+          tokenData.id_token as string,
           config.issuer_url,
           config.client_id,
         );
-      } catch (error) {
+      } catch {
+        // Fallback to manual decoding
         try {
-          const parts = tokenData.id_token.split(".");
+          const parts = (tokenData.id_token as string).split(".");
           if (parts.length === 3) {
             const payload = JSON.parse(
               Buffer.from(parts[1], "base64").toString(),
@@ -675,7 +672,10 @@ router.get("/oidc/callback", async (req, res) => {
           });
 
           if (userInfoResponse.ok) {
-            userInfo = await userInfoResponse.json();
+            userInfo = (await userInfoResponse.json()) as Record<
+              string,
+              unknown
+            >;
             break;
           } else {
             authLogger.error(
@@ -698,24 +698,25 @@ router.get("/oidc/callback", async (req, res) => {
       return res.status(400).json({ error: "Failed to get user information" });
     }
 
-    const getNestedValue = (obj: any, path: string): any => {
+    const getNestedValue = (
+      obj: Record<string, unknown>,
+      path: string,
+    ): unknown => {
       if (!path || !obj) return null;
       return path.split(".").reduce((current, key) => current?.[key], obj);
     };
 
-    const identifier =
-      getNestedValue(userInfo, config.identifier_path) ||
+    const identifier = (getNestedValue(userInfo, config.identifier_path) ||
       userInfo[config.identifier_path] ||
       userInfo.sub ||
       userInfo.email ||
-      userInfo.preferred_username;
+      userInfo.preferred_username) as string;
 
-    const name =
-      getNestedValue(userInfo, config.name_path) ||
+    const name = (getNestedValue(userInfo, config.name_path) ||
       userInfo[config.name_path] ||
       userInfo.name ||
       userInfo.given_name ||
-      identifier;
+      identifier) as string;
 
     if (!identifier) {
       authLogger.error(
@@ -739,7 +740,7 @@ router.get("/oidc/callback", async (req, res) => {
       const countResult = db.$client
         .prepare("SELECT COUNT(*) as count FROM users")
         .get();
-      isFirstUser = ((countResult as any)?.count || 0) === 0;
+      isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
 
       const id = nanoid();
       await db.insert(users).values({
@@ -749,14 +750,14 @@ router.get("/oidc/callback", async (req, res) => {
         is_admin: isFirstUser,
         is_oidc: true,
         oidc_identifier: identifier,
-        client_id: config.client_id,
-        client_secret: config.client_secret,
-        issuer_url: config.issuer_url,
-        authorization_url: config.authorization_url,
-        token_url: config.token_url,
-        identifier_path: config.identifier_path,
-        name_path: config.name_path,
-        scopes: config.scopes,
+        client_id: String(config.client_id),
+        client_secret: String(config.client_secret),
+        issuer_url: String(config.issuer_url),
+        authorization_url: String(config.authorization_url),
+        token_url: String(config.token_url),
+        identifier_path: String(config.identifier_path),
+        name_path: String(config.name_path),
+        scopes: String(config.scopes),
       });
 
       try {
@@ -801,7 +802,10 @@ router.get("/oidc/callback", async (req, res) => {
       expiresIn: "50d",
     });
 
-    let frontendUrl = redirectUri.replace("/users/oidc/callback", "");
+    let frontendUrl = (redirectUri as string).replace(
+      "/users/oidc/callback",
+      "",
+    );
 
     if (frontendUrl.includes("localhost")) {
       frontendUrl = "http://localhost:5173";
@@ -820,7 +824,10 @@ router.get("/oidc/callback", async (req, res) => {
   } catch (err) {
     authLogger.error("OIDC callback failed", err);
 
-    let frontendUrl = redirectUri.replace("/users/oidc/callback", "");
+    let frontendUrl = (redirectUri as string).replace(
+      "/users/oidc/callback",
+      "",
+    );
 
     if (frontendUrl.includes("localhost")) {
       frontendUrl = "http://localhost:5173";
@@ -845,6 +852,23 @@ router.post("/login", async (req, res) => {
       hasPassword: !!password,
     });
     return res.status(400).json({ error: "Invalid username or password" });
+  }
+
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
+      .get();
+    if (row && (row as { value: string }).value !== "true") {
+      return res
+        .status(403)
+        .json({ error: "Password authentication is currently disabled" });
+    }
+  } catch (e) {
+    authLogger.error("Failed to check password login status", {
+      operation: "login_check",
+      error: e,
+    });
+    return res.status(500).json({ error: "Failed to check login status" });
   }
 
   try {
@@ -893,7 +917,8 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch (setupError) {}
+    } catch {
+    }
 
     const dataUnlocked = await authManager.authenticateUser(
       userRecord.id,
@@ -926,7 +951,7 @@ router.post("/login", async (req, res) => {
       dataUnlocked: true,
     });
 
-    const response: any = {
+    const response: Record<string, unknown> = {
       success: true,
       is_admin: !!userRecord.is_admin,
       username: userRecord.username,
@@ -957,7 +982,7 @@ router.post("/login", async (req, res) => {
 // POST /users/logout
 router.post("/logout", async (req, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     if (userId) {
       authManager.logoutUser(userId);
@@ -979,7 +1004,7 @@ router.post("/logout", async (req, res) => {
 // Route: Get current user's info using JWT
 // GET /users/me
 router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   if (!isNonEmptyString(userId)) {
     authLogger.warn("Invalid userId in JWT for /users/me");
     return res.status(401).json({ error: "Invalid userId" });
@@ -1014,7 +1039,7 @@ router.get("/setup-required", async (req, res) => {
     const countResult = db.$client
       .prepare("SELECT COUNT(*) as count FROM users")
       .get();
-    const count = (countResult as any)?.count || 0;
+    const count = (countResult as { count?: number })?.count || 0;
 
     res.json({
       setup_required: count === 0,
@@ -1028,7 +1053,7 @@ router.get("/setup-required", async (req, res) => {
 // Route: Count users (admin only - for dashboard statistics)
 // GET /users/count
 router.get("/count", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
     if (!user[0] || !user[0].is_admin) {
@@ -1038,7 +1063,7 @@ router.get("/count", authenticateJWT, async (req, res) => {
     const countResult = db.$client
       .prepare("SELECT COUNT(*) as count FROM users")
       .get();
-    const count = (countResult as any)?.count || 0;
+    const count = (countResult as { count?: number })?.count || 0;
     res.json({ count });
   } catch (err) {
     authLogger.error("Failed to count users", err);
@@ -1065,7 +1090,9 @@ router.get("/registration-allowed", async (req, res) => {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
       .get();
-    res.json({ allowed: row ? (row as any).value === "true" : true });
+    res.json({
+      allowed: row ? (row as Record<string, unknown>).value === "true" : true,
+    });
   } catch (err) {
     authLogger.error("Failed to get registration allowed", err);
     res.status(500).json({ error: "Failed to get registration allowed" });
@@ -1075,7 +1102,7 @@ router.get("/registration-allowed", async (req, res) => {
 // Route: Set registration allowed status (admin only)
 // PATCH /users/registration-allowed
 router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
     if (!user || user.length === 0 || !user[0].is_admin) {
@@ -1095,10 +1122,51 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   }
 });
 
+// Route: Get password login allowed status (public - needed for login page)
+// GET /users/password-login-allowed
+router.get("/password-login-allowed", async (req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
+      .get();
+    res.json({
+      allowed: row ? (row as { value: string }).value === "true" : true,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get password login allowed", err);
+    res.status(500).json({ error: "Failed to get password login allowed" });
+  }
+});
+
+// Route: Set password login allowed status (admin only)
+// PATCH /users/password-login-allowed
+router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].is_admin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { allowed } = req.body;
+    if (typeof allowed !== "boolean") {
+      return res.status(400).json({ error: "Invalid value for allowed" });
+    }
+    db.$client
+      .prepare(
+        "UPDATE settings SET value = ? WHERE key = 'allow_password_login'",
+      )
+      .run(allowed ? "true" : "false");
+    res.json({ allowed });
+  } catch (err) {
+    authLogger.error("Failed to set password login allowed", err);
+    res.status(500).json({ error: "Failed to set password login allowed" });
+  }
+});
+
 // Route: Delete user account
 // DELETE /users/delete-account
 router.delete("/delete-account", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { password } = req.body;
 
   if (!isNonEmptyString(password)) {
@@ -1134,7 +1202,7 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
       const adminCount = db.$client
         .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
         .get();
-      if ((adminCount as any)?.count <= 1) {
+      if (((adminCount as { count?: number })?.count || 0) <= 1) {
         return res
           .status(403)
           .json({ error: "Cannot delete the last admin user" });
@@ -1224,7 +1292,9 @@ router.post("/verify-reset-code", async (req, res) => {
         .json({ error: "No reset code found for this user" });
     }
 
-    const resetData = JSON.parse((resetDataRow as any).value);
+    const resetData = JSON.parse(
+      (resetDataRow as Record<string, unknown>).value as string,
+    );
     const now = new Date();
     const expiresAt = new Date(resetData.expiresAt);
 
@@ -1282,7 +1352,9 @@ router.post("/complete-reset", async (req, res) => {
       return res.status(400).json({ error: "No temporary token found" });
     }
 
-    const tempTokenData = JSON.parse((tempTokenRow as any).value);
+    const tempTokenData = JSON.parse(
+      (tempTokenRow as Record<string, unknown>).value as string,
+    );
     const now = new Date();
     const expiresAt = new Date(tempTokenData.expiresAt);
 
@@ -1315,48 +1387,8 @@ router.post("/complete-reset", async (req, res) => {
       .where(eq(users.username, username));
 
     try {
-      const hasActiveSession = authManager.isUserUnlocked(userId);
-
-      if (hasActiveSession) {
-        const success = await authManager.resetUserPasswordWithPreservedDEK(
-          userId,
-          newPassword,
-        );
-
-        if (!success) {
-          authLogger.warn(
-            `Failed to preserve DEK during password reset for ${username}. Creating new DEK - data will be lost.`,
-            {
-              operation: "password_reset_preserve_failed",
-              userId,
-              username,
-            },
-          );
-          await authManager.registerUser(userId, newPassword);
-          authManager.logoutUser(userId);
-        } else {
-          authLogger.success(
-            `Password reset completed for user: ${username}. Data preserved using existing session.`,
-            {
-              operation: "password_reset_data_preserved",
-              userId,
-              username,
-            },
-          );
-        }
-      } else {
-        await authManager.registerUser(userId, newPassword);
-        authManager.logoutUser(userId);
-
-        authLogger.warn(
-          `Password reset completed for user: ${username}. Existing encrypted data is now inaccessible and will need to be re-entered.`,
-          {
-            operation: "password_reset_data_inaccessible",
-            userId,
-            username,
-          },
-        );
-      }
+      await authManager.registerUser(userId, newPassword);
+      authManager.logoutUser(userId);
 
       await db
         .update(users)
@@ -1366,6 +1398,15 @@ router.post("/complete-reset", async (req, res) => {
           totp_backup_codes: null,
         })
         .where(eq(users.id, userId));
+
+      authLogger.warn(
+        `Password reset completed for user: ${username}. Existing encrypted data is now inaccessible and will need to be re-entered.`,
+        {
+          operation: "password_reset_data_inaccessible",
+          userId,
+          username,
+        },
+      );
     } catch (encryptionError) {
       authLogger.error(
         "Failed to re-encrypt user data after password reset",
@@ -1381,6 +1422,8 @@ router.post("/complete-reset", async (req, res) => {
           "Password reset completed but user data encryption failed. Please contact administrator.",
       });
     }
+
+    authLogger.success(`Password successfully reset for user: ${username}`);
 
     db.$client
       .prepare("DELETE FROM settings WHERE key = ?")
@@ -1399,7 +1442,7 @@ router.post("/complete-reset", async (req, res) => {
 // Route: List all users (admin only)
 // GET /users/list
 router.get("/list", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
     if (!user || user.length === 0 || !user[0].is_admin) {
@@ -1425,7 +1468,7 @@ router.get("/list", authenticateJWT, async (req, res) => {
 // Route: Make user admin (admin only)
 // POST /users/make-admin
 router.post("/make-admin", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { username } = req.body;
 
   if (!isNonEmptyString(username)) {
@@ -1468,7 +1511,7 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
 // Route: Remove admin status (admin only)
 // POST /users/remove-admin
 router.post("/remove-admin", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { username } = req.body;
 
   if (!isNonEmptyString(username)) {
@@ -1587,7 +1630,7 @@ router.post("/totp/verify-login", async (req, res) => {
         backupCodes = userRecord.totp_backup_codes
           ? JSON.parse(userRecord.totp_backup_codes)
           : [];
-      } catch (parseError) {
+      } catch {
         backupCodes = [];
       }
 
@@ -1625,7 +1668,7 @@ router.post("/totp/verify-login", async (req, res) => {
       });
     }
 
-    const response: any = {
+    const response: Record<string, unknown> = {
       success: true,
       is_admin: !!userRecord.is_admin,
       username: userRecord.username,
@@ -1655,7 +1698,7 @@ router.post("/totp/verify-login", async (req, res) => {
 // Route: Setup TOTP
 // POST /users/totp/setup
 router.post("/totp/setup", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
@@ -1694,7 +1737,7 @@ router.post("/totp/setup", authenticateJWT, async (req, res) => {
 // Route: Enable TOTP
 // POST /users/totp/enable
 router.post("/totp/enable", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { totp_code } = req.body;
 
   if (!totp_code) {
@@ -1753,7 +1796,7 @@ router.post("/totp/enable", authenticateJWT, async (req, res) => {
 // Route: Disable TOTP
 // POST /users/totp/disable
 router.post("/totp/disable", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { password, totp_code } = req.body;
 
   if (!password && !totp_code) {
@@ -1811,7 +1854,7 @@ router.post("/totp/disable", authenticateJWT, async (req, res) => {
 // Route: Generate new backup codes
 // POST /users/totp/backup-codes
 router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { password, totp_code } = req.body;
 
   if (!password && !totp_code) {
@@ -1869,7 +1912,7 @@ router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
 // Route: Delete user (admin only)
 // DELETE /users/delete-user
 router.delete("/delete-user", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { username } = req.body;
 
   if (!isNonEmptyString(username)) {
@@ -1898,7 +1941,7 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
       const adminCount = db.$client
         .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
         .get();
-      if ((adminCount as any)?.count <= 1) {
+      if (((adminCount as { count?: number })?.count || 0) <= 1) {
         return res
           .status(403)
           .json({ error: "Cannot delete the last admin user" });
@@ -1955,7 +1998,7 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
 // Route: User data unlock - used when session expires
 // POST /users/unlock-data
 router.post("/unlock-data", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { password } = req.body;
 
   if (!password) {
@@ -1988,7 +2031,7 @@ router.post("/unlock-data", authenticateJWT, async (req, res) => {
 // Route: Check user data unlock status
 // GET /users/data-status
 router.get("/data-status", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   try {
     const isUnlocked = authManager.isUserUnlocked(userId);
@@ -2010,7 +2053,7 @@ router.get("/data-status", authenticateJWT, async (req, res) => {
 // Route: Change user password (re-encrypt data keys)
 // POST /users/change-password
 router.post("/change-password", authenticateJWT, async (req, res) => {
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {

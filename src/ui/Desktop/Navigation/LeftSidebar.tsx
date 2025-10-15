@@ -1,12 +1,7 @@
 import React, { useState } from "react";
 import { ChevronUp, User2, HardDrive, Menu, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  getCookie,
-  setCookie,
-  isElectron,
-  logoutUser,
-} from "@/ui/main-axios.ts";
+import { isElectron, logoutUser } from "@/ui/main-axios.ts";
 
 import {
   Sidebar,
@@ -57,14 +52,12 @@ interface SSHHost {
   enableTunnel: boolean;
   enableFileManager: boolean;
   defaultPath: string;
-  tunnelConnections: any[];
+  tunnelConnections: unknown[];
   createdAt: string;
   updatedAt: string;
 }
 
 interface SidebarProps {
-  onSelectView: (view: string) => void;
-  getView?: () => string;
   disabled?: boolean;
   isAdmin?: boolean;
   username?: string | null;
@@ -87,8 +80,6 @@ async function handleLogout() {
 }
 
 export function LeftSidebar({
-  onSelectView,
-  getView,
   disabled,
   isAdmin,
   username,
@@ -112,13 +103,19 @@ export function LeftSidebar({
     setCurrentTab,
     allSplitScreenTab,
     updateHostConfig,
-  } = useTabs() as any;
+  } = useTabs() as {
+    tabs: Array<{ id: number; type: string; [key: string]: unknown }>;
+    addTab: (tab: { type: string; [key: string]: unknown }) => number;
+    setCurrentTab: (id: number) => void;
+    allSplitScreenTab: number[];
+    updateHostConfig: (id: number, config: unknown) => void;
+  };
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
   const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
   const openSshManagerTab = () => {
     if (sshManagerTab || isSplitScreenActive) return;
-    const id = addTab({ type: "ssh_manager" } as any);
+    const id = addTab({ type: "ssh_manager" });
     setCurrentTab(id);
   };
   const adminTab = tabList.find((t) => t.type === "admin");
@@ -128,7 +125,7 @@ export function LeftSidebar({
       setCurrentTab(adminTab.id);
       return;
     }
-    const id = addTab({ type: "admin" } as any);
+    const id = addTab({ type: "admin" });
     setCurrentTab(id);
   };
   const userProfileTab = tabList.find((t) => t.type === "user_profile");
@@ -138,12 +135,12 @@ export function LeftSidebar({
       setCurrentTab(userProfileTab.id);
       return;
     }
-    const id = addTab({ type: "user_profile" } as any);
+    const id = addTab({ type: "user_profile" });
     setCurrentTab(id);
   };
 
   const [hosts, setHosts] = useState<SSHHost[]>([]);
-  const [hostsLoading, setHostsLoading] = useState(false);
+  const [hostsLoading] = useState(false);
   const [hostsError, setHostsError] = useState<string | null>(null);
   const prevHostsRef = React.useRef<SSHHost[]>([]);
   const [search, setSearch] = useState("");
@@ -206,7 +203,7 @@ export function LeftSidebar({
           });
         }, 50);
       }
-    } catch (err: any) {
+    } catch {
       setHostsError(t("leftSidebar.failedToLoadHosts"));
     }
   }, [updateHostConfig]);
@@ -314,14 +311,14 @@ export function LeftSidebar({
       return;
     }
 
-    const jwt = getCookie("jwt");
     try {
       await deleteAccount(deletePassword);
 
       handleLogout();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setDeleteError(
-        err?.response?.data?.error || t("leftSidebar.failedToDeleteAccount"),
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || t("leftSidebar.failedToDeleteAccount"),
       );
       setDeleteLoading(false);
     }

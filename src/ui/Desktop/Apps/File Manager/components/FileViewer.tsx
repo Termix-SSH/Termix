@@ -60,7 +60,6 @@ import {
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
-import ReactPlayer from "react-player";
 import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import ReactMarkdown from "react-markdown";
@@ -290,7 +289,7 @@ function getLanguageExtension(filename: string) {
   return language ? loadLanguage(language) : null;
 }
 
-function formatFileSize(bytes?: number, t?: any): string {
+function formatFileSize(bytes?: number, t?: (key: string) => string): string {
   if (!bytes) return t ? t("fileManager.unknownSize") : "Unknown size";
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -311,9 +310,7 @@ export function FileViewer({
 }: FileViewerProps) {
   const { t } = useTranslation();
   const [editedContent, setEditedContent] = useState(content);
-  const [originalContent, setOriginalContent] = useState(
-    savedContent || content,
-  );
+  const [, setOriginalContent] = useState(savedContent || content);
   const [hasChanges, setHasChanges] = useState(false);
   const [showLargeFileWarning, setShowLargeFileWarning] = useState(false);
   const [forceShowAsText, setForceShowAsText] = useState(false);
@@ -326,7 +323,9 @@ export function FileViewer({
   const [pdfScale, setPdfScale] = useState(1.2);
   const [pdfError, setPdfError] = useState(false);
   const [markdownEditMode, setMarkdownEditMode] = useState(false);
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<{
+    view?: { dispatch: (transaction: unknown) => void };
+  } | null>(null);
 
   const fileTypeInfo = getFileType(file.name);
 
@@ -975,13 +974,7 @@ export function FileViewer({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          code({
-                            node,
-                            inline,
-                            className,
-                            children,
-                            ...props
-                          }) {
+                          code({ inline, className, children, ...props }) {
                             const match = /language-(\w+)/.exec(
                               className || "",
                             );
@@ -1097,7 +1090,7 @@ export function FileViewer({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code({ node, inline, className, children, ...props }) {
+                        code({ inline, className, children, ...props }) {
                           const match = /language-(\w+)/.exec(className || "");
                           return !inline && match ? (
                             <SyntaxHighlighter
@@ -1380,8 +1373,7 @@ export function FileViewer({
                     <div className="rounded-lg overflow-hidden">
                       <AudioPlayer
                         src={audioUrl}
-                        onLoadedMetadata={(e) => {
-                          const audio = e.currentTarget;
+                        onLoadedMetadata={() => {
                           if (onMediaDimensionsChange) {
                             onMediaDimensionsChange({
                               width: 600,

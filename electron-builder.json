@@ -58,5 +58,60 @@
         "StartupWMClass": "termix"
       }
     }
-  }
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "mas",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "icon": "public/icon.icns",
+    "category": "public.app-category.developer-tools",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "type": "distribution",
+    "minimumSystemVersion": "10.15"
+  },
+  "dmg": {
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ],
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "sign": false,
+    "writeUpdateInfo": false
+  },
+  "mas": {
+    "entitlements": "build/entitlements.mas.plist",
+    "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
+    "asarUnpack": ["**/*.node"],
+    "type": "distribution",
+    "category": "public.app-category.developer-tools",
+    "extendInfo": {
+      "ElectronTeamID": "YOUR_TEAM_ID",
+      "ITSAppUsesNonExemptEncryption": false
+    }
+  },
+  "afterSign": "build/notarize.js"
 }

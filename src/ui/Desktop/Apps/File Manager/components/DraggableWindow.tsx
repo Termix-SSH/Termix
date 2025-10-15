@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Minus, Square, X, Maximize2, Minimize2 } from "lucide-react";
+import { Minus, X, Maximize2, Minimize2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface DraggableWindowProps {

@@ -42,9 +42,9 @@ export function CredentialEditor({
   onFormSubmit,
 }: CredentialEditorProps) {
   const { t } = useTranslation();
-  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [, setCredentials] = useState<Credential[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [fullCredentialDetails, setFullCredentialDetails] =
     useState<Credential | null>(null);
 
@@ -79,7 +79,8 @@ export function CredentialEditor({
         ].sort() as string[];
 
         setFolders(uniqueFolders);
-      } catch (error) {
+      } catch {
+        // Failed to load credentials
       } finally {
         setLoading(false);
       }
@@ -94,7 +95,7 @@ export function CredentialEditor({
         try {
           const fullDetails = await getCredentialDetails(editingCredential.id);
           setFullCredentialDetails(fullDetails);
-        } catch (error) {
+        } catch {
           toast.error(t("credentials.failedToFetchCredentialDetails"));
         }
       } else {
@@ -154,7 +155,9 @@ export function CredentialEditor({
   type FormData = z.infer<typeof formSchema>;
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema) as unknown as Parameters<
+      typeof useForm<FormData>
+    >[0]["resolver"],
     defaultValues: {
       name: "",
       description: "",
@@ -197,7 +200,7 @@ export function CredentialEditor({
           formData.publicKey = fullCredentialDetails.publicKey || "";
           formData.keyPassword = fullCredentialDetails.keyPassword || "";
           formData.keyType =
-            (fullCredentialDetails.keyType as any) || ("auto" as const);
+            (fullCredentialDetails.keyType as string) || ("auto" as const);
         }
 
         form.reset(formData);
@@ -636,10 +639,6 @@ export function CredentialEditor({
                     form.setValue("key", null);
                     form.setValue("keyPassword", "");
                     form.setValue("keyType", "auto");
-
-                    if (newAuthType === "password") {
-                    } else if (newAuthType === "key") {
-                    }
                   }}
                   className="flex-1 flex flex-col h-full min-h-0"
                 >

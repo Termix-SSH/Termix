@@ -1,21 +1,28 @@
 import React, { useState } from "react";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronDown, ChevronUpIcon, Hammer } from "lucide-react";
+import { ChevronDown, ChevronUpIcon, Hammer, FileText } from "lucide-react";
 import { Tab } from "@/ui/Desktop/Navigation/Tabs/Tab.tsx";
 import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/Desktop/Navigation/Tabs/TabDropdown.tsx";
 import { getCookie, setCookie } from "@/ui/main-axios.ts";
+import { SnippetsSidebar } from "@/ui/Desktop/Apps/Terminal/SnippetsSidebar.tsx";
+
+interface TabData {
+  id: number;
+  type: string;
+  title: string;
+  terminalRef?: {
+    current?: {
+      sendInput?: (data: string) => void;
+    };
+  };
+  [key: string]: unknown;
+}
 
 interface TopNavbarProps {
   isTopbarOpen: boolean;
@@ -34,13 +41,21 @@ export function TopNavbar({
     setSplitScreenTab,
     removeTab,
     allSplitScreenTab,
-  } = useTabs() as any;
+  } = useTabs() as {
+    tabs: TabData[];
+    currentTab: number;
+    setCurrentTab: (id: number) => void;
+    setSplitScreenTab: (id: number) => void;
+    removeTab: (id: number) => void;
+    allSplitScreenTab: number[];
+  };
   const leftPosition = state === "collapsed" ? "26px" : "264px";
   const { t } = useTranslation();
 
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
+  const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(false);
 
   const handleTabActivate = (tabId: number) => {
     setCurrentTab(tabId);
@@ -190,7 +205,7 @@ export function TopNavbar({
 
     if (commandToSend) {
       selectedTabIds.forEach((tabId) => {
-        const tab = tabs.find((t: any) => t.id === tabId);
+        const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
           tab.terminalRef.current.sendInput(commandToSend);
         }
@@ -204,7 +219,7 @@ export function TopNavbar({
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
       const char = e.key;
       selectedTabIds.forEach((tabId) => {
-        const tab = tabs.find((t: any) => t.id === tabId);
+        const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
           tab.terminalRef.current.sendInput(char);
         }
@@ -212,15 +227,22 @@ export function TopNavbar({
     }
   };
 
+  const handleSnippetExecute = (content: string) => {
+    const tab = tabs.find((t: TabData) => t.id === currentTab);
+    if (tab?.terminalRef?.current?.sendInput) {
+      tab.terminalRef.current.sendInput(content + "\n");
+    }
+  };
+
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
-  const currentTabObj = tabs.find((t: any) => t.id === currentTab);
+  const currentTabObj = tabs.find((t: TabData) => t.id === currentTab);
   const currentTabIsHome = currentTabObj?.type === "home";
   const currentTabIsSshManager = currentTabObj?.type === "ssh_manager";
   const currentTabIsAdmin = currentTabObj?.type === "admin";
   const currentTabIsUserProfile = currentTabObj?.type === "user_profile";
 
-  const terminalTabs = tabs.filter((tab: any) => tab.type === "terminal");
+  const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
 
   const updateRightClickCopyPaste = (checked: boolean) => {
     setCookie("rightClickCopyPaste", checked.toString());
@@ -237,7 +259,7 @@ export function TopNavbar({
         }}
       >
         <div className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-2 thin-scrollbar">
-          {tabs.map((tab: any) => {
+          {tabs.map((tab: TabData) => {
             const isActive = tab.id === currentTab;
             const isSplit =
               Array.isArray(allSplitScreenTab) &&
@@ -315,6 +337,16 @@ export function TopNavbar({
             onClick={() => setToolsSheetOpen(true)}
           >
             <Hammer className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-[30px] h-[30px]"
+            title={t("nav.snippets")}
+            onClick={() => setSnippetsSidebarOpen(true)}
+            disabled={!currentTabObj || currentTabObj.type !== "terminal"}
+          >
+            <FileText className="h-4 w-4" />
           </Button>
 
           <Button
@@ -484,6 +516,12 @@ export function TopNavbar({
           </div>
         </div>
       )}
+
+      <SnippetsSidebar
+        isOpen={snippetsSidebarOpen}
+        onClose={() => setSnippetsSidebarOpen(false)}
+        onExecute={handleSnippetExecute}
+      />
     </div>
   );
 }

@@ -21,10 +21,7 @@ interface DragToDesktopOptions {
   onError?: (error: string) => void;
 }
 
-export function useDragToDesktop({
-  sshSessionId,
-  sshHost,
-}: UseDragToDesktopProps) {
+export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
   const [state, setState] = useState<DragToDesktopState>({
     isDragging: false,
     isDownloading: false,
@@ -117,9 +114,10 @@ export function useDragToDesktop({
         }, 10000);
 
         return true;
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Failed to drag to desktop:", error);
-        const errorMessage = error.message || "Drag failed";
+        const err = error as { message?: string };
+        const errorMessage = err.message || "Drag failed";
 
         setState((prev) => ({
           ...prev,
@@ -137,7 +135,7 @@ export function useDragToDesktop({
         return false;
       }
     },
-    [sshSessionId, sshHost],
+    [sshSessionId],
   );
 
   const dragFilesToDesktop = useCallback(
@@ -226,9 +224,10 @@ export function useDragToDesktop({
           }));
         }, 15000);
         return true;
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Failed to batch drag to desktop:", error);
-        const errorMessage = error.message || "Batch drag failed";
+        const err = error as { message?: string };
+        const errorMessage = err.message || "Batch drag failed";
 
         setState((prev) => ({
           ...prev,
@@ -246,12 +245,12 @@ export function useDragToDesktop({
         return false;
       }
     },
-    [sshSessionId, sshHost, dragFileToDesktop],
+    [sshSessionId, dragFileToDesktop],
   );
 
   const dragFolderToDesktop = useCallback(
     async (folder: FileItem, options: DragToDesktopOptions = {}) => {
-      const { enableToast = true, onSuccess, onError } = options;
+      const { enableToast = true, onError } = options;
 
       if (!isElectron()) {
         const error =
@@ -274,7 +273,7 @@ export function useDragToDesktop({
 
       return false;
     },
-    [sshSessionId, sshHost],
+    [],
   );
 
   return {

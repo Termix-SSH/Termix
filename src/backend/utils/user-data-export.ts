@@ -18,14 +18,14 @@ interface UserExportData {
   userId: string;
   username: string;
   userData: {
-    sshHosts: any[];
-    sshCredentials: any[];
+    sshHosts: unknown[];
+    sshCredentials: unknown[];
     fileManagerData: {
-      recent: any[];
-      pinned: any[];
-      shortcuts: any[];
+      recent: unknown[];
+      pinned: unknown[];
+      shortcuts: unknown[];
     };
-    dismissedAlerts: any[];
+    dismissedAlerts: unknown[];
   };
   metadata: {
     totalRecords: number;
@@ -83,7 +83,7 @@ class UserDataExport {
             )
           : sshHosts;
 
-      let sshCredentialsData: any[] = [];
+      let sshCredentialsData: unknown[] = [];
       if (includeCredentials) {
         const credentials = await getDb()
           .select()
@@ -185,7 +185,10 @@ class UserDataExport {
     return JSON.stringify(exportData, null, pretty ? 2 : 0);
   }
 
-  static validateExportData(data: any): { valid: boolean; errors: string[] } {
+  static validateExportData(data: unknown): {
+    valid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
     if (!data || typeof data !== "object") {
@@ -193,23 +196,26 @@ class UserDataExport {
       return { valid: false, errors };
     }
 
-    if (!data.version) {
+    const dataObj = data as Record<string, unknown>;
+
+    if (!dataObj.version) {
       errors.push("Missing version field");
     }
 
-    if (!data.userId) {
+    if (!dataObj.userId) {
       errors.push("Missing userId field");
     }
 
-    if (!data.userData || typeof data.userData !== "object") {
+    if (!dataObj.userData || typeof dataObj.userData !== "object") {
       errors.push("Missing or invalid userData field");
     }
 
-    if (!data.metadata || typeof data.metadata !== "object") {
+    if (!dataObj.metadata || typeof dataObj.metadata !== "object") {
       errors.push("Missing or invalid metadata field");
     }
 
-    if (data.userData) {
+    if (dataObj.userData) {
+      const userData = dataObj.userData as Record<string, unknown>;
       const requiredFields = [
         "sshHosts",
         "sshCredentials",
@@ -218,23 +224,24 @@ class UserDataExport {
       ];
       for (const field of requiredFields) {
         if (
-          !Array.isArray(data.userData[field]) &&
-          !(
-            field === "fileManagerData" &&
-            typeof data.userData[field] === "object"
-          )
+          !Array.isArray(userData[field]) &&
+          !(field === "fileManagerData" && typeof userData[field] === "object")
         ) {
           errors.push(`Missing or invalid userData.${field} field`);
         }
       }
 
       if (
-        data.userData.fileManagerData &&
-        typeof data.userData.fileManagerData === "object"
+        userData.fileManagerData &&
+        typeof userData.fileManagerData === "object"
       ) {
+        const fileManagerData = userData.fileManagerData as Record<
+          string,
+          unknown
+        >;
         const fmFields = ["recent", "pinned", "shortcuts"];
         for (const field of fmFields) {
-          if (!Array.isArray(data.userData.fileManagerData[field])) {
+          if (!Array.isArray(fileManagerData[field])) {
             errors.push(
               `Missing or invalid userData.fileManagerData.${field} field`,
             );

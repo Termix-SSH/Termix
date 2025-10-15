@@ -4,7 +4,6 @@ import { HomepageUpdateLog } from "@/ui/Desktop/Homepage/HompageUpdateLog.tsx";
 import { HomepageAlertManager } from "@/ui/Desktop/Homepage/HomepageAlertManager.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getUserInfo, getDatabaseHealth, getCookie } from "@/ui/main-axios.ts";
-import { useTranslation } from "react-i18next";
 
 interface HomepageProps {
   onSelectView: (view: string) => void;
@@ -25,8 +24,8 @@ export function Homepage({
   isTopbarOpen,
 }: HomepageProps): React.ReactElement {
   const [loggedIn, setLoggedIn] = useState(isAuthenticated);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
+  const [, setIsAdmin] = useState(false);
+  const [, setUsername] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
 
@@ -40,8 +39,7 @@ export function Homepage({
 
   useEffect(() => {
     if (isAuthenticated) {
-      const jwt = getCookie("jwt");
-      if (jwt) {
+      if (getCookie("jwt")) {
         getUserInfo()
           .then((meRes) => {
             setIsAdmin(!!meRes.is_admin);
