@@ -276,7 +276,7 @@ router.post(
     if (effectiveAuthType === "password") {
       sshDataObj.password = password || null;
       sshDataObj.key = null;
-      sshDataObj.keyPassword = null;
+      sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       sshDataObj.key = key || null;
@@ -286,7 +286,7 @@ router.post(
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
-      sshDataObj.keyPassword = null;
+      sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     }
 
@@ -465,7 +465,7 @@ router.put(
         sshDataObj.password = password;
       }
       sshDataObj.key = null;
-      sshDataObj.keyPassword = null;
+      sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key) {
@@ -481,7 +481,7 @@ router.put(
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
-      sshDataObj.keyPassword = null;
+      sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     }
 

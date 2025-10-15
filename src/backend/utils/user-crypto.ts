@@ -94,9 +94,7 @@ class UserCrypto {
           DEK.fill(0);
           DEK = this.decryptDEK(storedEncryptedDEK, systemKey);
         } else if (!storedEncryptedDEK) {
-          throw new Error(
-            "Failed to store and retrieve user encryption key.",
-          );
+          throw new Error("Failed to store and retrieve user encryption key.");
         }
       } finally {
         systemKey.fill(0);
@@ -279,21 +277,6 @@ class UserCrypto {
 
       oldKEK.fill(0);
       newKEK.fill(0);
-
-      const dekCopy = Buffer.from(DEK);
-
-      const now = Date.now();
-      const oldSession = this.userSessions.get(userId);
-      if (oldSession) {
-        oldSession.dataKey.fill(0);
-      }
-
-      this.userSessions.set(userId, {
-        dataKey: dekCopy,
-        lastActivity: now,
-        expiresAt: now + UserCrypto.SESSION_DURATION,
-      });
-
       DEK.fill(0);
 
       return true;
