@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { LeftSidebar } from "@/ui/Desktop/Navigation/LeftSidebar.tsx";
-import { Homepage } from "@/ui/Desktop/Apps/Homepage/Homepage.tsx";
+import { Dashboard } from "@/ui/Desktop/Apps/Dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/Desktop/Navigation/AppView.tsx";
 import { HostManager } from "@/ui/Desktop/Apps/Host Manager/HostManager.tsx";
 import {
@@ -123,7 +123,7 @@ function AppContent() {
 
       {!isAuthenticated && !authLoading && !showVersionCheck && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000]">
-          <Homepage
+          <Dashboard
             onSelectView={handleSelectView}
             isAuthenticated={isAuthenticated}
             authLoading={authLoading}
@@ -149,7 +149,7 @@ function AppContent() {
 
           {showHome && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <Homepage
+              <Dashboard
                 onSelectView={handleSelectView}
                 isAuthenticated={isAuthenticated}
                 authLoading={authLoading}

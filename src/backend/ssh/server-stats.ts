@@ -577,7 +577,7 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     if (!host.password) {
       throw new Error(`No password available for host ${host.ip}`);
     }
-    (base as Record<string, unknown>).password = host.password;
+    // Don't set password in config - let keyboard-interactive handle it
   } else if (host.authType === "key") {
     if (!host.key) {
       throw new Error(`No SSH key available for host ${host.ip}`);

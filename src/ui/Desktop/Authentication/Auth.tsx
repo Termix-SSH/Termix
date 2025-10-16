@@ -25,7 +25,7 @@ import {
 } from "../../main-axios.ts";
 import { ElectronServerConfig as ServerConfigComponent } from "@/ui/Desktop/Authentication/ElectronServerConfig.tsx";
 
-interface HomepageAuthProps extends React.ComponentProps<"div"> {
+interface AuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
   setIsAdmin: (isAdmin: boolean) => void;
   setUsername: (username: string | null) => void;
@@ -51,7 +51,7 @@ export function Auth({
   setDbError,
   onAuthSuccess,
   ...props
-}: HomepageAuthProps) {
+}: AuthProps) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"login" | "signup" | "external" | "reset">(
     "login",

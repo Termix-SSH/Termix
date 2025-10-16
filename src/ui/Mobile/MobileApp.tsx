@@ -8,7 +8,7 @@ import {
   useTabs,
 } from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 import { getUserInfo } from "@/ui/main-axios.ts";
-import { HomepageAuth } from "@/ui/Mobile/Homepage/HomepageAuth.tsx";
+import { Auth } from "@/ui/Mobile/Authentication/Auth.tsx";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner.tsx";
 
@@ -124,7 +124,7 @@ const AppContent: FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-dark-bg p-4">
-        <HomepageAuth
+        <Auth
           setLoggedIn={setIsAuthenticated}
           setIsAdmin={setIsAdmin}
           setUsername={setUsername}

@@ -24,7 +24,7 @@ import {
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 
-interface HomepageAuthProps extends React.ComponentProps<"div"> {
+interface AuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
   setIsAdmin: (isAdmin: boolean) => void;
   setUsername: (username: string | null) => void;
@@ -40,7 +40,7 @@ interface HomepageAuthProps extends React.ComponentProps<"div"> {
   }) => void;
 }
 
-export function HomepageAuth({
+export function Auth({
   className,
   setLoggedIn,
   setIsAdmin,
@@ -52,7 +52,7 @@ export function HomepageAuth({
   setDbError,
   onAuthSuccess,
   ...props
-}: HomepageAuthProps) {
+}: AuthProps) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"login" | "signup" | "external" | "reset">(
     "login",

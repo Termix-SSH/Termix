@@ -290,12 +290,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   };
 
   if (
-    resolvedCredentials.authType === "password" &&
-    resolvedCredentials.password &&
-    resolvedCredentials.password.trim()
-  ) {
-    config.password = resolvedCredentials.password;
-  } else if (
     resolvedCredentials.authType === "key" &&
     resolvedCredentials.sshKey &&
     resolvedCredentials.sshKey.trim()
@@ -326,6 +320,22 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       });
       return res.status(400).json({ error: "Invalid SSH key format" });
     }
+  } else if (resolvedCredentials.authType === "password") {
+    if (!resolvedCredentials.password || !resolvedCredentials.password.trim()) {
+      fileLogger.warn(
+        "Password authentication requested but no password provided",
+        {
+          operation: "file_connect",
+          sessionId,
+          hostId,
+        },
+      );
+      return res
+        .status(400)
+        .json({ error: "Password required for password authentication" });
+    }
+    // Set password to offer both password and keyboard-interactive methods
+    config.password = resolvedCredentials.password;
   } else {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
@@ -403,6 +413,22 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         if (responseSent) return;
         responseSent = true;
 
+        if (pendingTOTPSessions[sessionId]) {
+          fileLogger.warn(
+            "TOTP session already exists, cleaning up old client",
+            {
+              operation: "file_keyboard_interactive",
+              hostId,
+              sessionId,
+            },
+          );
+          try {
+            pendingTOTPSessions[sessionId].client.end();
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
+
         pendingTOTPSessions[sessionId] = {
           client,
           finish,
@@ -410,6 +436,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           createdAt: Date.now(),
           sessionId,
         };
+
+        fileLogger.info("Created TOTP session", {
+          operation: "file_keyboard_interactive_totp",
+          hostId,
+          sessionId,
+          prompt: totpPrompt.prompt,
+        });
 
         res.json({
           requires_totp: true,
@@ -456,24 +489,37 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       operation: "file_totp_verify",
       sessionId,
       userId,
+      availableSessions: Object.keys(pendingTOTPSessions),
     });
     return res
       .status(404)
       .json({ error: "TOTP session expired. Please reconnect." });
   }
 
-  delete pendingTOTPSessions[sessionId];
-
-  if (Date.now() - session.createdAt > 120000) {
+  if (Date.now() - session.createdAt > 180000) {
+    delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
     } catch {
       // Ignore errors when closing timed out session
     }
+    fileLogger.warn("TOTP session timeout before code submission", {
+      operation: "file_totp_verify",
+      sessionId,
+      userId,
+      age: Date.now() - session.createdAt,
+    });
     return res
       .status(408)
       .json({ error: "TOTP session timeout. Please reconnect." });
   }
+
+  fileLogger.info("Submitting TOTP code to SSH server", {
+    operation: "file_totp_verify",
+    sessionId,
+    userId,
+    codeLength: totpCode.length,
+  });
 
   session.finish([totpCode]);
 
@@ -482,6 +528,8 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   session.client.on("ready", () => {
     if (responseSent) return;
     responseSent = true;
+
+    delete pendingTOTPSessions[sessionId];
 
     sshSessions[sessionId] = {
       client: session.client,
@@ -506,6 +554,8 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     if (responseSent) return;
     responseSent = true;
 
+    delete pendingTOTPSessions[sessionId];
+
     fileLogger.error("TOTP verification failed", {
       operation: "file_totp_verify",
       sessionId,
@@ -519,6 +569,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   setTimeout(() => {
     if (!responseSent) {
       responseSent = true;
+      delete pendingTOTPSessions[sessionId];
       res.status(408).json({ error: "TOTP verification timeout" });
     }
   }, 60000);

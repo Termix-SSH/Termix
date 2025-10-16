@@ -672,7 +672,25 @@ wss.on("connection", async (ws: WebSocket, req) => {
               totpCode,
             ]);
 
-            finish([totpCode]);
+            // Respond to ALL prompts, not just TOTP
+            const responses = prompts.map((p, index) => {
+              if (index === totpPromptIndex) {
+                return totpCode;
+              }
+              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+                return resolvedCredentials.password;
+              }
+              return "";
+            });
+
+            sshLogger.info("Full keyboard-interactive response", {
+              operation: "totp_full_response",
+              hostId: id,
+              totalPrompts: prompts.length,
+              responsesProvided: responses.filter((r) => r !== "").length,
+            });
+
+            finish(responses);
           };
           ws.send(
             JSON.stringify({
@@ -768,15 +786,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         compress: ["none", "zlib@openssh.com", "zlib"],
       },
     };
-    if (
-      resolvedCredentials.authType === "password" &&
-      resolvedCredentials.password
-    ) {
-      connectConfig.password = resolvedCredentials.password;
-    } else if (
-      resolvedCredentials.authType === "key" &&
-      resolvedCredentials.key
-    ) {
+
+    if (resolvedCredentials.authType === "key" && resolvedCredentials.key) {
       try {
         if (
           !resolvedCredentials.key.includes("-----BEGIN") ||
@@ -814,6 +825,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    } else if (resolvedCredentials.authType === "password") {
+      if (!resolvedCredentials.password) {
+        sshLogger.error(
+          "Password authentication requested but no password provided",
+        );
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Password authentication requested but no password provided",
+          }),
+        );
+        return;
+      }
+      // Set password to offer both password and keyboard-interactive methods
+      connectConfig.password = resolvedCredentials.password;
     } else {
       sshLogger.error("No valid authentication method provided");
       ws.send(

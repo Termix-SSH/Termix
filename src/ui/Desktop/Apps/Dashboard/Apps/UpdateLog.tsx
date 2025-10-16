@@ -13,7 +13,7 @@ import { getReleasesRSS, getVersionInfo } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { BookOpen, X } from "lucide-react";
 
-interface HomepageUpdateLogProps extends React.ComponentProps<"div"> {
+interface UpdateLogProps extends React.ComponentProps<"div"> {
   loggedIn: boolean;
 }
 
@@ -59,7 +59,7 @@ interface VersionResponse {
   cache_age?: number;
 }
 
-export function HomepageUpdateLog({ loggedIn }: HomepageUpdateLogProps) {
+export function UpdateLog({ loggedIn }: UpdateLogProps) {
   const { t } = useTranslation();
   const [releases, setReleases] = useState<RSSResponse | null>(null);
   const [versionInfo, setVersionInfo] = useState<VersionResponse | null>(null);
