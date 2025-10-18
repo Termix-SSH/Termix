@@ -2,7 +2,7 @@
 FROM node:22-slim AS deps
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/* 
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 
@@ -82,7 +82,7 @@ COPY --chown=node:node package.json ./
 
 VOLUME ["/app/data"]
 
-EXPOSE ${PORT} 30001 30002 30003 30004 30005
+EXPOSE ${PORT} 30001 30002 30003 30004 30005 300006
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

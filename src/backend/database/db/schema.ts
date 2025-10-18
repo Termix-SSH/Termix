@@ -189,3 +189,18 @@ export const snippets = sqliteTable("snippets", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const recentActivity = sqliteTable("recent_activity", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  type: text("type").notNull(),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => sshData.id),
+  hostName: text("host_name").notNull(),
+  timestamp: text("timestamp")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});

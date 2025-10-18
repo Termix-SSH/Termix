@@ -6,8 +6,9 @@ import {
   type ConnectConfig,
 } from "ssh2";
 import { parse as parseUrl } from "url";
+import axios from "axios";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials } from "../database/db/schema.js";
+import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -565,6 +566,62 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ws.send(
             JSON.stringify({ type: "connected", message: "SSH connected" }),
           );
+
+          // Log activity to homepage API
+          if (id && hostConfig.userId) {
+            (async () => {
+              try {
+                // Fetch host name from database
+                const hosts = await SimpleDBOps.select(
+                  getDb()
+                    .select()
+                    .from(sshData)
+                    .where(
+                      and(
+                        eq(sshData.id, id),
+                        eq(sshData.userId, hostConfig.userId!),
+                      ),
+                    ),
+                  "ssh_data",
+                  hostConfig.userId!,
+                );
+
+                const hostName =
+                  hosts.length > 0 && hosts[0].name
+                    ? hosts[0].name
+                    : `${username}@${ip}:${port}`;
+
+                await axios.post(
+                  "http://localhost:30006/activity/log",
+                  {
+                    type: "terminal",
+                    hostId: id,
+                    hostName,
+                  },
+                  {
+                    headers: {
+                      Authorization: `Bearer ${await authManager.generateJWTToken(hostConfig.userId!)}`,
+                    },
+                  },
+                );
+
+                sshLogger.info("Terminal activity logged", {
+                  operation: "activity_log",
+                  userId: hostConfig.userId,
+                  hostId: id,
+                  hostName,
+                });
+              } catch (error) {
+                sshLogger.warn("Failed to log terminal activity", {
+                  operation: "activity_log_error",
+                  userId: hostConfig.userId,
+                  hostId: id,
+                  error:
+                    error instanceof Error ? error.message : "Unknown error",
+                });
+              }
+            })();
+          }
         },
       );
     });

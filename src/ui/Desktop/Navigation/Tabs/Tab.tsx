@@ -1,7 +1,7 @@
 import React from "react";
-import { ButtonGroup } from "@/components/ui/button-group.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 import {
   Home,
   SeparatorVertical,
@@ -24,6 +24,13 @@ interface TabProps {
   disableActivate?: boolean;
   disableSplit?: boolean;
   disableClose?: boolean;
+  onDragStart?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragLeave?: () => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  isDragging?: boolean;
+  isDragOver?: boolean;
 }
 
 export function Tab({
@@ -38,18 +45,56 @@ export function Tab({
   disableActivate = false,
   disableSplit = false,
   disableClose = false,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+  isDragging = false,
+  isDragOver = false,
 }: TabProps): React.ReactElement {
   const { t } = useTranslation();
+
+  const dragProps = {
+    draggable: true,
+    onDragStart,
+    onDragOver,
+    onDragLeave,
+    onDrop,
+    onDragEnd,
+  };
+
+  // Firefox-style tab classes using cn utility
+  const tabBaseClasses = cn(
+    "relative flex items-center gap-1.5 px-3 py-2 min-w-fit max-w-[200px]",
+    "rounded-t-lg border-t-2 border-l-2 border-r-2",
+    "transition-all duration-150 select-none",
+    isDragOver &&
+      "bg-background/40 text-muted-foreground border-border opacity-60 cursor-default",
+    isDragging && "opacity-40 cursor-grabbing",
+    !isDragOver &&
+      !isDragging &&
+      isActive &&
+      "bg-background text-foreground border-border z-10 cursor-pointer",
+    !isDragOver &&
+      !isDragging &&
+      !isActive &&
+      "bg-background/80 text-muted-foreground border-border hover:bg-background/90 cursor-pointer",
+  );
+
   if (tabType === "home") {
     return (
-      <Button
-        variant="outline"
-        className={`!px-2 border-1 border-dark-border ${isActive ? "!bg-dark-bg-active !text-white !border-dark-border-active" : ""}`}
-        onClick={onActivate}
-        disabled={disableActivate}
+      <div
+        className={tabBaseClasses}
+        {...dragProps}
+        onClick={!disableActivate ? onActivate : undefined}
+        style={{
+          marginBottom: "-2px",
+          borderBottom: isActive ? "2px solid transparent" : "none",
+        }}
       >
-        <Home />
-      </Button>
+        <Home className="h-4 w-4" />
+      </div>
     );
   }
 
@@ -62,102 +107,147 @@ export function Tab({
     const isServer = tabType === "server";
     const isFileManager = tabType === "file_manager";
     const isUserProfile = tabType === "user_profile";
+
+    const displayTitle =
+      title ||
+      (isServer
+        ? t("nav.serverStats")
+        : isFileManager
+          ? t("nav.fileManager")
+          : isUserProfile
+            ? t("nav.userProfile")
+            : t("nav.terminal"));
+
     return (
-      <ButtonGroup>
-        <Button
-          variant="outline"
-          className={`!px-2 border-1 border-dark-border ${isActive ? "!bg-dark-bg-active !text-white !border-dark-border-active" : ""}`}
-          onClick={onActivate}
-          disabled={disableActivate}
+      <div
+        className={tabBaseClasses}
+        {...dragProps}
+        style={{
+          marginBottom: "-2px",
+          borderBottom: isActive ? "2px solid transparent" : "none",
+        }}
+      >
+        <div
+          className="flex items-center gap-1.5 flex-1 min-w-0"
+          onClick={!disableActivate ? onActivate : undefined}
         >
           {isServer ? (
-            <ServerIcon className="mr-1 h-4 w-4" />
+            <ServerIcon className="h-4 w-4 flex-shrink-0" />
           ) : isFileManager ? (
-            <FolderIcon className="mr-1 h-4 w-4" />
+            <FolderIcon className="h-4 w-4 flex-shrink-0" />
           ) : isUserProfile ? (
-            <UserIcon className="mr-1 h-4 w-4" />
+            <UserIcon className="h-4 w-4 flex-shrink-0" />
           ) : (
-            <TerminalIcon className="mr-1 h-4 w-4" />
+            <TerminalIcon className="h-4 w-4 flex-shrink-0" />
           )}
-          {title ||
-            (isServer
-              ? t("nav.serverStats")
-              : isFileManager
-                ? t("nav.fileManager")
-                : isUserProfile
-                  ? t("nav.userProfile")
-                  : t("nav.terminal"))}
-        </Button>
+          <span className="truncate text-sm">{displayTitle}</span>
+        </div>
+
         {canSplit && (
           <Button
-            variant="outline"
-            className="!px-2 border-1 border-dark-border"
-            onClick={onSplit}
+            variant="ghost"
+            size="icon"
+            className={cn("h-6 w-6", disableSplit && "opacity-50")}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disableSplit && onSplit) onSplit();
+            }}
             disabled={disableSplit}
             title={
               disableSplit ? t("nav.cannotSplitTab") : t("nav.splitScreen")
             }
           >
-            <SeparatorVertical className="w-[28px] h-[28px]" />
+            <SeparatorVertical className="h-4 w-4" />
           </Button>
         )}
+
         {canClose && (
           <Button
-            variant="outline"
-            className="!px-2 border-1 border-dark-border"
-            onClick={onClose}
+            variant="ghost"
+            size="icon"
+            className={cn("h-6 w-6", disableClose && "opacity-50")}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disableClose && onClose) onClose();
+            }}
             disabled={disableClose}
           >
-            <X />
+            <X className="h-4 w-4" />
           </Button>
         )}
-      </ButtonGroup>
+      </div>
     );
   }
 
   if (tabType === "ssh_manager") {
     return (
-      <ButtonGroup>
-        <Button
-          variant="outline"
-          className={`!px-2 border-1 border-dark-border ${isActive ? "!bg-dark-bg-active !text-white !border-dark-border-active" : ""}`}
-          onClick={onActivate}
-          disabled={disableActivate}
+      <div
+        className={tabBaseClasses}
+        {...dragProps}
+        style={{
+          marginBottom: "-2px",
+          borderBottom: isActive ? "2px solid transparent" : "none",
+        }}
+      >
+        <div
+          className="flex items-center gap-1.5 flex-1 min-w-0"
+          onClick={!disableActivate ? onActivate : undefined}
         >
-          {title || t("nav.sshManager")}
-        </Button>
-        <Button
-          variant="outline"
-          className="!px-2 border-1 border-dark-border"
-          onClick={onClose}
-          disabled={disableClose}
-        >
-          <X />
-        </Button>
-      </ButtonGroup>
+          <span className="truncate text-sm">
+            {title || t("nav.sshManager")}
+          </span>
+        </div>
+
+        {canClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("h-6 w-6", disableClose && "opacity-50")}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disableClose && onClose) onClose();
+            }}
+            disabled={disableClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     );
   }
 
   if (tabType === "admin") {
     return (
-      <ButtonGroup>
-        <Button
-          variant="outline"
-          className={`!px-2 border-1 border-dark-border ${isActive ? "!bg-dark-bg-active !text-white !border-dark-border-active" : ""}`}
-          onClick={onActivate}
-          disabled={disableActivate}
+      <div
+        className={tabBaseClasses}
+        {...dragProps}
+        style={{
+          marginBottom: "-2px",
+          borderBottom: isActive ? "2px solid transparent" : "none",
+        }}
+      >
+        <div
+          className="flex items-center gap-1.5 flex-1 min-w-0"
+          onClick={!disableActivate ? onActivate : undefined}
         >
-          {title || t("nav.admin")}
-        </Button>
-        <Button
-          variant="outline"
-          className="!px-2 border-1 border-dark-border"
-          onClick={onClose}
-          disabled={disableClose}
-        >
-          <X />
-        </Button>
-      </ButtonGroup>
+          <span className="truncate text-sm">{title || t("nav.admin")}</span>
+        </div>
+
+        {canClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("h-6 w-6", disableClose && "opacity-50")}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disableClose && onClose) onClose();
+            }}
+            disabled={disableClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     );
   }
 

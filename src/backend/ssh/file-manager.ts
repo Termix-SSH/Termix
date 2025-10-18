@@ -1,9 +1,10 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials } from "../database/db/schema.js";
+import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -101,6 +102,11 @@ interface PendingTOTPSession {
   config: import("ssh2").ConnectConfig;
   createdAt: number;
   sessionId: string;
+  hostId?: number;
+  ip?: string;
+  port?: number;
+  username?: string;
+  userId?: string;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -365,6 +371,56 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     };
     scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
+
+    // Log activity to homepage API
+    if (hostId && userId) {
+      (async () => {
+        try {
+          const hosts = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshData)
+              .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+            "ssh_data",
+            userId,
+          );
+
+          const hostName =
+            hosts.length > 0 && hosts[0].name
+              ? hosts[0].name
+              : `${username}@${ip}:${port}`;
+
+          const authManager = AuthManager.getInstance();
+          await axios.post(
+            "http://localhost:30006/activity/log",
+            {
+              type: "file_manager",
+              hostId,
+              hostName,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${await authManager.generateJWTToken(userId)}`,
+              },
+            },
+          );
+
+          fileLogger.info("File manager activity logged", {
+            operation: "activity_log",
+            userId,
+            hostId,
+            hostName,
+          });
+        } catch (error) {
+          fileLogger.warn("Failed to log file manager activity", {
+            operation: "activity_log_error",
+            userId,
+            hostId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      })();
+    }
   });
 
   client.on("error", (err) => {
@@ -435,6 +491,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           config,
           createdAt: Date.now(),
           sessionId,
+          hostId,
+          ip,
+          port,
+          username,
+          userId,
         };
 
         fileLogger.info("Created TOTP session", {
@@ -548,6 +609,61 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       status: "success",
       message: "TOTP verified, SSH connection established",
     });
+
+    // Log activity to homepage API
+    if (session.hostId && session.userId) {
+      (async () => {
+        try {
+          const hosts = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshData)
+              .where(
+                and(
+                  eq(sshData.id, session.hostId!),
+                  eq(sshData.userId, session.userId!),
+                ),
+              ),
+            "ssh_data",
+            session.userId!,
+          );
+
+          const hostName =
+            hosts.length > 0 && hosts[0].name
+              ? hosts[0].name
+              : `${session.username}@${session.ip}:${session.port}`;
+
+          const authManager = AuthManager.getInstance();
+          await axios.post(
+            "http://localhost:30006/activity/log",
+            {
+              type: "file_manager",
+              hostId: session.hostId,
+              hostName,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+              },
+            },
+          );
+
+          fileLogger.info("File manager activity logged (TOTP)", {
+            operation: "activity_log",
+            userId: session.userId,
+            hostId: session.hostId,
+            hostName,
+          });
+        } catch (error) {
+          fileLogger.warn("Failed to log file manager activity (TOTP)", {
+            operation: "activity_log_error",
+            userId: session.userId,
+            hostId: session.hostId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      })();
+    }
   });
 
   session.client.on("error", (err) => {

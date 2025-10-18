@@ -41,6 +41,7 @@ export function TopNavbar({
     setSplitScreenTab,
     removeTab,
     allSplitScreenTab,
+    reorderTabs,
   } = useTabs() as {
     tabs: TabData[];
     currentTab: number;
@@ -48,6 +49,7 @@ export function TopNavbar({
     setSplitScreenTab: (id: number) => void;
     removeTab: (id: number) => void;
     allSplitScreenTab: number[];
+    reorderTabs: (fromIndex: number, toIndex: number) => void;
   };
   const leftPosition = state === "collapsed" ? "26px" : "264px";
   const { t } = useTranslation();
@@ -56,6 +58,8 @@ export function TopNavbar({
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(false);
+  const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
+  const [dragOverTabIndex, setDragOverTabIndex] = useState<number | null>(null);
 
   const handleTabActivate = (tabId: number) => {
     setCurrentTab(tabId);
@@ -234,6 +238,35 @@ export function TopNavbar({
     }
   };
 
+  const handleDragStart = (index: number) => {
+    setDraggedTabIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedTabIndex !== null && draggedTabIndex !== index) {
+      setDragOverTabIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverTabIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedTabIndex !== null && draggedTabIndex !== dropIndex) {
+      reorderTabs(draggedTabIndex, dropIndex);
+    }
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
+  };
+
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
   const currentTabObj = tabs.find((t: TabData) => t.id === currentTab);
@@ -258,8 +291,13 @@ export function TopNavbar({
           right: "17px",
         }}
       >
-        <div className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-2 thin-scrollbar">
-          {tabs.map((tab: TabData) => {
+        <div className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-1 thin-scrollbar">
+          {tabs.map((tab: TabData, index: number) => {
+            // Insert preview tab before this position if dragging over it
+            const showPreviewBefore =
+              draggedTabIndex !== null &&
+              dragOverTabIndex === index &&
+              draggedTabIndex > index;
             const isActive = tab.id === currentTab;
             const isSplit =
               Array.isArray(allSplitScreenTab) &&
@@ -290,39 +328,99 @@ export function TopNavbar({
                 tab.type === "user_profile") &&
                 isSplitScreenActive);
             const disableClose = (isSplitScreenActive && isActive) || isSplit;
+            const isDragging = draggedTabIndex === index;
+            const isDragOver = dragOverTabIndex === index;
+
+            // Show preview after this position if dragging over and coming from before
+            const showPreviewAfter =
+              draggedTabIndex !== null &&
+              dragOverTabIndex === index &&
+              draggedTabIndex < index;
+
+            const draggedTab =
+              draggedTabIndex !== null ? tabs[draggedTabIndex] : null;
+
             return (
-              <Tab
-                key={tab.id}
-                tabType={tab.type}
-                title={tab.title}
-                isActive={isActive}
-                onActivate={() => handleTabActivate(tab.id)}
-                onClose={
-                  isTerminal ||
-                  isServer ||
-                  isFileManager ||
-                  isSshManager ||
-                  isAdmin ||
-                  isUserProfile
-                    ? () => handleTabClose(tab.id)
-                    : undefined
-                }
-                onSplit={
-                  isSplittable ? () => handleTabSplit(tab.id) : undefined
-                }
-                canSplit={isSplittable}
-                canClose={
-                  isTerminal ||
-                  isServer ||
-                  isFileManager ||
-                  isSshManager ||
-                  isAdmin ||
-                  isUserProfile
-                }
-                disableActivate={disableActivate}
-                disableSplit={disableSplit}
-                disableClose={disableClose}
-              />
+              <React.Fragment key={tab.id}>
+                {/* Preview tab before current position */}
+                {showPreviewBefore && draggedTab && (
+                  <Tab
+                    tabType={draggedTab.type}
+                    title={draggedTab.title}
+                    isActive={false}
+                    canSplit={
+                      draggedTab.type === "terminal" ||
+                      draggedTab.type === "server" ||
+                      draggedTab.type === "file_manager"
+                    }
+                    canClose={true}
+                    disableActivate={true}
+                    disableSplit={true}
+                    disableClose={true}
+                    isDragging={false}
+                    isDragOver={true}
+                  />
+                )}
+
+                <Tab
+                  tabType={tab.type}
+                  title={tab.title}
+                  isActive={isActive}
+                  onActivate={() => handleTabActivate(tab.id)}
+                  onClose={
+                    isTerminal ||
+                    isServer ||
+                    isFileManager ||
+                    isSshManager ||
+                    isAdmin ||
+                    isUserProfile
+                      ? () => handleTabClose(tab.id)
+                      : undefined
+                  }
+                  onSplit={
+                    isSplittable ? () => handleTabSplit(tab.id) : undefined
+                  }
+                  canSplit={isSplittable}
+                  canClose={
+                    isTerminal ||
+                    isServer ||
+                    isFileManager ||
+                    isSshManager ||
+                    isAdmin ||
+                    isUserProfile
+                  }
+                  disableActivate={disableActivate}
+                  disableSplit={disableSplit}
+                  disableClose={disableClose}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  isDragging={isDragging}
+                  isDragOver={false}
+                />
+
+                {/* Preview tab after current position */}
+                {showPreviewAfter && draggedTab && (
+                  <Tab
+                    tabType={draggedTab.type}
+                    title={draggedTab.title}
+                    isActive={false}
+                    canSplit={
+                      draggedTab.type === "terminal" ||
+                      draggedTab.type === "server" ||
+                      draggedTab.type === "file_manager"
+                    }
+                    canClose={true}
+                    disableActivate={true}
+                    disableSplit={true}
+                    disableClose={true}
+                    isDragging={false}
+                    isDragOver={true}
+                  />
+                )}
+              </React.Fragment>
             );
           })}
         </div>

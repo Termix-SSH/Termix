@@ -20,6 +20,7 @@ interface TabContextType {
   setCurrentTab: (tabId: number) => void;
   setSplitScreenTab: (tabId: number) => void;
   getTab: (tabId: number) => Tab | undefined;
+  reorderTabs: (fromIndex: number, toIndex: number) => void;
   updateHostConfig: (
     hostId: number,
     newHostConfig: {
@@ -152,6 +153,15 @@ export function TabProvider({ children }: TabProviderProps) {
     return tabs.find((tab) => tab.id === tabId);
   };
 
+  const reorderTabs = (fromIndex: number, toIndex: number) => {
+    setTabs((prev) => {
+      const newTabs = [...prev];
+      const [movedTab] = newTabs.splice(fromIndex, 1);
+      newTabs.splice(toIndex, 0, movedTab);
+      return newTabs;
+    });
+  };
+
   const updateHostConfig = (
     hostId: number,
     newHostConfig: {
@@ -187,6 +197,7 @@ export function TabProvider({ children }: TabProviderProps) {
     setCurrentTab,
     setSplitScreenTab,
     getTab,
+    reorderTabs,
     updateHostConfig,
   };
 

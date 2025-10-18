@@ -15,6 +15,7 @@ import {
   fileLogger,
   statsLogger,
   systemLogger,
+  homepageLogger,
   type LogContext,
 } from "../lib/frontend-logger.js";
 
@@ -121,6 +122,11 @@ function getLoggerForService(serviceName: string) {
     return statsLogger;
   } else if (serviceName.includes("AUTH") || serviceName.includes("auth")) {
     return authLogger;
+  } else if (
+    serviceName.includes("HOMEPAGE") ||
+    serviceName.includes("homepage")
+  ) {
+    return homepageLogger;
   } else {
     return apiLogger;
   }
@@ -484,6 +490,9 @@ function initializeApiInstances() {
 
   // Authentication API (port 30001)
   authApi = createApiInstance(getApiUrl("", 30001), "AUTH");
+
+  // Homepage API (port 30006)
+  homepageApi = createApiInstance(getApiUrl("", 30006), "HOMEPAGE");
 }
 
 // SSH Host Management API (port 30001)
@@ -500,6 +509,9 @@ export let statsApi: AxiosInstance;
 
 // Authentication API (port 30001)
 export let authApi: AxiosInstance;
+
+// Homepage API (port 30006)
+export let homepageApi: AxiosInstance;
 
 if (isElectron()) {
   getServerConfig()
@@ -2351,5 +2363,72 @@ export async function deleteSnippet(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "delete snippet");
+  }
+}
+
+// ============================================================================
+// HOMEPAGE API
+// ============================================================================
+
+export interface UptimeInfo {
+  uptimeMs: number;
+  uptimeSeconds: number;
+  formatted: string;
+}
+
+export interface RecentActivityItem {
+  id: number;
+  userId: string;
+  type: "terminal" | "file_manager";
+  hostId: number;
+  hostName: string;
+  timestamp: string;
+}
+
+export async function getUptime(): Promise<UptimeInfo> {
+  try {
+    const response = await homepageApi.get("/uptime");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch uptime");
+  }
+}
+
+export async function getRecentActivity(
+  limit?: number,
+): Promise<RecentActivityItem[]> {
+  try {
+    const response = await homepageApi.get("/activity/recent", {
+      params: { limit },
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch recent activity");
+  }
+}
+
+export async function logActivity(
+  type: "terminal" | "file_manager",
+  hostId: number,
+  hostName: string,
+): Promise<{ message: string; id: number | string }> {
+  try {
+    const response = await homepageApi.post("/activity/log", {
+      type,
+      hostId,
+      hostName,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "log activity");
+  }
+}
+
+export async function resetRecentActivity(): Promise<{ message: string }> {
+  try {
+    const response = await homepageApi.delete("/activity/reset");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "reset recent activity");
   }
 }
