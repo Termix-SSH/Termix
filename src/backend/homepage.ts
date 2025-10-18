@@ -189,7 +189,7 @@ app.post("/activity/log", async (req, res) => {
         hostName,
       },
       userId,
-    )) as { id: number };
+    )) as unknown as { id: number };
 
     // Keep only the last 100 activities per user to prevent bloat
     const allActivities = await SimpleDBOps.select(
@@ -253,10 +253,6 @@ const PORT = 30006;
 app.listen(PORT, async () => {
   try {
     await authManager.initialize();
-    homepageLogger.success(`Homepage API listening on port ${PORT}`, {
-      operation: "server_start",
-      port: PORT,
-    });
   } catch (err) {
     homepageLogger.error("Failed to initialize AuthManager", err, {
       operation: "auth_init_error",

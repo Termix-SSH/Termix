@@ -479,151 +479,155 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
 
-      sshConn!.shell(
-        {
-          rows: data.rows,
-          cols: data.cols,
-          term: "xterm-256color",
-        } as PseudoTtyOptions,
-        (err, stream) => {
-          if (err) {
-            sshLogger.error("Shell error", err, {
-              operation: "ssh_shell",
-              hostId: id,
-              ip,
-              port,
-              username,
-            });
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Shell error: " + err.message,
-              }),
-            );
-            return;
-          }
-
-          sshStream = stream;
-
-          stream.on("data", (data: Buffer) => {
-            try {
-              const utf8String = data.toString("utf-8");
-              ws.send(JSON.stringify({ type: "data", data: utf8String }));
-            } catch (error) {
-              sshLogger.error("Error encoding terminal data", error, {
-                operation: "terminal_data_encoding",
+      // Small delay to let connection stabilize after keyboard-interactive auth
+      // This helps prevent "No response from server" errors with TOTP
+      setTimeout(() => {
+        sshConn!.shell(
+          {
+            rows: data.rows,
+            cols: data.cols,
+            term: "xterm-256color",
+          } as PseudoTtyOptions,
+          (err, stream) => {
+            if (err) {
+              sshLogger.error("Shell error", err, {
+                operation: "ssh_shell",
                 hostId: id,
-                dataLength: data.length,
+                ip,
+                port,
+                username,
               });
               ws.send(
                 JSON.stringify({
-                  type: "data",
-                  data: data.toString("latin1"),
+                  type: "error",
+                  message: "Shell error: " + err.message,
                 }),
               );
+              return;
             }
-          });
 
-          stream.on("close", () => {
-            ws.send(
-              JSON.stringify({
-                type: "disconnected",
-                message: "Connection lost",
-              }),
-            );
-          });
+            sshStream = stream;
 
-          stream.on("error", (err: Error) => {
-            sshLogger.error("SSH stream error", err, {
-              operation: "ssh_stream",
-              hostId: id,
-              ip,
-              port,
-              username,
-            });
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "SSH stream error: " + err.message,
-              }),
-            );
-          });
-
-          setupPingInterval();
-
-          if (initialPath && initialPath.trim() !== "") {
-            const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
-            stream.write(cdCommand);
-          }
-
-          if (executeCommand && executeCommand.trim() !== "") {
-            setTimeout(() => {
-              const command = `${executeCommand}\n`;
-              stream.write(command);
-            }, 500);
-          }
-
-          ws.send(
-            JSON.stringify({ type: "connected", message: "SSH connected" }),
-          );
-
-          // Log activity to homepage API
-          if (id && hostConfig.userId) {
-            (async () => {
+            stream.on("data", (data: Buffer) => {
               try {
-                // Fetch host name from database
-                const hosts = await SimpleDBOps.select(
-                  getDb()
-                    .select()
-                    .from(sshData)
-                    .where(
-                      and(
-                        eq(sshData.id, id),
-                        eq(sshData.userId, hostConfig.userId!),
-                      ),
-                    ),
-                  "ssh_data",
-                  hostConfig.userId!,
+                const utf8String = data.toString("utf-8");
+                ws.send(JSON.stringify({ type: "data", data: utf8String }));
+              } catch (error) {
+                sshLogger.error("Error encoding terminal data", error, {
+                  operation: "terminal_data_encoding",
+                  hostId: id,
+                  dataLength: data.length,
+                });
+                ws.send(
+                  JSON.stringify({
+                    type: "data",
+                    data: data.toString("latin1"),
+                  }),
                 );
+              }
+            });
 
-                const hostName =
-                  hosts.length > 0 && hosts[0].name
-                    ? hosts[0].name
-                    : `${username}@${ip}:${port}`;
+            stream.on("close", () => {
+              ws.send(
+                JSON.stringify({
+                  type: "disconnected",
+                  message: "Connection lost",
+                }),
+              );
+            });
 
-                await axios.post(
-                  "http://localhost:30006/activity/log",
-                  {
-                    type: "terminal",
+            stream.on("error", (err: Error) => {
+              sshLogger.error("SSH stream error", err, {
+                operation: "ssh_stream",
+                hostId: id,
+                ip,
+                port,
+                username,
+              });
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "SSH stream error: " + err.message,
+                }),
+              );
+            });
+
+            setupPingInterval();
+
+            if (initialPath && initialPath.trim() !== "") {
+              const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
+              stream.write(cdCommand);
+            }
+
+            if (executeCommand && executeCommand.trim() !== "") {
+              setTimeout(() => {
+                const command = `${executeCommand}\n`;
+                stream.write(command);
+              }, 500);
+            }
+
+            ws.send(
+              JSON.stringify({ type: "connected", message: "SSH connected" }),
+            );
+
+            // Log activity to homepage API
+            if (id && hostConfig.userId) {
+              (async () => {
+                try {
+                  // Fetch host name from database
+                  const hosts = await SimpleDBOps.select(
+                    getDb()
+                      .select()
+                      .from(sshData)
+                      .where(
+                        and(
+                          eq(sshData.id, id),
+                          eq(sshData.userId, hostConfig.userId!),
+                        ),
+                      ),
+                    "ssh_data",
+                    hostConfig.userId!,
+                  );
+
+                  const hostName =
+                    hosts.length > 0 && hosts[0].name
+                      ? hosts[0].name
+                      : `${username}@${ip}:${port}`;
+
+                  await axios.post(
+                    "http://localhost:30006/activity/log",
+                    {
+                      type: "terminal",
+                      hostId: id,
+                      hostName,
+                    },
+                    {
+                      headers: {
+                        Authorization: `Bearer ${await authManager.generateJWTToken(hostConfig.userId!)}`,
+                      },
+                    },
+                  );
+
+                  sshLogger.info("Terminal activity logged", {
+                    operation: "activity_log",
+                    userId: hostConfig.userId,
                     hostId: id,
                     hostName,
-                  },
-                  {
-                    headers: {
-                      Authorization: `Bearer ${await authManager.generateJWTToken(hostConfig.userId!)}`,
-                    },
-                  },
-                );
-
-                sshLogger.info("Terminal activity logged", {
-                  operation: "activity_log",
-                  userId: hostConfig.userId,
-                  hostId: id,
-                  hostName,
-                });
-              } catch (error) {
-                sshLogger.warn("Failed to log terminal activity", {
-                  operation: "activity_log_error",
-                  userId: hostConfig.userId,
-                  hostId: id,
-                  error:
-                    error instanceof Error ? error.message : "Unknown error",
-                });
-              }
-            })();
-          }
-        },
-      );
+                  });
+                } catch (error) {
+                  sshLogger.warn("Failed to log terminal activity", {
+                    operation: "activity_log_error",
+                    userId: hostConfig.userId,
+                    hostId: id,
+                    error:
+                      error instanceof Error ? error.message : "Unknown error",
+                  });
+                }
+              })();
+            }
+          },
+        );
+      }, 100); // Small delay to stabilize connection after keyboard-interactive auth
     });
 
     sshConn.on("error", (err: Error) => {
@@ -716,19 +720,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
           keyboardInteractiveFinish = (totpResponses: string[]) => {
             const totpCode = (totpResponses[0] || "").trim();
 
-            sshLogger.info("TOTP response being sent to SSH server", {
-              operation: "totp_verification",
-              hostId: id,
-              responseLength: totpCode.length,
-            });
-
-            console.log(
-              `[SSH TOTP Response] Host ${id}: TOTP code: "${totpCode}" (length: ${totpCode.length})`,
-            );
-            console.log(`[SSH TOTP Response] Calling finish() with array:`, [
-              totpCode,
-            ]);
-
             // Respond to ALL prompts, not just TOTP
             const responses = prompts.map((p, index) => {
               if (index === totpPromptIndex) {
@@ -740,9 +731,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
               return "";
             });
 
-            sshLogger.info("Full keyboard-interactive response", {
-              operation: "totp_full_response",
+            sshLogger.info("TOTP response being sent to SSH server", {
+              operation: "totp_verification",
               hostId: id,
+              totpCodeLength: totpCode.length,
               totalPrompts: prompts.length,
               responsesProvided: responses.filter((r) => r !== "").length,
             });

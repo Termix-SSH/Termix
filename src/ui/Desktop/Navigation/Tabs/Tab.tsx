@@ -24,11 +24,6 @@ interface TabProps {
   disableActivate?: boolean;
   disableSplit?: boolean;
   disableClose?: boolean;
-  onDragStart?: () => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDragLeave?: () => void;
-  onDrop?: (e: React.DragEvent) => void;
-  onDragEnd?: () => void;
   isDragging?: boolean;
   isDragOver?: boolean;
 }
@@ -45,52 +40,37 @@ export function Tab({
   disableActivate = false,
   disableSplit = false,
   disableClose = false,
-  onDragStart,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  onDragEnd,
   isDragging = false,
   isDragOver = false,
 }: TabProps): React.ReactElement {
   const { t } = useTranslation();
 
-  const dragProps = {
-    draggable: true,
-    onDragStart,
-    onDragOver,
-    onDragLeave,
-    onDrop,
-    onDragEnd,
-  };
-
   // Firefox-style tab classes using cn utility
   const tabBaseClasses = cn(
-    "relative flex items-center gap-1.5 px-3 py-2 min-w-fit max-w-[200px]",
+    "relative flex items-center gap-1.5 px-3 min-w-fit max-w-[200px]",
     "rounded-t-lg border-t-2 border-l-2 border-r-2",
-    "transition-all duration-150 select-none",
+    "transition-all duration-150 h-[42px]",
     isDragOver &&
-      "bg-background/40 text-muted-foreground border-border opacity-60 cursor-default",
-    isDragging && "opacity-40 cursor-grabbing",
+      "bg-background/40 text-muted-foreground border-border opacity-60",
+    isDragging && "opacity-70",
     !isDragOver &&
       !isDragging &&
       isActive &&
-      "bg-background text-foreground border-border z-10 cursor-pointer",
+      "bg-background text-foreground border-border z-10",
     !isDragOver &&
       !isDragging &&
       !isActive &&
-      "bg-background/80 text-muted-foreground border-border hover:bg-background/90 cursor-pointer",
+      "bg-background/80 text-muted-foreground border-border hover:bg-background/90",
   );
 
   if (tabType === "home") {
     return (
       <div
         className={tabBaseClasses}
-        {...dragProps}
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid transparent" : "none",
+          borderBottom: isActive ? "2px solid white" : "none",
         }}
       >
         <Home className="h-4 w-4" />
@@ -121,10 +101,9 @@ export function Tab({
     return (
       <div
         className={tabBaseClasses}
-        {...dragProps}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid transparent" : "none",
+          borderBottom: isActive ? "2px solid white" : "none",
         }}
       >
         <div
@@ -183,10 +162,9 @@ export function Tab({
     return (
       <div
         className={tabBaseClasses}
-        {...dragProps}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid transparent" : "none",
+          borderBottom: isActive ? "2px solid white" : "none",
         }}
       >
         <div
@@ -220,10 +198,9 @@ export function Tab({
     return (
       <div
         className={tabBaseClasses}
-        {...dragProps}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid transparent" : "none",
+          borderBottom: isActive ? "2px solid white" : "none",
         }}
       >
         <div

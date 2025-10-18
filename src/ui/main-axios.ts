@@ -2042,7 +2042,7 @@ export async function getVersionInfo(): Promise<Record<string, unknown>> {
 
 export async function getDatabaseHealth(): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.get("/users/db-health");
+    const response = await authApi.get("/health");
     return response.data;
   } catch (error) {
     handleApiError(error, "check database health");

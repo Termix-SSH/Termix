@@ -164,6 +164,7 @@ function AppContent() {
               <HostManager
                 onSelectView={handleSelectView}
                 isTopbarOpen={isTopbarOpen}
+                initialTab={currentTabData?.initialTab}
               />
             </div>
           )}

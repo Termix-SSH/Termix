@@ -12,7 +12,7 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { getCookie, isElectron } from "@/ui/main-axios.ts";
+import { getCookie, isElectron, logActivity } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/components/TOTPDialog";
 
 interface HostConfig {
@@ -469,6 +469,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             reconnectAttempts.current = 0;
             isReconnectingRef.current = false;
+
+            // Log activity for recent connections
+            if (hostConfig.id) {
+              const hostName =
+                hostConfig.name || `${hostConfig.username}@${hostConfig.ip}`;
+              logActivity("terminal", hostConfig.id, hostName).catch((err) => {
+                console.warn("Failed to log terminal activity:", err);
+              });
+            }
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
             setIsConnected(false);

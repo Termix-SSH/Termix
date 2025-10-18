@@ -265,6 +265,7 @@ export interface TabContextTab {
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;
+  initialTab?: string; // For ssh_manager: "host_viewer" | "add_host" | "credentials" | "add_credential"
 }
 
 // ============================================================================
@@ -339,6 +340,7 @@ export interface CredentialSelectorProps {
 export interface HostManagerProps {
   onSelectView?: (view: string) => void;
   isTopbarOpen?: boolean;
+  initialTab?: string;
 }
 
 export interface SSHManagerHostEditorProps {

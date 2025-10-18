@@ -58,8 +58,19 @@ export function TopNavbar({
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(false);
-  const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
-  const [dragOverTabIndex, setDragOverTabIndex] = useState<number | null>(null);
+  const [dragState, setDragState] = useState<{
+    draggedIndex: number | null;
+    currentX: number;
+    startX: number;
+    targetIndex: number | null;
+  }>({
+    draggedIndex: null,
+    currentX: 0,
+    startX: 0,
+    targetIndex: null,
+  });
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const tabRefs = React.useRef<Map<number, HTMLDivElement>>(new Map());
 
   const handleTabActivate = (tabId: number) => {
     setCurrentTab(tabId);
@@ -238,33 +249,110 @@ export function TopNavbar({
     }
   };
 
-  const handleDragStart = (index: number) => {
-    setDraggedTabIndex(index);
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    console.log("Drag start:", index, e.clientX);
+
+    // Create transparent drag image
+    const img = new Image();
+    img.src =
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    e.dataTransfer.setDragImage(img, 0, 0);
+
+    setDragState({
+      draggedIndex: index,
+      startX: e.clientX,
+      currentX: e.clientX,
+      targetIndex: index,
+    });
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedTabIndex !== null && draggedTabIndex !== index) {
-      setDragOverTabIndex(index);
+  const handleDrag = (e: React.DragEvent) => {
+    if (e.clientX === 0) return; // Skip the final drag event
+    if (dragState.draggedIndex === null) return;
+
+    console.log("Dragging:", e.clientX);
+
+    setDragState((prev) => ({
+      ...prev,
+      currentX: e.clientX,
+    }));
+
+    // Calculate target position based on mouse X
+    if (!containerRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - containerRect.left;
+
+    let accumulatedX = 0;
+    let newTargetIndex = dragState.draggedIndex;
+
+    tabs.forEach((tab, i) => {
+      const tabEl = tabRefs.current.get(i);
+      if (!tabEl) return;
+
+      const tabWidth = tabEl.getBoundingClientRect().width;
+      const tabCenter = accumulatedX + tabWidth / 2;
+
+      if (mouseX < tabCenter && i === 0) {
+        newTargetIndex = 0;
+      } else if (mouseX >= tabCenter && mouseX < accumulatedX + tabWidth) {
+        newTargetIndex = i;
+      }
+
+      accumulatedX += tabWidth + 4; // 4px gap
+    });
+
+    if (mouseX >= accumulatedX - 4) {
+      newTargetIndex = tabs.length - 1;
     }
+
+    setDragState((prev) => ({
+      ...prev,
+      targetIndex: newTargetIndex,
+    }));
   };
 
-  const handleDragLeave = () => {
-    setDragOverTabIndex(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (draggedTabIndex !== null && draggedTabIndex !== dropIndex) {
-      reorderTabs(draggedTabIndex, dropIndex);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    console.log("Drop:", dragState);
+
+    if (
+      dragState.draggedIndex !== null &&
+      dragState.targetIndex !== null &&
+      dragState.draggedIndex !== dragState.targetIndex
+    ) {
+      reorderTabs(dragState.draggedIndex, dragState.targetIndex);
     }
-    setDraggedTabIndex(null);
-    setDragOverTabIndex(null);
+
+    setDragState({
+      draggedIndex: null,
+      startX: 0,
+      currentX: 0,
+      targetIndex: null,
+    });
   };
 
   const handleDragEnd = () => {
-    setDraggedTabIndex(null);
-    setDragOverTabIndex(null);
+    console.log("Drag end:", dragState);
+
+    if (
+      dragState.draggedIndex !== null &&
+      dragState.targetIndex !== null &&
+      dragState.draggedIndex !== dragState.targetIndex
+    ) {
+      reorderTabs(dragState.draggedIndex, dragState.targetIndex);
+    }
+
+    setDragState({
+      draggedIndex: null,
+      startX: 0,
+      currentX: 0,
+      targetIndex: null,
+    });
   };
 
   const isSplitScreenActive =
@@ -284,20 +372,19 @@ export function TopNavbar({
   return (
     <div>
       <div
-        className="fixed z-10 h-[50px] bg-dark-bg border-2 border-dark-border rounded-lg transition-all duration-200 ease-linear flex flex-row transform-none m-0 p-0"
+        className="fixed z-10 h-[50px] border-2 border-dark-border rounded-lg transition-all duration-200 ease-linear flex flex-row transform-none m-0 p-0"
         style={{
           top: isTopbarOpen ? "0.5rem" : "-3rem",
           left: leftPosition,
           right: "17px",
+          backgroundColor: "#1e1e21",
         }}
       >
-        <div className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-1 thin-scrollbar">
+        <div
+          ref={containerRef}
+          className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-1 thin-scrollbar"
+        >
           {tabs.map((tab: TabData, index: number) => {
-            // Insert preview tab before this position if dragging over it
-            const showPreviewBefore =
-              draggedTabIndex !== null &&
-              dragOverTabIndex === index &&
-              draggedTabIndex > index;
             const isActive = tab.id === currentTab;
             const isSplit =
               Array.isArray(allSplitScreenTab) &&
@@ -328,40 +415,77 @@ export function TopNavbar({
                 tab.type === "user_profile") &&
                 isSplitScreenActive);
             const disableClose = (isSplitScreenActive && isActive) || isSplit;
-            const isDragging = draggedTabIndex === index;
-            const isDragOver = dragOverTabIndex === index;
 
-            // Show preview after this position if dragging over and coming from before
-            const showPreviewAfter =
-              draggedTabIndex !== null &&
-              dragOverTabIndex === index &&
-              draggedTabIndex < index;
+            const isDragging = dragState.draggedIndex === index;
+            const dragOffset = isDragging
+              ? dragState.currentX - dragState.startX
+              : 0;
 
-            const draggedTab =
-              draggedTabIndex !== null ? tabs[draggedTabIndex] : null;
+            // Calculate transform
+            let transform = "";
+            if (isDragging) {
+              // Dragged tab follows cursor
+              transform = `translateX(${dragOffset}px)`;
+            } else if (
+              dragState.draggedIndex !== null &&
+              dragState.targetIndex !== null
+            ) {
+              // Other tabs shift to make room
+              const draggedIndex = dragState.draggedIndex;
+              const targetIndex = dragState.targetIndex;
+
+              if (
+                draggedIndex < targetIndex &&
+                index > draggedIndex &&
+                index <= targetIndex
+              ) {
+                // Shifting left
+                const draggedTabEl = tabRefs.current.get(draggedIndex);
+                const draggedWidth =
+                  draggedTabEl?.getBoundingClientRect().width || 0;
+                transform = `translateX(-${draggedWidth + 4}px)`;
+              } else if (
+                draggedIndex > targetIndex &&
+                index >= targetIndex &&
+                index < draggedIndex
+              ) {
+                // Shifting right
+                const draggedTabEl = tabRefs.current.get(draggedIndex);
+                const draggedWidth =
+                  draggedTabEl?.getBoundingClientRect().width || 0;
+                transform = `translateX(${draggedWidth + 4}px)`;
+              }
+            }
 
             return (
-              <React.Fragment key={tab.id}>
-                {/* Preview tab before current position */}
-                {showPreviewBefore && draggedTab && (
-                  <Tab
-                    tabType={draggedTab.type}
-                    title={draggedTab.title}
-                    isActive={false}
-                    canSplit={
-                      draggedTab.type === "terminal" ||
-                      draggedTab.type === "server" ||
-                      draggedTab.type === "file_manager"
-                    }
-                    canClose={true}
-                    disableActivate={true}
-                    disableSplit={true}
-                    disableClose={true}
-                    isDragging={false}
-                    isDragOver={true}
-                  />
-                )}
-
+              <div
+                key={tab.id}
+                ref={(el) => {
+                  if (el) {
+                    tabRefs.current.set(index, el);
+                  } else {
+                    tabRefs.current.delete(index);
+                  }
+                }}
+                draggable={true}
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  handleDragStart(e, index);
+                }}
+                onDrag={handleDrag}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                style={{
+                  transform,
+                  transition: isDragging ? "none" : "transform 200ms ease-out",
+                  zIndex: isDragging ? 1000 : 1,
+                  position: "relative",
+                  cursor: isDragging ? "grabbing" : "grab",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                }}
+              >
                 <Tab
                   tabType={tab.type}
                   title={tab.title}
@@ -392,35 +516,10 @@ export function TopNavbar({
                   disableActivate={disableActivate}
                   disableSplit={disableSplit}
                   disableClose={disableClose}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onDragEnd={handleDragEnd}
                   isDragging={isDragging}
                   isDragOver={false}
                 />
-
-                {/* Preview tab after current position */}
-                {showPreviewAfter && draggedTab && (
-                  <Tab
-                    tabType={draggedTab.type}
-                    title={draggedTab.title}
-                    isActive={false}
-                    canSplit={
-                      draggedTab.type === "terminal" ||
-                      draggedTab.type === "server" ||
-                      draggedTab.type === "file_manager"
-                    }
-                    canClose={true}
-                    disableActivate={true}
-                    disableSplit={true}
-                    disableClose={true}
-                    isDragging={false}
-                    isDragOver={true}
-                  />
-                )}
-              </React.Fragment>
+              </div>
             );
           })}
         </div>
@@ -460,7 +559,8 @@ export function TopNavbar({
       {!isTopbarOpen && (
         <div
           onClick={() => setIsTopbarOpen(true)}
-          className="absolute top-0 left-0 w-full h-[10px] bg-dark-bg cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md"
+          className="absolute top-0 left-0 w-full h-[10px] cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md"
+          style={{ backgroundColor: "#1e1e21" }}
         >
           <ChevronDown size={10} />
         </div>

@@ -107,6 +107,9 @@ interface PendingTOTPSession {
   port?: number;
   username?: string;
   userId?: string;
+  prompts?: Array<{ prompt: string; echo: boolean }>;
+  totpPromptIndex?: number;
+  resolvedPassword?: string;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -459,30 +462,28 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         promptsCount: prompts.length,
       });
 
-      const totpPrompt = prompts.find((p) =>
+      const totpPromptIndex = prompts.findIndex((p) =>
         /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
           p.prompt,
         ),
       );
 
-      if (totpPrompt) {
+      if (totpPromptIndex !== -1) {
         if (responseSent) return;
         responseSent = true;
 
         if (pendingTOTPSessions[sessionId]) {
           fileLogger.warn(
-            "TOTP session already exists, cleaning up old client",
+            "TOTP session already exists, ignoring duplicate keyboard-interactive",
             {
               operation: "file_keyboard_interactive",
               hostId,
               sessionId,
             },
           );
-          try {
-            pendingTOTPSessions[sessionId].client.end();
-          } catch (e) {
-            // Ignore cleanup errors
-          }
+          // Don't respond to duplicate keyboard-interactive events
+          // The first one is still being processed
+          return;
         }
 
         pendingTOTPSessions[sessionId] = {
@@ -496,19 +497,23 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           port,
           username,
           userId,
+          prompts,
+          totpPromptIndex,
+          resolvedPassword: resolvedCredentials.password,
         };
 
         fileLogger.info("Created TOTP session", {
           operation: "file_keyboard_interactive_totp",
           hostId,
           sessionId,
-          prompt: totpPrompt.prompt,
+          prompt: prompts[totpPromptIndex].prompt,
+          promptsCount: prompts.length,
         });
 
         res.json({
           requires_totp: true,
           sessionId,
-          prompt: totpPrompt.prompt,
+          prompt: prompts[totpPromptIndex].prompt,
         });
       } else {
         if (resolvedCredentials.password) {
@@ -580,15 +585,40 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     sessionId,
     userId,
     codeLength: totpCode.length,
+    promptsCount: session.prompts?.length || 0,
   });
 
-  session.finish([totpCode]);
+  // Build responses for ALL prompts, just like in terminal.ts
+  const responses = (session.prompts || []).map((p, index) => {
+    if (index === session.totpPromptIndex) {
+      return totpCode;
+    }
+    if (/password/i.test(p.prompt) && session.resolvedPassword) {
+      return session.resolvedPassword;
+    }
+    return "";
+  });
+
+  fileLogger.info("Full keyboard-interactive response for file manager", {
+    operation: "file_totp_full_response",
+    sessionId,
+    userId,
+    totalPrompts: session.prompts?.length || 0,
+    responsesProvided: responses.filter((r) => r !== "").length,
+  });
 
   let responseSent = false;
+  let responseTimeout: NodeJS.Timeout;
 
-  session.client.on("ready", () => {
+  // Remove old event listeners from /connect endpoint to avoid conflicts
+  session.client.removeAllListeners("ready");
+  session.client.removeAllListeners("error");
+
+  // CRITICAL: Attach event listeners BEFORE calling finish() to avoid race condition
+  session.client.once("ready", () => {
     if (responseSent) return;
     responseSent = true;
+    clearTimeout(responseTimeout);
 
     delete pendingTOTPSessions[sessionId];
 
@@ -666,9 +696,10 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     }
   });
 
-  session.client.on("error", (err) => {
+  session.client.once("error", (err) => {
     if (responseSent) return;
     responseSent = true;
+    clearTimeout(responseTimeout);
 
     delete pendingTOTPSessions[sessionId];
 
@@ -682,13 +713,21 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     res.status(401).json({ status: "error", message: "Invalid TOTP code" });
   });
 
-  setTimeout(() => {
+  responseTimeout = setTimeout(() => {
     if (!responseSent) {
       responseSent = true;
       delete pendingTOTPSessions[sessionId];
+      fileLogger.warn("TOTP verification timeout", {
+        operation: "file_totp_verify",
+        sessionId,
+        userId,
+      });
       res.status(408).json({ error: "TOTP verification timeout" });
     }
   }, 60000);
+
+  // Now that event listeners are attached, submit the TOTP response
+  session.finish(responses);
 });
 
 app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {

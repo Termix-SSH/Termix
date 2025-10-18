@@ -78,7 +78,7 @@ export function Dashboard({
     Array<{ id: number; name: string; cpu: number | null; ram: number | null }>
   >([]);
 
-  const { addTab } = useTabs();
+  const { addTab, setCurrentTab, tabs: tabList } = useTabs();
 
   let sidebarState: "expanded" | "collapsed" = "expanded";
   try {
@@ -160,14 +160,27 @@ export function Dashboard({
         const hosts = await getSSHHosts();
         setTotalServers(hosts.length);
 
-        const tunnels = await getTunnelStatuses();
-        setTotalTunnels(Object.keys(tunnels).length);
+        // Count total tunnels across all hosts
+        let totalTunnelsCount = 0;
+        for (const host of hosts) {
+          if (host.tunnelConnections) {
+            try {
+              const tunnelConnections = JSON.parse(host.tunnelConnections);
+              if (Array.isArray(tunnelConnections)) {
+                totalTunnelsCount += tunnelConnections.length;
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+        setTotalTunnels(totalTunnelsCount);
 
         const credentials = await getCredentials();
         setTotalCredentials(credentials.length);
 
-        // Fetch recent activity
-        const activity = await getRecentActivity(10);
+        // Fetch recent activity (35 items)
+        const activity = await getRecentActivity(35);
         setRecentActivity(activity);
 
         // Fetch server stats for first 5 servers
@@ -235,6 +248,55 @@ export function Dashboard({
         });
       }
     });
+  };
+
+  // Quick Actions handlers
+  const handleAddHost = () => {
+    const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
+    if (sshManagerTab) {
+      setCurrentTab(sshManagerTab.id);
+    } else {
+      const id = addTab({
+        type: "ssh_manager",
+        title: "Host Manager",
+        initialTab: "add_host",
+      });
+      setCurrentTab(id);
+    }
+  };
+
+  const handleAddCredential = () => {
+    const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
+    if (sshManagerTab) {
+      setCurrentTab(sshManagerTab.id);
+    } else {
+      const id = addTab({
+        type: "ssh_manager",
+        title: "Host Manager",
+        initialTab: "add_credential",
+      });
+      setCurrentTab(id);
+    }
+  };
+
+  const handleOpenAdminSettings = () => {
+    const adminTab = tabList.find((t) => t.type === "admin");
+    if (adminTab) {
+      setCurrentTab(adminTab.id);
+    } else {
+      const id = addTab({ type: "admin", title: "Admin Settings" });
+      setCurrentTab(id);
+    }
+  };
+
+  const handleOpenUserProfile = () => {
+    const userProfileTab = tabList.find((t) => t.type === "user_profile");
+    if (userProfileTab) {
+      setCurrentTab(userProfileTab.id);
+    } else {
+      const id = addTab({ type: "user_profile", title: "User Profile" });
+      setCurrentTab(id);
+    }
   };
 
   return (
@@ -486,7 +548,7 @@ export function Dashboard({
                       <Button
                         variant="outline"
                         className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3"
-                        onClick={() => onSelectView("host-manager-add")}
+                        onClick={handleAddHost}
                       >
                         <Server
                           className="shrink-0"
@@ -499,7 +561,7 @@ export function Dashboard({
                       <Button
                         variant="outline"
                         className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3"
-                        onClick={() => onSelectView("host-manager-credentials")}
+                        onClick={handleAddCredential}
                       >
                         <Key
                           className="shrink-0"
@@ -513,7 +575,7 @@ export function Dashboard({
                         <Button
                           variant="outline"
                           className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3"
-                          onClick={() => onSelectView("admin-settings")}
+                          onClick={handleOpenAdminSettings}
                         >
                           <Settings
                             className="shrink-0"
@@ -527,7 +589,7 @@ export function Dashboard({
                       <Button
                         variant="outline"
                         className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3"
-                        onClick={() => onSelectView("user-profile")}
+                        onClick={handleOpenUserProfile}
                       >
                         <User
                           className="shrink-0"

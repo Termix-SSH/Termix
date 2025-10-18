@@ -47,6 +47,7 @@ import {
   removeRecentFile,
   addFolderShortcut,
   getPinnedFiles,
+  logActivity,
 } from "@/ui/main-axios.ts";
 import type { SidebarItem } from "./FileManagerSidebar";
 
@@ -297,6 +298,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
 
       setSshSessionId(sessionId);
+
+      // Log activity for recent connections
+      if (currentHost?.id) {
+        const hostName =
+          currentHost.name || `${currentHost.username}@${currentHost.ip}`;
+        logActivity("file_manager", currentHost.id, hostName).catch((err) => {
+          console.warn("Failed to log file manager activity:", err);
+        });
+      }
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
@@ -1246,6 +1256,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         setTotpPrompt("");
         setSshSessionId(totpSessionId);
         setTotpSessionId(null);
+
+        // Log activity for recent connections
+        if (currentHost?.id) {
+          const hostName =
+            currentHost.name || `${currentHost.username}@${currentHost.ip}`;
+          logActivity("file_manager", currentHost.id, hostName).catch((err) => {
+            console.warn("Failed to log file manager activity:", err);
+          });
+        }
 
         try {
           const response = await listSSHFiles(totpSessionId, currentPath);

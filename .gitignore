@@ -27,3 +27,4 @@ dist-ssr
 /.claude/
 /ssl/
 .env
+/.mcp.json
