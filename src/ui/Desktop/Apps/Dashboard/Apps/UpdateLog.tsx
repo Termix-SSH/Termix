@@ -96,11 +96,10 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
     <>
       <Button
         variant="outline"
-        size="lg"
-        className="text-sm border-2 border-dark-border text-gray-300 hover:text-white hover:bg-dark-bg-darker transition-colors"
+        size="sm"
+        className="ml-2 text-sm border-1 border-dark-border text-muted-foreground"
         onClick={() => setIsOpen(true)}
       >
-        <BookOpen className="w-4 h-4 mr-2" />
         {t("common.updatesAndReleases")}
       </Button>
 
@@ -109,7 +108,6 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
           side="right"
           className="w-[500px] bg-dark-bg border-l-2 border-dark-border text-white sm:max-w-[500px] p-0 flex flex-col [&>button]:hidden"
         >
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-dark-border">
             <h2 className="text-lg font-semibold text-white">
               {t("common.updatesAndReleases")}
@@ -125,7 +123,6 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
             </Button>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
             {versionInfo && versionInfo.status === "requires_update" && (
               <Alert className="bg-dark-bg-darker border-dark-border text-white mb-3">
