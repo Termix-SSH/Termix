@@ -409,57 +409,59 @@ export function Server({
         </div>
         <Separator className="p-0.25 w-full" />
 
-        {showStatsUI && (
-          <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4">
-            {isLoadingMetrics && !metrics ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-gray-300">
-                    {t("serverStats.loadingMetrics")}
-                  </span>
-                </div>
-              </div>
-            ) : !metrics && serverStatus === "offline" ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {showStatsUI && (
+            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4 max-h-[50vh] overflow-y-auto">
+              {isLoadingMetrics && !metrics ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-gray-300">
+                      {t("serverStats.loadingMetrics")}
+                    </span>
                   </div>
-                  <p className="text-gray-300 mb-1">
-                    {t("serverStats.serverOffline")}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {t("serverStats.cannotFetchMetrics")}
-                  </p>
                 </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {enabledWidgets.map((widgetType) => (
-                  <div key={widgetType} className="h-[280px]">
-                    {renderWidget(widgetType)}
+              ) : !metrics && serverStatus === "offline" ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
+                    </div>
+                    <p className="text-gray-300 mb-1">
+                      {t("serverStats.serverOffline")}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {t("serverStats.cannotFetchMetrics")}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* SSH Tunnels */}
-        {currentHostConfig?.tunnelConnections &&
-          currentHostConfig.tunnelConnections.length > 0 && (
-            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker h-[360px] overflow-hidden flex flex-col min-h-0">
-              <Tunnel
-                filterHostKey={
-                  currentHostConfig?.name &&
-                  currentHostConfig.name.trim() !== ""
-                    ? currentHostConfig.name
-                    : `${currentHostConfig?.username}@${currentHostConfig?.ip}`
-                }
-              />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {enabledWidgets.map((widgetType) => (
+                    <div key={widgetType} className="h-[280px]">
+                      {renderWidget(widgetType)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
+
+          {/* SSH Tunnels */}
+          {currentHostConfig?.tunnelConnections &&
+            currentHostConfig.tunnelConnections.length > 0 && (
+              <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker h-[360px] overflow-hidden flex flex-col min-h-0">
+                <Tunnel
+                  filterHostKey={
+                    currentHostConfig?.name &&
+                    currentHostConfig.name.trim() !== ""
+                      ? currentHostConfig.name
+                      : `${currentHostConfig?.username}@${currentHostConfig?.ip}`
+                  }
+                />
+              </div>
+            )}
+        </div>
 
         <p className="px-4 pt-2 pb-2 text-sm text-gray-500">
           {t("serverStats.feedbackMessage")}{" "}

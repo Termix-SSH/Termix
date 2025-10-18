@@ -380,7 +380,7 @@ export function Dashboard({
 
             <Separator className="mt-3 p-0.25" />
 
-            <div className="flex flex-col h-screen my-5 mx-5 gap-4">
+            <div className="flex flex-col flex-1 my-5 mx-5 gap-4 min-h-0">
               <div className="flex flex-row flex-1 gap-4 min-h-0">
                 <div className="flex-1 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden">
                   <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden">
