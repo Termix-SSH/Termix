@@ -299,7 +299,7 @@ export function Dashboard({
                         className="border-2 !border-dark-border bg-dark-bg"
                       >
                         <Server size={20} className="shrink-0" />
-                        <p className="truncate ml-2">Server #1</p>
+                        <p className="truncate ml-2 font-semibold">Server #1</p>
                       </Button>
                     </div>
                   </div>
