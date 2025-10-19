@@ -4,14 +4,6 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
-	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>2CPC5YZYFN.com.karmaa.termix</string>
-	</array>
-	<key>com.apple.application-identifier</key>
-	<string>2CPC5YZYFN.com.karmaa.termix</string>
-	<key>com.apple.developer.team-identifier</key>
-	<string>2CPC5YZYFN</string>
 	<key>com.apple.security.network.client</key>
 	<true/>
 	<key>com.apple.security.network.server</key>
