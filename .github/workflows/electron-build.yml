@@ -156,6 +156,8 @@ jobs:
 
       - name: Build macOS App Store Package
         if: steps.check_certs.outputs.has_certs == 'true'
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: npm run build:mac
 
       - name: List release directory
