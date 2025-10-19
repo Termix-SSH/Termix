@@ -190,20 +190,21 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH
 
       - name: Build macOS App Store Package
+        if: steps.check_certs.outputs.has_certs == 'true'
         run: npm run build:mac-mas
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: List release directory
-        if: always()
+        if: steps.check_certs.outputs.has_certs == 'true'
         run: |
           echo "Contents of release directory:"
           ls -R release/ || echo "Release directory not found"
 
       - name: Upload macOS MAS Artifact
+        if: steps.check_certs.outputs.has_certs == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: Termix-macOS-MAS
@@ -214,6 +215,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Check for App Store Connect API credentials
+        if: steps.check_certs.outputs.has_certs == 'true'
         id: check_asc_creds
         run: |
           if [ -n "${{ secrets.APPLE_KEY_ID }}" ] && [ -n "${{ secrets.APPLE_ISSUER_ID }}" ] && [ -n "${{ secrets.APPLE_KEY_CONTENT }}" ]; then
@@ -262,6 +264,6 @@ jobs:
         continue-on-error: true
 
       - name: Clean up keychain
-        if: always()
+        if: always() && steps.check_certs.outputs.has_certs == 'true'
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
