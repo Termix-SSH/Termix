@@ -218,7 +218,7 @@ jobs:
 
           fastlane pilot upload \
             --pkg "$PKG_FILE" \
-            --platform osx \
+            --app_platform osx \
             --skip_waiting_for_build_processing true \
             --skip_submission true \
             --changelog "Bug fixes and improvements"
