@@ -211,20 +211,18 @@ jobs:
           fi
           echo "Found package: $PKG_FILE"
 
-          # Create API key JSON file
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "${{ secrets.APPLE_KEY_CONTENT }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8
+          # Create API key file
+          mkdir -p ~/private_keys
+          echo "${{ secrets.APPLE_KEY_CONTENT }}" | base64 --decode > ~/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8
 
-          # Upload using API key authentication
-          fastlane pilot upload \
-            --api_key_path ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8 \
-            --api_key_issuer_id "${{ secrets.APPLE_ISSUER_ID }}" \
-            --api_key_id "${{ secrets.APPLE_KEY_ID }}" \
-            --pkg "$PKG_FILE" \
-            --app_platform osx \
-            --skip_waiting_for_build_processing \
-            --skip_submission \
-            --changelog "Bug fixes and improvements"
+          # Upload to App Store Connect using xcrun altool
+          xcrun altool --upload-package "$PKG_FILE" \
+            --type macos \
+            --apiKey "${{ secrets.APPLE_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APPLE_ISSUER_ID }}" \
+            --apple-id "${{ secrets.APPLE_ID }}"
+
+          echo "✅ Upload complete! Build will appear in App Store Connect after processing (10-30 minutes)"
         continue-on-error: true
 
       - name: Clean up keychain
