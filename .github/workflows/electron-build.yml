@@ -216,12 +216,8 @@ jobs:
           echo "${{ secrets.APPLE_KEY_CONTENT }}" | base64 --decode > ~/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8
 
           # Upload to App Store Connect using xcrun altool
-          xcrun altool --upload-package "$PKG_FILE" \
+          xcrun altool --upload-app -f "$PKG_FILE" \
             --type macos \
-            --apple-id "com.karmaa.termix" \
-            --bundle-id "com.karmaa.termix" \
-            --bundle-version "1.8.0" \
-            --bundle-short-version-string "1.8.0" \
             --apiKey "${{ secrets.APPLE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPLE_ISSUER_ID }}"
 
