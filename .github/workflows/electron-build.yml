@@ -107,12 +107,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
       - name: Install dependencies
         run: |
-          npm ci --include=optional
-          npm rebuild
+          rm -f package-lock.json
+          npm install
+          npm install --force @rollup/rollup-darwin-arm64
 
       - name: Build macOS DMG
         run: npm run build:mac-dmg
@@ -153,12 +153,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
       - name: Install dependencies
         run: |
-          npm ci --include=optional
-          npm rebuild
+          rm -f package-lock.json
+          npm install
+          npm install --force @rollup/rollup-darwin-arm64
 
       - name: Check for Code Signing Certificates
         id: check_certs
@@ -212,6 +212,54 @@ jobs:
             release/mas/*.pkg
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Check for App Store Connect API credentials
+        id: check_asc_creds
+        run: |
+          if [ -n "${{ secrets.APPLE_KEY_ID }}" ] && [ -n "${{ secrets.APPLE_ISSUER_ID }}" ] && [ -n "${{ secrets.APPLE_KEY_CONTENT }}" ]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "✅ App Store Connect API credentials found. Will deploy to App Store Connect."
+          else
+            echo "has_credentials=false" >> $GITHUB_OUTPUT
+            echo "⚠️ App Store Connect API credentials not configured. Skipping deployment."
+            echo "Add APPLE_KEY_ID, APPLE_ISSUER_ID, and APPLE_KEY_CONTENT secrets to enable automatic deployment."
+          fi
+
+      - name: Setup Ruby for Fastlane
+        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      - name: Install Fastlane
+        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: |
+          gem install fastlane -N
+          fastlane --version
+
+      - name: Deploy to App Store Connect (TestFlight)
+        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        env:
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APPLE_KEY_CONTENT }}
+          APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: true
+        run: |
+          PKG_FILE=$(find release -name "*.pkg" -type f | head -n 1)
+          if [ -z "$PKG_FILE" ]; then
+            echo "Error: No .pkg file found in release directory"
+            exit 1
+          fi
+          echo "Found package: $PKG_FILE"
+
+          fastlane pilot upload \
+            --pkg "$PKG_FILE" \
+            --platform osx \
+            --skip_waiting_for_build_processing true \
+            --skip_submission true \
+            --changelog "Bug fixes and improvements"
+        continue-on-error: true
 
       - name: Clean up keychain
         if: always()
