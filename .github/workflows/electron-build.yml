@@ -218,8 +218,7 @@ jobs:
           # Upload to App Store Connect using xcrun altool
           xcrun altool --upload-package "$PKG_FILE" \
             --type macos \
-            --asc-public-id "${{ secrets.APPLE_TEAM_ID }}" \
-            --apple-id "${{ secrets.APPLE_ID }}" \
+            --apple-id "com.karmaa.termix" \
             --bundle-id "com.karmaa.termix" \
             --bundle-version "1.8.0" \
             --bundle-short-version-string "1.8.0" \
