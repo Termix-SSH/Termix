@@ -203,12 +203,6 @@ jobs:
 
       - name: Deploy to App Store Connect (TestFlight)
         if: steps.check_asc_creds.outputs.has_credentials == 'true'
-        env:
-          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
-          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APPLE_KEY_CONTENT }}
-          APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: true
-          DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS: "-t Aspera"
         run: |
           PKG_FILE=$(find release -name "*.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
@@ -217,8 +211,15 @@ jobs:
           fi
           echo "Found package: $PKG_FILE"
 
+          # Create API key JSON file
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APPLE_KEY_CONTENT }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8
+
+          # Upload using API key authentication
           fastlane pilot upload \
-            --username "${{ secrets.APPLE_ID }}" \
+            --api_key_path ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8 \
+            --api_key_issuer_id "${{ secrets.APPLE_ISSUER_ID }}" \
+            --api_key_id "${{ secrets.APPLE_KEY_ID }}" \
             --pkg "$PKG_FILE" \
             --app_platform osx \
             --skip_waiting_for_build_processing \
