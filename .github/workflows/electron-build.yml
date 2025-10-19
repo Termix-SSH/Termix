@@ -95,51 +95,6 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
-    if: github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == ''
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: |
-          rm -f package-lock.json
-          npm install
-          npm install --force @rollup/rollup-darwin-arm64
-
-      - name: Build macOS DMG
-        run: npm run build:mac-dmg
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Build macOS Zip
-        run: npm run build:mac-zip
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Upload macOS DMG Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Termix-macOS-DMG
-          path: release/*.dmg
-          retention-days: 30
-
-      - name: Upload macOS Zip Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Termix-macOS-Zip
-          path: release/*.zip
-          retention-days: 30
-
-  build-macos-mas:
-    runs-on: macos-latest
     if: github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all'
     needs: []
 
@@ -191,7 +146,7 @@ jobs:
 
       - name: Build macOS App Store Package
         if: steps.check_certs.outputs.has_certs == 'true'
-        run: npm run build:mac-mas
+        run: npm run build:mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
