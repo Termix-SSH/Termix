@@ -77,6 +77,7 @@
     "minimumSystemVersion": "10.15"
   },
   "mas": {
+    "provisioningProfile": "build/Termix_Mac_App_Store.provisionprofile",
     "entitlements": "build/entitlements.mas.plist",
     "entitlementsInherit": "build/entitlements.mas.inherit.plist",
     "hardenedRuntime": false,
