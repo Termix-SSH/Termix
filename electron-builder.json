@@ -1,6 +1,7 @@
 {
   "appId": "com.termix.app",
   "productName": "Termix",
+  "publish": null,
   "directories": {
     "output": "release"
   },
