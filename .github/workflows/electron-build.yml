@@ -110,7 +110,9 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci --include=optional
+          npm rebuild
 
       - name: Build macOS DMG
         run: npm run build:mac-dmg
@@ -154,7 +156,9 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci --include=optional
+          npm rebuild
 
       - name: Check for Code Signing Certificates
         id: check_certs
