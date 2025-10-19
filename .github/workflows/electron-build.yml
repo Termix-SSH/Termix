@@ -156,8 +156,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check for Code Signing Certificates
+        id: check_certs
+        run: |
+          if [ -n "${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}" ] && [ -n "${{ secrets.MAC_P12_PASSWORD }}" ]; then
+            echo "has_certs=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_certs=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Code signing certificates not configured. MAS build will be unsigned."
+          fi
+
       - name: Import Code Signing Certificates
-        if: github.event_name == 'workflow_dispatch' && (vars.MAC_BUILD_CERTIFICATE_BASE64 != '' || secrets.MAC_BUILD_CERTIFICATE_BASE64 != '')
+        if: steps.check_certs.outputs.has_certs == 'true'
         env:
           MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
           MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
@@ -183,12 +193,21 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      - name: List release directory
+        if: always()
+        run: |
+          echo "Contents of release directory:"
+          ls -R release/ || echo "Release directory not found"
+
       - name: Upload macOS MAS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Termix-macOS-MAS
-          path: release/mas/*.pkg
+          path: |
+            release/*.pkg
+            release/mas/*.pkg
           retention-days: 30
+          if-no-files-found: warn
 
       - name: Clean up keychain
         if: always()

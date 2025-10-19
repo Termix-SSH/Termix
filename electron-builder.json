@@ -109,7 +109,6 @@
     "type": "distribution",
     "category": "public.app-category.developer-tools",
     "extendInfo": {
-      "ElectronTeamID": "YOUR_TEAM_ID",
       "ITSAppUsesNonExemptEncryption": false
     }
   },
