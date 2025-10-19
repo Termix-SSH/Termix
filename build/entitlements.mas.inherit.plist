@@ -6,6 +6,10 @@
 	<true/>
 	<key>com.apple.security.inherit</key>
 	<true/>
+	<key>com.apple.application-identifier</key>
+	<string>2CPC5YZYFN.com.karmaa.termix</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>2CPC5YZYFN</string>
 	<key>com.apple.security.cs.allow-jit</key>
 	<true/>
 	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
