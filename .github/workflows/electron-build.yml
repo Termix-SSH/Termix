@@ -208,6 +208,7 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APPLE_KEY_CONTENT }}
           APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: true
+          DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS: "-t Aspera"
         run: |
           PKG_FILE=$(find release -name "*.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
@@ -217,10 +218,11 @@ jobs:
           echo "Found package: $PKG_FILE"
 
           fastlane pilot upload \
+            --username "${{ secrets.APPLE_ID }}" \
             --pkg "$PKG_FILE" \
             --app_platform osx \
-            --skip_waiting_for_build_processing true \
-            --skip_submission true \
+            --skip_waiting_for_build_processing \
+            --skip_submission \
             --changelog "Bug fixes and improvements"
         continue-on-error: true
 
