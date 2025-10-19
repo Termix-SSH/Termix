@@ -218,9 +218,13 @@ jobs:
           # Upload to App Store Connect using xcrun altool
           xcrun altool --upload-package "$PKG_FILE" \
             --type macos \
+            --asc-public-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --apple-id "${{ secrets.APPLE_ID }}" \
+            --bundle-id "com.karmaa.termix" \
+            --bundle-version "1.8.0" \
+            --bundle-short-version-string "1.8.0" \
             --apiKey "${{ secrets.APPLE_KEY_ID }}" \
-            --apiIssuer "${{ secrets.APPLE_ISSUER_ID }}" \
-            --apple-id "${{ secrets.APPLE_ID }}"
+            --apiIssuer "${{ secrets.APPLE_ISSUER_ID }}"
 
           echo "✅ Upload complete! Build will appear in App Store Connect after processing (10-30 minutes)"
         continue-on-error: true
