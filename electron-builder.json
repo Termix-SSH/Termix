@@ -77,7 +77,6 @@
     "minimumSystemVersion": "10.15"
   },
   "mas": {
-    "bundleVersion": "1.8.${env.BUILD_NUMBER}",
     "provisioningProfile": "build/Termix_Mac_App_Store.provisionprofile",
     "entitlements": "build/entitlements.mas.plist",
     "entitlementsInherit": "build/entitlements.mas.inherit.plist",
@@ -87,7 +86,8 @@
     "type": "distribution",
     "category": "public.app-category.developer-tools",
     "extendInfo": {
-      "ITSAppUsesNonExemptEncryption": false
+      "ITSAppUsesNonExemptEncryption": false,
+      "CFBundleVersion": "${env.BUILD_NUMBER}"
     }
   }
 }
