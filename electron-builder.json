@@ -112,5 +112,5 @@
       "ITSAppUsesNonExemptEncryption": false
     }
   },
-  "afterSign": "build/notarize.js"
+  "afterSign": "build/notarize.cjs"
 }
