@@ -169,11 +169,17 @@ jobs:
           echo "Imported certificates:"
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
+      - name: Set version for build
+        if: steps.check_certs.outputs.has_certs == 'true'
+        run: |
+          npm version 1.8.${{ github.run_number }} --no-git-tag-version
+          echo "Version set to:"
+          grep '"version"' package.json
+
       - name: Build macOS App Store Package
         if: steps.check_certs.outputs.has_certs == 'true'
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          BUILD_NUMBER: ${{ github.run_number }}
         run: npm run build:mac
 
       - name: List release directory
