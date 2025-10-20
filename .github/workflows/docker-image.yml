@@ -3,19 +3,13 @@ name: Build and Push Docker Image
 on:
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: "Comma-separated list of tags, e.g. latest,release-1.8.0,release-1.8.1"
-        required: false
-        default: ""
-      registry:
-        description: "Docker registry to push to"
+      version:
+        description: "Version to build, e.g. 1.8.0"
         required: true
-        default: "both"
-        type: choice
-        options:
-          - "ghcr"
-          - "dockerhub"
-          - "both"
+      production:
+        description: "Set true for prod build, false for dev build"
+        required: true
+        default: false
 
 jobs:
   build:
@@ -31,71 +25,30 @@ jobs:
 
       - uses: useblacksmith/setup-docker-builder@v1
 
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-            */*/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.ref_name }}-${{ hashFiles('docker/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ github.ref_name }}-
-            ${{ runner.os }}-buildx-
-
       - uses: docker/login-action@v3
-        if: ${{ github.event.inputs.registry == 'ghcr' || github.event.inputs.registry == 'both' }}
         with:
           registry: ghcr.io
           username: lukegus
           password: ${{ secrets.GHCR_TOKEN }}
 
       - uses: docker/login-action@v3
-        if: ${{ github.event.inputs.registry == 'dockerhub' || github.event.inputs.registry == 'both' }}
+        if: ${{ github.event.inputs.production == 'true' }}
         with:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Determine Docker image tags
-        id: vars
+      - name: Determine Docker tags
+        id: tags
         run: |
-          if [ "${{ github.event.inputs.tag_name }}" != "" ]; then
-            IFS=',' read -ra RAW_TAGS <<< "${{ github.event.inputs.tag_name }}"
-            TAGS=()
-            for t in "${RAW_TAGS[@]}"; do
-              tt="$(echo "$t" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-              if [ -n "$tt" ]; then
-                TAGS+=("$tt")
-              fi
-            done
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            TAGS=("latest")
-          elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
-            TAGS=("development-latest")
+          VERSION="${{ github.event.inputs.version }}"
+          PRODUCTION="${{ github.event.inputs.production }}"
+          if [ "$PRODUCTION" == "true" ]; then
+            TAGS="ghcr.io/lukegus/termix:release-$VERSION ghcr.io/lukegus/termix:latest docker.io/bugattiguy527/termix:release-$VERSION docker.io/bugattiguy527/termix:latest"
           else
-            TAGS=("${{ github.ref_name }}")
+            TAGS="ghcr.io/lukegus/termix:dev-$VERSION"
           fi
-
-          TAG_ARRAY=()
-          for tag in "${TAGS[@]}"; do
-            if [ "${{ github.event.inputs.registry }}" = "ghcr" ]; then
-              TAG_ARRAY+=("ghcr.io/lukegus/termix:${tag}")
-            elif [ "${{ github.event.inputs.registry }}" = "dockerhub" ]; then
-              TAG_ARRAY+=("docker.io/bugattiguy527/termix:${tag}")
-            else
-              TAG_ARRAY+=("ghcr.io/lukegus/termix:${tag}")
-              TAG_ARRAY+=("docker.io/bugattiguy527/termix:${tag}")
-            fi
-          done
-
-          JSON_TAGS=$(printf '%s\n' "${TAG_ARRAY[@]}" | jq -R -s -c 'split("\n")[:-1]')
-          echo "tags=$JSON_TAGS" >> $GITHUB_OUTPUT
+          echo "TAGS=$TAGS" >> $GITHUB_ENV
+          echo "Docker tags: $TAGS"
 
       - uses: useblacksmith/build-push-action@v2
         with:
@@ -103,7 +56,7 @@ jobs:
           file: ./docker/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
-          tags: ${{ fromJSON(steps.vars.outputs.tags) }}
+          tags: ${{ env.TAGS }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
