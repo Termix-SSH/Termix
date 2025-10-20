@@ -82,7 +82,7 @@ COPY --chown=node:node package.json ./
 
 VOLUME ["/app/data"]
 
-EXPOSE ${PORT} 30001 30002 30003 30004 30005 300006
+EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
