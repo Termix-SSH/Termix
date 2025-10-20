@@ -4,77 +4,91 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to build, e.g. 1.8.0"
+        description: "Version to build (e.g., 1.8.0)"
         required: true
       production:
-        description: "Set true for prod build, false for dev build"
+        description: "Is this a production build?"
         required: true
         default: false
+        type: boolean
 
 jobs:
   build:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
-      - uses: docker/setup-qemu-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
         with:
-          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
 
-      - uses: useblacksmith/setup-docker-builder@v1
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - uses: docker/login-action@v3
+      - name: Determine tags
+        id: tags
+        run: |
+          VERSION=${{ github.event.inputs.version }}
+          PROD=${{ github.event.inputs.production }}
+
+          TAGS=()
+          ALL_TAGS=()
+
+          if [ "$PROD" = "true" ]; then
+            # Production build → push release + latest to both GHCR and Docker Hub
+            TAGS+=("release-$VERSION" "latest")
+            for tag in "${TAGS[@]}"; do
+              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
+              ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
+            done
+          else
+            # Dev build → push only dev-x.x.x to GHCR
+            TAGS+=("dev-$VERSION")
+            for tag in "${TAGS[@]}"; do
+              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
+            done
+          fi
+
+          echo "ALL_TAGS=${ALL_TAGS[*]}" >> $GITHUB_ENV
+          echo "All tags to build:"
+          printf '%s\n' "${ALL_TAGS[@]}"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: lukegus
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - uses: docker/login-action@v3
+      - name: Login to Docker Hub (prod only)
         if: ${{ github.event.inputs.production == 'true' }}
+        uses: docker/login-action@v3
         with:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push to GHCR
-        uses: useblacksmith/build-push-action@v2
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
-          tags: |
-            ${{ github.event.inputs.production == 'true' && format('ghcr.io/lukegus/termix:release-{0}', github.event.inputs.version) || format('ghcr.io/lukegus/termix:dev-{0}', github.event.inputs.version) }}
-            ${{ github.event.inputs.production == 'true' && 'ghcr.io/lukegus/termix:latest' || '' }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: ${{ env.ALL_TAGS }}
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
-          outputs: type=registry,compression=zstd,compression-level=19
-
-      - name: Build and Push to Docker Hub
-        if: ${{ github.event.inputs.production == 'true' }}
-        uses: useblacksmith/build-push-action@v2
-        with:
-          context: .
-          file: ./docker/Dockerfile
-          push: true
-          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
-          tags: |
-            docker.io/bugattiguy527/termix:release-${{ github.event.inputs.version }}
-            docker.io/bugattiguy527/termix:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-            BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           outputs: type=registry,compression=zstd,compression-level=19
 
-      - run: |
+      - name: Cleanup Docker
+        if: always()
+        run: |
           docker image prune -af
           docker system prune -af --volumes
-        if: always()
