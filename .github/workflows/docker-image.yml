@@ -84,13 +84,12 @@ jobs:
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-          # Determine registry and image name
           if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
             echo "REGISTRY=docker.io" >> $GITHUB_ENV
             echo "IMAGE_NAME=bugattiguy527/termix" >> $GITHUB_ENV
           else
             echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
-            echo "IMAGE_NAME=$REPO_OWNER/termix" >> $GITHUB_ENV
+            echo "IMAGE_NAME=LukeGus/termix" >> $GITHUB_ENV
           fi
 
       - name: Build and Push Multi-Arch Docker Image
