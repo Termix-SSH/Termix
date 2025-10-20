@@ -169,89 +169,18 @@ jobs:
           echo "Imported certificates:"
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
+      - name: Set version for build
+        if: steps.check_certs.outputs.has_certs == 'true'
+        run: |
+          # Auto-increment patch version based on run number
+          npm version 1.8.${{ github.run_number }} --no-git-tag-version
+          cat package.json | grep version
+
       - name: Build macOS App Store Package
         if: steps.check_certs.outputs.has_certs == 'true'
         env:
-          BUILD_NUMBER: ${{ github.run_number }}
-        run: |
-          npm run build:mac
-
-          # Fix CFBundleVersion in Info.plist to use just build number
-          APP_PATH="release/mas/Termix.app"
-          if [ -d "$APP_PATH" ]; then
-            echo "Fixing CFBundleVersion in Info.plist..."
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_PATH/Contents/Info.plist"
-
-            BUNDLE_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist")
-            echo "✅ Updated CFBundleVersion to: $BUNDLE_VERSION"
-
-            # Re-sign all components recursively
-            echo "Re-signing app components..."
-
-            # Get signing identities - try different patterns
-            echo "Available identities in keychain:"
-            security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db
-
-            APP_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep "Apple Distribution" | head -1 | cut -d'"' -f2)
-
-            # Try multiple patterns for installer identity
-            INSTALLER_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep -i "installer" | head -1 | cut -d'"' -f2)
-
-            # If not found, try getting by hash pattern (3rd Party Mac Developer Installer)
-            if [ -z "$INSTALLER_IDENTITY" ]; then
-              INSTALLER_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep "3rd Party" | grep "Installer" | head -1 | cut -d'"' -f2)
-            fi
-
-            echo "Using app identity: $APP_IDENTITY"
-            echo "Using installer identity: $INSTALLER_IDENTITY"
-
-            if [ -z "$INSTALLER_IDENTITY" ]; then
-              echo "❌ Error: Could not find installer identity in keychain"
-              echo "Please verify MAC_INSTALLER_CERTIFICATE_BASE64 secret is set correctly"
-              exit 1
-            fi
-
-            # Sign helper apps first
-            codesign --force --sign "$APP_IDENTITY" \
-              --entitlements "build/entitlements.mas.inherit.plist" \
-              "$APP_PATH/Contents/Frameworks/Termix Helper.app" || true
-
-            codesign --force --sign "$APP_IDENTITY" \
-              --entitlements "build/entitlements.mas.inherit.plist" \
-              "$APP_PATH/Contents/Frameworks/Termix Helper (GPU).app" || true
-
-            codesign --force --sign "$APP_IDENTITY" \
-              --entitlements "build/entitlements.mas.inherit.plist" \
-              "$APP_PATH/Contents/Frameworks/Termix Helper (Plugin).app" || true
-
-            codesign --force --sign "$APP_IDENTITY" \
-              --entitlements "build/entitlements.mas.inherit.plist" \
-              "$APP_PATH/Contents/Frameworks/Termix Helper (Renderer).app" || true
-
-            # Sign frameworks
-            find "$APP_PATH/Contents/Frameworks" -name "*.framework" -o -name "*.dylib" | while read framework; do
-              codesign --force --sign "$APP_IDENTITY" "$framework" 2>/dev/null || true
-            done
-
-            # Sign main app last
-            codesign --force --deep --sign "$APP_IDENTITY" \
-              --entitlements "build/entitlements.mas.plist" \
-              --options runtime \
-              "$APP_PATH"
-
-            echo "✅ Re-signed app successfully"
-
-            # Remove old pkg and create new one
-            rm -f "release/mas/Termix-1.8.0.pkg"
-            productbuild --component "$APP_PATH" /Applications \
-              --sign "$INSTALLER_IDENTITY" \
-              "release/mas/Termix-1.8.0.pkg"
-
-            echo "✅ Created new package with build number: $BUILD_NUMBER"
-          else
-            echo "❌ Error: App not found at $APP_PATH"
-            exit 1
-          fi
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+        run: npm run build:mac
 
       - name: List release directory
         if: steps.check_certs.outputs.has_certs == 'true'
