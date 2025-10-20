@@ -158,7 +158,62 @@ jobs:
         if: steps.check_certs.outputs.has_certs == 'true'
         env:
           BUILD_NUMBER: ${{ github.run_number }}
-        run: npm run build:mac
+        run: |
+          npm run build:mac
+
+          # Fix CFBundleVersion in Info.plist to use just build number
+          APP_PATH="release/mas/Termix.app"
+          if [ -d "$APP_PATH" ]; then
+            echo "Fixing CFBundleVersion in Info.plist..."
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_PATH/Contents/Info.plist"
+
+            BUNDLE_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist")
+            echo "✅ Updated CFBundleVersion to: $BUNDLE_VERSION"
+
+            # Re-sign all components recursively
+            echo "Re-signing app components..."
+
+            # Sign helper apps first
+            codesign --force --sign "3rd Party Mac Developer Application" \
+              --entitlements "build/entitlements.mas.inherit.plist" \
+              "$APP_PATH/Contents/Frameworks/Termix Helper.app" || true
+
+            codesign --force --sign "3rd Party Mac Developer Application" \
+              --entitlements "build/entitlements.mas.inherit.plist" \
+              "$APP_PATH/Contents/Frameworks/Termix Helper (GPU).app" || true
+
+            codesign --force --sign "3rd Party Mac Developer Application" \
+              --entitlements "build/entitlements.mas.inherit.plist" \
+              "$APP_PATH/Contents/Frameworks/Termix Helper (Plugin).app" || true
+
+            codesign --force --sign "3rd Party Mac Developer Application" \
+              --entitlements "build/entitlements.mas.inherit.plist" \
+              "$APP_PATH/Contents/Frameworks/Termix Helper (Renderer).app" || true
+
+            # Sign frameworks
+            find "$APP_PATH/Contents/Frameworks" -name "*.framework" -o -name "*.dylib" | while read framework; do
+              codesign --force --sign "3rd Party Mac Developer Application" "$framework" 2>/dev/null || true
+            done
+
+            # Sign main app last
+            codesign --force --deep --sign "3rd Party Mac Developer Application" \
+              --entitlements "build/entitlements.mas.plist" \
+              --options runtime \
+              "$APP_PATH"
+
+            echo "✅ Re-signed app successfully"
+
+            # Remove old pkg and create new one
+            rm -f "release/mas/Termix-1.8.0.pkg"
+            productbuild --component "$APP_PATH" /Applications \
+              --sign "3rd Party Mac Developer Installer" \
+              "release/mas/Termix-1.8.0.pkg"
+
+            echo "✅ Created new package with build number: $BUILD_NUMBER"
+          else
+            echo "❌ Error: App not found at $APP_PATH"
+            exit 1
+          fi
 
       - name: List release directory
         if: steps.check_certs.outputs.has_certs == 'true'

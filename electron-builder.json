@@ -77,8 +77,6 @@
     "minimumSystemVersion": "10.15"
   },
   "mas": {
-    "bundleShortVersion": "1.8.0",
-    "bundleVersion": "${env.BUILD_NUMBER}",
     "provisioningProfile": "build/Termix_Mac_App_Store.provisionprofile",
     "entitlements": "build/entitlements.mas.plist",
     "entitlementsInherit": "build/entitlements.mas.inherit.plist",
