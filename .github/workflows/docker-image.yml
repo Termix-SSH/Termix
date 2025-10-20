@@ -89,7 +89,7 @@ jobs:
             echo "IMAGE_NAME=bugattiguy527/termix" >> $GITHUB_ENV
           else
             echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
-            echo "IMAGE_NAME=LukeGus/termix" >> $GITHUB_ENV
+            echo "IMAGE_NAME=lukegus/termix" >> $GITHUB_ENV
           fi
 
       - name: Build and Push Multi-Arch Docker Image
