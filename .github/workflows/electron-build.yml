@@ -172,9 +172,13 @@ jobs:
       - name: Set version for build
         if: steps.check_certs.outputs.has_certs == 'true'
         run: |
-          npm version 1.8.${{ github.run_number }} --no-git-tag-version
-          echo "Version set to:"
-          grep '"version"' package.json
+          # Get current version and extract major.minor
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          MAJOR_MINOR=$(echo $CURRENT_VERSION | cut -d. -f1-2)
+          NEW_VERSION="${MAJOR_MINOR}.${{ github.run_number }}"
+
+          npm version $NEW_VERSION --no-git-tag-version
+          echo "✅ Version set to: $NEW_VERSION"
 
       - name: Build macOS App Store Package
         if: steps.check_certs.outputs.has_certs == 'true'
