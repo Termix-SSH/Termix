@@ -55,7 +55,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Login to GitHub Container Registry
-        if: ${{ github.event.inputs.registry != 'dockerhub' }}
+        if: ${{ github.event.inputs.registry == 'ghcr' || github.event.inputs.registry == 'both' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -63,17 +63,15 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Login to Docker Hub
-        if: ${{ github.event.inputs.registry != 'ghcr' }}
+        if: ${{ github.event.inputs.registry == 'dockerhub' || github.event.inputs.registry == 'both' }}
         uses: docker/login-action@v3
         with:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Determine Docker image tag(s)
+      - name: Determine Docker image tags
         id: vars
         run: |
-          REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
-          echo "REPO_OWNER=$REPO_OWNER" >> $GITHUB_ENV
           if [ "${{ github.event.inputs.tag_name }}" != "" ]; then
             IFS=',' read -ra RAW_TAGS <<< "${{ github.event.inputs.tag_name }}"
             TAGS=()
@@ -90,19 +88,19 @@ jobs:
           else
             TAGS=("${{ github.ref_name }}")
           fi
-          echo "TAGS=${TAGS[*]}" >> $GITHUB_ENV
-          echo "ALL_TAGS<<EOF" >> $GITHUB_ENV
+
+          TAG_STR=""
           for tag in "${TAGS[@]}"; do
             if [ "${{ github.event.inputs.registry }}" == "ghcr" ]; then
-              echo "ghcr.io/lukegus/termix:${tag}"
+              TAG_STR+="ghcr.io/lukegus/termix:${tag} "
             elif [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-              echo "docker.io/bugattiguy527/termix:${tag}"
+              TAG_STR+="docker.io/bugattiguy527/termix:${tag} "
             else
-              echo "ghcr.io/lukegus/termix:${tag}"
-              echo "docker.io/bugattiguy527/termix:${tag}"
+              TAG_STR+="ghcr.io/lukegus/termix:${tag} docker.io/bugattiguy527/termix:${tag} "
             fi
           done
-          echo "EOF" >> $GITHUB_ENV
+          echo "ALL_TAGS=$TAG_STR" >> $GITHUB_ENV
+          echo "TAGS: $TAG_STR"
 
       - name: Build and Push Multi-Arch Docker Image
         uses: useblacksmith/build-push-action@v2
