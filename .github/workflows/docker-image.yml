@@ -108,11 +108,6 @@ jobs:
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           outputs: type=registry,compression=zstd,compression-level=19
 
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
       - name: Cleanup Docker Images Locally
         if: always()
         run: |
