@@ -113,15 +113,6 @@ jobs:
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-      - name: Delete all untagged image versions
-        if: success() && github.event.inputs.registry != 'dockerhub'
-        uses: quartx-analytics/ghcr-cleaner@v1
-        with:
-          owner-type: user
-          token: ${{ secrets.GHCR_TOKEN }}
-          repository-owner: ${{ github.repository_owner }}
-          delete-untagged: true
-
       - name: Cleanup Docker Images Locally
         if: always()
         run: |
