@@ -81,6 +81,7 @@ jobs:
           else
             TAGS=("${{ github.ref_name }}")
           fi
+
           TAG_ARRAY=()
           for tag in "${TAGS[@]}"; do
             if [ "${{ github.event.inputs.registry }}" = "ghcr" ]; then
@@ -92,7 +93,9 @@ jobs:
               TAG_ARRAY+=("docker.io/bugattiguy527/termix:${tag}")
             fi
           done
-          echo "tags=$(printf '%s\n' "${TAG_ARRAY[@]}" | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+
+          JSON_TAGS=$(printf '%s\n' "${TAG_ARRAY[@]}" | jq -R -s -c 'split("\n")[:-1]')
+          echo "tags=$JSON_TAGS" >> $GITHUB_OUTPUT
 
       - uses: useblacksmith/build-push-action@v2
         with:
