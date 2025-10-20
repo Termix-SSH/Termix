@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Custom tag name for the Docker image (comma-separated for multiple tags, e.g. latest,release-1.8.0)"
+        description: "Custom tag names (comma-separated, e.g. latest,release-1.8.0,release-1.8.1)"
         required: false
         default: ""
       registry:
@@ -69,9 +69,10 @@ jobs:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Determine Docker image tags
+      - name: Determine Docker image tag(s)
         id: vars
         run: |
+          # Determine tags array from workflow input or branch
           if [ "${{ github.event.inputs.tag_name }}" != "" ]; then
             IFS=',' read -ra RAW_TAGS <<< "${{ github.event.inputs.tag_name }}"
             TAGS=()
@@ -89,18 +90,23 @@ jobs:
             TAGS=("${{ github.ref_name }}")
           fi
 
-          TAG_STR=""
+          # Build the final tag list for Docker Buildx (multi-line)
+          ALL_TAGS=""
           for tag in "${TAGS[@]}"; do
             if [ "${{ github.event.inputs.registry }}" == "ghcr" ]; then
-              TAG_STR+="ghcr.io/lukegus/termix:${tag} "
+              ALL_TAGS+=$'\n'"ghcr.io/lukegus/termix:${tag}"
             elif [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-              TAG_STR+="docker.io/bugattiguy527/termix:${tag} "
+              ALL_TAGS+=$'\n'"docker.io/bugattiguy527/termix:${tag}"
             else
-              TAG_STR+="ghcr.io/lukegus/termix:${tag} docker.io/bugattiguy527/termix:${tag} "
+              ALL_TAGS+=$'\n'"ghcr.io/lukegus/termix:${tag}"
+              ALL_TAGS+=$'\n'"docker.io/bugattiguy527/termix:${tag}"
             fi
           done
-          echo "ALL_TAGS=$TAG_STR" >> $GITHUB_ENV
-          echo "TAGS: $TAG_STR"
+          # Trim leading newline
+          ALL_TAGS="${ALL_TAGS#$'\n'}"
+          echo "ALL_TAGS=$ALL_TAGS" >> $GITHUB_ENV
+          echo "ALL_TAGS:"
+          echo "$ALL_TAGS"
 
       - name: Build and Push Multi-Arch Docker Image
         uses: useblacksmith/build-push-action@v2
