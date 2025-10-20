@@ -1,20 +1,22 @@
-name: Build and Push Docker Image
+name: Build and Push Multi-Registry Docker Image
 
 on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Custom tag name for the Docker image"
+        description: "Custom tag name for the Docker image (comma-separated for multiple tags, e.g. latest,release-1.8.0)"
         required: false
         default: ""
-      registry:
-        description: "Docker registry to push to"
+      push_to_ghcr:
+        description: "Push to GitHub Container Registry"
+        type: boolean
         required: true
-        default: "ghcr"
-        type: choice
-        options:
-          - "ghcr"
-          - "dockerhub"
+        default: true
+      push_to_dockerhub:
+        description: "Push to Docker Hub"
+        type: boolean
+        required: true
+        default: true
 
 jobs:
   build:
@@ -28,7 +30,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
-          platforms: arm64
+          platforms: arm64,arm/v7,arm/v6
 
       - name: Setup Blacksmith Builder
         uses: useblacksmith/setup-docker-builder@v1
@@ -54,7 +56,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Login to GitHub Container Registry
-        if: github.event.inputs.registry != 'dockerhub'
+        if: ${{ inputs.push_to_ghcr }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -62,35 +64,29 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Login to Docker Hub
-        if: github.event.inputs.registry == 'dockerhub'
+        if: ${{ inputs.push_to_dockerhub }}
         uses: docker/login-action@v3
         with:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Determine Docker image tag
+      - name: Determine Docker image tags
+        id: vars
         run: |
           REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
           echo "REPO_OWNER=$REPO_OWNER" >> $GITHUB_ENV
 
           if [ "${{ github.event.inputs.tag_name }}" != "" ]; then
-            IMAGE_TAG="${{ github.event.inputs.tag_name }}"
+            IFS=',' read -ra TAGS <<< "${{ github.event.inputs.tag_name }}"
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            IMAGE_TAG="latest"
+            TAGS=("latest")
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
-            IMAGE_TAG="development-latest"
+            TAGS=("development-latest")
           else
-            IMAGE_TAG="${{ github.ref_name }}"
+            TAGS=("${{ github.ref_name }}")
           fi
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-          if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-            echo "REGISTRY=docker.io" >> $GITHUB_ENV
-            echo "IMAGE_NAME=bugattiguy527/termix" >> $GITHUB_ENV
-          else
-            echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
-            echo "IMAGE_NAME=lukegus/termix" >> $GITHUB_ENV
-          fi
+          echo "TAGS=${TAGS[*]}" >> $GITHUB_ENV
 
       - name: Build and Push Multi-Arch Docker Image
         uses: useblacksmith/build-push-action@v2
@@ -98,8 +94,10 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
+          tags: |
+            ${{ inputs.push_to_ghcr && format('ghcr.io/lukegus/termix:{0}', join(fromJson('["' + replace(env.TAGS, " ", '","') + '"]'), '\nghcr.io/lukegus/termix:')) }}
+            ${{ inputs.push_to_dockerhub && format('docker.io/bugattiguy527/termix:{0}', join(fromJson('["' + replace(env.TAGS, " ", '","') + '"]'), '\ndocker.io/bugattiguy527/termix:')) }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
