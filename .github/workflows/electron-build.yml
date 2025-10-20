@@ -173,30 +173,37 @@ jobs:
             # Re-sign all components recursively
             echo "Re-signing app components..."
 
+            # Get signing identity
+            APP_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep "Apple Distribution" | head -1 | cut -d'"' -f2)
+            INSTALLER_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep "Mac Installer Distribution" | head -1 | cut -d'"' -f2)
+
+            echo "Using app identity: $APP_IDENTITY"
+            echo "Using installer identity: $INSTALLER_IDENTITY"
+
             # Sign helper apps first
-            codesign --force --sign "3rd Party Mac Developer Application" \
+            codesign --force --sign "$APP_IDENTITY" \
               --entitlements "build/entitlements.mas.inherit.plist" \
               "$APP_PATH/Contents/Frameworks/Termix Helper.app" || true
 
-            codesign --force --sign "3rd Party Mac Developer Application" \
+            codesign --force --sign "$APP_IDENTITY" \
               --entitlements "build/entitlements.mas.inherit.plist" \
               "$APP_PATH/Contents/Frameworks/Termix Helper (GPU).app" || true
 
-            codesign --force --sign "3rd Party Mac Developer Application" \
+            codesign --force --sign "$APP_IDENTITY" \
               --entitlements "build/entitlements.mas.inherit.plist" \
               "$APP_PATH/Contents/Frameworks/Termix Helper (Plugin).app" || true
 
-            codesign --force --sign "3rd Party Mac Developer Application" \
+            codesign --force --sign "$APP_IDENTITY" \
               --entitlements "build/entitlements.mas.inherit.plist" \
               "$APP_PATH/Contents/Frameworks/Termix Helper (Renderer).app" || true
 
             # Sign frameworks
             find "$APP_PATH/Contents/Frameworks" -name "*.framework" -o -name "*.dylib" | while read framework; do
-              codesign --force --sign "3rd Party Mac Developer Application" "$framework" 2>/dev/null || true
+              codesign --force --sign "$APP_IDENTITY" "$framework" 2>/dev/null || true
             done
 
             # Sign main app last
-            codesign --force --deep --sign "3rd Party Mac Developer Application" \
+            codesign --force --deep --sign "$APP_IDENTITY" \
               --entitlements "build/entitlements.mas.plist" \
               --options runtime \
               "$APP_PATH"
@@ -206,7 +213,7 @@ jobs:
             # Remove old pkg and create new one
             rm -f "release/mas/Termix-1.8.0.pkg"
             productbuild --component "$APP_PATH" /Applications \
-              --sign "3rd Party Mac Developer Installer" \
+              --sign "$INSTALLER_IDENTITY" \
               "release/mas/Termix-1.8.0.pkg"
 
             echo "✅ Created new package with build number: $BUILD_NUMBER"
