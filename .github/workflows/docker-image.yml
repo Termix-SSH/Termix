@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Custom tag names (comma-separated, e.g. latest,release-1.8.0,release-1.8.1)"
+        description: "Comma-separated list of tags, e.g. latest,release-1.8.0,release-1.8.1"
         required: false
         default: ""
       registry:
         description: "Docker registry to push to"
         required: true
-        default: "ghcr"
+        default: "both"
         type: choice
         options:
           - "ghcr"
@@ -21,21 +21,17 @@ jobs:
   build:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64,arm/v7,arm/v6
 
-      - name: Setup Blacksmith Builder
-        uses: useblacksmith/setup-docker-builder@v1
+      - uses: useblacksmith/setup-docker-builder@v1
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.npm
@@ -45,8 +41,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.ref_name }}-${{ hashFiles('docker/Dockerfile') }}
@@ -54,25 +49,22 @@ jobs:
             ${{ runner.os }}-buildx-${{ github.ref_name }}-
             ${{ runner.os }}-buildx-
 
-      - name: Login to GitHub Container Registry
+      - uses: docker/login-action@v3
         if: ${{ github.event.inputs.registry == 'ghcr' || github.event.inputs.registry == 'both' }}
-        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: lukegus
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Login to Docker Hub
+      - uses: docker/login-action@v3
         if: ${{ github.event.inputs.registry == 'dockerhub' || github.event.inputs.registry == 'both' }}
-        uses: docker/login-action@v3
         with:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Determine Docker image tag(s)
+      - name: Determine Docker image tags
         id: vars
         run: |
-          # Determine tags array from workflow input or branch
           if [ "${{ github.event.inputs.tag_name }}" != "" ]; then
             IFS=',' read -ra RAW_TAGS <<< "${{ github.event.inputs.tag_name }}"
             TAGS=()
@@ -89,33 +81,26 @@ jobs:
           else
             TAGS=("${{ github.ref_name }}")
           fi
-
-          # Build the final tag list for Docker Buildx (multi-line)
-          ALL_TAGS=""
+          TAG_ARRAY=()
           for tag in "${TAGS[@]}"; do
-            if [ "${{ github.event.inputs.registry }}" == "ghcr" ]; then
-              ALL_TAGS+=$'\n'"ghcr.io/lukegus/termix:${tag}"
-            elif [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-              ALL_TAGS+=$'\n'"docker.io/bugattiguy527/termix:${tag}"
+            if [ "${{ github.event.inputs.registry }}" = "ghcr" ]; then
+              TAG_ARRAY+=("ghcr.io/lukegus/termix:${tag}")
+            elif [ "${{ github.event.inputs.registry }}" = "dockerhub" ]; then
+              TAG_ARRAY+=("docker.io/bugattiguy527/termix:${tag}")
             else
-              ALL_TAGS+=$'\n'"ghcr.io/lukegus/termix:${tag}"
-              ALL_TAGS+=$'\n'"docker.io/bugattiguy527/termix:${tag}"
+              TAG_ARRAY+=("ghcr.io/lukegus/termix:${tag}")
+              TAG_ARRAY+=("docker.io/bugattiguy527/termix:${tag}")
             fi
           done
-          # Trim leading newline
-          ALL_TAGS="${ALL_TAGS#$'\n'}"
-          echo "ALL_TAGS=$ALL_TAGS" >> $GITHUB_ENV
-          echo "ALL_TAGS:"
-          echo "$ALL_TAGS"
+          echo "tags=$(printf '%s\n' "${TAG_ARRAY[@]}" | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 
-      - name: Build and Push Multi-Arch Docker Image
-        uses: useblacksmith/build-push-action@v2
+      - uses: useblacksmith/build-push-action@v2
         with:
           context: .
           file: ./docker/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
-          tags: ${{ env.ALL_TAGS }}
+          tags: ${{ fromJSON(steps.vars.outputs.tags) }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -124,8 +109,7 @@ jobs:
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           outputs: type=registry,compression=zstd,compression-level=19
 
-      - name: Cleanup Docker Images Locally
-        if: always()
-        run: |
+      - run: |
           docker image prune -af
           docker system prune -af --volumes
+        if: always()
