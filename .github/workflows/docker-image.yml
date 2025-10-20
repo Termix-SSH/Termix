@@ -44,7 +44,9 @@ jobs:
           file: ./docker/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
-          tags: ${{ github.event.inputs.production == 'true' && format('ghcr.io/lukegus/termix:release-{0} ghcr.io/lukegus/termix:latest', github.event.inputs.version) || format('ghcr.io/lukegus/termix:dev-{0}', github.event.inputs.version) }}
+          tags: |
+            ${{ github.event.inputs.production == 'true' && format('ghcr.io/lukegus/termix:release-{0}', github.event.inputs.version) || format('ghcr.io/lukegus/termix:dev-{0}', github.event.inputs.version) }}
+            ${{ github.event.inputs.production == 'true' && 'ghcr.io/lukegus/termix:latest' || '' }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
