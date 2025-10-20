@@ -223,12 +223,19 @@ class AuthManager {
 
   createAdminMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
-      const authHeader = req.headers["authorization"];
-      if (!authHeader?.startsWith("Bearer ")) {
-        return res.status(401).json({ error: "Missing Authorization header" });
+      let token = req.cookies?.jwt;
+
+      if (!token) {
+        const authHeader = req.headers["authorization"];
+        if (authHeader?.startsWith("Bearer ")) {
+          token = authHeader.split(" ")[1];
+        }
       }
 
-      const token = authHeader.split(" ")[1];
+      if (!token) {
+        return res.status(401).json({ error: "Missing authentication token" });
+      }
+
       const payload = await this.verifyJWTToken(token);
 
       if (!payload) {
