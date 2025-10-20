@@ -139,16 +139,31 @@ jobs:
 
           # Decode certificates
           echo -n "$MAC_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $APP_CERT_PATH
-          echo -n "$MAC_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $INSTALLER_CERT_PATH
+
+          if [ -n "$MAC_INSTALLER_CERTIFICATE_BASE64" ]; then
+            echo "Decoding installer certificate..."
+            echo -n "$MAC_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $INSTALLER_CERT_PATH
+          else
+            echo "⚠️ MAC_INSTALLER_CERTIFICATE_BASE64 is empty"
+          fi
 
           # Create and configure keychain
           security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # Import both certificates
+          # Import application certificate
+          echo "Importing application certificate..."
           security import $APP_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security import $INSTALLER_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+
+          # Import installer certificate if it exists
+          if [ -f "$INSTALLER_CERT_PATH" ]; then
+            echo "Importing installer certificate..."
+            security import $INSTALLER_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          else
+            echo "⚠️ Installer certificate file not found, skipping import"
+          fi
+
           security list-keychain -d user -s $KEYCHAIN_PATH
 
           echo "Imported certificates:"
@@ -173,17 +188,26 @@ jobs:
             # Re-sign all components recursively
             echo "Re-signing app components..."
 
-            # Get signing identity
+            # Get signing identities - try different patterns
+            echo "Available identities in keychain:"
+            security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db
+
             APP_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep "Apple Distribution" | head -1 | cut -d'"' -f2)
-            INSTALLER_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep "Installer" | head -1 | cut -d'"' -f2)
+
+            # Try multiple patterns for installer identity
+            INSTALLER_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep -i "installer" | head -1 | cut -d'"' -f2)
+
+            # If not found, try getting by hash pattern (3rd Party Mac Developer Installer)
+            if [ -z "$INSTALLER_IDENTITY" ]; then
+              INSTALLER_IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db | grep "3rd Party" | grep "Installer" | head -1 | cut -d'"' -f2)
+            fi
 
             echo "Using app identity: $APP_IDENTITY"
             echo "Using installer identity: $INSTALLER_IDENTITY"
 
             if [ -z "$INSTALLER_IDENTITY" ]; then
-              echo "Available identities:"
-              security find-identity -v -p codesigning $RUNNER_TEMP/app-signing.keychain-db
-              echo "Error: Could not find installer identity"
+              echo "❌ Error: Could not find installer identity in keychain"
+              echo "Please verify MAC_INSTALLER_CERTIFICATE_BASE64 secret is set correctly"
               exit 1
             fi
 
