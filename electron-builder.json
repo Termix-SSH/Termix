@@ -87,7 +87,8 @@
     "type": "distribution",
     "category": "public.app-category.developer-tools",
     "extendInfo": {
-      "ITSAppUsesNonExemptEncryption": false
+      "ITSAppUsesNonExemptEncryption": false,
+      "NSAppleEventsUsageDescription": "Termix needs access to control other applications for terminal operations."
     }
   }
 }
