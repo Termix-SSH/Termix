@@ -58,8 +58,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: lukegus
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Login to Docker Hub
         if: github.event.inputs.registry == 'dockerhub'
@@ -84,13 +84,12 @@ jobs:
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-          # Determine registry and image name
           if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
             echo "REGISTRY=docker.io" >> $GITHUB_ENV
             echo "IMAGE_NAME=bugattiguy527/termix" >> $GITHUB_ENV
           else
             echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
-            echo "IMAGE_NAME=$REPO_OWNER/termix" >> $GITHUB_ENV
+            echo "IMAGE_NAME=lukegus/termix" >> $GITHUB_ENV
           fi
 
       - name: Build and Push Multi-Arch Docker Image
@@ -108,20 +107,6 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           outputs: type=registry,compression=zstd,compression-level=19
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-      - name: Delete all untagged image versions
-        if: success() && github.event.inputs.registry != 'dockerhub'
-        uses: quartx-analytics/ghcr-cleaner@v1
-        with:
-          owner-type: user
-          token: ${{ secrets.GHCR_TOKEN }}
-          repository-owner: ${{ github.repository_owner }}
-          delete-untagged: true
 
       - name: Cleanup Docker Images Locally
         if: always()
