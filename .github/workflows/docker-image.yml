@@ -11,15 +11,6 @@ on:
         required: true
         default: false
         type: boolean
-      registry:
-        description: "Docker registry to push to"
-        required: true
-        default: "both"
-        type: choice
-        options:
-          - "ghcr"
-          - "dockerhub"
-          - "both"
 
 jobs:
   build:
@@ -43,42 +34,38 @@ jobs:
         run: |
           VERSION=${{ github.event.inputs.version }}
           PROD=${{ github.event.inputs.production }}
-          REGISTRY=${{ github.event.inputs.registry }}
 
           TAGS=()
-          if [ "$PROD" = "true" ]; then
-            TAGS+=("release-$VERSION")
-            TAGS+=("latest")
-          else
-            TAGS+=("dev-$VERSION")
-          fi
-
           ALL_TAGS=()
-          for tag in "${TAGS[@]}"; do
-            if [ "$REGISTRY" = "ghcr" ] || [ "$REGISTRY" = "both" ]; then
+
+          if [ "$PROD" = "true" ]; then
+            # Production build → push release + latest to both GHCR and Docker Hub
+            TAGS+=("release-$VERSION" "latest")
+            for tag in "${TAGS[@]}"; do
               ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
-            fi
-            if [ "$REGISTRY" = "dockerhub" ] || [ "$REGISTRY" = "both" ]; then
-              if [ "$PROD" = "true" ]; then
-                ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
-              fi
-            fi
-          done
+              ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
+            done
+          else
+            # Dev build → push only dev-x.x.x to GHCR
+            TAGS+=("dev-$VERSION")
+            for tag in "${TAGS[@]}"; do
+              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
+            done
+          fi
 
           echo "ALL_TAGS=${ALL_TAGS[*]}" >> $GITHUB_ENV
           echo "All tags to build:"
           printf '%s\n' "${ALL_TAGS[@]}"
 
       - name: Login to GHCR
-        if: ${{ github.event.inputs.registry == 'ghcr' || github.event.inputs.registry == 'both' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: lukegus
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Login to Docker Hub
-        if: ${{ github.event.inputs.registry == 'dockerhub' || github.event.inputs.registry == 'both' }}
+      - name: Login to Docker Hub (prod only)
+        if: ${{ github.event.inputs.production == 'true' }}
         uses: docker/login-action@v3
         with:
           username: bugattiguy527
