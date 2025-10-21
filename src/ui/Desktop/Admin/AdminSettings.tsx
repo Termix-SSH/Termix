@@ -44,6 +44,7 @@ import {
   makeUserAdmin,
   removeAdminStatus,
   deleteUser,
+  getUserInfo,
   getCookie,
   isElectron,
 } from "@/ui/main-axios.ts";
@@ -92,6 +93,12 @@ export function AdminSettings({
   );
 
   const [securityInitialized, setSecurityInitialized] = React.useState(true);
+  const [currentUser, setCurrentUser] = React.useState<{
+    id: string;
+    username: string;
+    is_admin: boolean;
+    is_oidc: boolean;
+  } | null>(null);
 
   const [exportLoading, setExportLoading] = React.useState(false);
   const [importLoading, setImportLoading] = React.useState(false);
@@ -99,6 +106,11 @@ export function AdminSettings({
   const [exportPassword, setExportPassword] = React.useState("");
   const [showPasswordInput, setShowPasswordInput] = React.useState(false);
   const [importPassword, setImportPassword] = React.useState("");
+
+  const requiresImportPassword = React.useMemo(
+    () => !currentUser?.is_oidc,
+    [currentUser?.is_oidc],
+  );
 
   React.useEffect(() => {
     if (isElectron()) {
@@ -115,6 +127,22 @@ export function AdminSettings({
       .catch((err) => {
         if (!err.message?.includes("No server configured")) {
           toast.error(t("admin.failedToFetchOidcConfig"));
+        }
+      });
+    getUserInfo()
+      .then((info) => {
+        if (info) {
+          setCurrentUser({
+            id: info.userId,
+            username: info.username,
+            is_admin: info.is_admin,
+            is_oidc: info.is_oidc,
+          });
+        }
+      })
+      .catch((err) => {
+        if (!err?.message?.includes("No server configured")) {
+          console.warn("Failed to fetch current user info", err);
         }
       });
     fetchUsers();
@@ -334,7 +362,7 @@ export function AdminSettings({
       return;
     }
 
-    if (!importPassword.trim()) {
+    if (requiresImportPassword && !importPassword.trim()) {
       toast.error(t("admin.passwordRequired"));
       return;
     }
@@ -357,7 +385,9 @@ export function AdminSettings({
 
       const formData = new FormData();
       formData.append("file", importFile);
-      formData.append("password", importPassword);
+      if (requiresImportPassword) {
+        formData.append("password", importPassword);
+      }
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -966,7 +996,7 @@ export function AdminSettings({
                           </span>
                         </Button>
                       </div>
-                      {importFile && (
+                      {importFile && requiresImportPassword && (
                         <div className="space-y-2">
                           <Label htmlFor="import-password">Password</Label>
                           <PasswordInput
@@ -985,7 +1015,9 @@ export function AdminSettings({
                       <Button
                         onClick={handleImportDatabase}
                         disabled={
-                          importLoading || !importFile || !importPassword.trim()
+                          importLoading ||
+                          !importFile ||
+                          (requiresImportPassword && !importPassword.trim())
                         }
                         className="w-full"
                       >
