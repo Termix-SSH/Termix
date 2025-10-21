@@ -12,7 +12,6 @@ import { eq, and } from "drizzle-orm";
 import { DataCrypto } from "./data-crypto.js";
 import { UserDataExport, type UserExportData } from "./user-data-export.js";
 import { databaseLogger } from "./logger.js";
-import { nanoid } from "nanoid";
 
 interface ImportOptions {
   replaceExisting?: boolean;
@@ -90,7 +89,7 @@ class UserDataImport {
       ) {
         const importStats = await this.importSshHosts(
           targetUserId,
-          exportData.userData.sshHosts,
+          exportData.userData.sshHosts as Record<string, unknown>[],
           { replaceExisting, dryRun, userDataKey },
         );
         result.summary.sshHostsImported = importStats.imported;
@@ -105,7 +104,7 @@ class UserDataImport {
       ) {
         const importStats = await this.importSshCredentials(
           targetUserId,
-          exportData.userData.sshCredentials,
+          exportData.userData.sshCredentials as Record<string, unknown>[],
           { replaceExisting, dryRun, userDataKey },
         );
         result.summary.sshCredentialsImported = importStats.imported;
@@ -130,7 +129,7 @@ class UserDataImport {
       ) {
         const importStats = await this.importDismissedAlerts(
           targetUserId,
-          exportData.userData.dismissedAlerts,
+          exportData.userData.dismissedAlerts as Record<string, unknown>[],
           { replaceExisting, dryRun },
         );
         result.summary.dismissedAlertsImported = importStats.imported;
@@ -160,7 +159,7 @@ class UserDataImport {
 
   private static async importSshHosts(
     targetUserId: string,
-    sshHosts: any[],
+    sshHosts: Record<string, unknown>[],
     options: {
       replaceExisting: boolean;
       dryRun: boolean;
@@ -199,7 +198,9 @@ class UserDataImport {
 
         delete processedHostData.id;
 
-        await getDb().insert(sshData).values(processedHostData);
+        await getDb()
+          .insert(sshData)
+          .values(processedHostData as unknown as typeof sshData.$inferInsert);
         imported++;
       } catch (error) {
         errors.push(
@@ -214,7 +215,7 @@ class UserDataImport {
 
   private static async importSshCredentials(
     targetUserId: string,
-    credentials: any[],
+    credentials: Record<string, unknown>[],
     options: {
       replaceExisting: boolean;
       dryRun: boolean;
@@ -255,7 +256,11 @@ class UserDataImport {
 
         delete processedCredentialData.id;
 
-        await getDb().insert(sshCredentials).values(processedCredentialData);
+        await getDb()
+          .insert(sshCredentials)
+          .values(
+            processedCredentialData as unknown as typeof sshCredentials.$inferInsert,
+          );
         imported++;
       } catch (error) {
         errors.push(
@@ -270,7 +275,7 @@ class UserDataImport {
 
   private static async importFileManagerData(
     targetUserId: string,
-    fileManagerData: any,
+    fileManagerData: Record<string, unknown>,
     options: { replaceExisting: boolean; dryRun: boolean },
   ) {
     let imported = 0;
@@ -357,7 +362,7 @@ class UserDataImport {
 
   private static async importDismissedAlerts(
     targetUserId: string,
-    alerts: any[],
+    alerts: Record<string, unknown>[],
     options: { replaceExisting: boolean; dryRun: boolean },
   ) {
     let imported = 0;
@@ -377,7 +382,7 @@ class UserDataImport {
           .where(
             and(
               eq(dismissedAlerts.userId, targetUserId),
-              eq(dismissedAlerts.alertId, alert.alertId),
+              eq(dismissedAlerts.alertId, alert.alertId as string),
             ),
           );
 
@@ -396,10 +401,12 @@ class UserDataImport {
         if (existing.length > 0 && options.replaceExisting) {
           await getDb()
             .update(dismissedAlerts)
-            .set(newAlert)
+            .set(newAlert as typeof dismissedAlerts.$inferInsert)
             .where(eq(dismissedAlerts.id, existing[0].id));
         } else {
-          await getDb().insert(dismissedAlerts).values(newAlert);
+          await getDb()
+            .insert(dismissedAlerts)
+            .values(newAlert as typeof dismissedAlerts.$inferInsert);
         }
 
         imported++;

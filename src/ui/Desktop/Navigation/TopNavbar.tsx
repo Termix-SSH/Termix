@@ -1,21 +1,28 @@
 import React, { useState } from "react";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronDown, ChevronUpIcon, Hammer } from "lucide-react";
+import { ChevronDown, ChevronUpIcon, Hammer, FileText } from "lucide-react";
 import { Tab } from "@/ui/Desktop/Navigation/Tabs/Tab.tsx";
 import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/Desktop/Navigation/Tabs/TabDropdown.tsx";
 import { getCookie, setCookie } from "@/ui/main-axios.ts";
+import { SnippetsSidebar } from "@/ui/Desktop/Apps/Terminal/SnippetsSidebar.tsx";
+
+interface TabData {
+  id: number;
+  type: string;
+  title: string;
+  terminalRef?: {
+    current?: {
+      sendInput?: (data: string) => void;
+    };
+  };
+  [key: string]: unknown;
+}
 
 interface TopNavbarProps {
   isTopbarOpen: boolean;
@@ -34,13 +41,36 @@ export function TopNavbar({
     setSplitScreenTab,
     removeTab,
     allSplitScreenTab,
-  } = useTabs() as any;
+    reorderTabs,
+  } = useTabs() as {
+    tabs: TabData[];
+    currentTab: number;
+    setCurrentTab: (id: number) => void;
+    setSplitScreenTab: (id: number) => void;
+    removeTab: (id: number) => void;
+    allSplitScreenTab: number[];
+    reorderTabs: (fromIndex: number, toIndex: number) => void;
+  };
   const leftPosition = state === "collapsed" ? "26px" : "264px";
   const { t } = useTranslation();
 
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
+  const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(false);
+  const [dragState, setDragState] = useState<{
+    draggedIndex: number | null;
+    currentX: number;
+    startX: number;
+    targetIndex: number | null;
+  }>({
+    draggedIndex: null,
+    currentX: 0,
+    startX: 0,
+    targetIndex: null,
+  });
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const tabRefs = React.useRef<Map<number, HTMLDivElement>>(new Map());
 
   const handleTabActivate = (tabId: number) => {
     setCurrentTab(tabId);
@@ -190,7 +220,7 @@ export function TopNavbar({
 
     if (commandToSend) {
       selectedTabIds.forEach((tabId) => {
-        const tab = tabs.find((t: any) => t.id === tabId);
+        const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
           tab.terminalRef.current.sendInput(commandToSend);
         }
@@ -204,7 +234,7 @@ export function TopNavbar({
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
       const char = e.key;
       selectedTabIds.forEach((tabId) => {
-        const tab = tabs.find((t: any) => t.id === tabId);
+        const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
           tab.terminalRef.current.sendInput(char);
         }
@@ -212,15 +242,128 @@ export function TopNavbar({
     }
   };
 
+  const handleSnippetExecute = (content: string) => {
+    const tab = tabs.find((t: TabData) => t.id === currentTab);
+    if (tab?.terminalRef?.current?.sendInput) {
+      tab.terminalRef.current.sendInput(content + "\n");
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    console.log("Drag start:", index, e.clientX);
+
+    // Create transparent drag image
+    const img = new Image();
+    img.src =
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    e.dataTransfer.setDragImage(img, 0, 0);
+
+    setDragState({
+      draggedIndex: index,
+      startX: e.clientX,
+      currentX: e.clientX,
+      targetIndex: index,
+    });
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    if (e.clientX === 0) return; // Skip the final drag event
+    if (dragState.draggedIndex === null) return;
+
+    console.log("Dragging:", e.clientX);
+
+    setDragState((prev) => ({
+      ...prev,
+      currentX: e.clientX,
+    }));
+
+    // Calculate target position based on mouse X
+    if (!containerRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - containerRect.left;
+
+    let accumulatedX = 0;
+    let newTargetIndex = dragState.draggedIndex;
+
+    tabs.forEach((tab, i) => {
+      const tabEl = tabRefs.current.get(i);
+      if (!tabEl) return;
+
+      const tabWidth = tabEl.getBoundingClientRect().width;
+      const tabCenter = accumulatedX + tabWidth / 2;
+
+      if (mouseX < tabCenter && i === 0) {
+        newTargetIndex = 0;
+      } else if (mouseX >= tabCenter && mouseX < accumulatedX + tabWidth) {
+        newTargetIndex = i;
+      }
+
+      accumulatedX += tabWidth + 4; // 4px gap
+    });
+
+    if (mouseX >= accumulatedX - 4) {
+      newTargetIndex = tabs.length - 1;
+    }
+
+    setDragState((prev) => ({
+      ...prev,
+      targetIndex: newTargetIndex,
+    }));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    console.log("Drop:", dragState);
+
+    if (
+      dragState.draggedIndex !== null &&
+      dragState.targetIndex !== null &&
+      dragState.draggedIndex !== dragState.targetIndex
+    ) {
+      reorderTabs(dragState.draggedIndex, dragState.targetIndex);
+    }
+
+    setDragState({
+      draggedIndex: null,
+      startX: 0,
+      currentX: 0,
+      targetIndex: null,
+    });
+  };
+
+  const handleDragEnd = () => {
+    console.log("Drag end:", dragState);
+
+    if (
+      dragState.draggedIndex !== null &&
+      dragState.targetIndex !== null &&
+      dragState.draggedIndex !== dragState.targetIndex
+    ) {
+      reorderTabs(dragState.draggedIndex, dragState.targetIndex);
+    }
+
+    setDragState({
+      draggedIndex: null,
+      startX: 0,
+      currentX: 0,
+      targetIndex: null,
+    });
+  };
+
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
-  const currentTabObj = tabs.find((t: any) => t.id === currentTab);
+  const currentTabObj = tabs.find((t: TabData) => t.id === currentTab);
   const currentTabIsHome = currentTabObj?.type === "home";
   const currentTabIsSshManager = currentTabObj?.type === "ssh_manager";
   const currentTabIsAdmin = currentTabObj?.type === "admin";
   const currentTabIsUserProfile = currentTabObj?.type === "user_profile";
 
-  const terminalTabs = tabs.filter((tab: any) => tab.type === "terminal");
+  const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
 
   const updateRightClickCopyPaste = (checked: boolean) => {
     setCookie("rightClickCopyPaste", checked.toString());
@@ -229,15 +372,19 @@ export function TopNavbar({
   return (
     <div>
       <div
-        className="fixed z-10 h-[50px] bg-dark-bg border-2 border-dark-border rounded-lg transition-all duration-200 ease-linear flex flex-row transform-none m-0 p-0"
+        className="fixed z-10 h-[50px] border-2 border-dark-border rounded-lg transition-all duration-200 ease-linear flex flex-row transform-none m-0 p-0"
         style={{
           top: isTopbarOpen ? "0.5rem" : "-3rem",
           left: leftPosition,
           right: "17px",
+          backgroundColor: "#1e1e21",
         }}
       >
-        <div className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-2 thin-scrollbar">
-          {tabs.map((tab: any) => {
+        <div
+          ref={containerRef}
+          className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden gap-1 thin-scrollbar"
+        >
+          {tabs.map((tab: TabData, index: number) => {
             const isActive = tab.id === currentTab;
             const isSplit =
               Array.isArray(allSplitScreenTab) &&
@@ -268,39 +415,111 @@ export function TopNavbar({
                 tab.type === "user_profile") &&
                 isSplitScreenActive);
             const disableClose = (isSplitScreenActive && isActive) || isSplit;
+
+            const isDragging = dragState.draggedIndex === index;
+            const dragOffset = isDragging
+              ? dragState.currentX - dragState.startX
+              : 0;
+
+            // Calculate transform
+            let transform = "";
+            if (isDragging) {
+              // Dragged tab follows cursor
+              transform = `translateX(${dragOffset}px)`;
+            } else if (
+              dragState.draggedIndex !== null &&
+              dragState.targetIndex !== null
+            ) {
+              // Other tabs shift to make room
+              const draggedIndex = dragState.draggedIndex;
+              const targetIndex = dragState.targetIndex;
+
+              if (
+                draggedIndex < targetIndex &&
+                index > draggedIndex &&
+                index <= targetIndex
+              ) {
+                // Shifting left
+                const draggedTabEl = tabRefs.current.get(draggedIndex);
+                const draggedWidth =
+                  draggedTabEl?.getBoundingClientRect().width || 0;
+                transform = `translateX(-${draggedWidth + 4}px)`;
+              } else if (
+                draggedIndex > targetIndex &&
+                index >= targetIndex &&
+                index < draggedIndex
+              ) {
+                // Shifting right
+                const draggedTabEl = tabRefs.current.get(draggedIndex);
+                const draggedWidth =
+                  draggedTabEl?.getBoundingClientRect().width || 0;
+                transform = `translateX(${draggedWidth + 4}px)`;
+              }
+            }
+
             return (
-              <Tab
+              <div
                 key={tab.id}
-                tabType={tab.type}
-                title={tab.title}
-                isActive={isActive}
-                onActivate={() => handleTabActivate(tab.id)}
-                onClose={
-                  isTerminal ||
-                  isServer ||
-                  isFileManager ||
-                  isSshManager ||
-                  isAdmin ||
-                  isUserProfile
-                    ? () => handleTabClose(tab.id)
-                    : undefined
-                }
-                onSplit={
-                  isSplittable ? () => handleTabSplit(tab.id) : undefined
-                }
-                canSplit={isSplittable}
-                canClose={
-                  isTerminal ||
-                  isServer ||
-                  isFileManager ||
-                  isSshManager ||
-                  isAdmin ||
-                  isUserProfile
-                }
-                disableActivate={disableActivate}
-                disableSplit={disableSplit}
-                disableClose={disableClose}
-              />
+                ref={(el) => {
+                  if (el) {
+                    tabRefs.current.set(index, el);
+                  } else {
+                    tabRefs.current.delete(index);
+                  }
+                }}
+                draggable={true}
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  handleDragStart(e, index);
+                }}
+                onDrag={handleDrag}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                style={{
+                  transform,
+                  transition: isDragging ? "none" : "transform 200ms ease-out",
+                  zIndex: isDragging ? 1000 : 1,
+                  position: "relative",
+                  cursor: isDragging ? "grabbing" : "grab",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                }}
+              >
+                <Tab
+                  tabType={tab.type}
+                  title={tab.title}
+                  isActive={isActive}
+                  onActivate={() => handleTabActivate(tab.id)}
+                  onClose={
+                    isTerminal ||
+                    isServer ||
+                    isFileManager ||
+                    isSshManager ||
+                    isAdmin ||
+                    isUserProfile
+                      ? () => handleTabClose(tab.id)
+                      : undefined
+                  }
+                  onSplit={
+                    isSplittable ? () => handleTabSplit(tab.id) : undefined
+                  }
+                  canSplit={isSplittable}
+                  canClose={
+                    isTerminal ||
+                    isServer ||
+                    isFileManager ||
+                    isSshManager ||
+                    isAdmin ||
+                    isUserProfile
+                  }
+                  disableActivate={disableActivate}
+                  disableSplit={disableSplit}
+                  disableClose={disableClose}
+                  isDragging={isDragging}
+                  isDragOver={false}
+                />
+              </div>
             );
           })}
         </div>
@@ -319,6 +538,16 @@ export function TopNavbar({
 
           <Button
             variant="outline"
+            className="w-[30px] h-[30px]"
+            title={t("nav.snippets")}
+            onClick={() => setSnippetsSidebarOpen(true)}
+            disabled={!currentTabObj || currentTabObj.type !== "terminal"}
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="outline"
             onClick={() => setIsTopbarOpen(false)}
             className="w-[30px] h-[30px]"
           >
@@ -330,7 +559,8 @@ export function TopNavbar({
       {!isTopbarOpen && (
         <div
           onClick={() => setIsTopbarOpen(true)}
-          className="absolute top-0 left-0 w-full h-[10px] bg-dark-bg cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md"
+          className="absolute top-0 left-0 w-full h-[10px] cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md"
+          style={{ backgroundColor: "#1e1e21" }}
         >
           <ChevronDown size={10} />
         </div>
@@ -484,6 +714,12 @@ export function TopNavbar({
           </div>
         </div>
       )}
+
+      <SnippetsSidebar
+        isOpen={snippetsSidebarOpen}
+        onClose={() => setSnippetsSidebarOpen(false)}
+        onExecute={handleSnippetExecute}
+      />
     </div>
   );
 }

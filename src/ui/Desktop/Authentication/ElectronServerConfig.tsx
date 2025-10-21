@@ -18,7 +18,7 @@ interface ServerConfigProps {
   isFirstTime?: boolean;
 }
 
-export function ServerConfig({
+export function ElectronServerConfig({
   onServerConfigured,
   onCancel,
   isFirstTime = false,
@@ -43,7 +43,9 @@ export function ServerConfig({
         setServerUrl(config.serverUrl);
         setConnectionStatus("success");
       }
-    } catch (error) {}
+    } catch {
+      // Ignore config loading errors
+    }
   };
 
   const handleTestConnection = async () => {
@@ -72,7 +74,7 @@ export function ServerConfig({
         setConnectionStatus("error");
         setError(result.error || t("serverConfig.connectionFailed"));
       }
-    } catch (error) {
+    } catch {
       setConnectionStatus("error");
       setError(t("serverConfig.connectionError"));
     } finally {
@@ -115,7 +117,7 @@ export function ServerConfig({
       } else {
         setError(t("serverConfig.saveFailed"));
       }
-    } catch (error) {
+    } catch {
       setError(t("serverConfig.saveError"));
     } finally {
       setLoading(false);

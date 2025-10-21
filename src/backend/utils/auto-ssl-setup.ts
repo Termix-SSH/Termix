@@ -1,7 +1,6 @@
 import { execSync } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
-import crypto from "crypto";
 import { systemLogger } from "./logger.js";
 
 export class AutoSSLSetup {
@@ -102,7 +101,7 @@ export class AutoSSLSetup {
     try {
       try {
         execSync("openssl version", { stdio: "pipe" });
-      } catch (error) {
+      } catch {
         throw new Error(
           "OpenSSL is not installed or not available in PATH. Please install OpenSSL to enable SSL certificate generation.",
         );
@@ -234,7 +233,9 @@ IP.3 = 0.0.0.0
     let envContent = "";
     try {
       envContent = await fs.readFile(this.ENV_FILE, "utf8");
-    } catch {}
+    } catch {
+      // File doesn't exist yet, will create with SSL config
+    }
 
     let updatedContent = envContent;
     let hasChanges = false;

@@ -1,23 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { HomepageAlertCard } from "./HomepageAlertCard.tsx";
+import { AlertCard } from "./AlertCard.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { getUserAlerts, dismissAlert } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
-import type { TermixAlert } from "../../../types/index.js";
+import type { TermixAlert } from "../../../../../../types";
 
 interface AlertManagerProps {
   userId: string | null;
   loggedIn: boolean;
 }
 
-export function HomepageAlertManager({
+export function AlertManager({
   userId,
   loggedIn,
 }: AlertManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const [alerts, setAlerts] = useState<TermixAlert[]>([]);
   const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function HomepageAlertManager({
 
       setAlerts(sortedAlerts);
       setCurrentAlertIndex(0);
-    } catch (err) {
+    } catch {
       const { toast } = await import("sonner");
       toast.error(t("homepage.failedToLoadAlerts"));
       setError(t("homepage.failedToLoadAlerts"));
@@ -77,7 +77,7 @@ export function HomepageAlertManager({
           return Math.max(0, newAlertsLength - 1);
         return prevIndex;
       });
-    } catch (err) {
+    } catch {
       setError(t("homepage.failedToDismissAlert"));
     }
   };
@@ -129,7 +129,7 @@ export function HomepageAlertManager({
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-[99999]">
       <div className="relative w-full max-w-2xl mx-4">
-        <HomepageAlertCard
+        <AlertCard
           alert={currentAlert}
           onDismiss={handleDismissAlert}
           onClose={handleCloseCurrentAlert}

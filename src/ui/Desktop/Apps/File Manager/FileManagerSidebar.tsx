@@ -23,6 +23,35 @@ import {
 } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
 
+interface RecentFileData {
+  id: number;
+  name: string;
+  path: string;
+  lastOpened?: string;
+  [key: string]: unknown;
+}
+
+interface PinnedFileData {
+  id: number;
+  name: string;
+  path: string;
+  [key: string]: unknown;
+}
+
+interface ShortcutData {
+  id: number;
+  name: string;
+  path: string;
+  [key: string]: unknown;
+}
+
+interface DirectoryItemData {
+  name: string;
+  path: string;
+  type: string;
+  [key: string]: unknown;
+}
+
 export interface SidebarItem {
   id: string;
   name: string;
@@ -37,7 +66,6 @@ interface FileManagerSidebarProps {
   currentHost: SSHHost;
   currentPath: string;
   onPathChange: (path: string) => void;
-  onLoadDirectory?: (path: string) => void;
   onFileOpen?: (file: SidebarItem) => void;
   sshSessionId?: string;
   refreshTrigger?: number;
@@ -47,7 +75,6 @@ export function FileManagerSidebar({
   currentHost,
   currentPath,
   onPathChange,
-  onLoadDirectory,
   onFileOpen,
   sshSessionId,
   refreshTrigger,
@@ -88,31 +115,37 @@ export function FileManagerSidebar({
 
     try {
       const recentData = await getRecentFiles(currentHost.id);
-      const recentItems = recentData.slice(0, 5).map((item: any) => ({
-        id: `recent-${item.id}`,
-        name: item.name,
-        path: item.path,
-        type: "recent" as const,
-        lastAccessed: item.lastOpened,
-      }));
+      const recentItems = (recentData as RecentFileData[])
+        .slice(0, 5)
+        .map((item: RecentFileData) => ({
+          id: `recent-${item.id}`,
+          name: item.name,
+          path: item.path,
+          type: "recent" as const,
+          lastAccessed: item.lastOpened,
+        }));
       setRecentItems(recentItems);
 
       const pinnedData = await getPinnedFiles(currentHost.id);
-      const pinnedItems = pinnedData.map((item: any) => ({
-        id: `pinned-${item.id}`,
-        name: item.name,
-        path: item.path,
-        type: "pinned" as const,
-      }));
+      const pinnedItems = (pinnedData as PinnedFileData[]).map(
+        (item: PinnedFileData) => ({
+          id: `pinned-${item.id}`,
+          name: item.name,
+          path: item.path,
+          type: "pinned" as const,
+        }),
+      );
       setPinnedItems(pinnedItems);
 
       const shortcutData = await getFolderShortcuts(currentHost.id);
-      const shortcutItems = shortcutData.map((item: any) => ({
-        id: `shortcut-${item.id}`,
-        name: item.name,
-        path: item.path,
-        type: "shortcut" as const,
-      }));
+      const shortcutItems = (shortcutData as ShortcutData[]).map(
+        (item: ShortcutData) => ({
+          id: `shortcut-${item.id}`,
+          name: item.name,
+          path: item.path,
+          type: "shortcut" as const,
+        }),
+      );
       setShortcuts(shortcutItems);
     } catch (error) {
       console.error("Failed to load quick access data:", error);
@@ -230,12 +263,12 @@ export function FileManagerSidebar({
     try {
       const response = await listSSHFiles(sshSessionId, "/");
 
-      const rootFiles = response.files || [];
+      const rootFiles = (response.files || []) as DirectoryItemData[];
       const rootFolders = rootFiles.filter(
-        (item: any) => item.type === "directory",
+        (item: DirectoryItemData) => item.type === "directory",
       );
 
-      const rootTreeItems = rootFolders.map((folder: any) => ({
+      const rootTreeItems = rootFolders.map((folder: DirectoryItemData) => ({
         id: `folder-${folder.name}`,
         name: folder.name,
         path: folder.path,
@@ -298,12 +331,12 @@ export function FileManagerSidebar({
         try {
           const subResponse = await listSSHFiles(sshSessionId, folderPath);
 
-          const subFiles = subResponse.files || [];
+          const subFiles = (subResponse.files || []) as DirectoryItemData[];
           const subFolders = subFiles.filter(
-            (item: any) => item.type === "directory",
+            (item: DirectoryItemData) => item.type === "directory",
           );
 
-          const subTreeItems = subFolders.map((folder: any) => ({
+          const subTreeItems = subFolders.map((folder: DirectoryItemData) => ({
             id: `folder-${folder.path.replace(/\//g, "-")}`,
             name: folder.name,
             path: folder.path,

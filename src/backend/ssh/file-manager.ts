@@ -1,13 +1,15 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials } from "../database/db/schema.js";
+import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import type { AuthenticatedRequest } from "../../types/index.js";
 
 function isExecutableFile(permissions: string, fileName: string): boolean {
   const hasExecutePermission =
@@ -94,14 +96,33 @@ interface SSHSession {
   timeout?: NodeJS.Timeout;
 }
 
+interface PendingTOTPSession {
+  client: SSHClient;
+  finish: (responses: string[]) => void;
+  config: import("ssh2").ConnectConfig;
+  createdAt: number;
+  sessionId: string;
+  hostId?: number;
+  ip?: string;
+  port?: number;
+  username?: string;
+  userId?: string;
+  prompts?: Array<{ prompt: string; echo: boolean }>;
+  totpPromptIndex?: number;
+  resolvedPassword?: string;
+}
+
 const sshSessions: Record<string, SSHSession> = {};
+const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
 
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // Ignore connection close errors
+    }
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -155,7 +176,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     credentialId,
   } = req.body;
 
-  const userId = (req as any).userId;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!userId) {
     fileLogger.error("SSH connection rejected: no authenticated user", {
@@ -235,10 +256,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     );
   }
 
-  const config: any = {
+  const config: Record<string, unknown> = {
     host: ip,
     port: port || 22,
     username,
+    tryKeyboard: true,
     readyTimeout: 60000,
     keepaliveInterval: 30000,
     keepaliveCountMax: 3,
@@ -277,12 +299,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   };
 
   if (
-    resolvedCredentials.authType === "password" &&
-    resolvedCredentials.password &&
-    resolvedCredentials.password.trim()
-  ) {
-    config.password = resolvedCredentials.password;
-  } else if (
     resolvedCredentials.authType === "key" &&
     resolvedCredentials.sshKey &&
     resolvedCredentials.sshKey.trim()
@@ -313,6 +329,22 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       });
       return res.status(400).json({ error: "Invalid SSH key format" });
     }
+  } else if (resolvedCredentials.authType === "password") {
+    if (!resolvedCredentials.password || !resolvedCredentials.password.trim()) {
+      fileLogger.warn(
+        "Password authentication requested but no password provided",
+        {
+          operation: "file_connect",
+          sessionId,
+          hostId,
+        },
+      );
+      return res
+        .status(400)
+        .json({ error: "Password required for password authentication" });
+    }
+    // Set password to offer both password and keyboard-interactive methods
+    config.password = resolvedCredentials.password;
   } else {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
@@ -342,6 +374,56 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     };
     scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
+
+    // Log activity to homepage API
+    if (hostId && userId) {
+      (async () => {
+        try {
+          const hosts = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshData)
+              .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+            "ssh_data",
+            userId,
+          );
+
+          const hostName =
+            hosts.length > 0 && hosts[0].name
+              ? hosts[0].name
+              : `${username}@${ip}:${port}`;
+
+          const authManager = AuthManager.getInstance();
+          await axios.post(
+            "http://localhost:30006/activity/log",
+            {
+              type: "file_manager",
+              hostId,
+              hostName,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${await authManager.generateJWTToken(userId)}`,
+              },
+            },
+          );
+
+          fileLogger.info("File manager activity logged", {
+            operation: "activity_log",
+            userId,
+            hostId,
+            hostName,
+          });
+        } catch (error) {
+          fileLogger.warn("Failed to log file manager activity", {
+            operation: "activity_log_error",
+            userId,
+            hostId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      })();
+    }
   });
 
   client.on("error", (err) => {
@@ -364,7 +446,288 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     cleanupSession(sessionId);
   });
 
+  client.on(
+    "keyboard-interactive",
+    (
+      name: string,
+      instructions: string,
+      instructionsLang: string,
+      prompts: Array<{ prompt: string; echo: boolean }>,
+      finish: (responses: string[]) => void,
+    ) => {
+      fileLogger.info("Keyboard-interactive authentication requested", {
+        operation: "file_keyboard_interactive",
+        hostId,
+        sessionId,
+        promptsCount: prompts.length,
+      });
+
+      const totpPromptIndex = prompts.findIndex((p) =>
+        /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
+          p.prompt,
+        ),
+      );
+
+      if (totpPromptIndex !== -1) {
+        if (responseSent) return;
+        responseSent = true;
+
+        if (pendingTOTPSessions[sessionId]) {
+          fileLogger.warn(
+            "TOTP session already exists, ignoring duplicate keyboard-interactive",
+            {
+              operation: "file_keyboard_interactive",
+              hostId,
+              sessionId,
+            },
+          );
+          // Don't respond to duplicate keyboard-interactive events
+          // The first one is still being processed
+          return;
+        }
+
+        pendingTOTPSessions[sessionId] = {
+          client,
+          finish,
+          config,
+          createdAt: Date.now(),
+          sessionId,
+          hostId,
+          ip,
+          port,
+          username,
+          userId,
+          prompts,
+          totpPromptIndex,
+          resolvedPassword: resolvedCredentials.password,
+        };
+
+        fileLogger.info("Created TOTP session", {
+          operation: "file_keyboard_interactive_totp",
+          hostId,
+          sessionId,
+          prompt: prompts[totpPromptIndex].prompt,
+          promptsCount: prompts.length,
+        });
+
+        res.json({
+          requires_totp: true,
+          sessionId,
+          prompt: prompts[totpPromptIndex].prompt,
+        });
+      } else {
+        if (resolvedCredentials.password) {
+          const responses = prompts.map(
+            () => resolvedCredentials.password || "",
+          );
+          finish(responses);
+        } else {
+          finish(prompts.map(() => ""));
+        }
+      }
+    },
+  );
+
   client.connect(config);
+});
+
+app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
+  const { sessionId, totpCode } = req.body;
+
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!userId) {
+    fileLogger.error("TOTP verification rejected: no authenticated user", {
+      operation: "file_totp_auth",
+      sessionId,
+    });
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!sessionId || !totpCode) {
+    return res.status(400).json({ error: "Session ID and TOTP code required" });
+  }
+
+  const session = pendingTOTPSessions[sessionId];
+
+  if (!session) {
+    fileLogger.warn("TOTP session not found or expired", {
+      operation: "file_totp_verify",
+      sessionId,
+      userId,
+      availableSessions: Object.keys(pendingTOTPSessions),
+    });
+    return res
+      .status(404)
+      .json({ error: "TOTP session expired. Please reconnect." });
+  }
+
+  if (Date.now() - session.createdAt > 180000) {
+    delete pendingTOTPSessions[sessionId];
+    try {
+      session.client.end();
+    } catch {
+      // Ignore errors when closing timed out session
+    }
+    fileLogger.warn("TOTP session timeout before code submission", {
+      operation: "file_totp_verify",
+      sessionId,
+      userId,
+      age: Date.now() - session.createdAt,
+    });
+    return res
+      .status(408)
+      .json({ error: "TOTP session timeout. Please reconnect." });
+  }
+
+  fileLogger.info("Submitting TOTP code to SSH server", {
+    operation: "file_totp_verify",
+    sessionId,
+    userId,
+    codeLength: totpCode.length,
+    promptsCount: session.prompts?.length || 0,
+  });
+
+  // Build responses for ALL prompts, just like in terminal.ts
+  const responses = (session.prompts || []).map((p, index) => {
+    if (index === session.totpPromptIndex) {
+      return totpCode;
+    }
+    if (/password/i.test(p.prompt) && session.resolvedPassword) {
+      return session.resolvedPassword;
+    }
+    return "";
+  });
+
+  fileLogger.info("Full keyboard-interactive response for file manager", {
+    operation: "file_totp_full_response",
+    sessionId,
+    userId,
+    totalPrompts: session.prompts?.length || 0,
+    responsesProvided: responses.filter((r) => r !== "").length,
+  });
+
+  let responseSent = false;
+  let responseTimeout: NodeJS.Timeout;
+
+  // Remove old event listeners from /connect endpoint to avoid conflicts
+  session.client.removeAllListeners("ready");
+  session.client.removeAllListeners("error");
+
+  // CRITICAL: Attach event listeners BEFORE calling finish() to avoid race condition
+  session.client.once("ready", () => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    sshSessions[sessionId] = {
+      client: session.client,
+      isConnected: true,
+      lastActive: Date.now(),
+    };
+    scheduleSessionCleanup(sessionId);
+
+    fileLogger.success("TOTP verification successful", {
+      operation: "file_totp_verify",
+      sessionId,
+      userId,
+    });
+
+    res.json({
+      status: "success",
+      message: "TOTP verified, SSH connection established",
+    });
+
+    // Log activity to homepage API
+    if (session.hostId && session.userId) {
+      (async () => {
+        try {
+          const hosts = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshData)
+              .where(
+                and(
+                  eq(sshData.id, session.hostId!),
+                  eq(sshData.userId, session.userId!),
+                ),
+              ),
+            "ssh_data",
+            session.userId!,
+          );
+
+          const hostName =
+            hosts.length > 0 && hosts[0].name
+              ? hosts[0].name
+              : `${session.username}@${session.ip}:${session.port}`;
+
+          const authManager = AuthManager.getInstance();
+          await axios.post(
+            "http://localhost:30006/activity/log",
+            {
+              type: "file_manager",
+              hostId: session.hostId,
+              hostName,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+              },
+            },
+          );
+
+          fileLogger.info("File manager activity logged (TOTP)", {
+            operation: "activity_log",
+            userId: session.userId,
+            hostId: session.hostId,
+            hostName,
+          });
+        } catch (error) {
+          fileLogger.warn("Failed to log file manager activity (TOTP)", {
+            operation: "activity_log_error",
+            userId: session.userId,
+            hostId: session.hostId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      })();
+    }
+  });
+
+  session.client.once("error", (err) => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    fileLogger.error("TOTP verification failed", {
+      operation: "file_totp_verify",
+      sessionId,
+      userId,
+      error: err.message,
+    });
+
+    res.status(401).json({ status: "error", message: "Invalid TOTP code" });
+  });
+
+  responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      fileLogger.warn("TOTP verification timeout", {
+        operation: "file_totp_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "TOTP verification timeout" });
+    }
+  }, 60000);
+
+  // Now that event listeners are attached, submit the TOTP response
+  session.finish(responses);
 });
 
 app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
@@ -455,13 +818,12 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
         const parts = line.split(/\s+/);
         if (parts.length >= 9) {
           const permissions = parts[0];
-          const linkCount = parts[1];
           const owner = parts[2];
           const group = parts[3];
           const size = parseInt(parts[4], 10);
 
           let dateStr = "";
-          let nameStartIndex = 8;
+          const nameStartIndex = 8;
 
           if (parts[5] && parts[6] && parts[7]) {
             dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
@@ -694,7 +1056,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
-  const { sessionId, path: filePath, content, hostId, userId } = req.body;
+  const { sessionId, path: filePath, content } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -881,14 +1243,7 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
-  const {
-    sessionId,
-    path: filePath,
-    content,
-    fileName,
-    hostId,
-    userId,
-  } = req.body;
+  const { sessionId, path: filePath, content, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1022,8 +1377,6 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
       }
 
       if (chunks.length === 1) {
-        const tempFile = `/tmp/upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const escapedTempFile = tempFile.replace(/'/g, "'\"'\"'");
         const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
 
         const writeCommand = `echo '${chunks[0]}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
@@ -1088,13 +1441,11 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
           });
         });
       } else {
-        const tempFile = `/tmp/upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const escapedTempFile = tempFile.replace(/'/g, "'\"'\"'");
         const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
 
         let writeCommand = `> '${escapedPath}'`;
 
-        chunks.forEach((chunk, index) => {
+        chunks.forEach((chunk) => {
           writeCommand += ` && echo '${chunk}' | base64 -d >> '${escapedPath}'`;
         });
 
@@ -1177,14 +1528,7 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
-  const {
-    sessionId,
-    path: filePath,
-    fileName,
-    content = "",
-    hostId,
-    userId,
-  } = req.body;
+  const { sessionId, path: filePath, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1285,7 +1629,7 @@ app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
-  const { sessionId, path: folderPath, folderName, hostId, userId } = req.body;
+  const { sessionId, path: folderPath, folderName } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1386,7 +1730,7 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
 });
 
 app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
-  const { sessionId, path: itemPath, isDirectory, hostId, userId } = req.body;
+  const { sessionId, path: itemPath, isDirectory } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1488,7 +1832,7 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
 });
 
 app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
-  const { sessionId, oldPath, newName, hostId, userId } = req.body;
+  const { sessionId, oldPath, newName } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1596,7 +1940,7 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
 });
 
 app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
-  const { sessionId, oldPath, newPath, hostId, userId } = req.body;
+  const { sessionId, oldPath, newPath } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sessionId) {
@@ -1985,7 +2329,7 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
 });
 
 app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
-  const { sessionId, filePath, hostId, userId } = req.body;
+  const { sessionId, filePath } = req.body;
   const sshConn = sshSessions[sessionId];
 
   if (!sshConn || !sshConn.isConnected) {
@@ -2022,7 +2366,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
       checkResult += data.toString();
     });
 
-    checkStream.on("close", (code) => {
+    checkStream.on("close", () => {
       if (!checkResult.includes("EXECUTABLE")) {
         return res.status(400).json({ error: "File is not executable" });
       }

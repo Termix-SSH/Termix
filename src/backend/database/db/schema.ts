@@ -65,6 +65,7 @@ export const sshData = sqliteTable("ssh_data", {
     .notNull()
     .default(true),
   defaultPath: text("default_path"),
+  statsConfig: text("stats_config"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -169,6 +170,37 @@ export const sshCredentialUsage = sqliteTable("ssh_credential_usage", {
     .notNull()
     .references(() => users.id),
   usedAt: text("used_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const snippets = sqliteTable("snippets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  content: text("content").notNull(),
+  description: text("description"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const recentActivity = sqliteTable("recent_activity", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  type: text("type").notNull(),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => sshData.id),
+  hostName: text("host_name").notNull(),
+  timestamp: text("timestamp")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });

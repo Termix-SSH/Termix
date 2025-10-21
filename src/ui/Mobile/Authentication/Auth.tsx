@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
-import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Label } from "@/components/ui/label.tsx";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/Desktop/User/LanguageSwitcher.tsx";
 import { toast } from "sonner";
@@ -19,15 +19,12 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  setCookie,
-  getCookie,
-  getServerConfig,
-  isElectron,
   logoutUser,
-} from "../../main-axios.ts";
-import { ServerConfig as ServerConfigComponent } from "@/ui/Desktop/Electron Only/ServerConfig.tsx";
+  isElectron,
+} from "@/ui/main-axios.ts";
+import { PasswordInput } from "@/components/ui/password-input.tsx";
 
-interface HomepageAuthProps extends React.ComponentProps<"div"> {
+interface AuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
   setIsAdmin: (isAdmin: boolean) => void;
   setUsername: (username: string | null) => void;
@@ -43,7 +40,7 @@ interface HomepageAuthProps extends React.ComponentProps<"div"> {
   }) => void;
 }
 
-export function HomepageAuth({
+export function Auth({
   className,
   setLoggedIn,
   setIsAdmin,
@@ -55,7 +52,7 @@ export function HomepageAuth({
   setDbError,
   onAuthSuccess,
   ...props
-}: HomepageAuthProps) {
+}: AuthProps) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"login" | "signup" | "external" | "reset">(
     "login",
@@ -65,17 +62,7 @@ export function HomepageAuth({
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
-  const [visibility, setVisibility] = useState({
-    password: false,
-    signupConfirm: false,
-    resetNew: false,
-    resetConfirm: false,
-  });
-  const toggleVisibility = (field: keyof typeof visibility) => {
-    setVisibility((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [internalLoggedIn, setInternalLoggedIn] = useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [firstUserToastShown, setFirstUserToastShown] = useState(false);
@@ -105,7 +92,9 @@ export function HomepageAuth({
     const clearJWTOnLoad = async () => {
       try {
         await logoutUser();
-      } catch (error) {}
+      } catch (error) {
+        console.log("JWT cleanup on HomepageAuth load:", error);
+      }
     };
 
     clearJWTOnLoad();
@@ -116,6 +105,12 @@ export function HomepageAuth({
       setRegistrationAllowed(res.allowed);
     });
   }, []);
+
+  useEffect(() => {
+    if (!registrationAllowed && !internalLoggedIn) {
+      toast.warning(t("messages.registrationDisabled"));
+    }
+  }, [registrationAllowed, internalLoggedIn, t]);
 
   useEffect(() => {
     getOIDCConfig()
@@ -136,7 +131,6 @@ export function HomepageAuth({
   }, []);
 
   useEffect(() => {
-    setDbHealthChecking(true);
     getSetupRequired()
       .then((res) => {
         if (res.setup_required) {
@@ -150,21 +144,11 @@ export function HomepageAuth({
           setFirstUser(false);
         }
         setDbError(null);
-        setDbConnectionFailed(false);
       })
       .catch(() => {
-        setDbConnectionFailed(true);
-      })
-      .finally(() => {
-        setDbHealthChecking(false);
+        setDbError(t("errors.databaseConnection"));
       });
   }, [setDbError, firstUserToastShown]);
-
-  useEffect(() => {
-    if (!registrationAllowed && !internalLoggedIn) {
-      toast.warning(t("messages.registrationDisabled"));
-    }
-  }, [registrationAllowed, internalLoggedIn, t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -178,7 +162,7 @@ export function HomepageAuth({
     }
 
     try {
-      let res, meRes;
+      let res;
       if (tab === "login") {
         res = await loginUser(localUsername, password);
       } else {
@@ -208,7 +192,7 @@ export function HomepageAuth({
         throw new Error(t("errors.loginFailed"));
       }
 
-      [meRes] = await Promise.all([getUserInfo()]);
+      const [meRes] = await Promise.all([getUserInfo()]);
 
       setInternalLoggedIn(true);
       setLoggedIn(true);
@@ -231,17 +215,23 @@ export function HomepageAuth({
       setTotpRequired(false);
       setTotpCode("");
       setTotpTempToken("");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
       const errorMessage =
-        err?.response?.data?.error || err?.message || t("errors.unknownError");
+        error?.response?.data?.error ||
+        error?.message ||
+        t("errors.unknownError");
       toast.error(errorMessage);
       setInternalLoggedIn(false);
       setLoggedIn(false);
       setIsAdmin(false);
       setUsername(null);
       setUserId(null);
-      if (err?.response?.data?.error?.includes("Database")) {
-        setDbConnectionFailed(true);
+      if (error?.response?.data?.error?.includes("Database")) {
+        setDbError(t("errors.databaseConnection"));
       } else {
         setDbError(null);
       }
@@ -254,13 +244,17 @@ export function HomepageAuth({
     setError(null);
     setResetLoading(true);
     try {
-      const result = await initiatePasswordReset(localUsername);
+      await initiatePasswordReset(localUsername);
       setResetStep("verify");
       toast.success(t("messages.resetCodeSent"));
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
       toast.error(
-        err?.response?.data?.error ||
-          err?.message ||
+        error?.response?.data?.error ||
+          error?.message ||
           t("errors.failedPasswordReset"),
       );
     } finally {
@@ -276,8 +270,9 @@ export function HomepageAuth({
       setTempToken(response.tempToken);
       setResetStep("newPassword");
       toast.success(t("messages.codeVerified"));
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || t("errors.failedVerifyCode"));
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      toast.error(error?.response?.data?.error || t("errors.failedVerifyCode"));
     } finally {
       setResetLoading(false);
     }
@@ -314,9 +309,10 @@ export function HomepageAuth({
 
       setTab("login");
       resetPasswordState();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
       toast.error(
-        err?.response?.data?.error || t("errors.failedCompleteReset"),
+        error?.response?.data?.error || t("errors.failedCompleteReset"),
       );
     } finally {
       setResetLoading(false);
@@ -380,11 +376,15 @@ export function HomepageAuth({
       setTotpCode("");
       setTotpTempToken("");
       toast.success(t("messages.loginSuccess"));
-    } catch (err: any) {
-      const errorCode = err?.response?.data?.code;
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { code?: string; error?: string } };
+      };
+      const errorCode = error?.response?.data?.code;
       const errorMessage =
-        err?.response?.data?.error ||
-        err?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
         t("errors.invalidTotpCode");
 
       if (errorCode === "SESSION_EXPIRED") {
@@ -413,10 +413,14 @@ export function HomepageAuth({
       }
 
       window.location.replace(authUrl);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
       const errorMessage =
-        err?.response?.data?.error ||
-        err?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
         t("errors.failedOidcLogin");
       toast.error(errorMessage);
       setOidcLoading(false);
@@ -426,7 +430,6 @@ export function HomepageAuth({
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get("success");
-    const token = urlParams.get("token");
     const error = urlParams.get("error");
 
     if (error) {
@@ -460,7 +463,8 @@ export function HomepageAuth({
             window.location.pathname,
           );
         })
-        .catch((err) => {
+        .catch(() => {
+          toast.error(t("errors.failedUserInfo"));
           setInternalLoggedIn(false);
           setLoggedIn(false);
           setIsAdmin(false);
@@ -500,172 +504,17 @@ export function HomepageAuth({
     </svg>
   );
 
-  const [showServerConfig, setShowServerConfig] = useState<boolean | null>(
-    null,
-  );
-  const [currentServerUrl, setCurrentServerUrl] = useState<string>("");
-  const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
-  const [dbHealthChecking, setDbHealthChecking] = useState(false);
-
-  useEffect(() => {
-    if (dbConnectionFailed) {
-      toast.error(t("errors.databaseConnection"));
-    }
-  }, [dbConnectionFailed, t]);
-
-  const retryDatabaseConnection = async () => {
-    setDbHealthChecking(true);
-    setDbConnectionFailed(false);
-    try {
-      const res = await getSetupRequired();
-      if (res.setup_required) {
-        setFirstUser(true);
-        setTab("signup");
-      } else {
-        setFirstUser(false);
-      }
-      setDbError(null);
-      toast.success(t("messages.databaseConnected"));
-    } catch (error) {
-      setDbConnectionFailed(true);
-    } finally {
-      setDbHealthChecking(false);
-    }
-  };
-
-  useEffect(() => {
-    const checkServerConfig = async () => {
-      if (isElectron()) {
-        try {
-          const config = await getServerConfig();
-          setCurrentServerUrl(config?.serverUrl || "");
-          setShowServerConfig(!config || !config.serverUrl);
-        } catch (error) {
-          setShowServerConfig(true);
-        }
-      } else {
-        setShowServerConfig(false);
-      }
-    };
-
-    checkServerConfig();
-  }, []);
-
-  if (showServerConfig === null) {
-    return (
-      <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
-        {...props}
-      >
-        <div className="flex items-center justify-center h-32">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  if (showServerConfig) {
-    return (
-      <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
-        {...props}
-      >
-        <ServerConfigComponent
-          onServerConfigured={() => {
-            window.location.reload();
-          }}
-          onCancel={() => {
-            setShowServerConfig(false);
-          }}
-          isFirstTime={!currentServerUrl}
-        />
-      </div>
-    );
-  }
-
-  if (dbHealthChecking && !dbConnectionFailed) {
-    return (
-      <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
-        {...props}
-      >
-        <div className="flex items-center justify-center h-32">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              {t("common.checkingDatabase")}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (dbConnectionFailed) {
-    return (
-      <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
-        {...props}
-      >
-        <div className="mb-6 text-center">
-          <h2 className="text-xl font-bold mb-1">
-            {t("errors.databaseConnection")}
-          </h2>
-          <p className="text-muted-foreground">
-            {t("messages.databaseConnectionFailed")}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-11 text-base font-semibold"
-            disabled={dbHealthChecking}
-            onClick={() => window.location.reload()}
-          >
-            {t("common.refresh")}
-          </Button>
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-sm text-muted-foreground">
-                {t("common.language")}
-              </Label>
-            </div>
-            <LanguageSwitcher />
-          </div>
-          {isElectron() && currentServerUrl && (
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm text-muted-foreground">Server</Label>
-                <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                  {currentServerUrl}
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowServerConfig(true)}
-                className="h-8 px-3"
-              >
-                Edit
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
+      className={`w-full max-w-md flex flex-col bg-dark-bg ${className || ""}`}
       {...props}
     >
+      {dbError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{dbError}</AlertDescription>
+        </Alert>
+      )}
       {totpRequired && (
         <div className="flex flex-col gap-5">
           <div className="mb-6 text-center">
@@ -719,7 +568,31 @@ export function HomepageAuth({
         </div>
       )}
 
-      {!loggedIn && !authLoading && !totpRequired && (
+      {internalLoggedIn && !authLoading && (
+        <div className="flex flex-col gap-5">
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold mb-1">
+              {t("homepage.loggedInTitle")}
+            </h2>
+            <p className="text-muted-foreground">
+              {t("mobile.mobileAppInProgressDesc")}
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11 text-base font-semibold"
+            onClick={() =>
+              window.open("https://docs.termix.site/install", "_blank")
+            }
+          >
+            {t("mobile.viewMobileAppDocs")}
+          </Button>
+        </div>
+      )}
+
+      {!internalLoggedIn && !authLoading && !totpRequired && (
         <>
           <div className="flex gap-2 mb-6">
             <button
@@ -798,28 +671,14 @@ export function HomepageAuth({
                   <div className="text-center text-muted-foreground mb-4">
                     <p>{t("auth.loginWithExternalDesc")}</p>
                   </div>
-                  {(() => {
-                    if (isElectron()) {
-                      return (
-                        <div className="text-center p-4 bg-muted/50 rounded-lg border">
-                          <p className="text-muted-foreground text-sm">
-                            {t("auth.externalNotSupportedInElectron")}
-                          </p>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <Button
-                          type="button"
-                          className="w-full h-11 mt-2 text-base font-semibold"
-                          disabled={oidcLoading}
-                          onClick={handleOIDCLogin}
-                        >
-                          {oidcLoading ? Spinner : t("auth.loginWithExternal")}
-                        </Button>
-                      );
-                    }
-                  })()}
+                  <Button
+                    type="button"
+                    className="w-full h-11 mt-2 text-base font-semibold"
+                    disabled={oidcLoading}
+                    onClick={handleOIDCLogin}
+                  >
+                    {oidcLoading ? Spinner : t("auth.loginWithExternal")}
+                  </Button>
                 </>
               )}
               {tab === "reset" && (
@@ -917,7 +776,7 @@ export function HomepageAuth({
                       </div>
                       <div className="flex flex-col gap-5">
                         <div className="flex flex-col gap-2">
-                          <Label htmlFor="new-p assword">
+                          <Label htmlFor="new-password">
                             {t("auth.newPassword")}
                           </Label>
                           <PasswordInput
@@ -986,7 +845,7 @@ export function HomepageAuth({
                   className="h-11 text-base"
                   value={localUsername}
                   onChange={(e) => setLocalUsername(e.target.value)}
-                  disabled={loading || loggedIn}
+                  disabled={loading || internalLoggedIn}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -997,7 +856,7 @@ export function HomepageAuth({
                   className="h-11 text-base"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading || loggedIn}
+                  disabled={loading || internalLoggedIn}
                 />
               </div>
               {tab === "signup" && (
@@ -1011,7 +870,7 @@ export function HomepageAuth({
                     className="h-11 text-base"
                     value={signupConfirmPassword}
                     onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                    disabled={loading || loggedIn}
+                    disabled={loading || internalLoggedIn}
                   />
                 </div>
               )}
@@ -1031,7 +890,7 @@ export function HomepageAuth({
                   type="button"
                   variant="outline"
                   className="w-full h-11 text-base font-semibold"
-                  disabled={loading || loggedIn}
+                  disabled={loading || internalLoggedIn}
                   onClick={() => {
                     setTab("reset");
                     resetPasswordState();
@@ -1044,7 +903,7 @@ export function HomepageAuth({
             </form>
           )}
 
-          <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
+          <div className="mt-6 pt-4 border-t border-dark-border">
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-sm text-muted-foreground">
@@ -1053,27 +912,19 @@ export function HomepageAuth({
               </div>
               <LanguageSwitcher />
             </div>
-            {isElectron() && currentServerUrl && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm text-muted-foreground">
-                    Server
-                  </Label>
-                  <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                    {currentServerUrl}
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowServerConfig(true)}
-                  className="h-8 px-3"
-                >
-                  Edit
-                </Button>
-              </div>
-            )}
+          </div>
+
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 text-base font-semibold"
+              onClick={() =>
+                window.open("https://docs.termix.site/install", "_blank")
+              }
+            >
+              {t("mobile.viewMobileAppDocs")}
+            </Button>
           </div>
         </>
       )}

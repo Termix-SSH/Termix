@@ -1,3 +1,8 @@
+import type {
+  AuthenticatedRequest,
+  CacheEntry,
+  TermixAlert,
+} from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { dismissedAlerts } from "../db/schema.js";
@@ -6,17 +11,11 @@ import fetch from "node-fetch";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-  expiresAt: number;
-}
-
 class AlertCache {
   private cache: Map<string, CacheEntry> = new Map();
   private readonly CACHE_DURATION = 5 * 60 * 1000;
 
-  set(key: string, data: any): void {
+  set<T>(key: string, data: T): void {
     const now = Date.now();
     this.cache.set(key, {
       data,
@@ -25,7 +24,7 @@ class AlertCache {
     });
   }
 
-  get(key: string): any | null {
+  get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) {
       return null;
@@ -36,7 +35,7 @@ class AlertCache {
       return null;
     }
 
-    return entry.data;
+    return entry.data as T;
   }
 }
 
@@ -47,20 +46,9 @@ const REPO_OWNER = "Termix-SSH";
 const REPO_NAME = "Docs";
 const ALERTS_FILE = "main/termix-alerts.json";
 
-interface TermixAlert {
-  id: string;
-  title: string;
-  message: string;
-  expiresAt: string;
-  priority?: "low" | "medium" | "high" | "critical";
-  type?: "info" | "warning" | "error" | "success";
-  actionUrl?: string;
-  actionText?: string;
-}
-
 async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
   const cacheKey = "termix_alerts";
-  const cachedData = alertCache.get(cacheKey);
+  const cachedData = alertCache.get<TermixAlert[]>(cacheKey);
   if (cachedData) {
     return cachedData;
   }
@@ -115,7 +103,7 @@ const authenticateJWT = authManager.createAuthMiddleware();
 // GET /alerts
 router.get("/", authenticateJWT, async (req, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     const allAlerts = await fetchAlertsFromGitHub();
 
@@ -148,7 +136,7 @@ router.get("/", authenticateJWT, async (req, res) => {
 router.post("/dismiss", authenticateJWT, async (req, res) => {
   try {
     const { alertId } = req.body;
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     if (!alertId) {
       authLogger.warn("Missing alertId in dismiss request", { userId });
@@ -170,7 +158,7 @@ router.post("/dismiss", authenticateJWT, async (req, res) => {
       return res.status(409).json({ error: "Alert already dismissed" });
     }
 
-    const result = await db.insert(dismissedAlerts).values({
+    await db.insert(dismissedAlerts).values({
       userId,
       alertId,
     });
@@ -186,7 +174,7 @@ router.post("/dismiss", authenticateJWT, async (req, res) => {
 // GET /alerts/dismissed/:userId
 router.get("/dismissed", authenticateJWT, async (req, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     const dismissedAlertRecords = await db
       .select({
@@ -211,7 +199,7 @@ router.get("/dismissed", authenticateJWT, async (req, res) => {
 router.delete("/dismiss", authenticateJWT, async (req, res) => {
   try {
     const { alertId } = req.body;
-    const userId = (req as any).userId;
+    const userId = (req as AuthenticatedRequest).userId;
 
     if (!alertId) {
       return res.status(400).json({ error: "Alert ID is required" });

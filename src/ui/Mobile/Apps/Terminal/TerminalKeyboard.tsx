@@ -110,7 +110,7 @@ export function TerminalKeyboard({
         if (navigator.vibrate) {
           navigator.vibrate(20);
         }
-      } catch (e) {}
+      } catch {}
 
       onSendInput(input);
     },

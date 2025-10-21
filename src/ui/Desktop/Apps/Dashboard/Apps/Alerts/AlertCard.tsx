@@ -17,7 +17,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { TermixAlert } from "../../../types/index.js";
+import type { TermixAlert } from "../../../../../../types";
 
 interface AlertCardProps {
   alert: TermixAlert;
@@ -67,7 +67,7 @@ const getTypeBadgeVariant = (type?: string) => {
   }
 };
 
-export function HomepageAlertCard({
+export function AlertCard({
   alert,
   onDismiss,
   onClose,

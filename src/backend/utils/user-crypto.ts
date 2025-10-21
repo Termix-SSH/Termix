@@ -163,9 +163,10 @@ class UserCrypto {
 
   async authenticateOIDCUser(userId: string): Promise<boolean> {
     try {
+      const kekSalt = await this.getKEKSalt(userId);
       const encryptedDEK = await this.getEncryptedDEK(userId);
 
-      if (!encryptedDEK) {
+      if (!kekSalt || !encryptedDEK) {
         await this.setupOIDCUserEncryption(userId);
         return true;
       }
@@ -195,7 +196,7 @@ class UserCrypto {
       DEK.fill(0);
 
       return true;
-    } catch (error) {
+    } catch {
       await this.setupOIDCUserEncryption(userId);
       return true;
     }
@@ -276,21 +277,6 @@ class UserCrypto {
 
       oldKEK.fill(0);
       newKEK.fill(0);
-
-      const dekCopy = Buffer.from(DEK);
-
-      const now = Date.now();
-      const oldSession = this.userSessions.get(userId);
-      if (oldSession) {
-        oldSession.dataKey.fill(0);
-      }
-
-      this.userSessions.set(userId, {
-        dataKey: dekCopy,
-        lastActivity: now,
-        expiresAt: now + UserCrypto.SESSION_DURATION,
-      });
-
       DEK.fill(0);
 
       return true;
@@ -363,7 +349,7 @@ class UserCrypto {
       DEK.fill(0);
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -482,7 +468,7 @@ class UserCrypto {
       }
 
       return JSON.parse(result[0].value);
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -522,7 +508,7 @@ class UserCrypto {
       }
 
       return JSON.parse(result[0].value);
-    } catch (error) {
+    } catch {
       return null;
     }
   }

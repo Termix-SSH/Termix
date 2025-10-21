@@ -1,6 +1,7 @@
 {
-  "appId": "com.termix.app",
+  "appId": "com.karmaa.termix",
   "productName": "Termix",
+  "publish": null,
   "directories": {
     "output": "release"
   },
@@ -21,7 +22,7 @@
   },
   "buildDependenciesFromSource": false,
   "nodeGypRebuild": false,
-  "npmRebuild": false,
+  "npmRebuild": true,
   "win": {
     "target": "nsis",
     "icon": "public/icon.ico",
@@ -57,6 +58,36 @@
         "Keywords": "terminal;ssh;server;management;",
         "StartupWMClass": "termix"
       }
+    }
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "mas",
+        "arch": "universal"
+      }
+    ],
+    "icon": "public/icon.icns",
+    "category": "public.app-category.developer-tools",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mas.plist",
+    "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+    "type": "distribution",
+    "minimumSystemVersion": "10.15"
+  },
+  "mas": {
+    "provisioningProfile": "build/Termix_Mac_App_Store.provisionprofile",
+    "entitlements": "build/entitlements.mas.plist",
+    "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
+    "asarUnpack": ["**/*.node"],
+    "type": "distribution",
+    "category": "public.app-category.developer-tools",
+    "extendInfo": {
+      "ITSAppUsesNonExemptEncryption": false,
+      "NSAppleEventsUsageDescription": "Termix needs access to control other applications for terminal operations."
     }
   }
 }

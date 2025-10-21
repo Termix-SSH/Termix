@@ -37,7 +37,9 @@ class SystemCrypto {
           process.env.JWT_SECRET = jwtMatch[1];
           return;
         }
-      } catch {}
+      } catch {
+        // Ignore file read errors, will generate new secret
+      }
 
       await this.generateAndGuideUser();
     } catch (error) {
@@ -74,7 +76,9 @@ class SystemCrypto {
           process.env.DATABASE_KEY = dbKeyMatch[1];
           return;
         }
-      } catch {}
+      } catch {
+        // Ignore file read errors, will generate new key
+      }
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
@@ -111,7 +115,9 @@ class SystemCrypto {
           process.env.INTERNAL_AUTH_TOKEN = tokenMatch[1];
           return;
         }
-      } catch {}
+      } catch {
+        // Ignore file read errors, will generate new token
+      }
 
       await this.generateAndGuideInternalAuthToken();
     } catch (error) {

@@ -1,6 +1,14 @@
 import { FieldCrypto } from "./field-crypto.js";
 import { databaseLogger } from "./logger.js";
 
+interface DatabaseInstance {
+  prepare: (sql: string) => {
+    all: (param?: unknown) => unknown[];
+    get: (param?: unknown) => unknown;
+    run: (...params: unknown[]) => unknown;
+  };
+}
+
 export class LazyFieldEncryption {
   private static readonly LEGACY_FIELD_NAME_MAP: Record<string, string> = {
     key_password: "keyPassword",
@@ -39,7 +47,7 @@ export class LazyFieldEncryption {
         return false;
       }
       return true;
-    } catch (jsonError) {
+    } catch {
       return true;
     }
   }
@@ -74,7 +82,9 @@ export class LazyFieldEncryption {
               legacyFieldName,
             );
             return decrypted;
-          } catch (legacyError) {}
+          } catch {
+            // Ignore legacy format errors
+          }
         }
 
         const sensitiveFields = [
@@ -145,7 +155,7 @@ export class LazyFieldEncryption {
           wasPlaintext: false,
           wasLegacyEncryption: false,
         };
-      } catch (error) {
+      } catch {
         const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
         if (legacyFieldName) {
           try {
@@ -166,7 +176,9 @@ export class LazyFieldEncryption {
               wasPlaintext: false,
               wasLegacyEncryption: true,
             };
-          } catch (legacyError) {}
+          } catch {
+            // Ignore legacy format errors
+          }
         }
         return {
           encrypted: fieldValue,
@@ -178,12 +190,12 @@ export class LazyFieldEncryption {
   }
 
   static migrateRecordSensitiveFields(
-    record: any,
+    record: Record<string, unknown>,
     sensitiveFields: string[],
     userKEK: Buffer,
     recordId: string,
   ): {
-    updatedRecord: any;
+    updatedRecord: Record<string, unknown>;
     migratedFields: string[];
     needsUpdate: boolean;
   } {
@@ -198,7 +210,7 @@ export class LazyFieldEncryption {
         try {
           const { encrypted, wasPlaintext, wasLegacyEncryption } =
             this.migrateFieldToEncrypted(
-              fieldValue,
+              fieldValue as string,
               userKEK,
               recordId,
               fieldName,
@@ -253,7 +265,7 @@ export class LazyFieldEncryption {
     try {
       FieldCrypto.decryptField(fieldValue, userKEK, recordId, fieldName);
       return false;
-    } catch (error) {
+    } catch {
       const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
       if (legacyFieldName) {
         try {
@@ -264,7 +276,7 @@ export class LazyFieldEncryption {
             legacyFieldName,
           );
           return true;
-        } catch (legacyError) {
+        } catch {
           return false;
         }
       }
@@ -275,7 +287,7 @@ export class LazyFieldEncryption {
   static async checkUserNeedsMigration(
     userId: string,
     userKEK: Buffer,
-    db: any,
+    db: DatabaseInstance,
   ): Promise<{
     needsMigration: boolean;
     plaintextFields: Array<{
@@ -294,7 +306,9 @@ export class LazyFieldEncryption {
     try {
       const sshHosts = db
         .prepare("SELECT * FROM ssh_data WHERE user_id = ?")
-        .all(userId);
+        .all(userId) as Array<
+        Record<string, unknown> & { id: string | number }
+      >;
       for (const host of sshHosts) {
         const sensitiveFields = this.getSensitiveFieldsForTable("ssh_data");
         const hostPlaintextFields: string[] = [];
@@ -303,7 +317,7 @@ export class LazyFieldEncryption {
           if (
             host[field] &&
             this.fieldNeedsMigration(
-              host[field],
+              host[field] as string,
               userKEK,
               host.id.toString(),
               field,
@@ -325,7 +339,9 @@ export class LazyFieldEncryption {
 
       const sshCredentials = db
         .prepare("SELECT * FROM ssh_credentials WHERE user_id = ?")
-        .all(userId);
+        .all(userId) as Array<
+        Record<string, unknown> & { id: string | number }
+      >;
       for (const credential of sshCredentials) {
         const sensitiveFields =
           this.getSensitiveFieldsForTable("ssh_credentials");
@@ -335,7 +351,7 @@ export class LazyFieldEncryption {
           if (
             credential[field] &&
             this.fieldNeedsMigration(
-              credential[field],
+              credential[field] as string,
               userKEK,
               credential.id.toString(),
               field,

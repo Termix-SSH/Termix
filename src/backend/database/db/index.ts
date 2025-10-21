@@ -23,7 +23,7 @@ const enableFileEncryption = process.env.DB_FILE_ENCRYPTION !== "false";
 const dbPath = path.join(dataDir, "db.sqlite");
 const encryptedDbPath = `${dbPath}.encrypted`;
 
-let actualDbPath = ":memory:";
+const actualDbPath = ":memory:";
 let memoryDatabase: Database.Database;
 let isNewDatabase = false;
 let sqlite: Database.Database;
@@ -31,7 +31,8 @@ let sqlite: Database.Database;
 async function initializeDatabaseAsync(): Promise<void> {
   const systemCrypto = SystemCrypto.getInstance();
 
-  const dbKey = await systemCrypto.getDatabaseKey();
+  // Ensure database key is initialized
+  await systemCrypto.getDatabaseKey();
   if (enableFileEncryption) {
     try {
       if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
@@ -165,6 +166,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         tunnel_connections TEXT,
         enable_file_manager INTEGER NOT NULL DEFAULT 1,
         default_path TEXT,
+        stats_config TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id)
@@ -242,6 +244,28 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id)
     );
 
+    CREATE TABLE IF NOT EXISTS snippets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        description TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    );
+
+    CREATE TABLE IF NOT EXISTS recent_activity (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        host_name TEXT NOT NULL,
+        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id)
+    );
+
 `);
 
   migrateSchema();
@@ -277,7 +301,7 @@ const addColumnIfNotExists = (
                         FROM ${table} LIMIT 1`,
       )
       .get();
-  } catch (e) {
+  } catch {
     try {
       sqlite.exec(`ALTER TABLE ${table}
                 ADD COLUMN ${column} ${definition};`);
@@ -361,6 +385,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "stats_config", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
@@ -476,21 +501,29 @@ async function cleanupDatabase() {
       for (const file of files) {
         try {
           fs.unlinkSync(path.join(tempDir, file));
-        } catch {}
+        } catch {
+          // Ignore cleanup errors
+        }
       }
 
       try {
         fs.rmdirSync(tempDir);
-      } catch {}
+      } catch {
+        // Ignore cleanup errors
+      }
     }
-  } catch (error) {}
+  } catch {
+    // Ignore cleanup errors
+  }
 }
 
 process.on("exit", () => {
   if (sqlite) {
     try {
       sqlite.close();
-    } catch {}
+    } catch {
+      // Ignore close errors on exit
+    }
   }
 });
 

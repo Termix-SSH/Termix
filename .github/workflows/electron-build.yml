@@ -12,6 +12,7 @@ on:
           - all
           - windows
           - linux
+          - macos
 
 jobs:
   build-windows:
@@ -91,3 +92,167 @@ jobs:
           name: Termix-Linux-Portable
           path: Termix-Linux-Portable.zip
           retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    if: github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all'
+    needs: []
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
+          npm install --force @rollup/rollup-darwin-arm64
+
+      - name: Check for Code Signing Certificates
+        id: check_certs
+        run: |
+          if [ -n "${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}" ] && [ -n "${{ secrets.MAC_P12_PASSWORD }}" ]; then
+            echo "has_certs=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_certs=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Code signing certificates not configured. MAS build will be unsigned."
+          fi
+
+      - name: Import Code Signing Certificates
+        if: steps.check_certs.outputs.has_certs == 'true'
+        env:
+          MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
+          MAC_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.MAC_INSTALLER_CERTIFICATE_BASE64 }}
+          MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
+          MAC_KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
+        run: |
+          APP_CERT_PATH=$RUNNER_TEMP/app_certificate.p12
+          INSTALLER_CERT_PATH=$RUNNER_TEMP/installer_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # Decode certificates
+          echo -n "$MAC_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $APP_CERT_PATH
+
+          if [ -n "$MAC_INSTALLER_CERTIFICATE_BASE64" ]; then
+            echo "Decoding installer certificate..."
+            echo -n "$MAC_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $INSTALLER_CERT_PATH
+          else
+            echo "⚠️ MAC_INSTALLER_CERTIFICATE_BASE64 is empty"
+          fi
+
+          # Create and configure keychain
+          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import application certificate
+          echo "Importing application certificate..."
+          security import $APP_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+
+          # Import installer certificate if it exists
+          if [ -f "$INSTALLER_CERT_PATH" ]; then
+            echo "Importing installer certificate..."
+            security import $INSTALLER_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          else
+            echo "⚠️ Installer certificate file not found, skipping import"
+          fi
+
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          echo "Imported certificates:"
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
+
+      - name: Set version for build
+        if: steps.check_certs.outputs.has_certs == 'true'
+        run: |
+          # Get current version and extract major.minor
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          MAJOR_MINOR=$(echo $CURRENT_VERSION | cut -d. -f1-2)
+          NEW_VERSION="${MAJOR_MINOR}.${{ github.run_number }}"
+
+          npm version $NEW_VERSION --no-git-tag-version
+          echo "✅ Version set to: $NEW_VERSION"
+
+      - name: Build macOS App Store Package
+        if: steps.check_certs.outputs.has_certs == 'true'
+        env:
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+        run: npm run build:mac
+
+      - name: List release directory
+        if: steps.check_certs.outputs.has_certs == 'true'
+        run: |
+          echo "Contents of release directory:"
+          ls -R release/ || echo "Release directory not found"
+
+      - name: Upload macOS MAS Artifact
+        if: steps.check_certs.outputs.has_certs == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termix-macOS-MAS
+          path: |
+            release/*.pkg
+            release/mas/*.pkg
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Check for App Store Connect API credentials
+        if: steps.check_certs.outputs.has_certs == 'true'
+        id: check_asc_creds
+        run: |
+          if [ -n "${{ secrets.APPLE_KEY_ID }}" ] && [ -n "${{ secrets.APPLE_ISSUER_ID }}" ] && [ -n "${{ secrets.APPLE_KEY_CONTENT }}" ]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "✅ App Store Connect API credentials found. Will deploy to App Store Connect."
+          else
+            echo "has_credentials=false" >> $GITHUB_OUTPUT
+            echo "⚠️ App Store Connect API credentials not configured. Skipping deployment."
+            echo "Add APPLE_KEY_ID, APPLE_ISSUER_ID, and APPLE_KEY_CONTENT secrets to enable automatic deployment."
+          fi
+
+      - name: Setup Ruby for Fastlane
+        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      - name: Install Fastlane
+        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: |
+          gem install fastlane -N
+          fastlane --version
+
+      - name: Deploy to App Store Connect (TestFlight)
+        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: |
+          PKG_FILE=$(find release -name "*.pkg" -type f | head -n 1)
+          if [ -z "$PKG_FILE" ]; then
+            echo "Error: No .pkg file found in release directory"
+            exit 1
+          fi
+          echo "Found package: $PKG_FILE"
+
+          # Create API key file
+          mkdir -p ~/private_keys
+          echo "${{ secrets.APPLE_KEY_CONTENT }}" | base64 --decode > ~/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8
+
+          # Upload to App Store Connect using xcrun altool
+          xcrun altool --upload-app -f "$PKG_FILE" \
+            --type macos \
+            --apiKey "${{ secrets.APPLE_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APPLE_ISSUER_ID }}"
+
+          echo "✅ Upload complete! Build will appear in App Store Connect after processing (10-30 minutes)"
+        continue-on-error: true
+
+      - name: Clean up keychain
+        if: always() && steps.check_certs.outputs.has_certs == 'true'
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true

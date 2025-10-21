@@ -23,6 +23,18 @@ interface JWTPayload {
   exp?: number;
 }
 
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+  pendingTOTP?: boolean;
+  dataKey?: Buffer;
+}
+
+interface RequestWithHeaders extends Request {
+  headers: Request["headers"] & {
+    "x-forwarded-proto"?: string;
+  };
+}
+
 class AuthManager {
   private static instance: AuthManager;
   private systemCrypto: SystemCrypto;
@@ -108,7 +120,6 @@ class AuthManager {
 
       if (migrationResult.migrated) {
         await saveMemoryDatabaseToFile();
-      } else {
       }
     } catch (error) {
       databaseLogger.error("Lazy encryption migration failed", error, {
@@ -164,7 +175,10 @@ class AuthManager {
     });
   }
 
-  getSecureCookieOptions(req: any, maxAge: number = 24 * 60 * 60 * 1000) {
+  getSecureCookieOptions(
+    req: RequestWithHeaders,
+    maxAge: number = 24 * 60 * 60 * 1000,
+  ) {
     return {
       httpOnly: false,
       secure: req.secure || req.headers["x-forwarded-proto"] === "https",
@@ -176,10 +190,11 @@ class AuthManager {
 
   createAuthMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
-      let token = req.cookies?.jwt;
+      const authReq = req as AuthenticatedRequest;
+      let token = authReq.cookies?.jwt;
 
       if (!token) {
-        const authHeader = req.headers["authorization"];
+        const authHeader = authReq.headers["authorization"];
         if (authHeader?.startsWith("Bearer ")) {
           token = authHeader.split(" ")[1];
         }
@@ -195,15 +210,16 @@ class AuthManager {
         return res.status(401).json({ error: "Invalid token" });
       }
 
-      (req as any).userId = payload.userId;
-      (req as any).pendingTOTP = payload.pendingTOTP;
+      authReq.userId = payload.userId;
+      authReq.pendingTOTP = payload.pendingTOTP;
       next();
     };
   }
 
   createDataAccessMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
-      const userId = (req as any).userId;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.userId;
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
@@ -216,19 +232,26 @@ class AuthManager {
         });
       }
 
-      (req as any).dataKey = dataKey;
+      authReq.dataKey = dataKey;
       next();
     };
   }
 
   createAdminMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
-      const authHeader = req.headers["authorization"];
-      if (!authHeader?.startsWith("Bearer ")) {
-        return res.status(401).json({ error: "Missing Authorization header" });
+      let token = req.cookies?.jwt;
+
+      if (!token) {
+        const authHeader = req.headers["authorization"];
+        if (authHeader?.startsWith("Bearer ")) {
+          token = authHeader.split(" ")[1];
+        }
       }
 
-      const token = authHeader.split(" ")[1];
+      if (!token) {
+        return res.status(401).json({ error: "Missing authentication token" });
+      }
+
       const payload = await this.verifyJWTToken(token);
 
       if (!payload) {
@@ -257,8 +280,9 @@ class AuthManager {
           return res.status(403).json({ error: "Admin access required" });
         }
 
-        (req as any).userId = payload.userId;
-        (req as any).pendingTOTP = payload.pendingTOTP;
+        const authReq = req as AuthenticatedRequest;
+        authReq.userId = payload.userId;
+        authReq.pendingTOTP = payload.pendingTOTP;
         next();
       } catch (error) {
         databaseLogger.error("Failed to verify admin privileges", error, {

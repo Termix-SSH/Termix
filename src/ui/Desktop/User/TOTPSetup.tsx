@@ -66,8 +66,9 @@ export function TOTPSetup({
       setSecret(response.secret);
       setSetupStep("qr");
       setIsSettingUp(true);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Failed to start TOTP setup");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error?.response?.data?.error || "Failed to start TOTP setup");
     } finally {
       setLoading(false);
     }
@@ -86,8 +87,9 @@ export function TOTPSetup({
       setBackupCodes(response.backup_codes);
       setSetupStep("backup");
       toast.success(t("auth.twoFactorEnabledSuccess"));
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Invalid verification code");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error?.response?.data?.error || "Invalid verification code");
     } finally {
       setLoading(false);
     }
@@ -105,8 +107,9 @@ export function TOTPSetup({
       setDisableCode("");
       onStatusChange?.(false);
       toast.success(t("auth.twoFactorDisabled"));
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Failed to disable TOTP");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error?.response?.data?.error || "Failed to disable TOTP");
     } finally {
       setLoading(false);
     }
@@ -122,8 +125,11 @@ export function TOTPSetup({
       );
       setBackupCodes(response.backup_codes);
       toast.success(t("auth.newBackupCodesGenerated"));
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Failed to generate backup codes");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(
+        error?.response?.data?.error || "Failed to generate backup codes",
+      );
     } finally {
       setLoading(false);
     }

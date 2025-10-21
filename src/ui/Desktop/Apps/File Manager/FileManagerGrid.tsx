@@ -166,7 +166,6 @@ const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
 export function FileManagerGrid({
   files,
   selectedFiles,
-  onFileSelect,
   onFileOpen,
   onSelectionChange,
   currentPath,
@@ -188,7 +187,6 @@ export function FileManagerGrid({
   onUndo,
   onFileDrop,
   onFileDiff,
-  onSystemDragStart,
   onSystemDragEnd,
   hasClipboard,
   createIntent,
@@ -327,7 +325,6 @@ export function FileManagerGrid({
       dragState.files[0].type === "file"
     ) {
       onFileDiff?.(dragState.files[0], targetFile);
-    } else {
     }
 
     setDragState({ type: "none", files: [], counter: 0 });
@@ -429,16 +426,6 @@ export function FileManagerGrid({
     setIsEditingPath(false);
   };
 
-  const handlePathInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      confirmEditingPath();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancelEditingPath();
-    }
-  };
-
   useEffect(() => {
     if (!isEditingPath) {
       setEditPathValue(currentPath);
@@ -458,8 +445,6 @@ export function FileManagerGrid({
           type: "external",
           counter: prev.counter + 1,
         }));
-        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-        }
       }
     },
     [dragState.type],
@@ -620,7 +605,7 @@ export function FileManagerGrid({
   );
 
   useEffect(() => {
-    const handleGlobalMouseUp = (e: MouseEvent) => {
+    const handleGlobalMouseUp = () => {
       if (isSelecting) {
         setIsSelecting(false);
         setSelectionStart(null);

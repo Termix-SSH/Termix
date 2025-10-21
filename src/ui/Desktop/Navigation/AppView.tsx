@@ -10,13 +10,23 @@ import {
 } from "@/components/ui/resizable.tsx";
 import * as ResizablePrimitive from "react-resizable-panels";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
-import {
-  LucideRefreshCcw,
-  LucideRefreshCw,
-  RefreshCcw,
-  RefreshCcwDot,
-} from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
+
+interface TabData {
+  id: number;
+  type: string;
+  title: string;
+  terminalRef?: {
+    current?: {
+      fit?: () => void;
+      notifyResize?: () => void;
+      refresh?: () => void;
+    };
+  };
+  hostConfig?: unknown;
+  [key: string]: unknown;
+}
 
 interface TerminalViewProps {
   isTopbarOpen?: boolean;
@@ -25,11 +35,16 @@ interface TerminalViewProps {
 export function AppView({
   isTopbarOpen = true,
 }: TerminalViewProps): React.ReactElement {
-  const { tabs, currentTab, allSplitScreenTab, removeTab } = useTabs() as any;
+  const { tabs, currentTab, allSplitScreenTab, removeTab } = useTabs() as {
+    tabs: TabData[];
+    currentTab: number;
+    allSplitScreenTab: number[];
+    removeTab: (id: number) => void;
+  };
   const { state: sidebarState } = useSidebar();
 
   const terminalTabs = tabs.filter(
-    (tab: any) =>
+    (tab: TabData) =>
       tab.type === "terminal" ||
       tab.type === "server" ||
       tab.type === "file_manager",
@@ -59,7 +74,7 @@ export function AppView({
       const splitIds = allSplitScreenTab as number[];
       visibleIds.push(currentTab, ...splitIds.filter((i) => i !== currentTab));
     }
-    terminalTabs.forEach((t: any) => {
+    terminalTabs.forEach((t: TabData) => {
       if (visibleIds.includes(t.id)) {
         const ref = t.terminalRef?.current;
         if (ref?.fit) ref.fit();
@@ -125,16 +140,16 @@ export function AppView({
 
   const renderTerminalsLayer = () => {
     const styles: Record<number, React.CSSProperties> = {};
-    const splitTabs = terminalTabs.filter((tab: any) =>
+    const splitTabs = terminalTabs.filter((tab: TabData) =>
       allSplitScreenTab.includes(tab.id),
     );
-    const mainTab = terminalTabs.find((tab: any) => tab.id === currentTab);
+    const mainTab = terminalTabs.find((tab: TabData) => tab.id === currentTab);
     const layoutTabs = [
       mainTab,
       ...splitTabs.filter(
-        (t: any) => t && t.id !== (mainTab && (mainTab as any).id),
+        (t: TabData) => t && t.id !== (mainTab && (mainTab as TabData).id),
       ),
-    ].filter(Boolean) as any[];
+    ].filter((t): t is TabData => t !== null && t !== undefined);
 
     if (allSplitScreenTab.length === 0 && mainTab) {
       const isFileManagerTab = mainTab.type === "file_manager";
@@ -150,7 +165,7 @@ export function AppView({
         opacity: ready ? 1 : 0,
       };
     } else {
-      layoutTabs.forEach((t: any) => {
+      layoutTabs.forEach((t: TabData) => {
         const rect = panelRects[String(t.id)];
         const parentRect = containerRef.current?.getBoundingClientRect();
         if (rect && parentRect) {
@@ -171,7 +186,7 @@ export function AppView({
 
     return (
       <div className="absolute inset-0 z-[1]">
-        {terminalTabs.map((t: any) => {
+        {terminalTabs.map((t: TabData) => {
           const hasStyle = !!styles[t.id];
           const isVisible =
             hasStyle || (allSplitScreenTab.length === 0 && t.id === currentTab);
@@ -241,16 +256,16 @@ export function AppView({
   };
 
   const renderSplitOverlays = () => {
-    const splitTabs = terminalTabs.filter((tab: any) =>
+    const splitTabs = terminalTabs.filter((tab: TabData) =>
       allSplitScreenTab.includes(tab.id),
     );
-    const mainTab = terminalTabs.find((tab: any) => tab.id === currentTab);
+    const mainTab = terminalTabs.find((tab: TabData) => tab.id === currentTab);
     const layoutTabs = [
       mainTab,
       ...splitTabs.filter(
-        (t: any) => t && t.id !== (mainTab && (mainTab as any).id),
+        (t: TabData) => t && t.id !== (mainTab && (mainTab as TabData).id),
       ),
-    ].filter(Boolean) as any[];
+    ].filter((t): t is TabData => t !== null && t !== undefined);
     if (allSplitScreenTab.length === 0) return null;
 
     const handleStyle = {
@@ -258,13 +273,16 @@ export function AppView({
       zIndex: 12,
       background: "var(--color-dark-border)",
     } as React.CSSProperties;
-    const commonGroupProps = {
+    const commonGroupProps: {
+      onLayout: () => void;
+      onResize: () => void;
+    } = {
       onLayout: scheduleMeasureAndFit,
       onResize: scheduleMeasureAndFit,
-    } as any;
+    };
 
     if (layoutTabs.length === 2) {
-      const [a, b] = layoutTabs as any[];
+      const [a, b] = layoutTabs;
       return (
         <div className="absolute inset-0 z-[10] pointer-events-none">
           <ResizablePrimitive.PanelGroup
@@ -316,7 +334,7 @@ export function AppView({
       );
     }
     if (layoutTabs.length === 3) {
-      const [a, b, c] = layoutTabs as any[];
+      const [a, b, c] = layoutTabs;
       return (
         <div className="absolute inset-0 z-[10] pointer-events-none">
           <ResizablePrimitive.PanelGroup
@@ -404,7 +422,7 @@ export function AppView({
       );
     }
     if (layoutTabs.length === 4) {
-      const [a, b, c, d] = layoutTabs as any[];
+      const [a, b, c, d] = layoutTabs;
       return (
         <div className="absolute inset-0 z-[10] pointer-events-none">
           <ResizablePrimitive.PanelGroup
@@ -529,7 +547,7 @@ export function AppView({
     return null;
   };
 
-  const currentTabData = tabs.find((tab: any) => tab.id === currentTab);
+  const currentTabData = tabs.find((tab: TabData) => tab.id === currentTab);
   const isFileManager = currentTabData?.type === "file_manager";
   const isSplitScreen = allSplitScreenTab.length > 0;
 

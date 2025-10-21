@@ -21,7 +21,9 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       if (persistentConfig.parsed) {
         Object.assign(process.env, persistentConfig.parsed);
       }
-    } catch {}
+    } catch {
+      // Ignore errors if .env file doesn't exist
+    }
 
     let version = "unknown";
 
@@ -73,7 +75,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
           version = foundVersion;
           break;
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
@@ -102,6 +104,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await import("./ssh/tunnel.js");
     await import("./ssh/file-manager.js");
     await import("./ssh/server-stats.js");
+    await import("./homepage.js");
 
     process.on("SIGINT", () => {
       systemLogger.info(
@@ -126,7 +129,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       process.exit(1);
     });
 
-    process.on("unhandledRejection", (reason, promise) => {
+    process.on("unhandledRejection", (reason) => {
       systemLogger.error("Unhandled promise rejection", reason, {
         operation: "error_handling",
       });

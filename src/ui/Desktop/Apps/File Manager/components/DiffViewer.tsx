@@ -61,23 +61,19 @@ export function DiffViewer({
           userId: sshHost.userId,
         });
       }
-    } catch (error) {
-      try {
-        await connectSSH(sshSessionId, {
-          hostId: sshHost.id,
-          ip: sshHost.ip,
-          port: sshHost.port,
-          username: sshHost.username,
-          password: sshHost.password,
-          sshKey: sshHost.key,
-          keyPassword: sshHost.keyPassword,
-          authType: sshHost.authType,
-          credentialId: sshHost.credentialId,
-          userId: sshHost.userId,
-        });
-      } catch (reconnectError) {
-        throw reconnectError;
-      }
+    } catch {
+      await connectSSH(sshSessionId, {
+        hostId: sshHost.id,
+        ip: sshHost.ip,
+        port: sshHost.port,
+        username: sshHost.username,
+        password: sshHost.password,
+        sshKey: sshHost.key,
+        keyPassword: sshHost.keyPassword,
+        authType: sshHost.authType,
+        credentialId: sshHost.credentialId,
+        userId: sshHost.userId,
+      });
     }
   };
 
@@ -100,15 +96,19 @@ export function DiffViewer({
 
       setContent1(response1.content || "");
       setContent2(response2.content || "");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load files for diff:", error);
 
-      const errorData = error?.response?.data;
+      const err = error as {
+        message?: string;
+        response?: { data?: { tooLarge?: boolean; error?: string } };
+      };
+      const errorData = err?.response?.data;
       if (errorData?.tooLarge) {
         setError(t("fileManager.fileTooLarge", { error: errorData.error }));
       } else if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        err.message?.includes("connection") ||
+        err.message?.includes("established")
       ) {
         setError(
           t("fileManager.sshConnectionFailed", {
@@ -121,9 +121,7 @@ export function DiffViewer({
         setError(
           t("fileManager.loadFileFailed", {
             error:
-              error.message ||
-              errorData?.error ||
-              t("fileManager.unknownError"),
+              err.message || errorData?.error || t("fileManager.unknownError"),
           }),
         );
       }
@@ -161,12 +159,13 @@ export function DiffViewer({
           t("fileManager.downloadFileSuccess", { name: file.name }),
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to download file:", error);
+      const err = error as { message?: string };
       toast.error(
         t("fileManager.downloadFileFailed") +
           ": " +
-          (error.message || t("fileManager.unknownError")),
+          (err.message || t("fileManager.unknownError")),
       );
     }
   };

@@ -11,7 +11,7 @@ export interface LogContext {
   sessionId?: string;
   requestId?: string;
   duration?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const SENSITIVE_FIELDS = [
@@ -253,5 +253,6 @@ export const apiLogger = new Logger("API", "🌐", "#3b82f6");
 export const authLogger = new Logger("AUTH", "🔐", "#ef4444");
 export const systemLogger = new Logger("SYSTEM", "🚀", "#14b8a6");
 export const versionLogger = new Logger("VERSION", "📦", "#8b5cf6");
+export const homepageLogger = new Logger("HOMEPAGE", "🏠", "#ec4899");
 
 export const logger = systemLogger;
