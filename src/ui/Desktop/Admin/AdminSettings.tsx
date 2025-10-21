@@ -107,6 +107,7 @@ export function AdminSettings({
   const [showPasswordInput, setShowPasswordInput] = React.useState(false);
   const [importPassword, setImportPassword] = React.useState("");
 
+  // Only local accounts need to confirm their password before we post the import request.
   const requiresImportPassword = React.useMemo(
     () => !currentUser?.is_oidc,
     [currentUser?.is_oidc],
@@ -129,6 +130,7 @@ export function AdminSettings({
           toast.error(t("admin.failedToFetchOidcConfig"));
         }
       });
+    // Capture the current session so we know whether to ask for a password later.
     getUserInfo()
       .then((info) => {
         if (info) {
@@ -386,6 +388,7 @@ export function AdminSettings({
       const formData = new FormData();
       formData.append("file", importFile);
       if (requiresImportPassword) {
+        // Preserve the existing password flow for non-OIDC accounts.
         formData.append("password", importPassword);
       }
 
@@ -996,6 +999,7 @@ export function AdminSettings({
                           </span>
                         </Button>
                       </div>
+                      {/* Only render the password field when a local account is performing the import. */}
                       {importFile && requiresImportPassword && (
                         <div className="space-y-2">
                           <Label htmlFor="import-password">Password</Label>
