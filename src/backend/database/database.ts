@@ -918,17 +918,38 @@ app.post(
 
       const userId = (req as any).userId;
       const { password } = req.body;
+      const mainDb = getDb();
 
-      if (!password) {
-        return res.status(400).json({
-          error: "Password required for import",
-          code: "PASSWORD_REQUIRED",
-        });
+      const userRecords = await mainDb
+        .select()
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (!userRecords || userRecords.length === 0) {
+        return res.status(404).json({ error: "User not found" });
       }
 
-      const unlocked = await authManager.authenticateUser(userId, password);
-      if (!unlocked) {
-        return res.status(401).json({ error: "Invalid password" });
+      const isOidcUser = !!userRecords[0].is_oidc;
+
+      if (!isOidcUser) {
+        if (!password) {
+          return res.status(400).json({
+            error: "Password required for import",
+            code: "PASSWORD_REQUIRED",
+          });
+        }
+
+        const unlocked = await authManager.authenticateUser(userId, password);
+        if (!unlocked) {
+          return res.status(401).json({ error: "Invalid password" });
+        }
+      } else if (!DataCrypto.getUserDataKey(userId)) {
+        const oidcUnlocked = await authManager.authenticateOIDCUser(userId);
+        if (!oidcUnlocked) {
+          return res.status(403).json({
+            error: "Failed to unlock user data with SSO credentials",
+          });
+        }
       }
 
       apiLogger.info("Importing SQLite data", {
@@ -939,7 +960,13 @@ app.post(
         mimetype: req.file.mimetype,
       });
 
-      const userDataKey = DataCrypto.getUserDataKey(userId);
+      let userDataKey = DataCrypto.getUserDataKey(userId);
+      if (!userDataKey && isOidcUser) {
+        const oidcUnlocked = await authManager.authenticateOIDCUser(userId);
+        if (oidcUnlocked) {
+          userDataKey = DataCrypto.getUserDataKey(userId);
+        }
+      }
       if (!userDataKey) {
         throw new Error("User data not unlocked");
       }
@@ -993,7 +1020,6 @@ app.post(
       };
 
       try {
-        const mainDb = getDb();
 
         try {
           const importedHosts = importDb
