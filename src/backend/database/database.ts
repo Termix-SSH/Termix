@@ -932,6 +932,7 @@ app.post(
       const isOidcUser = !!userRecords[0].is_oidc;
 
       if (!isOidcUser) {
+        // Local accounts still prove knowledge of the password so their DEK can be derived again.
         if (!password) {
           return res.status(400).json({
             error: "Password required for import",
@@ -944,6 +945,7 @@ app.post(
           return res.status(401).json({ error: "Invalid password" });
         }
       } else if (!DataCrypto.getUserDataKey(userId)) {
+        // OIDC users skip the password prompt; make sure their DEK is unlocked via the OIDC session.
         const oidcUnlocked = await authManager.authenticateOIDCUser(userId);
         if (!oidcUnlocked) {
           return res.status(403).json({
@@ -962,6 +964,7 @@ app.post(
 
       let userDataKey = DataCrypto.getUserDataKey(userId);
       if (!userDataKey && isOidcUser) {
+        // authenticateOIDCUser lazily provisions the session key; retry the fetch when it succeeds.
         const oidcUnlocked = await authManager.authenticateOIDCUser(userId);
         if (oidcUnlocked) {
           userDataKey = DataCrypto.getUserDataKey(userId);
