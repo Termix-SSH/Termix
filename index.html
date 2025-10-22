@@ -5,6 +5,37 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Termix</title>
+    <style>
+      /* Custom scrollbar styles */
+      .hide-scrollbar {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+      }
+
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+      }
+
+      .skinny-scrollbar {
+        scrollbar-width: thin; /* Firefox */
+        scrollbar-color: #4a4a4a #1e1e21; /* thumb and track color for Firefox */
+      }
+
+      .skinny-scrollbar::-webkit-scrollbar {
+        width: 6px; /* width for vertical scrollbar */
+        height: 6px; /* height for horizontal scrollbar */
+      }
+
+      .skinny-scrollbar::-webkit-scrollbar-track {
+        background: #1e1e21; /* track color */
+      }
+
+      .skinny-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #4a4a4a; /* thumb color */
+        border-radius: 3px; /* roundness of the thumb */
+        border: 1px solid #1e1e21; /* border around the thumb */
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -546,7 +546,9 @@ export function Dashboard({
                         {t("dashboard.reset")}
                       </Button>
                     </div>
-                    <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-y-auto overflow-x-hidden">
+                    <div
+                      className={`grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-x-hidden ${recentActivityLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
+                    >
                       {recentActivityLoading ? (
                         <div className="flex flex-row items-center text-muted-foreground text-sm">
                           <Loader2 className="animate-spin mr-2" size={16} />
@@ -650,7 +652,9 @@ export function Dashboard({
                       <ChartLine className="mr-3" />
                       {t("dashboard.serverStats")}
                     </p>
-                    <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-y-auto overflow-x-hidden">
+                    <div
+                      className={`grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-x-hidden ${serverStatsLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
+                    >
                       {serverStatsLoading ? (
                         <div className="flex flex-row items-center text-muted-foreground text-sm">
                           <Loader2 className="animate-spin mr-2" size={16} />

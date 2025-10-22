@@ -486,7 +486,7 @@ export function TopNavbar({
       >
         <div
           ref={containerRef}
-          className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto gap-1"
+          className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden skinny-scrollbar gap-1"
         >
           {tabs.map((tab: TabData, index: number) => {
             const isActive = tab.id === currentTab;
