@@ -153,11 +153,26 @@ export function TabProvider({ children }: TabProviderProps) {
     return tabs.find((tab) => tab.id === tabId);
   };
 
+  const isReorderingRef = useRef(false);
+
   const reorderTabs = (fromIndex: number, toIndex: number) => {
+    if (isReorderingRef.current) return;
+
+    isReorderingRef.current = true;
+
     setTabs((prev) => {
       const newTabs = [...prev];
       const [movedTab] = newTabs.splice(fromIndex, 1);
-      newTabs.splice(toIndex, 0, movedTab);
+
+      const maxIndex = newTabs.length;
+      const safeToIndex = Math.min(toIndex, maxIndex);
+
+      newTabs.splice(safeToIndex, 0, movedTab);
+
+      setTimeout(() => {
+        isReorderingRef.current = false;
+      }, 100);
+
       return newTabs;
     });
   };

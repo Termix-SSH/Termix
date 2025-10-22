@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Terminal } from "@/ui/Desktop/Apps/Terminal/Terminal.tsx";
 import { Server as ServerView } from "@/ui/Desktop/Apps/Server/Server.tsx";
 import { FileManager } from "@/ui/Desktop/Apps/File Manager/FileManager.tsx";
@@ -43,11 +43,15 @@ export function AppView({
   };
   const { state: sidebarState } = useSidebar();
 
-  const terminalTabs = tabs.filter(
-    (tab: TabData) =>
-      tab.type === "terminal" ||
-      tab.type === "server" ||
-      tab.type === "file_manager",
+  const terminalTabs = useMemo(
+    () =>
+      tabs.filter(
+        (tab: TabData) =>
+          tab.type === "terminal" ||
+          tab.type === "server" ||
+          tab.type === "file_manager",
+      ),
+    [tabs],
   );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -107,9 +111,61 @@ export function AppView({
     });
   };
 
+  const prevStateRef = useRef({
+    terminalTabsLength: terminalTabs.length,
+    currentTab,
+    splitScreenTabsStr: allSplitScreenTab.join(","),
+    terminalTabIds: terminalTabs.map((t) => t.id).join(","),
+  });
+
   useEffect(() => {
-    hideThenFit();
-  }, [currentTab, terminalTabs.length, allSplitScreenTab.join(",")]);
+    const prev = prevStateRef.current;
+    const currentTabIds = terminalTabs.map((t) => t.id).join(",");
+
+    const lengthChanged = prev.terminalTabsLength !== terminalTabs.length;
+    const currentTabChanged = prev.currentTab !== currentTab;
+    const splitChanged =
+      prev.splitScreenTabsStr !== allSplitScreenTab.join(",");
+    const tabIdsChanged = prev.terminalTabIds !== currentTabIds;
+
+    // Only trigger hideThenFit if tabs were added/removed (not just reordered)
+    // or if current tab or split screen changed
+    const isJustReorder =
+      !lengthChanged && tabIdsChanged && !currentTabChanged && !splitChanged;
+
+    console.log("AppView useEffect:", {
+      lengthChanged,
+      currentTabChanged,
+      splitChanged,
+      tabIdsChanged,
+      isJustReorder,
+      willCallHideThenFit:
+        (lengthChanged || currentTabChanged || splitChanged) && !isJustReorder,
+    });
+
+    if (
+      (lengthChanged || currentTabChanged || splitChanged) &&
+      !isJustReorder
+    ) {
+      console.log(
+        "CALLING hideThenFit - this will set ready=false and cause Terminal isVisible to become false!",
+      );
+      hideThenFit();
+    }
+
+    // Update the ref for next comparison
+    prevStateRef.current = {
+      terminalTabsLength: terminalTabs.length,
+      currentTab,
+      splitScreenTabsStr: allSplitScreenTab.join(","),
+      terminalTabIds: currentTabIds,
+    };
+  }, [
+    currentTab,
+    terminalTabs.length,
+    allSplitScreenTab.join(","),
+    terminalTabs,
+  ]);
 
   useEffect(() => {
     scheduleMeasureAndFit();
@@ -137,6 +193,14 @@ export function AppView({
   }, []);
 
   const HEADER_H = 28;
+
+  // Create a stable map of terminal IDs to preserve component identity
+  const terminalIdMapRef = useRef<Set<number>>(new Set());
+
+  // Track all terminal IDs that have ever existed
+  useEffect(() => {
+    terminalTabs.forEach((t) => terminalIdMapRef.current.add(t.id));
+  }, [terminalTabs]);
 
   const renderTerminalsLayer = () => {
     const styles: Record<number, React.CSSProperties> = {};
@@ -184,9 +248,13 @@ export function AppView({
       });
     }
 
+    // Render in a STABLE order by ID to prevent React from unmounting
+    // Sort by ID instead of array position
+    const sortedTerminalTabs = [...terminalTabs].sort((a, b) => a.id - b.id);
+
     return (
       <div className="absolute inset-0 z-[1]">
-        {terminalTabs.map((t: TabData) => {
+        {sortedTerminalTabs.map((t: TabData) => {
           const hasStyle = !!styles[t.id];
           const isVisible =
             hasStyle || (allSplitScreenTab.length === 0 && t.id === currentTab);
@@ -202,6 +270,7 @@ export function AppView({
               } as React.CSSProperties);
 
           const effectiveVisible = isVisible && ready;
+
           return (
             <div key={t.id} style={finalStyle}>
               <div className="absolute inset-0 rounded-md bg-dark-bg">
