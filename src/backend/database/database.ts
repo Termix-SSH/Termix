@@ -678,7 +678,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.authType,
           decrypted.password || null,
           decrypted.key || null,
-          decrypted.keyPassword || decrypted.key_password || null,
+          decrypted.key_password || null,
           decrypted.keyType || null,
           decrypted.autostartPassword || null,
           decrypted.autostartKey || null,
@@ -721,9 +721,9 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.username,
           decrypted.password || null,
           decrypted.key || null,
-          decrypted.privateKey || decrypted.private_key || null,
-          decrypted.publicKey || decrypted.public_key || null,
-          decrypted.keyPassword || decrypted.key_password || null,
+          decrypted.private_key || null,
+          decrypted.public_key || null,
+          decrypted.key_password || null,
           decrypted.keyType || null,
           decrypted.detectedKeyType || null,
           decrypted.usageCount || 0,
@@ -1006,7 +1006,6 @@ app.post(
       };
 
       try {
-
         try {
           const importedHosts = importDb
             .prepare("SELECT * FROM ssh_data")

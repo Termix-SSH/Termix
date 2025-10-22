@@ -90,9 +90,9 @@ export function HostManagerEditor({
     Array<{ id: number; username: string; authType: string }>
   >([]);
 
-  const [authTab, setAuthTab] = useState<"password" | "key" | "credential">(
-    "password",
-  );
+  const [authTab, setAuthTab] = useState<
+    "password" | "key" | "credential" | "none"
+  >("password");
   const [keyInputMethod, setKeyInputMethod] = useState<"upload" | "paste">(
     "upload",
   );
@@ -179,7 +179,7 @@ export function HostManagerEditor({
       folder: z.string().optional(),
       tags: z.array(z.string().min(1)).default([]),
       pin: z.boolean().default(false),
-      authType: z.enum(["password", "key", "credential"]),
+      authType: z.enum(["password", "key", "credential", "none"]),
       credentialId: z.number().optional().nullable(),
       password: z.string().optional(),
       key: z.any().optional().nullable(),
@@ -241,6 +241,11 @@ export function HostManagerEditor({
         }),
     })
     .superRefine((data, ctx) => {
+      if (data.authType === "none") {
+        // No credentials required for "none" auth type - will use keyboard-interactive
+        return;
+      }
+
       if (data.authType === "password") {
         if (
           !data.password ||
@@ -356,7 +361,9 @@ export function HostManagerEditor({
         ? "credential"
         : cleanedHost.key
           ? "key"
-          : "password";
+          : cleanedHost.password
+            ? "password"
+            : "none";
       setAuthTab(defaultAuthType);
 
       const formData = {
@@ -367,7 +374,7 @@ export function HostManagerEditor({
         folder: cleanedHost.folder || "",
         tags: cleanedHost.tags || [],
         pin: Boolean(cleanedHost.pin),
-        authType: defaultAuthType as "password" | "key" | "credential",
+        authType: defaultAuthType as "password" | "key" | "credential" | "none",
         credentialId: null,
         password: "",
         key: null,
@@ -922,7 +929,8 @@ export function HostManagerEditor({
                     const newAuthType = value as
                       | "password"
                       | "key"
-                      | "credential";
+                      | "credential"
+                      | "none";
                     setAuthTab(newAuthType);
                     form.setValue("authType", newAuthType);
                   }}
@@ -936,6 +944,7 @@ export function HostManagerEditor({
                     <TabsTrigger value="credential">
                       {t("hosts.credential")}
                     </TabsTrigger>
+                    <TabsTrigger value="none">{t("hosts.none")}</TabsTrigger>
                   </TabsList>
                   <TabsContent value="password">
                     <FormField
@@ -1153,6 +1162,19 @@ export function HostManagerEditor({
                         </FormItem>
                       )}
                     />
+                  </TabsContent>
+                  <TabsContent value="none">
+                    <Alert className="mt-2">
+                      <AlertDescription>
+                        <strong>{t("hosts.noneAuthTitle")}</strong>
+                        <div className="mt-2">
+                          {t("hosts.noneAuthDescription")}
+                        </div>
+                        <div className="mt-2 text-sm">
+                          {t("hosts.noneAuthDetails")}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
                   </TabsContent>
                 </Tabs>
               </TabsContent>

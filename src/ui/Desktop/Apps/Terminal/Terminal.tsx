@@ -613,7 +613,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         fontSize: 14,
         fontFamily:
           '"Caskaydia Cove Nerd Font Mono", "SF Mono", Consolas, "Liberation Mono", monospace',
-        theme: { background: "#18181b", foreground: "#f7f7f7" },
         allowTransparency: true,
         convertEol: true,
         windowsMode: false,
@@ -626,6 +625,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         minimumContrastRatio: 1,
         letterSpacing: 0,
         lineHeight: 1.2,
+
+        theme: { background: "#18181b", foreground: "#f7f7f7" },
       };
 
       const fitAddon = new FitAddon();

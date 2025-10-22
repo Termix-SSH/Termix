@@ -18,7 +18,7 @@ export interface SSHHost {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential";
+  authType: "password" | "key" | "credential" | "none";
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -48,7 +48,7 @@ export interface SSHHostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential";
+  authType: "password" | "key" | "credential" | "none";
   password?: string;
   key?: File | null;
   keyPassword?: string;
@@ -298,7 +298,7 @@ export type ErrorType =
 // AUTHENTICATION TYPES
 // ============================================================================
 
-export type AuthType = "password" | "key" | "credential";
+export type AuthType = "password" | "key" | "credential" | "none";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 

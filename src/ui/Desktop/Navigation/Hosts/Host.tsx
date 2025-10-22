@@ -104,6 +104,7 @@ export function Host({ host }: HostProps): React.ReactElement {
               className="min-w-[160px]"
             >
               <DropdownMenuItem
+                className="font-semibold"
                 onClick={() =>
                   addTab({ type: "server", title, hostConfig: host })
                 }
@@ -111,13 +112,17 @@ export function Host({ host }: HostProps): React.ReactElement {
                 Open Server Details
               </DropdownMenuItem>
               <DropdownMenuItem
+                className="font-semibold"
                 onClick={() =>
                   addTab({ type: "file_manager", title, hostConfig: host })
                 }
               >
                 Open File Manager
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => alert("Settings clicked")}>
+              <DropdownMenuItem
+                className="font-semibold"
+                onClick={() => alert("Settings clicked")}
+              >
                 Edit
               </DropdownMenuItem>
             </DropdownMenuContent>

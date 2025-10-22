@@ -338,6 +338,38 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
       }
 
+      case "password_response": {
+        const passwordData = data as TOTPResponseData; // Same structure
+        if (keyboardInteractiveFinish && passwordData?.code) {
+          const password = passwordData.code;
+          sshLogger.info("Password received from user", {
+            operation: "password_response",
+            userId,
+            passwordLength: password.length,
+          });
+
+          keyboardInteractiveFinish([password]);
+          keyboardInteractiveFinish = null;
+        } else {
+          sshLogger.warn(
+            "Password response received but no callback available",
+            {
+              operation: "password_response_error",
+              userId,
+              hasCallback: !!keyboardInteractiveFinish,
+              hasCode: !!passwordData?.code,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Password authentication state lost. Please reconnect.",
+            }),
+          );
+        }
+        break;
+      }
+
       default:
         sshLogger.warn("Unknown message type received", {
           operation: "websocket_message_unknown_type",
@@ -779,7 +811,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }),
           );
         } else {
-          // Non-TOTP prompts (password, etc.) - respond automatically
+          // Non-TOTP prompts (password, etc.)
           if (keyboardInteractiveResponded) {
             sshLogger.warn(
               "Already responded to keyboard-interactive, ignoring subsequent prompt",
@@ -793,6 +825,54 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
           keyboardInteractiveResponded = true;
 
+          // Check if we have stored credentials for auto-response
+          const hasStoredPassword =
+            resolvedCredentials.password &&
+            resolvedCredentials.authType !== "none";
+
+          if (!hasStoredPassword && resolvedCredentials.authType === "none") {
+            // For "none" auth type, prompt user for all keyboard-interactive inputs
+            const passwordPromptIndex = prompts.findIndex((p) =>
+              /password/i.test(p.prompt),
+            );
+
+            if (passwordPromptIndex !== -1) {
+              // Ask user for password
+              keyboardInteractiveFinish = (userResponses: string[]) => {
+                const userInput = (userResponses[0] || "").trim();
+
+                // Build responses for all prompts
+                const responses = prompts.map((p, index) => {
+                  if (index === passwordPromptIndex) {
+                    return userInput;
+                  }
+                  return "";
+                });
+
+                sshLogger.info(
+                  "User-provided password being sent to SSH server",
+                  {
+                    operation: "interactive_password_verification",
+                    hostId: id,
+                    passwordLength: userInput.length,
+                    totalPrompts: prompts.length,
+                  },
+                );
+
+                finish(responses);
+              };
+
+              ws.send(
+                JSON.stringify({
+                  type: "password_required",
+                  prompt: prompts[passwordPromptIndex].prompt,
+                }),
+              );
+              return;
+            }
+          }
+
+          // Auto-respond with stored credentials
           const responses = prompts.map((p) => {
             if (/password/i.test(p.prompt) && resolvedCredentials.password) {
               return resolvedCredentials.password;
@@ -882,7 +962,23 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     };
 
-    if (resolvedCredentials.authType === "key" && resolvedCredentials.key) {
+    if (resolvedCredentials.authType === "none") {
+      // No credentials provided - rely entirely on keyboard-interactive authentication
+      // This mimics the behavior of the ssh command-line client where it prompts for password/TOTP
+      sshLogger.info(
+        "Using interactive authentication (no stored credentials)",
+        {
+          operation: "ssh_auth_none",
+          hostId: id,
+          ip,
+          username,
+        },
+      );
+      // Don't set password or privateKey - let keyboard-interactive handle everything
+    } else if (
+      resolvedCredentials.authType === "key" &&
+      resolvedCredentials.key
+    ) {
       try {
         if (
           !resolvedCredentials.key.includes("-----BEGIN") ||

@@ -58,12 +58,15 @@ export function TopNavbar({
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(false);
+  const [justDroppedTabId, setJustDroppedTabId] = useState<number | null>(null); // New state variable
   const [dragState, setDragState] = useState<{
+    draggedId: number | null;
     draggedIndex: number | null;
     currentX: number;
     startX: number;
     targetIndex: number | null;
   }>({
+    draggedId: null,
     draggedIndex: null,
     currentX: 0,
     startX: 0,
@@ -71,6 +74,8 @@ export function TopNavbar({
   });
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const tabRefs = React.useRef<Map<number, HTMLDivElement>>(new Map());
+
+  const prevTabsRef = React.useRef<TabData[]>([]);
 
   const handleTabActivate = (tabId: number) => {
     setCurrentTab(tabId);
@@ -249,6 +254,37 @@ export function TopNavbar({
     }
   };
 
+  React.useEffect(() => {
+    if (prevTabsRef.current.length > 0 && tabs !== prevTabsRef.current) {
+      // Check if tabs actually changed
+      console.log("Tabs AFTER reorder (IDs and references):");
+      tabs.forEach((newTab, newIdx) => {
+        const oldTab = prevTabsRef.current.find((t) => t.id === newTab.id);
+        console.log(
+          `  [${newIdx}] ID: ${newTab.id}, Ref:`,
+          newTab,
+          `(Old Ref:`,
+          oldTab,
+          `)`,
+        );
+        if (oldTab && oldTab !== newTab) {
+          console.warn(`  Tab ID ${newTab.id} object reference CHANGED!`);
+        } else if (oldTab && oldTab === newTab) {
+          console.info(`  Tab ID ${newTab.id} object reference PRESERVED.`);
+        }
+      });
+      // Clear prevTabsRef.current only after the comparison is done
+      prevTabsRef.current = [];
+    }
+  }, [tabs]); // Depend only on tabs
+
+  React.useEffect(() => {
+    if (justDroppedTabId !== null) {
+      const timer = setTimeout(() => setJustDroppedTabId(null), 50); // Clear after a short delay
+      return () => clearTimeout(timer);
+    }
+  }, [justDroppedTabId]);
+
   const handleDragStart = (e: React.DragEvent, index: number) => {
     console.log("Drag start:", index, e.clientX);
 
@@ -259,6 +295,7 @@ export function TopNavbar({
     e.dataTransfer.setDragImage(img, 0, 0);
 
     setDragState({
+      draggedId: tabs[index].id,
       draggedIndex: index,
       startX: e.clientX,
       currentX: e.clientX,
@@ -333,9 +370,23 @@ export function TopNavbar({
       // Moving right - find the rightmost tab whose midpoint we've passed
       for (let i = draggedIndex + 1; i < tabBoundaries.length; i++) {
         if (draggedCenter > tabBoundaries[i].mid) {
-          newTargetIndex = i;
+          newTargetIndex = i; // Reverted from i + 1 to i
         } else {
           break;
+        }
+      }
+      // Edge case: if dragged past the last tab, target should be at the very end
+      const lastTabIndex = tabBoundaries.length - 1;
+      if (lastTabIndex >= 0) {
+        // Ensure there's at least one tab
+        const lastTabEl = tabRefs.current.get(lastTabIndex);
+        if (lastTabEl) {
+          const lastTabRect = lastTabEl.getBoundingClientRect();
+          const containerRect = containerRef.current.getBoundingClientRect();
+          const lastTabEndInContainer = lastTabRect.right - containerRect.left;
+          if (currentX > lastTabEndInContainer) {
+            newTargetIndex = tabBoundaries.length; // Insert at the very end
+          }
         }
       }
     }
@@ -378,57 +429,40 @@ export function TopNavbar({
       dragState.targetIndex !== null &&
       dragState.draggedIndex !== dragState.targetIndex
     ) {
+      console.log("Tabs before reorder (IDs and references):");
+      tabs.forEach((tab, idx) =>
+        console.log(`  [${idx}] ID: ${tab.id}, Ref:`, tab),
+      );
+      prevTabsRef.current = tabs; // Store current tabs before reorder
       reorderTabs(dragState.draggedIndex, dragState.targetIndex);
-
-      // Delay clearing drag state to prevent visual jitter
-      // This allows the reorder to complete and re-render before removing transforms
-      setTimeout(() => {
-        setDragState({
-          draggedIndex: null,
-          startX: 0,
-          currentX: 0,
-          targetIndex: null,
-        });
-      }, 0);
-    } else {
-      // No reorder needed, clear immediately
-      setDragState({
-        draggedIndex: null,
-        startX: 0,
-        currentX: 0,
-        targetIndex: null,
-      });
+      if (dragState.draggedId !== null) {
+        setJustDroppedTabId(dragState.draggedId);
+      }
     }
+    // Immediately reset drag state after drop to ensure a single re-render
+    // with updated tabs and cleared drag state.
+    setDragState({
+      draggedId: null,
+      draggedIndex: null,
+      startX: 0,
+      currentX: 0,
+      targetIndex: null,
+    });
   };
 
   const handleDragEnd = () => {
     console.log("Drag end:", dragState);
 
-    if (
-      dragState.draggedIndex !== null &&
-      dragState.targetIndex !== null &&
-      dragState.draggedIndex !== dragState.targetIndex
-    ) {
-      reorderTabs(dragState.draggedIndex, dragState.targetIndex);
-
-      // Delay clearing drag state to prevent visual jitter
-      setTimeout(() => {
-        setDragState({
-          draggedIndex: null,
-          startX: 0,
-          currentX: 0,
-          targetIndex: null,
-        });
-      }, 0);
-    } else {
-      // No reorder needed, clear immediately
-      setDragState({
-        draggedIndex: null,
-        startX: 0,
-        currentX: 0,
-        targetIndex: null,
-      });
-    }
+    // Immediately reset drag state. If a drop occurred, handleDrop has already
+    // initiated the state clear. If the drag was cancelled (e.g., dropped
+    // outside a valid target), this clears the drag state.
+    setDragState({
+      draggedId: null,
+      draggedIndex: null,
+      startX: 0,
+      currentX: 0,
+      targetIndex: null,
+    });
   };
 
   const isSplitScreenActive =
@@ -492,45 +526,62 @@ export function TopNavbar({
                 isSplitScreenActive);
             const disableClose = (isSplitScreenActive && isActive) || isSplit;
 
-            const isDragging = dragState.draggedIndex === index;
-            const dragOffset = isDragging
+            const isDraggingThisTab = dragState.draggedIndex === index;
+            const isTheDraggedTab = tab.id === dragState.draggedId;
+            const isDroppedAndSnapping = tab.id === justDroppedTabId; // New condition
+            const dragOffset = isDraggingThisTab
               ? dragState.currentX - dragState.startX
               : 0;
 
+            // Diagnostic logs
+            if (dragState.draggedIndex !== null) {
+              console.log(
+                `Tab ID: ${tab.id}, Index: ${index}, isDraggingThisTab: ${isDraggingThisTab}, draggedOriginalIndex: ${dragState.draggedIndex}, currentTargetIndex: ${dragState.targetIndex}, isDroppedAndSnapping: ${isDroppedAndSnapping}`,
+              );
+            }
+
             // Calculate transform
             let transform = "";
-            if (isDragging) {
-              // Dragged tab follows cursor
+            if (isDraggingThisTab) {
               transform = `translateX(${dragOffset}px)`;
             } else if (
               dragState.draggedIndex !== null &&
               dragState.targetIndex !== null
             ) {
-              // Other tabs shift to make room
-              const draggedIndex = dragState.draggedIndex;
-              const targetIndex = dragState.targetIndex;
+              const draggedOriginalIndex = dragState.draggedIndex;
+              const currentTargetIndex = dragState.targetIndex;
 
+              // Determine if this tab should shift left or right
               if (
-                draggedIndex < targetIndex &&
-                index > draggedIndex &&
-                index <= targetIndex
+                draggedOriginalIndex < currentTargetIndex && // Dragging rightwards
+                index > draggedOriginalIndex && // This tab is to the right of the original position
+                index <= currentTargetIndex // This tab is at or before the target position
               ) {
-                // Shifting left
-                const draggedTabEl = tabRefs.current.get(draggedIndex);
-                const draggedWidth =
-                  draggedTabEl?.getBoundingClientRect().width || 0;
-                transform = `translateX(-${draggedWidth + 4}px)`;
+                // Shift left to make space
+                const draggedTabWidth =
+                  tabRefs.current
+                    .get(draggedOriginalIndex)
+                    ?.getBoundingClientRect().width || 0;
+                const gap = 4;
+                transform = `translateX(-${draggedTabWidth + gap}px)`;
               } else if (
-                draggedIndex > targetIndex &&
-                index >= targetIndex &&
-                index < draggedIndex
+                draggedOriginalIndex > currentTargetIndex && // Dragging leftwards
+                index >= currentTargetIndex && // This tab is at or after the target position
+                index < draggedOriginalIndex // This tab is to the left of the original position
               ) {
-                // Shifting right
-                const draggedTabEl = tabRefs.current.get(draggedIndex);
-                const draggedWidth =
-                  draggedTabEl?.getBoundingClientRect().width || 0;
-                transform = `translateX(${draggedWidth + 4}px)`;
+                // Shift right to make space
+                const draggedTabWidth =
+                  tabRefs.current
+                    .get(draggedOriginalIndex)
+                    ?.getBoundingClientRect().width || 0;
+                const gap = 4;
+                transform = `translateX(${draggedTabWidth + gap}px)`;
               }
+            }
+
+            // Diagnostic log for transform
+            if (dragState.draggedIndex !== null) {
+              console.log(`  Tab ID: ${tab.id}, Transform: ${transform}`);
             }
 
             return (
@@ -554,10 +605,13 @@ export function TopNavbar({
                 onDragEnd={handleDragEnd}
                 style={{
                   transform,
-                  transition: isDragging ? "none" : "transform 200ms ease-out",
-                  zIndex: isDragging ? 1000 : 1,
+                  transition:
+                    isDraggingThisTab || isDroppedAndSnapping
+                      ? "none"
+                      : "transform 200ms ease-out",
+                  zIndex: isDraggingThisTab ? 1000 : 1,
                   position: "relative",
-                  cursor: isDragging ? "grabbing" : "grab",
+                  cursor: isDraggingThisTab ? "grabbing" : "grab",
                   userSelect: "none",
                   WebkitUserSelect: "none",
                 }}
@@ -592,7 +646,7 @@ export function TopNavbar({
                   disableActivate={disableActivate}
                   disableSplit={disableSplit}
                   disableClose={disableClose}
-                  isDragging={isDragging}
+                  isDragging={isDraggingThisTab}
                   isDragOver={false}
                 />
               </div>
