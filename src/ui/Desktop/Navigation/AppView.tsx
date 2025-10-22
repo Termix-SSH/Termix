@@ -133,23 +133,10 @@ export function AppView({
     const isJustReorder =
       !lengthChanged && tabIdsChanged && !currentTabChanged && !splitChanged;
 
-    console.log("AppView useEffect:", {
-      lengthChanged,
-      currentTabChanged,
-      splitChanged,
-      tabIdsChanged,
-      isJustReorder,
-      willCallHideThenFit:
-        (lengthChanged || currentTabChanged || splitChanged) && !isJustReorder,
-    });
-
     if (
       (lengthChanged || currentTabChanged || splitChanged) &&
       !isJustReorder
     ) {
-      console.log(
-        "CALLING hideThenFit - this will set ready=false and cause Terminal isVisible to become false!",
-      );
       hideThenFit();
     }
 

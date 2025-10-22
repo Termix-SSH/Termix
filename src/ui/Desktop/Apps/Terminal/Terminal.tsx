@@ -720,9 +720,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       setVisible(true);
 
       return () => {
-        console.log(
-          `🔴 Terminal UNMOUNTING - this should NOT happen during drag!`,
-        );
         isUnmountingRef.current = true;
         shouldNotReconnectRef.current = true;
         isReconnectingRef.current = false;
@@ -745,21 +742,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [xtermRef, terminal]);
 
     useEffect(() => {
-      console.log(`📡 Terminal connection useEffect triggered:`, {
-        terminal: !!terminal,
-        hostConfig: !!hostConfig,
-        visible,
-        isConnected,
-        isConnecting,
-      });
-
       if (!terminal || !hostConfig || !visible) return;
 
       if (isConnected || isConnecting) return;
 
-      console.log(
-        `🔌 Initiating NEW connection - this should only happen on mount!`,
-      );
       setIsConnecting(true);
 
       const readyFonts =

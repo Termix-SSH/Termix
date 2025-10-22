@@ -16,6 +16,7 @@ interface TabProps {
   tabType: string;
   title?: string;
   isActive?: boolean;
+  isSplit?: boolean;
   onActivate?: () => void;
   onClose?: () => void;
   onSplit?: () => void;
@@ -32,6 +33,7 @@ export function Tab({
   tabType,
   title,
   isActive,
+  isSplit = false,
   onActivate,
   onClose,
   onSplit,
@@ -47,7 +49,7 @@ export function Tab({
 
   // Firefox-style tab classes using cn utility
   const tabBaseClasses = cn(
-    "relative flex items-center gap-1.5 px-3 min-w-fit max-w-[200px]",
+    "relative flex items-center gap-1.5 px-3 w-full min-w-0",
     "rounded-t-lg border-t-2 border-l-2 border-r-2",
     "transition-all duration-150 h-[42px]",
     isDragOver &&
@@ -63,10 +65,34 @@ export function Tab({
       "bg-background/80 text-muted-foreground border-border hover:bg-background/90",
   );
 
+  // Helper function to split title into base and suffix
+  const splitTitle = (fullTitle: string): { base: string; suffix: string } => {
+    const match = fullTitle.match(/^(.*?)(\s*\(\d+\))$/);
+    if (match) {
+      return { base: match[1], suffix: match[2] };
+    }
+    return { base: fullTitle, suffix: "" };
+  };
+
   if (tabType === "home") {
     return (
       <div
-        className={tabBaseClasses}
+        className={cn(
+          "relative flex items-center gap-1.5 px-3 flex-shrink-0 cursor-pointer",
+          "rounded-t-lg border-t-2 border-l-2 border-r-2",
+          "transition-all duration-150 h-[42px]",
+          isDragOver &&
+            "bg-background/40 text-muted-foreground border-border opacity-60",
+          isDragging && "opacity-70",
+          !isDragOver &&
+            !isDragging &&
+            isActive &&
+            "bg-background text-foreground border-border z-10",
+          !isDragOver &&
+            !isDragging &&
+            !isActive &&
+            "bg-background/80 text-muted-foreground border-border hover:bg-background/90",
+        )}
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
@@ -98,18 +124,18 @@ export function Tab({
             ? t("nav.userProfile")
             : t("nav.terminal"));
 
+    const { base, suffix } = splitTitle(displayTitle);
+
     return (
       <div
-        className={tabBaseClasses}
+        className={cn(tabBaseClasses, "cursor-pointer")}
+        onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
           borderBottom: isActive ? "2px solid white" : "none",
         }}
       >
-        <div
-          className="flex items-center gap-1.5 flex-1 min-w-0"
-          onClick={!disableActivate ? onActivate : undefined}
-        >
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
           {isServer ? (
             <ServerIcon className="h-4 w-4 flex-shrink-0" />
           ) : isFileManager ? (
@@ -119,7 +145,8 @@ export function Tab({
           ) : (
             <TerminalIcon className="h-4 w-4 flex-shrink-0" />
           )}
-          <span className="truncate text-sm">{displayTitle}</span>
+          <span className="truncate text-sm flex-1 min-w-0">{base}</span>
+          {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
         </div>
 
         {canSplit && (
@@ -136,7 +163,9 @@ export function Tab({
               disableSplit ? t("nav.cannotSplitTab") : t("nav.splitScreen")
             }
           >
-            <SeparatorVertical className="h-4 w-4" />
+            <SeparatorVertical
+              className={cn("h-4 w-4", isSplit && "text-white")}
+            />
           </Button>
         )}
 
@@ -159,21 +188,21 @@ export function Tab({
   }
 
   if (tabType === "ssh_manager") {
+    const displayTitle = title || t("nav.sshManager");
+    const { base, suffix } = splitTitle(displayTitle);
+
     return (
       <div
-        className={tabBaseClasses}
+        className={cn(tabBaseClasses, "cursor-pointer")}
+        onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
           borderBottom: isActive ? "2px solid white" : "none",
         }}
       >
-        <div
-          className="flex items-center gap-1.5 flex-1 min-w-0"
-          onClick={!disableActivate ? onActivate : undefined}
-        >
-          <span className="truncate text-sm">
-            {title || t("nav.sshManager")}
-          </span>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span className="truncate text-sm flex-1 min-w-0">{base}</span>
+          {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
         </div>
 
         {canClose && (
@@ -195,19 +224,21 @@ export function Tab({
   }
 
   if (tabType === "admin") {
+    const displayTitle = title || t("nav.admin");
+    const { base, suffix } = splitTitle(displayTitle);
+
     return (
       <div
-        className={tabBaseClasses}
+        className={cn(tabBaseClasses, "cursor-pointer")}
+        onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
           borderBottom: isActive ? "2px solid white" : "none",
         }}
       >
-        <div
-          className="flex items-center gap-1.5 flex-1 min-w-0"
-          onClick={!disableActivate ? onActivate : undefined}
-        >
-          <span className="truncate text-sm">{title || t("nav.admin")}</span>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span className="truncate text-sm flex-1 min-w-0">{base}</span>
+          {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
         </div>
 
         {canClose && (
