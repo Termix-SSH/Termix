@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import { getDb } from "./database/db/index.js";
 import { recentActivity, sshData } from "./database/db/schema.js";
 import { eq, and, desc } from "drizzle-orm";
-import { homepageLogger } from "./utils/logger.js";
+import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../types/index.js";
@@ -71,7 +71,7 @@ app.get("/uptime", async (req, res) => {
       formatted: `${days}d ${hours}h ${minutes}m`,
     });
   } catch (err) {
-    homepageLogger.error("Failed to get uptime", err);
+    dashboardLogger.error("Failed to get uptime", err);
     res.status(500).json({ error: "Failed to get uptime" });
   }
 });
@@ -103,7 +103,7 @@ app.get("/activity/recent", async (req, res) => {
 
     res.json(activities);
   } catch (err) {
-    homepageLogger.error("Failed to get recent activity", err);
+    dashboardLogger.error("Failed to get recent activity", err);
     res.status(500).json({ error: "Failed to get recent activity" });
   }
 });
@@ -211,7 +211,7 @@ app.post("/activity/log", async (req, res) => {
 
     res.json({ message: "Activity logged", id: result.id });
   } catch (err) {
-    homepageLogger.error("Failed to log activity", err);
+    dashboardLogger.error("Failed to log activity", err);
     res.status(500).json({ error: "Failed to log activity" });
   }
 });
@@ -229,22 +229,20 @@ app.delete("/activity/reset", async (req, res) => {
     }
 
     // Delete all activities for the user
-    const activities = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(recentActivity)
-        .where(eq(recentActivity.userId, userId)),
+    await SimpleDBOps.delete(
+      recentActivity,
       "recent_activity",
-      userId,
+      eq(recentActivity.userId, userId),
     );
 
-    for (const activity of activities) {
-      await SimpleDBOps.delete(recentActivity, "recent_activity", userId);
-    }
+    dashboardLogger.success("Recent activity cleared", {
+      operation: "reset_recent_activity",
+      userId,
+    });
 
     res.json({ message: "Recent activity cleared" });
   } catch (err) {
-    homepageLogger.error("Failed to reset activity", err);
+    dashboardLogger.error("Failed to reset activity", err);
     res.status(500).json({ error: "Failed to reset activity" });
   }
 });
@@ -254,7 +252,7 @@ app.listen(PORT, async () => {
   try {
     await authManager.initialize();
   } catch (err) {
-    homepageLogger.error("Failed to initialize AuthManager", err, {
+    dashboardLogger.error("Failed to initialize AuthManager", err, {
       operation: "auth_init_error",
     });
   }

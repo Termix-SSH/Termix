@@ -32,9 +32,13 @@ import {
   UserPlus,
   Settings,
   User,
+  Loader2,
+  Terminal,
+  FolderOpen,
 } from "lucide-react";
 import { Status } from "@/components/ui/shadcn-io/status";
 import { BsLightning } from "react-icons/bs";
+import { useTranslation } from "react-i18next";
 
 interface DashboardProps {
   onSelectView: (view: string) => void;
@@ -55,6 +59,7 @@ export function Dashboard({
   isTopbarOpen,
   onSelectView,
 }: DashboardProps): React.ReactElement {
+  const { t } = useTranslation();
   const [loggedIn, setLoggedIn] = useState(isAuthenticated);
   const [isAdmin, setIsAdmin] = useState(false);
   const [, setUsername] = useState<string | null>(null);
@@ -74,9 +79,12 @@ export function Dashboard({
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
     [],
   );
+  const [recentActivityLoading, setRecentActivityLoading] =
+    useState<boolean>(true);
   const [serverStats, setServerStats] = useState<
     Array<{ id: number; name: string; cpu: number | null; ram: number | null }>
   >([]);
+  const [serverStatsLoading, setServerStatsLoading] = useState<boolean>(true);
 
   const { addTab, setCurrentTab, tabs: tabList } = useTabs();
 
@@ -165,7 +173,10 @@ export function Dashboard({
         for (const host of hosts) {
           if (host.tunnelConnections) {
             try {
-              const tunnelConnections = JSON.parse(host.tunnelConnections);
+              // tunnelConnections is already parsed as an array from the backend
+              const tunnelConnections = Array.isArray(host.tunnelConnections)
+                ? host.tunnelConnections
+                : JSON.parse(host.tunnelConnections);
               if (Array.isArray(tunnelConnections)) {
                 totalTunnelsCount += tunnelConnections.length;
               }
@@ -180,10 +191,13 @@ export function Dashboard({
         setTotalCredentials(credentials.length);
 
         // Fetch recent activity (35 items)
+        setRecentActivityLoading(true);
         const activity = await getRecentActivity(35);
         setRecentActivity(activity);
+        setRecentActivityLoading(false);
 
         // Fetch server stats for first 5 servers
+        setServerStatsLoading(true);
         const serversWithStats = await Promise.all(
           hosts.slice(0, 5).map(async (host: { id: number; name: string }) => {
             try {
@@ -205,8 +219,11 @@ export function Dashboard({
           }),
         );
         setServerStats(serversWithStats);
+        setServerStatsLoading(false);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
+        setRecentActivityLoading(false);
+        setServerStatsLoading(false);
       }
     };
 
@@ -328,7 +345,9 @@ export function Dashboard({
         >
           <div className="flex flex-col relative z-10 w-full h-full">
             <div className="flex flex-row items-center justify-between w-full px-3 mt-3">
-              <div className="text-2xl text-white font-semibold">Dashboard</div>
+              <div className="text-2xl text-white font-semibold">
+                {t("dashboard.title")}
+              </div>
               <div className="flex flex-row gap-3">
                 <Button
                   className="font-semibold"
@@ -340,7 +359,7 @@ export function Dashboard({
                     )
                   }
                 >
-                  GitHub
+                  {t("dashboard.github")}
                 </Button>
                 <Button
                   className="font-semibold"
@@ -352,7 +371,7 @@ export function Dashboard({
                     )
                   }
                 >
-                  Support
+                  {t("dashboard.support")}
                 </Button>
                 <Button
                   className="font-semibold"
@@ -364,7 +383,7 @@ export function Dashboard({
                     )
                   }
                 >
-                  Discord
+                  {t("dashboard.discord")}
                 </Button>
                 <Button
                   className="font-semibold"
@@ -373,7 +392,7 @@ export function Dashboard({
                     window.open("https://github.com/sponsors/LukeGus", "_blank")
                   }
                 >
-                  Donate
+                  {t("dashboard.donate")}
                 </Button>
               </div>
             </div>
@@ -386,7 +405,7 @@ export function Dashboard({
                   <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden">
                     <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
                       <Server className="mr-3" />
-                      Server Overview
+                      {t("dashboard.serverOverview")}
                     </p>
                     <div className="bg-dark-bg w-full h-auto border-2 border-dark-border rounded-md px-3 py-3">
                       <div className="flex flex-row items-center justify-between mb-3">
@@ -396,7 +415,9 @@ export function Dashboard({
                             color="#FFFFFF"
                             className="shrink-0"
                           />
-                          <p className="ml-2 leading-none">Version</p>
+                          <p className="ml-2 leading-none">
+                            {t("dashboard.version")}
+                          </p>
                         </div>
 
                         <div className="flex flex-row items-center">
@@ -409,8 +430,8 @@ export function Dashboard({
                             className={`ml-2 text-sm border-1 border-dark-border ${versionStatus === "up_to_date" ? "text-green-400" : "text-yellow-400"}`}
                           >
                             {versionStatus === "up_to_date"
-                              ? "Up to Date"
-                              : "Update Available"}
+                              ? t("dashboard.upToDate")
+                              : t("dashboard.updateAvailable")}
                           </Button>
                           <UpdateLog loggedIn={loggedIn} />
                         </div>
@@ -423,7 +444,9 @@ export function Dashboard({
                             color="#FFFFFF"
                             className="shrink-0"
                           />
-                          <p className="ml-2 leading-none">Uptime</p>
+                          <p className="ml-2 leading-none">
+                            {t("dashboard.uptime")}
+                          </p>
                         </div>
 
                         <div className="flex flex-row items-center">
@@ -440,14 +463,18 @@ export function Dashboard({
                             color="#FFFFFF"
                             className="shrink-0"
                           />
-                          <p className="ml-2 leading-none">Database</p>
+                          <p className="ml-2 leading-none">
+                            {t("dashboard.database")}
+                          </p>
                         </div>
 
                         <div className="flex flex-row items-center">
                           <p
                             className={`leading-none ${dbHealth === "healthy" ? "text-green-400" : "text-red-400"}`}
                           >
-                            {dbHealth}
+                            {dbHealth === "healthy"
+                              ? t("dashboard.healthy")
+                              : t("dashboard.error")}
                           </p>
                         </div>
                       </div>
@@ -460,7 +487,9 @@ export function Dashboard({
                             color="#FFFFFF"
                             className="mr-3 shrink-0"
                           />
-                          <p className="m-0 leading-none">Total Servers</p>
+                          <p className="m-0 leading-none">
+                            {t("dashboard.totalServers")}
+                          </p>
                         </div>
                         <p className="m-0 leading-none text-muted-foreground font-semibold">
                           {totalServers}
@@ -473,7 +502,9 @@ export function Dashboard({
                             color="#FFFFFF"
                             className="mr-3 shrink-0"
                           />
-                          <p className="m-0 leading-none">Total Tunnels</p>
+                          <p className="m-0 leading-none">
+                            {t("dashboard.totalTunnels")}
+                          </p>
                         </div>
                         <p className="m-0 leading-none text-muted-foreground font-semibold">
                           {totalTunnels}
@@ -488,7 +519,9 @@ export function Dashboard({
                             color="#FFFFFF"
                             className="mr-3 shrink-0"
                           />
-                          <p className="m-0 leading-none">Total Credentials</p>
+                          <p className="m-0 leading-none">
+                            {t("dashboard.totalCredentials")}
+                          </p>
                         </div>
                         <p className="m-0 leading-none text-muted-foreground font-semibold">
                           {totalCredentials}
@@ -502,7 +535,7 @@ export function Dashboard({
                     <div className="flex flex-row items-center justify-between mb-3 mt-1">
                       <p className="text-xl font-semibold flex flex-row items-center">
                         <Clock className="mr-3" />
-                        Recent Activity
+                        {t("dashboard.recentActivity")}
                       </p>
                       <Button
                         variant="outline"
@@ -510,13 +543,18 @@ export function Dashboard({
                         className="border-2 !border-dark-border h-7"
                         onClick={handleResetActivity}
                       >
-                        Reset
+                        {t("dashboard.reset")}
                       </Button>
                     </div>
                     <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-y-auto overflow-x-hidden">
-                      {recentActivity.length === 0 ? (
+                      {recentActivityLoading ? (
+                        <div className="flex flex-row items-center text-muted-foreground text-sm">
+                          <Loader2 className="animate-spin mr-2" size={16} />
+                          <span>{t("dashboard.loadingRecentActivity")}</span>
+                        </div>
+                      ) : recentActivity.length === 0 ? (
                         <p className="text-muted-foreground text-sm">
-                          No recent activity
+                          {t("dashboard.noRecentActivity")}
                         </p>
                       ) : (
                         recentActivity.map((item) => (
@@ -526,7 +564,11 @@ export function Dashboard({
                             className="border-2 !border-dark-border bg-dark-bg"
                             onClick={() => handleActivityClick(item)}
                           >
-                            <Server size={20} className="shrink-0" />
+                            {item.type === "terminal" ? (
+                              <Terminal size={20} className="shrink-0" />
+                            ) : (
+                              <FolderOpen size={20} className="shrink-0" />
+                            )}
                             <p className="truncate ml-2 font-semibold">
                               {item.hostName}
                             </p>
@@ -542,7 +584,7 @@ export function Dashboard({
                   <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden">
                     <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
                       <FastForward className="mr-3" />
-                      Quick Actions
+                      {t("dashboard.quickActions")}
                     </p>
                     <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-y-auto overflow-x-hidden">
                       <Button
@@ -555,7 +597,7 @@ export function Dashboard({
                           style={{ width: "40px", height: "40px" }}
                         />
                         <span className="font-semibold text-sm mt-2">
-                          Add Host
+                          {t("dashboard.addHost")}
                         </span>
                       </Button>
                       <Button
@@ -568,7 +610,7 @@ export function Dashboard({
                           style={{ width: "40px", height: "40px" }}
                         />
                         <span className="font-semibold text-sm mt-2">
-                          Add Credential
+                          {t("dashboard.addCredential")}
                         </span>
                       </Button>
                       {isAdmin && (
@@ -582,7 +624,7 @@ export function Dashboard({
                             style={{ width: "40px", height: "40px" }}
                           />
                           <span className="font-semibold text-sm mt-2">
-                            Admin Settings
+                            {t("dashboard.adminSettings")}
                           </span>
                         </Button>
                       )}
@@ -596,7 +638,7 @@ export function Dashboard({
                           style={{ width: "40px", height: "40px" }}
                         />
                         <span className="font-semibold text-sm mt-2">
-                          User Profile
+                          {t("dashboard.userProfile")}
                         </span>
                       </Button>
                     </div>
@@ -606,12 +648,17 @@ export function Dashboard({
                   <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
                     <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
                       <ChartLine className="mr-3" />
-                      Server Stats
+                      {t("dashboard.serverStats")}
                     </p>
                     <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-y-auto overflow-x-hidden">
-                      {serverStats.length === 0 ? (
+                      {serverStatsLoading ? (
+                        <div className="flex flex-row items-center text-muted-foreground text-sm">
+                          <Loader2 className="animate-spin mr-2" size={16} />
+                          <span>{t("dashboard.loadingServerStats")}</span>
+                        </div>
+                      ) : serverStats.length === 0 ? (
                         <p className="text-muted-foreground text-sm">
-                          No server data available
+                          {t("dashboard.noServerData")}
                         </p>
                       ) : (
                         serverStats.map((server) => (
@@ -629,16 +676,16 @@ export function Dashboard({
                               </div>
                               <div className="flex flex-row justify-between text-xs text-muted-foreground">
                                 <span>
-                                  CPU:{" "}
+                                  {t("dashboard.cpu")}:{" "}
                                   {server.cpu !== null
                                     ? `${server.cpu}%`
-                                    : "N/A"}
+                                    : t("dashboard.notAvailable")}
                                 </span>
                                 <span>
-                                  RAM:{" "}
+                                  {t("dashboard.ram")}:{" "}
                                   {server.ram !== null
                                     ? `${server.ram}%`
-                                    : "N/A"}
+                                    : t("dashboard.notAvailable")}
                                 </span>
                               </div>
                             </div>

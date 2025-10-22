@@ -447,7 +447,6 @@ export function Server({
             </div>
           )}
 
-          {/* SSH Tunnels */}
           {currentHostConfig?.tunnelConnections &&
             currentHostConfig.tunnelConnections.length > 0 && (
               <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker h-[360px] overflow-hidden flex flex-col min-h-0">

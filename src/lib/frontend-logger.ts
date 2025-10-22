@@ -379,6 +379,6 @@ export const tunnelLogger = new FrontendLogger("TUNNEL", "📡", "#1e3a8a");
 export const fileLogger = new FrontendLogger("FILE", "📁", "#1e3a8a");
 export const statsLogger = new FrontendLogger("STATS", "📊", "#22c55e");
 export const systemLogger = new FrontendLogger("SYSTEM", "🚀", "#1e3a8a");
-export const homepageLogger = new FrontendLogger("HOMEPAGE", "🏠", "#ec4899");
+export const dashboardLogger = new FrontendLogger("DASHBOARD", "📊", "#ec4899");
 
 export const logger = systemLogger;

@@ -61,27 +61,27 @@ async function verifyOIDCToken(
     authLogger.error(`OIDC discovery failed: ${discoveryError}`);
   }
 
-    let jwks: Record<string, unknown> | null = null;
+  let jwks: Record<string, unknown> | null = null;
 
-    for (const url of jwksUrls) {
-      try {
-        const response = await fetch(url);
-        if (response.ok) {
-          const jwksData = (await response.json()) as Record<string, unknown>;;
-          if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
-            jwks = jwksData;
-            break;
-          } else {
-            authLogger.error(
-              `Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`,
-            );
-          }
+  for (const url of jwksUrls) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const jwksData = (await response.json()) as Record<string, unknown>;
+        if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
+          jwks = jwksData;
+          break;
         } else {
+          authLogger.error(
+            `Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`,
+          );
         }
-      } catch {
-        continue;
+      } else {
       }
+    } catch {
+      continue;
     }
+  }
 
   if (!jwks) {
     throw new Error("Failed to fetch JWKS from any URL");
@@ -917,8 +917,7 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch {
-    }
+    } catch {}
 
     const dataUnlocked = await authManager.authenticateUser(
       userRecord.id,
@@ -1153,7 +1152,7 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
     }
     db.$client
       .prepare(
-        "UPDATE settings SET value = ? WHERE key = 'allow_password_login'",
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_login', ?)",
       )
       .run(allowed ? "true" : "false");
     res.json({ allowed });

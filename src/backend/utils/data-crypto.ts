@@ -125,13 +125,17 @@ class DataCrypto {
         if (needsUpdate) {
           const updateQuery = `
             UPDATE ssh_data
-            SET password = ?, key = ?, key_password = ?, updated_at = CURRENT_TIMESTAMP
+            SET password = ?, key = ?, key_password = ?, key_type = ?, autostart_password = ?, autostart_key = ?, autostart_key_password = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `;
           db.prepare(updateQuery).run(
             updatedRecord.password || null,
             updatedRecord.key || null,
-            updatedRecord.key_password || null,
+            updatedRecord.key_password || updatedRecord.keyPassword || null,
+            updatedRecord.keyType || null,
+            updatedRecord.autostartPassword || null,
+            updatedRecord.autostartKey || null,
+            updatedRecord.autostartKeyPassword || null,
             record.id,
           );
 
@@ -160,15 +164,16 @@ class DataCrypto {
         if (needsUpdate) {
           const updateQuery = `
             UPDATE ssh_credentials
-            SET password = ?, key = ?, key_password = ?, private_key = ?, public_key = ?, updated_at = CURRENT_TIMESTAMP
+            SET password = ?, key = ?, key_password = ?, private_key = ?, public_key = ?, key_type = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `;
           db.prepare(updateQuery).run(
             updatedRecord.password || null,
             updatedRecord.key || null,
-            updatedRecord.key_password || null,
-            updatedRecord.private_key || null,
-            updatedRecord.public_key || null,
+            updatedRecord.key_password || updatedRecord.keyPassword || null,
+            updatedRecord.private_key || updatedRecord.privateKey || null,
+            updatedRecord.public_key || updatedRecord.publicKey || null,
+            updatedRecord.keyType || null,
             record.id,
           );
 
@@ -197,12 +202,18 @@ class DataCrypto {
         if (needsUpdate) {
           const updateQuery = `
             UPDATE users
-            SET totp_secret = ?, totp_backup_codes = ?
+            SET totp_secret = ?, totp_backup_codes = ?, client_secret = ?, oidc_identifier = ?
             WHERE id = ?
           `;
           db.prepare(updateQuery).run(
-            updatedRecord.totp_secret || null,
-            updatedRecord.totp_backup_codes || null,
+            updatedRecord.totp_secret || updatedRecord.totpSecret || null,
+            updatedRecord.totp_backup_codes ||
+              updatedRecord.totpBackupCodes ||
+              null,
+            updatedRecord.client_secret || updatedRecord.clientSecret || null,
+            updatedRecord.oidc_identifier ||
+              updatedRecord.oidcIdentifier ||
+              null,
             userId,
           );
 
@@ -249,24 +260,44 @@ class DataCrypto {
 
     try {
       const tablesToReencrypt = [
-        { table: "ssh_data", fields: ["password", "key", "key_password"] },
+        {
+          table: "ssh_data",
+          fields: [
+            "password",
+            "key",
+            "key_password",
+            "keyPassword",
+            "keyType",
+            "autostartPassword",
+            "autostartKey",
+            "autostartKeyPassword",
+          ],
+        },
         {
           table: "ssh_credentials",
           fields: [
             "password",
             "private_key",
+            "privateKey",
             "key_password",
+            "keyPassword",
             "key",
             "public_key",
+            "publicKey",
+            "keyType",
           ],
         },
         {
           table: "users",
           fields: [
             "client_secret",
+            "clientSecret",
             "totp_secret",
+            "totpSecret",
             "totp_backup_codes",
+            "totpBackupCodes",
             "oidc_identifier",
+            "oidcIdentifier",
           ],
         },
       ];

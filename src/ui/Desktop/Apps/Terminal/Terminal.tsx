@@ -93,11 +93,39 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const activityLoggedRef = useRef(false);
+    const activityLoggingRef = useRef(false); // Prevent concurrent logging calls
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
     const DEBOUNCE_MS = 140;
+
+    // Centralized activity logging to prevent duplicates
+    const logTerminalActivity = async () => {
+      if (
+        !hostConfig.id ||
+        activityLoggedRef.current ||
+        activityLoggingRef.current
+      ) {
+        return;
+      }
+
+      activityLoggingRef.current = true;
+      activityLoggedRef.current = true;
+
+      try {
+        const hostName =
+          hostConfig.name || `${hostConfig.username}@${hostConfig.ip}`;
+        await logActivity("terminal", hostConfig.id, hostName);
+      } catch (err) {
+        console.warn("Failed to log terminal activity:", err);
+        // Reset on error so it can be retried
+        activityLoggedRef.current = false;
+      } finally {
+        activityLoggingRef.current = false;
+      }
+    };
 
     useEffect(() => {
       isVisibleRef.current = isVisible;
@@ -471,13 +499,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             isReconnectingRef.current = false;
 
             // Log activity for recent connections
-            if (hostConfig.id) {
-              const hostName =
-                hostConfig.name || `${hostConfig.username}@${hostConfig.ip}`;
-              logActivity("terminal", hostConfig.id, hostName).catch((err) => {
-                console.warn("Failed to log terminal activity:", err);
-              });
-            }
+            logTerminalActivity();
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
             setIsConnected(false);

@@ -375,7 +375,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
 
-    // Log activity to homepage API
+    // Log activity to dashboard API
     if (hostId && userId) {
       (async () => {
         try {
@@ -446,6 +446,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     cleanupSession(sessionId);
   });
 
+  let keyboardInteractiveResponded = false;
+
   client.on(
     "keyboard-interactive",
     (
@@ -455,11 +457,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       prompts: Array<{ prompt: string; echo: boolean }>,
       finish: (responses: string[]) => void,
     ) => {
+      const promptTexts = prompts.map((p) => p.prompt);
       fileLogger.info("Keyboard-interactive authentication requested", {
         operation: "file_keyboard_interactive",
         hostId,
         sessionId,
         promptsCount: prompts.length,
+        prompts: promptTexts,
+        alreadyResponded: keyboardInteractiveResponded,
       });
 
       const totpPromptIndex = prompts.findIndex((p) =>
@@ -469,7 +474,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       );
 
       if (totpPromptIndex !== -1) {
-        if (responseSent) return;
+        // TOTP prompt detected - need user input
+        if (responseSent) {
+          fileLogger.warn("Response already sent, ignoring TOTP prompt", {
+            operation: "file_keyboard_interactive",
+            hostId,
+            sessionId,
+          });
+          return;
+        }
         responseSent = true;
 
         if (pendingTOTPSessions[sessionId]) {
@@ -481,10 +494,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
               sessionId,
             },
           );
-          // Don't respond to duplicate keyboard-interactive events
-          // The first one is still being processed
           return;
         }
+
+        keyboardInteractiveResponded = true;
 
         pendingTOTPSessions[sessionId] = {
           client,
@@ -516,14 +529,40 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           prompt: prompts[totpPromptIndex].prompt,
         });
       } else {
-        if (resolvedCredentials.password) {
-          const responses = prompts.map(
-            () => resolvedCredentials.password || "",
+        // Non-TOTP prompts (password, etc.) - respond automatically
+        if (keyboardInteractiveResponded) {
+          fileLogger.warn(
+            "Already responded to keyboard-interactive, ignoring subsequent prompt",
+            {
+              operation: "file_keyboard_interactive",
+              hostId,
+              sessionId,
+              prompts: promptTexts,
+            },
           );
-          finish(responses);
-        } else {
-          finish(prompts.map(() => ""));
+          return;
         }
+
+        keyboardInteractiveResponded = true;
+
+        const responses = prompts.map((p) => {
+          if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+            return resolvedCredentials.password;
+          }
+          return "";
+        });
+
+        fileLogger.info("Auto-responding to keyboard-interactive prompts", {
+          operation: "file_keyboard_interactive_response",
+          hostId,
+          sessionId,
+          hasPassword: !!resolvedCredentials.password,
+          responsesProvided: responses.filter((r) => r !== "").length,
+          totalPrompts: prompts.length,
+          prompts: promptTexts,
+        });
+
+        finish(responses);
       }
     },
   );
@@ -640,7 +679,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       message: "TOTP verified, SSH connection established",
     });
 
-    // Log activity to homepage API
+    // Log activity to dashboard API
     if (session.hostId && session.userId) {
       (async () => {
         try {

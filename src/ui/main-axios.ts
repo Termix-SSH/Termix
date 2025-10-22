@@ -15,7 +15,7 @@ import {
   fileLogger,
   statsLogger,
   systemLogger,
-  homepageLogger,
+  dashboardLogger,
   type LogContext,
 } from "../lib/frontend-logger.js";
 
@@ -123,10 +123,10 @@ function getLoggerForService(serviceName: string) {
   } else if (serviceName.includes("AUTH") || serviceName.includes("auth")) {
     return authLogger;
   } else if (
-    serviceName.includes("HOMEPAGE") ||
-    serviceName.includes("homepage")
+    serviceName.includes("DASHBOARD") ||
+    serviceName.includes("dashboard")
   ) {
-    return homepageLogger;
+    return dashboardLogger;
   } else {
     return apiLogger;
   }

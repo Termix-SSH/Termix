@@ -287,6 +287,24 @@ async function initializeCompleteDatabase(): Promise<void> {
       error: e,
     });
   }
+
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
+      .get();
+    if (!row) {
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('allow_password_login', 'true')",
+        )
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize allow_password_login setting", {
+      operation: "db_init",
+      error: e,
+    });
+  }
 }
 
 const addColumnIfNotExists = (

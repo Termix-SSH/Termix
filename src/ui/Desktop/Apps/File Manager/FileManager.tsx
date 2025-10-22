@@ -220,6 +220,34 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const pathChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const currentLoadingPathRef = useRef<string>("");
   const keepaliveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const activityLoggedRef = useRef(false);
+  const activityLoggingRef = useRef(false); // Prevent concurrent logging calls
+
+  // Centralized activity logging to prevent duplicates
+  const logFileManagerActivity = useCallback(async () => {
+    if (
+      !currentHost?.id ||
+      activityLoggedRef.current ||
+      activityLoggingRef.current
+    ) {
+      return;
+    }
+
+    activityLoggingRef.current = true;
+    activityLoggedRef.current = true;
+
+    try {
+      const hostName =
+        currentHost.name || `${currentHost.username}@${currentHost.ip}`;
+      await logActivity("file_manager", currentHost.id, hostName);
+    } catch (err) {
+      console.warn("Failed to log file manager activity:", err);
+      // Reset on error so it can be retried
+      activityLoggedRef.current = false;
+    } finally {
+      activityLoggingRef.current = false;
+    }
+  }, [currentHost]);
 
   const handleFileDragStart = useCallback(
     (files: FileItem[]) => {
@@ -299,15 +327,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       setSshSessionId(sessionId);
 
-      // Log activity for recent connections
-      if (currentHost?.id) {
-        const hostName =
-          currentHost.name || `${currentHost.username}@${currentHost.ip}`;
-        logActivity("file_manager", currentHost.id, hostName).catch((err) => {
-          console.warn("Failed to log file manager activity:", err);
-        });
-      }
-
       try {
         const response = await listSSHFiles(sessionId, currentPath);
         const files = Array.isArray(response)
@@ -316,6 +335,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         setFiles(files);
         clearSelection();
         initialLoadDoneRef.current = true;
+
+        // Log activity for recent connections (after successful directory load)
+        logFileManagerActivity();
       } catch (dirError: unknown) {
         console.error("Failed to load initial directory:", dirError);
       }
@@ -1257,15 +1279,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         setSshSessionId(totpSessionId);
         setTotpSessionId(null);
 
-        // Log activity for recent connections
-        if (currentHost?.id) {
-          const hostName =
-            currentHost.name || `${currentHost.username}@${currentHost.ip}`;
-          logActivity("file_manager", currentHost.id, hostName).catch((err) => {
-            console.warn("Failed to log file manager activity:", err);
-          });
-        }
-
         try {
           const response = await listSSHFiles(totpSessionId, currentPath);
           const files = Array.isArray(response)
@@ -1275,6 +1288,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           clearSelection();
           initialLoadDoneRef.current = true;
           toast.success(t("fileManager.connectedSuccessfully"));
+
+          // Log activity for recent connections (after successful directory load)
+          logFileManagerActivity();
         } catch (dirError: unknown) {
           console.error("Failed to load initial directory:", dirError);
         }

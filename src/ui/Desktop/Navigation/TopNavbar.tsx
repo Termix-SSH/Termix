@@ -276,44 +276,97 @@ export function TopNavbar({
       ...prev,
       currentX: e.clientX,
     }));
+  };
 
-    // Calculate target position based on mouse X
-    if (!containerRef.current) return;
+  const calculateTargetIndex = () => {
+    if (!containerRef.current || dragState.draggedIndex === null) return null;
 
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - containerRect.left;
+    const draggedIndex = dragState.draggedIndex;
 
+    // Build array of tab boundaries in ORIGINAL order
+    const tabBoundaries: {
+      index: number;
+      start: number;
+      end: number;
+      mid: number;
+    }[] = [];
     let accumulatedX = 0;
-    let newTargetIndex = dragState.draggedIndex;
 
     tabs.forEach((tab, i) => {
       const tabEl = tabRefs.current.get(i);
       if (!tabEl) return;
 
       const tabWidth = tabEl.getBoundingClientRect().width;
-      const tabCenter = accumulatedX + tabWidth / 2;
-
-      if (mouseX < tabCenter && i === 0) {
-        newTargetIndex = 0;
-      } else if (mouseX >= tabCenter && mouseX < accumulatedX + tabWidth) {
-        newTargetIndex = i;
-      }
-
+      tabBoundaries.push({
+        index: i,
+        start: accumulatedX,
+        end: accumulatedX + tabWidth,
+        mid: accumulatedX + tabWidth / 2,
+      });
       accumulatedX += tabWidth + 4; // 4px gap
     });
 
-    if (mouseX >= accumulatedX - 4) {
-      newTargetIndex = tabs.length - 1;
+    if (tabBoundaries.length === 0) return null;
+
+    // Calculate the dragged tab's center in container coordinates
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const draggedTab = tabBoundaries[draggedIndex];
+    // Convert absolute positions to container-relative coordinates
+    const currentX = dragState.currentX - containerRect.left;
+    const startX = dragState.startX - containerRect.left;
+    const offset = currentX - startX;
+    const draggedCenter = draggedTab.mid + offset;
+
+    // Determine target index based on where the dragged tab's center is
+    let newTargetIndex = draggedIndex;
+
+    if (offset < 0) {
+      // Moving left - find the leftmost tab whose midpoint we've passed
+      for (let i = draggedIndex - 1; i >= 0; i--) {
+        if (draggedCenter < tabBoundaries[i].mid) {
+          newTargetIndex = i;
+        } else {
+          break;
+        }
+      }
+    } else if (offset > 0) {
+      // Moving right - find the rightmost tab whose midpoint we've passed
+      for (let i = draggedIndex + 1; i < tabBoundaries.length; i++) {
+        if (draggedCenter > tabBoundaries[i].mid) {
+          newTargetIndex = i;
+        } else {
+          break;
+        }
+      }
     }
 
-    setDragState((prev) => ({
-      ...prev,
-      targetIndex: newTargetIndex,
-    }));
+    return newTargetIndex;
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+
+    // Firefox compatibility - track position via dragover
+    if (dragState.draggedIndex === null) return;
+
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    // Update currentX if we have a valid clientX (Firefox may not provide it in onDrag)
+    if (e.clientX !== 0) {
+      setDragState((prev) => ({
+        ...prev,
+        currentX: e.clientX,
+      }));
+    }
+
+    const newTargetIndex = calculateTargetIndex();
+    if (newTargetIndex !== null && newTargetIndex !== dragState.targetIndex) {
+      setDragState((prev) => ({
+        ...prev,
+        targetIndex: newTargetIndex,
+      }));
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -326,14 +379,26 @@ export function TopNavbar({
       dragState.draggedIndex !== dragState.targetIndex
     ) {
       reorderTabs(dragState.draggedIndex, dragState.targetIndex);
-    }
 
-    setDragState({
-      draggedIndex: null,
-      startX: 0,
-      currentX: 0,
-      targetIndex: null,
-    });
+      // Delay clearing drag state to prevent visual jitter
+      // This allows the reorder to complete and re-render before removing transforms
+      setTimeout(() => {
+        setDragState({
+          draggedIndex: null,
+          startX: 0,
+          currentX: 0,
+          targetIndex: null,
+        });
+      }, 0);
+    } else {
+      // No reorder needed, clear immediately
+      setDragState({
+        draggedIndex: null,
+        startX: 0,
+        currentX: 0,
+        targetIndex: null,
+      });
+    }
   };
 
   const handleDragEnd = () => {
@@ -345,14 +410,25 @@ export function TopNavbar({
       dragState.draggedIndex !== dragState.targetIndex
     ) {
       reorderTabs(dragState.draggedIndex, dragState.targetIndex);
-    }
 
-    setDragState({
-      draggedIndex: null,
-      startX: 0,
-      currentX: 0,
-      targetIndex: null,
-    });
+      // Delay clearing drag state to prevent visual jitter
+      setTimeout(() => {
+        setDragState({
+          draggedIndex: null,
+          startX: 0,
+          currentX: 0,
+          targetIndex: null,
+        });
+      }, 0);
+    } else {
+      // No reorder needed, clear immediately
+      setDragState({
+        draggedIndex: null,
+        startX: 0,
+        currentX: 0,
+        targetIndex: null,
+      });
+    }
   };
 
   const isSplitScreenActive =

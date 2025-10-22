@@ -196,6 +196,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let pingInterval: NodeJS.Timeout | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
+  let keyboardInteractiveResponded = false;
 
   ws.on("close", () => {
     const userWs = userConnections.get(userId);
@@ -482,7 +483,29 @@ wss.on("connection", async (ws: WebSocket, req) => {
       // Small delay to let connection stabilize after keyboard-interactive auth
       // This helps prevent "No response from server" errors with TOTP
       setTimeout(() => {
-        sshConn!.shell(
+        // Check if connection still exists (might have been cleaned up)
+        if (!sshConn) {
+          sshLogger.warn(
+            "SSH connection was cleaned up before shell could be created",
+            {
+              operation: "ssh_shell",
+              hostId: id,
+              ip,
+              port,
+              username,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "SSH connection was closed before terminal could be created",
+            }),
+          );
+          return;
+        }
+
+        sshConn.shell(
           {
             rows: data.rows,
             cols: data.cols,
@@ -570,7 +593,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               JSON.stringify({ type: "connected", message: "SSH connected" }),
             );
 
-            // Log activity to homepage API
+            // Log activity to dashboard API
             if (id && hostConfig.userId) {
               (async () => {
                 try {
@@ -714,8 +737,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
 
         if (totpPromptIndex !== -1) {
-          if (totpPromptSent) return;
+          // TOTP prompt detected - need user input
+          if (totpPromptSent) {
+            sshLogger.warn("TOTP prompt already sent, ignoring duplicate", {
+              operation: "ssh_keyboard_interactive",
+              hostId: id,
+            });
+            return;
+          }
           totpPromptSent = true;
+          keyboardInteractiveResponded = true;
 
           keyboardInteractiveFinish = (totpResponses: string[]) => {
             const totpCode = (totpResponses[0] || "").trim();
@@ -748,6 +779,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }),
           );
         } else {
+          // Non-TOTP prompts (password, etc.) - respond automatically
+          if (keyboardInteractiveResponded) {
+            sshLogger.warn(
+              "Already responded to keyboard-interactive, ignoring subsequent prompt",
+              {
+                operation: "ssh_keyboard_interactive",
+                hostId: id,
+                prompts: promptTexts,
+              },
+            );
+            return;
+          }
+          keyboardInteractiveResponded = true;
+
           const responses = prompts.map((p) => {
             if (/password/i.test(p.prompt) && resolvedCredentials.password) {
               return resolvedCredentials.password;
@@ -761,6 +806,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             hasPassword: !!resolvedCredentials.password,
             responsesProvided: responses.filter((r) => r !== "").length,
             totalPrompts: prompts.length,
+            prompts: promptTexts,
           });
 
           console.log(
@@ -948,6 +994,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     totpPromptSent = false;
+    keyboardInteractiveResponded = false;
     keyboardInteractiveFinish = null;
   }
 

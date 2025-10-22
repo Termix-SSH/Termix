@@ -12,6 +12,7 @@ import {
   loginUser,
   getUserInfo,
   getRegistrationAllowed,
+  getPasswordLoginAllowed,
   getOIDCConfig,
   getSetupRequired,
   initiatePasswordReset,
@@ -67,6 +68,7 @@ export function Auth({
   const [firstUser, setFirstUser] = useState(false);
   const [firstUserToastShown, setFirstUserToastShown] = useState(false);
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
+  const [passwordLoginAllowed, setPasswordLoginAllowed] = useState(true);
   const [oidcConfigured, setOidcConfigured] = useState(false);
 
   const [resetStep, setResetStep] = useState<
@@ -107,10 +109,28 @@ export function Auth({
   }, []);
 
   useEffect(() => {
+    getPasswordLoginAllowed()
+      .then((res) => {
+        setPasswordLoginAllowed(res.allowed);
+      })
+      .catch((err) => {
+        if (err.code !== "NO_SERVER_CONFIGURED") {
+          console.error("Failed to fetch password login status:", err);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
     if (!registrationAllowed && !internalLoggedIn) {
       toast.warning(t("messages.registrationDisabled"));
     }
   }, [registrationAllowed, internalLoggedIn, t]);
+
+  useEffect(() => {
+    if (!passwordLoginAllowed && oidcConfigured && tab !== "external") {
+      setTab("external");
+    }
+  }, [passwordLoginAllowed, oidcConfigured, tab]);
 
   useEffect(() => {
     getOIDCConfig()
@@ -157,6 +177,12 @@ export function Auth({
 
     if (!localUsername.trim()) {
       toast.error(t("errors.requiredField"));
+      setLoading(false);
+      return;
+    }
+
+    if (!passwordLoginAllowed && !firstUser) {
+      toast.error(t("errors.passwordLoginDisabled"));
       setLoading(false);
       return;
     }
@@ -595,42 +621,46 @@ export function Auth({
       {!internalLoggedIn && !authLoading && !totpRequired && (
         <>
           <div className="flex gap-2 mb-6">
-            <button
-              type="button"
-              className={cn(
-                "flex-1 py-2 text-base font-medium rounded-md transition-all",
-                tab === "login"
-                  ? "bg-primary text-primary-foreground shadow"
-                  : "bg-muted text-muted-foreground hover:bg-accent",
-              )}
-              onClick={() => {
-                setTab("login");
-                if (tab === "reset") resetPasswordState();
-                if (tab === "signup") clearFormFields();
-              }}
-              aria-selected={tab === "login"}
-              disabled={loading || firstUser}
-            >
-              {t("common.login")}
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "flex-1 py-2 text-base font-medium rounded-md transition-all",
-                tab === "signup"
-                  ? "bg-primary text-primary-foreground shadow"
-                  : "bg-muted text-muted-foreground hover:bg-accent",
-              )}
-              onClick={() => {
-                setTab("signup");
-                if (tab === "reset") resetPasswordState();
-                if (tab === "login") clearFormFields();
-              }}
-              aria-selected={tab === "signup"}
-              disabled={loading || !registrationAllowed}
-            >
-              {t("common.register")}
-            </button>
+            {passwordLoginAllowed && (
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 py-2 text-base font-medium rounded-md transition-all",
+                  tab === "login"
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "bg-muted text-muted-foreground hover:bg-accent",
+                )}
+                onClick={() => {
+                  setTab("login");
+                  if (tab === "reset") resetPasswordState();
+                  if (tab === "signup") clearFormFields();
+                }}
+                aria-selected={tab === "login"}
+                disabled={loading || firstUser}
+              >
+                {t("common.login")}
+              </button>
+            )}
+            {passwordLoginAllowed && (
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 py-2 text-base font-medium rounded-md transition-all",
+                  tab === "signup"
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "bg-muted text-muted-foreground hover:bg-accent",
+                )}
+                onClick={() => {
+                  setTab("signup");
+                  if (tab === "reset") resetPasswordState();
+                  if (tab === "login") clearFormFields();
+                }}
+                aria-selected={tab === "signup"}
+                disabled={loading || !registrationAllowed}
+              >
+                {t("common.register")}
+              </button>
+            )}
             {oidcConfigured && (
               <button
                 type="button"
