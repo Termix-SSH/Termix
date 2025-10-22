@@ -3,22 +3,18 @@ name: Build and Push Docker Image
 on:
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: "Custom tag name for the Docker image"
-        required: false
-        default: ""
-      registry:
-        description: "Docker registry to push to"
+      version:
+        description: "Version to build (e.g., 1.8.0)"
         required: true
-        default: "ghcr"
-        type: choice
-        options:
-          - "ghcr"
-          - "dockerhub"
+      production:
+        description: "Is this a production build?"
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   build:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -28,102 +24,70 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
-          platforms: arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
 
-      - name: Setup Blacksmith Builder
-        uses: useblacksmith/setup-docker-builder@v1
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-            */*/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      - name: Determine tags
+        id: tags
+        run: |
+          VERSION=${{ github.event.inputs.version }}
+          PROD=${{ github.event.inputs.production }}
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.ref_name }}-${{ hashFiles('docker/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ github.ref_name }}-
-            ${{ runner.os }}-buildx-
+          TAGS=()
+          ALL_TAGS=()
 
-      - name: Login to GitHub Container Registry
-        if: github.event.inputs.registry != 'dockerhub'
+          if [ "$PROD" = "true" ]; then
+            # Production build → push release + latest to both GHCR and Docker Hub
+            TAGS+=("release-$VERSION" "latest")
+            for tag in "${TAGS[@]}"; do
+              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
+              ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
+            done
+          else
+            # Dev build → push only dev-x.x.x to GHCR
+            TAGS+=("dev-$VERSION")
+            for tag in "${TAGS[@]}"; do
+              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
+            done
+          fi
+
+          echo "ALL_TAGS=${ALL_TAGS[*]}" >> $GITHUB_ENV
+          echo "All tags to build:"
+          printf '%s\n' "${ALL_TAGS[@]}"
+
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: lukegus
+          password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Login to Docker Hub
-        if: github.event.inputs.registry == 'dockerhub'
+      - name: Login to Docker Hub (prod only)
+        if: ${{ github.event.inputs.production == 'true' }}
         uses: docker/login-action@v3
         with:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Determine Docker image tag
-        run: |
-          REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
-          echo "REPO_OWNER=$REPO_OWNER" >> $GITHUB_ENV
-
-          if [ "${{ github.event.inputs.tag_name }}" != "" ]; then
-            IMAGE_TAG="${{ github.event.inputs.tag_name }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            IMAGE_TAG="latest"
-          elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
-            IMAGE_TAG="development-latest"
-          else
-            IMAGE_TAG="${{ github.ref_name }}"
-          fi
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-
-          # Determine registry and image name
-          if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-            echo "REGISTRY=docker.io" >> $GITHUB_ENV
-            echo "IMAGE_NAME=bugattiguy527/termix" >> $GITHUB_ENV
-          else
-            echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
-            echo "IMAGE_NAME=$REPO_OWNER/termix" >> $GITHUB_ENV
-          fi
-
-      - name: Build and Push Multi-Arch Docker Image
-        uses: useblacksmith/build-push-action@v2
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: ${{ env.ALL_TAGS }}
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           outputs: type=registry,compression=zstd,compression-level=19
 
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-      - name: Delete all untagged image versions
-        if: success() && github.event.inputs.registry != 'dockerhub'
-        uses: quartx-analytics/ghcr-cleaner@v1
-        with:
-          owner-type: user
-          token: ${{ secrets.GHCR_TOKEN }}
-          repository-owner: ${{ github.repository_owner }}
-          delete-untagged: true
-
-      - name: Cleanup Docker Images Locally
+      - name: Cleanup Docker
         if: always()
         run: |
           docker image prune -af
