@@ -331,20 +331,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
   } else if (resolvedCredentials.authType === "password") {
     if (!resolvedCredentials.password || !resolvedCredentials.password.trim()) {
-      fileLogger.warn(
-        "Password authentication requested but no password provided",
-        {
-          operation: "file_connect",
-          sessionId,
-          hostId,
-        },
-      );
       return res
         .status(400)
         .json({ error: "Password required for password authentication" });
     }
-    // Set password to offer both password and keyboard-interactive methods
-    config.password = resolvedCredentials.password;
+  } else if (resolvedCredentials.authType === "none") {
+    // Don't set password in config - rely on keyboard-interactive
   } else {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
@@ -458,15 +450,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       finish: (responses: string[]) => void,
     ) => {
       const promptTexts = prompts.map((p) => p.prompt);
-      fileLogger.info("Keyboard-interactive authentication requested", {
-        operation: "file_keyboard_interactive",
-        hostId,
-        sessionId,
-        promptsCount: prompts.length,
-        prompts: promptTexts,
-        alreadyResponded: keyboardInteractiveResponded,
-      });
-
       const totpPromptIndex = prompts.findIndex((p) =>
         /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
           p.prompt,
@@ -474,26 +457,26 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       );
 
       if (totpPromptIndex !== -1) {
-        // TOTP prompt detected - need user input
         if (responseSent) {
-          fileLogger.warn("Response already sent, ignoring TOTP prompt", {
-            operation: "file_keyboard_interactive",
-            hostId,
-            sessionId,
+          const responses = prompts.map((p) => {
+            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+              return resolvedCredentials.password;
+            }
+            return "";
           });
+          finish(responses);
           return;
         }
         responseSent = true;
 
         if (pendingTOTPSessions[sessionId]) {
-          fileLogger.warn(
-            "TOTP session already exists, ignoring duplicate keyboard-interactive",
-            {
-              operation: "file_keyboard_interactive",
-              hostId,
-              sessionId,
-            },
-          );
+          const responses = prompts.map((p) => {
+            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+              return resolvedCredentials.password;
+            }
+            return "";
+          });
+          finish(responses);
           return;
         }
 
@@ -515,36 +498,75 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           resolvedPassword: resolvedCredentials.password,
         };
 
-        fileLogger.info("Created TOTP session", {
-          operation: "file_keyboard_interactive_totp",
-          hostId,
-          sessionId,
-          prompt: prompts[totpPromptIndex].prompt,
-          promptsCount: prompts.length,
-        });
-
         res.json({
           requires_totp: true,
           sessionId,
           prompt: prompts[totpPromptIndex].prompt,
         });
       } else {
-        // Non-TOTP prompts (password, etc.) - respond automatically
-        if (keyboardInteractiveResponded) {
-          fileLogger.warn(
-            "Already responded to keyboard-interactive, ignoring subsequent prompt",
-            {
-              operation: "file_keyboard_interactive",
-              hostId,
-              sessionId,
-              prompts: promptTexts,
-            },
-          );
+        // Non-TOTP prompts (password, etc.)
+        const hasStoredPassword =
+          resolvedCredentials.password &&
+          resolvedCredentials.authType !== "none";
+
+        // Check if this is a password prompt
+        const passwordPromptIndex = prompts.findIndex((p) =>
+          /password/i.test(p.prompt),
+        );
+
+        // If no stored password (including authType "none"), prompt the user
+        if (!hasStoredPassword && passwordPromptIndex !== -1) {
+          if (responseSent) {
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+                return resolvedCredentials.password;
+              }
+              return "";
+            });
+            finish(responses);
+            return;
+          }
+          responseSent = true;
+
+          if (pendingTOTPSessions[sessionId]) {
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+                return resolvedCredentials.password;
+              }
+              return "";
+            });
+            finish(responses);
+            return;
+          }
+
+          keyboardInteractiveResponded = true;
+
+          pendingTOTPSessions[sessionId] = {
+            client,
+            finish,
+            config,
+            createdAt: Date.now(),
+            sessionId,
+            hostId,
+            ip,
+            port,
+            username,
+            userId,
+            prompts,
+            totpPromptIndex: passwordPromptIndex,
+            resolvedPassword: resolvedCredentials.password,
+          };
+
+          res.json({
+            requires_totp: true,
+            sessionId,
+            prompt: prompts[passwordPromptIndex].prompt,
+            isPassword: true,
+          });
           return;
         }
 
-        keyboardInteractiveResponded = true;
-
+        // Auto-respond with stored credentials if available
         const responses = prompts.map((p) => {
           if (/password/i.test(p.prompt) && resolvedCredentials.password) {
             return resolvedCredentials.password;
@@ -552,16 +574,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           return "";
         });
 
-        fileLogger.info("Auto-responding to keyboard-interactive prompts", {
-          operation: "file_keyboard_interactive_response",
-          hostId,
-          sessionId,
-          hasPassword: !!resolvedCredentials.password,
-          responsesProvided: responses.filter((r) => r !== "").length,
-          totalPrompts: prompts.length,
-          prompts: promptTexts,
-        });
-
+        keyboardInteractiveResponded = true;
         finish(responses);
       }
     },
@@ -619,14 +632,6 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       .json({ error: "TOTP session timeout. Please reconnect." });
   }
 
-  fileLogger.info("Submitting TOTP code to SSH server", {
-    operation: "file_totp_verify",
-    sessionId,
-    userId,
-    codeLength: totpCode.length,
-    promptsCount: session.prompts?.length || 0,
-  });
-
   // Build responses for ALL prompts, just like in terminal.ts
   const responses = (session.prompts || []).map((p, index) => {
     if (index === session.totpPromptIndex) {
@@ -649,9 +654,9 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   let responseSent = false;
   let responseTimeout: NodeJS.Timeout;
 
-  // Remove old event listeners from /connect endpoint to avoid conflicts
-  session.client.removeAllListeners("ready");
-  session.client.removeAllListeners("error");
+  // Don't remove event listeners - just add our own 'once' handlers
+  // The ssh2 library manages multiple listeners correctly
+  // Removing them can cause the connection to become unstable
 
   // CRITICAL: Attach event listeners BEFORE calling finish() to avoid race condition
   session.client.once("ready", () => {
@@ -661,78 +666,69 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
 
     delete pendingTOTPSessions[sessionId];
 
-    sshSessions[sessionId] = {
-      client: session.client,
-      isConnected: true,
-      lastActive: Date.now(),
-    };
-    scheduleSessionCleanup(sessionId);
+    // Add a small delay to let SSH2 stabilize the connection after keyboard-interactive
+    // This prevents "Not connected" errors when immediately trying to exec commands
+    setTimeout(() => {
+      sshSessions[sessionId] = {
+        client: session.client,
+        isConnected: true,
+        lastActive: Date.now(),
+      };
+      scheduleSessionCleanup(sessionId);
 
-    fileLogger.success("TOTP verification successful", {
-      operation: "file_totp_verify",
-      sessionId,
-      userId,
-    });
+      res.json({
+        status: "success",
+        message: "TOTP verified, SSH connection established",
+      });
 
-    res.json({
-      status: "success",
-      message: "TOTP verified, SSH connection established",
-    });
-
-    // Log activity to dashboard API
-    if (session.hostId && session.userId) {
-      (async () => {
-        try {
-          const hosts = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshData)
-              .where(
-                and(
-                  eq(sshData.id, session.hostId!),
-                  eq(sshData.userId, session.userId!),
+      // Log activity to dashboard API after connection is stable
+      if (session.hostId && session.userId) {
+        (async () => {
+          try {
+            const hosts = await SimpleDBOps.select(
+              getDb()
+                .select()
+                .from(sshData)
+                .where(
+                  and(
+                    eq(sshData.id, session.hostId!),
+                    eq(sshData.userId, session.userId!),
+                  ),
                 ),
-              ),
-            "ssh_data",
-            session.userId!,
-          );
+              "ssh_data",
+              session.userId!,
+            );
 
-          const hostName =
-            hosts.length > 0 && hosts[0].name
-              ? hosts[0].name
-              : `${session.username}@${session.ip}:${session.port}`;
+            const hostName =
+              hosts.length > 0 && hosts[0].name
+                ? hosts[0].name
+                : `${session.username}@${session.ip}:${session.port}`;
 
-          const authManager = AuthManager.getInstance();
-          await axios.post(
-            "http://localhost:30006/activity/log",
-            {
-              type: "file_manager",
-              hostId: session.hostId,
-              hostName,
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+            const authManager = AuthManager.getInstance();
+            await axios.post(
+              "http://localhost:30006/activity/log",
+              {
+                type: "file_manager",
+                hostId: session.hostId,
+                hostName,
               },
-            },
-          );
-
-          fileLogger.info("File manager activity logged (TOTP)", {
-            operation: "activity_log",
-            userId: session.userId,
-            hostId: session.hostId,
-            hostName,
-          });
-        } catch (error) {
-          fileLogger.warn("Failed to log file manager activity (TOTP)", {
-            operation: "activity_log_error",
-            userId: session.userId,
-            hostId: session.hostId,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
-        }
-      })();
-    }
+              {
+                headers: {
+                  Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+                },
+              },
+            );
+          } catch (error) {
+            fileLogger.warn("Failed to log file manager activity (TOTP)", {
+              operation: "activity_log_error",
+              userId: session.userId,
+              hostId: session.hostId,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        })();
+      }
+    }, 200); // Give SSH2 connection 200ms to fully stabilize after keyboard-interactive
   });
 
   session.client.once("error", (err) => {

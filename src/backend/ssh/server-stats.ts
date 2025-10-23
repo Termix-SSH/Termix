@@ -112,13 +112,9 @@ class SSHConnectionPool {
           );
 
           if (totpPrompt) {
-            statsLogger.warn(
-              `Server Stats cannot handle TOTP for host ${host.ip}. Connection will fail.`,
-              {
-                operation: "server_stats_totp_detected",
-                hostId: host.id,
-              },
-            );
+            // Record TOTP failure as permanent - never retry
+            // The recordFailure method will log this once
+            authFailureTracker.recordFailure(host.id, "TOTP", true);
             client.end();
             reject(
               new Error(
@@ -272,9 +268,109 @@ class MetricsCache {
   }
 }
 
+interface AuthFailureRecord {
+  count: number;
+  lastFailure: number;
+  reason: "TOTP" | "AUTH" | "TIMEOUT";
+  permanent: boolean; // If true, don't retry at all
+}
+
+class AuthFailureTracker {
+  private failures = new Map<number, AuthFailureRecord>();
+  private maxRetries = 3;
+  private backoffBase = 60000; // 1 minute base backoff
+
+  recordFailure(
+    hostId: number,
+    reason: "TOTP" | "AUTH" | "TIMEOUT",
+    permanent = false,
+  ): void {
+    const existing = this.failures.get(hostId);
+    if (existing) {
+      existing.count++;
+      existing.lastFailure = Date.now();
+      existing.reason = reason;
+      if (permanent) existing.permanent = true;
+    } else {
+      this.failures.set(hostId, {
+        count: 1,
+        lastFailure: Date.now(),
+        reason,
+        permanent,
+      });
+    }
+  }
+
+  shouldSkip(hostId: number): boolean {
+    const record = this.failures.get(hostId);
+    if (!record) return false;
+
+    // Always skip TOTP hosts
+    if (record.reason === "TOTP" || record.permanent) {
+      return true;
+    }
+
+    // Skip if we've exceeded max retries
+    if (record.count >= this.maxRetries) {
+      return true;
+    }
+
+    // Calculate exponential backoff
+    const backoffTime = this.backoffBase * Math.pow(2, record.count - 1);
+    const timeSinceFailure = Date.now() - record.lastFailure;
+
+    return timeSinceFailure < backoffTime;
+  }
+
+  getSkipReason(hostId: number): string | null {
+    const record = this.failures.get(hostId);
+    if (!record) return null;
+
+    if (record.reason === "TOTP") {
+      return "TOTP authentication required (metrics unavailable)";
+    }
+
+    if (record.permanent) {
+      return "Authentication permanently failed";
+    }
+
+    if (record.count >= this.maxRetries) {
+      return `Too many authentication failures (${record.count} attempts)`;
+    }
+
+    const backoffTime = this.backoffBase * Math.pow(2, record.count - 1);
+    const timeSinceFailure = Date.now() - record.lastFailure;
+    const remainingTime = Math.ceil((backoffTime - timeSinceFailure) / 1000);
+
+    if (timeSinceFailure < backoffTime) {
+      return `Retry in ${remainingTime}s (attempt ${record.count}/${this.maxRetries})`;
+    }
+
+    return null;
+  }
+
+  reset(hostId: number): void {
+    this.failures.delete(hostId);
+    // Don't log reset - it's not important
+  }
+
+  cleanup(): void {
+    // Clean up old failures (older than 1 hour)
+    const maxAge = 60 * 60 * 1000;
+    const now = Date.now();
+
+    for (const [hostId, record] of this.failures.entries()) {
+      if (!record.permanent && now - record.lastFailure > maxAge) {
+        this.failures.delete(hostId);
+      }
+    }
+  }
+}
+
 const connectionPool = new SSHConnectionPool();
 const requestQueue = new RequestQueue();
 const metricsCache = new MetricsCache();
+const authFailureTracker = new AuthFailureTracker();
 const authManager = AuthManager.getInstance();
 
 type HostStatus = "online" | "offline";
@@ -729,6 +825,13 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     os: string | null;
   };
 }> {
+  // Check if we should skip this host due to auth failures
+  if (authFailureTracker.shouldSkip(host.id)) {
+    const reason = authFailureTracker.getSkipReason(host.id);
+    // Don't log - just skip silently to avoid spam
+    throw new Error(reason || "Authentication failed");
+  }
+
   const cached = metricsCache.get(host.id);
   if (cached) {
     return cached as ReturnType<typeof collectMetrics> extends Promise<infer T>
@@ -1070,11 +1173,32 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         return result;
       });
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("TOTP authentication required")
-      ) {
-        throw error;
+      // Record authentication failures for backoff
+      if (error instanceof Error) {
+        if (error.message.includes("TOTP authentication required")) {
+          // TOTP failures are already recorded in keyboard-interactive handler
+          throw error;
+        } else if (
+          error.message.includes("No password available") ||
+          error.message.includes("Unsupported authentication type") ||
+          error.message.includes("No SSH key available")
+        ) {
+          // Configuration errors - permanent failures, don't retry
+          // recordFailure will log once when first detected
+          authFailureTracker.recordFailure(host.id, "AUTH", true);
+        } else if (
+          error.message.includes("authentication") ||
+          error.message.includes("Permission denied") ||
+          error.message.includes("All configured authentication methods failed")
+        ) {
+          // recordFailure will log once when first detected
+          authFailureTracker.recordFailure(host.id, "AUTH");
+        } else if (
+          error.message.includes("timeout") ||
+          error.message.includes("ETIMEDOUT")
+        ) {
+          authFailureTracker.recordFailure(host.id, "TIMEOUT");
+        }
       }
       throw error;
     }
@@ -1257,13 +1381,17 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
     const metrics = await collectMetrics(host);
     res.json({ ...metrics, lastChecked: new Date().toISOString() });
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+
+    // Check if this is a skip due to auth failure tracking
     if (
-      err instanceof Error &&
-      err.message.includes("TOTP authentication required")
+      errorMessage.includes("TOTP authentication required") ||
+      errorMessage.includes("metrics unavailable")
     ) {
+      // Don't log as error - this is expected for TOTP hosts
       return res.status(403).json({
         error: "TOTP_REQUIRED",
-        message: "Server Stats unavailable for TOTP-enabled servers",
+        message: errorMessage,
         cpu: { percent: null, cores: null, load: null },
         memory: { percent: null, usedGiB: null, totalGiB: null },
         disk: {
@@ -1280,7 +1408,43 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
       });
     }
 
-    statsLogger.error("Failed to collect metrics", err);
+    // Check if this is a skip due to too many failures or config issues
+    if (
+      errorMessage.includes("Too many authentication failures") ||
+      errorMessage.includes("Retry in") ||
+      errorMessage.includes("Invalid configuration") ||
+      errorMessage.includes("Authentication failed")
+    ) {
+      // Don't log - return error silently to avoid spam
+      return res.status(429).json({
+        error: "UNAVAILABLE",
+        message: errorMessage,
+        cpu: { percent: null, cores: null, load: null },
+        memory: { percent: null, usedGiB: null, totalGiB: null },
+        disk: {
+          percent: null,
+          usedHuman: null,
+          totalHuman: null,
+          availableHuman: null,
+        },
+        network: { interfaces: [] },
+        uptime: { seconds: null, formatted: null },
+        processes: { total: null, running: null, top: [] },
+        system: { hostname: null, kernel: null, os: null },
+        lastChecked: new Date().toISOString(),
+      });
+    }
+
+    // Only log unexpected errors
+    if (
+      !errorMessage.includes("timeout") &&
+      !errorMessage.includes("offline") &&
+      !errorMessage.includes("permanently") &&
+      !errorMessage.includes("none") &&
+      !errorMessage.includes("No password")
+    ) {
+      statsLogger.error("Failed to collect metrics", err);
+    }
 
     if (err instanceof Error && err.message.includes("timeout")) {
       return res.status(504).json({
@@ -1339,4 +1503,12 @@ app.listen(PORT, async () => {
       operation: "auth_init_error",
     });
   }
+
+  // Cleanup old auth failures every 10 minutes
+  setInterval(
+    () => {
+      authFailureTracker.cleanup();
+    },
+    10 * 60 * 1000,
+  );
 });

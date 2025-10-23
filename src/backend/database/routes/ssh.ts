@@ -235,6 +235,7 @@ router.post(
       defaultPath,
       tunnelConnections,
       statsConfig,
+      terminalConfig,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -271,6 +272,7 @@ router.post(
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
+      terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -421,6 +423,7 @@ router.put(
       defaultPath,
       tunnelConnections,
       statsConfig,
+      terminalConfig,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -458,6 +461,7 @@ router.put(
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
+      terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -604,6 +608,9 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
           statsConfig: row.statsConfig
             ? JSON.parse(row.statsConfig as string)
             : undefined,
+          terminalConfig: row.terminalConfig
+            ? JSON.parse(row.terminalConfig as string)
+            : undefined,
         };
 
         return (await resolveHostCredentials(baseHost)) || baseHost;
@@ -670,6 +677,9 @@ router.get(
         enableFileManager: !!host.enableFileManager,
         statsConfig: host.statsConfig
           ? JSON.parse(host.statsConfig)
+          : undefined,
+        terminalConfig: host.terminalConfig
+          ? JSON.parse(host.terminalConfig)
           : undefined,
       };
 

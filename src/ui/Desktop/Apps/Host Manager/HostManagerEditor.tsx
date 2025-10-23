@@ -32,6 +32,7 @@ import {
   updateSSHHost,
   enableAutoStart,
   disableAutoStart,
+  getSnippets,
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/Desktop/Apps/Credentials/CredentialSelector.tsx";
@@ -41,6 +42,31 @@ import { EditorView } from "@codemirror/view";
 import type { StatsConfig } from "@/types/stats-widgets";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx";
+import { Slider } from "@/components/ui/slider.tsx";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion.tsx";
+import {
+  TERMINAL_THEMES,
+  TERMINAL_FONTS,
+  CURSOR_STYLES,
+  BELL_STYLES,
+  FAST_SCROLL_MODIFIERS,
+  DEFAULT_TERMINAL_CONFIG,
+} from "@/constants/terminal-themes";
+import { TerminalPreview } from "@/ui/Desktop/Apps/Terminal/TerminalPreview.tsx";
+import type { TerminalConfig } from "@/types";
+import { Plus, X } from "lucide-react";
 
 interface SSHHost {
   id: number;
@@ -69,6 +95,7 @@ interface SSHHost {
     autoStart: boolean;
   }>;
   statsConfig?: StatsConfig;
+  terminalConfig?: TerminalConfig;
   createdAt: string;
   updatedAt: string;
   credentialId?: number;
@@ -89,6 +116,9 @@ export function HostManagerEditor({
   const [credentials, setCredentials] = useState<
     Array<{ id: number; username: string; authType: string }>
   >([]);
+  const [snippets, setSnippets] = useState<
+    Array<{ id: number; name: string; content: string }>
+  >([]);
 
   const [authTab, setAuthTab] = useState<
     "password" | "key" | "credential" | "none"
@@ -103,11 +133,13 @@ export function HostManagerEditor({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [hostsData, credentialsData] = await Promise.all([
+        const [hostsData, credentialsData, snippetsData] = await Promise.all([
           getSSHHosts(),
           getCredentials(),
+          getSnippets(),
         ]);
         setCredentials(credentialsData);
+        setSnippets(Array.isArray(snippetsData) ? snippetsData : []);
 
         const uniqueFolders = [
           ...new Set(
@@ -239,6 +271,34 @@ export function HostManagerEditor({
             "system",
           ],
         }),
+      terminalConfig: z
+        .object({
+          cursorBlink: z.boolean(),
+          cursorStyle: z.enum(["block", "underline", "bar"]),
+          fontSize: z.number().min(8).max(24),
+          fontFamily: z.string(),
+          letterSpacing: z.number().min(-2).max(5),
+          lineHeight: z.number().min(1.0).max(2.0),
+          theme: z.string(),
+          scrollback: z.number().min(1000).max(50000),
+          bellStyle: z.enum(["none", "sound", "visual", "both"]),
+          rightClickSelectsWord: z.boolean(),
+          fastScrollModifier: z.enum(["alt", "ctrl", "shift"]),
+          fastScrollSensitivity: z.number().min(1).max(10),
+          minimumContrastRatio: z.number().min(1).max(21),
+          backspaceMode: z.enum(["normal", "control-h"]),
+          agentForwarding: z.boolean(),
+          environmentVariables: z.array(
+            z.object({
+              key: z.string(),
+              value: z.string(),
+            }),
+          ),
+          startupSnippetId: z.number().nullable(),
+          autoMosh: z.boolean(),
+          moshCommand: z.string(),
+        })
+        .optional(),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -327,6 +387,7 @@ export function HostManagerEditor({
       defaultPath: "/",
       tunnelConnections: [],
       statsConfig: DEFAULT_STATS_CONFIG,
+      terminalConfig: DEFAULT_TERMINAL_CONFIG,
     },
   });
 
@@ -386,6 +447,7 @@ export function HostManagerEditor({
         defaultPath: cleanedHost.defaultPath || "/",
         tunnelConnections: cleanedHost.tunnelConnections || [],
         statsConfig: cleanedHost.statsConfig || DEFAULT_STATS_CONFIG,
+        terminalConfig: cleanedHost.terminalConfig || DEFAULT_TERMINAL_CONFIG,
       };
 
       if (defaultAuthType === "password") {
@@ -432,6 +494,7 @@ export function HostManagerEditor({
         defaultPath: "/",
         tunnelConnections: [],
         statsConfig: DEFAULT_STATS_CONFIG,
+        terminalConfig: DEFAULT_TERMINAL_CONFIG,
       };
 
       form.reset(defaultFormData);
@@ -471,6 +534,7 @@ export function HostManagerEditor({
         defaultPath: data.defaultPath || "/",
         tunnelConnections: data.tunnelConnections || [],
         statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
+        terminalConfig: data.terminalConfig || DEFAULT_TERMINAL_CONFIG,
       };
 
       submitData.credentialId = null;
@@ -1178,7 +1242,7 @@ export function HostManagerEditor({
                   </TabsContent>
                 </Tabs>
               </TabsContent>
-              <TabsContent value="terminal">
+              <TabsContent value="terminal" className="space-y-1">
                 <FormField
                   control={form.control}
                   name="enableTerminal"
@@ -1197,6 +1261,615 @@ export function HostManagerEditor({
                     </FormItem>
                   )}
                 />
+                <h1 className="text-xl font-semibold mt-7">
+                  Terminal Customization
+                </h1>
+                <Accordion type="multiple" className="w-full">
+                  <AccordionItem value="appearance">
+                    <AccordionTrigger>Appearance</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Theme Preview
+                        </label>
+                        <TerminalPreview
+                          theme={form.watch("terminalConfig.theme")}
+                          fontSize={form.watch("terminalConfig.fontSize")}
+                          fontFamily={form.watch("terminalConfig.fontFamily")}
+                          cursorStyle={form.watch("terminalConfig.cursorStyle")}
+                          cursorBlink={form.watch("terminalConfig.cursorBlink")}
+                          letterSpacing={form.watch(
+                            "terminalConfig.letterSpacing",
+                          )}
+                          lineHeight={form.watch("terminalConfig.lineHeight")}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.theme"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Theme</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select theme" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {Object.entries(TERMINAL_THEMES).map(
+                                  ([key, theme]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {theme.name}
+                                    </SelectItem>
+                                  ),
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Choose a color theme for the terminal
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Font Family */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.fontFamily"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Font Family</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select font" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {TERMINAL_FONTS.map((font) => (
+                                  <SelectItem
+                                    key={font.value}
+                                    value={font.value}
+                                  >
+                                    {font.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Select the font to use in the terminal
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Font Size */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.fontSize"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Font Size: {field.value}px</FormLabel>
+                            <FormControl>
+                              <Slider
+                                min={8}
+                                max={24}
+                                step={1}
+                                value={[field.value]}
+                                onValueChange={([value]) =>
+                                  field.onChange(value)
+                                }
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Adjust the terminal font size
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Letter Spacing */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.letterSpacing"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Letter Spacing: {field.value}px
+                            </FormLabel>
+                            <FormControl>
+                              <Slider
+                                min={-2}
+                                max={10}
+                                step={0.5}
+                                value={[field.value]}
+                                onValueChange={([value]) =>
+                                  field.onChange(value)
+                                }
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Adjust spacing between characters
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Line Height */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.lineHeight"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Line Height: {field.value}</FormLabel>
+                            <FormControl>
+                              <Slider
+                                min={1}
+                                max={2}
+                                step={0.1}
+                                value={[field.value]}
+                                onValueChange={([value]) =>
+                                  field.onChange(value)
+                                }
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Adjust spacing between lines
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Cursor Style */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.cursorStyle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cursor Style</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select cursor style" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="block">Block</SelectItem>
+                                <SelectItem value="underline">
+                                  Underline
+                                </SelectItem>
+                                <SelectItem value="bar">Bar</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Choose the cursor appearance
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Cursor Blink */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.cursorBlink"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>Cursor Blink</FormLabel>
+                              <FormDescription>
+                                Enable cursor blinking animation
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Behavior Settings */}
+                  <AccordionItem value="behavior">
+                    <AccordionTrigger>Behavior</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-4">
+                      {/* Scrollback Buffer */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.scrollback"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Scrollback Buffer: {field.value} lines
+                            </FormLabel>
+                            <FormControl>
+                              <Slider
+                                min={1000}
+                                max={100000}
+                                step={1000}
+                                value={[field.value]}
+                                onValueChange={([value]) =>
+                                  field.onChange(value)
+                                }
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Number of lines to keep in scrollback history
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Bell Style */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.bellStyle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bell Style</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select bell style" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                <SelectItem value="sound">Sound</SelectItem>
+                                <SelectItem value="visual">Visual</SelectItem>
+                                <SelectItem value="both">Both</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              How to handle terminal bell (BEL character)
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Right Click Selects Word */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.rightClickSelectsWord"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>Right Click Selects Word</FormLabel>
+                              <FormDescription>
+                                Right-clicking selects the word under cursor
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Fast Scroll Modifier */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.fastScrollModifier"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fast Scroll Modifier</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select modifier" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="alt">Alt</SelectItem>
+                                <SelectItem value="ctrl">Ctrl</SelectItem>
+                                <SelectItem value="shift">Shift</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Modifier key for fast scrolling
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Fast Scroll Sensitivity */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.fastScrollSensitivity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Fast Scroll Sensitivity: {field.value}
+                            </FormLabel>
+                            <FormControl>
+                              <Slider
+                                min={1}
+                                max={10}
+                                step={1}
+                                value={[field.value]}
+                                onValueChange={([value]) =>
+                                  field.onChange(value)
+                                }
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Scroll speed multiplier when modifier is held
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Minimum Contrast Ratio */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.minimumContrastRatio"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Minimum Contrast Ratio: {field.value}
+                            </FormLabel>
+                            <FormControl>
+                              <Slider
+                                min={1}
+                                max={21}
+                                step={1}
+                                value={[field.value]}
+                                onValueChange={([value]) =>
+                                  field.onChange(value)
+                                }
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Automatically adjust colors for better readability
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Advanced Settings */}
+                  <AccordionItem value="advanced">
+                    <AccordionTrigger>Advanced</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-4">
+                      {/* Agent Forwarding */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.agentForwarding"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>SSH Agent Forwarding</FormLabel>
+                              <FormDescription>
+                                Forward SSH authentication agent to remote host
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Backspace Mode */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.backspaceMode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Backspace Mode</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select backspace mode" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="normal">
+                                  Normal (DEL)
+                                </SelectItem>
+                                <SelectItem value="control-h">
+                                  Control-H (^H)
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Backspace key behavior for compatibility
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Startup Snippet */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.startupSnippetId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Startup Snippet</FormLabel>
+                            <Select
+                              onValueChange={(value) =>
+                                field.onChange(
+                                  value === "none" ? null : parseInt(value),
+                                )
+                              }
+                              value={field.value?.toString() || "none"}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select snippet" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                {snippets.map((snippet) => (
+                                  <SelectItem
+                                    key={snippet.id}
+                                    value={snippet.id.toString()}
+                                  >
+                                    {snippet.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Execute a snippet when the terminal connects
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Auto MOSH */}
+                      <FormField
+                        control={form.control}
+                        name="terminalConfig.autoMosh"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>Auto-MOSH</FormLabel>
+                              <FormDescription>
+                                Automatically run MOSH command on connect
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* MOSH Command */}
+                      {form.watch("terminalConfig.autoMosh") && (
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.moshCommand"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>MOSH Command</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="mosh user@server"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                The MOSH command to execute
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* Environment Variables */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Environment Variables
+                        </label>
+                        <FormDescription>
+                          Set custom environment variables for the terminal
+                          session
+                        </FormDescription>
+                        {form
+                          .watch("terminalConfig.environmentVariables")
+                          ?.map((_, index) => (
+                            <div key={index} className="flex gap-2">
+                              <FormField
+                                control={form.control}
+                                name={`terminalConfig.environmentVariables.${index}.key`}
+                                render={({ field }) => (
+                                  <FormItem className="flex-1">
+                                    <FormControl>
+                                      <Input
+                                        placeholder="Variable name"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`terminalConfig.environmentVariables.${index}.value`}
+                                render={({ field }) => (
+                                  <FormItem className="flex-1">
+                                    <FormControl>
+                                      <Input placeholder="Value" {...field} />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                  const current = form.getValues(
+                                    "terminalConfig.environmentVariables",
+                                  );
+                                  form.setValue(
+                                    "terminalConfig.environmentVariables",
+                                    current.filter((_, i) => i !== index),
+                                  );
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const current =
+                              form.getValues(
+                                "terminalConfig.environmentVariables",
+                              ) || [];
+                            form.setValue(
+                              "terminalConfig.environmentVariables",
+                              [...current, { key: "", value: "" }],
+                            );
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Variable
+                        </Button>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </TabsContent>
               <TabsContent value="tunnel">
                 <FormField

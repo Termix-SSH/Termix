@@ -1264,7 +1264,9 @@
     "enterNewPassword": "Enter your new password for user:",
     "passwordResetSuccess": "Success!",
     "passwordResetSuccessDesc": "Your password has been successfully reset! You can now log in with your new password.",
-    "signUp": "Sign Up"
+    "signUp": "Sign Up",
+    "authenticationDisabled": "Authentication Disabled",
+    "authenticationDisabledDesc": "All authentication methods are currently disabled. Please contact your administrator."
   },
   "errors": {
     "notFound": "Page not found",

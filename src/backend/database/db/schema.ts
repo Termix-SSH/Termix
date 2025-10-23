@@ -66,6 +66,7 @@ export const sshData = sqliteTable("ssh_data", {
     .default(true),
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
+  terminalConfig: text("terminal_config"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

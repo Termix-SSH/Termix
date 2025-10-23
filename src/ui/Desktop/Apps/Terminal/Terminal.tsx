@@ -12,8 +12,19 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { getCookie, isElectron, logActivity } from "@/ui/main-axios.ts";
+import {
+  getCookie,
+  isElectron,
+  logActivity,
+  getSnippets,
+} from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/components/TOTPDialog";
+import {
+  TERMINAL_THEMES,
+  DEFAULT_TERMINAL_CONFIG,
+  TERMINAL_FONTS,
+} from "@/constants/terminal-themes";
+import type { TerminalConfig } from "@/types";
 
 interface HostConfig {
   id?: number;
@@ -26,6 +37,7 @@ interface HostConfig {
   keyType?: string;
   authType?: string;
   credentialId?: number;
+  terminalConfig?: TerminalConfig;
   [key: string]: unknown;
 }
 
@@ -72,6 +84,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const { t } = useTranslation();
     const { instance: terminal, ref: xtermRef } = useXTerm();
+
+    const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
+    const themeColors =
+      TERMINAL_THEMES[config.theme]?.colors || TERMINAL_THEMES.termix.colors;
+    const backgroundColor = themeColors.background;
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -84,6 +101,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [, setIsAuthenticated] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
+    const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
     const isVisibleRef = useRef<boolean>(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
@@ -172,12 +190,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (webSocketRef.current && code) {
         webSocketRef.current.send(
           JSON.stringify({
-            type: "totp_response",
+            type: isPasswordPrompt ? "password_response" : "totp_response",
             data: { code },
           }),
         );
         setTotpRequired(false);
         setTotpPrompt("");
+        setIsPasswordPrompt(false);
       }
     }
 
@@ -500,6 +519,65 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
             // Log activity for recent connections
             logTerminalActivity();
+
+            // Execute post-connection actions
+            setTimeout(async () => {
+              // Merge default config with host-specific config
+              const terminalConfig = {
+                ...DEFAULT_TERMINAL_CONFIG,
+                ...hostConfig.terminalConfig,
+              };
+
+              // Set environment variables
+              if (
+                terminalConfig.environmentVariables &&
+                terminalConfig.environmentVariables.length > 0
+              ) {
+                for (const envVar of terminalConfig.environmentVariables) {
+                  if (envVar.key && envVar.value && ws.readyState === 1) {
+                    ws.send(
+                      JSON.stringify({
+                        type: "input",
+                        data: `export ${envVar.key}="${envVar.value}"\n`,
+                      }),
+                    );
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+                  }
+                }
+              }
+
+              // Execute startup snippet
+              if (terminalConfig.startupSnippetId) {
+                try {
+                  const snippets = await getSnippets();
+                  const snippet = snippets.find(
+                    (s: { id: number }) =>
+                      s.id === terminalConfig.startupSnippetId,
+                  );
+                  if (snippet && ws.readyState === 1) {
+                    ws.send(
+                      JSON.stringify({
+                        type: "input",
+                        data: snippet.content + "\n",
+                      }),
+                    );
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                  }
+                } catch (err) {
+                  console.warn("Failed to execute startup snippet:", err);
+                }
+              }
+
+              // Execute MOSH command
+              if (terminalConfig.autoMosh && ws.readyState === 1) {
+                ws.send(
+                  JSON.stringify({
+                    type: "input",
+                    data: terminalConfig.moshCommand + "\n",
+                  }),
+                );
+              }
+            }, 500);
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
             setIsConnected(false);
@@ -513,6 +591,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "totp_required") {
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || "Verification code:");
+            setIsPasswordPrompt(false);
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+          } else if (msg.type === "password_required") {
+            setTotpRequired(true);
+            setTotpPrompt(msg.prompt || "Password:");
+            setIsPasswordPrompt(true);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
@@ -606,27 +693,66 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
 
+      // Merge default config with host-specific config
+      const config = {
+        ...DEFAULT_TERMINAL_CONFIG,
+        ...hostConfig.terminalConfig,
+      };
+
+      // Get theme colors
+      const themeColors =
+        TERMINAL_THEMES[config.theme]?.colors || TERMINAL_THEMES.termix.colors;
+
+      // Get font family with fallback
+      const fontConfig = TERMINAL_FONTS.find(
+        (f) => f.value === config.fontFamily,
+      );
+      const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
+
       terminal.options = {
-        cursorBlink: true,
-        cursorStyle: "bar",
-        scrollback: 10000,
-        fontSize: 14,
-        fontFamily:
-          '"Caskaydia Cove Nerd Font Mono", "SF Mono", Consolas, "Liberation Mono", monospace',
+        cursorBlink: config.cursorBlink,
+        cursorStyle: config.cursorStyle,
+        scrollback: config.scrollback,
+        fontSize: config.fontSize,
+        fontFamily,
         allowTransparency: true,
         convertEol: true,
         windowsMode: false,
         macOptionIsMeta: false,
         macOptionClickForcesSelection: false,
-        rightClickSelectsWord: false,
-        fastScrollModifier: "alt",
-        fastScrollSensitivity: 5,
+        rightClickSelectsWord: config.rightClickSelectsWord,
+        fastScrollModifier: config.fastScrollModifier,
+        fastScrollSensitivity: config.fastScrollSensitivity,
         allowProposedApi: true,
-        minimumContrastRatio: 1,
-        letterSpacing: 0,
-        lineHeight: 1.2,
+        minimumContrastRatio: config.minimumContrastRatio,
+        letterSpacing: config.letterSpacing,
+        lineHeight: config.lineHeight,
+        bellStyle: config.bellStyle as "none" | "sound",
 
-        theme: { background: "#18181b", foreground: "#f7f7f7" },
+        theme: {
+          background: themeColors.background,
+          foreground: themeColors.foreground,
+          cursor: themeColors.cursor,
+          cursorAccent: themeColors.cursorAccent,
+          selectionBackground: themeColors.selectionBackground,
+          selectionForeground: themeColors.selectionForeground,
+          black: themeColors.black,
+          red: themeColors.red,
+          green: themeColors.green,
+          yellow: themeColors.yellow,
+          blue: themeColors.blue,
+          magenta: themeColors.magenta,
+          cyan: themeColors.cyan,
+          white: themeColors.white,
+          brightBlack: themeColors.brightBlack,
+          brightRed: themeColors.brightRed,
+          brightGreen: themeColors.brightGreen,
+          brightYellow: themeColors.brightYellow,
+          brightBlue: themeColors.brightBlue,
+          brightMagenta: themeColors.brightMagenta,
+          brightCyan: themeColors.brightCyan,
+          brightWhite: themeColors.brightWhite,
+        },
       };
 
       const fitAddon = new FitAddon();
@@ -670,6 +796,24 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         const isMacOS =
           navigator.platform.toUpperCase().indexOf("MAC") >= 0 ||
           navigator.userAgent.toUpperCase().indexOf("MAC") >= 0;
+
+        // Handle backspace mode (Control-H)
+        if (
+          config.backspaceMode === "control-h" &&
+          e.key === "Backspace" &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (webSocketRef.current?.readyState === 1) {
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: "\x08" }),
+            );
+          }
+          return false;
+        }
 
         if (!isMacOS) return;
 
@@ -739,7 +883,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
         webSocketRef.current?.close();
       };
-    }, [xtermRef, terminal]);
+    }, [xtermRef, terminal, hostConfig]);
 
     useEffect(() => {
       if (!terminal || !hostConfig || !visible) return;
@@ -813,7 +957,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [splitScreen, isVisible, terminal]);
 
     return (
-      <div className="h-full w-full relative">
+      <div className="h-full w-full relative" style={{ backgroundColor }}>
         <div
           ref={xtermRef}
           className={`h-full w-full transition-opacity duration-200 ${visible && isVisible && !isConnecting ? "opacity-100" : "opacity-0"}`}
@@ -829,10 +973,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           prompt={totpPrompt}
           onSubmit={handleTotpSubmit}
           onCancel={handleTotpCancel}
+          backgroundColor={backgroundColor}
         />
 
         {isConnecting && (
-          <div className="absolute inset-0 flex items-center justify-center bg-dark-bg">
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ backgroundColor }}
+          >
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
               <span className="text-gray-300">{t("terminal.connecting")}</span>
@@ -846,6 +994,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
 const style = document.createElement("style");
 style.innerHTML = `
+/* Import popular terminal fonts from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 @font-face {
   font-family: 'Caskaydia Cove Nerd Font Mono';
   src: url('./fonts/CaskaydiaCoveNerdFontMono-Regular.ttf') format('truetype');

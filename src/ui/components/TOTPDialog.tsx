@@ -10,6 +10,7 @@ interface TOTPDialogProps {
   prompt: string;
   onSubmit: (code: string) => void;
   onCancel: () => void;
+  backgroundColor?: string;
 }
 
 export function TOTPDialog({
@@ -17,6 +18,7 @@ export function TOTPDialog({
   prompt,
   onSubmit,
   onCancel,
+  backgroundColor,
 }: TOTPDialogProps) {
   const { t } = useTranslation();
 
@@ -24,7 +26,10 @@ export function TOTPDialog({
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-50">
-      <div className="absolute inset-0 bg-dark-bg rounded-md" />
+      <div
+        className="absolute inset-0 bg-dark-bg rounded-md"
+        style={{ backgroundColor: backgroundColor || undefined }}
+      />
       <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
         <div className="mb-4 flex items-center gap-2">
           <Shield className="w-5 h-5 text-primary" />

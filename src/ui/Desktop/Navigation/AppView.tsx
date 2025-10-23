@@ -12,6 +12,10 @@ import * as ResizablePrimitive from "react-resizable-panels";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
+import {
+  TERMINAL_THEMES,
+  DEFAULT_TERMINAL_CONFIG,
+} from "@/constants/terminal-themes";
 
 interface TabData {
   id: number;
@@ -24,7 +28,7 @@ interface TabData {
       refresh?: () => void;
     };
   };
-  hostConfig?: unknown;
+  hostConfig?: any;
   [key: string]: unknown;
 }
 
@@ -258,9 +262,24 @@ export function AppView({
 
           const effectiveVisible = isVisible && ready;
 
+          const isTerminal = t.type === "terminal";
+          const terminalConfig = {
+            ...DEFAULT_TERMINAL_CONFIG,
+            ...(t.hostConfig as any)?.terminalConfig,
+          };
+          const themeColors =
+            TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+            TERMINAL_THEMES.termix.colors;
+          const backgroundColor = themeColors.background;
+
           return (
             <div key={t.id} style={finalStyle}>
-              <div className="absolute inset-0 rounded-md bg-dark-bg">
+              <div
+                className="absolute inset-0 rounded-md overflow-hidden"
+                style={{
+                  backgroundColor: isTerminal ? backgroundColor : "#18181b",
+                }}
+              >
                 {t.type === "terminal" ? (
                   <Terminal
                     ref={t.terminalRef}
@@ -605,21 +624,37 @@ export function AppView({
 
   const currentTabData = tabs.find((tab: TabData) => tab.id === currentTab);
   const isFileManager = currentTabData?.type === "file_manager";
+  const isTerminal = currentTabData?.type === "terminal";
   const isSplitScreen = allSplitScreenTab.length > 0;
+
+  // Get terminal background color for the current tab
+  const terminalConfig = {
+    ...DEFAULT_TERMINAL_CONFIG,
+    ...(currentTabData?.hostConfig as any)?.terminalConfig,
+  };
+  const themeColors =
+    TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+    TERMINAL_THEMES.termix.colors;
+  const terminalBackgroundColor = themeColors.background;
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
+
+  // Determine background color based on current tab type
+  let containerBackground = "var(--color-dark-bg)";
+  if (isFileManager && !isSplitScreen) {
+    containerBackground = "var(--color-dark-bg-darkest)";
+  } else if (isTerminal) {
+    containerBackground = terminalBackgroundColor;
+  }
 
   return (
     <div
       ref={containerRef}
       className="border-2 border-dark-border rounded-lg overflow-hidden overflow-x-hidden relative"
       style={{
-        background:
-          isFileManager && !isSplitScreen
-            ? "var(--color-dark-bg-darkest)"
-            : "var(--color-dark-bg)",
+        background: containerBackground,
         marginLeft: leftMarginPx,
         marginRight: 17,
         marginTop: topMarginPx,

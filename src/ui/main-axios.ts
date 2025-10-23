@@ -747,6 +747,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       statsConfig: hostData.statsConfig || null,
+      terminalConfig: hostData.terminalConfig || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -804,6 +805,7 @@ export async function updateSSHHost(
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       statsConfig: hostData.statsConfig || null,
+      terminalConfig: hostData.terminalConfig || null,
     };
 
     if (!submitData.enableTunnel) {

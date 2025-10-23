@@ -167,6 +167,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         enable_file_manager INTEGER NOT NULL DEFAULT 1,
         default_path TEXT,
         stats_config TEXT,
+        terminal_config TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id)
@@ -404,6 +405,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists("ssh_data", "stats_config", "TEXT");
+  addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");

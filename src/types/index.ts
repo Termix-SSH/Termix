@@ -36,6 +36,7 @@ export interface SSHHost {
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
   statsConfig?: string;
+  terminalConfig?: TerminalConfig;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +61,7 @@ export interface SSHHostData {
   defaultPath?: string;
   tunnelConnections?: TunnelConnection[];
   statsConfig?: string;
+  terminalConfig?: TerminalConfig;
 }
 
 // ============================================================================
@@ -246,6 +248,37 @@ export interface TermixAlert {
   type?: "info" | "warning" | "error" | "success";
   actionUrl?: string;
   actionText?: string;
+}
+
+// ============================================================================
+// TERMINAL CONFIGURATION TYPES
+// ============================================================================
+
+export interface TerminalConfig {
+  // Appearance
+  cursorBlink: boolean;
+  cursorStyle: "block" | "underline" | "bar";
+  fontSize: number;
+  fontFamily: string;
+  letterSpacing: number;
+  lineHeight: number;
+  theme: string; // Theme key from TERMINAL_THEMES
+
+  // Behavior
+  scrollback: number;
+  bellStyle: "none" | "sound" | "visual" | "both";
+  rightClickSelectsWord: boolean;
+  fastScrollModifier: "alt" | "ctrl" | "shift";
+  fastScrollSensitivity: number;
+  minimumContrastRatio: number;
+
+  // Advanced
+  backspaceMode: "normal" | "control-h";
+  agentForwarding: boolean;
+  environmentVariables: Array<{ key: string; value: string }>;
+  startupSnippetId: number | null;
+  autoMosh: boolean;
+  moshCommand: string;
 }
 
 // ============================================================================
