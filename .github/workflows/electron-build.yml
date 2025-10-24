@@ -183,7 +183,7 @@ jobs:
           echo "✅ Build version for Apple: $BUILD_VERSION"
 
           # Build with custom buildVersion without modifying package.json
-          npm run build && electron-builder --mac --universal --config.buildVersion="$BUILD_VERSION"
+          npm run build && npx electron-builder --mac --universal --config.buildVersion="$BUILD_VERSION"
 
       - name: List release directory
         if: steps.check_certs.outputs.has_certs == 'true'
