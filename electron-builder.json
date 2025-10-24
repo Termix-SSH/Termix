@@ -67,6 +67,7 @@
     "icon": "public/icon.png",
     "category": "Development",
     "executableName": "termix",
+    "maintainer": "Termix <mail@termix.site>",
     "desktop": {
       "entry": {
         "Name": "Termix",

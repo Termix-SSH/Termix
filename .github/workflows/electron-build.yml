@@ -18,6 +18,11 @@ on:
         required: false
         default: false
         type: boolean
+      submit_to_stores:
+        description: "Submit builds to app stores"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build-windows:
@@ -115,6 +120,10 @@ jobs:
           npm install --force @rollup/rollup-linux-x64-gnu
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
+          npm install --force @swc/core-linux-x64-gnu
+          npm install --force @swc/core-linux-arm64-gnu
+          npm install --force @swc/core-linux-arm-gnueabihf
+          npm install --force @swc/core
 
       - name: Build Linux (All Architectures)
         run: npm run build && npx electron-builder --linux --x64 --arm64 --armv7l
@@ -207,6 +216,7 @@ jobs:
           npm install --force @rollup/rollup-darwin-x64
           npm install --force @swc/core-darwin-arm64
           npm install --force @swc/core-darwin-x64
+          npm install --force @swc/core
 
       - name: Check for Code Signing Certificates
         id: check_certs
@@ -331,7 +341,11 @@ jobs:
         run: |
           if [ -n "${{ secrets.APPLE_KEY_ID }}" ] && [ -n "${{ secrets.APPLE_ISSUER_ID }}" ] && [ -n "${{ secrets.APPLE_KEY_CONTENT }}" ]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "✅ App Store Connect API credentials found. Will deploy to App Store Connect."
+            if [ "${{ github.event.inputs.submit_to_stores }}" == "true" ]; then
+              echo "✅ App Store Connect API credentials found. Will deploy to TestFlight."
+            else
+              echo "ℹ️ App Store Connect API credentials found, but store submission is disabled."
+            fi
           else
             echo "has_credentials=false" >> $GITHUB_OUTPUT
             echo "⚠️ App Store Connect API credentials not configured. Skipping deployment."
@@ -339,20 +353,20 @@ jobs:
           fi
 
       - name: Setup Ruby for Fastlane
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.submit_to_stores == 'true'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: false
 
       - name: Install Fastlane
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.submit_to_stores == 'true'
         run: |
           gem install fastlane -N
           fastlane --version
 
       - name: Deploy to App Store Connect (TestFlight)
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.submit_to_stores == 'true'
         run: |
           PKG_FILE=$(find release -name "*.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
