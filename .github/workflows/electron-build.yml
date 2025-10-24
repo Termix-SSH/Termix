@@ -204,6 +204,9 @@ jobs:
           rm -f package-lock.json
           npm install
           npm install --force @rollup/rollup-darwin-arm64
+          npm install --force @rollup/rollup-darwin-x64
+          npm install --force @swc/core-darwin-arm64
+          npm install --force @swc/core-darwin-x64
 
       - name: Check for Code Signing Certificates
         id: check_certs
