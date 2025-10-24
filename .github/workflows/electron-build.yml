@@ -13,6 +13,11 @@ on:
           - windows
           - linux
           - macos
+      upload_to_release:
+        description: "Upload artifacts to latest GitHub release"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build-windows:
@@ -34,28 +39,57 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Windows Portable
-        run: npm run build:win-portable
+      - name: Build Windows (All Architectures)
+        run: npm run build && npx electron-builder --win --x64 --ia32
 
-      - name: Build Windows Installer
-        run: npm run build:win-installer
-
-      - name: Create Windows Portable zip
-        run: |
-          Compress-Archive -Path "release/win-unpacked/*" -DestinationPath "Termix-Windows-Portable.zip"
-
-      - name: Upload Windows Portable Artifact
+      - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@v4
         with:
-          name: Termix-Windows-Portable
-          path: Termix-Windows-Portable.zip
+          name: Termix-Windows-x64-NSIS
+          path: release/*.exe
           retention-days: 30
 
-      - name: Upload Windows Installer Artifact
+      - name: Upload Windows x64 MSI Installer
         uses: actions/upload-artifact@v4
         with:
-          name: Termix-Windows-Installer
-          path: release/*.exe
+          name: Termix-Windows-x64-MSI
+          path: release/*.msi
+          retention-days: 30
+
+      - name: Upload Windows ia32 NSIS Installer
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-ia32.exe') != ''
+        with:
+          name: Termix-Windows-ia32-NSIS
+          path: release/*-ia32.exe
+          retention-days: 30
+
+      - name: Create Windows x64 Portable zip
+        run: |
+          if (Test-Path "release/win-unpacked") {
+            Compress-Archive -Path "release/win-unpacked/*" -DestinationPath "Termix-Windows-x64-Portable.zip"
+          }
+
+      - name: Create Windows ia32 Portable zip
+        run: |
+          if (Test-Path "release/win-ia32-unpacked") {
+            Compress-Archive -Path "release/win-ia32-unpacked/*" -DestinationPath "Termix-Windows-ia32-Portable.zip"
+          }
+
+      - name: Upload Windows x64 Portable
+        uses: actions/upload-artifact@v4
+        if: hashFiles('Termix-Windows-x64-Portable.zip') != ''
+        with:
+          name: Termix-Windows-x64-Portable
+          path: Termix-Windows-x64-Portable.zip
+          retention-days: 30
+
+      - name: Upload Windows ia32 Portable
+        uses: actions/upload-artifact@v4
+        if: hashFiles('Termix-Windows-ia32-Portable.zip') != ''
+        with:
+          name: Termix-Windows-ia32-Portable
+          path: Termix-Windows-ia32-Portable.zip
           retention-days: 30
 
   build-linux:
@@ -77,20 +111,71 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Linux Portable
-        run: npm run build:linux-portable
+      - name: Build Linux (All Architectures)
+        run: npm run build && npx electron-builder --linux --x64 --arm64 --armv7l
 
-      - name: Create Linux Portable zip
-        run: |
-          cd release/linux-unpacked
-          zip -r ../../Termix-Linux-Portable.zip *
-          cd ../..
-
-      - name: Upload Linux Portable Artifact
+      - name: Upload Linux x64 AppImage
         uses: actions/upload-artifact@v4
+        if: hashFiles('release/*.AppImage') != ''
         with:
-          name: Termix-Linux-Portable
-          path: Termix-Linux-Portable.zip
+          name: Termix-Linux-x64-AppImage
+          path: release/*-x86_64.AppImage
+          retention-days: 30
+
+      - name: Upload Linux arm64 AppImage
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-arm64.AppImage') != ''
+        with:
+          name: Termix-Linux-arm64-AppImage
+          path: release/*-arm64.AppImage
+          retention-days: 30
+
+      - name: Upload Linux x64 DEB
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*.deb') != ''
+        with:
+          name: Termix-Linux-x64-DEB
+          path: release/*_amd64.deb
+          retention-days: 30
+
+      - name: Upload Linux arm64 DEB
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*_arm64.deb') != ''
+        with:
+          name: Termix-Linux-arm64-DEB
+          path: release/*_arm64.deb
+          retention-days: 30
+
+      - name: Upload Linux armv7l DEB
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*_armhf.deb') != ''
+        with:
+          name: Termix-Linux-armv7l-DEB
+          path: release/*_armhf.deb
+          retention-days: 30
+
+      - name: Upload Linux x64 tar.gz
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-x64.tar.gz') != ''
+        with:
+          name: Termix-Linux-x64-Portable
+          path: release/*-x64.tar.gz
+          retention-days: 30
+
+      - name: Upload Linux arm64 tar.gz
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-arm64.tar.gz') != ''
+        with:
+          name: Termix-Linux-arm64-Portable
+          path: release/*-arm64.tar.gz
+          retention-days: 30
+
+      - name: Upload Linux armv7l tar.gz
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-armv7l.tar.gz') != ''
+        with:
+          name: Termix-Linux-armv7l-Portable
+          path: release/*-armv7l.tar.gz
           retention-days: 30
 
   build-macos:
@@ -174,16 +259,22 @@ jobs:
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         run: |
-          # Get current version and extract major.minor
+          # Get current version for display
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          MAJOR_MINOR=$(echo $CURRENT_VERSION | cut -d. -f1-2)
-          BUILD_VERSION="${MAJOR_MINOR}.${{ github.run_number }}"
+          BUILD_VERSION="${{ github.run_number }}"
 
           echo "✅ Package version: $CURRENT_VERSION (unchanged)"
-          echo "✅ Build version for Apple: $BUILD_VERSION"
+          echo "✅ Build number for Apple: $BUILD_VERSION"
 
-          # Build with custom buildVersion without modifying package.json
-          npm run build && npx electron-builder --mac --universal --config.buildVersion="$BUILD_VERSION"
+          # Build MAS only with custom buildVersion (just the workflow number)
+          npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
+
+      - name: Build macOS DMG (All Architectures)
+        env:
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+        run: |
+          # Build DMG for all architectures (doesn't require signing)
+          npm run build && npx electron-builder --mac dmg --universal --x64 --arm64
 
       - name: List release directory
         if: steps.check_certs.outputs.has_certs == 'true'
@@ -201,6 +292,30 @@ jobs:
             release/mas/*.pkg
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload macOS Universal DMG
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-universal.dmg') != ''
+        with:
+          name: Termix-macOS-universal-DMG
+          path: release/*-universal.dmg
+          retention-days: 30
+
+      - name: Upload macOS x64 DMG
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-x64.dmg') != ''
+        with:
+          name: Termix-macOS-x64-DMG
+          path: release/*-x64.dmg
+          retention-days: 30
+
+      - name: Upload macOS arm64 DMG
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-arm64.dmg') != ''
+        with:
+          name: Termix-macOS-arm64-DMG
+          path: release/*-arm64.dmg
+          retention-days: 30
 
       - name: Check for App Store Connect API credentials
         if: steps.check_certs.outputs.has_certs == 'true'
@@ -255,3 +370,47 @@ jobs:
         if: always() && steps.check_certs.outputs.has_certs == 'true'
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+
+  upload-to-release:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.upload_to_release == 'true'
+    needs: [build-windows, build-linux, build-macos]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get latest release tag
+        id: get_release
+        run: |
+          LATEST_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 | awk '{print $1}')
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest release tag: $LATEST_TAG"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Display artifact structure
+        run: |
+          echo "Artifact structure:"
+          ls -R artifacts/
+
+      - name: Upload artifacts to latest release
+        run: |
+          cd artifacts
+          for dir in */; do
+            echo "Processing directory: $dir"
+            cd "$dir"
+            for file in *; do
+              if [ -f "$file" ]; then
+                echo "Uploading: $file"
+                gh release upload ${{ steps.get_release.outputs.tag }} "$file" --repo ${{ github.repository }} --clobber
+              fi
+            done
+            cd ..
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}

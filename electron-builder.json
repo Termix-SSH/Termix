@@ -24,28 +24,44 @@
   "nodeGypRebuild": false,
   "npmRebuild": true,
   "win": {
-    "target": "nsis",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      },
+      {
+        "target": "msi",
+        "arch": ["x64", "ia32"]
+      }
+    ],
     "icon": "public/icon.ico",
     "executableName": "Termix"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Termix",
     "uninstallDisplayName": "Termix"
   },
+  "msi": {
+    "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+  },
   "linux": {
     "target": [
       {
         "target": "AppImage",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64", "arm64", "armv7l"]
       },
       {
         "target": "tar.gz",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64", "armv7l"]
       }
     ],
     "icon": "public/icon.png",
@@ -65,6 +81,10 @@
       {
         "target": "mas",
         "arch": "universal"
+      },
+      {
+        "target": "dmg",
+        "arch": ["universal", "x64", "arm64"]
       }
     ],
     "icon": "public/icon.icns",
@@ -75,6 +95,10 @@
     "entitlementsInherit": "build/entitlements.mas.inherit.plist",
     "type": "distribution",
     "minimumSystemVersion": "10.15"
+  },
+  "dmg": {
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "sign": false
   },
   "mas": {
     "provisioningProfile": "build/Termix_Mac_App_Store.provisionprofile",
