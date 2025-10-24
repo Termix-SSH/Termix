@@ -109,7 +109,12 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          rm -f package-lock.json
+          npm install
+          npm install --force @rollup/rollup-linux-x64-gnu
+          npm install --force @rollup/rollup-linux-arm64-gnu
+          npm install --force @rollup/rollup-linux-arm-gnueabihf
 
       - name: Build Linux (All Architectures)
         run: npm run build && npx electron-builder --linux --x64 --arm64 --armv7l
