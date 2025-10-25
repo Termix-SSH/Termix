@@ -49,16 +49,10 @@ jobs:
 
       - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-x64.exe') != ''
         with:
           name: Termix-Windows-x64-NSIS
-          path: release/*.exe
-          retention-days: 30
-
-      - name: Upload Windows x64 MSI Installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: Termix-Windows-x64-MSI
-          path: release/*.msi
+          path: release/*-x64.exe
           retention-days: 30
 
       - name: Upload Windows ia32 NSIS Installer
@@ -69,32 +63,36 @@ jobs:
           path: release/*-ia32.exe
           retention-days: 30
 
-      - name: Create Windows x64 Portable zip
-        run: |
-          if (Test-Path "release/win-unpacked") {
-            Compress-Archive -Path "release/win-unpacked/*" -DestinationPath "Termix-Windows-x64-Portable.zip"
-          }
+      - name: Upload Windows x64 MSI Installer
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-x64.msi') != ''
+        with:
+          name: Termix-Windows-x64-MSI
+          path: release/*-x64.msi
+          retention-days: 30
 
-      - name: Create Windows ia32 Portable zip
-        run: |
-          if (Test-Path "release/win-ia32-unpacked") {
-            Compress-Archive -Path "release/win-ia32-unpacked/*" -DestinationPath "Termix-Windows-ia32-Portable.zip"
-          }
+      - name: Upload Windows ia32 MSI Installer
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/*-ia32.msi') != ''
+        with:
+          name: Termix-Windows-ia32-MSI
+          path: release/*-ia32.msi
+          retention-days: 30
 
       - name: Upload Windows x64 Portable
         uses: actions/upload-artifact@v4
-        if: hashFiles('Termix-Windows-x64-Portable.zip') != ''
+        if: hashFiles('release/win-unpacked/*') != ''
         with:
           name: Termix-Windows-x64-Portable
-          path: Termix-Windows-x64-Portable.zip
+          path: release/win-unpacked/
           retention-days: 30
 
       - name: Upload Windows ia32 Portable
         uses: actions/upload-artifact@v4
-        if: hashFiles('Termix-Windows-ia32-Portable.zip') != ''
+        if: hashFiles('release/win-ia32-unpacked/*') != ''
         with:
           name: Termix-Windows-ia32-Portable
-          path: Termix-Windows-ia32-Portable.zip
+          path: release/win-ia32-unpacked/
           retention-days: 30
 
   build-linux:
@@ -212,11 +210,13 @@ jobs:
         run: |
           rm -f package-lock.json
           npm install
-          npm install --force @rollup/rollup-darwin-arm64
-          npm install --force @rollup/rollup-darwin-x64
+          # Clean and reinstall @swc/core with proper native bindings
+          rm -rf node_modules/@swc
           npm install --force @swc/core-darwin-arm64
           npm install --force @swc/core-darwin-x64
           npm install --force @swc/core
+          npm install --force @rollup/rollup-darwin-arm64
+          npm install --force @rollup/rollup-darwin-x64
 
       - name: Check for Code Signing Certificates
         id: check_certs
