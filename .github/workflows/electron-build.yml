@@ -224,10 +224,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci --include=optional
+          rm -rf node_modules package-lock.json
+          npm install
           npm install --force @rollup/rollup-darwin-arm64
-          rm -rf node_modules/@swc
-          npm install --force @swc/core
 
       - name: Check for Code Signing Certificates
         id: check_certs
