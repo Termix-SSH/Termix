@@ -227,7 +227,7 @@ jobs:
         run: |
           npm ci --include=optional
           npm install --force @rollup/rollup-darwin-arm64
-          npm install --no-save @swc/core-darwin-x64 @swc/core-darwin-arm64
+          npm install --force @swc/core
 
       - name: Check for Code Signing Certificates
         id: check_certs
