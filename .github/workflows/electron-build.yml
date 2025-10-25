@@ -227,7 +227,10 @@ jobs:
         run: npm ci
 
       - name: Install macOS-specific build dependencies
-        run: npm install --force @rollup/rollup-darwin-arm64
+        run: |
+          npm install --force @rollup/rollup-darwin-arm64
+          npm uninstall @swc/core
+          npm install @swc/core --include=optional
 
       - name: Check for Code Signing Certificates
         id: check_certs
