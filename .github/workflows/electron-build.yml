@@ -118,10 +118,7 @@ jobs:
           npm install --force @rollup/rollup-linux-x64-gnu
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
-          npm install --force @swc/core-linux-x64-gnu
-          npm install --force @swc/core-linux-arm64-gnu
-          npm install --force @swc/core-linux-arm-gnueabihf
-          npm install --force @swc/core
+          npm rebuild @swc/core
 
       - name: Build Linux (All Architectures)
         run: npm run build && npx electron-builder --linux --x64 --arm64 --armv7l
@@ -211,6 +208,7 @@ jobs:
           rm -f package-lock.json
           npm install
           npm install --force @rollup/rollup-darwin-arm64
+          npm rebuild @swc/core
 
       - name: Check for Code Signing Certificates
         id: check_certs
