@@ -98,14 +98,16 @@
     "category": "public.app-category.developer-tools",
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
-    "entitlements": "build/entitlements.mas.plist",
-    "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.inherit.plist",
     "type": "distribution",
     "minimumSystemVersion": "10.15"
   },
   "dmg": {
-    "artifactName": "termix_macos_${arch}_${version}_dmg.${ext}"
+    "artifactName": "termix_macos_${arch}_${version}_dmg.${ext}",
+    "sign": true
   },
+  "afterSign": "build/notarize.js",
   "mas": {
     "provisioningProfile": "build/Termix_Mac_App_Store.provisionprofile",
     "entitlements": "build/entitlements.mas.plist",
