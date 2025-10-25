@@ -221,11 +221,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: |
-          rm -f package-lock.json
-          npm install
+          npm ci
           npm install --force @rollup/rollup-darwin-arm64
 
       - name: Check for Code Signing Certificates
@@ -282,11 +282,7 @@ jobs:
           echo "Imported certificates:"
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
-      - name: Build Vite Frontend
-        run: npm run build
-
-      - name: Build macOS App Store Package
-        if: steps.check_certs.outputs.has_certs == 'true'
+      - name: Build macOS Packages
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         run: |
@@ -297,15 +293,14 @@ jobs:
           echo "✅ Package version: $CURRENT_VERSION (unchanged)"
           echo "✅ Build number for Apple: $BUILD_VERSION"
 
-          # Build MAS only with custom buildVersion (frontend already built)
-          npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
-
-      - name: Build macOS DMG (All Architectures)
-        env:
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-        run: |
-          # Build DMG for all architectures (frontend already built, doesn't require signing)
-          npx electron-builder --mac dmg --universal --x64 --arm64
+          # Build both MAS and DMG in a single command to avoid running build twice
+          if [ "${{ steps.check_certs.outputs.has_certs }}" == "true" ]; then
+            # Build MAS and DMG with custom buildVersion
+            npm run build && npx electron-builder --mac --universal --x64 --arm64 --config.buildVersion="$BUILD_VERSION"
+          else
+            # Build only DMG (no certs for MAS)
+            npm run build && npx electron-builder --mac dmg --universal --x64 --arm64
+          fi
 
       - name: List release directory
         if: steps.check_certs.outputs.has_certs == 'true'
