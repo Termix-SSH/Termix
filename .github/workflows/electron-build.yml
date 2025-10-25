@@ -335,6 +335,9 @@ jobs:
       - name: Build macOS DMG
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           # Build DMG without running npm run build again (already built above or skip if no certs)
           if [ "${{ steps.check_certs.outputs.has_certs }}" == "true" ]; then
