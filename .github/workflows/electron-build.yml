@@ -332,11 +332,72 @@ jobs:
           # Build MAS with custom buildVersion
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
 
+      - name: Clean up MAS keychain before DMG build
+        if: steps.check_certs.outputs.has_certs == 'true'
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          echo "Cleaned up MAS keychain"
+
+      - name: Check for Developer ID Certificates
+        id: check_dev_id_certs
+        run: |
+          if [ -n "${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}" ] && [ -n "${{ secrets.DEVELOPER_ID_P12_PASSWORD }}" ]; then
+            echo "has_dev_id_certs=true" >> $GITHUB_OUTPUT
+            echo "✅ Developer ID certificates configured for DMG signing"
+          else
+            echo "has_dev_id_certs=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Developer ID certificates not configured. DMG will be unsigned."
+            echo "Add DEVELOPER_ID_CERTIFICATE_BASE64 and DEVELOPER_ID_P12_PASSWORD secrets to enable DMG signing."
+          fi
+
+      - name: Import Developer ID Certificates
+        if: steps.check_dev_id_certs.outputs.has_dev_id_certs == 'true'
+        env:
+          DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          MAC_KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
+        run: |
+          DEV_CERT_PATH=$RUNNER_TEMP/dev_certificate.p12
+          DEV_INSTALLER_CERT_PATH=$RUNNER_TEMP/dev_installer_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/dev-signing.keychain-db
+
+          # Decode Developer ID certificate
+          echo -n "$DEVELOPER_ID_CERTIFICATE_BASE64" | base64 --decode -o $DEV_CERT_PATH
+
+          if [ -n "$DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64" ]; then
+            echo "Decoding Developer ID installer certificate..."
+            echo -n "$DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $DEV_INSTALLER_CERT_PATH
+          else
+            echo "⚠️ DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64 is empty (optional)"
+          fi
+
+          # Create and configure keychain
+          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import Developer ID Application certificate
+          echo "Importing Developer ID Application certificate..."
+          security import $DEV_CERT_PATH -P "$DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+
+          # Import Developer ID Installer certificate if it exists
+          if [ -f "$DEV_INSTALLER_CERT_PATH" ]; then
+            echo "Importing Developer ID Installer certificate..."
+            security import $DEV_INSTALLER_CERT_PATH -P "$DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          fi
+
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          echo "Imported Developer ID certificates:"
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
+
       - name: Build macOS DMG
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           # Build DMG without running npm run build again (already built above or skip if no certs)
@@ -440,10 +501,11 @@ jobs:
           echo "✅ Upload complete! Build will appear in App Store Connect after processing (10-30 minutes)"
         continue-on-error: true
 
-      - name: Clean up keychain
-        if: always() && steps.check_certs.outputs.has_certs == 'true'
+      - name: Clean up keychains
+        if: always()
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          security delete-keychain $RUNNER_TEMP/dev-signing.keychain-db || true
 
   upload-to-release:
     runs-on: blacksmith-4vcpu-ubuntu-2404
