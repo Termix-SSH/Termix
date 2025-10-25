@@ -84,13 +84,6 @@ function createWindow() {
     console.log("Frontend loaded successfully");
   });
 
-  mainWindow.on("close", (event) => {
-    if (process.platform === "darwin") {
-      event.preventDefault();
-      mainWindow.hide();
-    }
-  });
-
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -528,16 +521,12 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  app.quit();
 });
 
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
-  } else if (mainWindow) {
-    mainWindow.show();
   }
 });
 
