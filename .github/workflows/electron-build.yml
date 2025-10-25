@@ -221,12 +221,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
       - name: Install dependencies
         run: |
           npm ci --include=optional
           npm install --force @rollup/rollup-darwin-arm64
+          rm -rf node_modules/@swc
           npm install --force @swc/core
 
       - name: Check for Code Signing Certificates
