@@ -224,8 +224,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          rm -rf node_modules package-lock.json
-          npm install --legacy-peer-deps
+          rm -f package-lock.json
+          npm install
           npm install --force @rollup/rollup-darwin-arm64
 
       - name: Check for Code Signing Certificates
