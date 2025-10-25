@@ -42,7 +42,24 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          # Retry npm ci up to 3 times on failure
+          $maxAttempts = 3
+          $attempt = 1
+          while ($attempt -le $maxAttempts) {
+            try {
+              npm ci
+              break
+            } catch {
+              if ($attempt -eq $maxAttempts) {
+                Write-Error "npm ci failed after $maxAttempts attempts"
+                exit 1
+              }
+              Write-Host "npm ci attempt $attempt failed, retrying in 10 seconds..."
+              Start-Sleep -Seconds 10
+              $attempt++
+            }
+          }
 
       - name: Get version
         id: package-version
@@ -138,7 +155,19 @@ jobs:
       - name: Install dependencies
         run: |
           rm -f package-lock.json
-          npm install
+          # Retry npm install up to 3 times on failure
+          for i in 1 2 3; do
+            if npm install; then
+              break
+            else
+              if [ $i -eq 3 ]; then
+                echo "npm install failed after 3 attempts"
+                exit 1
+              fi
+              echo "npm install attempt $i failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
           npm install --force @rollup/rollup-linux-x64-gnu
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
@@ -259,7 +288,19 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
+          # Retry npm ci up to 3 times on failure
+          for i in 1 2 3; do
+            if npm ci; then
+              break
+            else
+              if [ $i -eq 3 ]; then
+                echo "npm ci failed after 3 attempts"
+                exit 1
+              fi
+              echo "npm ci attempt $i failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
           npm install --force @rollup/rollup-darwin-arm64
           npm install dmg-license
 
