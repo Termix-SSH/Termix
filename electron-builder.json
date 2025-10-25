@@ -107,7 +107,7 @@
     "artifactName": "termix_macos_${arch}_${version}_dmg.${ext}",
     "sign": true
   },
-  "afterSign": "build/notarize.js",
+  "afterSign": "build/notarize.cjs",
   "mas": {
     "provisioningProfile": "build/Termix_Mac_App_Store.provisionprofile",
     "entitlements": "build/entitlements.mas.plist",
