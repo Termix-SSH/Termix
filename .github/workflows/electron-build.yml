@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x64.exe') != ''
         with:
-          name: Termix-Windows-x64-NSIS.exe
+          name: Termix-Windows-x64-NSIS
           path: release/*-x64.exe
           retention-days: 30
 
@@ -64,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-ia32.exe') != ''
         with:
-          name: Termix-Windows-ia32-NSIS.exe
+          name: Termix-Windows-ia32-NSIS
           path: release/*-ia32.exe
           retention-days: 30
 
@@ -72,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x64.msi') != ''
         with:
-          name: Termix-Windows-x64-MSI.msi
+          name: Termix-Windows-x64-MSI
           path: release/*-x64.msi
           retention-days: 30
 
@@ -80,7 +80,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-ia32.msi') != ''
         with:
-          name: Termix-Windows-ia32-MSI.msi
+          name: Termix-Windows-ia32-MSI
           path: release/*-ia32.msi
           retention-days: 30
 
@@ -98,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('Termix-Windows-x64-Portable.zip') != ''
         with:
-          name: Termix-Windows-x64-Portable.zip
+          name: Termix-Windows-x64-Portable
           path: Termix-Windows-x64-Portable.zip
           retention-days: 30
 
@@ -106,7 +106,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('Termix-Windows-ia32-Portable.zip') != ''
         with:
-          name: Termix-Windows-ia32-Portable.zip
+          name: Termix-Windows-ia32-Portable
           path: Termix-Windows-ia32-Portable.zip
           retention-days: 30
 
@@ -146,7 +146,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x86_64.AppImage') != ''
         with:
-          name: Termix-Linux-x64.AppImage
+          name: Termix-Linux-x64-AppImage
           path: release/*-x86_64.AppImage
           retention-days: 30
 
@@ -154,7 +154,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-arm64.AppImage') != ''
         with:
-          name: Termix-Linux-arm64.AppImage
+          name: Termix-Linux-arm64-AppImage
           path: release/*-arm64.AppImage
           retention-days: 30
 
@@ -162,7 +162,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*_amd64.deb') != ''
         with:
-          name: Termix-Linux-x64.deb
+          name: Termix-Linux-x64-DEB
           path: release/*_amd64.deb
           retention-days: 30
 
@@ -170,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*_arm64.deb') != ''
         with:
-          name: Termix-Linux-arm64.deb
+          name: Termix-Linux-arm64-DEB
           path: release/*_arm64.deb
           retention-days: 30
 
@@ -178,7 +178,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*_armhf.deb') != ''
         with:
-          name: Termix-Linux-armv7l.deb
+          name: Termix-Linux-armv7l-DEB
           path: release/*_armhf.deb
           retention-days: 30
 
@@ -186,7 +186,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x64.tar.gz') != ''
         with:
-          name: Termix-Linux-x64-Portable.tar.gz
+          name: Termix-Linux-x64-Portable
           path: release/*-x64.tar.gz
           retention-days: 30
 
@@ -194,7 +194,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-arm64.tar.gz') != ''
         with:
-          name: Termix-Linux-arm64-Portable.tar.gz
+          name: Termix-Linux-arm64-Portable
           path: release/*-arm64.tar.gz
           retention-days: 30
 
@@ -202,7 +202,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-armv7l.tar.gz') != ''
         with:
-          name: Termix-Linux-armv7l-Portable.tar.gz
+          name: Termix-Linux-armv7l-Portable
           path: release/*-armv7l.tar.gz
           retention-days: 30
 
@@ -317,7 +317,7 @@ jobs:
         if: steps.check_certs.outputs.has_certs == 'true' && hashFiles('release/*.pkg') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: Termix-macOS-MAS.pkg
+          name: Termix-macOS-MAS
           path: release/*.pkg
           retention-days: 30
           if-no-files-found: warn
@@ -326,7 +326,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-universal.dmg') != ''
         with:
-          name: Termix-macOS-universal.dmg
+          name: Termix-macOS-Universal-DMG
           path: release/*-universal.dmg
           retention-days: 30
 
@@ -334,7 +334,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x64.dmg') != ''
         with:
-          name: Termix-macOS-x64.dmg
+          name: Termix-macOS-x64-DMG
           path: release/*-x64.dmg
           retention-days: 30
 
@@ -342,7 +342,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-arm64.dmg') != ''
         with:
-          name: Termix-macOS-arm64.dmg
+          name: Termix-macOS-arm64-DMG
           path: release/*-arm64.dmg
           retention-days: 30
 
