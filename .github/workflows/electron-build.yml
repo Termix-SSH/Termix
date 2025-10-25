@@ -421,12 +421,23 @@ jobs:
         with:
           path: artifacts
 
-      - name: Get latest release tag
+      - name: Get latest release
         id: get_release
         run: |
-          LATEST_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 | awk '{print $1}')
-          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Latest release tag: $LATEST_TAG"
+          echo "Fetching latest release from ${{ github.repository }}..."
+          LATEST_RELEASE=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName,name,isLatest -q '.[0]')
+
+          if [ -z "$LATEST_RELEASE" ]; then
+            echo "ERROR: No releases found in ${{ github.repository }}"
+            exit 1
+          fi
+
+          RELEASE_TAG=$(echo "$LATEST_RELEASE" | jq -r '.tagName')
+          RELEASE_NAME=$(echo "$LATEST_RELEASE" | jq -r '.name')
+
+          echo "tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "Latest release: $RELEASE_NAME ($RELEASE_TAG)"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -437,6 +448,10 @@ jobs:
 
       - name: Upload artifacts to latest release
         run: |
+          RELEASE_TAG="${{ steps.get_release.outputs.tag }}"
+          echo "Uploading artifacts to release: $RELEASE_TAG"
+          echo ""
+
           cd artifacts
           for dir in */; do
             echo "Processing directory: $dir"
@@ -444,10 +459,14 @@ jobs:
             for file in *; do
               if [ -f "$file" ]; then
                 echo "Uploading: $file"
-                gh release upload ${{ steps.get_release.outputs.tag }} "$file" --repo ${{ github.repository }} --clobber
+                gh release upload "$RELEASE_TAG" "$file" --repo ${{ github.repository }} --clobber
+                echo "✓ $file uploaded successfully"
               fi
             done
             cd ..
           done
+
+          echo ""
+          echo "All artifacts uploaded to: https://github.com/${{ github.repository }}/releases/tag/$RELEASE_TAG"
         env:
           GH_TOKEN: ${{ github.token }}
