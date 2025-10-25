@@ -221,13 +221,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
-        run: |
-          rm -f package-lock.json
-          npm install
-          npm install --force @rollup/rollup-darwin-arm64
-          npm rebuild
+        run: npm ci
+
+      - name: Install macOS-specific build dependencies
+        run: npm install --force @rollup/rollup-darwin-arm64
 
       - name: Check for Code Signing Certificates
         id: check_certs
