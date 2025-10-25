@@ -272,6 +272,9 @@ jobs:
           echo "Imported certificates:"
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
+      - name: Build Vite Frontend
+        run: npm run build
+
       - name: Build macOS App Store Package
         if: steps.check_certs.outputs.has_certs == 'true'
         env:
@@ -284,15 +287,15 @@ jobs:
           echo "✅ Package version: $CURRENT_VERSION (unchanged)"
           echo "✅ Build number for Apple: $BUILD_VERSION"
 
-          # Build MAS only with custom buildVersion (just the workflow number)
-          npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
+          # Build MAS only with custom buildVersion (frontend already built)
+          npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
 
       - name: Build macOS DMG (All Architectures)
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         run: |
-          # Build DMG for all architectures (doesn't require signing)
-          npm run build && npx electron-builder --mac dmg --universal --x64 --arm64
+          # Build DMG for all architectures (frontend already built, doesn't require signing)
+          npx electron-builder --mac dmg --universal --x64 --arm64
 
       - name: List release directory
         if: steps.check_certs.outputs.has_certs == 'true'
