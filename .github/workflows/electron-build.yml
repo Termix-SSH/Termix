@@ -47,11 +47,16 @@ jobs:
       - name: Build Windows (All Architectures)
         run: npm run build && npx electron-builder --win --x64 --ia32
 
+      - name: List release files
+        run: |
+          echo "Contents of release directory:"
+          dir release
+
       - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x64.exe') != ''
         with:
-          name: Termix-Windows-x64-NSIS
+          name: Termix-Windows-x64-NSIS.exe
           path: release/*-x64.exe
           retention-days: 30
 
@@ -59,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-ia32.exe') != ''
         with:
-          name: Termix-Windows-ia32-NSIS
+          name: Termix-Windows-ia32-NSIS.exe
           path: release/*-ia32.exe
           retention-days: 30
 
@@ -67,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x64.msi') != ''
         with:
-          name: Termix-Windows-x64-MSI
+          name: Termix-Windows-x64-MSI.msi
           path: release/*-x64.msi
           retention-days: 30
 
@@ -75,24 +80,34 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-ia32.msi') != ''
         with:
-          name: Termix-Windows-ia32-MSI
+          name: Termix-Windows-ia32-MSI.msi
           path: release/*-ia32.msi
           retention-days: 30
 
+      - name: Create Windows x64 Portable zip
+        if: hashFiles('release/win-unpacked/*') != ''
+        run: |
+          Compress-Archive -Path "release\win-unpacked\*" -DestinationPath "Termix-Windows-x64-Portable.zip"
+
+      - name: Create Windows ia32 Portable zip
+        if: hashFiles('release/win-ia32-unpacked/*') != ''
+        run: |
+          Compress-Archive -Path "release\win-ia32-unpacked\*" -DestinationPath "Termix-Windows-ia32-Portable.zip"
+
       - name: Upload Windows x64 Portable
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/win-unpacked/*') != ''
+        if: hashFiles('Termix-Windows-x64-Portable.zip') != ''
         with:
-          name: Termix-Windows-x64-Portable
-          path: release/win-unpacked/
+          name: Termix-Windows-x64-Portable.zip
+          path: Termix-Windows-x64-Portable.zip
           retention-days: 30
 
       - name: Upload Windows ia32 Portable
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/win-ia32-unpacked/*') != ''
+        if: hashFiles('Termix-Windows-ia32-Portable.zip') != ''
         with:
-          name: Termix-Windows-ia32-Portable
-          path: release/win-ia32-unpacked/
+          name: Termix-Windows-ia32-Portable.zip
+          path: Termix-Windows-ia32-Portable.zip
           retention-days: 30
 
   build-linux:
@@ -118,16 +133,20 @@ jobs:
           npm install --force @rollup/rollup-linux-x64-gnu
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
-          npm rebuild @swc/core
 
       - name: Build Linux (All Architectures)
         run: npm run build && npx electron-builder --linux --x64 --arm64 --armv7l
 
+      - name: List release files
+        run: |
+          echo "Contents of release directory:"
+          ls -la release/
+
       - name: Upload Linux x64 AppImage
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*.AppImage') != ''
+        if: hashFiles('release/*-x86_64.AppImage') != ''
         with:
-          name: Termix-Linux-x64-AppImage
+          name: Termix-Linux-x64.AppImage
           path: release/*-x86_64.AppImage
           retention-days: 30
 
@@ -135,15 +154,15 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-arm64.AppImage') != ''
         with:
-          name: Termix-Linux-arm64-AppImage
+          name: Termix-Linux-arm64.AppImage
           path: release/*-arm64.AppImage
           retention-days: 30
 
       - name: Upload Linux x64 DEB
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*.deb') != ''
+        if: hashFiles('release/*_amd64.deb') != ''
         with:
-          name: Termix-Linux-x64-DEB
+          name: Termix-Linux-x64.deb
           path: release/*_amd64.deb
           retention-days: 30
 
@@ -151,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*_arm64.deb') != ''
         with:
-          name: Termix-Linux-arm64-DEB
+          name: Termix-Linux-arm64.deb
           path: release/*_arm64.deb
           retention-days: 30
 
@@ -159,7 +178,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*_armhf.deb') != ''
         with:
-          name: Termix-Linux-armv7l-DEB
+          name: Termix-Linux-armv7l.deb
           path: release/*_armhf.deb
           retention-days: 30
 
@@ -167,7 +186,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x64.tar.gz') != ''
         with:
-          name: Termix-Linux-x64-Portable
+          name: Termix-Linux-x64-Portable.tar.gz
           path: release/*-x64.tar.gz
           retention-days: 30
 
@@ -175,7 +194,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-arm64.tar.gz') != ''
         with:
-          name: Termix-Linux-arm64-Portable
+          name: Termix-Linux-arm64-Portable.tar.gz
           path: release/*-arm64.tar.gz
           retention-days: 30
 
@@ -183,7 +202,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-armv7l.tar.gz') != ''
         with:
-          name: Termix-Linux-armv7l-Portable
+          name: Termix-Linux-armv7l-Portable.tar.gz
           path: release/*-armv7l.tar.gz
           retention-days: 30
 
@@ -205,10 +224,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          rm -f package-lock.json
-          npm install
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
           npm install --force @rollup/rollup-darwin-arm64
-          npm rebuild @swc/core
 
       - name: Check for Code Signing Certificates
         id: check_certs
@@ -295,14 +313,12 @@ jobs:
           echo "Contents of release directory:"
           ls -R release/ || echo "Release directory not found"
 
-      - name: Upload macOS MAS Artifact
-        if: steps.check_certs.outputs.has_certs == 'true'
+      - name: Upload macOS MAS PKG
+        if: steps.check_certs.outputs.has_certs == 'true' && hashFiles('release/*.pkg') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: Termix-macOS-MAS
-          path: |
-            release/*.pkg
-            release/mas/*.pkg
+          name: Termix-macOS-MAS.pkg
+          path: release/*.pkg
           retention-days: 30
           if-no-files-found: warn
 
@@ -310,7 +326,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-universal.dmg') != ''
         with:
-          name: Termix-macOS-universal-DMG
+          name: Termix-macOS-universal.dmg
           path: release/*-universal.dmg
           retention-days: 30
 
@@ -318,7 +334,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-x64.dmg') != ''
         with:
-          name: Termix-macOS-x64-DMG
+          name: Termix-macOS-x64.dmg
           path: release/*-x64.dmg
           retention-days: 30
 
@@ -326,7 +342,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('release/*-arm64.dmg') != ''
         with:
-          name: Termix-macOS-arm64-DMG
+          name: Termix-macOS-arm64.dmg
           path: release/*-arm64.dmg
           retention-days: 30
 
