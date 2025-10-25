@@ -210,13 +210,7 @@ jobs:
         run: |
           rm -f package-lock.json
           npm install
-          # Clean and reinstall @swc/core with proper native bindings
-          rm -rf node_modules/@swc
-          npm install --force @swc/core-darwin-arm64
-          npm install --force @swc/core-darwin-x64
-          npm install --force @swc/core
           npm install --force @rollup/rollup-darwin-arm64
-          npm install --force @rollup/rollup-darwin-x64
 
       - name: Check for Code Signing Certificates
         id: check_certs
