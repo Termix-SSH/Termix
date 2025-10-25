@@ -227,6 +227,7 @@ jobs:
         run: |
           npm ci
           npm install --force @rollup/rollup-darwin-arm64
+          npm install dmg-license
 
       - name: Check for Code Signing Certificates
         id: check_certs
