@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 
 // SSL certificate paths
 const sslCertPath = path.join(process.cwd(), "ssl/termix.crt");

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: "Build type to run"
+        description: "Platform to build for"
         required: true
         default: "all"
         type: choice
@@ -13,16 +13,16 @@ on:
           - windows
           - linux
           - macos
-      upload_to_release:
-        description: "Upload artifacts to latest GitHub release"
-        required: false
-        default: false
-        type: boolean
-      submit_to_stores:
-        description: "Submit builds to app stores"
-        required: false
-        default: false
-        type: boolean
+      artifact_destination:
+        description: "What to do with the built app"
+        required: true
+        default: "file"
+        type: choice
+        options:
+          - none
+          - file
+          - release
+          - submit
 
 jobs:
   build-windows:
@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x64.exe') != ''
+        if: hashFiles('release/*-x64.exe') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Windows-x64-NSIS
           path: release/*-x64.exe
@@ -62,7 +62,7 @@ jobs:
 
       - name: Upload Windows ia32 NSIS Installer
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-ia32.exe') != ''
+        if: hashFiles('release/*-ia32.exe') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Windows-ia32-NSIS
           path: release/*-ia32.exe
@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload Windows x64 MSI Installer
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x64.msi') != ''
+        if: hashFiles('release/*-x64.msi') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Windows-x64-MSI
           path: release/*-x64.msi
@@ -78,7 +78,7 @@ jobs:
 
       - name: Upload Windows ia32 MSI Installer
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-ia32.msi') != ''
+        if: hashFiles('release/*-ia32.msi') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Windows-ia32-MSI
           path: release/*-ia32.msi
@@ -96,7 +96,7 @@ jobs:
 
       - name: Upload Windows x64 Portable
         uses: actions/upload-artifact@v4
-        if: hashFiles('Termix-Windows-x64-Portable.zip') != ''
+        if: hashFiles('Termix-Windows-x64-Portable.zip') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Windows-x64-Portable
           path: Termix-Windows-x64-Portable.zip
@@ -104,7 +104,7 @@ jobs:
 
       - name: Upload Windows ia32 Portable
         uses: actions/upload-artifact@v4
-        if: hashFiles('Termix-Windows-ia32-Portable.zip') != ''
+        if: hashFiles('Termix-Windows-ia32-Portable.zip') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Windows-ia32-Portable
           path: Termix-Windows-ia32-Portable.zip
@@ -144,7 +144,7 @@ jobs:
 
       - name: Upload Linux x64 AppImage
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x86_64.AppImage') != ''
+        if: hashFiles('release/*-x86_64.AppImage') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Linux-x64-AppImage
           path: release/*-x86_64.AppImage
@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload Linux arm64 AppImage
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-arm64.AppImage') != ''
+        if: hashFiles('release/*-arm64.AppImage') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Linux-arm64-AppImage
           path: release/*-arm64.AppImage
@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload Linux x64 DEB
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*_amd64.deb') != ''
+        if: hashFiles('release/*_amd64.deb') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Linux-x64-DEB
           path: release/*_amd64.deb
@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload Linux arm64 DEB
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*_arm64.deb') != ''
+        if: hashFiles('release/*_arm64.deb') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Linux-arm64-DEB
           path: release/*_arm64.deb
@@ -176,7 +176,7 @@ jobs:
 
       - name: Upload Linux armv7l DEB
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*_armhf.deb') != ''
+        if: hashFiles('release/*_armhf.deb') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Linux-armv7l-DEB
           path: release/*_armhf.deb
@@ -184,7 +184,7 @@ jobs:
 
       - name: Upload Linux x64 tar.gz
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x64.tar.gz') != ''
+        if: hashFiles('release/*-x64.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Linux-x64-Portable
           path: release/*-x64.tar.gz
@@ -192,7 +192,7 @@ jobs:
 
       - name: Upload Linux arm64 tar.gz
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-arm64.tar.gz') != ''
+        if: hashFiles('release/*-arm64.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Linux-arm64-Portable
           path: release/*-arm64.tar.gz
@@ -200,7 +200,7 @@ jobs:
 
       - name: Upload Linux armv7l tar.gz
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-armv7l.tar.gz') != ''
+        if: hashFiles('release/*-armv7l.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-Linux-armv7l-Portable
           path: release/*-armv7l.tar.gz
@@ -221,22 +221,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: |
-          rm -rf node_modules package-lock.json
-          npm install
+          npm ci
           npm install --force @rollup/rollup-darwin-arm64
-
-      - name: Fix @swc/core native bindings
-        run: |
-          echo "Platform: $(uname -m)"
-          echo "Manually running @swc/core postinstall..."
-          cd node_modules/@swc/core
-          node postinstall.js
-          cd ../../..
-          echo "Checking for .node files:"
-          find node_modules/@swc -name "*.node" -type f || echo "No .node files found"
 
       - name: Check for Code Signing Certificates
         id: check_certs
@@ -327,7 +317,7 @@ jobs:
           ls -R release/ || echo "Release directory not found"
 
       - name: Upload macOS MAS PKG
-        if: steps.check_certs.outputs.has_certs == 'true' && hashFiles('release/*.pkg') != ''
+        if: steps.check_certs.outputs.has_certs == 'true' && hashFiles('release/*.pkg') != '' && (github.event.inputs.artifact_destination == 'file' || github.event.inputs.artifact_destination == 'release' || github.event.inputs.artifact_destination == 'submit')
         uses: actions/upload-artifact@v4
         with:
           name: Termix-macOS-MAS
@@ -337,7 +327,7 @@ jobs:
 
       - name: Upload macOS Universal DMG
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-universal.dmg') != ''
+        if: hashFiles('release/*-universal.dmg') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-macOS-Universal-DMG
           path: release/*-universal.dmg
@@ -345,7 +335,7 @@ jobs:
 
       - name: Upload macOS x64 DMG
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x64.dmg') != ''
+        if: hashFiles('release/*-x64.dmg') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-macOS-x64-DMG
           path: release/*-x64.dmg
@@ -353,7 +343,7 @@ jobs:
 
       - name: Upload macOS arm64 DMG
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-arm64.dmg') != ''
+        if: hashFiles('release/*-arm64.dmg') != '' && github.event.inputs.artifact_destination != 'none'
         with:
           name: Termix-macOS-arm64-DMG
           path: release/*-arm64.dmg
@@ -365,7 +355,7 @@ jobs:
         run: |
           if [ -n "${{ secrets.APPLE_KEY_ID }}" ] && [ -n "${{ secrets.APPLE_ISSUER_ID }}" ] && [ -n "${{ secrets.APPLE_KEY_CONTENT }}" ]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
-            if [ "${{ github.event.inputs.submit_to_stores }}" == "true" ]; then
+            if [ "${{ github.event.inputs.artifact_destination }}" == "submit" ]; then
               echo "✅ App Store Connect API credentials found. Will deploy to TestFlight."
             else
               echo "ℹ️ App Store Connect API credentials found, but store submission is disabled."
@@ -377,20 +367,20 @@ jobs:
           fi
 
       - name: Setup Ruby for Fastlane
-        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.submit_to_stores == 'true'
+        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.artifact_destination == 'submit'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: false
 
       - name: Install Fastlane
-        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.submit_to_stores == 'true'
+        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.artifact_destination == 'submit'
         run: |
           gem install fastlane -N
           fastlane --version
 
       - name: Deploy to App Store Connect (TestFlight)
-        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.submit_to_stores == 'true'
+        if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.artifact_destination == 'submit'
         run: |
           PKG_FILE=$(find release -name "*.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
@@ -419,7 +409,7 @@ jobs:
 
   upload-to-release:
     runs-on: ubuntu-latest
-    if: github.event.inputs.upload_to_release == 'true'
+    if: github.event.inputs.artifact_destination == 'release'
     needs: [build-windows, build-linux, build-macos]
     permissions:
       contents: write
