@@ -228,15 +228,15 @@ jobs:
           npm install
           npm install --force @rollup/rollup-darwin-arm64
 
-      - name: Verify @swc/core installation
+      - name: Fix @swc/core native bindings
         run: |
-          echo "Checking @swc/core installation..."
-          ls -la node_modules/@swc/core/ || echo "@swc/core not found"
-          ls -la node_modules/@swc/ || echo "@swc directory not found"
-          echo "Node version: $(node --version)"
           echo "Platform: $(uname -m)"
-          echo "Installed @swc packages:"
-          npm list @swc/core @swc/core-darwin-arm64 @swc/core-darwin-x64 || true
+          echo "Manually running @swc/core postinstall..."
+          cd node_modules/@swc/core
+          node postinstall.js
+          cd ../../..
+          echo "Checking for .node files:"
+          find node_modules/@swc -name "*.node" -type f || echo "No .node files found"
 
       - name: Check for Code Signing Certificates
         id: check_certs
