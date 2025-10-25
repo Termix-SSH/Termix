@@ -224,7 +224,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          rm -rf node_modules package-lock.json
+          rm -f package-lock.json
           npm install
           npm install --force @rollup/rollup-darwin-arm64
 
