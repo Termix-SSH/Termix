@@ -409,7 +409,7 @@ jobs:
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
 
   upload-to-release:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event.inputs.artifact_destination == 'release'
     needs: [build-windows, build-linux, build-macos]
     permissions:
