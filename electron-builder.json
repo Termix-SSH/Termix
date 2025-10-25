@@ -83,9 +83,6 @@
   "deb": {
     "artifactName": "termix_linux_${arch}_${version}_deb.${ext}"
   },
-  "tar.gz": {
-    "artifactName": "termix_linux_${arch}_${version}_portable.${ext}"
-  },
   "mac": {
     "target": [
       {
