@@ -40,14 +40,14 @@
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
+    "artifactName": "termix_windows_${arch}_${version}_nsis.${ext}",
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Termix",
     "uninstallDisplayName": "Termix"
   },
   "msi": {
-    "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+    "artifactName": "termix_windows_${arch}_${version}_msi.${ext}"
   },
   "linux": {
     "target": [
@@ -77,6 +77,15 @@
       }
     }
   },
+  "appImage": {
+    "artifactName": "termix_linux_${arch}_${version}_appimage.${ext}"
+  },
+  "deb": {
+    "artifactName": "termix_linux_${arch}_${version}_deb.${ext}"
+  },
+  "tar.gz": {
+    "artifactName": "termix_linux_${arch}_${version}_portable.${ext}"
+  },
   "mac": {
     "target": [
       {
@@ -98,7 +107,7 @@
     "minimumSystemVersion": "10.15"
   },
   "dmg": {
-    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "artifactName": "termix_macos_${arch}_${version}_dmg.${ext}",
     "sign": false
   },
   "mas": {
@@ -110,6 +119,7 @@
     "asarUnpack": ["**/*.node"],
     "type": "distribution",
     "category": "public.app-category.developer-tools",
+    "artifactName": "termix_macos_${arch}_${version}_mas.${ext}",
     "extendInfo": {
       "ITSAppUsesNonExemptEncryption": false,
       "NSAppleEventsUsageDescription": "Termix needs access to control other applications for terminal operations."

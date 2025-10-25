@@ -44,6 +44,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Get version
+        id: package-version
+        run: |
+          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
       - name: Build Windows (All Architectures)
         run: npm run build && npx electron-builder --win --x64 --ia32
 
@@ -54,60 +61,62 @@ jobs:
 
       - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x64.exe') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_x64_*_nsis.exe') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Windows-x64-NSIS
-          path: release/*-x64.exe
+          name: termix_windows_x64_nsis
+          path: release/*_x64_*_nsis.exe
           retention-days: 30
 
       - name: Upload Windows ia32 NSIS Installer
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-ia32.exe') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_ia32_*_nsis.exe') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Windows-ia32-NSIS
-          path: release/*-ia32.exe
+          name: termix_windows_ia32_nsis
+          path: release/*_ia32_*_nsis.exe
           retention-days: 30
 
       - name: Upload Windows x64 MSI Installer
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x64.msi') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_x64_*_msi.msi') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Windows-x64-MSI
-          path: release/*-x64.msi
+          name: termix_windows_x64_msi
+          path: release/*_x64_*_msi.msi
           retention-days: 30
 
       - name: Upload Windows ia32 MSI Installer
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-ia32.msi') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_ia32_*_msi.msi') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Windows-ia32-MSI
-          path: release/*-ia32.msi
+          name: termix_windows_ia32_msi
+          path: release/*_ia32_*_msi.msi
           retention-days: 30
 
       - name: Create Windows x64 Portable zip
         if: hashFiles('release/win-unpacked/*') != ''
         run: |
-          Compress-Archive -Path "release\win-unpacked\*" -DestinationPath "Termix-Windows-x64-Portable.zip"
+          $VERSION = "${{ steps.package-version.outputs.version }}"
+          Compress-Archive -Path "release\win-unpacked\*" -DestinationPath "termix_windows_x64_${VERSION}_portable.zip"
 
       - name: Create Windows ia32 Portable zip
         if: hashFiles('release/win-ia32-unpacked/*') != ''
         run: |
-          Compress-Archive -Path "release\win-ia32-unpacked\*" -DestinationPath "Termix-Windows-ia32-Portable.zip"
+          $VERSION = "${{ steps.package-version.outputs.version }}"
+          Compress-Archive -Path "release\win-ia32-unpacked\*" -DestinationPath "termix_windows_ia32_${VERSION}_portable.zip"
 
       - name: Upload Windows x64 Portable
         uses: actions/upload-artifact@v4
-        if: hashFiles('Termix-Windows-x64-Portable.zip') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('termix_windows_x64_*_portable.zip') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Windows-x64-Portable
-          path: Termix-Windows-x64-Portable.zip
+          name: termix_windows_x64_portable
+          path: termix_windows_x64_*_portable.zip
           retention-days: 30
 
       - name: Upload Windows ia32 Portable
         uses: actions/upload-artifact@v4
-        if: hashFiles('Termix-Windows-ia32-Portable.zip') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('termix_windows_ia32_*_portable.zip') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Windows-ia32-Portable
-          path: Termix-Windows-ia32-Portable.zip
+          name: termix_windows_ia32_portable
+          path: termix_windows_ia32_*_portable.zip
           retention-days: 30
 
   build-linux:
@@ -144,66 +153,66 @@ jobs:
 
       - name: Upload Linux x64 AppImage
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x86_64.AppImage') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_x64_*_appimage.AppImage') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Linux-x64-AppImage
-          path: release/*-x86_64.AppImage
+          name: termix_linux_x64_appimage
+          path: release/*_x64_*_appimage.AppImage
           retention-days: 30
 
       - name: Upload Linux arm64 AppImage
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-arm64.AppImage') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_arm64_*_appimage.AppImage') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Linux-arm64-AppImage
-          path: release/*-arm64.AppImage
+          name: termix_linux_arm64_appimage
+          path: release/*_arm64_*_appimage.AppImage
           retention-days: 30
 
       - name: Upload Linux x64 DEB
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*_amd64.deb') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_x64_*_deb.deb') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Linux-x64-DEB
-          path: release/*_amd64.deb
+          name: termix_linux_x64_deb
+          path: release/*_x64_*_deb.deb
           retention-days: 30
 
       - name: Upload Linux arm64 DEB
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*_arm64.deb') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_arm64_*_deb.deb') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Linux-arm64-DEB
-          path: release/*_arm64.deb
+          name: termix_linux_arm64_deb
+          path: release/*_arm64_*_deb.deb
           retention-days: 30
 
       - name: Upload Linux armv7l DEB
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*_armhf.deb') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_armv7l_*_deb.deb') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Linux-armv7l-DEB
-          path: release/*_armhf.deb
+          name: termix_linux_armv7l_deb
+          path: release/*_armv7l_*_deb.deb
           retention-days: 30
 
       - name: Upload Linux x64 tar.gz
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x64.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_x64_*_portable.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Linux-x64-Portable
-          path: release/*-x64.tar.gz
+          name: termix_linux_x64_portable
+          path: release/*_x64_*_portable.tar.gz
           retention-days: 30
 
       - name: Upload Linux arm64 tar.gz
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-arm64.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_arm64_*_portable.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Linux-arm64-Portable
-          path: release/*-arm64.tar.gz
+          name: termix_linux_arm64_portable
+          path: release/*_arm64_*_portable.tar.gz
           retention-days: 30
 
       - name: Upload Linux armv7l tar.gz
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-armv7l.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_armv7l_*_portable.tar.gz') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-Linux-armv7l-Portable
-          path: release/*-armv7l.tar.gz
+          name: termix_linux_armv7l_portable
+          path: release/*_armv7l_*_portable.tar.gz
           retention-days: 30
 
   build-macos:
@@ -318,36 +327,36 @@ jobs:
           ls -R release/ || echo "Release directory not found"
 
       - name: Upload macOS MAS PKG
-        if: steps.check_certs.outputs.has_certs == 'true' && hashFiles('release/*.pkg') != '' && (github.event.inputs.artifact_destination == 'file' || github.event.inputs.artifact_destination == 'release' || github.event.inputs.artifact_destination == 'submit')
+        if: steps.check_certs.outputs.has_certs == 'true' && hashFiles('release/*_*_*_mas.pkg') != '' && (github.event.inputs.artifact_destination == 'file' || github.event.inputs.artifact_destination == 'release' || github.event.inputs.artifact_destination == 'submit')
         uses: actions/upload-artifact@v4
         with:
-          name: Termix-macOS-MAS
-          path: release/*.pkg
+          name: termix_macos_mas
+          path: release/*_*_*_mas.pkg
           retention-days: 30
           if-no-files-found: warn
 
       - name: Upload macOS Universal DMG
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-universal.dmg') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_universal_*_dmg.dmg') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-macOS-Universal-DMG
-          path: release/*-universal.dmg
+          name: termix_macos_universal_dmg
+          path: release/*_universal_*_dmg.dmg
           retention-days: 30
 
       - name: Upload macOS x64 DMG
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-x64.dmg') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_x64_*_dmg.dmg') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-macOS-x64-DMG
-          path: release/*-x64.dmg
+          name: termix_macos_x64_dmg
+          path: release/*_x64_*_dmg.dmg
           retention-days: 30
 
       - name: Upload macOS arm64 DMG
         uses: actions/upload-artifact@v4
-        if: hashFiles('release/*-arm64.dmg') != '' && github.event.inputs.artifact_destination != 'none'
+        if: hashFiles('release/*_arm64_*_dmg.dmg') != '' && github.event.inputs.artifact_destination != 'none'
         with:
-          name: Termix-macOS-arm64-DMG
-          path: release/*-arm64.dmg
+          name: termix_macos_arm64_dmg
+          path: release/*_arm64_*_dmg.dmg
           retention-days: 30
 
       - name: Check for App Store Connect API credentials
