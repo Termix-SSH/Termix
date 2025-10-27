@@ -29,6 +29,12 @@ Add your Chocolatey API key as a GitHub secret:
 - Secret name: `CHOCOLATEY_API_KEY`
 - Get your API key from: https://community.chocolatey.org/account
 
+**Important:** The package ID "termix" must be registered/owned by you on Chocolatey. If you get a 403 error:
+
+1. Check if the package exists: https://community.chocolatey.org/packages/termix
+2. If taken by someone else, change the package ID in `chocolatey/termix.nuspec` (e.g., to "termix-ssh")
+3. See `chocolatey/TROUBLESHOOTING.md` for detailed solutions
+
 ### Manual Submission
 
 If you prefer to submit manually:

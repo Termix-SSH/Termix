@@ -601,18 +601,24 @@ jobs:
           Copy-Item -Path "chocolatey\*" -Destination "choco-build" -Recurse -Force
 
           # Update chocolateyinstall.ps1 with actual values
-          $installScript = Get-Content "choco-build\tools\chocolateyinstall.ps1" -Raw
+          $installScript = Get-Content "choco-build\tools\chocolateyinstall.ps1" -Raw -Encoding UTF8
           $installScript = $installScript -replace 'DOWNLOAD_URL_PLACEHOLDER', $DOWNLOAD_URL
           $installScript = $installScript -replace 'CHECKSUM_PLACEHOLDER', $CHECKSUM
-          Set-Content -Path "choco-build\tools\chocolateyinstall.ps1" -Value $installScript
+          [System.IO.File]::WriteAllText("$PWD\choco-build\tools\chocolateyinstall.ps1", $installScript, [System.Text.UTF8Encoding]::new($false))
 
-          # Update nuspec with version
-          $nuspec = Get-Content "choco-build\termix.nuspec" -Raw
+          # Update nuspec with version (preserve UTF-8 encoding without BOM)
+          $nuspec = Get-Content "choco-build\termix.nuspec" -Raw -Encoding UTF8
           $nuspec = $nuspec -replace 'VERSION_PLACEHOLDER', $VERSION
-          Set-Content -Path "choco-build\termix.nuspec" -Value $nuspec
+          [System.IO.File]::WriteAllText("$PWD\choco-build\termix.nuspec", $nuspec, [System.Text.UTF8Encoding]::new($false))
 
           echo "Chocolatey package prepared for version $VERSION"
           echo "Download URL: $DOWNLOAD_URL"
+
+          # Verify the nuspec is valid
+          echo ""
+          echo "Verifying nuspec content:"
+          Get-Content "choco-build\termix.nuspec" -Head 10
+          echo ""
 
       - name: Install Chocolatey
         run: |
@@ -623,7 +629,18 @@ jobs:
       - name: Pack Chocolatey package
         run: |
           cd choco-build
+          echo "Packing Chocolatey package..."
           choco pack termix.nuspec
+
+          if ($LASTEXITCODE -ne 0) {
+            echo "❌ Failed to pack Chocolatey package"
+            exit 1
+          }
+
+          echo ""
+          echo "✅ Package created successfully"
+          echo "Package contents:"
+          Get-ChildItem *.nupkg | ForEach-Object { echo $_.Name }
 
       - name: Check for Chocolatey API Key
         id: check_choco_key
@@ -643,8 +660,35 @@ jobs:
           $VERSION = "${{ steps.package-version.outputs.version }}"
           cd choco-build
           choco apikey --key "${{ secrets.CHOCOLATEY_API_KEY }}" --source https://push.chocolatey.org/
-          choco push "termix.$VERSION.nupkg" --source https://push.chocolatey.org/
-          echo "✅ Package pushed to Chocolatey successfully!"
+
+          try {
+            choco push "termix.$VERSION.nupkg" --source https://push.chocolatey.org/
+            if ($LASTEXITCODE -eq 0) {
+              echo ""
+              echo "✅ Package pushed to Chocolatey successfully!"
+              echo "View at: https://community.chocolatey.org/packages/termix/$VERSION"
+            } else {
+              throw "Chocolatey push failed with exit code $LASTEXITCODE"
+            }
+          } catch {
+            echo ""
+            echo "❌ Failed to push to Chocolatey"
+            echo ""
+            echo "Common reasons:"
+            echo "1. Package ID 'termix' is already owned by another user"
+            echo "2. You need to register/claim the package ID first"
+            echo "3. API key doesn't have push permissions"
+            echo ""
+            echo "Solutions:"
+            echo "1. Check if package exists: https://community.chocolatey.org/packages/termix"
+            echo "2. If it exists and is yours, contact Chocolatey support to claim it"
+            echo "3. If owned by someone else, use a different package ID (e.g., 'termix-ssh')"
+            echo "4. Register a new package ID at: https://community.chocolatey.org/"
+            echo ""
+            echo "The package artifact has been saved for manual submission."
+            echo ""
+            exit 1
+          }
 
       - name: Upload Chocolatey package as artifact
         uses: actions/upload-artifact@v4
