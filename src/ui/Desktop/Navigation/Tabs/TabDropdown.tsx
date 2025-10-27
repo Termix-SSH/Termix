@@ -68,10 +68,6 @@ export function TabDropdown(): React.ReactElement {
     setCurrentTab(tabId);
   };
 
-  if (tabs.length <= 1) {
-    return null;
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

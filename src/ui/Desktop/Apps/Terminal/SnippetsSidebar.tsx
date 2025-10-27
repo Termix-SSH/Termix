@@ -19,7 +19,20 @@ import {
   updateSnippet,
   deleteSnippet,
 } from "@/ui/main-axios";
+import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import type { Snippet, SnippetData } from "../../../../types/index.js";
+
+interface TabData {
+  id: number;
+  type: string;
+  title: string;
+  terminalRef?: {
+    current?: {
+      sendInput?: (data: string) => void;
+    };
+  };
+  [key: string]: unknown;
+}
 
 interface SnippetsSidebarProps {
   isOpen: boolean;
@@ -34,6 +47,7 @@ export function SnippetsSidebar({
 }: SnippetsSidebarProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
+  const { tabs } = useTabs() as { tabs: TabData[] };
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -47,6 +61,7 @@ export function SnippetsSidebar({
     name: false,
     content: false,
   });
+  const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -134,15 +149,42 @@ export function SnippetsSidebar({
     }
   };
 
+  const handleTabToggle = (tabId: number) => {
+    setSelectedTabIds((prev) =>
+      prev.includes(tabId)
+        ? prev.filter((id) => id !== tabId)
+        : [...prev, tabId],
+    );
+  };
+
   const handleExecute = (snippet: Snippet) => {
-    onExecute(snippet.content);
-    toast.success(t("snippets.executeSuccess", { name: snippet.name }));
+    if (selectedTabIds.length > 0) {
+      // Execute on selected terminals
+      selectedTabIds.forEach((tabId) => {
+        const tab = tabs.find((t: TabData) => t.id === tabId);
+        if (tab?.terminalRef?.current?.sendInput) {
+          tab.terminalRef.current.sendInput(snippet.content + "\n");
+        }
+      });
+      toast.success(
+        t("snippets.executeSuccess", {
+          name: snippet.name,
+          count: selectedTabIds.length,
+        }),
+      );
+    } else {
+      // Execute on current terminal (legacy behavior)
+      onExecute(snippet.content);
+      toast.success(t("snippets.executeSuccess", { name: snippet.name }));
+    }
   };
 
   const handleCopy = (snippet: Snippet) => {
     navigator.clipboard.writeText(snippet.content);
     toast.success(t("snippets.copySuccess", { name: snippet.name }));
   };
+
+  const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
 
   if (!isOpen) return null;
 
@@ -184,6 +226,49 @@ export function SnippetsSidebar({
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
+              {/* Terminal Selection */}
+              {terminalTabs.length > 0 && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-white">
+                      {t("snippets.selectTerminals", {
+                        defaultValue: "Select Terminals (optional)",
+                      })}
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedTabIds.length > 0
+                        ? t("snippets.executeOnSelected", {
+                            defaultValue: `Execute on ${selectedTabIds.length} selected terminal(s)`,
+                            count: selectedTabIds.length,
+                          })
+                        : t("snippets.executeOnCurrent", {
+                            defaultValue:
+                              "Execute on current terminal (click to select multiple)",
+                          })}
+                    </p>
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                      {terminalTabs.map((tab) => (
+                        <Button
+                          key={tab.id}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={`rounded-full px-3 py-1 text-xs flex items-center gap-1 ${
+                            selectedTabIds.includes(tab.id)
+                              ? "text-white bg-gray-700"
+                              : "text-gray-500"
+                          }`}
+                          onClick={() => handleTabToggle(tab.id)}
+                        >
+                          {tab.title}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <Separator className="my-4" />
+                </>
+              )}
+
               <Button
                 onClick={handleCreate}
                 className="w-full"
