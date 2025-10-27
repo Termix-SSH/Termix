@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 
-$packageName = 'termix'
+$packageName = 'termix-ssh'
 $toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
 $url64 = 'DOWNLOAD_URL_PLACEHOLDER'
 $checksum64 = 'CHECKSUM_PLACEHOLDER'

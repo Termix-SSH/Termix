@@ -607,9 +607,9 @@ jobs:
           [System.IO.File]::WriteAllText("$PWD\choco-build\tools\chocolateyinstall.ps1", $installScript, [System.Text.UTF8Encoding]::new($false))
 
           # Update nuspec with version (preserve UTF-8 encoding without BOM)
-          $nuspec = Get-Content "choco-build\termix.nuspec" -Raw -Encoding UTF8
+          $nuspec = Get-Content "choco-build\termix-ssh.nuspec" -Raw -Encoding UTF8
           $nuspec = $nuspec -replace 'VERSION_PLACEHOLDER', $VERSION
-          [System.IO.File]::WriteAllText("$PWD\choco-build\termix.nuspec", $nuspec, [System.Text.UTF8Encoding]::new($false))
+          [System.IO.File]::WriteAllText("$PWD\choco-build\termix-ssh.nuspec", $nuspec, [System.Text.UTF8Encoding]::new($false))
 
           echo "Chocolatey package prepared for version $VERSION"
           echo "Download URL: $DOWNLOAD_URL"
@@ -617,7 +617,7 @@ jobs:
           # Verify the nuspec is valid
           echo ""
           echo "Verifying nuspec content:"
-          Get-Content "choco-build\termix.nuspec" -Head 10
+          Get-Content "choco-build\termix-ssh.nuspec" -Head 10
           echo ""
 
       - name: Install Chocolatey
@@ -630,7 +630,7 @@ jobs:
         run: |
           cd choco-build
           echo "Packing Chocolatey package..."
-          choco pack termix.nuspec
+          choco pack termix-ssh.nuspec
 
           if ($LASTEXITCODE -ne 0) {
             echo "❌ Failed to pack Chocolatey package"
@@ -662,11 +662,11 @@ jobs:
           choco apikey --key "${{ secrets.CHOCOLATEY_API_KEY }}" --source https://push.chocolatey.org/
 
           try {
-            choco push "termix.$VERSION.nupkg" --source https://push.chocolatey.org/
+            choco push "termix-ssh.$VERSION.nupkg" --source https://push.chocolatey.org/
             if ($LASTEXITCODE -eq 0) {
               echo ""
               echo "✅ Package pushed to Chocolatey successfully!"
-              echo "View at: https://community.chocolatey.org/packages/termix/$VERSION"
+              echo "View at: https://community.chocolatey.org/packages/termix-ssh/$VERSION"
             } else {
               throw "Chocolatey push failed with exit code $LASTEXITCODE"
             }
@@ -675,15 +675,14 @@ jobs:
             echo "❌ Failed to push to Chocolatey"
             echo ""
             echo "Common reasons:"
-            echo "1. Package ID 'termix' is already owned by another user"
+            echo "1. Package ID 'termix-ssh' is already owned by another user"
             echo "2. You need to register/claim the package ID first"
             echo "3. API key doesn't have push permissions"
             echo ""
             echo "Solutions:"
-            echo "1. Check if package exists: https://community.chocolatey.org/packages/termix"
+            echo "1. Check if package exists: https://community.chocolatey.org/packages/termix-ssh"
             echo "2. If it exists and is yours, contact Chocolatey support to claim it"
-            echo "3. If owned by someone else, use a different package ID (e.g., 'termix-ssh')"
-            echo "4. Register a new package ID at: https://community.chocolatey.org/"
+            echo "3. Register a new package ID at: https://community.chocolatey.org/"
             echo ""
             echo "The package artifact has been saved for manual submission."
             echo ""

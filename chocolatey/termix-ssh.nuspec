@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
-    <id>termix</id>
+    <id>termix-ssh</id>
     <version>VERSION_PLACEHOLDER</version>
     <packageSourceUrl>https://github.com/Termix-SSH/Termix</packageSourceUrl>
     <owners>bugattiguy527</owners>
-    <title>Termix</title>
+    <title>Termix SSH</title>
     <authors>bugattiguy527</authors>
     <projectUrl>https://github.com/Termix-SSH/Termix</projectUrl>
     <iconUrl>https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.png</iconUrl>

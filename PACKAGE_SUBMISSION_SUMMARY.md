@@ -102,6 +102,8 @@ Add GitHub secret to enable automatic submission:
 - **Get from**: https://community.chocolatey.org/account
 - **Location**: Repository Settings → Secrets and variables → Actions
 
+**Note:** Package ID is "termix-ssh"
+
 ### Flatpak (Manual)
 
 No secrets required. Process:
@@ -218,8 +220,8 @@ These are already configured in `electron-builder.json`.
 
 ```powershell
 cd chocolatey
-choco pack termix.nuspec
-choco install termix -s . -y
+choco pack termix-ssh.nuspec
+choco install termix-ssh -s . -y
 ```
 
 ### Flatpak
@@ -244,7 +246,7 @@ Once approved on all platforms:
 
 ```bash
 # Windows (Chocolatey)
-choco install termix
+choco install termix-ssh
 
 # Linux (Flatpak)
 flatpak install flathub com.karmaa.termix
@@ -262,7 +264,7 @@ brew install --cask termix
 ### Chocolatey
 
 - Updates pushed automatically when you run workflow with "submit"
-- Users update with: `choco upgrade termix`
+- Users update with: `choco upgrade termix-ssh`
 
 ### Flatpak
 
@@ -295,7 +297,7 @@ brew install --cask termix
 For issues:
 
 - **Build/Workflow**: https://github.com/Termix-SSH/Termix/issues
-- **Chocolatey**: https://community.chocolatey.org/packages/termix
+- **Chocolatey**: https://community.chocolatey.org/packages/termix-ssh
 - **Flatpak**: https://github.com/flathub/com.karmaa.termix/issues
 - **Homebrew**: https://github.com/Homebrew/homebrew-cask/issues (or your custom tap)
 

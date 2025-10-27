@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 
-$packageName = 'termix'
+$packageName = 'termix-ssh'
 $softwareName = 'Termix*'
 $installerType = 'msi'
 
