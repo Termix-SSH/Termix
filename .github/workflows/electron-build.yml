@@ -548,6 +548,111 @@ jobs:
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
           security delete-keychain $RUNNER_TEMP/dev-signing.keychain-db || true
 
+  submit-to-chocolatey:
+    runs-on: windows-latest
+    if: github.event.inputs.artifact_destination == 'submit'
+    needs: [build-windows]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Get version from package.json
+        id: package-version
+        run: |
+          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
+          echo "Building Chocolatey package for version: $VERSION"
+
+      - name: Download Windows x64 MSI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: termix_windows_x64_msi
+          path: artifact
+
+      - name: Get MSI file info
+        id: msi-info
+        run: |
+          $VERSION = "${{ steps.package-version.outputs.version }}"
+          $MSI_FILE = Get-ChildItem -Path artifact -Filter "*.msi" | Select-Object -First 1
+          $MSI_NAME = $MSI_FILE.Name
+          $CHECKSUM = (Get-FileHash -Path $MSI_FILE.FullName -Algorithm SHA256).Hash
+
+          echo "msi_name=$MSI_NAME" >> $env:GITHUB_OUTPUT
+          echo "checksum=$CHECKSUM" >> $env:GITHUB_OUTPUT
+          echo "MSI File: $MSI_NAME"
+          echo "SHA256: $CHECKSUM"
+
+      - name: Prepare Chocolatey package
+        run: |
+          $VERSION = "${{ steps.package-version.outputs.version }}"
+          $CHECKSUM = "${{ steps.msi-info.outputs.checksum }}"
+          $MSI_NAME = "${{ steps.msi-info.outputs.msi_name }}"
+
+          # Construct the download URL with the actual release tag format
+          $DOWNLOAD_URL = "https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$MSI_NAME"
+
+          # Copy chocolatey files to build directory
+          New-Item -ItemType Directory -Force -Path "choco-build"
+          Copy-Item -Path "chocolatey\*" -Destination "choco-build" -Recurse -Force
+
+          # Update chocolateyinstall.ps1 with actual values
+          $installScript = Get-Content "choco-build\tools\chocolateyinstall.ps1" -Raw
+          $installScript = $installScript -replace 'DOWNLOAD_URL_PLACEHOLDER', $DOWNLOAD_URL
+          $installScript = $installScript -replace 'CHECKSUM_PLACEHOLDER', $CHECKSUM
+          Set-Content -Path "choco-build\tools\chocolateyinstall.ps1" -Value $installScript
+
+          # Update nuspec with version
+          $nuspec = Get-Content "choco-build\termix.nuspec" -Raw
+          $nuspec = $nuspec -replace 'VERSION_PLACEHOLDER', $VERSION
+          Set-Content -Path "choco-build\termix.nuspec" -Value $nuspec
+
+          echo "Chocolatey package prepared for version $VERSION"
+          echo "Download URL: $DOWNLOAD_URL"
+
+      - name: Install Chocolatey
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+      - name: Pack Chocolatey package
+        run: |
+          cd choco-build
+          choco pack termix.nuspec
+
+      - name: Check for Chocolatey API Key
+        id: check_choco_key
+        run: |
+          if ("${{ secrets.CHOCOLATEY_API_KEY }}" -ne "") {
+            echo "has_key=true" >> $env:GITHUB_OUTPUT
+            echo "✅ Chocolatey API key found. Will push to Chocolatey."
+          } else {
+            echo "has_key=false" >> $env:GITHUB_OUTPUT
+            echo "⚠️ Chocolatey API key not configured. Package will be created but not pushed."
+            echo "Add CHOCOLATEY_API_KEY secret to enable automatic submission."
+          }
+
+      - name: Push to Chocolatey
+        if: steps.check_choco_key.outputs.has_key == 'true'
+        run: |
+          $VERSION = "${{ steps.package-version.outputs.version }}"
+          cd choco-build
+          choco apikey --key "${{ secrets.CHOCOLATEY_API_KEY }}" --source https://push.chocolatey.org/
+          choco push "termix.$VERSION.nupkg" --source https://push.chocolatey.org/
+          echo "✅ Package pushed to Chocolatey successfully!"
+
+      - name: Upload Chocolatey package as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chocolatey-package
+          path: choco-build/*.nupkg
+          retention-days: 30
+
   upload-to-release:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event.inputs.artifact_destination == 'release'
