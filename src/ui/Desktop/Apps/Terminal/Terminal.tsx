@@ -18,7 +18,7 @@ import {
   logActivity,
   getSnippets,
 } from "@/ui/main-axios.ts";
-import { TOTPDialog } from "@/ui/components/TOTPDialog";
+import { TOTPDialog } from "@/ui/Desktop/Navigation/TOTPDialog.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,

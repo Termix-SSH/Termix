@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { TOTPDialog } from "@/ui/components/TOTPDialog";
+import { TOTPDialog } from "@/ui/Desktop/Navigation/TOTPDialog.tsx";
 import {
   Upload,
   FolderPlus,
