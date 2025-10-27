@@ -653,6 +653,411 @@ jobs:
           path: choco-build/*.nupkg
           retention-days: 30
 
+  submit-to-flatpak:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.artifact_destination == 'submit'
+    needs: [build-linux]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Get version from package.json
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
+          echo "Building Flatpak submission for version: $VERSION"
+
+      - name: Download Linux x64 AppImage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: termix_linux_x64_appimage
+          path: artifact-x64
+
+      - name: Download Linux arm64 AppImage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: termix_linux_arm64_appimage
+          path: artifact-arm64
+
+      - name: Get AppImage file info
+        id: appimage-info
+        run: |
+          VERSION="${{ steps.package-version.outputs.version }}"
+
+          # x64 AppImage
+          APPIMAGE_X64_FILE=$(find artifact-x64 -name "*.AppImage" -type f | head -n 1)
+          APPIMAGE_X64_NAME=$(basename "$APPIMAGE_X64_FILE")
+          CHECKSUM_X64=$(sha256sum "$APPIMAGE_X64_FILE" | awk '{print $1}')
+
+          # arm64 AppImage
+          APPIMAGE_ARM64_FILE=$(find artifact-arm64 -name "*.AppImage" -type f | head -n 1)
+          APPIMAGE_ARM64_NAME=$(basename "$APPIMAGE_ARM64_FILE")
+          CHECKSUM_ARM64=$(sha256sum "$APPIMAGE_ARM64_FILE" | awk '{print $1}')
+
+          echo "appimage_x64_name=$APPIMAGE_X64_NAME" >> $GITHUB_OUTPUT
+          echo "checksum_x64=$CHECKSUM_X64" >> $GITHUB_OUTPUT
+          echo "appimage_arm64_name=$APPIMAGE_ARM64_NAME" >> $GITHUB_OUTPUT
+          echo "checksum_arm64=$CHECKSUM_ARM64" >> $GITHUB_OUTPUT
+
+          echo "x64 AppImage: $APPIMAGE_X64_NAME"
+          echo "x64 SHA256: $CHECKSUM_X64"
+          echo "arm64 AppImage: $APPIMAGE_ARM64_NAME"
+          echo "arm64 SHA256: $CHECKSUM_ARM64"
+
+      - name: Install ImageMagick for icon generation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Prepare Flatpak submission files
+        run: |
+          VERSION="${{ steps.package-version.outputs.version }}"
+          CHECKSUM_X64="${{ steps.appimage-info.outputs.checksum_x64 }}"
+          CHECKSUM_ARM64="${{ steps.appimage-info.outputs.checksum_arm64 }}"
+          RELEASE_DATE="${{ steps.package-version.outputs.release_date }}"
+          APPIMAGE_X64_NAME="${{ steps.appimage-info.outputs.appimage_x64_name }}"
+          APPIMAGE_ARM64_NAME="${{ steps.appimage-info.outputs.appimage_arm64_name }}"
+
+          # Create submission directory
+          mkdir -p flatpak-submission
+
+          # Copy Flatpak files to submission directory
+          cp flatpak/com.karmaa.termix.yml flatpak-submission/
+          cp flatpak/com.karmaa.termix.desktop flatpak-submission/
+          cp flatpak/com.karmaa.termix.metainfo.xml flatpak-submission/
+          cp flatpak/flathub.json flatpak-submission/
+
+          # Copy and prepare icons
+          cp public/icon.svg flatpak-submission/com.karmaa.termix.svg
+          convert public/icon.png -resize 256x256 flatpak-submission/icon-256.png
+          convert public/icon.png -resize 128x128 flatpak-submission/icon-128.png
+
+          # Update manifest with version and checksums
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" flatpak-submission/com.karmaa.termix.yml
+          sed -i "s/CHECKSUM_X64_PLACEHOLDER/$CHECKSUM_X64/g" flatpak-submission/com.karmaa.termix.yml
+          sed -i "s/CHECKSUM_ARM64_PLACEHOLDER/$CHECKSUM_ARM64/g" flatpak-submission/com.karmaa.termix.yml
+
+          # Update metainfo with version and date
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" flatpak-submission/com.karmaa.termix.metainfo.xml
+          sed -i "s/DATE_PLACEHOLDER/$RELEASE_DATE/g" flatpak-submission/com.karmaa.termix.metainfo.xml
+
+          echo "✅ Flatpak submission files prepared for version $VERSION"
+          echo "x64 Download URL: https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$APPIMAGE_X64_NAME"
+          echo "arm64 Download URL: https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$APPIMAGE_ARM64_NAME"
+
+      - name: Create submission instructions
+        run: |
+          cat > flatpak-submission/SUBMISSION_INSTRUCTIONS.md << 'EOF'
+          # Flathub Submission Instructions for Termix
+
+          ## Automatic Submission (Recommended)
+
+          All files needed for Flathub submission are in this artifact. Follow these steps:
+
+          1. **Fork the Flathub repository**:
+             - Go to https://github.com/flathub/flathub
+             - Click "Fork" button
+
+          2. **Clone your fork**:
+             ```bash
+             git clone https://github.com/YOUR-USERNAME/flathub.git
+             cd flathub
+             git checkout -b com.karmaa.termix
+             ```
+
+          3. **Copy all files from this artifact** to the root of your flathub fork
+
+          4. **Commit and push**:
+             ```bash
+             git add .
+             git commit -m "Add Termix ${{ steps.package-version.outputs.version }}"
+             git push origin com.karmaa.termix
+             ```
+
+          5. **Create Pull Request**:
+             - Go to https://github.com/YOUR-USERNAME/flathub
+             - Click "Compare & pull request"
+             - Submit PR to flathub/flathub
+
+          ## Files in this submission:
+
+          - `com.karmaa.termix.yml` - Flatpak manifest
+          - `com.karmaa.termix.desktop` - Desktop entry
+          - `com.karmaa.termix.metainfo.xml` - AppStream metadata
+          - `flathub.json` - Flathub configuration
+          - `com.karmaa.termix.svg` - SVG icon
+          - `icon-256.png` - 256x256 icon
+          - `icon-128.png` - 128x128 icon
+
+          ## Version Information:
+
+          - Version: ${{ steps.package-version.outputs.version }}
+          - Release Date: ${{ steps.package-version.outputs.release_date }}
+          - x64 AppImage SHA256: ${{ steps.appimage-info.outputs.checksum_x64 }}
+          - arm64 AppImage SHA256: ${{ steps.appimage-info.outputs.checksum_arm64 }}
+
+          ## After Submission:
+
+          1. Flathub maintainers will review your submission (usually 1-5 days)
+          2. They may request changes - be responsive to feedback
+          3. Once approved, Termix will be available via: `flatpak install flathub com.karmaa.termix`
+
+          ## Resources:
+
+          - [Flathub Submission Guidelines](https://docs.flathub.org/docs/for-app-authors/submission)
+          - [Flatpak Documentation](https://docs.flatpak.org/)
+          EOF
+
+          echo "✅ Created submission instructions"
+
+      - name: List submission files
+        run: |
+          echo "Flatpak submission files:"
+          ls -la flatpak-submission/
+
+      - name: Upload Flatpak submission as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-submission
+          path: flatpak-submission/*
+          retention-days: 30
+
+      - name: Display next steps
+        run: |
+          echo ""
+          echo "🎉 Flatpak submission files ready!"
+          echo ""
+          echo "📦 Download the 'flatpak-submission' artifact and follow SUBMISSION_INSTRUCTIONS.md"
+          echo ""
+          echo "Quick summary:"
+          echo "1. Fork https://github.com/flathub/flathub"
+          echo "2. Copy artifact files to your fork"
+          echo "3. Create PR to flathub/flathub"
+          echo ""
+
+  submit-to-homebrew:
+    runs-on: macos-latest
+    if: github.event.inputs.artifact_destination == 'submit'
+    needs: [build-macos]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Get version from package.json
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building Homebrew Cask for version: $VERSION"
+
+      - name: Download macOS Universal DMG artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: termix_macos_universal_dmg
+          path: artifact
+
+      - name: Get DMG file info
+        id: dmg-info
+        run: |
+          VERSION="${{ steps.package-version.outputs.version }}"
+          DMG_FILE=$(find artifact -name "*.dmg" -type f | head -n 1)
+          DMG_NAME=$(basename "$DMG_FILE")
+          CHECKSUM=$(shasum -a 256 "$DMG_FILE" | awk '{print $1}')
+
+          echo "dmg_name=$DMG_NAME" >> $GITHUB_OUTPUT
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "DMG File: $DMG_NAME"
+          echo "SHA256: $CHECKSUM"
+
+      - name: Prepare Homebrew submission files
+        run: |
+          VERSION="${{ steps.package-version.outputs.version }}"
+          CHECKSUM="${{ steps.dmg-info.outputs.checksum }}"
+          DMG_NAME="${{ steps.dmg-info.outputs.dmg_name }}"
+
+          # Create submission directory
+          mkdir -p homebrew-submission/Casks/t
+
+          # Copy Homebrew cask file
+          cp homebrew/termix.rb homebrew-submission/Casks/t/termix.rb
+          cp homebrew/README.md homebrew-submission/
+
+          # Update cask with version and checksum
+          sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-submission/Casks/t/termix.rb
+          sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-submission/Casks/t/termix.rb
+
+          echo "✅ Homebrew Cask prepared for version $VERSION"
+          echo "Download URL: https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$DMG_NAME"
+
+      - name: Verify Cask syntax
+        run: |
+          # Install Homebrew if not present (should be on macos-latest)
+          if ! command -v brew &> /dev/null; then
+            echo "Installing Homebrew..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          fi
+
+          # Basic syntax check
+          ruby -c homebrew-submission/Casks/t/termix.rb
+          echo "✅ Cask syntax is valid"
+
+      - name: Create submission instructions
+        run: |
+          cat > homebrew-submission/SUBMISSION_INSTRUCTIONS.md << 'EOF'
+          # Homebrew Cask Submission Instructions for Termix
+
+          ## Option 1: Submit to Official Homebrew Cask (Recommended)
+
+          ### Prerequisites
+          - macOS with Homebrew installed
+          - GitHub account
+
+          ### Steps
+
+          1. **Fork the Homebrew Cask repository**:
+             - Go to https://github.com/Homebrew/homebrew-cask
+             - Click "Fork" button
+
+          2. **Clone your fork**:
+             ```bash
+             git clone https://github.com/YOUR-USERNAME/homebrew-cask.git
+             cd homebrew-cask
+             git checkout -b termix
+             ```
+
+          3. **Copy the cask file**:
+             - Copy `Casks/t/termix.rb` from this artifact to your fork at `Casks/t/termix.rb`
+             - Note: Casks are organized by first letter in subdirectories
+
+          4. **Test the cask locally**:
+             ```bash
+             brew install --cask ./Casks/t/termix.rb
+             brew uninstall --cask termix
+             ```
+
+          5. **Run audit checks**:
+             ```bash
+             brew audit --cask --online ./Casks/t/termix.rb
+             brew style ./Casks/t/termix.rb
+             ```
+
+          6. **Commit and push**:
+             ```bash
+             git add Casks/t/termix.rb
+             git commit -m "Add Termix ${{ steps.package-version.outputs.version }}"
+             git push origin termix
+             ```
+
+          7. **Create Pull Request**:
+             - Go to https://github.com/YOUR-USERNAME/homebrew-cask
+             - Click "Compare & pull request"
+             - Fill in the PR template
+             - Submit to Homebrew/homebrew-cask
+
+          ### PR Requirements
+
+          Your PR should include:
+          - Clear commit message: "Add Termix X.Y.Z" or "Update Termix to X.Y.Z"
+          - All audit checks passing
+          - Working download URL
+          - Valid SHA256 checksum
+
+          ## Option 2: Create Your Own Tap (Alternative)
+
+          If you want more control and faster updates:
+
+          1. **Create a tap repository**:
+             - Create repo: `Termix-SSH/homebrew-termix`
+             - Add `Casks/termix.rb` to the repo
+
+          2. **Users install with**:
+             ```bash
+             brew tap termix-ssh/termix
+             brew install --cask termix
+             ```
+
+          ### Advantages of Custom Tap
+          - No approval process
+          - Instant updates
+          - Full control
+          - Can include beta versions
+
+          ### Disadvantages
+          - Less discoverable
+          - Users must add tap first
+          - You maintain it yourself
+
+          ## Files in this submission:
+
+          - `Casks/t/termix.rb` - Homebrew Cask formula
+          - `README.md` - Detailed documentation
+          - `SUBMISSION_INSTRUCTIONS.md` - This file
+
+          ## Version Information:
+
+          - Version: ${{ steps.package-version.outputs.version }}
+          - DMG SHA256: ${{ steps.dmg-info.outputs.checksum }}
+          - DMG URL: https://github.com/Termix-SSH/Termix/releases/download/release-${{ steps.package-version.outputs.version }}-tag/${{ steps.dmg-info.outputs.dmg_name }}
+
+          ## After Submission:
+
+          ### Official Homebrew Cask:
+          1. Maintainers will review (usually 24-48 hours)
+          2. May request changes or fixes
+          3. Once merged, users can install with: `brew install --cask termix`
+          4. Homebrew bot will auto-update for future releases
+
+          ### Custom Tap:
+          1. Push to your tap repository
+          2. Immediately available to users
+          3. Update the cask file for each new release
+
+          ## Resources:
+
+          - [Homebrew Cask Documentation](https://docs.brew.sh/Cask-Cookbook)
+          - [Acceptable Casks](https://docs.brew.sh/Acceptable-Casks)
+          - [How to Open a PR](https://docs.brew.sh/How-To-Open-a-Homebrew-Pull-Request)
+          EOF
+
+          echo "✅ Created submission instructions"
+
+      - name: List submission files
+        run: |
+          echo "Homebrew submission files:"
+          find homebrew-submission -type f
+
+      - name: Upload Homebrew submission as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: homebrew-submission
+          path: homebrew-submission/*
+          retention-days: 30
+
+      - name: Display next steps
+        run: |
+          echo ""
+          echo "🍺 Homebrew Cask ready!"
+          echo ""
+          echo "📦 Download the 'homebrew-submission' artifact and follow SUBMISSION_INSTRUCTIONS.md"
+          echo ""
+          echo "Quick summary:"
+          echo "Option 1 (Recommended): Fork https://github.com/Homebrew/homebrew-cask and submit PR"
+          echo "Option 2 (Alternative): Create your own tap at Termix-SSH/homebrew-termix"
+          echo ""
+
   upload-to-release:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event.inputs.artifact_destination == 'release'
