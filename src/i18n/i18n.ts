@@ -5,7 +5,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import enTranslation from "../locales/en/translation.json";
 import zhTranslation from "../locales/zh/translation.json";
 import deTranslation from "../locales/de/translation.json";
-import ptbrTranslation from "../locales/pt-br/translation.json";
+import ptbrTranslation from "../locales/pt-BR/translation.json";
 
 i18n
   .use(LanguageDetector)
