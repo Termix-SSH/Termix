@@ -415,61 +415,73 @@ router.get("/oidc-config", async (req, res) => {
 
     let config = JSON.parse((row as Record<string, unknown>).value as string);
 
-    if (config.client_secret) {
-      if (config.client_secret.startsWith("encrypted:")) {
-        const authHeader = req.headers["authorization"];
-        if (authHeader?.startsWith("Bearer ")) {
-          const token = authHeader.split(" ")[1];
-          const authManager = AuthManager.getInstance();
-          const payload = await authManager.verifyJWTToken(token);
+    // Check if user is authenticated admin
+    let isAuthenticatedAdmin = false;
+    const authHeader = req.headers["authorization"];
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      const authManager = AuthManager.getInstance();
+      const payload = await authManager.verifyJWTToken(token);
 
-          if (payload) {
-            const userId = payload.userId;
-            const user = await db
-              .select()
-              .from(users)
-              .where(eq(users.id, userId));
+      if (payload) {
+        const userId = payload.userId;
+        const user = await db.select().from(users).where(eq(users.id, userId));
 
-            if (user && user.length > 0 && user[0].is_admin) {
-              try {
-                const adminDataKey = DataCrypto.getUserDataKey(userId);
-                if (adminDataKey) {
-                  config = DataCrypto.decryptRecord(
-                    "settings",
-                    config,
-                    userId,
-                    adminDataKey,
-                  );
-                } else {
-                  config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
-                }
-              } catch {
-                authLogger.warn("Failed to decrypt OIDC config for admin", {
-                  operation: "oidc_config_decrypt_failed",
+        if (user && user.length > 0 && user[0].is_admin) {
+          isAuthenticatedAdmin = true;
+
+          // Only decrypt for authenticated admins
+          if (config.client_secret?.startsWith("encrypted:")) {
+            try {
+              const adminDataKey = DataCrypto.getUserDataKey(userId);
+              if (adminDataKey) {
+                config = DataCrypto.decryptRecord(
+                  "settings",
+                  config,
                   userId,
-                });
-                config.client_secret = "[ENCRYPTED - DECRYPTION FAILED]";
+                  adminDataKey,
+                );
+              } else {
+                config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
               }
-            } else {
-              config.client_secret = "[ENCRYPTED - ADMIN ONLY]";
+            } catch {
+              authLogger.warn("Failed to decrypt OIDC config for admin", {
+                operation: "oidc_config_decrypt_failed",
+                userId,
+              });
+              config.client_secret = "[ENCRYPTED - DECRYPTION FAILED]";
             }
-          } else {
-            config.client_secret = "[ENCRYPTED - AUTH REQUIRED]";
+          } else if (config.client_secret?.startsWith("encoded:")) {
+            // Decode for authenticated admins only
+            try {
+              const decoded = Buffer.from(
+                config.client_secret.substring(8),
+                "base64",
+              ).toString("utf8");
+              config.client_secret = decoded;
+            } catch {
+              config.client_secret = "[ENCODING ERROR]";
+            }
           }
-        } else {
-          config.client_secret = "[ENCRYPTED - AUTH REQUIRED]";
-        }
-      } else if (config.client_secret.startsWith("encoded:")) {
-        try {
-          const decoded = Buffer.from(
-            config.client_secret.substring(8),
-            "base64",
-          ).toString("utf8");
-          config.client_secret = decoded;
-        } catch {
-          config.client_secret = "[ENCODING ERROR]";
         }
       }
+    }
+
+    // For non-admin users, hide sensitive fields
+    if (!isAuthenticatedAdmin) {
+      // Remove all sensitive fields for public access
+      delete config.client_secret;
+      delete config.id;
+
+      // Only return public fields needed for login page
+      const publicConfig = {
+        client_id: config.client_id,
+        issuer_url: config.issuer_url,
+        authorization_url: config.authorization_url,
+        scopes: config.scopes,
+      };
+
+      return res.json(publicConfig);
     }
 
     res.json(config);
@@ -940,7 +952,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = await authManager.generateJWTToken(userRecord.id, {
-      expiresIn: "24h",
+      expiresIn: "7d",
     });
 
     authLogger.success(`User logged in successfully: ${username}`, {
@@ -968,7 +980,7 @@ router.post("/login", async (req, res) => {
       .cookie(
         "jwt",
         token,
-        authManager.getSecureCookieOptions(req, 24 * 60 * 60 * 1000),
+        authManager.getSecureCookieOptions(req, 7 * 24 * 60 * 60 * 1000),
       )
       .json(response);
   } catch (err) {
@@ -1386,9 +1398,27 @@ router.post("/complete-reset", async (req, res) => {
       .where(eq(users.username, username));
 
     try {
+      // Delete all encrypted data since we're creating a new DEK
+      // The old DEK is lost, so old encrypted data becomes unreadable
+      await db.delete(sshData).where(eq(sshData.userId, userId));
+      await db
+        .delete(fileManagerRecent)
+        .where(eq(fileManagerRecent.userId, userId));
+      await db
+        .delete(fileManagerPinned)
+        .where(eq(fileManagerPinned.userId, userId));
+      await db
+        .delete(fileManagerShortcuts)
+        .where(eq(fileManagerShortcuts.userId, userId));
+      await db
+        .delete(dismissedAlerts)
+        .where(eq(dismissedAlerts.userId, userId));
+
+      // Now setup new encryption with new DEK
       await authManager.registerUser(userId, newPassword);
       authManager.logoutUser(userId);
 
+      // Clear TOTP settings
       await db
         .update(users)
         .set({
@@ -1399,16 +1429,16 @@ router.post("/complete-reset", async (req, res) => {
         .where(eq(users.id, userId));
 
       authLogger.warn(
-        `Password reset completed for user: ${username}. Existing encrypted data is now inaccessible and will need to be re-entered.`,
+        `Password reset completed for user: ${username}. All encrypted data has been deleted due to lost encryption key.`,
         {
-          operation: "password_reset_data_inaccessible",
+          operation: "password_reset_data_deleted",
           userId,
           username,
         },
       );
     } catch (encryptionError) {
       authLogger.error(
-        "Failed to re-encrypt user data after password reset",
+        "Failed to setup user data encryption after password reset",
         encryptionError,
         {
           operation: "password_reset_encryption_failed",
@@ -1417,8 +1447,7 @@ router.post("/complete-reset", async (req, res) => {
         },
       );
       return res.status(500).json({
-        error:
-          "Password reset completed but user data encryption failed. Please contact administrator.",
+        error: "Password reset failed. Please contact administrator.",
       });
     }
 

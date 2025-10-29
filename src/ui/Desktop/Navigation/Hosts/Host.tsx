@@ -1,8 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Status, StatusIndicator } from "@/components/ui/shadcn-io/status";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { EllipsisVertical, Terminal } from "lucide-react";
+import {
+  EllipsisVertical,
+  Terminal,
+  Server,
+  FolderOpen,
+  Pencil,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,9 +18,11 @@ import {
 import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext";
 import { getServerStatusById } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
+import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 
-export function Host({ host }: HostProps): React.ReactElement {
+export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
+  const [host, setHost] = useState(initialHost);
   const [serverStatus, setServerStatus] = useState<
     "online" | "offline" | "degraded"
   >("degraded");
@@ -25,7 +33,47 @@ export function Host({ host }: HostProps): React.ReactElement {
     ? host.name
     : `${host.username}@${host.ip}:${host.port}`;
 
+  // Update host when prop changes
   useEffect(() => {
+    setHost(initialHost);
+  }, [initialHost]);
+
+  // Listen for host changes to immediately update config
+  useEffect(() => {
+    const handleHostsChanged = async () => {
+      const { getSSHHosts } = await import("@/ui/main-axios.ts");
+      const hosts = await getSSHHosts();
+      const updatedHost = hosts.find((h) => h.id === host.id);
+      if (updatedHost) {
+        setHost(updatedHost);
+      }
+    };
+
+    window.addEventListener("ssh-hosts:changed", handleHostsChanged);
+    return () =>
+      window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
+  }, [host.id]);
+
+  // Parse stats config for monitoring settings
+  const statsConfig = useMemo(() => {
+    try {
+      return host.statsConfig
+        ? JSON.parse(host.statsConfig)
+        : DEFAULT_STATS_CONFIG;
+    } catch {
+      return DEFAULT_STATS_CONFIG;
+    }
+  }, [host.statsConfig]);
+
+  const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
+
+  useEffect(() => {
+    // Don't poll if status monitoring is disabled
+    if (!shouldShowStatus) {
+      setServerStatus("offline");
+      return;
+    }
+
     let cancelled = false;
 
     const fetchStatus = async () => {
@@ -41,6 +89,9 @@ export function Host({ host }: HostProps): React.ReactElement {
             setServerStatus("offline");
           } else if (err?.response?.status === 504) {
             setServerStatus("degraded");
+          } else if (err?.response?.status === 404) {
+            // Status not available - monitoring disabled
+            setServerStatus("offline");
           } else {
             setServerStatus("offline");
           }
@@ -49,13 +100,13 @@ export function Host({ host }: HostProps): React.ReactElement {
     };
 
     fetchStatus();
-    const intervalId = window.setInterval(fetchStatus, 30000);
+    const intervalId = window.setInterval(fetchStatus, 10000); // Poll backend every 10 seconds
 
     return () => {
       cancelled = true;
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, [host.id]);
+  }, [host.id, shouldShowStatus]);
 
   const handleTerminalClick = () => {
     addTab({ type: "terminal", title, hostConfig: host });
@@ -64,12 +115,14 @@ export function Host({ host }: HostProps): React.ReactElement {
   return (
     <div>
       <div className="flex items-center gap-2">
-        <Status
-          status={serverStatus}
-          className="!bg-transparent !p-0.75 flex-shrink-0"
-        >
-          <StatusIndicator />
-        </Status>
+        {shouldShowStatus && (
+          <Status
+            status={serverStatus}
+            className="!bg-transparent !p-0.75 flex-shrink-0"
+          >
+            <StatusIndicator />
+          </Status>
+        )}
 
         <p className="font-semibold flex-1 min-w-0 break-words text-sm">
           {host.name || host.ip}
@@ -101,29 +154,39 @@ export function Host({ host }: HostProps): React.ReactElement {
             <DropdownMenuContent
               align="start"
               side="right"
-              className="min-w-[160px]"
+              className="w-56 bg-dark-bg border-dark-border text-white"
             >
               <DropdownMenuItem
-                className="font-semibold"
                 onClick={() =>
                   addTab({ type: "server", title, hostConfig: host })
                 }
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
               >
-                Open Server Details
+                <Server className="h-4 w-4" />
+                <span className="flex-1">Open Server Details</span>
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="font-semibold"
                 onClick={() =>
                   addTab({ type: "file_manager", title, hostConfig: host })
                 }
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
               >
-                Open File Manager
+                <FolderOpen className="h-4 w-4" />
+                <span className="flex-1">Open File Manager</span>
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="font-semibold"
-                onClick={() => alert("Settings clicked")}
+                onClick={() =>
+                  addTab({
+                    type: "ssh_manager",
+                    title: "Host Manager",
+                    hostConfig: host,
+                    initialTab: "add_host",
+                  })
+                }
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
               >
-                Edit
+                <Pencil className="h-4 w-4" />
+                <span className="flex-1">Edit</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

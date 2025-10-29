@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Status, StatusIndicator } from "@/components/ui/shadcn-io/status";
 import { Button } from "@/components/ui/button.tsx";
 import { ButtonGroup } from "@/components/ui/button-group.tsx";
@@ -6,6 +6,7 @@ import { Terminal } from "lucide-react";
 import { getServerStatusById } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/Mobile/Navigation/Tabs/TabContext.tsx";
 import type { HostProps } from "../../../../types/index.js";
+import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 
 export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
@@ -19,7 +20,26 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
     ? host.name
     : `${host.username}@${host.ip}:${host.port}`;
 
+  // Parse stats config for monitoring settings
+  const statsConfig = useMemo(() => {
+    try {
+      return host.statsConfig
+        ? JSON.parse(host.statsConfig)
+        : DEFAULT_STATS_CONFIG;
+    } catch {
+      return DEFAULT_STATS_CONFIG;
+    }
+  }, [host.statsConfig]);
+
+  const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
+
   useEffect(() => {
+    // Don't poll if status monitoring is disabled
+    if (!shouldShowStatus) {
+      setServerStatus("offline");
+      return;
+    }
+
     let cancelled = false;
 
     const fetchStatus = async () => {
@@ -36,6 +56,7 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
           } else if (err?.response?.status === 504) {
             setServerStatus("degraded");
           } else if (err?.response?.status === 404) {
+            // Status not available - monitoring disabled
             setServerStatus("offline");
           } else {
             setServerStatus("offline");
@@ -46,13 +67,13 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
 
     fetchStatus();
 
-    const intervalId = window.setInterval(fetchStatus, 30000);
+    const intervalId = window.setInterval(fetchStatus, 10000); // Poll backend every 10 seconds
 
     return () => {
       cancelled = true;
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, [host.id]);
+  }, [host.id, shouldShowStatus]);
 
   const handleTerminalClick = () => {
     addTab({ type: "terminal", title, hostConfig: host });
@@ -62,12 +83,14 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
   return (
     <div>
       <div className="flex items-center gap-2">
-        <Status
-          status={serverStatus}
-          className="!bg-transparent !p-0.75 flex-shrink-0"
-        >
-          <StatusIndicator />
-        </Status>
+        {shouldShowStatus && (
+          <Status
+            status={serverStatus}
+            className="!bg-transparent !p-0.75 flex-shrink-0"
+          >
+            <StatusIndicator />
+          </Status>
+        )}
         <p className="font-semibold flex-1 min-w-0 break-words text-sm">
           {host.name || host.ip}
         </p>

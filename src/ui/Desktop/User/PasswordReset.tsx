@@ -161,6 +161,14 @@ export function PasswordReset({ userInfo }: PasswordResetProps) {
         <>
           {resetStep === "initiate" && (
             <>
+              <Alert variant="destructive" className="mb-4">
+                <AlertTitle>Warning: Data Loss</AlertTitle>
+                <AlertDescription>
+                  Resetting your password will delete all your saved SSH hosts,
+                  credentials, and encrypted data. This action cannot be undone.
+                  Only use this if you have forgotten your password.
+                </AlertDescription>
+              </Alert>
               <div className="flex flex-col gap-4">
                 <Button
                   type="button"

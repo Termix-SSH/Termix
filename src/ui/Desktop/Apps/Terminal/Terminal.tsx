@@ -95,14 +95,17 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [visible, setVisible] = useState(false);
+    const [isReady, setIsReady] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
+    const [isFitted, setIsFitted] = useState(false);
     const [, setConnectionError] = useState<string | null>(null);
     const [, setIsAuthenticated] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
     const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
     const isVisibleRef = useRef<boolean>(false);
+    const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
     const maxReconnectAttempts = 3;
@@ -129,6 +132,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
+      // Set flags IMMEDIATELY to prevent race conditions
       activityLoggingRef.current = true;
       activityLoggedRef.current = true;
 
@@ -136,6 +140,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         const hostName =
           hostConfig.name || `${hostConfig.username}@${hostConfig.ip}`;
         await logActivity("terminal", hostConfig.id, hostName);
+        // Don't reset activityLoggedRef on success - we want to prevent future calls
       } catch (err) {
         console.warn("Failed to log terminal activity:", err);
         // Reset on error so it can be retried
@@ -184,6 +189,32 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       } catch {
         // Ignore terminal refresh errors
       }
+    }
+
+    function performFit() {
+      if (
+        !fitAddonRef.current ||
+        !terminal ||
+        !isVisibleRef.current ||
+        isFittingRef.current
+      ) {
+        return;
+      }
+
+      isFittingRef.current = true;
+
+      requestAnimationFrame(() => {
+        try {
+          fitAddonRef.current?.fit();
+          if (terminal && terminal.cols > 0 && terminal.rows > 0) {
+            scheduleNotify(terminal.cols, terminal.rows);
+          }
+          hardRefresh();
+          setIsFitted(true);
+        } finally {
+          isFittingRef.current = false;
+        }
+      });
     }
 
     function handleTotpSubmit(code: string) {
@@ -727,7 +758,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         minimumContrastRatio: config.minimumContrastRatio,
         letterSpacing: config.letterSpacing,
         lineHeight: config.lineHeight,
-        bellStyle: config.bellStyle as "none" | "sound",
+        bellStyle: config.bellStyle as "none" | "sound" | "visual" | "both",
 
         theme: {
           background: themeColors.background,
@@ -852,11 +883,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       const resizeObserver = new ResizeObserver(() => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
-          if (!isVisibleRef.current) return;
-          fitAddonRef.current?.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-          hardRefresh();
-        }, 150);
+          if (!isVisibleRef.current || !isReady) return;
+          performFit();
+        }, 50); // Reduced from 150ms to 50ms for snappier response
       });
 
       resizeObserver.observe(xtermRef.current);
@@ -868,6 +897,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         shouldNotReconnectRef.current = true;
         isReconnectingRef.current = false;
         setIsConnecting(false);
+        setVisible(false);
+        setIsReady(false);
+        isFittingRef.current = false;
         resizeObserver.disconnect();
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("keydown", handleMacKeyboard, true);
@@ -899,10 +931,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           : Promise.resolve();
 
       readyFonts.then(() => {
-        setTimeout(() => {
+        requestAnimationFrame(() => {
           fitAddonRef.current?.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
+          if (terminal && terminal.cols > 0 && terminal.rows > 0) {
+            scheduleNotify(terminal.cols, terminal.rows);
+          }
           hardRefresh();
+
+          setVisible(true);
+          setIsReady(true);
 
           if (terminal && !splitScreen) {
             terminal.focus();
@@ -921,46 +958,74 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           const rows = terminal.rows;
 
           connectToHost(cols, rows);
-        }, 200);
+        });
       });
     }, [terminal, hostConfig, visible, isConnected, isConnecting, splitScreen]);
 
     useEffect(() => {
-      if (isVisible && fitAddonRef.current) {
-        setTimeout(() => {
-          fitAddonRef.current?.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-          hardRefresh();
-          if (terminal && !splitScreen) {
-            terminal.focus();
-          }
-        }, 0);
-
-        if (terminal && !splitScreen) {
-          setTimeout(() => {
-            terminal.focus();
-          }, 100);
+      if (!isVisible || !isReady || !fitAddonRef.current || !terminal) {
+        // Reset fitted state when becoming invisible
+        if (!isVisible && isFitted) {
+          setIsFitted(false);
         }
+        return;
       }
-    }, [isVisible, splitScreen, terminal]);
 
+      // When becoming visible, we need to:
+      // 1. Mark as not fitted
+      // 2. Clear any rendering artifacts
+      // 3. Fit to the container size
+      // 4. Mark as fitted (happens in performFit)
+      setIsFitted(false);
+
+      // Use double requestAnimationFrame to ensure container has laid out
+      let rafId1: number;
+      let rafId2: number;
+
+      rafId1 = requestAnimationFrame(() => {
+        rafId2 = requestAnimationFrame(() => {
+          // Force a hard refresh to clear any artifacts
+          hardRefresh();
+          // Fit the terminal to the new size
+          performFit();
+          // Focus will happen after isFitted becomes true
+        });
+      });
+
+      return () => {
+        if (rafId1) cancelAnimationFrame(rafId1);
+        if (rafId2) cancelAnimationFrame(rafId2);
+      };
+    }, [isVisible, isReady, splitScreen, terminal]);
+
+    // Focus the terminal after it's been fitted and is visible
     useEffect(() => {
-      if (!fitAddonRef.current) return;
-      setTimeout(() => {
-        fitAddonRef.current?.fit();
-        if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-        hardRefresh();
-        if (terminal && !splitScreen && isVisible) {
+      if (
+        isFitted &&
+        isVisible &&
+        isReady &&
+        !isConnecting &&
+        terminal &&
+        !splitScreen
+      ) {
+        // Use requestAnimationFrame to ensure the terminal is actually visible in the DOM
+        const rafId = requestAnimationFrame(() => {
           terminal.focus();
-        }
-      }, 0);
-    }, [splitScreen, isVisible, terminal]);
+        });
+        return () => cancelAnimationFrame(rafId);
+      }
+    }, [isFitted, isVisible, isReady, isConnecting, terminal, splitScreen]);
 
     return (
       <div className="h-full w-full relative" style={{ backgroundColor }}>
         <div
           ref={xtermRef}
-          className={`h-full w-full transition-opacity duration-200 ${visible && isVisible && !isConnecting ? "opacity-100" : "opacity-0"}`}
+          className="h-full w-full"
+          style={{
+            visibility:
+              isReady && !isConnecting && isFitted ? "visible" : "hidden",
+            opacity: isReady && !isConnecting && isFitted ? 1 : 0,
+          }}
           onClick={() => {
             if (terminal && !splitScreen) {
               terminal.focus();

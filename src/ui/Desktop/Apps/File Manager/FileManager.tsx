@@ -233,6 +233,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       return;
     }
 
+    // Set flags IMMEDIATELY to prevent race conditions
     activityLoggingRef.current = true;
     activityLoggedRef.current = true;
 
@@ -240,6 +241,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       const hostName =
         currentHost.name || `${currentHost.username}@${currentHost.ip}`;
       await logActivity("file_manager", currentHost.id, hostName);
+      // Don't reset activityLoggedRef on success - we want to prevent future calls
     } catch (err) {
       console.warn("Failed to log file manager activity:", err);
       // Reset on error so it can be retried
@@ -337,7 +339,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         initialLoadDoneRef.current = true;
 
         // Log activity for recent connections (after successful directory load)
-        logFileManagerActivity();
+        // Only log if TOTP was not required (if TOTP is required, we'll log after verification)
+        if (!result?.requires_totp) {
+          logFileManagerActivity();
+        }
       } catch (dirError: unknown) {
         console.error("Failed to load initial directory:", dirError);
       }

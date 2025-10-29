@@ -31,6 +31,7 @@ interface TabContextType {
       port: number;
     },
   ) => void;
+  updateTab: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
@@ -96,6 +97,35 @@ export function TabProvider({ children }: TabProviderProps) {
   }
 
   const addTab = (tabData: Omit<Tab, "id">): number => {
+    // Check if an ssh_manager tab already exists
+    if (tabData.type === "ssh_manager") {
+      const existingTab = tabs.find((t) => t.type === "ssh_manager");
+      if (existingTab) {
+        // Update the existing tab with new data
+        // Create a new object reference to force React to detect the change
+        setTabs((prev) =>
+          prev.map((t) =>
+            t.id === existingTab.id
+              ? {
+                  ...t,
+                  hostConfig: tabData.hostConfig
+                    ? { ...tabData.hostConfig }
+                    : undefined,
+                  initialTab: tabData.initialTab,
+                  // Add a timestamp to force re-render
+                  _updateTimestamp: Date.now(),
+                }
+              : t,
+          ),
+        );
+        setCurrentTab(existingTab.id);
+        setAllSplitScreenTab((prev) =>
+          prev.filter((tid) => tid !== existingTab.id),
+        );
+        return existingTab.id;
+      }
+    }
+
     const id = nextTabId.current++;
     const needsUniqueTitle =
       tabData.type === "terminal" ||
@@ -203,6 +233,12 @@ export function TabProvider({ children }: TabProviderProps) {
     );
   };
 
+  const updateTab = (tabId: number, updates: Partial<Omit<Tab, "id">>) => {
+    setTabs((prev) =>
+      prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)),
+    );
+  };
+
   const value: TabContextType = {
     tabs,
     currentTab,
@@ -214,6 +250,7 @@ export function TabProvider({ children }: TabProviderProps) {
     getTab,
     reorderTabs,
     updateHostConfig,
+    updateTab,
   };
 
   return <TabContext.Provider value={value}>{children}</TabContext.Provider>;

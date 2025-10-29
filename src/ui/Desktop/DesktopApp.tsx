@@ -165,6 +165,7 @@ function AppContent() {
                 onSelectView={handleSelectView}
                 isTopbarOpen={isTopbarOpen}
                 initialTab={currentTabData?.initialTab}
+                hostConfig={currentTabData?.hostConfig}
               />
             </div>
           )}

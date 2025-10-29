@@ -5,12 +5,13 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import enTranslation from "../locales/en/translation.json";
 import zhTranslation from "../locales/zh/translation.json";
 import deTranslation from "../locales/de/translation.json";
+import ptbrTranslation from "../locales/pt-br/translation.json";
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    supportedLngs: ["en", "zh", "de"],
+    supportedLngs: ["en", "zh", "de", "ptbr"],
     fallbackLng: "en",
     debug: false,
 
@@ -31,6 +32,9 @@ i18n
       },
       de: {
         translation: deTranslation,
+      },
+      ptbr: {
+        translation: ptbrTranslation,
       },
     },
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { HostManagerViewer } from "@/ui/Desktop/Apps/Host Manager/HostManagerViewer.tsx";
 import {
   Tabs,
@@ -17,10 +17,13 @@ import type { SSHHost, HostManagerProps } from "../../../types/index";
 export function HostManager({
   isTopbarOpen,
   initialTab = "host_viewer",
+  hostConfig,
 }: HostManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [editingHost, setEditingHost] = useState<SSHHost | null>(null);
+  const [editingHost, setEditingHost] = useState<SSHHost | null>(
+    hostConfig || null,
+  );
 
   const [editingCredential, setEditingCredential] = useState<{
     id: number;
@@ -28,6 +31,16 @@ export function HostManager({
     username: string;
   } | null>(null);
   const { state: sidebarState } = useSidebar();
+  const prevHostConfigRef = useRef<SSHHost | undefined>(hostConfig);
+
+  // Update editing host when hostConfig prop changes
+  useEffect(() => {
+    if (hostConfig && hostConfig !== prevHostConfigRef.current) {
+      setEditingHost(hostConfig);
+      setActiveTab(initialTab || "add_host");
+      prevHostConfigRef.current = hostConfig;
+    }
+  }, [hostConfig, initialTab]);
 
   const handleEditHost = (host: SSHHost) => {
     setEditingHost(host);

@@ -746,7 +746,11 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       enableFileManager: Boolean(hostData.enableFileManager),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
-      statsConfig: hostData.statsConfig || null,
+      statsConfig: hostData.statsConfig
+        ? typeof hostData.statsConfig === "string"
+          ? hostData.statsConfig
+          : JSON.stringify(hostData.statsConfig)
+        : null,
       terminalConfig: hostData.terminalConfig || null,
     };
 
@@ -804,7 +808,11 @@ export async function updateSSHHost(
       enableFileManager: Boolean(hostData.enableFileManager),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
-      statsConfig: hostData.statsConfig || null,
+      statsConfig: hostData.statsConfig
+        ? typeof hostData.statsConfig === "string"
+          ? hostData.statsConfig
+          : JSON.stringify(hostData.statsConfig)
+        : null,
       terminalConfig: hostData.terminalConfig || null,
     };
 
@@ -1629,6 +1637,15 @@ export async function getServerMetricsById(id: number): Promise<ServerMetrics> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch server metrics");
+  }
+}
+
+export async function refreshServerPolling(): Promise<void> {
+  try {
+    await statsApi.post("/refresh");
+  } catch (error) {
+    // Silently fail - this is a background operation
+    console.warn("Failed to refresh server polling:", error);
   }
 }
 

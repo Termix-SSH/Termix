@@ -231,6 +231,51 @@ export function AdminSettings({
   };
 
   const handleTogglePasswordLogin = async (checked: boolean) => {
+    // If disabling password login, warn the user
+    if (!checked) {
+      // Check if OIDC is configured
+      const hasOIDCConfigured =
+        oidcConfig.client_id &&
+        oidcConfig.client_secret &&
+        oidcConfig.issuer_url &&
+        oidcConfig.authorization_url &&
+        oidcConfig.token_url;
+
+      if (!hasOIDCConfigured) {
+        toast.error(t("admin.cannotDisablePasswordLoginWithoutOIDC"), {
+          duration: 5000,
+        });
+        return;
+      }
+
+      confirmWithToast(
+        t("admin.confirmDisablePasswordLogin"),
+        async () => {
+          setPasswordLoginLoading(true);
+          try {
+            await updatePasswordLoginAllowed(checked);
+            setAllowPasswordLogin(checked);
+
+            // Auto-disable registration when password login is disabled
+            if (allowRegistration) {
+              await updateRegistrationAllowed(false);
+              setAllowRegistration(false);
+              toast.success(t("admin.passwordLoginAndRegistrationDisabled"));
+            } else {
+              toast.success(t("admin.passwordLoginDisabled"));
+            }
+          } catch {
+            toast.error(t("admin.failedToUpdatePasswordLoginStatus"));
+          } finally {
+            setPasswordLoginLoading(false);
+          }
+        },
+        "destructive",
+      );
+      return;
+    }
+
+    // Enabling password login - proceed normally
     setPasswordLoginLoading(true);
     try {
       await updatePasswordLoginAllowed(checked);
@@ -552,9 +597,14 @@ export function AdminSettings({
                   <Checkbox
                     checked={allowRegistration}
                     onCheckedChange={handleToggleRegistration}
-                    disabled={regLoading}
+                    disabled={regLoading || !allowPasswordLogin}
                   />
                   {t("admin.allowNewAccountRegistration")}
+                  {!allowPasswordLogin && (
+                    <span className="text-xs text-muted-foreground">
+                      ({t("admin.requiresPasswordLogin")})
+                    </span>
+                  )}
                 </label>
                 <label className="flex items-center gap-2">
                   <Checkbox
@@ -587,6 +637,15 @@ export function AdminSettings({
                     {t("common.documentation")}
                   </Button>
                 </div>
+
+                {!allowPasswordLogin && (
+                  <Alert variant="destructive">
+                    <AlertTitle>{t("admin.criticalWarning")}</AlertTitle>
+                    <AlertDescription>
+                      {t("admin.oidcRequiredWarning")}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {oidcError && (
                   <Alert variant="destructive">
@@ -733,6 +792,48 @@ export function AdminSettings({
                       type="button"
                       variant="outline"
                       onClick={async () => {
+                        // Check if password login is enabled
+                        if (!allowPasswordLogin) {
+                          confirmWithToast(
+                            t("admin.confirmDisableOIDCWarning"),
+                            async () => {
+                              const emptyConfig = {
+                                client_id: "",
+                                client_secret: "",
+                                issuer_url: "",
+                                authorization_url: "",
+                                token_url: "",
+                                identifier_path: "",
+                                name_path: "",
+                                scopes: "",
+                                userinfo_url: "",
+                              };
+                              setOidcConfig(emptyConfig);
+                              setOidcError(null);
+                              setOidcLoading(true);
+                              try {
+                                await disableOIDCConfig();
+                                toast.success(
+                                  t("admin.oidcConfigurationDisabled"),
+                                );
+                              } catch (err: unknown) {
+                                setOidcError(
+                                  (
+                                    err as {
+                                      response?: { data?: { error?: string } };
+                                    }
+                                  )?.response?.data?.error ||
+                                    t("admin.failedToDisableOidcConfig"),
+                                );
+                              } finally {
+                                setOidcLoading(false);
+                              }
+                            },
+                            "destructive",
+                          );
+                          return;
+                        }
+
                         const emptyConfig = {
                           client_id: "",
                           client_secret: "",

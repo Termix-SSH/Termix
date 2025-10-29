@@ -55,8 +55,16 @@ function useWindowWidth() {
 function RootApp() {
   const width = useWindowWidth();
   const isMobile = width < 768;
+
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  const isTermixMobile = /Termix-Mobile/.test(userAgent);
+
   if (isElectron()) {
     return <DesktopApp />;
+  }
+
+  if (isTermixMobile) {
+    return <MobileApp key="mobile" />;
   }
 
   return isMobile ? <MobileApp key="mobile" /> : <DesktopApp key="desktop" />;

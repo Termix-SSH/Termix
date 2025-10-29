@@ -43,11 +43,14 @@ import {
   Pencil,
   FolderMinus,
   Copy,
+  Activity,
+  Clock,
 } from "lucide-react";
 import type {
   SSHHost,
   SSHManagerHostViewerProps,
 } from "../../../../types/index.js";
+import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 
 export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const { t } = useTranslation();
@@ -122,6 +125,10 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           toast.success(t("hosts.hostDeletedSuccessfully", { name: hostName }));
           await fetchHosts();
           window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
+
+          // Refresh backend polling to remove deleted host
+          const { refreshServerPolling } = await import("@/ui/main-axios.ts");
+          refreshServerPolling();
         } catch {
           toast.error(t("hosts.failedToDeleteHost"));
         }
@@ -382,6 +389,48 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     } finally {
       setImporting(false);
       event.target.value = "";
+    }
+  };
+
+  // Helper function to parse stats config and format monitoring status
+  const getMonitoringStatus = (host: SSHHost) => {
+    try {
+      const statsConfig = host.statsConfig
+        ? JSON.parse(host.statsConfig)
+        : DEFAULT_STATS_CONFIG;
+
+      const formatInterval = (seconds: number): string => {
+        if (seconds >= 60) {
+          const minutes = Math.round(seconds / 60);
+          return `${minutes}m`;
+        }
+        return `${seconds}s`;
+      };
+
+      const statusEnabled = statsConfig.statusCheckEnabled !== false;
+      const metricsEnabled = statsConfig.metricsEnabled !== false;
+      const statusInterval = statusEnabled
+        ? formatInterval(statsConfig.statusCheckInterval || 30)
+        : null;
+      const metricsInterval = metricsEnabled
+        ? formatInterval(statsConfig.metricsInterval || 30)
+        : null;
+
+      return {
+        statusEnabled,
+        metricsEnabled,
+        statusInterval,
+        metricsInterval,
+        bothDisabled: !statusEnabled && !metricsEnabled,
+      };
+    } catch {
+      return {
+        statusEnabled: true,
+        metricsEnabled: true,
+        statusInterval: "30s",
+        metricsInterval: "30s",
+        bothDisabled: false,
+      };
     }
   };
 
@@ -1088,6 +1137,49 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         {t("hosts.fileManagerBadge")}
                                       </Badge>
                                     )}
+
+                                    {/* Monitoring Status Badges */}
+                                    {(() => {
+                                      const monitoringStatus =
+                                        getMonitoringStatus(host);
+
+                                      if (monitoringStatus.bothDisabled) {
+                                        return (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs px-1 py-0 text-muted-foreground"
+                                          >
+                                            <Activity className="h-2 w-2 mr-0.5" />
+                                            {t("hosts.monitoringDisabledBadge")}
+                                          </Badge>
+                                        );
+                                      }
+
+                                      return (
+                                        <>
+                                          {monitoringStatus.statusEnabled && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs px-1 py-0"
+                                            >
+                                              <Activity className="h-2 w-2 mr-0.5" />
+                                              {t("hosts.statusMonitoring")}:{" "}
+                                              {monitoringStatus.statusInterval}
+                                            </Badge>
+                                          )}
+                                          {monitoringStatus.metricsEnabled && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs px-1 py-0"
+                                            >
+                                              <Clock className="h-2 w-2 mr-0.5" />
+                                              {t("hosts.metricsMonitoring")}:{" "}
+                                              {monitoringStatus.metricsInterval}
+                                            </Badge>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 </div>
                               </div>

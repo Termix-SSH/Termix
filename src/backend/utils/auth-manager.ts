@@ -142,7 +142,7 @@ class AuthManager {
     }
 
     return jwt.sign(payload, jwtSecret, {
-      expiresIn: options.expiresIn || "24h",
+      expiresIn: options.expiresIn || "7d",
     } as jwt.SignOptions);
   }
 
@@ -177,7 +177,7 @@ class AuthManager {
 
   getSecureCookieOptions(
     req: RequestWithHeaders,
-    maxAge: number = 24 * 60 * 60 * 1000,
+    maxAge: number = 7 * 24 * 60 * 60 * 1000,
   ) {
     return {
       httpOnly: false,

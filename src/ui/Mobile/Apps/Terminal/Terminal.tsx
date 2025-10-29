@@ -51,12 +51,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [visible, setVisible] = useState(false);
+    const [isReady, setIsReady] = useState(false);
     const [, setIsConnected] = useState(false);
     const [, setIsConnecting] = useState(false);
     const [, setConnectionError] = useState<string | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const isVisibleRef = useRef<boolean>(false);
     const isConnectingRef = useRef(false);
+    const isFittingRef = useRef(false);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -102,6 +104,31 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       } catch {
         // Ignore terminal refresh errors
       }
+    }
+
+    function performFit() {
+      if (
+        !fitAddonRef.current ||
+        !terminal ||
+        !isVisibleRef.current ||
+        isFittingRef.current
+      ) {
+        return;
+      }
+
+      isFittingRef.current = true;
+
+      requestAnimationFrame(() => {
+        try {
+          fitAddonRef.current?.fit();
+          if (terminal && terminal.cols > 0 && terminal.rows > 0) {
+            scheduleNotify(terminal.cols, terminal.rows);
+          }
+          hardRefresh();
+        } finally {
+          isFittingRef.current = false;
+        }
+      });
     }
 
     function scheduleNotify(cols: number, rows: number) {
@@ -288,10 +315,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       const resizeObserver = new ResizeObserver(() => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
-          if (!isVisibleRef.current) return;
-          fitAddonRef.current?.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-          hardRefresh();
+          if (!isVisibleRef.current || !isReady) return;
+          performFit();
         }, 150);
       });
 
@@ -302,12 +327,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           ?.ready instanceof Promise
           ? (document as { fonts?: { ready?: Promise<unknown> } }).fonts.ready
           : Promise.resolve();
-      setVisible(true);
 
       readyFonts.then(() => {
-        setTimeout(() => {
+        requestAnimationFrame(() => {
           fitAddon.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
+          if (terminal && terminal.cols > 0 && terminal.rows > 0) {
+            scheduleNotify(terminal.cols, terminal.rows);
+          }
           hardRefresh();
 
           const jwtToken = getCookie("jwt");
@@ -315,6 +341,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             setIsConnected(false);
             setIsConnecting(false);
             setConnectionError("Authentication required");
+            setVisible(true);
+            setIsReady(true);
             return;
           }
 
@@ -343,6 +371,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
 
           if (isConnectingRef.current) {
+            setVisible(true);
+            setIsReady(true);
             return;
           }
 
@@ -370,7 +400,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           wasDisconnectedBySSH.current = false;
 
           setupWebSocketListeners(ws, cols, rows);
-        }, 200);
+
+          setVisible(true);
+          setIsReady(true);
+        });
       });
 
       return () => {
@@ -382,32 +415,29 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           pingIntervalRef.current = null;
         }
         webSocketRef.current?.close();
+        setVisible(false);
+        setIsReady(false);
+        isFittingRef.current = false;
       };
-    }, [xtermRef, terminal, hostConfig]);
+    }, [xtermRef, terminal, hostConfig, isAuthenticated]);
 
     useEffect(() => {
-      if (isVisible && fitAddonRef.current) {
-        setTimeout(() => {
-          fitAddonRef.current?.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-          hardRefresh();
-        }, 0);
+      if (!isVisible || !isReady || !fitAddonRef.current || !terminal) {
+        return;
       }
-    }, [isVisible, terminal]);
 
-    useEffect(() => {
-      if (!fitAddonRef.current) return;
-      setTimeout(() => {
-        fitAddonRef.current?.fit();
-        if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-        hardRefresh();
-      }, 0);
-    }, [isVisible, terminal]);
+      const fitTimeout = setTimeout(() => {
+        performFit();
+      }, 100);
+
+      return () => clearTimeout(fitTimeout);
+    }, [isVisible, isReady, terminal]);
 
     return (
       <div
         ref={xtermRef}
-        className={`h-full w-full m-1 transition-opacity duration-200 ${visible && isVisible ? "opacity-100" : "opacity-0"} overflow-hidden`}
+        className={`h-full w-full m-1 ${isReady && isVisible ? "opacity-100" : "opacity-0"} transition-opacity duration-150 overflow-hidden`}
+        style={{ visibility: isReady ? "visible" : "hidden" }}
       />
     );
   },

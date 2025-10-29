@@ -266,31 +266,44 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keepaliveCountMax: 3,
     algorithms: {
       kex: [
+        "curve25519-sha256",
+        "curve25519-sha256@libssh.org",
+        "ecdh-sha2-nistp521",
+        "ecdh-sha2-nistp384",
+        "ecdh-sha2-nistp256",
+        "diffie-hellman-group-exchange-sha256",
         "diffie-hellman-group14-sha256",
         "diffie-hellman-group14-sha1",
-        "diffie-hellman-group1-sha1",
-        "diffie-hellman-group-exchange-sha256",
         "diffie-hellman-group-exchange-sha1",
-        "ecdh-sha2-nistp256",
-        "ecdh-sha2-nistp384",
-        "ecdh-sha2-nistp521",
+        "diffie-hellman-group1-sha1",
+      ],
+      serverHostKey: [
+        "ssh-ed25519",
+        "ecdsa-sha2-nistp521",
+        "ecdsa-sha2-nistp384",
+        "ecdsa-sha2-nistp256",
+        "rsa-sha2-512",
+        "rsa-sha2-256",
+        "ssh-rsa",
+        "ssh-dss",
       ],
       cipher: [
-        "aes128-ctr",
-        "aes192-ctr",
-        "aes256-ctr",
-        "aes128-gcm@openssh.com",
+        "chacha20-poly1305@openssh.com",
         "aes256-gcm@openssh.com",
-        "aes128-cbc",
-        "aes192-cbc",
+        "aes128-gcm@openssh.com",
+        "aes256-ctr",
+        "aes192-ctr",
+        "aes128-ctr",
         "aes256-cbc",
+        "aes192-cbc",
+        "aes128-cbc",
         "3des-cbc",
       ],
       hmac: [
-        "hmac-sha2-256-etm@openssh.com",
         "hmac-sha2-512-etm@openssh.com",
-        "hmac-sha2-256",
+        "hmac-sha2-256-etm@openssh.com",
         "hmac-sha2-512",
+        "hmac-sha2-256",
         "hmac-sha1",
         "hmac-md5",
       ],
@@ -335,6 +348,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         .status(400)
         .json({ error: "Password required for password authentication" });
     }
+    config.password = resolvedCredentials.password;
   } else if (resolvedCredentials.authType === "none") {
     // Don't set password in config - rely on keyboard-interactive
   } else {

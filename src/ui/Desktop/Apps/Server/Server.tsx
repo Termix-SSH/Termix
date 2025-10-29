@@ -80,21 +80,26 @@ export function Server({
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [showStatsUI, setShowStatsUI] = React.useState(true);
 
-  const enabledWidgets = React.useMemo((): WidgetType[] => {
+  // Parse stats config for monitoring settings
+  const statsConfig = React.useMemo((): StatsConfig => {
     if (!currentHostConfig?.statsConfig) {
-      return DEFAULT_STATS_CONFIG.enabledWidgets;
+      return DEFAULT_STATS_CONFIG;
     }
     try {
       const parsed =
         typeof currentHostConfig.statsConfig === "string"
           ? JSON.parse(currentHostConfig.statsConfig)
           : currentHostConfig.statsConfig;
-      return parsed?.enabledWidgets || DEFAULT_STATS_CONFIG.enabledWidgets;
+      return { ...DEFAULT_STATS_CONFIG, ...parsed };
     } catch (error) {
       console.error("Failed to parse statsConfig:", error);
-      return DEFAULT_STATS_CONFIG.enabledWidgets;
+      return DEFAULT_STATS_CONFIG;
     }
   }, [currentHostConfig?.statsConfig]);
+
+  const enabledWidgets = statsConfig.enabledWidgets;
+  const statusCheckEnabled = statsConfig.statusCheckEnabled !== false;
+  const metricsEnabled = statsConfig.metricsEnabled !== false;
 
   React.useEffect(() => {
     setCurrentHostConfig(hostConfig);
@@ -176,7 +181,13 @@ export function Server({
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
   }, [hostConfig?.id]);
 
+  // Separate effect for status monitoring
   React.useEffect(() => {
+    if (!statusCheckEnabled || !currentHostConfig?.id || !isVisible) {
+      setServerStatus("offline");
+      return;
+    }
+
     let cancelled = false;
     let intervalId: number | undefined;
 
@@ -196,14 +207,33 @@ export function Server({
           } else if (err?.response?.status === 504) {
             setServerStatus("offline");
           } else if (err?.response?.status === 404) {
+            // Status not available - monitoring disabled
             setServerStatus("offline");
           } else {
             setServerStatus("offline");
           }
-          toast.error(t("serverStats.failedToFetchStatus"));
         }
       }
     };
+
+    fetchStatus();
+    intervalId = window.setInterval(fetchStatus, 10000); // Poll backend every 10 seconds
+
+    return () => {
+      cancelled = true;
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, [currentHostConfig?.id, isVisible, statusCheckEnabled]);
+
+  // Separate effect for metrics monitoring
+  React.useEffect(() => {
+    if (!metricsEnabled || !currentHostConfig?.id || !isVisible) {
+      setShowStatsUI(false);
+      return;
+    }
+
+    let cancelled = false;
+    let intervalId: number | undefined;
 
     const fetchMetrics = async () => {
       if (!currentHostConfig?.id) return;
@@ -221,19 +251,25 @@ export function Server({
         }
       } catch (error: unknown) {
         if (!cancelled) {
-          setMetrics(null);
-          setShowStatsUI(false);
           const err = error as {
             code?: string;
             response?: { status?: number; data?: { error?: string } };
           };
-          if (
+          if (err?.response?.status === 404) {
+            // Metrics not available - monitoring disabled
+            setMetrics(null);
+            setShowStatsUI(false);
+          } else if (
             err?.code === "TOTP_REQUIRED" ||
             (err?.response?.status === 403 &&
               err?.response?.data?.error === "TOTP_REQUIRED")
           ) {
+            setMetrics(null);
+            setShowStatsUI(false);
             toast.error(t("serverStats.totpUnavailable"));
           } else {
+            setMetrics(null);
+            setShowStatsUI(false);
             toast.error(t("serverStats.failedToFetchMetrics"));
           }
         }
@@ -244,20 +280,14 @@ export function Server({
       }
     };
 
-    if (currentHostConfig?.id && isVisible) {
-      fetchStatus();
-      fetchMetrics();
-      intervalId = window.setInterval(() => {
-        fetchStatus();
-        fetchMetrics();
-      }, 30000);
-    }
+    fetchMetrics();
+    intervalId = window.setInterval(fetchMetrics, 10000); // Poll backend every 10 seconds
 
     return () => {
       cancelled = true;
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, [currentHostConfig?.id, isVisible]);
+  }, [currentHostConfig?.id, isVisible, metricsEnabled]);
 
   const topMarginPx = isTopbarOpen ? 74 : 16;
   const leftMarginPx = sidebarState === "collapsed" ? 16 : 8;
@@ -297,12 +327,14 @@ export function Server({
                 {currentHostConfig?.folder} / {title}
               </h1>
             </div>
-            <Status
-              status={serverStatus}
-              className="!bg-transparent !p-0.75 flex-shrink-0"
-            >
-              <StatusIndicator />
-            </Status>
+            {statusCheckEnabled && (
+              <Status
+                status={serverStatus}
+                className="!bg-transparent !p-0.75 flex-shrink-0"
+              >
+                <StatusIndicator />
+              </Status>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button
@@ -410,7 +442,7 @@ export function Server({
         <Separator className="p-0.25 w-full" />
 
         <div className="flex-1 overflow-y-auto min-h-0">
-          {showStatsUI && (
+          {metricsEnabled && showStatsUI && (
             <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4 max-h-[50vh] overflow-y-auto">
               {isLoadingMetrics && !metrics ? (
                 <div className="flex items-center justify-center py-8">

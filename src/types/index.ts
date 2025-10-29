@@ -60,7 +60,7 @@ export interface SSHHostData {
   enableFileManager?: boolean;
   defaultPath?: string;
   tunnelConnections?: TunnelConnection[];
-  statsConfig?: string;
+  statsConfig?: string | Record<string, unknown>; // Can be string (from backend) or object (from form)
   terminalConfig?: TerminalConfig;
 }
 
@@ -374,6 +374,7 @@ export interface HostManagerProps {
   onSelectView?: (view: string) => void;
   isTopbarOpen?: boolean;
   initialTab?: string;
+  hostConfig?: SSHHost;
 }
 
 export interface SSHManagerHostEditorProps {

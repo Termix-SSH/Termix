@@ -478,7 +478,7 @@ export function SnippetsSidebar({
                 {t("common.cancel")}
               </Button>
               <Button onClick={handleSubmit} className="flex-1">
-                {editingSnippet ? t("common.update") : t("common.create")}
+                {editingSnippet ? t("snippets.edit") : t("snippets.create")}
               </Button>
             </div>
           </div>

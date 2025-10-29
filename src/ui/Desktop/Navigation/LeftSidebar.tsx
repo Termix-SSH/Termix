@@ -115,7 +115,7 @@ export function LeftSidebar({
   const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
   const openSshManagerTab = () => {
     if (sshManagerTab || isSplitScreenActive) return;
-    const id = addTab({ type: "ssh_manager" });
+    const id = addTab({ type: "ssh_manager", title: "Host Manager" });
     setCurrentTab(id);
   };
   const adminTab = tabList.find((t) => t.type === "admin");

@@ -119,6 +119,7 @@ export function HostManagerEditor({
   const [snippets, setSnippets] = useState<
     Array<{ id: number; name: string; content: string }>
   >([]);
+  const [snippetSearch, setSnippetSearch] = useState("");
 
   const [authTab, setAuthTab] = useState<
     "password" | "key" | "credential" | "none"
@@ -127,6 +128,14 @@ export function HostManagerEditor({
     "upload",
   );
   const isSubmittingRef = useRef(false);
+
+  // Monitoring interval states
+  const [statusIntervalUnit, setStatusIntervalUnit] = useState<
+    "seconds" | "minutes"
+  >("seconds");
+  const [metricsIntervalUnit, setMetricsIntervalUnit] = useState<
+    "seconds" | "minutes"
+  >("seconds");
 
   const ipInputRef = useRef<HTMLInputElement>(null);
 
@@ -260,6 +269,10 @@ export function HostManagerEditor({
               ]),
             )
             .default(["cpu", "memory", "disk", "network", "uptime", "system"]),
+          statusCheckEnabled: z.boolean().default(true),
+          statusCheckInterval: z.number().min(5).max(3600).default(30),
+          metricsEnabled: z.boolean().default(true),
+          metricsInterval: z.number().min(5).max(3600).default(30),
         })
         .default({
           enabledWidgets: [
@@ -270,6 +283,10 @@ export function HostManagerEditor({
             "uptime",
             "system",
           ],
+          statusCheckEnabled: true,
+          statusCheckInterval: 30,
+          metricsEnabled: true,
+          metricsInterval: 30,
         }),
       terminalConfig: z
         .object({
@@ -277,7 +294,7 @@ export function HostManagerEditor({
           cursorStyle: z.enum(["block", "underline", "bar"]),
           fontSize: z.number().min(8).max(24),
           fontFamily: z.string(),
-          letterSpacing: z.number().min(-2).max(5),
+          letterSpacing: z.number().min(-2).max(10),
           lineHeight: z.number().min(1.0).max(2.0),
           theme: z.string(),
           scrollback: z.number().min(1000).max(50000),
@@ -427,6 +444,22 @@ export function HostManagerEditor({
             : "none";
       setAuthTab(defaultAuthType);
 
+      // Parse statsConfig from JSON string if needed
+      let parsedStatsConfig = DEFAULT_STATS_CONFIG;
+      try {
+        if (cleanedHost.statsConfig) {
+          parsedStatsConfig =
+            typeof cleanedHost.statsConfig === "string"
+              ? JSON.parse(cleanedHost.statsConfig)
+              : cleanedHost.statsConfig;
+        }
+      } catch (error) {
+        console.error("Failed to parse statsConfig:", error);
+      }
+
+      // Merge with defaults to ensure all new fields are present
+      parsedStatsConfig = { ...DEFAULT_STATS_CONFIG, ...parsedStatsConfig };
+
       const formData = {
         name: cleanedHost.name || "",
         ip: cleanedHost.ip || "",
@@ -446,7 +479,7 @@ export function HostManagerEditor({
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
         tunnelConnections: cleanedHost.tunnelConnections || [],
-        statsConfig: cleanedHost.statsConfig || DEFAULT_STATS_CONFIG,
+        statsConfig: parsedStatsConfig,
         terminalConfig: cleanedHost.terminalConfig || DEFAULT_TERMINAL_CONFIG,
       };
 
@@ -517,6 +550,24 @@ export function HostManagerEditor({
 
       if (!data.name || data.name.trim() === "") {
         data.name = `${data.username}@${data.ip}`;
+      }
+
+      // Validate monitoring intervals
+      if (data.statsConfig) {
+        const statusInterval = data.statsConfig.statusCheckInterval || 30;
+        const metricsInterval = data.statsConfig.metricsInterval || 30;
+
+        if (statusInterval < 5 || statusInterval > 3600) {
+          toast.error(t("hosts.intervalValidation"));
+          isSubmittingRef.current = false;
+          return;
+        }
+
+        if (metricsInterval < 5 || metricsInterval > 3600) {
+          toast.error(t("hosts.intervalValidation"));
+          isSubmittingRef.current = false;
+          return;
+        }
       }
 
       const submitData: Record<string, unknown> = {
@@ -611,6 +662,10 @@ export function HostManagerEditor({
       }
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
+
+      // Refresh backend polling to pick up new/updated host configuration
+      const { refreshServerPolling } = await import("@/ui/main-axios.ts");
+      refreshServerPolling();
 
       form.reset();
     } catch {
@@ -773,787 +828,1590 @@ export function HostManagerEditor({
           className="flex flex-col flex-1 min-h-0 h-full"
         >
           <ScrollArea className="flex-1 min-h-0 w-full my-1 pb-2">
-            <Tabs defaultValue="general" className="w-full">
-              <TabsList>
-                <TabsTrigger value="general">{t("hosts.general")}</TabsTrigger>
-                <TabsTrigger value="terminal">
-                  {t("hosts.terminal")}
-                </TabsTrigger>
-                <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
-                <TabsTrigger value="file_manager">
-                  {t("hosts.fileManager")}
-                </TabsTrigger>
-                <TabsTrigger value="statistics">
-                  {t("hosts.statistics")}
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="general" className="pt-2">
-                <FormLabel className="mb-3 font-bold">
-                  {t("hosts.connectionDetails")}
-                </FormLabel>
-                <div className="grid grid-cols-12 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="ip"
-                    render={({ field }) => (
-                      <FormItem className="col-span-5">
-                        <FormLabel>{t("hosts.ipAddress")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("placeholders.ipAddress")}
-                            {...field}
-                            ref={(e) => {
-                              field.ref(e);
-                              ipInputRef.current = e;
-                            }}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="port"
-                    render={({ field }) => (
-                      <FormItem className="col-span-1">
-                        <FormLabel>{t("hosts.port")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("placeholders.port")}
-                            {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem className="col-span-6">
-                        <FormLabel>{t("hosts.username")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("placeholders.username")}
-                            {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormLabel className="mb-3 mt-3 font-bold">
-                  {t("hosts.organization")}
-                </FormLabel>
-                <div className="grid grid-cols-26 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem className="col-span-10">
-                        <FormLabel>{t("hosts.name")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("placeholders.hostname")}
-                            {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="folder"
-                    render={({ field }) => (
-                      <FormItem className="col-span-10 relative">
-                        <FormLabel>{t("hosts.folder")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            ref={folderInputRef}
-                            placeholder={t("placeholders.folder")}
-                            className="min-h-[40px]"
-                            autoComplete="off"
-                            value={field.value}
-                            onFocus={() => setFolderDropdownOpen(true)}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              setFolderDropdownOpen(true);
-                            }}
-                          />
-                        </FormControl>
-                        {folderDropdownOpen && filteredFolders.length > 0 && (
-                          <div
-                            ref={folderDropdownRef}
-                            className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
-                          >
-                            <div className="grid grid-cols-1 gap-1 p-0">
-                              {filteredFolders.map((folder) => (
-                                <Button
-                                  key={folder}
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-white/15 focus:bg-white/20 focus:outline-none"
-                                  onClick={() => handleFolderClick(folder)}
-                                >
-                                  {folder}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="tags"
-                    render={({ field }) => (
-                      <FormItem className="col-span-10 overflow-visible">
-                        <FormLabel>{t("hosts.tags")}</FormLabel>
-                        <FormControl>
-                          <div className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-dark-bg-input focus-within:ring-2 ring-ring min-h-[40px]">
-                            {field.value.map((tag: string, idx: number) => (
-                              <span
-                                key={tag + idx}
-                                className="flex items-center bg-gray-200 text-gray-800 rounded-full px-2 py-0.5 text-xs"
-                              >
-                                {tag}
-                                <button
-                                  type="button"
-                                  className="ml-1 text-gray-500 hover:text-red-500 focus:outline-none"
-                                  onClick={() => {
-                                    const newTags = field.value.filter(
-                                      (_: string, i: number) => i !== idx,
-                                    );
-                                    field.onChange(newTags);
-                                  }}
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
-                            <input
-                              type="text"
-                              className="flex-1 min-w-[60px] border-none outline-none bg-transparent p-0 h-6"
-                              value={tagInput}
-                              onChange={(e) => setTagInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === " " && tagInput.trim() !== "") {
-                                  e.preventDefault();
-                                  if (!field.value.includes(tagInput.trim())) {
-                                    field.onChange([
-                                      ...field.value,
-                                      tagInput.trim(),
-                                    ]);
-                                  }
-                                  setTagInput("");
-                                } else if (
-                                  e.key === "Backspace" &&
-                                  tagInput === "" &&
-                                  field.value.length > 0
-                                ) {
-                                  field.onChange(field.value.slice(0, -1));
-                                }
-                              }}
-                              placeholder={t("hosts.addTagsSpaceToAdd")}
-                            />
-                          </div>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="pin"
-                    render={({ field }) => (
-                      <FormItem className="col-span-6">
-                        <FormLabel>{t("hosts.pin")}</FormLabel>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormLabel className="mb-3 mt-3 font-bold">
-                  {t("hosts.authentication")}
-                </FormLabel>
-                <Tabs
-                  value={authTab}
-                  onValueChange={(value) => {
-                    const newAuthType = value as
-                      | "password"
-                      | "key"
-                      | "credential"
-                      | "none";
-                    setAuthTab(newAuthType);
-                    form.setValue("authType", newAuthType);
-                  }}
-                  className="flex-1 flex flex-col h-full min-h-0"
-                >
-                  <TabsList>
-                    <TabsTrigger value="password">
-                      {t("hosts.password")}
-                    </TabsTrigger>
-                    <TabsTrigger value="key">{t("hosts.key")}</TabsTrigger>
-                    <TabsTrigger value="credential">
-                      {t("hosts.credential")}
-                    </TabsTrigger>
-                    <TabsTrigger value="none">{t("hosts.none")}</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="password">
+            <div className="pr-4">
+              <Tabs defaultValue="general" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="general">
+                    {t("hosts.general")}
+                  </TabsTrigger>
+                  <TabsTrigger value="terminal">
+                    {t("hosts.terminal")}
+                  </TabsTrigger>
+                  <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
+                  <TabsTrigger value="file_manager">
+                    {t("hosts.fileManager")}
+                  </TabsTrigger>
+                  <TabsTrigger value="statistics">
+                    {t("hosts.statistics")}
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="general" className="pt-2">
+                  <FormLabel className="mb-3 font-bold">
+                    {t("hosts.connectionDetails")}
+                  </FormLabel>
+                  <div className="grid grid-cols-12 gap-4">
                     <FormField
                       control={form.control}
-                      name="password"
+                      name="ip"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("hosts.password")}</FormLabel>
+                        <FormItem className="col-span-5">
+                          <FormLabel>{t("hosts.ipAddress")}</FormLabel>
                           <FormControl>
-                            <PasswordInput
-                              placeholder={t("placeholders.password")}
+                            <Input
+                              placeholder={t("placeholders.ipAddress")}
+                              {...field}
+                              ref={(e) => {
+                                field.ref(e);
+                                ipInputRef.current = e;
+                              }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="port"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1">
+                          <FormLabel>{t("hosts.port")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("placeholders.port")}
                               {...field}
                             />
                           </FormControl>
                         </FormItem>
                       )}
                     />
-                  </TabsContent>
-                  <TabsContent value="key">
-                    <Tabs
-                      value={keyInputMethod}
-                      onValueChange={(value) => {
-                        setKeyInputMethod(value as "upload" | "paste");
-                        if (value === "upload") {
-                          form.setValue("key", null);
-                        } else {
-                          form.setValue("key", "");
-                        }
-                      }}
-                      className="w-full"
-                    >
-                      <TabsList className="inline-flex items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-                        <TabsTrigger value="upload">
-                          {t("hosts.uploadFile")}
-                        </TabsTrigger>
-                        <TabsTrigger value="paste">
-                          {t("hosts.pasteKey")}
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="upload" className="mt-4">
-                        <Controller
-                          control={form.control}
-                          name="key"
-                          render={({ field }) => (
-                            <FormItem className="mb-4">
-                              <FormLabel>{t("hosts.sshPrivateKey")}</FormLabel>
-                              <FormControl>
-                                <div className="relative inline-block">
-                                  <input
-                                    id="key-upload"
-                                    type="file"
-                                    accept=".pem,.key,.txt,.ppk"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      field.onChange(file || null);
-                                    }}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                  />
+
+                    <FormField
+                      control={form.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem className="col-span-6">
+                          <FormLabel>{t("hosts.username")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("placeholders.username")}
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormLabel className="mb-3 mt-3 font-bold">
+                    {t("hosts.organization")}
+                  </FormLabel>
+                  <div className="grid grid-cols-26 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem className="col-span-10">
+                          <FormLabel>{t("hosts.name")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t("placeholders.hostname")}
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="folder"
+                      render={({ field }) => (
+                        <FormItem className="col-span-10 relative">
+                          <FormLabel>{t("hosts.folder")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              ref={folderInputRef}
+                              placeholder={t("placeholders.folder")}
+                              className="min-h-[40px]"
+                              autoComplete="off"
+                              value={field.value}
+                              onFocus={() => setFolderDropdownOpen(true)}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                setFolderDropdownOpen(true);
+                              }}
+                            />
+                          </FormControl>
+                          {folderDropdownOpen && filteredFolders.length > 0 && (
+                            <div
+                              ref={folderDropdownRef}
+                              className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                            >
+                              <div className="grid grid-cols-1 gap-1 p-0">
+                                {filteredFolders.map((folder) => (
                                   <Button
+                                    key={folder}
                                     type="button"
-                                    variant="outline"
-                                    className="justify-start text-left"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                    onClick={() => handleFolderClick(folder)}
                                   >
-                                    <span
-                                      className="truncate"
-                                      title={
-                                        field.value?.name || t("hosts.upload")
-                                      }
-                                    >
-                                      {field.value === "existing_key"
-                                        ? t("hosts.existingKey")
-                                        : field.value
-                                          ? editingHost
-                                            ? t("hosts.updateKey")
-                                            : field.value.name
-                                          : t("hosts.upload")}
-                                    </span>
+                                    {folder}
                                   </Button>
-                                </div>
-                              </FormControl>
-                            </FormItem>
+                                ))}
+                              </div>
+                            </div>
                           )}
-                        />
-                      </TabsContent>
-                      <TabsContent value="paste" className="mt-4">
-                        <Controller
-                          control={form.control}
-                          name="key"
-                          render={({ field }) => (
-                            <FormItem className="mb-4">
-                              <FormLabel>{t("hosts.sshPrivateKey")}</FormLabel>
-                              <FormControl>
-                                <CodeMirror
-                                  value={
-                                    typeof field.value === "string"
-                                      ? field.value
-                                      : ""
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="tags"
+                      render={({ field }) => (
+                        <FormItem className="col-span-10 overflow-visible">
+                          <FormLabel>{t("hosts.tags")}</FormLabel>
+                          <FormControl>
+                            <div className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-dark-bg-input focus-within:ring-2 ring-ring min-h-[40px]">
+                              {field.value.map((tag: string, idx: number) => (
+                                <span
+                                  key={tag + idx}
+                                  className="flex items-center bg-gray-200 text-gray-800 rounded-full px-2 py-0.5 text-xs"
+                                >
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    className="ml-1 text-gray-500 hover:text-red-500 focus:outline-none"
+                                    onClick={() => {
+                                      const newTags = field.value.filter(
+                                        (_: string, i: number) => i !== idx,
+                                      );
+                                      field.onChange(newTags);
+                                    }}
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                              <input
+                                type="text"
+                                className="flex-1 min-w-[60px] border-none outline-none bg-transparent p-0 h-6"
+                                value={tagInput}
+                                onChange={(e) => setTagInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === " " && tagInput.trim() !== "") {
+                                    e.preventDefault();
+                                    if (
+                                      !field.value.includes(tagInput.trim())
+                                    ) {
+                                      field.onChange([
+                                        ...field.value,
+                                        tagInput.trim(),
+                                      ]);
+                                    }
+                                    setTagInput("");
+                                  } else if (
+                                    e.key === "Backspace" &&
+                                    tagInput === "" &&
+                                    field.value.length > 0
+                                  ) {
+                                    field.onChange(field.value.slice(0, -1));
                                   }
-                                  onChange={(value) => field.onChange(value)}
-                                  placeholder={t(
-                                    "placeholders.pastePrivateKey",
-                                  )}
-                                  theme={oneDark}
-                                  className="border border-input rounded-md"
-                                  minHeight="120px"
-                                  basicSetup={{
-                                    lineNumbers: true,
-                                    foldGutter: false,
-                                    dropCursor: false,
-                                    allowMultipleSelections: false,
-                                    highlightSelectionMatches: false,
-                                    searchKeymap: false,
-                                    scrollPastEnd: false,
-                                  }}
-                                  extensions={[
-                                    EditorView.theme({
-                                      ".cm-scroller": {
-                                        overflow: "auto",
-                                      },
-                                    }),
-                                  ]}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </TabsContent>
-                    </Tabs>
-                    <div className="grid grid-cols-15 gap-4 mt-4">
+                                }}
+                                placeholder={t("hosts.addTagsSpaceToAdd")}
+                              />
+                            </div>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="pin"
+                      render={({ field }) => (
+                        <FormItem className="col-span-6">
+                          <FormLabel>{t("hosts.pin")}</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormLabel className="mb-3 mt-3 font-bold">
+                    {t("hosts.authentication")}
+                  </FormLabel>
+                  <Tabs
+                    value={authTab}
+                    onValueChange={(value) => {
+                      const newAuthType = value as
+                        | "password"
+                        | "key"
+                        | "credential"
+                        | "none";
+                      setAuthTab(newAuthType);
+                      form.setValue("authType", newAuthType);
+                    }}
+                    className="flex-1 flex flex-col h-full min-h-0"
+                  >
+                    <TabsList>
+                      <TabsTrigger value="password">
+                        {t("hosts.password")}
+                      </TabsTrigger>
+                      <TabsTrigger value="key">{t("hosts.key")}</TabsTrigger>
+                      <TabsTrigger value="credential">
+                        {t("hosts.credential")}
+                      </TabsTrigger>
+                      <TabsTrigger value="none">{t("hosts.none")}</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="password">
                       <FormField
                         control={form.control}
-                        name="keyPassword"
+                        name="password"
                         render={({ field }) => (
-                          <FormItem className="col-span-8">
-                            <FormLabel>{t("hosts.keyPassword")}</FormLabel>
+                          <FormItem>
+                            <FormLabel>{t("hosts.password")}</FormLabel>
                             <FormControl>
                               <PasswordInput
-                                placeholder={t("placeholders.keyPassword")}
+                                placeholder={t("placeholders.password")}
                                 {...field}
                               />
                             </FormControl>
                           </FormItem>
                         )}
                       />
+                    </TabsContent>
+                    <TabsContent value="key">
+                      <Tabs
+                        value={keyInputMethod}
+                        onValueChange={(value) => {
+                          setKeyInputMethod(value as "upload" | "paste");
+                          if (value === "upload") {
+                            form.setValue("key", null);
+                          } else {
+                            form.setValue("key", "");
+                          }
+                        }}
+                        className="w-full"
+                      >
+                        <TabsList className="inline-flex items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                          <TabsTrigger value="upload">
+                            {t("hosts.uploadFile")}
+                          </TabsTrigger>
+                          <TabsTrigger value="paste">
+                            {t("hosts.pasteKey")}
+                          </TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="upload" className="mt-4">
+                          <Controller
+                            control={form.control}
+                            name="key"
+                            render={({ field }) => (
+                              <FormItem className="mb-4">
+                                <FormLabel>
+                                  {t("hosts.sshPrivateKey")}
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative inline-block">
+                                    <input
+                                      id="key-upload"
+                                      type="file"
+                                      accept=".pem,.key,.txt,.ppk"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        field.onChange(file || null);
+                                      }}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className="justify-start text-left"
+                                    >
+                                      <span
+                                        className="truncate"
+                                        title={
+                                          field.value?.name || t("hosts.upload")
+                                        }
+                                      >
+                                        {field.value === "existing_key"
+                                          ? t("hosts.existingKey")
+                                          : field.value
+                                            ? editingHost
+                                              ? t("hosts.updateKey")
+                                              : field.value.name
+                                            : t("hosts.upload")}
+                                      </span>
+                                    </Button>
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </TabsContent>
+                        <TabsContent value="paste" className="mt-4">
+                          <Controller
+                            control={form.control}
+                            name="key"
+                            render={({ field }) => (
+                              <FormItem className="mb-4">
+                                <FormLabel>
+                                  {t("hosts.sshPrivateKey")}
+                                </FormLabel>
+                                <FormControl>
+                                  <CodeMirror
+                                    value={
+                                      typeof field.value === "string"
+                                        ? field.value
+                                        : ""
+                                    }
+                                    onChange={(value) => field.onChange(value)}
+                                    placeholder={t(
+                                      "placeholders.pastePrivateKey",
+                                    )}
+                                    theme={oneDark}
+                                    className="border border-input rounded-md"
+                                    minHeight="120px"
+                                    basicSetup={{
+                                      lineNumbers: true,
+                                      foldGutter: false,
+                                      dropCursor: false,
+                                      allowMultipleSelections: false,
+                                      highlightSelectionMatches: false,
+                                      searchKeymap: false,
+                                      scrollPastEnd: false,
+                                    }}
+                                    extensions={[
+                                      EditorView.theme({
+                                        ".cm-scroller": {
+                                          overflow: "auto",
+                                        },
+                                      }),
+                                    ]}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </TabsContent>
+                      </Tabs>
+                      <div className="grid grid-cols-15 gap-4 mt-4">
+                        <FormField
+                          control={form.control}
+                          name="keyPassword"
+                          render={({ field }) => (
+                            <FormItem className="col-span-8">
+                              <FormLabel>{t("hosts.keyPassword")}</FormLabel>
+                              <FormControl>
+                                <PasswordInput
+                                  placeholder={t("placeholders.keyPassword")}
+                                  {...field}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="keyType"
+                          render={({ field }) => (
+                            <FormItem className="relative col-span-3">
+                              <FormLabel>{t("hosts.keyType")}</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Button
+                                    ref={keyTypeButtonRef}
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full justify-start text-left rounded-md px-2 py-2 bg-dark-bg border border-input text-foreground"
+                                    onClick={() =>
+                                      setKeyTypeDropdownOpen((open) => !open)
+                                    }
+                                  >
+                                    {keyTypeOptions.find(
+                                      (opt) => opt.value === field.value,
+                                    )?.label || t("hosts.autoDetect")}
+                                  </Button>
+                                  {keyTypeDropdownOpen && (
+                                    <div
+                                      ref={keyTypeDropdownRef}
+                                      className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                    >
+                                      <div className="grid grid-cols-1 gap-1 p-0">
+                                        {keyTypeOptions.map((opt) => (
+                                          <Button
+                                            key={opt.value}
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-dark-bg text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                            onClick={() => {
+                                              field.onChange(opt.value);
+                                              setKeyTypeDropdownOpen(false);
+                                            }}
+                                          >
+                                            {opt.label}
+                                          </Button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="credential">
                       <FormField
                         control={form.control}
-                        name="keyType"
+                        name="credentialId"
                         render={({ field }) => (
-                          <FormItem className="relative col-span-3">
-                            <FormLabel>{t("hosts.keyType")}</FormLabel>
-                            <FormControl>
-                              <div className="relative">
+                          <FormItem>
+                            <CredentialSelector
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              onCredentialSelect={(credential) => {
+                                if (credential) {
+                                  form.setValue(
+                                    "username",
+                                    credential.username,
+                                  );
+                                }
+                              }}
+                            />
+                            <FormDescription>
+                              {t("hosts.credentialDescription")}
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+                    </TabsContent>
+                    <TabsContent value="none">
+                      <Alert className="mt-2">
+                        <AlertDescription>
+                          <strong>{t("hosts.noneAuthTitle")}</strong>
+                          <div className="mt-2">
+                            {t("hosts.noneAuthDescription")}
+                          </div>
+                          <div className="mt-2 text-sm">
+                            {t("hosts.noneAuthDetails")}
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    </TabsContent>
+                  </Tabs>
+                </TabsContent>
+                <TabsContent value="terminal" className="space-y-1">
+                  <FormField
+                    control={form.control}
+                    name="enableTerminal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("hosts.enableTerminal")}</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t("hosts.enableTerminalDesc")}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                  <Alert className="mt-4 mb-4">
+                    <AlertDescription>
+                      {t("hosts.terminalCustomizationNotice")}
+                    </AlertDescription>
+                  </Alert>
+                  <h1 className="text-xl font-semibold mt-7">
+                    Terminal Customization
+                  </h1>
+                  <Accordion type="multiple" className="w-full">
+                    <AccordionItem value="appearance">
+                      <AccordionTrigger>Appearance</AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            Theme Preview
+                          </label>
+                          <TerminalPreview
+                            theme={form.watch("terminalConfig.theme")}
+                            fontSize={form.watch("terminalConfig.fontSize")}
+                            fontFamily={form.watch("terminalConfig.fontFamily")}
+                            cursorStyle={form.watch(
+                              "terminalConfig.cursorStyle",
+                            )}
+                            cursorBlink={form.watch(
+                              "terminalConfig.cursorBlink",
+                            )}
+                            letterSpacing={form.watch(
+                              "terminalConfig.letterSpacing",
+                            )}
+                            lineHeight={form.watch("terminalConfig.lineHeight")}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.theme"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Theme</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select theme" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {Object.entries(TERMINAL_THEMES).map(
+                                    ([key, theme]) => (
+                                      <SelectItem key={key} value={key}>
+                                        {theme.name}
+                                      </SelectItem>
+                                    ),
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                Choose a color theme for the terminal
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Font Family */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.fontFamily"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Font Family</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select font" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {TERMINAL_FONTS.map((font) => (
+                                    <SelectItem
+                                      key={font.value}
+                                      value={font.value}
+                                    >
+                                      {font.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                Select the font to use in the terminal
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Font Size */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.fontSize"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Font Size: {field.value}px</FormLabel>
+                              <FormControl>
+                                <Slider
+                                  min={8}
+                                  max={24}
+                                  step={1}
+                                  value={[field.value]}
+                                  onValueChange={([value]) =>
+                                    field.onChange(value)
+                                  }
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Adjust the terminal font size
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Letter Spacing */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.letterSpacing"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Letter Spacing: {field.value}px
+                              </FormLabel>
+                              <FormControl>
+                                <Slider
+                                  min={-2}
+                                  max={10}
+                                  step={0.5}
+                                  value={[field.value]}
+                                  onValueChange={([value]) =>
+                                    field.onChange(value)
+                                  }
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Adjust spacing between characters
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Line Height */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.lineHeight"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Line Height: {field.value}</FormLabel>
+                              <FormControl>
+                                <Slider
+                                  min={1}
+                                  max={2}
+                                  step={0.1}
+                                  value={[field.value]}
+                                  onValueChange={([value]) =>
+                                    field.onChange(value)
+                                  }
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Adjust spacing between lines
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Cursor Style */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.cursorStyle"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Cursor Style</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select cursor style" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="block">Block</SelectItem>
+                                  <SelectItem value="underline">
+                                    Underline
+                                  </SelectItem>
+                                  <SelectItem value="bar">Bar</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                Choose the cursor appearance
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Cursor Blink */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.cursorBlink"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>Cursor Blink</FormLabel>
+                                <FormDescription>
+                                  Enable cursor blinking animation
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {/* Behavior Settings */}
+                    <AccordionItem value="behavior">
+                      <AccordionTrigger>Behavior</AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-4">
+                        {/* Scrollback Buffer */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.scrollback"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Scrollback Buffer: {field.value} lines
+                              </FormLabel>
+                              <FormControl>
+                                <Slider
+                                  min={1000}
+                                  max={100000}
+                                  step={1000}
+                                  value={[field.value]}
+                                  onValueChange={([value]) =>
+                                    field.onChange(value)
+                                  }
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Number of lines to keep in scrollback history
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Bell Style */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.bellStyle"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Bell Style</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select bell style" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  <SelectItem value="sound">Sound</SelectItem>
+                                  <SelectItem value="visual">Visual</SelectItem>
+                                  <SelectItem value="both">Both</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                How to handle terminal bell (BEL character,
+                                \x07). Programs trigger this when completing
+                                tasks, encountering errors, or for
+                                notifications. "Sound" plays an audio beep,
+                                "Visual" flashes the screen briefly, "Both" does
+                                both, "None" disables bell alerts.
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Right Click Selects Word */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.rightClickSelectsWord"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>Right Click Selects Word</FormLabel>
+                                <FormDescription>
+                                  Right-clicking selects the word under cursor
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Fast Scroll Modifier */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.fastScrollModifier"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Fast Scroll Modifier</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select modifier" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="alt">Alt</SelectItem>
+                                  <SelectItem value="ctrl">Ctrl</SelectItem>
+                                  <SelectItem value="shift">Shift</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                Modifier key for fast scrolling
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Fast Scroll Sensitivity */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.fastScrollSensitivity"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Fast Scroll Sensitivity: {field.value}
+                              </FormLabel>
+                              <FormControl>
+                                <Slider
+                                  min={1}
+                                  max={10}
+                                  step={1}
+                                  value={[field.value]}
+                                  onValueChange={([value]) =>
+                                    field.onChange(value)
+                                  }
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Scroll speed multiplier when modifier is held
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Minimum Contrast Ratio */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.minimumContrastRatio"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Minimum Contrast Ratio: {field.value}
+                              </FormLabel>
+                              <FormControl>
+                                <Slider
+                                  min={1}
+                                  max={21}
+                                  step={1}
+                                  value={[field.value]}
+                                  onValueChange={([value]) =>
+                                    field.onChange(value)
+                                  }
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Automatically adjust colors for better
+                                readability
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {/* Advanced Settings */}
+                    <AccordionItem value="advanced">
+                      <AccordionTrigger>Advanced</AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-4">
+                        {/* Agent Forwarding */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.agentForwarding"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>SSH Agent Forwarding</FormLabel>
+                                <FormDescription>
+                                  Forward SSH authentication agent to remote
+                                  host
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Backspace Mode */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.backspaceMode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Backspace Mode</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select backspace mode" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="normal">
+                                    Normal (DEL)
+                                  </SelectItem>
+                                  <SelectItem value="control-h">
+                                    Control-H (^H)
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                Backspace key behavior for compatibility
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Startup Snippet */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.startupSnippetId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Startup Snippet</FormLabel>
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(
+                                    value === "none" ? null : parseInt(value),
+                                  );
+                                  setSnippetSearch("");
+                                }}
+                                value={field.value?.toString() || "none"}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select snippet" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <div className="px-2 pb-2 sticky top-0 bg-popover z-10">
+                                    <Input
+                                      placeholder="Search snippets..."
+                                      value={snippetSearch}
+                                      onChange={(e) =>
+                                        setSnippetSearch(e.target.value)
+                                      }
+                                      className="h-8"
+                                      onClick={(e) => e.stopPropagation()}
+                                      onKeyDown={(e) => e.stopPropagation()}
+                                    />
+                                  </div>
+                                  <div className="max-h-[200px] overflow-y-auto">
+                                    <SelectItem value="none">None</SelectItem>
+                                    {snippets
+                                      .filter((snippet) =>
+                                        snippet.name
+                                          .toLowerCase()
+                                          .includes(
+                                            snippetSearch.toLowerCase(),
+                                          ),
+                                      )
+                                      .map((snippet) => (
+                                        <SelectItem
+                                          key={snippet.id}
+                                          value={snippet.id.toString()}
+                                        >
+                                          {snippet.name}
+                                        </SelectItem>
+                                      ))}
+                                    {snippets.filter((snippet) =>
+                                      snippet.name
+                                        .toLowerCase()
+                                        .includes(snippetSearch.toLowerCase()),
+                                    ).length === 0 &&
+                                      snippetSearch && (
+                                        <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                                          No snippets found
+                                        </div>
+                                      )}
+                                  </div>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                Execute a snippet when the terminal connects
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Auto MOSH */}
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.autoMosh"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>Auto-MOSH</FormLabel>
+                                <FormDescription>
+                                  Automatically run MOSH command on connect
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* MOSH Command */}
+                        {form.watch("terminalConfig.autoMosh") && (
+                          <FormField
+                            control={form.control}
+                            name="terminalConfig.moshCommand"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>MOSH Command</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="mosh user@server"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  The MOSH command to execute
+                                </FormDescription>
+                              </FormItem>
+                            )}
+                          />
+                        )}
+
+                        {/* Environment Variables */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            Environment Variables
+                          </label>
+                          <FormDescription>
+                            Set custom environment variables for the terminal
+                            session
+                          </FormDescription>
+                          {form
+                            .watch("terminalConfig.environmentVariables")
+                            ?.map((_, index) => (
+                              <div key={index} className="flex gap-2">
+                                <FormField
+                                  control={form.control}
+                                  name={`terminalConfig.environmentVariables.${index}.key`}
+                                  render={({ field }) => (
+                                    <FormItem className="flex-1">
+                                      <FormControl>
+                                        <Input
+                                          placeholder="Variable name"
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name={`terminalConfig.environmentVariables.${index}.value`}
+                                  render={({ field }) => (
+                                    <FormItem className="flex-1">
+                                      <FormControl>
+                                        <Input placeholder="Value" {...field} />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
                                 <Button
-                                  ref={keyTypeButtonRef}
                                   type="button"
                                   variant="outline"
-                                  className="w-full justify-start text-left rounded-md px-2 py-2 bg-dark-bg border border-input text-foreground"
-                                  onClick={() =>
-                                    setKeyTypeDropdownOpen((open) => !open)
-                                  }
+                                  size="icon"
+                                  onClick={() => {
+                                    const current = form.getValues(
+                                      "terminalConfig.environmentVariables",
+                                    );
+                                    form.setValue(
+                                      "terminalConfig.environmentVariables",
+                                      current.filter((_, i) => i !== index),
+                                    );
+                                  }}
                                 >
-                                  {keyTypeOptions.find(
-                                    (opt) => opt.value === field.value,
-                                  )?.label || t("hosts.autoDetect")}
+                                  <X className="h-4 w-4" />
                                 </Button>
-                                {keyTypeDropdownOpen && (
+                              </div>
+                            ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const current =
+                                form.getValues(
+                                  "terminalConfig.environmentVariables",
+                                ) || [];
+                              form.setValue(
+                                "terminalConfig.environmentVariables",
+                                [...current, { key: "", value: "" }],
+                              );
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Variable
+                          </Button>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </TabsContent>
+                <TabsContent value="tunnel">
+                  <FormField
+                    control={form.control}
+                    name="enableTunnel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("hosts.enableTunnel")}</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t("hosts.enableTunnelDesc")}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch("enableTunnel") && (
+                    <>
+                      <Alert className="mt-4">
+                        <AlertDescription>
+                          <strong>{t("hosts.sshpassRequired")}</strong>
+                          <div>
+                            {t("hosts.sshpassRequiredDesc")}{" "}
+                            <code className="bg-muted px-1 rounded inline">
+                              sudo apt install sshpass
+                            </code>{" "}
+                            {t("hosts.debianUbuntuEquivalent")}
+                          </div>
+                          <div className="mt-2">
+                            <strong>{t("hosts.otherInstallMethods")}</strong>
+                            <div>
+                              • {t("hosts.centosRhelFedora")}{" "}
+                              <code className="bg-muted px-1 rounded inline">
+                                sudo yum install sshpass
+                              </code>{" "}
+                              {t("hosts.or")}{" "}
+                              <code className="bg-muted px-1 rounded inline">
+                                sudo dnf install sshpass
+                              </code>
+                            </div>
+                            <div>
+                              • {t("hosts.macos")}{" "}
+                              <code className="bg-muted px-1 rounded inline">
+                                brew install hudochenkov/sshpass/sshpass
+                              </code>
+                            </div>
+                            <div>• {t("hosts.windows")}</div>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+
+                      <Alert className="mt-4">
+                        <AlertDescription>
+                          <strong>{t("hosts.sshServerConfigRequired")}</strong>
+                          <div>{t("hosts.sshServerConfigDesc")}</div>
+                          <div>
+                            •{" "}
+                            <code className="bg-muted px-1 rounded inline">
+                              GatewayPorts yes
+                            </code>{" "}
+                            {t("hosts.gatewayPortsYes")}
+                          </div>
+                          <div>
+                            •{" "}
+                            <code className="bg-muted px-1 rounded inline">
+                              AllowTcpForwarding yes
+                            </code>{" "}
+                            {t("hosts.allowTcpForwardingYes")}
+                          </div>
+                          <div>
+                            •{" "}
+                            <code className="bg-muted px-1 rounded inline">
+                              PermitRootLogin yes
+                            </code>{" "}
+                            {t("hosts.permitRootLoginYes")}
+                          </div>
+                          <div className="mt-2">{t("hosts.editSshConfig")}</div>
+                        </AlertDescription>
+                      </Alert>
+                      <div className="mt-3 flex justify-between">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-3 text-xs"
+                          onClick={() =>
+                            window.open(
+                              "https://docs.termix.site/tunnels",
+                              "_blank",
+                            )
+                          }
+                        >
+                          {t("common.documentation")}
+                        </Button>
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="tunnelConnections"
+                        render={({ field }) => (
+                          <FormItem className="mt-4">
+                            <FormLabel>
+                              {t("hosts.tunnelConnections")}
+                            </FormLabel>
+                            <FormControl>
+                              <div className="space-y-4">
+                                {field.value.map((connection, index) => (
                                   <div
-                                    ref={keyTypeDropdownRef}
-                                    className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                    key={index}
+                                    className="p-4 border rounded-lg bg-muted/50"
                                   >
-                                    <div className="grid grid-cols-1 gap-1 p-0">
-                                      {keyTypeOptions.map((opt) => (
-                                        <Button
-                                          key={opt.value}
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-dark-bg text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
-                                          onClick={() => {
-                                            field.onChange(opt.value);
-                                            setKeyTypeDropdownOpen(false);
-                                          }}
-                                        >
-                                          {opt.label}
-                                        </Button>
-                                      ))}
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h4 className="text-sm font-bold">
+                                        {t("hosts.connection")} {index + 1}
+                                      </h4>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          const newConnections =
+                                            field.value.filter(
+                                              (_, i) => i !== index,
+                                            );
+                                          field.onChange(newConnections);
+                                        }}
+                                      >
+                                        {t("hosts.remove")}
+                                      </Button>
+                                    </div>
+                                    <div className="grid grid-cols-12 gap-4">
+                                      <FormField
+                                        control={form.control}
+                                        name={`tunnelConnections.${index}.sourcePort`}
+                                        render={({
+                                          field: sourcePortField,
+                                        }) => (
+                                          <FormItem className="col-span-4">
+                                            <FormLabel>
+                                              {t("hosts.sourcePort")}
+                                              {t("hosts.sourcePortDesc")}
+                                            </FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                placeholder="22"
+                                                {...sourcePortField}
+                                              />
+                                            </FormControl>
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={form.control}
+                                        name={`tunnelConnections.${index}.endpointPort`}
+                                        render={({
+                                          field: endpointPortField,
+                                        }) => (
+                                          <FormItem className="col-span-4">
+                                            <FormLabel>
+                                              {t("hosts.endpointPort")}
+                                            </FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                placeholder="224"
+                                                {...endpointPortField}
+                                              />
+                                            </FormControl>
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={form.control}
+                                        name={`tunnelConnections.${index}.endpointHost`}
+                                        render={({
+                                          field: endpointHostField,
+                                        }) => (
+                                          <FormItem className="col-span-4 relative">
+                                            <FormLabel>
+                                              {t("hosts.endpointSshConfig")}
+                                            </FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                ref={(el) => {
+                                                  sshConfigInputRefs.current[
+                                                    index
+                                                  ] = el;
+                                                }}
+                                                placeholder={t(
+                                                  "placeholders.sshConfig",
+                                                )}
+                                                className="min-h-[40px]"
+                                                autoComplete="off"
+                                                value={endpointHostField.value}
+                                                onFocus={() =>
+                                                  setSshConfigDropdownOpen(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      [index]: true,
+                                                    }),
+                                                  )
+                                                }
+                                                onChange={(e) => {
+                                                  endpointHostField.onChange(e);
+                                                  setSshConfigDropdownOpen(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      [index]: true,
+                                                    }),
+                                                  );
+                                                }}
+                                              />
+                                            </FormControl>
+                                            {sshConfigDropdownOpen[index] &&
+                                              getFilteredSshConfigs(index)
+                                                .length > 0 && (
+                                                <div
+                                                  ref={(el) => {
+                                                    sshConfigDropdownRefs.current[
+                                                      index
+                                                    ] = el;
+                                                  }}
+                                                  className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                >
+                                                  <div className="grid grid-cols-1 gap-1 p-0">
+                                                    {getFilteredSshConfigs(
+                                                      index,
+                                                    ).map((config) => (
+                                                      <Button
+                                                        key={config}
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                                        onClick={() =>
+                                                          handleSshConfigClick(
+                                                            config,
+                                                            index,
+                                                          )
+                                                        }
+                                                      >
+                                                        {config}
+                                                      </Button>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              )}
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                      {t("hosts.tunnelForwardDescription", {
+                                        sourcePort:
+                                          form.watch(
+                                            `tunnelConnections.${index}.sourcePort`,
+                                          ) || "22",
+                                        endpointPort:
+                                          form.watch(
+                                            `tunnelConnections.${index}.endpointPort`,
+                                          ) || "224",
+                                      })}
+                                    </p>
+
+                                    <div className="grid grid-cols-12 gap-4 mt-4">
+                                      <FormField
+                                        control={form.control}
+                                        name={`tunnelConnections.${index}.maxRetries`}
+                                        render={({
+                                          field: maxRetriesField,
+                                        }) => (
+                                          <FormItem className="col-span-4">
+                                            <FormLabel>
+                                              {t("hosts.maxRetries")}
+                                            </FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                placeholder={t(
+                                                  "placeholders.maxRetries",
+                                                )}
+                                                {...maxRetriesField}
+                                              />
+                                            </FormControl>
+                                            <FormDescription>
+                                              {t("hosts.maxRetriesDescription")}
+                                            </FormDescription>
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={form.control}
+                                        name={`tunnelConnections.${index}.retryInterval`}
+                                        render={({
+                                          field: retryIntervalField,
+                                        }) => (
+                                          <FormItem className="col-span-4">
+                                            <FormLabel>
+                                              {t("hosts.retryInterval")}
+                                            </FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                placeholder={t(
+                                                  "placeholders.retryInterval",
+                                                )}
+                                                {...retryIntervalField}
+                                              />
+                                            </FormControl>
+                                            <FormDescription>
+                                              {t(
+                                                "hosts.retryIntervalDescription",
+                                              )}
+                                            </FormDescription>
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={form.control}
+                                        name={`tunnelConnections.${index}.autoStart`}
+                                        render={({ field }) => (
+                                          <FormItem className="col-span-4">
+                                            <FormLabel>
+                                              {t("hosts.autoStartContainer")}
+                                            </FormLabel>
+                                            <FormControl>
+                                              <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                              />
+                                            </FormControl>
+                                            <FormDescription>
+                                              {t("hosts.autoStartDesc")}
+                                            </FormDescription>
+                                          </FormItem>
+                                        )}
+                                      />
                                     </div>
                                   </div>
-                                )}
+                                ))}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    field.onChange([
+                                      ...field.value,
+                                      {
+                                        sourcePort: 22,
+                                        endpointPort: 224,
+                                        endpointHost: "",
+                                        maxRetries: 3,
+                                        retryInterval: 10,
+                                        autoStart: false,
+                                      },
+                                    ]);
+                                  }}
+                                >
+                                  {t("hosts.addConnection")}
+                                </Button>
                               </div>
                             </FormControl>
                           </FormItem>
                         )}
                       />
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="credential">
-                    <FormField
-                      control={form.control}
-                      name="credentialId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <CredentialSelector
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            onCredentialSelect={(credential) => {
-                              if (credential) {
-                                form.setValue("username", credential.username);
-                              }
-                            }}
-                          />
-                          <FormDescription>
-                            {t("hosts.credentialDescription")}
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                  </TabsContent>
-                  <TabsContent value="none">
-                    <Alert className="mt-2">
-                      <AlertDescription>
-                        <strong>{t("hosts.noneAuthTitle")}</strong>
-                        <div className="mt-2">
-                          {t("hosts.noneAuthDescription")}
-                        </div>
-                        <div className="mt-2 text-sm">
-                          {t("hosts.noneAuthDetails")}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  </TabsContent>
-                </Tabs>
-              </TabsContent>
-              <TabsContent value="terminal" className="space-y-1">
-                <FormField
-                  control={form.control}
-                  name="enableTerminal"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("hosts.enableTerminal")}</FormLabel>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        {t("hosts.enableTerminalDesc")}
-                      </FormDescription>
-                    </FormItem>
+                    </>
                   )}
-                />
-                <h1 className="text-xl font-semibold mt-7">
-                  Terminal Customization
-                </h1>
-                <Accordion type="multiple" className="w-full">
-                  <AccordionItem value="appearance">
-                    <AccordionTrigger>Appearance</AccordionTrigger>
-                    <AccordionContent className="space-y-4 pt-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Theme Preview
-                        </label>
-                        <TerminalPreview
-                          theme={form.watch("terminalConfig.theme")}
-                          fontSize={form.watch("terminalConfig.fontSize")}
-                          fontFamily={form.watch("terminalConfig.fontFamily")}
-                          cursorStyle={form.watch("terminalConfig.cursorStyle")}
-                          cursorBlink={form.watch("terminalConfig.cursorBlink")}
-                          letterSpacing={form.watch(
-                            "terminalConfig.letterSpacing",
-                          )}
-                          lineHeight={form.watch("terminalConfig.lineHeight")}
-                        />
-                      </div>
+                </TabsContent>
+                <TabsContent value="file_manager">
+                  <FormField
+                    control={form.control}
+                    name="enableFileManager"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("hosts.enableFileManager")}</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t("hosts.enableFileManagerDesc")}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
 
+                  {form.watch("enableFileManager") && (
+                    <div className="mt-4">
                       <FormField
                         control={form.control}
-                        name="terminalConfig.theme"
+                        name="defaultPath"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Theme</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select theme" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {Object.entries(TERMINAL_THEMES).map(
-                                  ([key, theme]) => (
-                                    <SelectItem key={key} value={key}>
-                                      {theme.name}
-                                    </SelectItem>
-                                  ),
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Choose a color theme for the terminal
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Font Family */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.fontFamily"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Font Family</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select font" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {TERMINAL_FONTS.map((font) => (
-                                  <SelectItem
-                                    key={font.value}
-                                    value={font.value}
-                                  >
-                                    {font.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Select the font to use in the terminal
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Font Size */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.fontSize"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Font Size: {field.value}px</FormLabel>
+                            <FormLabel>{t("hosts.defaultPath")}</FormLabel>
                             <FormControl>
-                              <Slider
-                                min={8}
-                                max={24}
-                                step={1}
-                                value={[field.value]}
-                                onValueChange={([value]) =>
-                                  field.onChange(value)
-                                }
+                              <Input
+                                placeholder={t("placeholders.homePath")}
+                                {...field}
                               />
                             </FormControl>
                             <FormDescription>
-                              Adjust the terminal font size
+                              {t("hosts.defaultPathDesc")}
                             </FormDescription>
                           </FormItem>
                         )}
                       />
-
-                      {/* Letter Spacing */}
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="statistics" className="space-y-6">
+                  {/* Monitoring Configuration Section */}
+                  <div className="space-y-4">
+                    {/* Status Check Monitoring */}
+                    <div className="space-y-3">
                       <FormField
                         control={form.control}
-                        name="terminalConfig.letterSpacing"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Letter Spacing: {field.value}px
-                            </FormLabel>
-                            <FormControl>
-                              <Slider
-                                min={-2}
-                                max={10}
-                                step={0.5}
-                                value={[field.value]}
-                                onValueChange={([value]) =>
-                                  field.onChange(value)
-                                }
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Adjust spacing between characters
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Line Height */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.lineHeight"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Line Height: {field.value}</FormLabel>
-                            <FormControl>
-                              <Slider
-                                min={1}
-                                max={2}
-                                step={0.1}
-                                value={[field.value]}
-                                onValueChange={([value]) =>
-                                  field.onChange(value)
-                                }
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Adjust spacing between lines
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Cursor Style */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.cursorStyle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Cursor Style</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select cursor style" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="block">Block</SelectItem>
-                                <SelectItem value="underline">
-                                  Underline
-                                </SelectItem>
-                                <SelectItem value="bar">Bar</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Choose the cursor appearance
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Cursor Blink */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.cursorBlink"
+                        name="statsConfig.statusCheckEnabled"
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                             <div className="space-y-0.5">
-                              <FormLabel>Cursor Blink</FormLabel>
+                              <FormLabel>
+                                {t("hosts.statusCheckEnabled")}
+                              </FormLabel>
                               <FormDescription>
-                                Enable cursor blinking animation
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  {/* Behavior Settings */}
-                  <AccordionItem value="behavior">
-                    <AccordionTrigger>Behavior</AccordionTrigger>
-                    <AccordionContent className="space-y-4 pt-4">
-                      {/* Scrollback Buffer */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.scrollback"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Scrollback Buffer: {field.value} lines
-                            </FormLabel>
-                            <FormControl>
-                              <Slider
-                                min={1000}
-                                max={100000}
-                                step={1000}
-                                value={[field.value]}
-                                onValueChange={([value]) =>
-                                  field.onChange(value)
-                                }
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Number of lines to keep in scrollback history
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Bell Style */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.bellStyle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Bell Style</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select bell style" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                <SelectItem value="sound">Sound</SelectItem>
-                                <SelectItem value="visual">Visual</SelectItem>
-                                <SelectItem value="both">Both</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              How to handle terminal bell (BEL character)
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Right Click Selects Word */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.rightClickSelectsWord"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                            <div className="space-y-0.5">
-                              <FormLabel>Right Click Selects Word</FormLabel>
-                              <FormDescription>
-                                Right-clicking selects the word under cursor
+                                {t("hosts.statusCheckEnabledDesc")}
                               </FormDescription>
                             </div>
                             <FormControl>
@@ -1566,774 +2424,251 @@ export function HostManagerEditor({
                         )}
                       />
 
-                      {/* Fast Scroll Modifier */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.fastScrollModifier"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Fast Scroll Modifier</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select modifier" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="alt">Alt</SelectItem>
-                                <SelectItem value="ctrl">Ctrl</SelectItem>
-                                <SelectItem value="shift">Shift</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Modifier key for fast scrolling
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Fast Scroll Sensitivity */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.fastScrollSensitivity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Fast Scroll Sensitivity: {field.value}
-                            </FormLabel>
-                            <FormControl>
-                              <Slider
-                                min={1}
-                                max={10}
-                                step={1}
-                                value={[field.value]}
-                                onValueChange={([value]) =>
-                                  field.onChange(value)
-                                }
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Scroll speed multiplier when modifier is held
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Minimum Contrast Ratio */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.minimumContrastRatio"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Minimum Contrast Ratio: {field.value}
-                            </FormLabel>
-                            <FormControl>
-                              <Slider
-                                min={1}
-                                max={21}
-                                step={1}
-                                value={[field.value]}
-                                onValueChange={([value]) =>
-                                  field.onChange(value)
-                                }
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Automatically adjust colors for better readability
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  {/* Advanced Settings */}
-                  <AccordionItem value="advanced">
-                    <AccordionTrigger>Advanced</AccordionTrigger>
-                    <AccordionContent className="space-y-4 pt-4">
-                      {/* Agent Forwarding */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.agentForwarding"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                            <div className="space-y-0.5">
-                              <FormLabel>SSH Agent Forwarding</FormLabel>
-                              <FormDescription>
-                                Forward SSH authentication agent to remote host
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Backspace Mode */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.backspaceMode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Backspace Mode</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select backspace mode" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="normal">
-                                  Normal (DEL)
-                                </SelectItem>
-                                <SelectItem value="control-h">
-                                  Control-H (^H)
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Backspace key behavior for compatibility
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Startup Snippet */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.startupSnippetId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Startup Snippet</FormLabel>
-                            <Select
-                              onValueChange={(value) =>
-                                field.onChange(
-                                  value === "none" ? null : parseInt(value),
-                                )
-                              }
-                              value={field.value?.toString() || "none"}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select snippet" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {snippets.map((snippet) => (
-                                  <SelectItem
-                                    key={snippet.id}
-                                    value={snippet.id.toString()}
-                                  >
-                                    {snippet.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Execute a snippet when the terminal connects
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Auto MOSH */}
-                      <FormField
-                        control={form.control}
-                        name="terminalConfig.autoMosh"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                            <div className="space-y-0.5">
-                              <FormLabel>Auto-MOSH</FormLabel>
-                              <FormDescription>
-                                Automatically run MOSH command on connect
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* MOSH Command */}
-                      {form.watch("terminalConfig.autoMosh") && (
+                      {form.watch("statsConfig.statusCheckEnabled") && (
                         <FormField
                           control={form.control}
-                          name="terminalConfig.moshCommand"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>MOSH Command</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="mosh user@server"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                The MOSH command to execute
-                              </FormDescription>
-                            </FormItem>
-                          )}
-                        />
-                      )}
+                          name="statsConfig.statusCheckInterval"
+                          render={({ field }) => {
+                            const displayValue =
+                              statusIntervalUnit === "minutes"
+                                ? Math.round((field.value || 30) / 60)
+                                : field.value || 30;
 
-                      {/* Environment Variables */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Environment Variables
-                        </label>
-                        <FormDescription>
-                          Set custom environment variables for the terminal
-                          session
-                        </FormDescription>
-                        {form
-                          .watch("terminalConfig.environmentVariables")
-                          ?.map((_, index) => (
-                            <div key={index} className="flex gap-2">
-                              <FormField
-                                control={form.control}
-                                name={`terminalConfig.environmentVariables.${index}.key`}
-                                render={({ field }) => (
-                                  <FormItem className="flex-1">
-                                    <FormControl>
-                                      <Input
-                                        placeholder="Variable name"
-                                        {...field}
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                              <FormField
-                                control={form.control}
-                                name={`terminalConfig.environmentVariables.${index}.value`}
-                                render={({ field }) => (
-                                  <FormItem className="flex-1">
-                                    <FormControl>
-                                      <Input placeholder="Value" {...field} />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                onClick={() => {
-                                  const current = form.getValues(
-                                    "terminalConfig.environmentVariables",
-                                  );
-                                  form.setValue(
-                                    "terminalConfig.environmentVariables",
-                                    current.filter((_, i) => i !== index),
-                                  );
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const current =
-                              form.getValues(
-                                "terminalConfig.environmentVariables",
-                              ) || [];
-                            form.setValue(
-                              "terminalConfig.environmentVariables",
-                              [...current, { key: "", value: "" }],
+                            const handleIntervalChange = (value: string) => {
+                              const numValue = parseInt(value) || 0;
+                              const seconds =
+                                statusIntervalUnit === "minutes"
+                                  ? numValue * 60
+                                  : numValue;
+                              field.onChange(seconds);
+                            };
+
+                            return (
+                              <FormItem>
+                                <FormLabel>
+                                  {t("hosts.statusCheckInterval")}
+                                </FormLabel>
+                                <div className="flex gap-2">
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      value={displayValue}
+                                      onChange={(e) =>
+                                        handleIntervalChange(e.target.value)
+                                      }
+                                      className="flex-1"
+                                    />
+                                  </FormControl>
+                                  <Select
+                                    value={statusIntervalUnit}
+                                    onValueChange={(
+                                      value: "seconds" | "minutes",
+                                    ) => {
+                                      setStatusIntervalUnit(value);
+                                      // Convert current value to new unit
+                                      const currentSeconds = field.value || 30;
+                                      if (value === "minutes") {
+                                        const minutes = Math.round(
+                                          currentSeconds / 60,
+                                        );
+                                        field.onChange(minutes * 60);
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[120px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="seconds">
+                                        {t("hosts.intervalSeconds")}
+                                      </SelectItem>
+                                      <SelectItem value="minutes">
+                                        {t("hosts.intervalMinutes")}
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <FormDescription>
+                                  {t("hosts.statusCheckIntervalDesc")}
+                                </FormDescription>
+                              </FormItem>
                             );
                           }}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Variable
-                        </Button>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </TabsContent>
-              <TabsContent value="tunnel">
-                <FormField
-                  control={form.control}
-                  name="enableTunnel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("hosts.enableTunnel")}</FormLabel>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
                         />
-                      </FormControl>
-                      <FormDescription>
-                        {t("hosts.enableTunnelDesc")}
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
-                {form.watch("enableTunnel") && (
-                  <>
-                    <Alert className="mt-4">
-                      <AlertDescription>
-                        <strong>{t("hosts.sshpassRequired")}</strong>
-                        <div>
-                          {t("hosts.sshpassRequiredDesc")}{" "}
-                          <code className="bg-muted px-1 rounded inline">
-                            sudo apt install sshpass
-                          </code>{" "}
-                          {t("hosts.debianUbuntuEquivalent")}
-                        </div>
-                        <div className="mt-2">
-                          <strong>{t("hosts.otherInstallMethods")}</strong>
-                          <div>
-                            • {t("hosts.centosRhelFedora")}{" "}
-                            <code className="bg-muted px-1 rounded inline">
-                              sudo yum install sshpass
-                            </code>{" "}
-                            {t("hosts.or")}{" "}
-                            <code className="bg-muted px-1 rounded inline">
-                              sudo dnf install sshpass
-                            </code>
-                          </div>
-                          <div>
-                            • {t("hosts.macos")}{" "}
-                            <code className="bg-muted px-1 rounded inline">
-                              brew install hudochenkov/sshpass/sshpass
-                            </code>
-                          </div>
-                          <div>• {t("hosts.windows")}</div>
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-
-                    <Alert className="mt-4">
-                      <AlertDescription>
-                        <strong>{t("hosts.sshServerConfigRequired")}</strong>
-                        <div>{t("hosts.sshServerConfigDesc")}</div>
-                        <div>
-                          •{" "}
-                          <code className="bg-muted px-1 rounded inline">
-                            GatewayPorts yes
-                          </code>{" "}
-                          {t("hosts.gatewayPortsYes")}
-                        </div>
-                        <div>
-                          •{" "}
-                          <code className="bg-muted px-1 rounded inline">
-                            AllowTcpForwarding yes
-                          </code>{" "}
-                          {t("hosts.allowTcpForwardingYes")}
-                        </div>
-                        <div>
-                          •{" "}
-                          <code className="bg-muted px-1 rounded inline">
-                            PermitRootLogin yes
-                          </code>{" "}
-                          {t("hosts.permitRootLoginYes")}
-                        </div>
-                        <div className="mt-2">{t("hosts.editSshConfig")}</div>
-                      </AlertDescription>
-                    </Alert>
-                    <div className="mt-3 flex justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-3 text-xs"
-                        onClick={() =>
-                          window.open(
-                            "https://docs.termix.site/tunnels",
-                            "_blank",
-                          )
-                        }
-                      >
-                        {t("common.documentation")}
-                      </Button>
+                      )}
                     </div>
-                    <FormField
-                      control={form.control}
-                      name="tunnelConnections"
-                      render={({ field }) => (
-                        <FormItem className="mt-4">
-                          <FormLabel>{t("hosts.tunnelConnections")}</FormLabel>
-                          <FormControl>
-                            <div className="space-y-4">
-                              {field.value.map((connection, index) => (
+
+                    {/* Metrics Monitoring */}
+                    <div className="space-y-3">
+                      <FormField
+                        control={form.control}
+                        name="statsConfig.metricsEnabled"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>{t("hosts.metricsEnabled")}</FormLabel>
+                              <FormDescription>
+                                {t("hosts.metricsEnabledDesc")}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {form.watch("statsConfig.metricsEnabled") && (
+                        <FormField
+                          control={form.control}
+                          name="statsConfig.metricsInterval"
+                          render={({ field }) => {
+                            const displayValue =
+                              metricsIntervalUnit === "minutes"
+                                ? Math.round((field.value || 30) / 60)
+                                : field.value || 30;
+
+                            const handleIntervalChange = (value: string) => {
+                              const numValue = parseInt(value) || 0;
+                              const seconds =
+                                metricsIntervalUnit === "minutes"
+                                  ? numValue * 60
+                                  : numValue;
+                              field.onChange(seconds);
+                            };
+
+                            return (
+                              <FormItem>
+                                <FormLabel>
+                                  {t("hosts.metricsInterval")}
+                                </FormLabel>
+                                <div className="flex gap-2">
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      value={displayValue}
+                                      onChange={(e) =>
+                                        handleIntervalChange(e.target.value)
+                                      }
+                                      className="flex-1"
+                                    />
+                                  </FormControl>
+                                  <Select
+                                    value={metricsIntervalUnit}
+                                    onValueChange={(
+                                      value: "seconds" | "minutes",
+                                    ) => {
+                                      setMetricsIntervalUnit(value);
+                                      // Convert current value to new unit
+                                      const currentSeconds = field.value || 30;
+                                      if (value === "minutes") {
+                                        const minutes = Math.round(
+                                          currentSeconds / 60,
+                                        );
+                                        field.onChange(minutes * 60);
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[120px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="seconds">
+                                        {t("hosts.intervalSeconds")}
+                                      </SelectItem>
+                                      <SelectItem value="minutes">
+                                        {t("hosts.intervalMinutes")}
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <FormDescription>
+                                  {t("hosts.metricsIntervalDesc")}
+                                </FormDescription>
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Only show widget selection if metrics monitoring is enabled */}
+                  {form.watch("statsConfig.metricsEnabled") && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="statsConfig.enabledWidgets"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("hosts.enabledWidgets")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.enabledWidgetsDesc")}
+                            </FormDescription>
+                            <div className="space-y-3 mt-3">
+                              {(
+                                [
+                                  "cpu",
+                                  "memory",
+                                  "disk",
+                                  "network",
+                                  "uptime",
+                                  "processes",
+                                  "system",
+                                ] as const
+                              ).map((widget) => (
                                 <div
-                                  key={index}
-                                  className="p-4 border rounded-lg bg-muted/50"
+                                  key={widget}
+                                  className="flex items-center space-x-2"
                                 >
-                                  <div className="flex items-center justify-between mb-3">
-                                    <h4 className="text-sm font-bold">
-                                      {t("hosts.connection")} {index + 1}
-                                    </h4>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const newConnections =
-                                          field.value.filter(
-                                            (_, i) => i !== index,
-                                          );
-                                        field.onChange(newConnections);
-                                      }}
-                                    >
-                                      {t("hosts.remove")}
-                                    </Button>
-                                  </div>
-                                  <div className="grid grid-cols-12 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`tunnelConnections.${index}.sourcePort`}
-                                      render={({ field: sourcePortField }) => (
-                                        <FormItem className="col-span-4">
-                                          <FormLabel>
-                                            {t("hosts.sourcePort")}
-                                            {t("hosts.sourcePortDesc")}
-                                          </FormLabel>
-                                          <FormControl>
-                                            <Input
-                                              placeholder="22"
-                                              {...sourcePortField}
-                                            />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`tunnelConnections.${index}.endpointPort`}
-                                      render={({
-                                        field: endpointPortField,
-                                      }) => (
-                                        <FormItem className="col-span-4">
-                                          <FormLabel>
-                                            {t("hosts.endpointPort")}
-                                          </FormLabel>
-                                          <FormControl>
-                                            <Input
-                                              placeholder="224"
-                                              {...endpointPortField}
-                                            />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`tunnelConnections.${index}.endpointHost`}
-                                      render={({
-                                        field: endpointHostField,
-                                      }) => (
-                                        <FormItem className="col-span-4 relative">
-                                          <FormLabel>
-                                            {t("hosts.endpointSshConfig")}
-                                          </FormLabel>
-                                          <FormControl>
-                                            <Input
-                                              ref={(el) => {
-                                                sshConfigInputRefs.current[
-                                                  index
-                                                ] = el;
-                                              }}
-                                              placeholder={t(
-                                                "placeholders.sshConfig",
-                                              )}
-                                              className="min-h-[40px]"
-                                              autoComplete="off"
-                                              value={endpointHostField.value}
-                                              onFocus={() =>
-                                                setSshConfigDropdownOpen(
-                                                  (prev) => ({
-                                                    ...prev,
-                                                    [index]: true,
-                                                  }),
-                                                )
-                                              }
-                                              onChange={(e) => {
-                                                endpointHostField.onChange(e);
-                                                setSshConfigDropdownOpen(
-                                                  (prev) => ({
-                                                    ...prev,
-                                                    [index]: true,
-                                                  }),
-                                                );
-                                              }}
-                                            />
-                                          </FormControl>
-                                          {sshConfigDropdownOpen[index] &&
-                                            getFilteredSshConfigs(index)
-                                              .length > 0 && (
-                                              <div
-                                                ref={(el) => {
-                                                  sshConfigDropdownRefs.current[
-                                                    index
-                                                  ] = el;
-                                                }}
-                                                className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
-                                              >
-                                                <div className="grid grid-cols-1 gap-1 p-0">
-                                                  {getFilteredSshConfigs(
-                                                    index,
-                                                  ).map((config) => (
-                                                    <Button
-                                                      key={config}
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-white/15 focus:bg-white/20 focus:outline-none"
-                                                      onClick={() =>
-                                                        handleSshConfigClick(
-                                                          config,
-                                                          index,
-                                                        )
-                                                      }
-                                                    >
-                                                      {config}
-                                                    </Button>
-                                                  ))}
-                                                </div>
-                                              </div>
-                                            )}
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    {t("hosts.tunnelForwardDescription", {
-                                      sourcePort:
-                                        form.watch(
-                                          `tunnelConnections.${index}.sourcePort`,
-                                        ) || "22",
-                                      endpointPort:
-                                        form.watch(
-                                          `tunnelConnections.${index}.endpointPort`,
-                                        ) || "224",
-                                    })}
-                                  </p>
-
-                                  <div className="grid grid-cols-12 gap-4 mt-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`tunnelConnections.${index}.maxRetries`}
-                                      render={({ field: maxRetriesField }) => (
-                                        <FormItem className="col-span-4">
-                                          <FormLabel>
-                                            {t("hosts.maxRetries")}
-                                          </FormLabel>
-                                          <FormControl>
-                                            <Input
-                                              placeholder={t(
-                                                "placeholders.maxRetries",
-                                              )}
-                                              {...maxRetriesField}
-                                            />
-                                          </FormControl>
-                                          <FormDescription>
-                                            {t("hosts.maxRetriesDescription")}
-                                          </FormDescription>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`tunnelConnections.${index}.retryInterval`}
-                                      render={({
-                                        field: retryIntervalField,
-                                      }) => (
-                                        <FormItem className="col-span-4">
-                                          <FormLabel>
-                                            {t("hosts.retryInterval")}
-                                          </FormLabel>
-                                          <FormControl>
-                                            <Input
-                                              placeholder={t(
-                                                "placeholders.retryInterval",
-                                              )}
-                                              {...retryIntervalField}
-                                            />
-                                          </FormControl>
-                                          <FormDescription>
-                                            {t(
-                                              "hosts.retryIntervalDescription",
-                                            )}
-                                          </FormDescription>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`tunnelConnections.${index}.autoStart`}
-                                      render={({ field }) => (
-                                        <FormItem className="col-span-4">
-                                          <FormLabel>
-                                            {t("hosts.autoStartContainer")}
-                                          </FormLabel>
-                                          <FormControl>
-                                            <Switch
-                                              checked={field.value}
-                                              onCheckedChange={field.onChange}
-                                            />
-                                          </FormControl>
-                                          <FormDescription>
-                                            {t("hosts.autoStartDesc")}
-                                          </FormDescription>
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
+                                  <Checkbox
+                                    checked={field.value?.includes(widget)}
+                                    onCheckedChange={(checked) => {
+                                      const currentWidgets = field.value || [];
+                                      if (checked) {
+                                        field.onChange([
+                                          ...currentWidgets,
+                                          widget,
+                                        ]);
+                                      } else {
+                                        field.onChange(
+                                          currentWidgets.filter(
+                                            (w) => w !== widget,
+                                          ),
+                                        );
+                                      }
+                                    }}
+                                  />
+                                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    {widget === "cpu" &&
+                                      t("serverStats.cpuUsage")}
+                                    {widget === "memory" &&
+                                      t("serverStats.memoryUsage")}
+                                    {widget === "disk" &&
+                                      t("serverStats.diskUsage")}
+                                    {widget === "network" &&
+                                      t("serverStats.networkInterfaces")}
+                                    {widget === "uptime" &&
+                                      t("serverStats.uptime")}
+                                    {widget === "processes" &&
+                                      t("serverStats.processes")}
+                                    {widget === "system" &&
+                                      t("serverStats.systemInfo")}
+                                  </label>
                                 </div>
                               ))}
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => {
-                                  field.onChange([
-                                    ...field.value,
-                                    {
-                                      sourcePort: 22,
-                                      endpointPort: 224,
-                                      endpointHost: "",
-                                      maxRetries: 3,
-                                      retryInterval: 10,
-                                      autoStart: false,
-                                    },
-                                  ]);
-                                }}
-                              >
-                                {t("hosts.addConnection")}
-                              </Button>
                             </div>
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
-              </TabsContent>
-              <TabsContent value="file_manager">
-                <FormField
-                  control={form.control}
-                  name="enableFileManager"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("hosts.enableFileManager")}</FormLabel>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        {t("hosts.enableFileManagerDesc")}
-                      </FormDescription>
-                    </FormItem>
+                          </FormItem>
+                        )}
+                      />
+                    </>
                   )}
-                />
-
-                {form.watch("enableFileManager") && (
-                  <div className="mt-4">
-                    <FormField
-                      control={form.control}
-                      name="defaultPath"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("hosts.defaultPath")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("placeholders.homePath")}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            {t("hosts.defaultPathDesc")}
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-              </TabsContent>
-              <TabsContent value="statistics">
-                <FormField
-                  control={form.control}
-                  name="statsConfig.enabledWidgets"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("hosts.enabledWidgets")}</FormLabel>
-                      <FormDescription>
-                        {t("hosts.enabledWidgetsDesc")}
-                      </FormDescription>
-                      <div className="space-y-3 mt-3">
-                        {(
-                          [
-                            "cpu",
-                            "memory",
-                            "disk",
-                            "network",
-                            "uptime",
-                            "processes",
-                            "system",
-                          ] as const
-                        ).map((widget) => (
-                          <div
-                            key={widget}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              checked={field.value?.includes(widget)}
-                              onCheckedChange={(checked) => {
-                                const currentWidgets = field.value || [];
-                                if (checked) {
-                                  field.onChange([...currentWidgets, widget]);
-                                } else {
-                                  field.onChange(
-                                    currentWidgets.filter((w) => w !== widget),
-                                  );
-                                }
-                              }}
-                            />
-                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                              {widget === "cpu" && t("serverStats.cpuUsage")}
-                              {widget === "memory" &&
-                                t("serverStats.memoryUsage")}
-                              {widget === "disk" && t("serverStats.diskUsage")}
-                              {widget === "network" &&
-                                t("serverStats.networkInterfaces")}
-                              {widget === "uptime" && t("serverStats.uptime")}
-                              {widget === "processes" &&
-                                t("serverStats.processes")}
-                              {widget === "system" &&
-                                t("serverStats.systemInfo")}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-            </Tabs>
+                </TabsContent>
+              </Tabs>
+            </div>
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />

@@ -406,6 +406,197 @@ type StatusEntry = {
   lastChecked: string;
 };
 
+interface StatsConfig {
+  enabledWidgets: string[];
+  statusCheckEnabled: boolean;
+  statusCheckInterval: number;
+  metricsEnabled: boolean;
+  metricsInterval: number;
+}
+
+const DEFAULT_STATS_CONFIG: StatsConfig = {
+  enabledWidgets: ["cpu", "memory", "disk", "network", "uptime", "system"],
+  statusCheckEnabled: true,
+  statusCheckInterval: 30,
+  metricsEnabled: true,
+  metricsInterval: 30,
+};
+
+interface HostPollingConfig {
+  host: SSHHostWithCredentials;
+  statsConfig: StatsConfig;
+  statusTimer?: NodeJS.Timeout;
+  metricsTimer?: NodeJS.Timeout;
+}
+
+class PollingManager {
+  private pollingConfigs = new Map<number, HostPollingConfig>();
+  private statusStore = new Map<number, StatusEntry>();
+  private metricsStore = new Map<
+    number,
+    {
+      data: Awaited<ReturnType<typeof collectMetrics>>;
+      timestamp: number;
+    }
+  >();
+
+  parseStatsConfig(statsConfigStr?: string): StatsConfig {
+    if (!statsConfigStr) {
+      return DEFAULT_STATS_CONFIG;
+    }
+    try {
+      const parsed = JSON.parse(statsConfigStr);
+      return { ...DEFAULT_STATS_CONFIG, ...parsed };
+    } catch (error) {
+      statsLogger.warn(
+        `Failed to parse statsConfig: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+      return DEFAULT_STATS_CONFIG;
+    }
+  }
+
+  async startPollingForHost(host: SSHHostWithCredentials): Promise<void> {
+    const statsConfig = this.parseStatsConfig(host.statsConfig);
+    const existingConfig = this.pollingConfigs.get(host.id);
+
+    // Clear existing timers if they exist
+    if (existingConfig) {
+      if (existingConfig.statusTimer) {
+        clearInterval(existingConfig.statusTimer);
+      }
+      if (existingConfig.metricsTimer) {
+        clearInterval(existingConfig.metricsTimer);
+      }
+    }
+
+    const config: HostPollingConfig = {
+      host,
+      statsConfig,
+    };
+
+    // Start status polling if enabled
+    if (statsConfig.statusCheckEnabled) {
+      const intervalMs = statsConfig.statusCheckInterval * 1000;
+
+      // Poll immediately (don't await - let it run in background)
+      this.pollHostStatus(host);
+
+      // Then set up interval to poll periodically
+      config.statusTimer = setInterval(() => {
+        this.pollHostStatus(host);
+      }, intervalMs);
+    } else {
+      // Remove status if monitoring is disabled
+      this.statusStore.delete(host.id);
+    }
+
+    // Start metrics polling if enabled
+    if (statsConfig.metricsEnabled) {
+      const intervalMs = statsConfig.metricsInterval * 1000;
+
+      // Poll immediately (don't await - let it run in background)
+      this.pollHostMetrics(host);
+
+      // Then set up interval to poll periodically
+      config.metricsTimer = setInterval(() => {
+        this.pollHostMetrics(host);
+      }, intervalMs);
+    } else {
+      // Remove metrics if monitoring is disabled
+      this.metricsStore.delete(host.id);
+    }
+
+    this.pollingConfigs.set(host.id, config);
+  }
+
+  private async pollHostStatus(host: SSHHostWithCredentials): Promise<void> {
+    try {
+      const isOnline = await tcpPing(host.ip, host.port, 5000);
+      const statusEntry: StatusEntry = {
+        status: isOnline ? "online" : "offline",
+        lastChecked: new Date().toISOString(),
+      };
+      this.statusStore.set(host.id, statusEntry);
+    } catch (error) {
+      statsLogger.warn(
+        `Failed to poll status for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+      const statusEntry: StatusEntry = {
+        status: "offline",
+        lastChecked: new Date().toISOString(),
+      };
+      this.statusStore.set(host.id, statusEntry);
+    }
+  }
+
+  private async pollHostMetrics(host: SSHHostWithCredentials): Promise<void> {
+    try {
+      const metrics = await collectMetrics(host);
+      this.metricsStore.set(host.id, {
+        data: metrics,
+        timestamp: Date.now(),
+      });
+    } catch (error) {}
+  }
+
+  stopPollingForHost(hostId: number): void {
+    const config = this.pollingConfigs.get(hostId);
+    if (config) {
+      if (config.statusTimer) {
+        clearInterval(config.statusTimer);
+      }
+      if (config.metricsTimer) {
+        clearInterval(config.metricsTimer);
+      }
+      this.pollingConfigs.delete(hostId);
+      this.statusStore.delete(hostId);
+      this.metricsStore.delete(hostId);
+    }
+  }
+
+  getStatus(hostId: number): StatusEntry | undefined {
+    return this.statusStore.get(hostId);
+  }
+
+  getAllStatuses(): Map<number, StatusEntry> {
+    return this.statusStore;
+  }
+
+  getMetrics(
+    hostId: number,
+  ):
+    | { data: Awaited<ReturnType<typeof collectMetrics>>; timestamp: number }
+    | undefined {
+    return this.metricsStore.get(hostId);
+  }
+
+  async initializePolling(userId: string): Promise<void> {
+    const hosts = await fetchAllHosts(userId);
+
+    for (const host of hosts) {
+      await this.startPollingForHost(host);
+    }
+  }
+
+  async refreshHostPolling(userId: string): Promise<void> {
+    // Stop all current polling
+    for (const hostId of this.pollingConfigs.keys()) {
+      this.stopPollingForHost(hostId);
+    }
+
+    // Reinitialize
+    await this.initializePolling(userId);
+  }
+
+  destroy(): void {
+    for (const hostId of this.pollingConfigs.keys()) {
+      this.stopPollingForHost(hostId);
+    }
+  }
+}
+
+const pollingManager = new PollingManager();
+
 function validateHostId(
   req: express.Request,
   res: express.Response,
@@ -460,8 +651,6 @@ app.use(express.json({ limit: "1mb" }));
 
 app.use(authManager.createAuthMiddleware());
 
-const hostStatuses: Map<number, StatusEntry> = new Map();
-
 async function fetchAllHosts(
   userId: string,
 ): Promise<SSHHostWithCredentials[]> {
@@ -499,11 +688,6 @@ async function fetchHostById(
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
     if (!SimpleDBOps.isUserDataUnlocked(userId)) {
-      statsLogger.debug("User data locked - cannot fetch host", {
-        operation: "fetchHostById_data_locked",
-        userId,
-        hostId: id,
-      });
       return undefined;
     }
 
@@ -637,31 +821,44 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     readyTimeout: 10_000,
     algorithms: {
       kex: [
+        "curve25519-sha256",
+        "curve25519-sha256@libssh.org",
+        "ecdh-sha2-nistp521",
+        "ecdh-sha2-nistp384",
+        "ecdh-sha2-nistp256",
+        "diffie-hellman-group-exchange-sha256",
         "diffie-hellman-group14-sha256",
         "diffie-hellman-group14-sha1",
-        "diffie-hellman-group1-sha1",
-        "diffie-hellman-group-exchange-sha256",
         "diffie-hellman-group-exchange-sha1",
-        "ecdh-sha2-nistp256",
-        "ecdh-sha2-nistp384",
-        "ecdh-sha2-nistp521",
+        "diffie-hellman-group1-sha1",
+      ],
+      serverHostKey: [
+        "ssh-ed25519",
+        "ecdsa-sha2-nistp521",
+        "ecdsa-sha2-nistp384",
+        "ecdsa-sha2-nistp256",
+        "rsa-sha2-512",
+        "rsa-sha2-256",
+        "ssh-rsa",
+        "ssh-dss",
       ],
       cipher: [
-        "aes128-ctr",
-        "aes192-ctr",
-        "aes256-ctr",
-        "aes128-gcm@openssh.com",
+        "chacha20-poly1305@openssh.com",
         "aes256-gcm@openssh.com",
-        "aes128-cbc",
-        "aes192-cbc",
+        "aes128-gcm@openssh.com",
+        "aes256-ctr",
+        "aes192-ctr",
+        "aes128-ctr",
         "aes256-cbc",
+        "aes192-cbc",
+        "aes128-cbc",
         "3des-cbc",
       ],
       hmac: [
-        "hmac-sha2-256-etm@openssh.com",
         "hmac-sha2-512-etm@openssh.com",
-        "hmac-sha2-256",
+        "hmac-sha2-256-etm@openssh.com",
         "hmac-sha2-512",
+        "hmac-sha2-256",
         "hmac-sha1",
         "hmac-md5",
       ],
@@ -999,7 +1196,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           );
           const netStatOut = await execCommand(
             client,
-            "ip -o link show | awk '{print $2,$9}' | sed 's/:$//'",
+            "ip -o link show | awk '{gsub(/:/, \"\", $2); print $2,$9}'",
           );
 
           const addrs = ifconfigOut.stdout
@@ -1234,47 +1431,6 @@ function tcpPing(
   });
 }
 
-async function pollStatusesOnce(userId?: string): Promise<void> {
-  if (!userId) {
-    statsLogger.warn("Skipping status poll - no authenticated user", {
-      operation: "status_poll",
-    });
-    return;
-  }
-
-  const hosts = await fetchAllHosts(userId);
-  if (hosts.length === 0) {
-    statsLogger.warn("No hosts retrieved for status polling", {
-      operation: "status_poll",
-      userId,
-    });
-    return;
-  }
-
-  const checks = hosts.map(async (h) => {
-    const isOnline = await tcpPing(h.ip, h.port, 5000);
-    const now = new Date().toISOString();
-    const statusEntry: StatusEntry = {
-      status: isOnline ? "online" : "offline",
-      lastChecked: now,
-    };
-    hostStatuses.set(h.id, statusEntry);
-    return isOnline;
-  });
-
-  const results = await Promise.allSettled(checks);
-  const onlineCount = results.filter(
-    (r) => r.status === "fulfilled" && r.value === true,
-  ).length;
-  const offlineCount = hosts.length - onlineCount;
-  statsLogger.success("Status polling completed", {
-    operation: "status_poll",
-    totalHosts: hosts.length,
-    onlineCount,
-    offlineCount,
-  });
-}
-
 app.get("/status", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -1285,11 +1441,14 @@ app.get("/status", async (req, res) => {
     });
   }
 
-  if (hostStatuses.size === 0) {
-    await pollStatusesOnce(userId);
+  // Initialize polling if no hosts are being polled yet
+  const statuses = pollingManager.getAllStatuses();
+  if (statuses.size === 0) {
+    await pollingManager.initializePolling(userId);
   }
+
   const result: Record<number, StatusEntry> = {};
-  for (const [id, entry] of hostStatuses.entries()) {
+  for (const [id, entry] of pollingManager.getAllStatuses().entries()) {
     result[id] = entry;
   }
   res.json(result);
@@ -1306,25 +1465,18 @@ app.get("/status/:id", validateHostId, async (req, res) => {
     });
   }
 
-  try {
-    const host = await fetchHostById(id, userId);
-    if (!host) {
-      return res.status(404).json({ error: "Host not found" });
-    }
-
-    const isOnline = await tcpPing(host.ip, host.port, 5000);
-    const now = new Date().toISOString();
-    const statusEntry: StatusEntry = {
-      status: isOnline ? "online" : "offline",
-      lastChecked: now,
-    };
-
-    hostStatuses.set(id, statusEntry);
-    res.json(statusEntry);
-  } catch (err) {
-    statsLogger.error("Failed to check host status", err);
-    res.status(500).json({ error: "Failed to check host status" });
+  // Initialize polling if no hosts are being polled yet
+  const statuses = pollingManager.getAllStatuses();
+  if (statuses.size === 0) {
+    await pollingManager.initializePolling(userId);
   }
+
+  const statusEntry = pollingManager.getStatus(id);
+  if (!statusEntry) {
+    return res.status(404).json({ error: "Status not available" });
+  }
+
+  res.json(statusEntry);
 });
 
 app.post("/refresh", async (req, res) => {
@@ -1337,8 +1489,8 @@ app.post("/refresh", async (req, res) => {
     });
   }
 
-  await pollStatusesOnce(userId);
-  res.json({ message: "Refreshed" });
+  await pollingManager.refreshHostPolling(userId);
+  res.json({ message: "Polling refreshed" });
 });
 
 app.get("/metrics/:id", validateHostId, async (req, res) => {
@@ -1352,121 +1504,10 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
     });
   }
 
-  try {
-    const host = await fetchHostById(id, userId);
-    if (!host) {
-      return res.status(404).json({ error: "Host not found" });
-    }
-
-    const isOnline = await tcpPing(host.ip, host.port, 5000);
-    if (!isOnline) {
-      return res.status(503).json({
-        error: "Host is offline",
-        cpu: { percent: null, cores: null, load: null },
-        memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: {
-          percent: null,
-          usedHuman: null,
-          totalHuman: null,
-          availableHuman: null,
-        },
-        network: { interfaces: [] },
-        uptime: { seconds: null, formatted: null },
-        processes: { total: null, running: null, top: [] },
-        system: { hostname: null, kernel: null, os: null },
-        lastChecked: new Date().toISOString(),
-      });
-    }
-
-    const metrics = await collectMetrics(host);
-    res.json({ ...metrics, lastChecked: new Date().toISOString() });
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
-
-    // Check if this is a skip due to auth failure tracking
-    if (
-      errorMessage.includes("TOTP authentication required") ||
-      errorMessage.includes("metrics unavailable")
-    ) {
-      // Don't log as error - this is expected for TOTP hosts
-      return res.status(403).json({
-        error: "TOTP_REQUIRED",
-        message: errorMessage,
-        cpu: { percent: null, cores: null, load: null },
-        memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: {
-          percent: null,
-          usedHuman: null,
-          totalHuman: null,
-          availableHuman: null,
-        },
-        network: { interfaces: [] },
-        uptime: { seconds: null, formatted: null },
-        processes: { total: null, running: null, top: [] },
-        system: { hostname: null, kernel: null, os: null },
-        lastChecked: new Date().toISOString(),
-      });
-    }
-
-    // Check if this is a skip due to too many failures or config issues
-    if (
-      errorMessage.includes("Too many authentication failures") ||
-      errorMessage.includes("Retry in") ||
-      errorMessage.includes("Invalid configuration") ||
-      errorMessage.includes("Authentication failed")
-    ) {
-      // Don't log - return error silently to avoid spam
-      return res.status(429).json({
-        error: "UNAVAILABLE",
-        message: errorMessage,
-        cpu: { percent: null, cores: null, load: null },
-        memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: {
-          percent: null,
-          usedHuman: null,
-          totalHuman: null,
-          availableHuman: null,
-        },
-        network: { interfaces: [] },
-        uptime: { seconds: null, formatted: null },
-        processes: { total: null, running: null, top: [] },
-        system: { hostname: null, kernel: null, os: null },
-        lastChecked: new Date().toISOString(),
-      });
-    }
-
-    // Only log unexpected errors
-    if (
-      !errorMessage.includes("timeout") &&
-      !errorMessage.includes("offline") &&
-      !errorMessage.includes("permanently") &&
-      !errorMessage.includes("none") &&
-      !errorMessage.includes("No password")
-    ) {
-      statsLogger.error("Failed to collect metrics", err);
-    }
-
-    if (err instanceof Error && err.message.includes("timeout")) {
-      return res.status(504).json({
-        error: "Metrics collection timeout",
-        cpu: { percent: null, cores: null, load: null },
-        memory: { percent: null, usedGiB: null, totalGiB: null },
-        disk: {
-          percent: null,
-          usedHuman: null,
-          totalHuman: null,
-          availableHuman: null,
-        },
-        network: { interfaces: [] },
-        uptime: { seconds: null, formatted: null },
-        processes: { total: null, running: null, top: [] },
-        system: { hostname: null, kernel: null, os: null },
-        lastChecked: new Date().toISOString(),
-      });
-    }
-
-    return res.status(500).json({
-      error: "Failed to collect metrics",
+  const metricsData = pollingManager.getMetrics(id);
+  if (!metricsData) {
+    return res.status(404).json({
+      error: "Metrics not available",
       cpu: { percent: null, cores: null, load: null },
       memory: { percent: null, usedGiB: null, totalGiB: null },
       disk: {
@@ -1482,14 +1523,21 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
       lastChecked: new Date().toISOString(),
     });
   }
+
+  res.json({
+    ...metricsData.data,
+    lastChecked: new Date(metricsData.timestamp).toISOString(),
+  });
 });
 
 process.on("SIGINT", () => {
+  pollingManager.destroy();
   connectionPool.destroy();
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
+  pollingManager.destroy();
   connectionPool.destroy();
   process.exit(0);
 });

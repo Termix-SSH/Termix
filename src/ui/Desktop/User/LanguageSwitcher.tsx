@@ -13,6 +13,11 @@ const languages = [
   { code: "en", name: "English", nativeName: "English" },
   { code: "zh", name: "Chinese", nativeName: "中文" },
   { code: "de", name: "German", nativeName: "Deutsch" },
+  {
+    code: "ptbr",
+    name: "Brazilian Portuguese",
+    nativeName: "Português Brasileiro",
+  },
 ];
 
 export function LanguageSwitcher() {

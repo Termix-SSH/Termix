@@ -15,6 +15,10 @@ const authManager = AuthManager.getInstance();
 // Track server start time
 const serverStartTime = Date.now();
 
+// In-memory rate limiter for activity logging
+const activityRateLimiter = new Map<string, number>();
+const RATE_LIMIT_MS = 1000; // 1 second window
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -134,6 +138,32 @@ app.post("/activity/log", async (req, res) => {
       });
     }
 
+    // In-memory rate limiting to prevent duplicate requests
+    const rateLimitKey = `${userId}:${hostId}:${type}`;
+    const now = Date.now();
+    const lastLogged = activityRateLimiter.get(rateLimitKey);
+
+    if (lastLogged && now - lastLogged < RATE_LIMIT_MS) {
+      // Too soon after last request, reject as duplicate
+      return res.json({
+        message: "Activity already logged recently (rate limited)",
+      });
+    }
+
+    // Update rate limiter
+    activityRateLimiter.set(rateLimitKey, now);
+
+    // Clean up old entries from rate limiter (keep it from growing indefinitely)
+    if (activityRateLimiter.size > 10000) {
+      const entriesToDelete: string[] = [];
+      for (const [key, timestamp] of activityRateLimiter.entries()) {
+        if (now - timestamp > RATE_LIMIT_MS * 2) {
+          entriesToDelete.push(key);
+        }
+      }
+      entriesToDelete.forEach((key) => activityRateLimiter.delete(key));
+    }
+
     // Verify the host belongs to the user
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -146,36 +176,6 @@ app.post("/activity/log", async (req, res) => {
 
     if (hosts.length === 0) {
       return res.status(404).json({ error: "Host not found" });
-    }
-
-    // Check if this activity already exists in recent history (within last 5 minutes)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const recentSimilar = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(recentActivity)
-        .where(
-          and(
-            eq(recentActivity.userId, userId),
-            eq(recentActivity.hostId, hostId),
-            eq(recentActivity.type, type),
-          ),
-        )
-        .orderBy(desc(recentActivity.timestamp))
-        .limit(1),
-      "recent_activity",
-      userId,
-    );
-
-    if (
-      recentSimilar.length > 0 &&
-      recentSimilar[0].timestamp >= fiveMinutesAgo
-    ) {
-      // Activity already logged recently, don't duplicate
-      return res.json({
-        message: "Activity already logged recently",
-        id: recentSimilar[0].id,
-      });
     }
 
     // Insert new activity
