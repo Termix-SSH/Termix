@@ -683,6 +683,7 @@
     "password": "密码",
     "key": "密钥",
     "credential": "凭证",
+    "none": "无",
     "selectCredential": "选择凭证",
     "selectCredentialPlaceholder": "选择一个凭证...",
     "credentialRequired": "使用凭证认证时需要选择凭证",
@@ -784,7 +785,10 @@
     "monitoringDisabledBadge": "监控已关闭",
     "statusMonitoring": "状态",
     "metricsMonitoring": "指标",
-    "terminalCustomizationNotice": "注意：终端自定义仅在桌面网站版本中有效。移动和 Electron 应用程序使用系统默认终端设置。"
+    "terminalCustomizationNotice": "注意：终端自定义仅在桌面网站版本中有效。移动和 Electron 应用程序使用系统默认终端设置。",
+    "noneAuthTitle": "键盘交互式认证",
+    "noneAuthDescription": "此认证方法在连接到 SSH 服务器时将使用键盘交互式认证。",
+    "noneAuthDetails": "键盘交互式认证允许服务器在连接期间提示您输入凭据。这对于需要多因素认证或动态密码输入的服务器很有用。"
   },
   "terminal": {
     "title": "终端",

@@ -652,6 +652,7 @@
     "password": "Senha",
     "key": "Chave",
     "credential": "Credencial",
+    "none": "Nenhum",
     "selectCredential": "Selecionar Credencial",
     "selectCredentialPlaceholder": "Escolha uma credencial...",
     "credentialRequired": "Credencial é obrigatória ao usar autenticação por credencial",
@@ -710,7 +711,10 @@
     "monitoringDisabledBadge": "Monitoramento Desligado",
     "statusMonitoring": "Status",
     "metricsMonitoring": "Métricas",
-    "terminalCustomizationNotice": "Nota: As personalizações do terminal funcionam apenas na versão Desktop Website. Aplicativos Mobile e Electron usam as configurações padrão do terminal do sistema."
+    "terminalCustomizationNotice": "Nota: As personalizações do terminal funcionam apenas na versão Desktop Website. Aplicativos Mobile e Electron usam as configurações padrão do terminal do sistema.",
+    "noneAuthTitle": "Autenticação Interativa por Teclado",
+    "noneAuthDescription": "Este método de autenticação usará autenticação interativa por teclado ao conectar ao servidor SSH.",
+    "noneAuthDetails": "A autenticação interativa por teclado permite que o servidor solicite credenciais durante a conexão. Isso é útil para servidores que requerem autenticação multifator ou entrada de senha dinâmica."
   },
   "terminal": {
     "title": "Terminal",
