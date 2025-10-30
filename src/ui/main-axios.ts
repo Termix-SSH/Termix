@@ -1755,6 +1755,15 @@ export async function getOIDCConfig(): Promise<Record<string, unknown>> {
   }
 }
 
+export async function getAdminOIDCConfig(): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.get("/users/oidc-config/admin");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch admin OIDC config");
+  }
+}
+
 export async function getSetupRequired(): Promise<{ setup_required: boolean }> {
   try {
     const response = await authApi.get("/users/setup-required");
@@ -1813,6 +1822,18 @@ export async function completePasswordReset(
     return response.data;
   } catch (error) {
     handleApiError(error, "complete password reset");
+  }
+}
+
+export async function changePassword(oldPassword: string, newPassword: string) {
+  try {
+    const response = await authApi.post("/users/change-password", {
+      oldPassword,
+      newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "change password");
   }
 }
 

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Label } from "@/components/ui/label.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/Desktop/User/LanguageSwitcher.tsx";
 import { toast } from "sonner";
@@ -858,6 +859,12 @@ export function Auth({
                       <>
                         {resetStep === "initiate" && (
                           <>
+                            <Alert variant="destructive" className="mb-4">
+                              <AlertTitle>{t("common.warning")}</AlertTitle>
+                              <AlertDescription>
+                                {t("auth.dataLossWarning")}
+                              </AlertDescription>
+                            </Alert>
                             <div className="text-center text-muted-foreground mb-4">
                               <p>{t("auth.resetCodeDesc")}</p>
                             </div>

@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
-  getOIDCConfig,
+  getAdminOIDCConfig,
   getRegistrationAllowed,
   getPasswordLoginAllowed,
   getUserList,
@@ -125,7 +125,7 @@ export function AdminSettings({
       }
     }
 
-    getOIDCConfig()
+    getAdminOIDCConfig()
       .then((res) => {
         if (res) setOidcConfig(res);
       })

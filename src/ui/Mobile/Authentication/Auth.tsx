@@ -740,6 +740,12 @@ export function Auth({
                       <>
                         {resetStep === "initiate" && (
                           <>
+                            <Alert variant="destructive" className="mb-4">
+                              <AlertTitle>{t("common.warning")}</AlertTitle>
+                              <AlertDescription>
+                                {t("auth.dataLossWarning")}
+                              </AlertDescription>
+                            </Alert>
                             <div className="text-center text-muted-foreground mb-4">
                               <p>{t("auth.resetCodeDesc")}</p>
                             </div>

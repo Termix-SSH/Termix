@@ -367,6 +367,8 @@
     "language": "Language",
     "autoDetect": "Auto-detect",
     "changeAccountPassword": "Change your account password",
+    "passwordResetTitle": "Password Reset",
+    "passwordResetDescription": "You are about to reset your password. This will log you out of all active sessions.",
     "enterSixDigitCode": "Enter the 6-digit code from the docker container logs for user:",
     "enterNewPassword": "Enter your new password for user:",
     "passwordsDoNotMatch": "Passwords do not match",
@@ -1294,9 +1296,8 @@
     "newPassword": "New Password",
     "confirmNewPassword": "Confirm Password",
     "enterNewPassword": "Enter your new password for user:",
-    "passwordResetSuccess": "Success!",
-    "passwordResetSuccessDesc": "Your password has been successfully reset! You can now log in with your new password.",
     "signUp": "Sign Up",
+    "dataLossWarning": "Resetting your password this way will delete all your saved SSH hosts, credentials, and other encrypted data. This action cannot be undone. Only use this if you have forgotten your password and are not logged in.",
     "authenticationDisabled": "Authentication Disabled",
     "authenticationDisabledDesc": "All authentication methods are currently disabled. Please contact your administrator."
   },
@@ -1370,7 +1371,10 @@
     "authMethod": "Authentication Method",
     "local": "Local",
     "external": "External (OIDC)",
-    "selectPreferredLanguage": "Select your preferred language for the interface"
+    "selectPreferredLanguage": "Select your preferred language for the interface",
+    "currentPassword": "Current Password",
+    "passwordChangedSuccess": "Password changed successfully! Please log in again.",
+    "failedToChangePassword": "Failed to change password. Please check your current password and try again."
   },
   "user": {
     "failedToLoadVersionInfo": "Failed to load version information"

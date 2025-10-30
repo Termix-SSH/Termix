@@ -174,10 +174,22 @@ jobs:
       - name: Build Linux (All Architectures)
         run: npm run build && npx electron-builder --linux --x64 --arm64 --armv7l
 
-      - name: Rename tar.gz files to match convention
+      - name: Rename Linux artifacts for consistency
         run: |
           VERSION=$(node -p "require('./package.json').version")
           cd release
+
+          # Rename x64 AppImage to use 'x64'
+          if [ -f "termix_linux_x86_64_${VERSION}_appimage.AppImage" ]; then
+            mv "termix_linux_x86_64_${VERSION}_appimage.AppImage" "termix_linux_x64_${VERSION}_appimage.AppImage"
+            echo "Renamed x64 AppImage to use 'x64' arch"
+          fi
+
+          # Rename x64 deb to use 'x64'
+          if [ -f "termix_linux_amd64_${VERSION}_deb.deb" ]; then
+            mv "termix_linux_amd64_${VERSION}_deb.deb" "termix_linux_x64_${VERSION}_deb.deb"
+            echo "Renamed x64 deb to use 'x64' arch"
+          fi
 
           # Rename x64 tar.gz if it exists
           if [ -f "termix-${VERSION}.tar.gz" ]; then

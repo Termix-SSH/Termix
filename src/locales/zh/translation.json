@@ -353,6 +353,8 @@
     "language": "语言",
     "autoDetect": "自动检测",
     "changeAccountPassword": "修改您的账户密码",
+    "passwordResetTitle": "重置密码",
+    "passwordResetDescription": "您即将重置密码。此操作将使您从所有活动会话中注销。",
     "enterSixDigitCode": "输入来自 docker 容器日志中用户的 6 位数代码：",
     "enterNewPassword": "为用户输入新密码：",
     "passwordsDoNotMatch": "密码不匹配",
@@ -1277,7 +1279,8 @@
     "enterNewPassword": "为用户输入新密码：",
     "passwordResetSuccess": "成功！",
     "passwordResetSuccessDesc": "您的密码已成功重置！您现在可以使用新密码登录。",
-    "signUp": "注册"
+    "signUp": "注册",
+    "dataLossWarning": "以这种方式重置密码将删除所有已保存的 SSH 主机、凭据和其他加密数据。此操作无法撤销。仅当您忘记密码且未登录时才使用此功能。"
   },
   "errors": {
     "notFound": "页面未找到",
@@ -1349,7 +1352,10 @@
     "authMethod": "认证方式",
     "local": "本地",
     "external": "外部 (OIDC)",
-    "selectPreferredLanguage": "选择您的界面首选语言"
+    "selectPreferredLanguage": "选择您的界面首选语言",
+    "currentPassword": "当前密码",
+    "passwordChangedSuccess": "密码修改成功！请重新登录。",
+    "failedToChangePassword": "修改密码失败。请检查您当前的密码并重试。"
   },
   "user": {
     "failedToLoadVersionInfo": "加载版本信息失败"

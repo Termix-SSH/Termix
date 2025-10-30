@@ -318,6 +318,8 @@
     "language": "Sprache",
     "autoDetect": "Automatische Erkennung",
     "changeAccountPassword": "Passwort für Ihr Konto ändern",
+    "passwordResetTitle": "Passwort zurücksetzen",
+    "passwordResetDescription": "Sie sind dabei, Ihr Passwort zurückzusetzen. Dadurch werden Sie von allen aktiven Sitzungen abgemeldet.",
     "enterSixDigitCode": "Geben Sie den 6-stelligen Code aus den Docker-Container-Protokollen \/ logs für den Benutzer ein:",
     "enterNewPassword": "Geben Sie Ihr neues Passwort für den Benutzer ein:",
     "passwordsDoNotMatch": "Passwörter stimmen nicht überein",
@@ -1170,7 +1172,8 @@
     "enterNewPassword": "Geben Sie Ihr neues Passwort für den Benutzer ein:",
     "passwordResetSuccess": "Erfolgreich!",
     "passwordResetSuccessDesc": "Ihr Passwort wurde erfolgreich zurückgesetzt! Sie können sich jetzt mit Ihrem neuen Passwort anmelden.",
-    "signUp": "Registrierung"
+    "signUp": "Registrierung",
+    "dataLossWarning": "Wenn Sie Ihr Passwort auf diese Weise zurücksetzen, werden alle Ihre gespeicherten SSH-Hosts, Anmeldeinformationen und andere verschlüsselte Daten gelöscht. Diese Aktion kann nicht rückgängig gemacht werden. Verwenden Sie diese Option nur, wenn Sie Ihr Passwort vergessen haben und nicht angemeldet sind."
   },
   "errors": {
     "notFound": "Seite nicht gefunden",
@@ -1242,7 +1245,10 @@
     "authMethod": "Authentifizierungsmethode",
     "local": "Lokal",
     "external": "Extern (OIDC)",
-    "selectPreferredLanguage": "Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche"
+    "selectPreferredLanguage": "Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche",
+    "currentPassword": "Aktuelles Passwort",
+    "passwordChangedSuccess": "Passwort erfolgreich geändert! Bitte melden Sie sich erneut an.",
+    "failedToChangePassword": "Passwort konnte nicht geändert werden. Bitte überprüfen Sie Ihr aktuelles Passwort und versuchen Sie es erneut."
   },
   "user": {
     "failedToLoadVersionInfo": "Fehler beim Laden der Versionsinformationen"

@@ -5,11 +5,15 @@ import { db } from "../db/index.js";
 import {
   users,
   sshData,
+  sshCredentials,
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
   dismissedAlerts,
   settings,
+  sshCredentialUsage,
+  recentActivity,
+  snippets,
 } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -413,45 +417,37 @@ router.get("/oidc-config", async (req, res) => {
       return res.json(null);
     }
 
+    const config = JSON.parse((row as Record<string, unknown>).value as string);
+
+    // Only return public fields needed for login page
+    const publicConfig = {
+      client_id: config.client_id,
+      issuer_url: config.issuer_url,
+      authorization_url: config.authorization_url,
+      scopes: config.scopes,
+    };
+
+    return res.json(publicConfig);
+  } catch (err) {
+    authLogger.error("Failed to get OIDC config", err);
+    res.status(500).json({ error: "Failed to get OIDC config" });
+  }
+});
+
+// Route: Get OIDC configuration for Admin (admin only)
+// GET /users/oidc-config/admin
+router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
+      .get();
+    if (!row) {
+      return res.json(null);
+    }
+
     let config = JSON.parse((row as Record<string, unknown>).value as string);
 
-    // Check if user is authenticated admin
-    let isAuthenticatedAdmin = false;
-    let userId: string | null = null;
-    const authHeader = req.headers["authorization"];
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
-      const authManager = AuthManager.getInstance();
-      const payload = await authManager.verifyJWTToken(token);
-
-      if (payload) {
-        userId = payload.userId;
-        const user = await db.select().from(users).where(eq(users.id, userId));
-
-        if (user && user.length > 0 && user[0].is_admin) {
-          isAuthenticatedAdmin = true;
-        }
-      }
-    }
-
-    // For non-admin users, hide sensitive fields
-    if (!isAuthenticatedAdmin) {
-      // Remove all sensitive fields for public access
-      delete config.client_secret;
-      delete config.id;
-
-      // Only return public fields needed for login page
-      const publicConfig = {
-        client_id: config.client_id,
-        issuer_url: config.issuer_url,
-        authorization_url: config.authorization_url,
-        scopes: config.scopes,
-      };
-
-      return res.json(publicConfig);
-    }
-
-    // For authenticated admins, decrypt sensitive fields
     if (config.client_secret?.startsWith("encrypted:")) {
       try {
         const adminDataKey = DataCrypto.getUserDataKey(userId);
@@ -463,8 +459,6 @@ router.get("/oidc-config", async (req, res) => {
             adminDataKey,
           );
         } else {
-          // Admin is authenticated but data key is not available
-          // This can happen if they haven't unlocked their data yet
           config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
         }
       } catch (decryptError) {
@@ -475,7 +469,6 @@ router.get("/oidc-config", async (req, res) => {
         config.client_secret = "[ENCRYPTED - DECRYPTION FAILED]";
       }
     } else if (config.client_secret?.startsWith("encoded:")) {
-      // Decode for authenticated admins
       try {
         const decoded = Buffer.from(
           config.client_secret.substring(8),
@@ -493,8 +486,8 @@ router.get("/oidc-config", async (req, res) => {
 
     res.json(config);
   } catch (err) {
-    authLogger.error("Failed to get OIDC config", err);
-    res.status(500).json({ error: "Failed to get OIDC config" });
+    authLogger.error("Failed to get OIDC config for admin", err);
+    res.status(500).json({ error: "Failed to get OIDC config for admin" });
   }
 });
 
@@ -1399,63 +1392,131 @@ router.post("/complete-reset", async (req, res) => {
     const saltRounds = parseInt(process.env.SALT || "10", 10);
     const password_hash = await bcrypt.hash(newPassword, saltRounds);
 
-    await db
-      .update(users)
-      .set({ password_hash })
-      .where(eq(users.username, username));
+    // Check if user is logged in and data is unlocked
+    let userIdFromJwt: string | null = null;
+    const cookie = req.cookies?.jwt;
+    let header: string | undefined;
+    if (req.headers?.authorization?.startsWith("Bearer ")) {
+      header = req.headers?.authorization?.split(" ")[1];
+    }
+    const token = cookie || header;
 
-    try {
-      // Delete all encrypted data since we're creating a new DEK
-      // The old DEK is lost, so old encrypted data becomes unreadable
-      await db.delete(sshData).where(eq(sshData.userId, userId));
-      await db
-        .delete(fileManagerRecent)
-        .where(eq(fileManagerRecent.userId, userId));
-      await db
-        .delete(fileManagerPinned)
-        .where(eq(fileManagerPinned.userId, userId));
-      await db
-        .delete(fileManagerShortcuts)
-        .where(eq(fileManagerShortcuts.userId, userId));
-      await db
-        .delete(dismissedAlerts)
-        .where(eq(dismissedAlerts.userId, userId));
+    if (token) {
+      const payload = await authManager.verifyJWTToken(token);
+      if (payload) {
+        userIdFromJwt = payload.userId;
+      }
+    }
 
-      // Now setup new encryption with new DEK
-      await authManager.registerUser(userId, newPassword);
-      authManager.logoutUser(userId);
+    if (userIdFromJwt === userId && authManager.isUserUnlocked(userId)) {
+      // Logged-in user: preserve data
+      try {
+        const success = await authManager.resetUserPasswordWithPreservedDEK(
+          userId,
+          newPassword,
+        );
 
-      // Clear TOTP settings
+        if (!success) {
+          throw new Error("Failed to re-encrypt user data with new password.");
+        }
+
+        await db
+          .update(users)
+          .set({ password_hash })
+          .where(eq(users.id, userId));
+        authManager.logoutUser(userId);
+        authLogger.success(
+          `Password reset (data preserved) for user: ${username}`,
+          {
+            operation: "password_reset_preserved",
+            userId,
+            username,
+          },
+        );
+      } catch (encryptionError) {
+        authLogger.error(
+          "Failed to setup user data encryption after password reset",
+          encryptionError,
+          {
+            operation: "password_reset_encryption_failed_preserved",
+            userId,
+            username,
+          },
+        );
+        return res.status(500).json({
+          error: "Password reset failed. Please contact administrator.",
+        });
+      }
+    } else {
+      // Logged-out user: data is lost
       await db
         .update(users)
-        .set({
-          totp_enabled: false,
-          totp_secret: null,
-          totp_backup_codes: null,
-        })
-        .where(eq(users.id, userId));
+        .set({ password_hash })
+        .where(eq(users.username, username));
 
-      authLogger.warn(
-        `Password reset completed for user: ${username}. All encrypted data has been deleted due to lost encryption key.`,
-        {
-          operation: "password_reset_data_deleted",
-          userId,
-          username,
-        },
-      );
-    } catch (encryptionError) {
-      authLogger.error(
-        "Failed to setup user data encryption after password reset",
-        encryptionError,
-        {
-          operation: "password_reset_encryption_failed",
-          userId,
-          username,
-        },
-      );
-      return res.status(500).json({
-        error: "Password reset failed. Please contact administrator.",
-      });
+      try {
+        // Delete all encrypted data since we're creating a new DEK
+        // The old DEK is lost, so old encrypted data becomes unreadable
+        await db
+          .delete(sshCredentialUsage)
+          .where(eq(sshCredentialUsage.userId, userId));
+        await db
+          .delete(fileManagerRecent)
+          .where(eq(fileManagerRecent.userId, userId));
+        await db
+          .delete(fileManagerPinned)
+          .where(eq(fileManagerPinned.userId, userId));
+        await db
+          .delete(fileManagerShortcuts)
+          .where(eq(fileManagerShortcuts.userId, userId));
+        await db
+          .delete(recentActivity)
+          .where(eq(recentActivity.userId, userId));
+        await db
+          .delete(dismissedAlerts)
+          .where(eq(dismissedAlerts.userId, userId));
+        await db.delete(snippets).where(eq(snippets.userId, userId));
+        await db.delete(sshData).where(eq(sshData.userId, userId));
+        await db
+          .delete(sshCredentials)
+          .where(eq(sshCredentials.userId, userId));
+
+        // Now setup new encryption with new DEK
+        await authManager.registerUser(userId, newPassword);
+        authManager.logoutUser(userId);
+
+        // Clear TOTP settings
+        await db
+          .update(users)
+          .set({
+            totp_enabled: false,
+            totp_secret: null,
+            totp_backup_codes: null,
+          })
+          .where(eq(users.id, userId));
+
+        authLogger.warn(
+          `Password reset completed for user: ${username}. All encrypted data has been deleted due to lost encryption key.`,
+          {
+            operation: "password_reset_data_deleted",
+            userId,
+            username,
+          },
+        );
+      } catch (encryptionError) {
+        authLogger.error(
+          "Failed to setup user data encryption after password reset",
+          encryptionError,
+          {
+            operation: "password_reset_encryption_failed",
+            userId,
+            username,
+          },
+        );
+        return res.status(500).json({
+          error: "Password reset failed. Please contact administrator.",
+        });
+      }
     }
 
     authLogger.success(`Password successfully reset for user: ${username}`);
@@ -1472,6 +1533,52 @@ router.post("/complete-reset", async (req, res) => {
     authLogger.error("Failed to complete password reset", err);
     res.status(500).json({ error: "Failed to complete password reset" });
   }
+});
+
+router.post("/change-password", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { oldPassword, newPassword } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: "User not authenticated" });
+  }
+
+  if (!oldPassword || !newPassword) {
+    return res
+      .status(400)
+      .json({ error: "Old and new passwords are required." });
+  }
+
+  const user = await db.select().from(users).where(eq(users.id, userId));
+  if (!user || user.length === 0) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  // Verify old password for login hash
+  const isMatch = await bcrypt.compare(oldPassword, user[0].password_hash);
+  if (!isMatch) {
+    return res.status(401).json({ error: "Incorrect current password" });
+  }
+
+  // Change encryption keys and login hash
+  const success = await authManager.changeUserPassword(
+    userId,
+    oldPassword,
+    newPassword,
+  );
+  if (!success) {
+    return res
+      .status(500)
+      .json({ error: "Failed to update password and re-encrypt data." });
+  }
+
+  const saltRounds = parseInt(process.env.SALT || "10", 10);
+  const password_hash = await bcrypt.hash(newPassword, saltRounds);
+  await db.update(users).set({ password_hash }).where(eq(users.id, userId));
+
+  authManager.logoutUser(userId); // Log out user for security
+
+  res.json({ message: "Password changed successfully. Please log in again." });
 });
 
 // Route: List all users (admin only)
