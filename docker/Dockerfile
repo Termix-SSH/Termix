@@ -6,10 +6,6 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 
 COPY package*.json ./
 
-ENV npm_config_target_platform=linux
-ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
-
 RUN rm -rf node_modules package-lock.json && \
     npm install --ignore-scripts --force && \
     npm cache clean --force
@@ -31,10 +27,6 @@ WORKDIR /app
 
 COPY . .
 
-ENV npm_config_target_platform=linux
-ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
-
 RUN npm rebuild better-sqlite3 --force
 
 RUN npm run build:backend
@@ -46,10 +38,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
-
-ENV npm_config_target_platform=linux
-ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
 
 RUN npm ci --only=production --ignore-scripts --force && \
     npm rebuild better-sqlite3 bcryptjs --force && \
