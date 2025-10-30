@@ -444,10 +444,10 @@ jobs:
           # Build DMG without running npm run build again (already built above or skip if no certs)
           if [ "${{ steps.check_certs.outputs.has_certs }}" == "true" ]; then
             # Frontend already built, just package DMG
-            npx electron-builder --mac dmg --universal --x64 --arm64
+            npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
           else
             # No certs, need to build frontend first
-            npm run build && npx electron-builder --mac dmg --universal --x64 --arm64
+            npm run build && npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
           fi
 
       - name: List release directory
