@@ -350,7 +350,9 @@ export function TopNavbar({
                 tab.type === "admin" ||
                 tab.type === "user_profile") &&
                 isSplitScreenActive);
-            const disableClose = (isSplitScreenActive && isActive) || isSplit;
+            const isHome = tab.type === "home";
+            const disableClose =
+              (isSplitScreenActive && isActive) || isSplit || isHome;
 
             const isDraggingThisTab = dragState.draggedIndex === index;
             const isTheDraggedTab = tab.id === dragState.draggedId;
@@ -420,6 +422,14 @@ export function TopNavbar({
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
+                e
+                onMouseDown={(e) => {
+                  // Middle mouse button (button === 1)
+                  if (e.button === 1 && !disableClose) {
+                    e.preventDefault();
+                    handleTabClose(tab.id);
+                  }
+                }}
                 style={{
                   transform,
                   transition:

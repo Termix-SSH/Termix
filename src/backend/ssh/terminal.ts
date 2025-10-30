@@ -793,10 +793,25 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           // If no stored password (including authType "none"), prompt the user
           if (!hasStoredPassword && passwordPromptIndex !== -1) {
-            if (keyboardInteractiveResponded) {
+            // Don't block duplicate password prompts - some servers (like Warpgate) may ask multiple times
+            if (keyboardInteractiveResponded && totpPromptSent) {
+              // Only block if we already sent a TOTP prompt
+              sshLogger.info(
+                "Skipping duplicate password prompt after TOTP sent",
+                {
+                  operation: "keyboard_interactive_skip",
+                  hostId: id,
+                },
+              );
               return;
             }
             keyboardInteractiveResponded = true;
+
+            sshLogger.info("Requesting password from user (authType: none)", {
+              operation: "keyboard_interactive_password",
+              hostId: id,
+              prompt: prompts[passwordPromptIndex].prompt,
+            });
 
             keyboardInteractiveFinish = (userResponses: string[]) => {
               const userInput = (userResponses[0] || "").trim();
@@ -916,7 +931,37 @@ wss.on("connection", async (ws: WebSocket, req) => {
     };
 
     if (resolvedCredentials.authType === "none") {
-      // Don't set password in config - rely on keyboard-interactive
+      // Use authHandler to control authentication flow
+      // This ensures we only try keyboard-interactive, not password auth
+      connectConfig.authHandler = (
+        methodsLeft: string[],
+        partialSuccess: boolean,
+        callback: (nextMethod: string | false) => void,
+      ) => {
+        sshLogger.info("Auth handler called", {
+          operation: "ssh_auth_handler",
+          hostId: id,
+          methodsLeft,
+          partialSuccess,
+        });
+
+        // Only try keyboard-interactive
+        if (methodsLeft.includes("keyboard-interactive")) {
+          callback("keyboard-interactive");
+        } else {
+          sshLogger.error("Server does not support keyboard-interactive auth", {
+            operation: "ssh_auth_handler_no_keyboard",
+            hostId: id,
+            methodsLeft,
+          });
+          callback(false); // No more methods to try
+        }
+      };
+
+      sshLogger.info("Using keyboard-interactive auth (authType: none)", {
+        operation: "ssh_auth_config",
+        hostId: id,
+      });
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(

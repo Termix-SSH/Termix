@@ -108,6 +108,8 @@ export function TabProvider({ children }: TabProviderProps) {
             t.id === existingTab.id
               ? {
                   ...t,
+                  // Keep the original title (Host Manager)
+                  title: existingTab.title,
                   hostConfig: tabData.hostConfig
                     ? { ...tabData.hostConfig }
                     : undefined,
@@ -220,6 +222,15 @@ export function TabProvider({ children }: TabProviderProps) {
     setTabs((prev) =>
       prev.map((tab) => {
         if (tab.hostConfig && tab.hostConfig.id === hostId) {
+          // Don't update the title for ssh_manager tabs - they should stay as "Host Manager"
+          if (tab.type === "ssh_manager") {
+            return {
+              ...tab,
+              hostConfig: newHostConfig,
+            };
+          }
+
+          // For other tabs (terminal, server, file_manager), update both config and title
           return {
             ...tab,
             hostConfig: newHostConfig,

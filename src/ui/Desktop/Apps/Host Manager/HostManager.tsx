@@ -31,25 +31,55 @@ export function HostManager({
     username: string;
   } | null>(null);
   const { state: sidebarState } = useSidebar();
-  const prevHostConfigRef = useRef<SSHHost | undefined>(hostConfig);
+  const ignoreNextHostConfigChangeRef = useRef<boolean>(false);
+  const lastProcessedHostIdRef = useRef<number | undefined>(undefined);
 
-  // Update editing host when hostConfig prop changes
+  // Update editing host when hostConfig prop changes (from sidebar edit button)
   useEffect(() => {
-    if (hostConfig && hostConfig !== prevHostConfigRef.current) {
-      setEditingHost(hostConfig);
-      setActiveTab(initialTab || "add_host");
-      prevHostConfigRef.current = hostConfig;
+    // Skip if we should ignore this change
+    if (ignoreNextHostConfigChangeRef.current) {
+      ignoreNextHostConfigChangeRef.current = false;
+      return;
+    }
+
+    // Only process if this is an external edit request (from sidebar)
+    if (hostConfig && initialTab === "add_host") {
+      const currentHostId = hostConfig.id;
+
+      // Open editor if it's a different host OR same host but user is on viewer/credentials tabs
+      if (currentHostId !== lastProcessedHostIdRef.current) {
+        // Different host - always open
+        setEditingHost(hostConfig);
+        setActiveTab("add_host");
+        lastProcessedHostIdRef.current = currentHostId;
+      } else if (
+        activeTab === "host_viewer" ||
+        activeTab === "credentials" ||
+        activeTab === "add_credential"
+      ) {
+        // Same host but user manually navigated away - reopen
+        setEditingHost(hostConfig);
+        setActiveTab("add_host");
+      }
+      // If same host and already on add_host tab, do nothing (don't block tab changes)
     }
   }, [hostConfig, initialTab]);
 
   const handleEditHost = (host: SSHHost) => {
     setEditingHost(host);
     setActiveTab("add_host");
+    lastProcessedHostIdRef.current = host.id;
   };
 
   const handleFormSubmit = () => {
+    // Ignore the next hostConfig change (which will come from ssh-hosts:changed event)
+    ignoreNextHostConfigChangeRef.current = true;
     setEditingHost(null);
     setActiveTab("host_viewer");
+    // Clear after a delay so the same host can be edited again
+    setTimeout(() => {
+      lastProcessedHostIdRef.current = undefined;
+    }, 500);
   };
 
   const handleEditCredential = (credential: {
@@ -70,6 +100,7 @@ export function HostManager({
     setActiveTab(value);
     if (value !== "add_host") {
       setEditingHost(null);
+      isEditingRef.current = false;
     }
     if (value !== "add_credential") {
       setEditingCredential(null);

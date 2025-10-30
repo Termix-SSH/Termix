@@ -666,8 +666,6 @@ export function HostManagerEditor({
       // Refresh backend polling to pick up new/updated host configuration
       const { refreshServerPolling } = await import("@/ui/main-axios.ts");
       refreshServerPolling();
-
-      form.reset();
     } catch {
       toast.error(t("hosts.failedToSaveHost"));
     } finally {

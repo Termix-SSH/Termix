@@ -518,9 +518,6 @@ class PollingManager {
       };
       this.statusStore.set(host.id, statusEntry);
     } catch (error) {
-      statsLogger.warn(
-        `Failed to poll status for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
       const statusEntry: StatusEntry = {
         status: "offline",
         lastChecked: new Date().toISOString(),
@@ -1088,10 +1085,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           const coresNum = Number((coresOut.stdout || "").trim());
           cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
         } catch (e) {
-          statsLogger.warn(
-            `Failed to collect CPU metrics for host ${host.id}`,
-            e,
-          );
           cpuPercent = null;
           cores = null;
           loadTriplet = null;
@@ -1118,10 +1111,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
             totalGiB = kibToGiB(totalKb);
           }
         } catch (e) {
-          statsLogger.warn(
-            `Failed to collect memory metrics for host ${host.id}`,
-            e,
-          );
           memPercent = null;
           usedGiB = null;
           totalGiB = null;
@@ -1171,10 +1160,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
             }
           }
         } catch (e) {
-          statsLogger.warn(
-            `Failed to collect disk metrics for host ${host.id}`,
-            e,
-          );
           diskPercent = null;
           usedHuman = null;
           totalHuman = null;
@@ -1238,12 +1223,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
               txBytes: null,
             });
           }
-        } catch (e) {
-          statsLogger.warn(
-            `Failed to collect network metrics for host ${host.id}`,
-            e,
-          );
-        }
+        } catch (e) {}
 
         // Collect uptime
         let uptimeSeconds: number | null = null;
@@ -1260,9 +1240,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
               uptimeFormatted = `${days}d ${hours}h ${minutes}m`;
             }
           }
-        } catch (e) {
-          statsLogger.warn(`Failed to collect uptime for host ${host.id}`, e);
-        }
+        } catch (e) {}
 
         // Collect process information
         let totalProcesses: number | null = null;
@@ -1305,12 +1283,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           );
           totalProcesses = Number(procCount.stdout.trim()) - 1;
           runningProcesses = Number(runningCount.stdout.trim());
-        } catch (e) {
-          statsLogger.warn(
-            `Failed to collect process info for host ${host.id}`,
-            e,
-          );
-        }
+        } catch (e) {}
 
         // Collect system information
         let hostname: string | null = null;
@@ -1327,12 +1300,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           hostname = hostnameOut.stdout.trim() || null;
           kernel = kernelOut.stdout.trim() || null;
           os = osOut.stdout.trim() || null;
-        } catch (e) {
-          statsLogger.warn(
-            `Failed to collect system info for host ${host.id}`,
-            e,
-          );
-        }
+        } catch (e) {}
 
         const result = {
           cpu: { percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet },

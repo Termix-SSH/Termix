@@ -350,7 +350,40 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
     config.password = resolvedCredentials.password;
   } else if (resolvedCredentials.authType === "none") {
-    // Don't set password in config - rely on keyboard-interactive
+    // Use authHandler to control authentication flow
+    // This ensures we only try keyboard-interactive, not password auth
+    config.authHandler = (
+      methodsLeft: string[],
+      partialSuccess: boolean,
+      callback: (nextMethod: string | false) => void,
+    ) => {
+      fileLogger.info("Auth handler called", {
+        operation: "ssh_auth_handler",
+        hostId,
+        sessionId,
+        methodsLeft,
+        partialSuccess,
+      });
+
+      // Only try keyboard-interactive
+      if (methodsLeft.includes("keyboard-interactive")) {
+        callback("keyboard-interactive");
+      } else {
+        fileLogger.error("Server does not support keyboard-interactive auth", {
+          operation: "ssh_auth_handler_no_keyboard",
+          hostId,
+          sessionId,
+          methodsLeft,
+        });
+        callback(false); // No more methods to try
+      }
+    };
+
+    fileLogger.info("Using keyboard-interactive auth (authType: none)", {
+      operation: "ssh_auth_config",
+      hostId,
+      sessionId,
+    });
   } else {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
@@ -531,29 +564,37 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         // If no stored password (including authType "none"), prompt the user
         if (!hasStoredPassword && passwordPromptIndex !== -1) {
           if (responseSent) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-                return resolvedCredentials.password;
-              }
-              return "";
-            });
-            finish(responses);
+            // Connection is already being handled, don't send duplicate responses
+            fileLogger.info(
+              "Skipping duplicate password prompt - response already sent",
+              {
+                operation: "keyboard_interactive_skip",
+                hostId,
+                sessionId,
+              },
+            );
             return;
           }
           responseSent = true;
 
           if (pendingTOTPSessions[sessionId]) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-                return resolvedCredentials.password;
-              }
-              return "";
+            // Session already waiting for TOTP, don't override
+            fileLogger.info("Skipping password prompt - TOTP session pending", {
+              operation: "keyboard_interactive_skip",
+              hostId,
+              sessionId,
             });
-            finish(responses);
             return;
           }
 
           keyboardInteractiveResponded = true;
+
+          fileLogger.info("Requesting password from user (authType: none)", {
+            operation: "keyboard_interactive_password",
+            hostId,
+            sessionId,
+            prompt: prompts[passwordPromptIndex].prompt,
+          });
 
           pendingTOTPSessions[sessionId] = {
             client,

@@ -417,6 +417,7 @@ router.get("/oidc-config", async (req, res) => {
 
     // Check if user is authenticated admin
     let isAuthenticatedAdmin = false;
+    let userId: string | null = null;
     const authHeader = req.headers["authorization"];
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
@@ -424,45 +425,11 @@ router.get("/oidc-config", async (req, res) => {
       const payload = await authManager.verifyJWTToken(token);
 
       if (payload) {
-        const userId = payload.userId;
+        userId = payload.userId;
         const user = await db.select().from(users).where(eq(users.id, userId));
 
         if (user && user.length > 0 && user[0].is_admin) {
           isAuthenticatedAdmin = true;
-
-          // Only decrypt for authenticated admins
-          if (config.client_secret?.startsWith("encrypted:")) {
-            try {
-              const adminDataKey = DataCrypto.getUserDataKey(userId);
-              if (adminDataKey) {
-                config = DataCrypto.decryptRecord(
-                  "settings",
-                  config,
-                  userId,
-                  adminDataKey,
-                );
-              } else {
-                config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
-              }
-            } catch {
-              authLogger.warn("Failed to decrypt OIDC config for admin", {
-                operation: "oidc_config_decrypt_failed",
-                userId,
-              });
-              config.client_secret = "[ENCRYPTED - DECRYPTION FAILED]";
-            }
-          } else if (config.client_secret?.startsWith("encoded:")) {
-            // Decode for authenticated admins only
-            try {
-              const decoded = Buffer.from(
-                config.client_secret.substring(8),
-                "base64",
-              ).toString("utf8");
-              config.client_secret = decoded;
-            } catch {
-              config.client_secret = "[ENCODING ERROR]";
-            }
-          }
         }
       }
     }
@@ -482,6 +449,46 @@ router.get("/oidc-config", async (req, res) => {
       };
 
       return res.json(publicConfig);
+    }
+
+    // For authenticated admins, decrypt sensitive fields
+    if (config.client_secret?.startsWith("encrypted:")) {
+      try {
+        const adminDataKey = DataCrypto.getUserDataKey(userId);
+        if (adminDataKey) {
+          config = DataCrypto.decryptRecord(
+            "settings",
+            config,
+            userId,
+            adminDataKey,
+          );
+        } else {
+          // Admin is authenticated but data key is not available
+          // This can happen if they haven't unlocked their data yet
+          config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
+        }
+      } catch (decryptError) {
+        authLogger.warn("Failed to decrypt OIDC config for admin", {
+          operation: "oidc_config_decrypt_failed",
+          userId,
+        });
+        config.client_secret = "[ENCRYPTED - DECRYPTION FAILED]";
+      }
+    } else if (config.client_secret?.startsWith("encoded:")) {
+      // Decode for authenticated admins
+      try {
+        const decoded = Buffer.from(
+          config.client_secret.substring(8),
+          "base64",
+        ).toString("utf8");
+        config.client_secret = decoded;
+      } catch (decodeError) {
+        authLogger.warn("Failed to decode OIDC config for admin", {
+          operation: "oidc_config_decode_failed",
+          userId,
+        });
+        config.client_secret = "[ENCODING ERROR]";
+      }
     }
 
     res.json(config);

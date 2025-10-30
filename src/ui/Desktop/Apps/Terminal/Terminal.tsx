@@ -452,7 +452,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     ) {
       ws.addEventListener("open", () => {
         connectionTimeoutRef.current = setTimeout(() => {
-          if (!isConnected && !totpRequired) {
+          if (!isConnected && !totpRequired && !isPasswordPrompt) {
             if (terminal) {
               terminal.clear();
             }
