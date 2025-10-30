@@ -11,7 +11,7 @@ ENV npm_config_target_arch=x64
 ENV npm_config_target_libc=glibc
 
 RUN rm -rf node_modules package-lock.json && \
-    npm install --force && \
+    npm install --ignore-scripts --force && \
     npm cache clean --force
 
 # Stage 2: Build frontend
