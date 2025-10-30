@@ -154,17 +154,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          rm -f package-lock.json
-          # Retry npm install up to 3 times on failure
+          # Retry npm ci up to 3 times on failure
           for i in 1 2 3; do
-            if npm install; then
+            if npm ci; then
               break
             else
               if [ $i -eq 3 ]; then
-                echo "npm install failed after 3 attempts"
+                echo "npm ci failed after 3 attempts"
                 exit 1
               fi
-              echo "npm install attempt $i failed, retrying in 10 seconds..."
+              echo "npm ci attempt $i failed, retrying in 10 seconds..."
               sleep 10
             fi
           done
