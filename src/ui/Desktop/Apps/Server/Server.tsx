@@ -8,6 +8,7 @@ import {
   getServerStatusById,
   getServerMetricsById,
   type ServerMetrics,
+  sshHostApi,
 } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
@@ -26,6 +27,8 @@ import {
   ProcessesWidget,
   SystemWidget,
 } from "./widgets";
+import { ManageCustomButtons } from "./ManageCustomButtons.tsx";
+import { CommandOutputDialog } from "./CommandOutputDialog.tsx";
 
 interface HostConfig {
   id: number;
@@ -79,6 +82,17 @@ export function Server({
   const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [showStatsUI, setShowStatsUI] = React.useState(true);
+  const [customButtons, setCustomButtons] = React.useState<
+    Array<{ id: number; label: string; command: string; icon?: string }>
+  >([]);
+  const [showManageButtons, setShowManageButtons] = React.useState(false);
+  const [commandOutput, setCommandOutput] = React.useState<{
+    output: string;
+    errorOutput: string;
+    exitCode: number;
+    label: string;
+  } | null>(null);
+  const [isExecutingCommand, setIsExecutingCommand] = React.useState(false);
 
   // Parse stats config for monitoring settings
   const statsConfig = React.useMemo((): StatsConfig => {
@@ -104,6 +118,64 @@ export function Server({
   React.useEffect(() => {
     setCurrentHostConfig(hostConfig);
   }, [hostConfig]);
+
+  const fetchCustomButtons = React.useCallback(async () => {
+    if (!currentHostConfig?.id) return;
+    try {
+      const response = await sshHostApi.get(
+        `/db/host/${currentHostConfig.id}/custom-buttons`,
+      );
+      setCustomButtons(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Failed to fetch custom buttons:", error);
+      setCustomButtons([]);
+    }
+  }, [currentHostConfig?.id]);
+
+  React.useEffect(() => {
+    fetchCustomButtons();
+  }, [fetchCustomButtons]);
+
+  const executeCustomCommand = async (button: {
+    id: number;
+    label: string;
+    command: string;
+  }) => {
+    if (!currentHostConfig?.id || isExecutingCommand) return;
+
+    try {
+      setIsExecutingCommand(true);
+      toast.info(t("serverStats.commandExecuting"));
+
+      const response = await sshHostApi.post(
+        `/db/host/${currentHostConfig.id}/custom-buttons/${button.id}/execute`,
+      );
+
+      setCommandOutput({
+        output: response.data.output || "",
+        errorOutput: response.data.errorOutput || "",
+        exitCode: response.data.exitCode || 0,
+        label: button.label,
+      });
+
+      if (response.data.exitCode === 0) {
+        toast.success(t("serverStats.commandSuccess"));
+      } else {
+        toast.error(t("serverStats.commandFailed"));
+      }
+    } catch (error) {
+      console.error("Failed to execute command:", error);
+      toast.error(t("serverStats.failedToExecuteCommand"));
+      setCommandOutput({
+        output: "",
+        errorOutput: error instanceof Error ? error.message : "Unknown error",
+        exitCode: 1,
+        label: button.label,
+      });
+    } finally {
+      setIsExecutingCommand(false);
+    }
+  };
 
   const renderWidget = (widgetType: WidgetType) => {
     switch (widgetType) {
@@ -442,6 +514,75 @@ export function Server({
         <Separator className="p-0.25 w-full" />
 
         <div className="flex-1 overflow-y-auto min-h-0">
+          {/* Custom Buttons Section */}
+          {currentHostConfig?.id && (
+            <div className="rounded-lg border border-dark-border m-3 bg-dark-bg-darker overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-dark-bg/30 border-b border-dark-border/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                  <h3 className="font-semibold text-gray-200">
+                    {t("serverStats.customButtons")}
+                  </h3>
+                  {Array.isArray(customButtons) && customButtons.length > 0 && (
+                    <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded-md bg-dark-bg/50">
+                      {customButtons.length}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowManageButtons(true)}
+                  className="h-7 text-xs hover:bg-dark-bg"
+                >
+                  {t("serverStats.manageButtons")}
+                </Button>
+              </div>
+              <div className="p-4">
+                {Array.isArray(customButtons) && customButtons.length > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {customButtons.map((button) => (
+                      <Button
+                        key={button.id}
+                        variant="outline"
+                        size="sm"
+                        disabled={isExecutingCommand}
+                        onClick={() => executeCustomCommand(button)}
+                        className="font-medium hover:bg-primary/10 hover:border-primary/50 transition-colors"
+                      >
+                        {button.label}
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="w-12 h-12 rounded-full bg-dark-bg/50 flex items-center justify-center mb-3">
+                      <svg
+                        className="w-6 h-6 text-muted-foreground"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {t("serverStats.noCustomButtons")}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 max-w-md">
+                      {t("serverStats.noCustomButtonsMessage")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {metricsEnabled && showStatsUI && (
             <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4 max-h-[50vh] overflow-y-auto">
               {isLoadingMetrics && !metrics ? (
@@ -506,6 +647,24 @@ export function Server({
           </a>
           !
         </p>
+
+        <ManageCustomButtons
+          isOpen={showManageButtons}
+          hostId={currentHostConfig?.id || 0}
+          onClose={() => setShowManageButtons(false)}
+          onButtonsUpdated={fetchCustomButtons}
+        />
+
+        {commandOutput && (
+          <CommandOutputDialog
+            isOpen={!!commandOutput}
+            output={commandOutput.output}
+            errorOutput={commandOutput.errorOutput}
+            exitCode={commandOutput.exitCode}
+            commandLabel={commandOutput.label}
+            onClose={() => setCommandOutput(null)}
+          />
+        )}
       </div>
     </div>
   );

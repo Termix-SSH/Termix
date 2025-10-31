@@ -8,6 +8,7 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
+  serverCustomButtons,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -1723,6 +1724,426 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+// Route: Get custom buttons for a host (requires JWT)
+// GET /ssh/db/host/:hostId/custom-buttons
+router.get(
+  "/db/host/:hostId/custom-buttons",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const hostId = parseInt(req.params.hostId);
+
+    if (!isNonEmptyString(userId) || !hostId) {
+      sshLogger.warn("Invalid userId or hostId for custom buttons fetch", {
+        operation: "custom_buttons_fetch",
+        hostId,
+        userId,
+      });
+      return res.status(400).json({ error: "Invalid userId or hostId" });
+    }
+
+    try {
+      const buttons = await db
+        .select()
+        .from(serverCustomButtons)
+        .where(
+          and(
+            eq(serverCustomButtons.userId, userId),
+            eq(serverCustomButtons.hostId, hostId),
+          ),
+        )
+        .orderBy(serverCustomButtons.order);
+
+      res.json(buttons);
+    } catch (err) {
+      sshLogger.error("Failed to fetch custom buttons", err, {
+        operation: "custom_buttons_fetch",
+        hostId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch custom buttons" });
+    }
+  },
+);
+
+// Route: Create custom button (requires JWT)
+// POST /ssh/db/host/:hostId/custom-buttons
+router.post(
+  "/db/host/:hostId/custom-buttons",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const hostId = parseInt(req.params.hostId);
+    const { label, command, icon, order } = req.body;
+
+    if (
+      !isNonEmptyString(userId) ||
+      !hostId ||
+      !isNonEmptyString(label) ||
+      !isNonEmptyString(command)
+    ) {
+      sshLogger.warn("Invalid data for custom button creation", {
+        operation: "custom_button_create",
+        hostId,
+        userId,
+        hasLabel: !!label,
+        hasCommand: !!command,
+      });
+      return res.status(400).json({ error: "Label and command are required" });
+    }
+
+    try {
+      const buttonData = {
+        userId,
+        hostId,
+        label,
+        command,
+        icon: icon || null,
+        order: order || 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const result = await db
+        .insert(serverCustomButtons)
+        .values(buttonData)
+        .returning();
+
+      sshLogger.success(
+        `Custom button created: ${label} for host ${hostId} by user ${userId}`,
+        {
+          operation: "custom_button_create_success",
+          userId,
+          hostId,
+          buttonId: result[0].id,
+          label,
+        },
+      );
+
+      res.json(result[0]);
+    } catch (err) {
+      sshLogger.error("Failed to create custom button", err, {
+        operation: "custom_button_create",
+        hostId,
+        userId,
+        label,
+      });
+      res.status(500).json({ error: "Failed to create custom button" });
+    }
+  },
+);
+
+// Route: Update custom button (requires JWT)
+// PUT /ssh/db/host/:hostId/custom-buttons/:buttonId
+router.put(
+  "/db/host/:hostId/custom-buttons/:buttonId",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const hostId = parseInt(req.params.hostId);
+    const buttonId = parseInt(req.params.buttonId);
+    const { label, command, icon, order } = req.body;
+
+    if (!isNonEmptyString(userId) || !hostId || !buttonId) {
+      sshLogger.warn("Invalid data for custom button update", {
+        operation: "custom_button_update",
+        hostId,
+        buttonId,
+        userId,
+      });
+      return res
+        .status(400)
+        .json({ error: "Invalid userId, hostId, or buttonId" });
+    }
+
+    try {
+      const updateData: Record<string, unknown> = {
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (label !== undefined) updateData.label = label;
+      if (command !== undefined) updateData.command = command;
+      if (icon !== undefined) updateData.icon = icon;
+      if (order !== undefined) updateData.order = order;
+
+      const result = await db
+        .update(serverCustomButtons)
+        .set(updateData)
+        .where(
+          and(
+            eq(serverCustomButtons.id, buttonId),
+            eq(serverCustomButtons.userId, userId),
+            eq(serverCustomButtons.hostId, hostId),
+          ),
+        )
+        .returning();
+
+      if (result.length === 0) {
+        sshLogger.warn("Custom button not found for update", {
+          operation: "custom_button_update",
+          hostId,
+          buttonId,
+          userId,
+        });
+        return res.status(404).json({ error: "Custom button not found" });
+      }
+
+      sshLogger.success(
+        `Custom button updated: ${result[0].label} (ID: ${buttonId})`,
+        {
+          operation: "custom_button_update_success",
+          userId,
+          hostId,
+          buttonId,
+        },
+      );
+
+      res.json(result[0]);
+    } catch (err) {
+      sshLogger.error("Failed to update custom button", err, {
+        operation: "custom_button_update",
+        hostId,
+        buttonId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to update custom button" });
+    }
+  },
+);
+
+// Route: Delete custom button (requires JWT)
+// DELETE /ssh/db/host/:hostId/custom-buttons/:buttonId
+router.delete(
+  "/db/host/:hostId/custom-buttons/:buttonId",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const hostId = parseInt(req.params.hostId);
+    const buttonId = parseInt(req.params.buttonId);
+
+    if (!isNonEmptyString(userId) || !hostId || !buttonId) {
+      sshLogger.warn("Invalid data for custom button deletion", {
+        operation: "custom_button_delete",
+        hostId,
+        buttonId,
+        userId,
+      });
+      return res
+        .status(400)
+        .json({ error: "Invalid userId, hostId, or buttonId" });
+    }
+
+    try {
+      const buttonToDelete = await db
+        .select()
+        .from(serverCustomButtons)
+        .where(
+          and(
+            eq(serverCustomButtons.id, buttonId),
+            eq(serverCustomButtons.userId, userId),
+            eq(serverCustomButtons.hostId, hostId),
+          ),
+        );
+
+      if (buttonToDelete.length === 0) {
+        sshLogger.warn("Custom button not found for deletion", {
+          operation: "custom_button_delete",
+          hostId,
+          buttonId,
+          userId,
+        });
+        return res.status(404).json({ error: "Custom button not found" });
+      }
+
+      await db
+        .delete(serverCustomButtons)
+        .where(
+          and(
+            eq(serverCustomButtons.id, buttonId),
+            eq(serverCustomButtons.userId, userId),
+            eq(serverCustomButtons.hostId, hostId),
+          ),
+        );
+
+      sshLogger.success(
+        `Custom button deleted: ${buttonToDelete[0].label} (ID: ${buttonId})`,
+        {
+          operation: "custom_button_delete_success",
+          userId,
+          hostId,
+          buttonId,
+        },
+      );
+
+      res.json({ message: "Custom button deleted" });
+    } catch (err) {
+      sshLogger.error("Failed to delete custom button", err, {
+        operation: "custom_button_delete",
+        hostId,
+        buttonId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to delete custom button" });
+    }
+  },
+);
+
+// Route: Execute custom button command (requires JWT)
+// POST /ssh/db/host/:hostId/custom-buttons/:buttonId/execute
+router.post(
+  "/db/host/:hostId/custom-buttons/:buttonId/execute",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const hostId = parseInt(req.params.hostId);
+    const buttonId = parseInt(req.params.buttonId);
+
+    if (!isNonEmptyString(userId) || !hostId || !buttonId) {
+      sshLogger.warn("Invalid data for custom button execution", {
+        operation: "custom_button_execute",
+        hostId,
+        buttonId,
+        userId,
+      });
+      return res
+        .status(400)
+        .json({ error: "Invalid userId, hostId, or buttonId" });
+    }
+
+    try {
+      const buttons = await db
+        .select()
+        .from(serverCustomButtons)
+        .where(
+          and(
+            eq(serverCustomButtons.id, buttonId),
+            eq(serverCustomButtons.userId, userId),
+            eq(serverCustomButtons.hostId, hostId),
+          ),
+        );
+
+      if (buttons.length === 0) {
+        sshLogger.warn("Custom button not found for execution", {
+          operation: "custom_button_execute",
+          hostId,
+          buttonId,
+          userId,
+        });
+        return res.status(404).json({ error: "Custom button not found" });
+      }
+
+      const button = buttons[0];
+
+      const hosts = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshData)
+          .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+        "ssh_data",
+        userId,
+      );
+
+      if (hosts.length === 0) {
+        sshLogger.warn("Host not found for button execution", {
+          operation: "custom_button_execute",
+          hostId,
+          buttonId,
+          userId,
+        });
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      const host = hosts[0];
+      const resolvedHost = (await resolveHostCredentials(host)) || host;
+
+      const { Client } = await import("ssh2");
+      const client = new Client();
+
+      const executeCommand = new Promise((resolve, reject) => {
+        let output = "";
+        let errorOutput = "";
+
+        client
+          .on("ready", () => {
+            client.exec(button.command, (err, stream) => {
+              if (err) {
+                client.end();
+                return reject(err);
+              }
+
+              stream
+                .on("close", (code: number, signal: string) => {
+                  client.end();
+                  resolve({ output, errorOutput, exitCode: code, signal });
+                })
+                .on("data", (data: Buffer) => {
+                  output += data.toString();
+                })
+                .stderr.on("data", (data: Buffer) => {
+                  errorOutput += data.toString();
+                });
+            });
+          })
+          .on("error", (err) => {
+            reject(err);
+          });
+
+        const connectionConfig: Record<string, unknown> = {
+          host: resolvedHost.ip,
+          port: resolvedHost.port,
+          username: resolvedHost.username,
+        };
+
+        if (resolvedHost.authType === "password") {
+          connectionConfig.password = resolvedHost.password;
+        } else if (resolvedHost.authType === "key") {
+          connectionConfig.privateKey = resolvedHost.key;
+          if (resolvedHost.keyPassword) {
+            connectionConfig.passphrase = resolvedHost.keyPassword;
+          }
+        }
+
+        client.connect(connectionConfig);
+      });
+
+      const result = await Promise.race([
+        executeCommand,
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Command execution timeout")),
+            30000,
+          ),
+        ),
+      ]);
+
+      sshLogger.success(
+        `Custom button executed: ${button.label} on host ${hostId}`,
+        {
+          operation: "custom_button_execute_success",
+          userId,
+          hostId,
+          buttonId,
+          command: button.command,
+        },
+      );
+
+      res.json(result);
+    } catch (err) {
+      sshLogger.error("Failed to execute custom button", err, {
+        operation: "custom_button_execute",
+        hostId,
+        buttonId,
+        userId,
+      });
+      res.status(500).json({
+        error: "Failed to execute command",
+        details: err instanceof Error ? err.message : "Unknown error",
+      });
     }
   },
 );

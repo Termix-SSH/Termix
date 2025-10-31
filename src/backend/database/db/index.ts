@@ -267,6 +267,20 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (host_id) REFERENCES ssh_data (id)
     );
 
+    CREATE TABLE IF NOT EXISTS server_custom_buttons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        label TEXT NOT NULL,
+        command TEXT NOT NULL,
+        icon TEXT,
+        "order" INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id)
+    );
+
 `);
 
   migrateSchema();
@@ -335,7 +349,45 @@ const addColumnIfNotExists = (
   }
 };
 
+const createTableIfNotExists = (tableName: string, createSQL: string) => {
+  try {
+    sqlite.prepare(`SELECT 1 FROM ${tableName} LIMIT 1`).get();
+  } catch {
+    try {
+      sqlite.exec(createSQL);
+      databaseLogger.info(`Created table ${tableName}`, {
+        operation: "schema_migration",
+        table: tableName,
+      });
+    } catch (createError) {
+      databaseLogger.warn(`Failed to create table ${tableName}`, {
+        operation: "schema_migration",
+        table: tableName,
+        error: createError,
+      });
+    }
+  }
+};
+
 const migrateSchema = () => {
+  // Create server_custom_buttons table if it doesn't exist
+  createTableIfNotExists(
+    "server_custom_buttons",
+    `CREATE TABLE server_custom_buttons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        label TEXT NOT NULL,
+        command TEXT NOT NULL,
+        icon TEXT,
+        "order" INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id)
+    )`
+  );
+
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 
   addColumnIfNotExists("users", "is_oidc", "INTEGER NOT NULL DEFAULT 0");
