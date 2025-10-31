@@ -29,6 +29,10 @@ import {
   Lock,
   Download,
   Upload,
+  Monitor,
+  Smartphone,
+  Globe,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -111,6 +115,21 @@ export function AdminSettings({
   const [showPasswordInput, setShowPasswordInput] = React.useState(false);
   const [importPassword, setImportPassword] = React.useState("");
 
+  const [sessions, setSessions] = React.useState<
+    Array<{
+      id: string;
+      userId: string;
+      username?: string;
+      deviceType: string;
+      deviceInfo: string;
+      createdAt: string;
+      expiresAt: string;
+      lastActiveAt: string;
+      jwtToken: string;
+    }>
+  >([]);
+  const [sessionsLoading, setSessionsLoading] = React.useState(false);
+
   const requiresImportPassword = React.useMemo(
     () => !currentUser?.is_oidc,
     [currentUser?.is_oidc],
@@ -152,6 +171,7 @@ export function AdminSettings({
         }
       });
     fetchUsers();
+    fetchSessions();
   }, []);
 
   React.useEffect(() => {
@@ -538,6 +558,168 @@ export function AdminSettings({
     }
   };
 
+  const fetchSessions = async () => {
+    if (isElectron()) {
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
+      if (!serverUrl) {
+        return;
+      }
+    }
+
+    setSessionsLoading(true);
+    try {
+      const isDev =
+        process.env.NODE_ENV === "development" &&
+        (window.location.port === "3000" ||
+          window.location.port === "5173" ||
+          window.location.port === "" ||
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+
+      const apiUrl = isElectron()
+        ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/users/sessions`
+        : isDev
+          ? `http://localhost:30001/users/sessions`
+          : `/users/sessions`;
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${getCookie("jwt")}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSessions(data.sessions || []);
+      } else {
+        toast.error(t("admin.failedToFetchSessions"));
+      }
+    } catch (err) {
+      if (!err?.message?.includes("No server configured")) {
+        toast.error(t("admin.failedToFetchSessions"));
+      }
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    // Check if this is the current session
+    const currentJWT = getCookie("jwt");
+    const currentSession = sessions.find((s) => s.jwtToken === currentJWT);
+    const isCurrentSession = currentSession?.id === sessionId;
+
+    confirmWithToast(
+      t("admin.confirmRevokeSession"),
+      async () => {
+        try {
+          const isDev =
+            process.env.NODE_ENV === "development" &&
+            (window.location.port === "3000" ||
+              window.location.port === "5173" ||
+              window.location.port === "" ||
+              window.location.hostname === "localhost" ||
+              window.location.hostname === "127.0.0.1");
+
+          const apiUrl = isElectron()
+            ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/users/sessions/${sessionId}`
+            : isDev
+              ? `http://localhost:30001/users/sessions/${sessionId}`
+              : `/users/sessions/${sessionId}`;
+
+          const response = await fetch(apiUrl, {
+            method: "DELETE",
+            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${getCookie("jwt")}`,
+            },
+          });
+
+          if (response.ok) {
+            toast.success(t("admin.sessionRevokedSuccessfully"));
+
+            // If user revoked their own session, reload the page after a brief delay
+            if (isCurrentSession) {
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
+            } else {
+              fetchSessions();
+            }
+          } else {
+            toast.error(t("admin.failedToRevokeSession"));
+          }
+        } catch {
+          toast.error(t("admin.failedToRevokeSession"));
+        }
+      },
+      "destructive",
+    );
+  };
+
+  const handleRevokeAllUserSessions = async (userId: string) => {
+    // Check if revoking sessions for current user
+    const isCurrentUser = currentUser?.id === userId;
+
+    confirmWithToast(
+      t("admin.confirmRevokeAllSessions"),
+      async () => {
+        try {
+          const isDev =
+            process.env.NODE_ENV === "development" &&
+            (window.location.port === "3000" ||
+              window.location.port === "5173" ||
+              window.location.port === "" ||
+              window.location.hostname === "localhost" ||
+              window.location.hostname === "127.0.0.1");
+
+          const apiUrl = isElectron()
+            ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/users/sessions/revoke-all`
+            : isDev
+              ? `http://localhost:30001/users/sessions/revoke-all`
+              : `/users/sessions/revoke-all`;
+
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${getCookie("jwt")}`,
+            },
+            body: JSON.stringify({
+              targetUserId: userId,
+              exceptCurrent: false,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            toast.success(
+              data.message || t("admin.sessionsRevokedSuccessfully"),
+            );
+
+            // If revoking sessions for current user, reload the page after a brief delay
+            if (isCurrentUser) {
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
+            } else {
+              fetchSessions();
+            }
+          } else {
+            toast.error(t("admin.failedToRevokeSessions"));
+          }
+        } catch {
+          toast.error(t("admin.failedToRevokeSessions"));
+        }
+      },
+      "destructive",
+    );
+  };
+
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
@@ -577,6 +759,10 @@ export function AdminSettings({
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 {t("admin.users")}
+              </TabsTrigger>
+              <TabsTrigger value="sessions" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Sessions
               </TabsTrigger>
               <TabsTrigger value="admins" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
@@ -937,6 +1123,137 @@ export function AdminSettings({
                             </TableCell>
                           </TableRow>
                         ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="sessions" className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Session Management</h3>
+                  <Button
+                    onClick={fetchSessions}
+                    disabled={sessionsLoading}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {sessionsLoading ? t("admin.loading") : t("admin.refresh")}
+                  </Button>
+                </div>
+                {sessionsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Loading sessions...
+                  </div>
+                ) : sessions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No active sessions found.
+                  </div>
+                ) : (
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="px-4">Device</TableHead>
+                          <TableHead className="px-4">User</TableHead>
+                          <TableHead className="px-4">Created</TableHead>
+                          <TableHead className="px-4">Last Active</TableHead>
+                          <TableHead className="px-4">Expires</TableHead>
+                          <TableHead className="px-4">
+                            {t("admin.actions")}
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sessions.map((session) => {
+                          const DeviceIcon =
+                            session.deviceType === "desktop"
+                              ? Monitor
+                              : session.deviceType === "mobile"
+                                ? Smartphone
+                                : Globe;
+
+                          const createdDate = new Date(session.createdAt);
+                          const lastActiveDate = new Date(session.lastActiveAt);
+                          const expiresDate = new Date(session.expiresAt);
+
+                          const formatDate = (date: Date) =>
+                            date.toLocaleDateString() +
+                            " " +
+                            date.toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            });
+
+                          return (
+                            <TableRow
+                              key={session.id}
+                              className={
+                                session.isRevoked ? "opacity-50" : undefined
+                              }
+                            >
+                              <TableCell className="px-4">
+                                <div className="flex items-center gap-2">
+                                  <DeviceIcon className="h-4 w-4" />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm">
+                                      {session.deviceInfo}
+                                    </span>
+                                    {session.isRevoked && (
+                                      <span className="text-xs text-red-600">
+                                        Revoked
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-4">
+                                {session.username || session.userId}
+                              </TableCell>
+                              <TableCell className="px-4 text-sm text-muted-foreground">
+                                {formatDate(createdDate)}
+                              </TableCell>
+                              <TableCell className="px-4 text-sm text-muted-foreground">
+                                {formatDate(lastActiveDate)}
+                              </TableCell>
+                              <TableCell className="px-4 text-sm text-muted-foreground">
+                                {formatDate(expiresDate)}
+                              </TableCell>
+                              <TableCell className="px-4">
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleRevokeSession(session.id)
+                                    }
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    disabled={session.isRevoked}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                  {session.username && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleRevokeAllUserSessions(
+                                          session.userId,
+                                        )
+                                      }
+                                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
+                                      title="Revoke all sessions for this user"
+                                    >
+                                      Revoke All
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>

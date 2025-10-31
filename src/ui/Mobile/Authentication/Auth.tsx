@@ -7,6 +7,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/Desktop/User/LanguageSwitcher.tsx";
 import { toast } from "sonner";
+import { Smartphone } from "lucide-react";
 import {
   registerUser,
   loginUser,
@@ -22,8 +23,50 @@ import {
   verifyTOTPLogin,
   logoutUser,
   isElectron,
+  getCookie,
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
+
+/**
+ * Detect if we're running inside a React Native WebView
+ */
+function isReactNativeWebView(): boolean {
+  return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
+}
+
+/**
+ * Post JWT token to React Native WebView for mobile app authentication
+ */
+function postJWTToWebView() {
+  if (!isReactNativeWebView()) {
+    return;
+  }
+
+  try {
+    // Get JWT from localStorage or cookies
+    const jwt = getCookie("jwt") || localStorage.getItem("jwt");
+
+    if (!jwt) {
+      console.warn("JWT not found when trying to post to WebView");
+      return;
+    }
+
+    // Post message to React Native
+    (window as any).ReactNativeWebView.postMessage(
+      JSON.stringify({
+        type: "AUTH_SUCCESS",
+        token: jwt,
+        source: "explicit",
+        platform: "mobile",
+        timestamp: Date.now(),
+      }),
+    );
+
+    console.log("JWT posted to React Native WebView");
+  } catch (error) {
+    console.error("Failed to post JWT to WebView:", error);
+  }
+}
 
 interface AuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
@@ -231,6 +274,10 @@ export function Auth({
         username: meRes.username || null,
         userId: meRes.userId || null,
       });
+
+      // Post JWT to React Native WebView if running in mobile app
+      postJWTToWebView();
+
       setInternalLoggedIn(true);
       if (tab === "signup") {
         setSignupConfirmPassword("");
@@ -395,6 +442,9 @@ export function Auth({
           username: res.username || null,
           userId: res.userId || null,
         });
+
+        // Post JWT to React Native WebView if running in mobile app
+        postJWTToWebView();
       }, 100);
 
       setInternalLoggedIn(true);
@@ -482,6 +532,10 @@ export function Auth({
             username: meRes.username || null,
             userId: meRes.userId || null,
           });
+
+          // Post JWT to React Native WebView if running in mobile app
+          postJWTToWebView();
+
           setInternalLoggedIn(true);
           window.history.replaceState(
             {},
@@ -535,6 +589,13 @@ export function Auth({
       className={`w-full max-w-md flex flex-col bg-dark-bg ${className || ""}`}
       {...props}
     >
+      {isReactNativeWebView() && (
+        <Alert className="mb-4 border-blue-500 bg-blue-500/10">
+          <Smartphone className="h-4 w-4" />
+          <AlertTitle>{t("auth.mobileApp")}</AlertTitle>
+          <AlertDescription>{t("auth.loggingInToMobileApp")}</AlertDescription>
+        </Alert>
+      )}
       {dbError && (
         <Alert variant="destructive" className="mb-4">
           <AlertTitle>Error</AlertTitle>

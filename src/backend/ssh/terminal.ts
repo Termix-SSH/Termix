@@ -364,6 +364,55 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
       }
 
+      case "reconnect_with_credentials": {
+        const credentialsData = data as {
+          cols: number;
+          rows: number;
+          hostConfig: ConnectToHostData["hostConfig"];
+          password?: string;
+          sshKey?: string;
+          keyPassword?: string;
+        };
+
+        // Update the host config with provided credentials
+        if (credentialsData.password) {
+          credentialsData.hostConfig.password = credentialsData.password;
+          credentialsData.hostConfig.authType = "password";
+        } else if (credentialsData.sshKey) {
+          credentialsData.hostConfig.key = credentialsData.sshKey;
+          credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
+          credentialsData.hostConfig.authType = "key";
+        }
+
+        // Cleanup existing connection if any
+        cleanupSSH();
+
+        // Reconnect with new credentials
+        const reconnectData: ConnectToHostData = {
+          cols: credentialsData.cols,
+          rows: credentialsData.rows,
+          hostConfig: credentialsData.hostConfig,
+        };
+
+        handleConnectToHost(reconnectData).catch((error) => {
+          sshLogger.error("Failed to reconnect with credentials", error, {
+            operation: "ssh_reconnect_with_credentials",
+            userId,
+            hostId: credentialsData.hostConfig?.id,
+            ip: credentialsData.hostConfig?.ip,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Failed to connect with provided credentials: " +
+                (error instanceof Error ? error.message : "Unknown error"),
+            }),
+          );
+        });
+        break;
+      }
+
       default:
         sshLogger.warn("Unknown message type received", {
           operation: "websocket_message_unknown_type",
@@ -741,6 +790,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
         prompts: Array<{ prompt: string; echo: boolean }>,
         finish: (responses: string[]) => void,
       ) => {
+        // Notify frontend that keyboard-interactive is available (e.g., for Warpgate OIDC)
+        // This allows the terminal to be displayed immediately so user can see auth prompts
+        if (resolvedCredentials.authType === "none") {
+          ws.send(
+            JSON.stringify({
+              type: "keyboard_interactive_available",
+              message: "Keyboard-interactive authentication is available",
+            }),
+          );
+        }
+
         const promptTexts = prompts.map((p) => p.prompt);
         const totpPromptIndex = prompts.findIndex((p) =>
           /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
@@ -931,37 +991,47 @@ wss.on("connection", async (ws: WebSocket, req) => {
     };
 
     if (resolvedCredentials.authType === "none") {
-      // Use authHandler to control authentication flow
-      // This ensures we only try keyboard-interactive, not password auth
+      // For "none" auth type, allow natural SSH negotiation
+      // The authHandler will try keyboard-interactive if available, otherwise notify frontend
+      // This allows for Warpgate OIDC and other interactive auth scenarios
       connectConfig.authHandler = (
-        methodsLeft: string[],
+        methodsLeft: string[] | null,
         partialSuccess: boolean,
         callback: (nextMethod: string | false) => void,
       ) => {
-        sshLogger.info("Auth handler called", {
-          operation: "ssh_auth_handler",
-          hostId: id,
-          methodsLeft,
-          partialSuccess,
-        });
-
-        // Only try keyboard-interactive
-        if (methodsLeft.includes("keyboard-interactive")) {
-          callback("keyboard-interactive");
+        if (methodsLeft && methodsLeft.length > 0) {
+          // Prefer keyboard-interactive if available
+          if (methodsLeft.includes("keyboard-interactive")) {
+            callback("keyboard-interactive");
+          } else {
+            // No keyboard-interactive available - notify frontend to show auth dialog
+            sshLogger.info(
+              "Server does not support keyboard-interactive auth for 'none' auth type",
+              {
+                operation: "ssh_auth_handler_no_keyboard",
+                hostId: id,
+                methodsLeft,
+              },
+            );
+            ws.send(
+              JSON.stringify({
+                type: "auth_method_not_available",
+                message:
+                  "The server does not support keyboard-interactive authentication. Please provide credentials.",
+                methodsAvailable: methodsLeft,
+              }),
+            );
+            callback(false);
+          }
         } else {
-          sshLogger.error("Server does not support keyboard-interactive auth", {
-            operation: "ssh_auth_handler_no_keyboard",
+          // No methods left or empty - try to proceed without auth
+          sshLogger.info("No auth methods available, proceeding without auth", {
+            operation: "ssh_auth_no_methods",
             hostId: id,
-            methodsLeft,
           });
-          callback(false); // No more methods to try
+          callback(false);
         }
       };
-
-      sshLogger.info("Using keyboard-interactive auth (authType: none)", {
-        operation: "ssh_auth_config",
-        hostId: id,
-      });
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(

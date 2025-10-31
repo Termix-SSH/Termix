@@ -25,14 +25,10 @@ import {
   DropdownMenuTrigger,
 } from "@radix-ui/react-dropdown-menu";
 import { Input } from "@/components/ui/input.tsx";
-import { PasswordInput } from "@/components/ui/password-input.tsx";
-import { Label } from "@/components/ui/label.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
 import { FolderCard } from "@/ui/Desktop/Navigation/Hosts/FolderCard.tsx";
 import { getSSHHosts } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/Desktop/Navigation/Tabs/TabContext.tsx";
-import { deleteAccount } from "@/ui/main-axios.ts";
 
 interface SSHHost {
   id: number;
@@ -86,11 +82,6 @@ export function LeftSidebar({
   children,
 }: SidebarProps): React.ReactElement {
   const { t } = useTranslation();
-
-  const [deleteAccountOpen, setDeleteAccountOpen] = React.useState(false);
-  const [deletePassword, setDeletePassword] = React.useState("");
-  const [deleteLoading, setDeleteLoading] = React.useState(false);
-  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
     const saved = localStorage.getItem("leftSidebarOpen");
@@ -300,30 +291,6 @@ export function LeftSidebar({
     return [...pinned, ...rest];
   }, []);
 
-  const handleDeleteAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setDeleteLoading(true);
-    setDeleteError(null);
-
-    if (!deletePassword.trim()) {
-      setDeleteError(t("leftSidebar.passwordRequired"));
-      setDeleteLoading(false);
-      return;
-    }
-
-    try {
-      await deleteAccount(deletePassword);
-
-      handleLogout();
-    } catch (err: unknown) {
-      setDeleteError(
-        (err as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error || t("leftSidebar.failedToDeleteAccount"),
-      );
-      setDeleteLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-svh">
       <SidebarProvider open={isSidebarOpen}>
@@ -444,14 +411,6 @@ export function LeftSidebar({
                     >
                       <span>{t("common.logout")}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
-                      onClick={() => setDeleteAccountOpen(true)}
-                    >
-                      <span className="text-red-400">
-                        {t("leftSidebar.deleteAccount")}
-                      </span>
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </SidebarMenuItem>
@@ -467,114 +426,6 @@ export function LeftSidebar({
           className="absolute top-0 left-0 w-[10px] h-full bg-dark-bg cursor-pointer z-20 flex items-center justify-center rounded-tr-md rounded-br-md"
         >
           <ChevronRight size={10} />
-        </div>
-      )}
-
-      {deleteAccountOpen && (
-        <div
-          className="fixed top-0 left-0 right-0 bottom-0 z-[999999] pointer-events-auto isolate"
-          style={{
-            transform: "translateZ(0)",
-            willChange: "z-index",
-          }}
-        >
-          <div
-            className="w-[400px] h-full bg-dark-bg border-r-2 border-dark-border flex flex-col shadow-2xl relative isolate z-[9999999]"
-            style={{
-              boxShadow: "4px 0 20px rgba(0, 0, 0, 0.5)",
-              transform: "translateZ(0)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-dark-border">
-              <h2 className="text-lg font-semibold text-white">
-                {t("leftSidebar.deleteAccount")}
-              </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setDeleteAccountOpen(false);
-                  setDeletePassword("");
-                  setDeleteError(null);
-                }}
-                className="h-8 w-8 p-0 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center"
-                title={t("leftSidebar.closeDeleteAccount")}
-              >
-                <span className="text-lg font-bold leading-none">×</span>
-              </Button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-4">
-                <div className="text-sm text-gray-300">
-                  {t("leftSidebar.deleteAccountWarning")}
-                </div>
-
-                <Alert variant="destructive">
-                  <AlertTitle>{t("common.warning")}</AlertTitle>
-                  <AlertDescription>
-                    {t("leftSidebar.deleteAccountWarningDetails")}
-                  </AlertDescription>
-                </Alert>
-
-                {deleteError && (
-                  <Alert variant="destructive">
-                    <AlertTitle>{t("common.error")}</AlertTitle>
-                    <AlertDescription>{deleteError}</AlertDescription>
-                  </Alert>
-                )}
-
-                <form onSubmit={handleDeleteAccount} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="delete-password">
-                      {t("leftSidebar.confirmPassword")}
-                    </Label>
-                    <PasswordInput
-                      id="delete-password"
-                      value={deletePassword}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                      placeholder={t("placeholders.confirmPassword")}
-                      required
-                    />
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      type="submit"
-                      variant="destructive"
-                      className="flex-1"
-                      disabled={deleteLoading || !deletePassword.trim()}
-                    >
-                      {deleteLoading
-                        ? t("leftSidebar.deleting")
-                        : t("leftSidebar.deleteAccount")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setDeleteAccountOpen(false);
-                        setDeletePassword("");
-                        setDeleteError(null);
-                      }}
-                    >
-                      {t("leftSidebar.cancel")}
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="flex-1 cursor-pointer"
-            onClick={() => {
-              setDeleteAccountOpen(false);
-              setDeletePassword("");
-              setDeleteError(null);
-            }}
-          />
         </div>
       )}
     </div>

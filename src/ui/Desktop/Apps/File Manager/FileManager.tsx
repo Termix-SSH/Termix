@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { TOTPDialog } from "@/ui/Desktop/Navigation/TOTPDialog.tsx";
+import { SSHAuthDialog } from "@/ui/Desktop/Navigation/SSHAuthDialog.tsx";
 import {
   Upload,
   FolderPlus,
@@ -100,6 +101,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpSessionId, setTotpSessionId] = useState<string | null>(null);
   const [totpPrompt, setTotpPrompt] = useState<string>("");
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authDialogReason, setAuthDialogReason] = useState<
+    "no_keyboard" | "auth_failed" | "timeout"
+  >("no_keyboard");
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
   const [isClosing, setIsClosing] = useState<boolean>(false);
@@ -323,6 +328,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         setTotpRequired(true);
         setTotpSessionId(sessionId);
         setTotpPrompt(result.prompt || "Verification code:");
+        setIsLoading(false);
+        return;
+      }
+
+      if (result?.status === "auth_required") {
+        setAuthDialogReason(result.reason || "no_keyboard");
+        setShowAuthDialog(true);
         setIsLoading(false);
         return;
       }
@@ -1315,6 +1327,80 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     if (onClose) onClose();
   }
 
+  async function handleAuthDialogSubmit(credentials: {
+    password?: string;
+    sshKey?: string;
+    keyPassword?: string;
+  }) {
+    if (!currentHost) return;
+
+    try {
+      setIsLoading(true);
+      setShowAuthDialog(false);
+
+      const sessionId = currentHost.id.toString();
+
+      const result = await connectSSH(sessionId, {
+        hostId: currentHost.id,
+        ip: currentHost.ip,
+        port: currentHost.port,
+        username: currentHost.username,
+        password: credentials.password,
+        sshKey: credentials.sshKey,
+        keyPassword: credentials.keyPassword,
+        authType: credentials.password ? "password" : "key",
+        credentialId: currentHost.credentialId,
+        userId: currentHost.userId,
+      });
+
+      if (result?.requires_totp) {
+        setTotpRequired(true);
+        setTotpSessionId(sessionId);
+        setTotpPrompt(result.prompt || "Verification code:");
+        setIsLoading(false);
+        return;
+      }
+
+      if (result?.status === "auth_required") {
+        setAuthDialogReason(result.reason || "auth_failed");
+        setShowAuthDialog(true);
+        setIsLoading(false);
+        toast.error(t("fileManager.authenticationFailed"));
+        return;
+      }
+
+      setSshSessionId(sessionId);
+
+      try {
+        const response = await listSSHFiles(sessionId, currentPath);
+        const files = Array.isArray(response)
+          ? response
+          : response?.files || [];
+        setFiles(files);
+        clearSelection();
+        initialLoadDoneRef.current = true;
+        toast.success(t("fileManager.connectedSuccessfully"));
+        logFileManagerActivity();
+      } catch (dirError: unknown) {
+        console.error("Failed to load initial directory:", dirError);
+      }
+    } catch (error: unknown) {
+      console.error("SSH connection with credentials failed:", error);
+      setAuthDialogReason("auth_failed");
+      setShowAuthDialog(true);
+      toast.error(
+        t("fileManager.failedToConnect") + ": " + (error.message || error),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleAuthDialogCancel() {
+    setShowAuthDialog(false);
+    if (onClose) onClose();
+  }
+
   function generateUniqueName(
     baseName: string,
     type: "file" | "directory",
@@ -1890,6 +1976,21 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         onSubmit={handleTotpSubmit}
         onCancel={handleTotpCancel}
       />
+
+      {currentHost && (
+        <SSHAuthDialog
+          isOpen={showAuthDialog}
+          reason={authDialogReason}
+          onSubmit={handleAuthDialogSubmit}
+          onCancel={handleAuthDialogCancel}
+          hostInfo={{
+            ip: currentHost.ip,
+            port: currentHost.port,
+            username: currentHost.username,
+            name: currentHost.name,
+          }}
+        />
+      )}
     </div>
   );
 }

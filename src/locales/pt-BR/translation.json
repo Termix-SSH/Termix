@@ -1353,6 +1353,7 @@
     "closeDeleteAccount": "Fechar Exclusão de Conta",
     "deleteAccountWarning": "Esta ação não pode ser desfeita. Isso excluirá permanentemente sua conta e todos os dados associados.",
     "deleteAccountWarningDetails": "Excluir sua conta removerá todos os seus dados, incluindo hosts SSH, configurações e preferências. Esta ação é irreversível.",
+    "deleteAccountWarningShort": "Esta ação é irreversível e excluirá permanentemente sua conta.",
     "cannotDeleteAccount": "Não é Possível Excluir Conta",
     "lastAdminWarning": "Você é o último usuário administrador. Você não pode excluir sua conta pois isso deixaria o sistema sem administradores. Por favor, torne outro usuário administrador primeiro, ou contate o suporte do sistema.",
     "confirmPassword": "Confirmar Senha",

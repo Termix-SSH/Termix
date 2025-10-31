@@ -19,6 +19,7 @@ import {
   getSnippets,
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/Desktop/Navigation/TOTPDialog.tsx";
+import { SSHAuthDialog } from "@/ui/Desktop/Navigation/SSHAuthDialog.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -104,6 +105,12 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
     const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
+    const [showAuthDialog, setShowAuthDialog] = useState(false);
+    const [authDialogReason, setAuthDialogReason] = useState<
+      "no_keyboard" | "auth_failed" | "timeout"
+    >("no_keyboard");
+    const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
+      useState(false);
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -234,6 +241,38 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     function handleTotpCancel() {
       setTotpRequired(false);
       setTotpPrompt("");
+      if (onClose) onClose();
+    }
+
+    function handleAuthDialogSubmit(credentials: {
+      password?: string;
+      sshKey?: string;
+      keyPassword?: string;
+    }) {
+      if (webSocketRef.current && terminal) {
+        // Send reconnect message with credentials
+        webSocketRef.current.send(
+          JSON.stringify({
+            type: "reconnect_with_credentials",
+            data: {
+              cols: terminal.cols,
+              rows: terminal.rows,
+              hostConfig: {
+                ...hostConfig,
+                password: credentials.password,
+                key: credentials.sshKey,
+                keyPassword: credentials.keyPassword,
+              },
+            },
+          }),
+        );
+        setShowAuthDialog(false);
+        setIsConnecting(true);
+      }
+    }
+
+    function handleAuthDialogCancel() {
+      setShowAuthDialog(false);
       if (onClose) onClose();
     }
 
@@ -631,6 +670,25 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || "Password:");
             setIsPasswordPrompt(true);
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+          } else if (msg.type === "keyboard_interactive_available") {
+            // Keyboard-interactive auth is available (e.g., Warpgate OIDC)
+            // Show terminal immediately so user can see auth prompts
+            setKeyboardInteractiveDetected(true);
+            setIsConnecting(false);
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+          } else if (msg.type === "auth_method_not_available") {
+            // Server doesn't support keyboard-interactive for "none" auth
+            // Show SSHAuthDialog for manual credential entry
+            setAuthDialogReason("no_keyboard");
+            setShowAuthDialog(true);
+            setIsConnecting(false);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
@@ -1038,6 +1096,20 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           prompt={totpPrompt}
           onSubmit={handleTotpSubmit}
           onCancel={handleTotpCancel}
+          backgroundColor={backgroundColor}
+        />
+
+        <SSHAuthDialog
+          isOpen={showAuthDialog}
+          reason={authDialogReason}
+          onSubmit={handleAuthDialogSubmit}
+          onCancel={handleAuthDialogCancel}
+          hostInfo={{
+            ip: hostConfig.ip,
+            port: hostConfig.port,
+            username: hostConfig.username,
+            name: hostConfig.name,
+          }}
           backgroundColor={backgroundColor}
         />
 

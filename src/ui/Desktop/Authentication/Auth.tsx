@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/Desktop/User/LanguageSwitcher.tsx";
 import { toast } from "sonner";
+import { Monitor } from "lucide-react";
 import {
   registerUser,
   loginUser,
@@ -26,6 +27,7 @@ import {
   logoutUser,
 } from "../../main-axios.ts";
 import { ElectronServerConfig as ServerConfigComponent } from "@/ui/Desktop/Authentication/ElectronServerConfig.tsx";
+import { ElectronLoginForm } from "@/ui/Desktop/Authentication/ElectronLoginForm.tsx";
 
 interface AuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
@@ -586,6 +588,43 @@ export function Auth({
     );
   }
 
+  // Show ElectronLoginForm when Electron has a configured server and user is not logged in
+  if (isElectron() && currentServerUrl && !loggedIn && !authLoading) {
+    return (
+      <div
+        className="w-full h-screen flex items-center justify-center p-4"
+        {...props}
+      >
+        <div className="w-full max-w-4xl h-[90vh]">
+          <ElectronLoginForm
+            serverUrl={currentServerUrl}
+            onAuthSuccess={async () => {
+              try {
+                const meRes = await getUserInfo();
+                setInternalLoggedIn(true);
+                setLoggedIn(true);
+                setIsAdmin(!!meRes.is_admin);
+                setUsername(meRes.username || null);
+                setUserId(meRes.userId || null);
+                onAuthSuccess({
+                  isAdmin: !!meRes.is_admin,
+                  username: meRes.username || null,
+                  userId: meRes.userId || null,
+                });
+                toast.success(t("messages.loginSuccess"));
+              } catch (err) {
+                toast.error(t("errors.failedUserInfo"));
+              }
+            }}
+            onChangeServer={() => {
+              setShowServerConfig(true);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (dbHealthChecking && !dbConnectionFailed) {
     return (
       <div
@@ -664,11 +703,33 @@ export function Auth({
     );
   }
 
+  // Detect if we're running in Electron's WebView/iframe
+  const isInElectronWebView = () => {
+    try {
+      // Check if we're in an iframe AND the parent is Electron
+      if (window.self !== window.top) {
+        // We're in an iframe, likely Electron's ElectronLoginForm
+        return true;
+      }
+    } catch (e) {
+      // Cross-origin iframe, can't access parent
+      return false;
+    }
+    return false;
+  };
+
   return (
     <div
       className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
       {...props}
     >
+      {isInElectronWebView() && (
+        <Alert className="mb-4 border-blue-500 bg-blue-500/10">
+          <Monitor className="h-4 w-4" />
+          <AlertTitle>{t("auth.desktopApp")}</AlertTitle>
+          <AlertDescription>{t("auth.loggingInToDesktopApp")}</AlertDescription>
+        </Alert>
+      )}
       {totpRequired && (
         <div className="flex flex-col gap-5">
           <div className="mb-6 text-center">

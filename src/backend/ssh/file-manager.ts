@@ -311,6 +311,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     },
   };
 
+  let authMethodNotAvailable = false;
+
   if (
     resolvedCredentials.authType === "key" &&
     resolvedCredentials.sshKey &&
@@ -353,37 +355,30 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     // Use authHandler to control authentication flow
     // This ensures we only try keyboard-interactive, not password auth
     config.authHandler = (
-      methodsLeft: string[],
+      methodsLeft: string[] | null,
       partialSuccess: boolean,
       callback: (nextMethod: string | false) => void,
     ) => {
-      fileLogger.info("Auth handler called", {
-        operation: "ssh_auth_handler",
-        hostId,
-        sessionId,
-        methodsLeft,
-        partialSuccess,
-      });
-
-      // Only try keyboard-interactive
-      if (methodsLeft.includes("keyboard-interactive")) {
-        callback("keyboard-interactive");
+      if (methodsLeft && methodsLeft.length > 0) {
+        if (methodsLeft.includes("keyboard-interactive")) {
+          callback("keyboard-interactive");
+        } else {
+          authMethodNotAvailable = true;
+          fileLogger.error(
+            "Server does not support keyboard-interactive auth",
+            {
+              operation: "ssh_auth_handler_no_keyboard",
+              hostId,
+              sessionId,
+              methodsAvailable: methodsLeft,
+            },
+          );
+          callback(false);
+        }
       } else {
-        fileLogger.error("Server does not support keyboard-interactive auth", {
-          operation: "ssh_auth_handler_no_keyboard",
-          hostId,
-          sessionId,
-          methodsLeft,
-        });
-        callback(false); // No more methods to try
+        callback(false);
       }
     };
-
-    fileLogger.info("Using keyboard-interactive auth (authType: none)", {
-      operation: "ssh_auth_config",
-      hostId,
-      sessionId,
-    });
   } else {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
@@ -446,13 +441,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
               },
             },
           );
-
-          fileLogger.info("File manager activity logged", {
-            operation: "activity_log",
-            userId,
-            hostId,
-            hostName,
-          });
         } catch (error) {
           fileLogger.warn("Failed to log file manager activity", {
             operation: "activity_log_error",
@@ -468,16 +456,34 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   client.on("error", (err) => {
     if (responseSent) return;
     responseSent = true;
-    fileLogger.error("SSH connection failed for file manager", {
-      operation: "file_connect",
-      sessionId,
-      hostId,
-      ip,
-      port,
-      username,
-      error: err.message,
-    });
-    res.status(500).json({ status: "error", message: err.message });
+
+    if (authMethodNotAvailable && resolvedCredentials.authType === "none") {
+      fileLogger.info(
+        "Keyboard-interactive not available, requesting credentials",
+        {
+          operation: "file_connect_auth_not_available",
+          sessionId,
+          hostId,
+        },
+      );
+      res.status(200).json({
+        status: "auth_required",
+        message:
+          "The server does not support keyboard-interactive authentication. Please provide credentials.",
+        reason: "no_keyboard",
+      });
+    } else {
+      fileLogger.error("SSH connection failed for file manager", {
+        operation: "file_connect",
+        sessionId,
+        hostId,
+        ip,
+        port,
+        username,
+        error: err.message,
+      });
+      res.status(500).json({ status: "error", message: err.message });
+    }
   });
 
   client.on("close", () => {

@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { db } from "../db/index.js";
 import {
   users,
+  sessions,
   sshData,
   sshCredentials,
   fileManagerRecent,
@@ -25,6 +26,7 @@ import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
+import { parseUserAgent } from "../../utils/user-agent-parser.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -810,8 +812,18 @@ router.get("/oidc/callback", async (req, res) => {
       });
     }
 
+    // Detect platform and device info
+    const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
-      expiresIn: "50d",
+      deviceType: deviceInfo.type,
+      deviceInfo: deviceInfo.deviceInfo,
+    });
+
+    authLogger.success("OIDC user authenticated", {
+      operation: "oidc_login_success",
+      userId: userRecord.id,
+      deviceType: deviceInfo.type,
+      deviceInfo: deviceInfo.deviceInfo,
     });
 
     let frontendUrl = (redirectUri as string).replace(
@@ -826,12 +838,14 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendUrl);
     redirectUrl.searchParams.set("success", "true");
 
+    // Calculate max age based on device type
+    const maxAge =
+      deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
+        ? 30 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
+
     return res
-      .cookie(
-        "jwt",
-        token,
-        authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000),
-      )
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
       .redirect(redirectUrl.toString());
   } catch (err) {
     authLogger.error("OIDC callback failed", err);
@@ -951,8 +965,11 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    // Detect platform and device info
+    const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
-      expiresIn: "7d",
+      deviceType: deviceInfo.type,
+      deviceInfo: deviceInfo.deviceInfo,
     });
 
     authLogger.success(`User logged in successfully: ${username}`, {
@@ -960,6 +977,8 @@ router.post("/login", async (req, res) => {
       username,
       userId: userRecord.id,
       dataUnlocked: true,
+      deviceType: deviceInfo.type,
+      deviceInfo: deviceInfo.deviceInfo,
     });
 
     const response: Record<string, unknown> = {
@@ -976,12 +995,14 @@ router.post("/login", async (req, res) => {
       response.token = token;
     }
 
+    // Calculate max age based on device type
+    const maxAge =
+      deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
+        ? 30 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
+
     return res
-      .cookie(
-        "jwt",
-        token,
-        authManager.getSecureCookieOptions(req, 7 * 24 * 60 * 60 * 1000),
-      )
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
       .json(response);
   } catch (err) {
     authLogger.error("Failed to log in user", err);
@@ -1793,8 +1814,11 @@ router.post("/totp/verify-login", async (req, res) => {
         .where(eq(users.id, userRecord.id));
     }
 
+    // Detect platform and device info
+    const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
-      expiresIn: "50d",
+      deviceType: deviceInfo.type,
+      deviceInfo: deviceInfo.deviceInfo,
     });
 
     const isElectron =
@@ -1810,6 +1834,13 @@ router.post("/totp/verify-login", async (req, res) => {
       });
     }
 
+    authLogger.success("TOTP verification successful", {
+      operation: "totp_verify_success",
+      userId: userRecord.id,
+      deviceType: deviceInfo.type,
+      deviceInfo: deviceInfo.deviceInfo,
+    });
+
     const response: Record<string, unknown> = {
       success: true,
       is_admin: !!userRecord.is_admin,
@@ -1824,12 +1855,14 @@ router.post("/totp/verify-login", async (req, res) => {
       response.token = token;
     }
 
+    // Calculate max age based on device type
+    const maxAge =
+      deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
+        ? 30 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
+
     return res
-      .cookie(
-        "jwt",
-        token,
-        authManager.getSecureCookieOptions(req, 50 * 24 * 60 * 60 * 1000),
-      )
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
       .json(response);
   } catch (err) {
     authLogger.error("TOTP verification failed", err);
@@ -2093,6 +2126,10 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     const targetUserId = targetUser[0].id;
 
     try {
+      // Delete all user-related data to avoid foreign key constraints
+      await db
+        .delete(sshCredentialUsage)
+        .where(eq(sshCredentialUsage.userId, targetUserId));
       await db
         .delete(fileManagerRecent)
         .where(eq(fileManagerRecent.userId, targetUserId));
@@ -2102,12 +2139,17 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
       await db
         .delete(fileManagerShortcuts)
         .where(eq(fileManagerShortcuts.userId, targetUserId));
-
+      await db
+        .delete(recentActivity)
+        .where(eq(recentActivity.userId, targetUserId));
       await db
         .delete(dismissedAlerts)
         .where(eq(dismissedAlerts.userId, targetUserId));
-
+      await db.delete(snippets).where(eq(snippets.userId, targetUserId));
       await db.delete(sshData).where(eq(sshData.userId, targetUserId));
+      await db
+        .delete(sshCredentials)
+        .where(eq(sshCredentials.userId, targetUserId));
     } catch (cleanupError) {
       authLogger.error(`Cleanup failed for user ${username}:`, cleanupError);
       throw cleanupError;
@@ -2250,6 +2292,168 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
       userId,
     });
     res.status(500).json({ error: "Failed to change password" });
+  }
+});
+
+// Route: Get sessions (all for admin, own for user)
+// GET /users/sessions
+router.get("/sessions", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+    let sessionList;
+
+    if (userRecord.is_admin) {
+      // Admin: Get all sessions with user info
+      sessionList = await authManager.getAllSessions();
+
+      // Join with users to get usernames
+      const enrichedSessions = await Promise.all(
+        sessionList.map(async (session) => {
+          const sessionUser = await db
+            .select({ username: users.username })
+            .from(users)
+            .where(eq(users.id, session.userId))
+            .limit(1);
+
+          return {
+            ...session,
+            username: sessionUser[0]?.username || "Unknown",
+          };
+        }),
+      );
+
+      return res.json({ sessions: enrichedSessions });
+    } else {
+      // Regular user: Get only their own sessions
+      sessionList = await authManager.getUserSessions(userId);
+      return res.json({ sessions: sessionList });
+    }
+  } catch (err) {
+    authLogger.error("Failed to get sessions", err);
+    res.status(500).json({ error: "Failed to get sessions" });
+  }
+});
+
+// Route: Revoke a specific session
+// DELETE /users/sessions/:sessionId
+router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { sessionId } = req.params;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID is required" });
+  }
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    // Check if session exists
+    const sessionRecords = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    if (sessionRecords.length === 0) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    const session = sessionRecords[0];
+
+    // Non-admin users can only revoke their own sessions
+    if (!userRecord.is_admin && session.userId !== userId) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to revoke this session" });
+    }
+
+    const success = await authManager.revokeSession(sessionId);
+
+    if (success) {
+      authLogger.success("Session revoked", {
+        operation: "session_revoke",
+        sessionId,
+        revokedBy: userId,
+      });
+      res.json({ message: "Session revoked successfully" });
+    } else {
+      res.status(500).json({ error: "Failed to revoke session" });
+    }
+  } catch (err) {
+    authLogger.error("Failed to revoke session", err);
+    res.status(500).json({ error: "Failed to revoke session" });
+  }
+});
+
+// Route: Revoke all sessions for a user
+// POST /users/sessions/revoke-all
+router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { targetUserId, exceptCurrent } = req.body;
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    // Determine which user's sessions to revoke
+    let revokeUserId = userId;
+    if (targetUserId && userRecord.is_admin) {
+      // Admin can revoke any user's sessions
+      revokeUserId = targetUserId;
+    } else if (targetUserId && targetUserId !== userId) {
+      // Non-admin can only revoke their own sessions
+      return res.status(403).json({
+        error: "Not authorized to revoke sessions for other users",
+      });
+    }
+
+    // Get current session ID if needed
+    let currentSessionId: string | undefined;
+    if (exceptCurrent) {
+      const token =
+        req.cookies?.jwt || req.headers?.authorization?.split(" ")[1];
+      if (token) {
+        const payload = await authManager.verifyJWTToken(token);
+        currentSessionId = payload?.sessionId;
+      }
+    }
+
+    const revokedCount = await authManager.revokeAllUserSessions(
+      revokeUserId,
+      currentSessionId,
+    );
+
+    authLogger.success("User sessions revoked", {
+      operation: "user_sessions_revoke_all",
+      revokeUserId,
+      revokedBy: userId,
+      exceptCurrent,
+      revokedCount,
+    });
+
+    res.json({
+      message: `${revokedCount} session(s) revoked successfully`,
+      count: revokedCount,
+    });
+  } catch (err) {
+    authLogger.error("Failed to revoke user sessions", err);
+    res.status(500).json({ error: "Failed to revoke sessions" });
   }
 });
 

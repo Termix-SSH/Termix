@@ -1414,6 +1414,7 @@
     "closeDeleteAccount": "关闭删除账户",
     "deleteAccountWarning": "此操作无法撤销。这将永久删除您的账户和所有相关数据。",
     "deleteAccountWarningDetails": "删除您的账户将删除所有数据，包括 SSH 主机、配置和设置。此操作不可逆。",
+    "deleteAccountWarningShort": "此操作不可逆，将永久删除您的帐户。",
     "cannotDeleteAccount": "无法删除账户",
     "lastAdminWarning": "您是最后一个管理员用户。您不能删除自己的账户，否则系统将没有任何管理员。请先将其他用户设为管理员，或联系系统支持。",
     "confirmPassword": "确认密码",

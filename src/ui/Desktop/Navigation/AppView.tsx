@@ -16,6 +16,7 @@ import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
+import { SSHAuthDialog } from "@/ui/Desktop/Navigation/SSHAuthDialog.tsx";
 
 interface TabData {
   id: number;
