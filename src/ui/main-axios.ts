@@ -199,6 +199,10 @@ function createApiInstance(
       }
     }
 
+    if (typeof window !== "undefined" && (window as any).ReactNativeWebView) {
+      config.headers["User-Agent"] = "Termix-Mobile";
+    }
+
     return config;
   });
 
