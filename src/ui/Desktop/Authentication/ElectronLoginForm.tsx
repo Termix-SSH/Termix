@@ -326,8 +326,8 @@ export function ElectronLoginForm({
           src={serverUrl}
           className="w-full h-full border-0"
           title="Server Authentication"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation"
-          allow="clipboard-read; clipboard-write; cross-origin-isolated"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
+          allow="clipboard-read; clipboard-write; cross-origin-isolated; camera; microphone; geolocation"
         />
       </div>
     </div>

@@ -64,6 +64,41 @@ function createWindow() {
     mainWindow.loadFile(indexPath);
   }
 
+  // Allow iframes to load from any origin by removing X-Frame-Options headers
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      const headers = details.responseHeaders;
+
+      // Remove headers that block iframe embedding
+      if (headers) {
+        delete headers["x-frame-options"];
+        delete headers["X-Frame-Options"];
+
+        // Modify CSP to allow framing
+        if (headers["content-security-policy"]) {
+          headers["content-security-policy"] = headers["content-security-policy"]
+            .map(value => value.replace(/frame-ancestors[^;]*/gi, ''))
+            .filter(value => value.trim().length > 0);
+
+          if (headers["content-security-policy"].length === 0) {
+            delete headers["content-security-policy"];
+          }
+        }
+        if (headers["Content-Security-Policy"]) {
+          headers["Content-Security-Policy"] = headers["Content-Security-Policy"]
+            .map(value => value.replace(/frame-ancestors[^;]*/gi, ''))
+            .filter(value => value.trim().length > 0);
+
+          if (headers["Content-Security-Policy"].length === 0) {
+            delete headers["Content-Security-Policy"];
+          }
+        }
+      }
+
+      callback({ responseHeaders: headers });
+    }
+  );
+
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
   });
