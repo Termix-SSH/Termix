@@ -310,6 +310,10 @@ function createApiInstance(
         if (isSessionExpired && typeof window !== "undefined") {
           console.warn("Session expired - please log in again");
 
+          // Clear the JWT cookie to prevent reload loop
+          document.cookie =
+            "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
           import("sonner").then(({ toast }) => {
             toast.warning("Session expired - please log in again");
           });

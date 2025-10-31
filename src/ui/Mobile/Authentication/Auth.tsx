@@ -134,18 +134,6 @@ export function Auth({
   }, [loggedIn]);
 
   useEffect(() => {
-    const clearJWTOnLoad = async () => {
-      try {
-        await logoutUser();
-      } catch (error) {
-        console.log("JWT cleanup on HomepageAuth load:", error);
-      }
-    };
-
-    clearJWTOnLoad();
-  }, []);
-
-  useEffect(() => {
     getRegistrationAllowed().then((res) => {
       setRegistrationAllowed(res.allowed);
     });

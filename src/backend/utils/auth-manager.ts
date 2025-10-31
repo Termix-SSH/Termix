@@ -45,7 +45,6 @@ class AuthManager {
   private static instance: AuthManager;
   private systemCrypto: SystemCrypto;
   private userCrypto: UserCrypto;
-  private invalidatedTokens: Set<string> = new Set();
 
   private constructor() {
     this.systemCrypto = SystemCrypto.getInstance();
@@ -54,6 +53,22 @@ class AuthManager {
     this.userCrypto.setSessionExpiredCallback((userId: string) => {
       this.invalidateUserTokens(userId);
     });
+
+    // Run session cleanup every 5 minutes
+    setInterval(
+      () => {
+        this.cleanupExpiredSessions().catch((error) => {
+          databaseLogger.error(
+            "Failed to run periodic session cleanup",
+            error,
+            {
+              operation: "session_cleanup_periodic",
+            },
+          );
+        });
+      },
+      5 * 60 * 1000,
+    );
   }
 
   static getInstance(): AuthManager {
@@ -237,48 +252,81 @@ class AuthManager {
 
   async verifyJWTToken(token: string): Promise<JWTPayload | null> {
     try {
-      if (this.invalidatedTokens.has(token)) {
-        return null;
-      }
-
       const jwtSecret = await this.systemCrypto.getJWTSecret();
       const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+
+      // For tokens with sessionId, verify the session exists in database
+      // This ensures revoked sessions are rejected even after backend restart
+      if (payload.sessionId) {
+        try {
+          const sessionRecords = await db
+            .select()
+            .from(sessions)
+            .where(eq(sessions.id, payload.sessionId))
+            .limit(1);
+
+          if (sessionRecords.length === 0) {
+            databaseLogger.warn(
+              "JWT token has no matching session in database",
+              {
+                operation: "jwt_verify_failed",
+                reason: "session_not_found",
+                sessionId: payload.sessionId,
+              },
+            );
+            return null;
+          }
+        } catch (dbError) {
+          databaseLogger.error(
+            "Failed to check session in database during JWT verification",
+            dbError,
+            {
+              operation: "jwt_verify_session_check_failed",
+              sessionId: payload.sessionId,
+            },
+          );
+          // Continue anyway - database errors shouldn't block valid JWTs
+        }
+      }
+
+      databaseLogger.info("JWT verification successful", {
+        operation: "jwt_verify_success",
+        userId: payload.userId,
+        sessionId: payload.sessionId,
+      });
       return payload;
     } catch (error) {
       databaseLogger.warn("JWT verification failed", {
         operation: "jwt_verify_failed",
         error: error instanceof Error ? error.message : "Unknown error",
+        errorName: error instanceof Error ? error.name : "Unknown",
       });
       return null;
     }
   }
 
   invalidateJWTToken(token: string): void {
-    this.invalidatedTokens.add(token);
+    // No-op: Token invalidation is now handled through database session deletion
+    databaseLogger.info(
+      "Token invalidation requested (handled via session deletion)",
+      {
+        operation: "token_invalidate",
+      },
+    );
   }
 
   invalidateUserTokens(userId: string): void {
-    databaseLogger.info("User tokens invalidated due to data lock", {
+    databaseLogger.info("User tokens invalidation requested due to data lock", {
       operation: "user_tokens_invalidate",
       userId,
     });
+    // Session cleanup will happen through revokeAllUserSessions if needed
   }
 
   async revokeSession(sessionId: string): Promise<boolean> {
     try {
-      // Get the session to blacklist the token
-      const sessionRecords = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.id, sessionId))
-        .limit(1);
-
-      if (sessionRecords.length > 0) {
-        const session = sessionRecords[0];
-        this.invalidatedTokens.add(session.jwtToken);
-      }
-
-      // Delete the session instead of marking as revoked
+      // Delete the session from database
+      // The JWT will be invalidated because verifyJWTToken checks for session existence
       await db.delete(sessions).where(eq(sessions.id, sessionId));
 
       databaseLogger.info("Session deleted", {
@@ -301,19 +349,18 @@ class AuthManager {
     exceptSessionId?: string,
   ): Promise<number> {
     try {
-      // Get all user sessions to blacklist tokens
-      let query = db.select().from(sessions).where(eq(sessions.userId, userId));
+      // Get session count before deletion
+      const userSessions = await db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.userId, userId));
 
-      const userSessions = await query;
+      const deletedCount = userSessions.filter(
+        (s) => !exceptSessionId || s.id !== exceptSessionId,
+      ).length;
 
-      // Add all tokens to blacklist (except the excepted one)
-      for (const session of userSessions) {
-        if (!exceptSessionId || session.id !== exceptSessionId) {
-          this.invalidatedTokens.add(session.jwtToken);
-        }
-      }
-
-      // Delete sessions instead of marking as revoked
+      // Delete sessions from database
+      // JWTs will be invalidated because verifyJWTToken checks for session existence
       if (exceptSessionId) {
         await db
           .delete(sessions)
@@ -326,10 +373,6 @@ class AuthManager {
       } else {
         await db.delete(sessions).where(eq(sessions.userId, userId));
       }
-
-      const deletedCount = userSessions.filter(
-        (s) => !exceptSessionId || s.id !== exceptSessionId,
-      ).length;
 
       databaseLogger.info("User sessions deleted", {
         operation: "user_sessions_delete",
@@ -350,30 +393,28 @@ class AuthManager {
 
   async cleanupExpiredSessions(): Promise<number> {
     try {
-      // Get expired sessions to blacklist their tokens
+      // Get expired sessions count
       const expiredSessions = await db
         .select()
         .from(sessions)
         .where(sql`${sessions.expiresAt} < datetime('now')`);
 
-      // Add expired tokens to blacklist
-      for (const session of expiredSessions) {
-        this.invalidatedTokens.add(session.jwtToken);
-      }
+      const expiredCount = expiredSessions.length;
 
       // Delete expired sessions
+      // JWTs will be invalidated because verifyJWTToken checks for session existence
       await db
         .delete(sessions)
         .where(sql`${sessions.expiresAt} < datetime('now')`);
 
-      if (expiredSessions.length > 0) {
+      if (expiredCount > 0) {
         databaseLogger.info("Expired sessions cleaned up", {
           operation: "sessions_cleanup",
-          count: expiredSessions.length,
+          count: expiredCount,
         });
       }
 
-      return expiredSessions.length;
+      return expiredCount;
     } catch (error) {
       databaseLogger.error("Failed to cleanup expired sessions", error, {
         operation: "sessions_cleanup_failed",
@@ -465,8 +506,20 @@ class AuthManager {
 
           // Session exists, no need to check isRevoked since we delete sessions instead
 
-          // Check if session has expired
-          if (new Date(session.expiresAt) < new Date()) {
+          // Check if session has expired by comparing timestamps
+          const sessionExpiryTime = new Date(session.expiresAt).getTime();
+          const currentTime = Date.now();
+          const isExpired = sessionExpiryTime < currentTime;
+
+          if (isExpired) {
+            databaseLogger.warn("Session has expired", {
+              operation: "session_expired",
+              sessionId: payload.sessionId,
+              expiresAt: session.expiresAt,
+              expiryTime: sessionExpiryTime,
+              currentTime: currentTime,
+              difference: currentTime - sessionExpiryTime,
+            });
             return res.status(401).json({
               error: "Session has expired",
               code: "SESSION_EXPIRED",
@@ -508,15 +561,14 @@ class AuthManager {
         return res.status(401).json({ error: "Authentication required" });
       }
 
+      // Try to get data key if available (may be null after restart)
       const dataKey = this.userCrypto.getUserDataKey(userId);
-      if (!dataKey) {
-        return res.status(401).json({
-          error: "Session expired - please log in again",
-          code: "SESSION_EXPIRED",
-        });
-      }
+      authReq.dataKey = dataKey || undefined;
 
-      authReq.dataKey = dataKey;
+      // Note: Data key will be null after backend restart until user performs
+      // an operation that requires decryption. This is expected behavior.
+      // Individual routes that need encryption should check dataKey explicitly.
+
       next();
     };
   }
@@ -580,8 +632,44 @@ class AuthManager {
     };
   }
 
-  logoutUser(userId: string): void {
+  async logoutUser(userId: string, sessionId?: string): Promise<void> {
     this.userCrypto.logoutUser(userId);
+
+    // Delete the specific session from database if sessionId provided
+    if (sessionId) {
+      try {
+        await db.delete(sessions).where(eq(sessions.id, sessionId));
+        databaseLogger.info("Session deleted on logout", {
+          operation: "session_delete_logout",
+          userId,
+          sessionId,
+        });
+      } catch (error) {
+        databaseLogger.error("Failed to delete session on logout", error, {
+          operation: "session_delete_logout_failed",
+          userId,
+          sessionId,
+        });
+      }
+    } else {
+      // If no sessionId, delete all sessions for this user
+      try {
+        await db.delete(sessions).where(eq(sessions.userId, userId));
+        databaseLogger.info("All user sessions deleted on logout", {
+          operation: "sessions_delete_logout",
+          userId,
+        });
+      } catch (error) {
+        databaseLogger.error(
+          "Failed to delete user sessions on logout",
+          error,
+          {
+            operation: "sessions_delete_logout_failed",
+            userId,
+          },
+        );
+      }
+    }
   }
 
   getUserDataKey(userId: string): Buffer | null {

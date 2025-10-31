@@ -92,18 +92,6 @@ export function Auth({
   }, [loggedIn]);
 
   useEffect(() => {
-    const clearJWTOnLoad = async () => {
-      try {
-        await logoutUser();
-      } catch {
-        // Ignore logout errors on initial load
-      }
-    };
-
-    clearJWTOnLoad();
-  }, []);
-
-  useEffect(() => {
     getRegistrationAllowed().then((res) => {
       setRegistrationAllowed(res.allowed);
     });

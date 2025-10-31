@@ -1012,15 +1012,31 @@ router.post("/login", async (req, res) => {
 
 // Route: Logout user
 // POST /users/logout
-router.post("/logout", async (req, res) => {
+router.post("/logout", authenticateJWT, async (req, res) => {
   try {
-    const userId = (req as AuthenticatedRequest).userId;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId;
 
     if (userId) {
-      authManager.logoutUser(userId);
+      // Get sessionId from JWT if available
+      const token =
+        req.cookies?.jwt || req.headers["authorization"]?.split(" ")[1];
+      let sessionId: string | undefined;
+
+      if (token) {
+        try {
+          const payload = await authManager.verifyJWTToken(token);
+          sessionId = payload?.sessionId;
+        } catch (error) {
+          // Ignore token verification errors during logout
+        }
+      }
+
+      await authManager.logoutUser(userId, sessionId);
       authLogger.info("User logged out", {
         operation: "user_logout",
         userId,
+        sessionId,
       });
     }
 
@@ -1036,29 +1052,35 @@ router.post("/logout", async (req, res) => {
 // Route: Get current user's info using JWT
 // GET /users/me
 router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
+  console.log("=== /users/me CALLED ===");
   const userId = (req as AuthenticatedRequest).userId;
+  console.log("User ID from JWT:", userId);
+
   if (!isNonEmptyString(userId)) {
+    console.log("ERROR: Invalid userId");
     authLogger.warn("Invalid userId in JWT for /users/me");
     return res.status(401).json({ error: "Invalid userId" });
   }
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
+    console.log("User found:", user.length > 0 ? "YES" : "NO");
+
     if (!user || user.length === 0) {
+      console.log("ERROR: User not found in database");
       authLogger.warn(`User not found for /users/me: ${userId}`);
       return res.status(401).json({ error: "User not found" });
     }
 
-    const isDataUnlocked = authManager.isUserUnlocked(userId);
-
+    console.log("SUCCESS: Returning user info");
     res.json({
       userId: user[0].id,
       username: user[0].username,
       is_admin: !!user[0].is_admin,
       is_oidc: !!user[0].is_oidc,
       totp_enabled: !!user[0].totp_enabled,
-      data_unlocked: isDataUnlocked,
     });
   } catch (err) {
+    console.log("ERROR: Exception thrown:", err);
     authLogger.error("Failed to get username", err);
     res.status(500).json({ error: "Failed to get username" });
   }
@@ -1429,7 +1451,7 @@ router.post("/complete-reset", async (req, res) => {
       }
     }
 
-    if (userIdFromJwt === userId && authManager.isUserUnlocked(userId)) {
+    if (userIdFromJwt === userId) {
       // Logged-in user: preserve data
       try {
         const success = await authManager.resetUserPasswordWithPreservedDEK(
@@ -1825,15 +1847,6 @@ router.post("/totp/verify-login", async (req, res) => {
       req.headers["x-electron-app"] === "true" ||
       req.headers["X-Electron-App"] === "true";
 
-    const isDataUnlocked = authManager.isUserUnlocked(userRecord.id);
-
-    if (!isDataUnlocked) {
-      return res.status(401).json({
-        error: "Session expired - please log in again",
-        code: "SESSION_EXPIRED",
-      });
-    }
-
     authLogger.success("TOTP verification successful", {
       operation: "totp_verify_success",
       userId: userRecord.id,
@@ -1848,7 +1861,6 @@ router.post("/totp/verify-login", async (req, res) => {
       userId: userRecord.id,
       is_oidc: !!userRecord.is_oidc,
       totp_enabled: !!userRecord.totp_enabled,
-      data_unlocked: isDataUnlocked,
     };
 
     if (isElectron) {
@@ -2218,12 +2230,10 @@ router.get("/data-status", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
   try {
-    const isUnlocked = authManager.isUserUnlocked(userId);
+    // Data lock functionality has been removed - always return unlocked for authenticated users
     res.json({
-      unlocked: isUnlocked,
-      message: isUnlocked
-        ? "Data is unlocked"
-        : "Data is locked - re-authenticate with password",
+      unlocked: true,
+      message: "Data is unlocked",
     });
   } catch (err) {
     authLogger.error("Failed to check data status", err, {

@@ -31,13 +31,6 @@ const AppContent: FC = () => {
           setIsAuthenticated(true);
           setIsAdmin(!!meRes.is_admin);
           setUsername(meRes.username || null);
-
-          if (!meRes.data_unlocked) {
-            console.warn("User data is locked - re-authentication required");
-            setIsAuthenticated(false);
-            setIsAdmin(false);
-            setUsername(null);
-          }
         })
         .catch((err) => {
           setIsAuthenticated(false);
