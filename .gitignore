@@ -28,3 +28,4 @@ dist-ssr
 /ssl/
 .env
 /.mcp.json
+/nul
