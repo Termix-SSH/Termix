@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
-import { getCookie } from "@/ui/main-axios.ts";
+import { getCookie, getUserInfo } from "@/ui/main-axios.ts";
 
 interface ElectronLoginFormProps {
   serverUrl: string;
@@ -53,11 +53,22 @@ export function ElectronLoginForm({
                 throw new Error("Failed to save JWT to localStorage");
               }
 
+              try {
+                await getUserInfo();
+              } catch (verifyErr) {
+                localStorage.removeItem("jwt");
+                throw new Error("Invalid or expired authentication token");
+              }
+
               await new Promise((resolve) => setTimeout(resolve, 500));
 
               onAuthSuccess();
             } catch (err) {
-              setError(t("errors.authTokenSaveFailed"));
+              const errorMessage =
+                err instanceof Error
+                  ? err.message
+                  : t("errors.authTokenSaveFailed");
+              setError(errorMessage);
               setIsAuthenticating(false);
               hasAuthenticatedRef.current = false;
             }

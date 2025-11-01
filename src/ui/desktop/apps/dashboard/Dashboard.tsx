@@ -159,7 +159,8 @@ export function Dashboard({
           setDbHealth("error");
         }
 
-        const hosts = await getSSHHosts();
+        const hostsResponse = await getSSHHosts();
+        const hosts = Array.isArray(hostsResponse) ? hostsResponse : [];
         setTotalServers(hosts.length);
 
         let totalTunnelsCount = 0;
@@ -177,11 +178,17 @@ export function Dashboard({
         }
         setTotalTunnels(totalTunnelsCount);
 
-        const credentials = await getCredentials();
+        const credentialsResponse = await getCredentials();
+        const credentials = Array.isArray(credentialsResponse)
+          ? credentialsResponse
+          : [];
         setTotalCredentials(credentials.length);
 
         setRecentActivityLoading(true);
-        const activity = await getRecentActivity(35);
+        const activityResponse = await getRecentActivity(35);
+        const activity = Array.isArray(activityResponse)
+          ? activityResponse
+          : [];
         setRecentActivity(activity);
         setRecentActivityLoading(false);
 
