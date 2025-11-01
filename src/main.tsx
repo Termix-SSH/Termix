@@ -2,8 +2,8 @@
 import { StrictMode, useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import DesktopApp from "./ui/Desktop/DesktopApp.tsx";
-import { MobileApp } from "./ui/Mobile/MobileApp.tsx";
+import DesktopApp from "@/ui/desktop/DesktopApp.tsx";
+import { MobileApp } from "@/ui/mobile/MobileApp.tsx";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./i18n/i18n";
 import { isElectron } from "./ui/main-axios.ts";

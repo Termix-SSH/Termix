@@ -231,9 +231,6 @@ class AuthManager {
     return jwt.sign(payload, jwtSecret, { expiresIn } as jwt.SignOptions);
   }
 
-  /**
-   * Parse expiresIn string to milliseconds
-   */
   private parseExpiresIn(expiresIn: string): number {
     const match = expiresIn.match(/^(\d+)([smhd])$/);
     if (!match) return 7 * 24 * 60 * 60 * 1000;

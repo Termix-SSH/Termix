@@ -1,7 +1,5 @@
-# Auto detect text files and perform LF normalization
 * text=auto eol=lf
 
-# Source code
 *.js text eol=lf
 *.jsx text eol=lf
 *.ts text eol=lf
@@ -14,16 +12,13 @@
 *.yaml text eol=lf
 *.yml text eol=lf
 
-# Scripts
 *.sh text eol=lf
 *.bash text eol=lf
 
-# Windows scripts should use CRLF
 *.bat text eol=crlf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
 
-# Binary files
 *.png binary
 *.jpg binary
 *.jpeg binary
