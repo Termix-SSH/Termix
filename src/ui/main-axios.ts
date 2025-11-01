@@ -1695,8 +1695,32 @@ export async function loginUser(
   try {
     const response = await authApi.post("/users/login", { username, password });
 
-    if (isElectron() && response.data.token) {
+    const hasToken = response.data.token;
+
+    if (isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
+    }
+
+    const isInIframe =
+      typeof window !== "undefined" && window.self !== window.top;
+
+    if (isInIframe && hasToken) {
+      localStorage.setItem("jwt", response.data.token);
+
+      try {
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            token: response.data.token,
+            source: "login_api",
+            platform: "desktop",
+            timestamp: Date.now(),
+          },
+          "*",
+        );
+      } catch (e) {
+        console.error("[main-axios] Error posting message to parent:", e);
+      }
     }
 
     return {
@@ -2027,6 +2051,35 @@ export async function verifyTOTPLogin(
       temp_token,
       totp_code,
     });
+
+    const hasToken = response.data.token;
+
+    if (isElectron() && hasToken) {
+      localStorage.setItem("jwt", response.data.token);
+    }
+
+    const isInIframe =
+      typeof window !== "undefined" && window.self !== window.top;
+
+    if (isInIframe && hasToken) {
+      localStorage.setItem("jwt", response.data.token);
+
+      try {
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            token: response.data.token,
+            source: "totp_verify",
+            platform: "desktop",
+            timestamp: Date.now(),
+          },
+          "*",
+        );
+      } catch (e) {
+        console.error("[main-axios] Error posting message to parent:", e);
+      }
+    }
+
     return response.data;
   } catch (error) {
     handleApiError(error as AxiosError, "verify TOTP login");

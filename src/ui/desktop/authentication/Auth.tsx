@@ -241,6 +241,22 @@ export function Auth({
         throw new Error(t("errors.loginFailed"));
       }
 
+      if (isInElectronWebView() && res.token) {
+        try {
+          localStorage.setItem("jwt", res.token);
+          window.parent.postMessage(
+            {
+              type: "AUTH_SUCCESS",
+              token: res.token,
+              source: "auth_component",
+              platform: "desktop",
+              timestamp: Date.now(),
+            },
+            "*",
+          );
+        } catch (e) {}
+      }
+
       const [meRes] = await Promise.all([getUserInfo()]);
 
       setInternalLoggedIn(true);
@@ -398,6 +414,22 @@ export function Auth({
         localStorage.setItem("jwt", res.token);
       }
 
+      if (isInElectronWebView() && res.token) {
+        try {
+          localStorage.setItem("jwt", res.token);
+          window.parent.postMessage(
+            {
+              type: "AUTH_SUCCESS",
+              token: res.token,
+              source: "totp_auth_component",
+              platform: "desktop",
+              timestamp: Date.now(),
+            },
+            "*",
+          );
+        } catch (e) {}
+      }
+
       setInternalLoggedIn(true);
       setLoggedIn(true);
       setIsAdmin(!!res.is_admin);
@@ -485,6 +517,24 @@ export function Auth({
 
       getUserInfo()
         .then((meRes) => {
+          if (isInElectronWebView()) {
+            const token = getCookie("jwt") || localStorage.getItem("jwt");
+            if (token) {
+              try {
+                window.parent.postMessage(
+                  {
+                    type: "AUTH_SUCCESS",
+                    token: token,
+                    source: "oidc_callback",
+                    platform: "desktop",
+                    timestamp: Date.now(),
+                  },
+                  "*",
+                );
+              } catch (e) {}
+            }
+          }
+
           setInternalLoggedIn(true);
           setLoggedIn(true);
           setIsAdmin(!!meRes.is_admin);
@@ -577,7 +627,8 @@ export function Auth({
   if (showServerConfig === null) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
         <div className="flex items-center justify-center h-32">
@@ -590,7 +641,8 @@ export function Auth({
   if (showServerConfig) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
         <ServerConfigComponent
@@ -645,7 +697,8 @@ export function Auth({
   if (dbHealthChecking && !dbConnectionFailed) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
         <div className="flex items-center justify-center h-32">
@@ -663,7 +716,8 @@ export function Auth({
   if (dbConnectionFailed) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
         <div className="mb-6 text-center">
@@ -722,7 +776,8 @@ export function Auth({
 
   return (
     <div
-      className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md ${className || ""}`}
+      className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+      style={{ maxHeight: "calc(100vh - 1rem)" }}
       {...props}
     >
       {isInElectronWebView() && (

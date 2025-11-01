@@ -40,7 +40,6 @@ function postJWTToWebView() {
     const jwt = getCookie("jwt") || localStorage.getItem("jwt");
 
     if (!jwt) {
-      console.warn("JWT not found when trying to post to WebView");
       return;
     }
 
@@ -53,11 +52,7 @@ function postJWTToWebView() {
         timestamp: Date.now(),
       }),
     );
-
-    console.log("JWT posted to React Native WebView");
-  } catch (error) {
-    console.error("Failed to post JWT to WebView:", error);
-  }
+  } catch (error) {}
 }
 
 interface AuthProps extends React.ComponentProps<"div"> {
@@ -563,7 +558,8 @@ export function Auth({
 
   return (
     <div
-      className={`w-full max-w-md flex flex-col bg-dark-bg ${className || ""}`}
+      className={`w-full max-w-md flex flex-col bg-dark-bg overflow-y-auto my-2 ${className || ""}`}
+      style={{ maxHeight: "calc(100vh - 1rem)" }}
       {...props}
     >
       {isReactNativeWebView() && (

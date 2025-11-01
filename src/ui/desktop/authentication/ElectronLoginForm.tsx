@@ -57,16 +57,13 @@ export function ElectronLoginForm({
 
               onAuthSuccess();
             } catch (err) {
-              console.error("[ElectronLoginForm] Error saving JWT:", err);
               setError(t("errors.authTokenSaveFailed"));
               setIsAuthenticating(false);
               hasAuthenticatedRef.current = false;
             }
           }
         }
-      } catch (err) {
-        console.error("[ElectronLoginForm] Error processing message:", err);
-      }
+      } catch (err) {}
     };
 
     window.addEventListener("message", handleMessage);
@@ -99,7 +96,9 @@ export function ElectronLoginForm({
             let hasNotified = false;
 
             function postJWTToParent(token, source) {
-              if (hasNotified) return;
+              if (hasNotified) {
+                return;
+              }
               hasNotified = true;
 
               try {
@@ -111,7 +110,6 @@ export function ElectronLoginForm({
                   timestamp: Date.now()
                 }, '*');
               } catch (e) {
-                console.error('[Electron WebView] Error posting message:', e);
               }
             }
 
@@ -143,7 +141,6 @@ export function ElectronLoginForm({
                   }
                 }
               } catch (error) {
-                console.error('[Electron WebView] Error in checkAuth:', error);
               }
               return false;
             }
@@ -178,27 +175,23 @@ export function ElectronLoginForm({
               clearInterval(intervalId);
             }, 300000);
 
-            checkAuth();
+            setTimeout(() => checkAuth(), 500);
           })();
         `;
 
         try {
           if (iframe.contentWindow) {
-            iframe.contentWindow.postMessage(
-              { type: "INJECT_SCRIPT", script: injectedScript },
-              "*",
-            );
-
-            iframe.contentWindow.eval(injectedScript);
+            try {
+              iframe.contentWindow.eval(injectedScript);
+            } catch (evalError) {
+              iframe.contentWindow.postMessage(
+                { type: "INJECT_SCRIPT", script: injectedScript },
+                "*",
+              );
+            }
           }
-        } catch (err) {
-          console.warn(
-            "[ElectronLoginForm] Cannot inject script due to cross-origin restrictions",
-          );
-        }
-      } catch (err) {
-        console.error("[ElectronLoginForm] Error in handleLoad:", err);
-      }
+        } catch (err) {}
+      } catch (err) {}
     };
 
     const handleError = () => {

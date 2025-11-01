@@ -72,12 +72,21 @@ function createWindow() {
     mainWindow.setMenuBarVisibility(false);
   }
 
-  mainWindow.webContents.setUserAgent(
-    `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`,
+  const customUserAgent = `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`;
+  mainWindow.webContents.setUserAgent(customUserAgent);
+
+  mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
+    (details, callback) => {
+      details.requestHeaders["X-Electron-App"] = "true";
+
+      details.requestHeaders["User-Agent"] = customUserAgent;
+
+      callback({ requestHeaders: details.requestHeaders });
+    },
   );
 
   if (isDev) {
-    mainWindow.loadURL("http:://localhost:5173");
+    mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
     const indexPath = path.join(__dirname, "..", "dist", "index.html");
