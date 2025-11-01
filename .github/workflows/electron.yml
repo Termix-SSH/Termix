@@ -329,7 +329,6 @@ jobs:
 
           if [ -n "$MAC_INSTALLER_CERTIFICATE_BASE64" ]; then
             echo -n "$MAC_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $INSTALLER_CERT_PATH
-          else
           fi
 
           security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
@@ -340,7 +339,6 @@ jobs:
 
           if [ -f "$INSTALLER_CERT_PATH" ]; then
             security import $INSTALLER_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          else
           fi
 
           security list-keychain -d user -s $KEYCHAIN_PATH
@@ -386,7 +384,6 @@ jobs:
 
           if [ -n "$DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64" ]; then
             echo -n "$DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $DEV_INSTALLER_CERT_PATH
-          else
           fi
 
           security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
