@@ -80,7 +80,6 @@ export function CredentialEditor({
 
         setFolders(uniqueFolders);
       } catch {
-        // Failed to load credentials
       } finally {
         setLoading(false);
       }

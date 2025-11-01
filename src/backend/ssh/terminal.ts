@@ -333,15 +333,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
 
       case "password_response": {
-        const passwordData = data as TOTPResponseData; // Same structure
+        const passwordData = data as TOTPResponseData;
         if (keyboardInteractiveFinish && passwordData?.code) {
           const password = passwordData.code;
-          sshLogger.info("Password received from user", {
-            operation: "password_response",
-            userId,
-            passwordLength: password.length,
-          });
-
           keyboardInteractiveFinish([password]);
           keyboardInteractiveFinish = null;
         } else {
@@ -374,7 +368,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
           keyPassword?: string;
         };
 
-        // Update the host config with provided credentials
         if (credentialsData.password) {
           credentialsData.hostConfig.password = credentialsData.password;
           credentialsData.hostConfig.authType = "password";
@@ -384,10 +377,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           credentialsData.hostConfig.authType = "key";
         }
 
-        // Cleanup existing connection if any
         cleanupSSH();
 
-        // Reconnect with new credentials
         const reconnectData: ConnectToHostData = {
           cols: credentialsData.cols,
           rows: credentialsData.rows,
@@ -555,8 +546,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
 
-      // Immediately try to create shell - don't delay as it can cause connection to be cleaned up
-      // The connection is already ready at this point
       if (!sshConn) {
         sshLogger.warn(
           "SSH connection was cleaned up before shell could be created",
@@ -666,11 +655,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
             JSON.stringify({ type: "connected", message: "SSH connected" }),
           );
 
-          // Log activity to dashboard API
           if (id && hostConfig.userId) {
             (async () => {
               try {
-                // Fetch host name from database
                 const hosts = await SimpleDBOps.select(
                   getDb()
                     .select()
@@ -790,8 +777,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         prompts: Array<{ prompt: string; echo: boolean }>,
         finish: (responses: string[]) => void,
       ) => {
-        // Notify frontend that keyboard-interactive is available (e.g., for Warpgate OIDC)
-        // This allows the terminal to be displayed immediately so user can see auth prompts
         if (resolvedCredentials.authType === "none") {
           ws.send(
             JSON.stringify({
@@ -846,53 +831,25 @@ wss.on("connection", async (ws: WebSocket, req) => {
             resolvedCredentials.password &&
             resolvedCredentials.authType !== "none";
 
-          // Check if this is a password prompt
           const passwordPromptIndex = prompts.findIndex((p) =>
             /password/i.test(p.prompt),
           );
 
-          // If no stored password (including authType "none"), prompt the user
           if (!hasStoredPassword && passwordPromptIndex !== -1) {
-            // Don't block duplicate password prompts - some servers (like Warpgate) may ask multiple times
             if (keyboardInteractiveResponded && totpPromptSent) {
-              // Only block if we already sent a TOTP prompt
-              sshLogger.info(
-                "Skipping duplicate password prompt after TOTP sent",
-                {
-                  operation: "keyboard_interactive_skip",
-                  hostId: id,
-                },
-              );
               return;
             }
             keyboardInteractiveResponded = true;
 
-            sshLogger.info("Requesting password from user (authType: none)", {
-              operation: "keyboard_interactive_password",
-              hostId: id,
-              prompt: prompts[passwordPromptIndex].prompt,
-            });
-
             keyboardInteractiveFinish = (userResponses: string[]) => {
               const userInput = (userResponses[0] || "").trim();
 
-              // Build responses for all prompts
               const responses = prompts.map((p, index) => {
                 if (index === passwordPromptIndex) {
                   return userInput;
                 }
                 return "";
               });
-
-              sshLogger.info(
-                "User-provided password being sent to SSH server",
-                {
-                  operation: "interactive_password_verification",
-                  hostId: id,
-                  passwordLength: userInput.length,
-                  totalPrompts: prompts.length,
-                },
-              );
 
               finish(responses);
             };
@@ -906,8 +863,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             return;
           }
 
-          // Auto-respond with stored credentials if available
-          // Allow multiple responses - the server might ask multiple times during auth flow
           const responses = prompts.map((p) => {
             if (/password/i.test(p.prompt) && resolvedCredentials.password) {
               return resolvedCredentials.password;
@@ -991,28 +946,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
     };
 
     if (resolvedCredentials.authType === "none") {
-      // For "none" auth type, allow natural SSH negotiation
-      // The authHandler will try keyboard-interactive if available, otherwise notify frontend
-      // This allows for Warpgate OIDC and other interactive auth scenarios
       connectConfig.authHandler = (
         methodsLeft: string[] | null,
         partialSuccess: boolean,
         callback: (nextMethod: string | false) => void,
       ) => {
         if (methodsLeft && methodsLeft.length > 0) {
-          // Prefer keyboard-interactive if available
           if (methodsLeft.includes("keyboard-interactive")) {
             callback("keyboard-interactive");
           } else {
-            // No keyboard-interactive available - notify frontend to show auth dialog
-            sshLogger.info(
-              "Server does not support keyboard-interactive auth for 'none' auth type",
-              {
-                operation: "ssh_auth_handler_no_keyboard",
-                hostId: id,
-                methodsLeft,
-              },
-            );
             ws.send(
               JSON.stringify({
                 type: "auth_method_not_available",
@@ -1024,11 +966,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             callback(false);
           }
         } else {
-          // No methods left or empty - try to proceed without auth
-          sshLogger.info("No auth methods available, proceeding without auth", {
-            operation: "ssh_auth_no_methods",
-            hostId: id,
-          });
           callback(false);
         }
       };

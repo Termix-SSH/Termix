@@ -47,7 +47,6 @@ export function Tab({
 }: TabProps): React.ReactElement {
   const { t } = useTranslation();
 
-  // Firefox-style tab classes using cn utility
   const tabBaseClasses = cn(
     "relative flex items-center gap-1.5 px-3 w-full min-w-0",
     "rounded-t-lg border-t-2 border-l-2 border-r-2",
@@ -65,7 +64,6 @@ export function Tab({
       "bg-background/80 text-muted-foreground border-border hover:bg-background/90",
   );
 
-  // Helper function to split title into base and suffix
   const splitTitle = (fullTitle: string): { base: string; suffix: string } => {
     const match = fullTitle.match(/^(.*?)(\s*\(\d+\))$/);
     if (match) {

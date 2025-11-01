@@ -16,7 +16,8 @@
     <bugTrackerUrl>https://github.com/Termix-SSH/Support/issues</bugTrackerUrl>
     <tags>docker ssh self-hosted file-management ssh-tunnel termix server-management terminal</tags>
     <summary>Termix is a web-based server management platform with SSH terminal, tunneling, and file editing capabilities.</summary>
-    <description>Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a web-based solution for managing your servers and infrastructure through a single, intuitive interface.
+    <description>
+Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a web-based solution for managing your servers and infrastructure through a single, intuitive interface.
 
 Termix offers:
 - SSH terminal access
@@ -24,7 +25,8 @@ Termix offers:
 - Remote file management
 - Server monitoring and management
 
-This package installs the desktop application version of Termix.</description>
+This package installs the desktop application version of Termix.
+    </description>
     <releaseNotes>https://github.com/Termix-SSH/Termix/releases</releaseNotes>
   </metadata>
   <files>

@@ -112,8 +112,6 @@ class SSHConnectionPool {
           );
 
           if (totpPrompt) {
-            // Record TOTP failure as permanent - never retry
-            // The recordFailure method will log this once
             authFailureTracker.recordFailure(host.id, "TOTP", true);
             client.end();
             reject(
@@ -158,9 +156,7 @@ class SSHConnectionPool {
         if (!conn.inUse && now - conn.lastUsed > maxAge) {
           try {
             conn.client.end();
-          } catch {
-            // Ignore errors when closing stale connections
-          }
+          } catch {}
           return false;
         }
         return true;
@@ -180,9 +176,7 @@ class SSHConnectionPool {
       for (const conn of connections) {
         try {
           conn.client.end();
-        } catch {
-          // Ignore errors when closing connections during cleanup
-        }
+        } catch {}
       }
     }
     this.connections.clear();
@@ -220,9 +214,7 @@ class RequestQueue {
       if (request) {
         try {
           await request();
-        } catch {
-          // Ignore errors from queued requests
-        }
+        } catch {}
       }
     }
 
@@ -272,13 +264,13 @@ interface AuthFailureRecord {
   count: number;
   lastFailure: number;
   reason: "TOTP" | "AUTH" | "TIMEOUT";
-  permanent: boolean; // If true, don't retry at all
+  permanent: boolean;
 }
 
 class AuthFailureTracker {
   private failures = new Map<number, AuthFailureRecord>();
   private maxRetries = 3;
-  private backoffBase = 60000; // 1 minute base backoff
+  private backoffBase = 60000;
 
   recordFailure(
     hostId: number,
@@ -305,17 +297,14 @@ class AuthFailureTracker {
     const record = this.failures.get(hostId);
     if (!record) return false;
 
-    // Always skip TOTP hosts
     if (record.reason === "TOTP" || record.permanent) {
       return true;
     }
 
-    // Skip if we've exceeded max retries
     if (record.count >= this.maxRetries) {
       return true;
     }
 
-    // Calculate exponential backoff
     const backoffTime = this.backoffBase * Math.pow(2, record.count - 1);
     const timeSinceFailure = Date.now() - record.lastFailure;
 
@@ -351,11 +340,9 @@ class AuthFailureTracker {
 
   reset(hostId: number): void {
     this.failures.delete(hostId);
-    // Don't log reset - it's not important
   }
 
   cleanup(): void {
-    // Clean up old failures (older than 1 hour)
     const maxAge = 60 * 60 * 1000;
     const now = Date.now();
 
@@ -459,7 +446,6 @@ class PollingManager {
     const statsConfig = this.parseStatsConfig(host.statsConfig);
     const existingConfig = this.pollingConfigs.get(host.id);
 
-    // Clear existing timers if they exist
     if (existingConfig) {
       if (existingConfig.statusTimer) {
         clearInterval(existingConfig.statusTimer);
@@ -474,35 +460,27 @@ class PollingManager {
       statsConfig,
     };
 
-    // Start status polling if enabled
     if (statsConfig.statusCheckEnabled) {
       const intervalMs = statsConfig.statusCheckInterval * 1000;
 
-      // Poll immediately (don't await - let it run in background)
       this.pollHostStatus(host);
 
-      // Then set up interval to poll periodically
       config.statusTimer = setInterval(() => {
         this.pollHostStatus(host);
       }, intervalMs);
     } else {
-      // Remove status if monitoring is disabled
       this.statusStore.delete(host.id);
     }
 
-    // Start metrics polling if enabled
     if (statsConfig.metricsEnabled) {
       const intervalMs = statsConfig.metricsInterval * 1000;
 
-      // Poll immediately (don't await - let it run in background)
       this.pollHostMetrics(host);
 
-      // Then set up interval to poll periodically
       config.metricsTimer = setInterval(() => {
         this.pollHostMetrics(host);
       }, intervalMs);
     } else {
-      // Remove metrics if monitoring is disabled
       this.metricsStore.delete(host.id);
     }
 
@@ -576,12 +554,10 @@ class PollingManager {
   }
 
   async refreshHostPolling(userId: string): Promise<void> {
-    // Stop all current polling
     for (const hostId of this.pollingConfigs.keys()) {
       this.stopPollingForHost(hostId);
     }
 
-    // Reinitialize
     await this.initializePolling(userId);
   }
 
@@ -1019,10 +995,8 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     os: string | null;
   };
 }> {
-  // Check if we should skip this host due to auth failures
   if (authFailureTracker.shouldSkip(host.id)) {
     const reason = authFailureTracker.getSkipReason(host.id);
-    // Don't log - just skip silently to avoid spam
     throw new Error(reason || "Authentication failed");
   }
 
@@ -1166,7 +1140,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           availableHuman = null;
         }
 
-        // Collect network interfaces
         const interfaces: Array<{
           name: string;
           ip: string;
@@ -1225,7 +1198,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           }
         } catch (e) {}
 
-        // Collect uptime
         let uptimeSeconds: number | null = null;
         let uptimeFormatted: string | null = null;
         try {
@@ -1242,7 +1214,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           }
         } catch (e) {}
 
-        // Collect process information
         let totalProcesses: number | null = null;
         let runningProcesses: number | null = null;
         const topProcesses: Array<{
@@ -1285,7 +1256,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           runningProcesses = Number(runningCount.stdout.trim());
         } catch (e) {}
 
-        // Collect system information
         let hostname: string | null = null;
         let kernel: string | null = null;
         let os: string | null = null;
@@ -1338,25 +1308,20 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         return result;
       });
     } catch (error) {
-      // Record authentication failures for backoff
       if (error instanceof Error) {
         if (error.message.includes("TOTP authentication required")) {
-          // TOTP failures are already recorded in keyboard-interactive handler
           throw error;
         } else if (
           error.message.includes("No password available") ||
           error.message.includes("Unsupported authentication type") ||
           error.message.includes("No SSH key available")
         ) {
-          // Configuration errors - permanent failures, don't retry
-          // recordFailure will log once when first detected
           authFailureTracker.recordFailure(host.id, "AUTH", true);
         } else if (
           error.message.includes("authentication") ||
           error.message.includes("Permission denied") ||
           error.message.includes("All configured authentication methods failed")
         ) {
-          // recordFailure will log once when first detected
           authFailureTracker.recordFailure(host.id, "AUTH");
         } else if (
           error.message.includes("timeout") ||
@@ -1384,9 +1349,7 @@ function tcpPing(
       settled = true;
       try {
         socket.destroy();
-      } catch {
-        // Ignore errors when destroying socket
-      }
+      } catch {}
       resolve(result);
     };
 
@@ -1409,7 +1372,6 @@ app.get("/status", async (req, res) => {
     });
   }
 
-  // Initialize polling if no hosts are being polled yet
   const statuses = pollingManager.getAllStatuses();
   if (statuses.size === 0) {
     await pollingManager.initializePolling(userId);
@@ -1433,7 +1395,6 @@ app.get("/status/:id", validateHostId, async (req, res) => {
     });
   }
 
-  // Initialize polling if no hosts are being polled yet
   const statuses = pollingManager.getAllStatuses();
   if (statuses.size === 0) {
     await pollingManager.initializePolling(userId);
@@ -1520,7 +1481,6 @@ app.listen(PORT, async () => {
     });
   }
 
-  // Cleanup old auth failures every 10 minutes
   setInterval(
     () => {
       authFailureTracker.cleanup();

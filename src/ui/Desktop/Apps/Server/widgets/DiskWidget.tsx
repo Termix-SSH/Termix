@@ -15,7 +15,6 @@ interface DiskWidgetProps {
 export function DiskWidget({ metrics }: DiskWidgetProps) {
   const { t } = useTranslation();
 
-  // Prepare radial chart data
   const radialData = React.useMemo(() => {
     const percent = metrics?.disk?.percent || 0;
     return [

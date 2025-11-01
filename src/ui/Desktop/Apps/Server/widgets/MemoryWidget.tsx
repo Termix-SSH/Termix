@@ -22,7 +22,6 @@ interface MemoryWidgetProps {
 export function MemoryWidget({ metrics, metricsHistory }: MemoryWidgetProps) {
   const { t } = useTranslation();
 
-  // Prepare chart data
   const chartData = React.useMemo(() => {
     return metricsHistory.map((m, index) => ({
       index,

@@ -226,9 +226,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const currentLoadingPathRef = useRef<string>("");
   const keepaliveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activityLoggedRef = useRef(false);
-  const activityLoggingRef = useRef(false); // Prevent concurrent logging calls
+  const activityLoggingRef = useRef(false);
 
-  // Centralized activity logging to prevent duplicates
   const logFileManagerActivity = useCallback(async () => {
     if (
       !currentHost?.id ||
@@ -238,7 +237,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       return;
     }
 
-    // Set flags IMMEDIATELY to prevent race conditions
     activityLoggingRef.current = true;
     activityLoggedRef.current = true;
 
@@ -246,10 +244,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       const hostName =
         currentHost.name || `${currentHost.username}@${currentHost.ip}`;
       await logActivity("file_manager", currentHost.id, hostName);
-      // Don't reset activityLoggedRef on success - we want to prevent future calls
     } catch (err) {
       console.warn("Failed to log file manager activity:", err);
-      // Reset on error so it can be retried
       activityLoggedRef.current = false;
     } finally {
       activityLoggingRef.current = false;
@@ -350,8 +346,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         clearSelection();
         initialLoadDoneRef.current = true;
 
-        // Log activity for recent connections (after successful directory load)
-        // Only log if TOTP was not required (if TOTP is required, we'll log after verification)
         if (!result?.requires_totp) {
           logFileManagerActivity();
         }
@@ -1306,7 +1300,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           initialLoadDoneRef.current = true;
           toast.success(t("fileManager.connectedSuccessfully"));
 
-          // Log activity for recent connections (after successful directory load)
           logFileManagerActivity();
         } catch (dirError: unknown) {
           console.error("Failed to load initial directory:", dirError);

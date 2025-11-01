@@ -84,9 +84,7 @@ function detectKeyTypeFromContent(keyContent: string): string {
       } else if (decodedString.includes("1.3.101.112")) {
         return "ssh-ed25519";
       }
-    } catch {
-      // Cannot decode key, fallback to length-based detection
-    }
+    } catch {}
 
     if (content.length < 800) {
       return "ssh-ed25519";
@@ -142,9 +140,7 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
       } else if (decodedString.includes("1.3.101.112")) {
         return "ssh-ed25519";
       }
-    } catch {
-      // Cannot decode key, fallback to length-based detection
-    }
+    } catch {}
 
     if (content.length < 400) {
       return "ssh-ed25519";
@@ -246,9 +242,7 @@ export function parseSSHKey(
 
           useSSH2 = true;
         }
-      } catch {
-        // SSH2 parsing failed, will use fallback method
-      }
+      } catch {}
     }
 
     if (!useSSH2) {
@@ -274,9 +268,7 @@ export function parseSSHKey(
           success: true,
         };
       }
-    } catch {
-      // Fallback parsing also failed
-    }
+    } catch {}
 
     return {
       privateKey: privateKeyData,

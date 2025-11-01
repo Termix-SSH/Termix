@@ -33,12 +33,10 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     ? host.name
     : `${host.username}@${host.ip}:${host.port}`;
 
-  // Update host when prop changes
   useEffect(() => {
     setHost(initialHost);
   }, [initialHost]);
 
-  // Listen for host changes to immediately update config
   useEffect(() => {
     const handleHostsChanged = async () => {
       const { getSSHHosts } = await import("@/ui/main-axios.ts");
@@ -54,7 +52,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
   }, [host.id]);
 
-  // Parse stats config for monitoring settings
   const statsConfig = useMemo(() => {
     try {
       return host.statsConfig
@@ -68,7 +65,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
 
   useEffect(() => {
-    // Don't poll if status monitoring is disabled
     if (!shouldShowStatus) {
       setServerStatus("offline");
       return;
@@ -90,7 +86,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
           } else if (err?.response?.status === 504) {
             setServerStatus("degraded");
           } else if (err?.response?.status === 404) {
-            // Status not available - monitoring disabled
             setServerStatus("offline");
           } else {
             setServerStatus("offline");
@@ -100,7 +95,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     };
 
     fetchStatus();
-    const intervalId = window.setInterval(fetchStatus, 10000); // Poll backend every 10 seconds
+    const intervalId = window.setInterval(fetchStatus, 10000);
 
     return () => {
       cancelled = true;

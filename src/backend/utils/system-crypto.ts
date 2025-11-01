@@ -107,9 +107,7 @@ class SystemCrypto {
           process.env.DATABASE_KEY = dbKeyMatch[1];
           return;
         }
-      } catch {
-        // Ignore file read errors, will generate new key
-      }
+      } catch {}
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
@@ -146,9 +144,7 @@ class SystemCrypto {
           process.env.INTERNAL_AUTH_TOKEN = tokenMatch[1];
           return;
         }
-      } catch {
-        // Ignore file read errors, will generate new token
-      }
+      } catch {}
 
       await this.generateAndGuideInternalAuthToken();
     } catch (error) {

@@ -1,7 +1,3 @@
-// ============================================================================
-// CENTRAL TYPE DEFINITIONS
-// ============================================================================
-
 import type { Client } from "ssh2";
 import type { Request } from "express";
 
@@ -60,7 +56,7 @@ export interface SSHHostData {
   enableFileManager?: boolean;
   defaultPath?: string;
   tunnelConnections?: TunnelConnection[];
-  statsConfig?: string | Record<string, unknown>; // Can be string (from backend) or object (from form)
+  statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
 }
 
@@ -110,7 +106,6 @@ export interface TunnelConnection {
   endpointPort: number;
   endpointHost: string;
 
-  // Endpoint host credentials for tunnel authentication
   endpointPassword?: string;
   endpointKey?: string;
   endpointKeyPassword?: string;
@@ -255,16 +250,14 @@ export interface TermixAlert {
 // ============================================================================
 
 export interface TerminalConfig {
-  // Appearance
   cursorBlink: boolean;
   cursorStyle: "block" | "underline" | "bar";
   fontSize: number;
   fontFamily: string;
   letterSpacing: number;
   lineHeight: number;
-  theme: string; // Theme key from TERMINAL_THEMES
+  theme: string;
 
-  // Behavior
   scrollback: number;
   bellStyle: "none" | "sound" | "visual" | "both";
   rightClickSelectsWord: boolean;
@@ -272,7 +265,6 @@ export interface TerminalConfig {
   fastScrollSensitivity: number;
   minimumContrastRatio: number;
 
-  // Advanced
   backspaceMode: "normal" | "control-h";
   agentForwarding: boolean;
   environmentVariables: Array<{ key: string; value: string }>;
@@ -298,7 +290,7 @@ export interface TabContextTab {
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;
-  initialTab?: string; // For ssh_manager: "host_viewer" | "add_host" | "credentials" | "add_credential"
+  initialTab?: string;
 }
 
 // ============================================================================

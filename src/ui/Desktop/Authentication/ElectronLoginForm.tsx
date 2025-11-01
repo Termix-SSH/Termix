@@ -25,9 +25,7 @@ export function ElectronLoginForm({
   const [currentUrl, setCurrentUrl] = useState(serverUrl);
 
   useEffect(() => {
-    // Listen for messages from iframe
     const handleMessage = async (event: MessageEvent) => {
-      // Only accept messages from our configured server
       try {
         const serverOrigin = new URL(serverUrl).origin;
         if (event.origin !== serverOrigin) {
@@ -43,25 +41,17 @@ export function ElectronLoginForm({
             !hasAuthenticatedRef.current &&
             !isAuthenticating
           ) {
-            console.log(
-              "[ElectronLoginForm] Received auth success from iframe",
-            );
             hasAuthenticatedRef.current = true;
             setIsAuthenticating(true);
 
             try {
-              // Save JWT to localStorage (Electron mode)
               localStorage.setItem("jwt", data.token);
 
-              // Verify it was saved
               const savedToken = localStorage.getItem("jwt");
               if (!savedToken) {
                 throw new Error("Failed to save JWT to localStorage");
               }
 
-              console.log("[ElectronLoginForm] JWT saved successfully");
-
-              // Small delay to ensure everything is saved
               await new Promise((resolve) => setTimeout(resolve, 200));
 
               onAuthSuccess();
@@ -86,36 +76,28 @@ export function ElectronLoginForm({
   }, [serverUrl, isAuthenticating, onAuthSuccess, t]);
 
   useEffect(() => {
-    // Inject script into iframe when it loads
     const iframe = iframeRef.current;
     if (!iframe) return;
 
     const handleLoad = () => {
       setLoading(false);
 
-      // Update current URL when iframe loads
       try {
         if (iframe.contentWindow) {
           setCurrentUrl(iframe.contentWindow.location.href);
         }
       } catch (e) {
-        // Cross-origin, can't access - use serverUrl
         setCurrentUrl(serverUrl);
       }
 
       try {
-        // Inject JavaScript to detect JWT
         const injectedScript = `
           (function() {
-            console.log('[Electron WebView] Script injected');
-
             let hasNotified = false;
 
             function postJWTToParent(token, source) {
               if (hasNotified) return;
               hasNotified = true;
-
-              console.log('[Electron WebView] Posting JWT to parent, source:', source);
 
               try {
                 window.parent.postMessage({
@@ -163,7 +145,6 @@ export function ElectronLoginForm({
               return false;
             }
 
-            // Intercept localStorage.setItem
             const originalSetItem = localStorage.setItem;
             localStorage.setItem = function(key, value) {
               originalSetItem.apply(this, arguments);
@@ -172,7 +153,6 @@ export function ElectronLoginForm({
               }
             };
 
-            // Intercept sessionStorage.setItem
             const originalSessionSetItem = sessionStorage.setItem;
             sessionStorage.setItem = function(key, value) {
               originalSessionSetItem.apply(this, arguments);
@@ -181,7 +161,6 @@ export function ElectronLoginForm({
               }
             };
 
-            // Poll for JWT
             const intervalId = setInterval(() => {
               if (hasNotified) {
                 clearInterval(intervalId);
@@ -192,17 +171,14 @@ export function ElectronLoginForm({
               }
             }, 500);
 
-            // Stop after 5 minutes
             setTimeout(() => {
               clearInterval(intervalId);
             }, 300000);
 
-            // Initial check
             checkAuth();
           })();
         `;
 
-        // Try to inject the script
         try {
           if (iframe.contentWindow) {
             iframe.contentWindow.postMessage(
@@ -210,11 +186,9 @@ export function ElectronLoginForm({
               "*",
             );
 
-            // Also try direct execution if same origin
             iframe.contentWindow.eval(injectedScript);
           }
         } catch (err) {
-          // Cross-origin restrictions - this is expected for external servers
           console.warn(
             "[ElectronLoginForm] Cannot inject script due to cross-origin restrictions",
           );
@@ -250,12 +224,10 @@ export function ElectronLoginForm({
     onChangeServer();
   };
 
-  // Format URL for display (remove protocol)
   const displayUrl = currentUrl.replace(/^https?:\/\//, "");
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-dark-bg flex flex-col">
-      {/* Navigation Bar */}
       <div className="flex items-center justify-between p-4 bg-dark-bg border-b border-dark-border">
         <button
           onClick={handleBack}

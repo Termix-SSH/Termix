@@ -27,23 +27,16 @@ import {
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 
-/**
- * Detect if we're running inside a React Native WebView
- */
 function isReactNativeWebView(): boolean {
   return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
 }
 
-/**
- * Post JWT token to React Native WebView for mobile app authentication
- */
 function postJWTToWebView() {
   if (!isReactNativeWebView()) {
     return;
   }
 
   try {
-    // Get JWT from localStorage or cookies
     const jwt = getCookie("jwt") || localStorage.getItem("jwt");
 
     if (!jwt) {
@@ -51,7 +44,6 @@ function postJWTToWebView() {
       return;
     }
 
-    // Post message to React Native
     (window as any).ReactNativeWebView.postMessage(
       JSON.stringify({
         type: "AUTH_SUCCESS",
@@ -263,7 +255,6 @@ export function Auth({
         userId: meRes.userId || null,
       });
 
-      // Post JWT to React Native WebView if running in mobile app
       postJWTToWebView();
 
       setInternalLoggedIn(true);
@@ -431,7 +422,6 @@ export function Auth({
           userId: res.userId || null,
         });
 
-        // Post JWT to React Native WebView if running in mobile app
         postJWTToWebView();
       }, 100);
 
@@ -521,7 +511,6 @@ export function Auth({
             userId: meRes.userId || null,
           });
 
-          // Post JWT to React Native WebView if running in mobile app
           postJWTToWebView();
 
           setInternalLoggedIn(true);
@@ -670,7 +659,6 @@ export function Auth({
       {!internalLoggedIn && !authLoading && !totpRequired && (
         <>
           {(() => {
-            // Check if any authentication method is available
             const hasLogin = passwordLoginAllowed && !firstUser;
             const hasSignup =
               (passwordLoginAllowed || firstUser) && registrationAllowed;

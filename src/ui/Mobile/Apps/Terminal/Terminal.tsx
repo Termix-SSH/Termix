@@ -101,9 +101,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             terminal as { refresh?: (start: number, end: number) => void }
           ).refresh(0, terminal.rows - 1);
         }
-      } catch {
-        // Ignore terminal refresh errors
-      }
+      } catch {}
     }
 
     function performFit() {
@@ -177,9 +175,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               scheduleNotify(cols, rows);
               hardRefresh();
             }
-          } catch {
-            // Ignore resize notification errors
-          }
+          } catch {}
         },
         refresh: () => hardRefresh(),
       }),
@@ -229,9 +225,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               `\r\n[${msg.message || t("terminal.disconnected")}]`,
             );
           }
-        } catch {
-          // Ignore message parsing errors
-        }
+        } catch {}
       });
 
       ws.addEventListener("close", (event) => {

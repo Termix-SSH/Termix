@@ -66,7 +66,6 @@ export function Dashboard({
   const [userId, setUserId] = useState<string | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // Dashboard data state
   const [uptime, setUptime] = useState<string>("0d 0h 0m");
   const [versionStatus, setVersionStatus] = useState<
     "up_to_date" | "requires_update"
@@ -141,22 +140,18 @@ export function Dashboard({
     }
   }, [isAuthenticated]);
 
-  // Fetch dashboard data
   useEffect(() => {
     if (!loggedIn) return;
 
     const fetchDashboardData = async () => {
       try {
-        // Fetch uptime
         const uptimeInfo = await getUptime();
         setUptime(uptimeInfo.formatted);
 
-        // Fetch version info
         const versionInfo = await getVersionInfo();
         setVersionText(`v${versionInfo.localVersion}`);
         setVersionStatus(versionInfo.status || "up_to_date");
 
-        // Fetch database health
         try {
           await getDatabaseHealth();
           setDbHealth("healthy");
@@ -164,25 +159,20 @@ export function Dashboard({
           setDbHealth("error");
         }
 
-        // Fetch total counts
         const hosts = await getSSHHosts();
         setTotalServers(hosts.length);
 
-        // Count total tunnels across all hosts
         let totalTunnelsCount = 0;
         for (const host of hosts) {
           if (host.tunnelConnections) {
             try {
-              // tunnelConnections is already parsed as an array from the backend
               const tunnelConnections = Array.isArray(host.tunnelConnections)
                 ? host.tunnelConnections
                 : JSON.parse(host.tunnelConnections);
               if (Array.isArray(tunnelConnections)) {
                 totalTunnelsCount += tunnelConnections.length;
               }
-            } catch {
-              // Ignore parse errors
-            }
+            } catch {}
           }
         }
         setTotalTunnels(totalTunnelsCount);
@@ -190,13 +180,11 @@ export function Dashboard({
         const credentials = await getCredentials();
         setTotalCredentials(credentials.length);
 
-        // Fetch recent activity (35 items)
         setRecentActivityLoading(true);
         const activity = await getRecentActivity(35);
         setRecentActivity(activity);
         setRecentActivityLoading(false);
 
-        // Fetch server stats for first 5 servers
         setServerStatsLoading(true);
         const serversWithStats = await Promise.all(
           hosts.slice(0, 5).map(async (host: { id: number; name: string }) => {
@@ -229,12 +217,10 @@ export function Dashboard({
 
     fetchDashboardData();
 
-    // Refresh every 30 seconds
     const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
   }, [loggedIn]);
 
-  // Handler for resetting recent activity
   const handleResetActivity = async () => {
     try {
       await resetRecentActivity();
@@ -244,9 +230,7 @@ export function Dashboard({
     }
   };
 
-  // Handler for opening a recent activity item
   const handleActivityClick = (item: RecentActivityItem) => {
-    // Find the host and open appropriate tab
     getSSHHosts().then((hosts) => {
       const host = hosts.find((h: { id: number }) => h.id === item.hostId);
       if (!host) return;
@@ -267,7 +251,6 @@ export function Dashboard({
     });
   };
 
-  // Quick Actions handlers
   const handleAddHost = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {

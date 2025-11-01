@@ -153,7 +153,6 @@ export function AdminSettings({
           toast.error(t("admin.failedToFetchOidcConfig"));
         }
       });
-    // Capture the current session so we know whether to ask for a password later.
     getUserInfo()
       .then((info) => {
         if (info) {
@@ -251,9 +250,7 @@ export function AdminSettings({
   };
 
   const handleTogglePasswordLogin = async (checked: boolean) => {
-    // If disabling password login, warn the user
     if (!checked) {
-      // Check if OIDC is configured
       const hasOIDCConfigured =
         oidcConfig.client_id &&
         oidcConfig.client_secret &&
@@ -276,7 +273,6 @@ export function AdminSettings({
             await updatePasswordLoginAllowed(checked);
             setAllowPasswordLogin(checked);
 
-            // Auto-disable registration when password login is disabled
             if (allowRegistration) {
               await updateRegistrationAllowed(false);
               setAllowRegistration(false);
@@ -295,7 +291,6 @@ export function AdminSettings({
       return;
     }
 
-    // Enabling password login - proceed normally
     setPasswordLoginLoading(true);
     try {
       await updatePasswordLoginAllowed(checked);
@@ -493,7 +488,6 @@ export function AdminSettings({
       const formData = new FormData();
       formData.append("file", importFile);
       if (requiresImportPassword) {
-        // Preserve the existing password flow for non-OIDC accounts.
         formData.append("password", importPassword);
       }
 
@@ -607,7 +601,6 @@ export function AdminSettings({
   };
 
   const handleRevokeSession = async (sessionId: string) => {
-    // Check if this is the current session
     const currentJWT = getCookie("jwt");
     const currentSession = sessions.find((s) => s.jwtToken === currentJWT);
     const isCurrentSession = currentSession?.id === sessionId;
@@ -641,7 +634,6 @@ export function AdminSettings({
           if (response.ok) {
             toast.success(t("admin.sessionRevokedSuccessfully"));
 
-            // If user revoked their own session, reload the page after a brief delay
             if (isCurrentSession) {
               setTimeout(() => {
                 window.location.reload();
@@ -661,7 +653,6 @@ export function AdminSettings({
   };
 
   const handleRevokeAllUserSessions = async (userId: string) => {
-    // Check if revoking sessions for current user
     const isCurrentUser = currentUser?.id === userId;
 
     confirmWithToast(
@@ -701,7 +692,6 @@ export function AdminSettings({
               data.message || t("admin.sessionsRevokedSuccessfully"),
             );
 
-            // If revoking sessions for current user, reload the page after a brief delay
             if (isCurrentUser) {
               setTimeout(() => {
                 window.location.reload();
@@ -978,7 +968,6 @@ export function AdminSettings({
                       type="button"
                       variant="outline"
                       onClick={async () => {
-                        // Check if password login is enabled
                         if (!allowPasswordLogin) {
                           confirmWithToast(
                             t("admin.confirmDisableOIDCWarning"),
@@ -1469,7 +1458,6 @@ export function AdminSettings({
                           </span>
                         </Button>
                       </div>
-                      {/* Only render the password field when a local account is performing the import. */}
                       {importFile && requiresImportPassword && (
                         <div className="space-y-2">
                           <Label htmlFor="import-password">Password</Label>

@@ -58,16 +58,12 @@ export function Auth({
 }: AuthProps) {
   const { t } = useTranslation();
 
-  // Detect if we're running in Electron's WebView/iframe
   const isInElectronWebView = () => {
     try {
-      // Check if we're in an iframe AND the parent is Electron
       if (window.self !== window.top) {
-        // We're in an iframe, likely Electron's ElectronLoginForm
         return true;
       }
     } catch (e) {
-      // Cross-origin iframe, can't access parent
       return false;
     }
     return false;
@@ -108,7 +104,6 @@ export function Auth({
   }, [loggedIn]);
 
   useEffect(() => {
-    // Skip when in Electron WebView iframe
     if (isInElectronWebView()) {
       return;
     }
@@ -119,7 +114,6 @@ export function Auth({
   }, []);
 
   useEffect(() => {
-    // Skip when in Electron WebView iframe
     if (isInElectronWebView()) {
       return;
     }
@@ -136,7 +130,6 @@ export function Auth({
   }, []);
 
   useEffect(() => {
-    // Skip when in Electron WebView iframe
     if (isInElectronWebView()) {
       return;
     }
@@ -159,8 +152,6 @@ export function Auth({
   }, []);
 
   useEffect(() => {
-    // Skip database health check when in Electron WebView iframe
-    // The parent Electron window will handle authentication
     if (isInElectronWebView()) {
       setDbHealthChecking(false);
       setDbConnectionFailed(false);
@@ -615,7 +606,6 @@ export function Auth({
     );
   }
 
-  // Show ElectronLoginForm when Electron has a configured server and user is not logged in
   if (isElectron() && currentServerUrl && !loggedIn && !authLoading) {
     return (
       <div
@@ -797,7 +787,6 @@ export function Auth({
       {!loggedIn && !authLoading && !totpRequired && (
         <>
           {(() => {
-            // Check if any authentication method is available
             const hasLogin = passwordLoginAllowed && !firstUser;
             const hasSignup =
               (passwordLoginAllowed || firstUser) && registrationAllowed;

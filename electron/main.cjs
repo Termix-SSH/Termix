@@ -1,4 +1,11 @@
-const { app, BrowserWindow, shell, ipcMain, dialog, Menu } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  dialog,
+  Menu,
+} = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -57,37 +64,38 @@ function createWindow() {
   }
 
   if (isDev) {
-    mainWindow.loadURL("http://localhost:5173");
+    mainWindow.loadURL("http:://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
     const indexPath = path.join(__dirname, "..", "dist", "index.html");
     mainWindow.loadFile(indexPath);
   }
 
-  // Allow iframes to load from any origin by removing X-Frame-Options headers
   mainWindow.webContents.session.webRequest.onHeadersReceived(
     (details, callback) => {
       const headers = details.responseHeaders;
 
-      // Remove headers that block iframe embedding
       if (headers) {
         delete headers["x-frame-options"];
         delete headers["X-Frame-Options"];
 
-        // Modify CSP to allow framing
         if (headers["content-security-policy"]) {
-          headers["content-security-policy"] = headers["content-security-policy"]
-            .map(value => value.replace(/frame-ancestors[^;]*/gi, ''))
-            .filter(value => value.trim().length > 0);
+          headers["content-security-policy"] = headers[
+            "content-security-policy"
+          ]
+            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
+            .filter((value) => value.trim().length > 0);
 
           if (headers["content-security-policy"].length === 0) {
             delete headers["content-security-policy"];
           }
         }
         if (headers["Content-Security-Policy"]) {
-          headers["Content-Security-Policy"] = headers["Content-Security-Policy"]
-            .map(value => value.replace(/frame-ancestors[^;]*/gi, ''))
-            .filter(value => value.trim().length > 0);
+          headers["Content-Security-Policy"] = headers[
+            "Content-Security-Policy"
+          ]
+            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
+            .filter((value) => value.trim().length > 0);
 
           if (headers["Content-Security-Policy"].length === 0) {
             delete headers["Content-Security-Policy"];
@@ -96,7 +104,7 @@ function createWindow() {
       }
 
       callback({ responseHeaders: headers });
-    }
+    },
   );
 
   mainWindow.once("ready-to-show", () => {

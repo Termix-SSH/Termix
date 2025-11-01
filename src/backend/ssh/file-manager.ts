@@ -120,9 +120,7 @@ function cleanupSession(sessionId: string) {
   if (session) {
     try {
       session.client.end();
-    } catch {
-      // Ignore connection close errors
-    }
+    } catch {}
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -352,8 +350,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
     config.password = resolvedCredentials.password;
   } else if (resolvedCredentials.authType === "none") {
-    // Use authHandler to control authentication flow
-    // This ensures we only try keyboard-interactive, not password auth
     config.authHandler = (
       methodsLeft: string[] | null,
       partialSuccess: boolean,
@@ -409,7 +405,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
 
-    // Log activity to dashboard API
     if (hostId && userId) {
       (async () => {
         try {
@@ -458,14 +453,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     responseSent = true;
 
     if (authMethodNotAvailable && resolvedCredentials.authType === "none") {
-      fileLogger.info(
-        "Keyboard-interactive not available, requesting credentials",
-        {
-          operation: "file_connect_auth_not_available",
-          sessionId,
-          hostId,
-        },
-      );
       res.status(200).json({
         status: "auth_required",
         message:
@@ -557,50 +544,25 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           prompt: prompts[totpPromptIndex].prompt,
         });
       } else {
-        // Non-TOTP prompts (password, etc.)
         const hasStoredPassword =
           resolvedCredentials.password &&
           resolvedCredentials.authType !== "none";
 
-        // Check if this is a password prompt
         const passwordPromptIndex = prompts.findIndex((p) =>
           /password/i.test(p.prompt),
         );
 
-        // If no stored password (including authType "none"), prompt the user
         if (!hasStoredPassword && passwordPromptIndex !== -1) {
           if (responseSent) {
-            // Connection is already being handled, don't send duplicate responses
-            fileLogger.info(
-              "Skipping duplicate password prompt - response already sent",
-              {
-                operation: "keyboard_interactive_skip",
-                hostId,
-                sessionId,
-              },
-            );
             return;
           }
           responseSent = true;
 
           if (pendingTOTPSessions[sessionId]) {
-            // Session already waiting for TOTP, don't override
-            fileLogger.info("Skipping password prompt - TOTP session pending", {
-              operation: "keyboard_interactive_skip",
-              hostId,
-              sessionId,
-            });
             return;
           }
 
           keyboardInteractiveResponded = true;
-
-          fileLogger.info("Requesting password from user (authType: none)", {
-            operation: "keyboard_interactive_password",
-            hostId,
-            sessionId,
-            prompt: prompts[passwordPromptIndex].prompt,
-          });
 
           pendingTOTPSessions[sessionId] = {
             client,
@@ -627,7 +589,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           return;
         }
 
-        // Auto-respond with stored credentials if available
         const responses = prompts.map((p) => {
           if (/password/i.test(p.prompt) && resolvedCredentials.password) {
             return resolvedCredentials.password;
@@ -679,9 +640,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {
-      // Ignore errors when closing timed out session
-    }
+    } catch {}
     fileLogger.warn("TOTP session timeout before code submission", {
       operation: "file_totp_verify",
       sessionId,
@@ -693,7 +652,6 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       .json({ error: "TOTP session timeout. Please reconnect." });
   }
 
-  // Build responses for ALL prompts, just like in terminal.ts
   const responses = (session.prompts || []).map((p, index) => {
     if (index === session.totpPromptIndex) {
       return totpCode;
@@ -704,22 +662,9 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     return "";
   });
 
-  fileLogger.info("Full keyboard-interactive response for file manager", {
-    operation: "file_totp_full_response",
-    sessionId,
-    userId,
-    totalPrompts: session.prompts?.length || 0,
-    responsesProvided: responses.filter((r) => r !== "").length,
-  });
-
   let responseSent = false;
   let responseTimeout: NodeJS.Timeout;
 
-  // Don't remove event listeners - just add our own 'once' handlers
-  // The ssh2 library manages multiple listeners correctly
-  // Removing them can cause the connection to become unstable
-
-  // CRITICAL: Attach event listeners BEFORE calling finish() to avoid race condition
   session.client.once("ready", () => {
     if (responseSent) return;
     responseSent = true;
@@ -727,8 +672,6 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
 
     delete pendingTOTPSessions[sessionId];
 
-    // Add a small delay to let SSH2 stabilize the connection after keyboard-interactive
-    // This prevents "Not connected" errors when immediately trying to exec commands
     setTimeout(() => {
       sshSessions[sessionId] = {
         client: session.client,
@@ -742,7 +685,6 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         message: "TOTP verified, SSH connection established",
       });
 
-      // Log activity to dashboard API after connection is stable
       if (session.hostId && session.userId) {
         (async () => {
           try {
@@ -789,7 +731,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
           }
         })();
       }
-    }, 200); // Give SSH2 connection 200ms to fully stabilize after keyboard-interactive
+    }, 200);
   });
 
   session.client.once("error", (err) => {
@@ -822,7 +764,6 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     }
   }, 60000);
 
-  // Now that event listeners are attached, submit the TOTP response
   session.finish(responses);
 });
 
@@ -2492,15 +2433,6 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
             ? parseInt(exitCodeMatch[1])
             : code;
           const cleanOutput = output.replace(/EXIT_CODE:\d+$/, "").trim();
-
-          fileLogger.info("File execution completed", {
-            operation: "execute_file",
-            sessionId,
-            filePath,
-            exitCode: actualExitCode,
-            outputLength: cleanOutput.length,
-            errorLength: errorOutput.length,
-          });
 
           res.json({
             success: true,

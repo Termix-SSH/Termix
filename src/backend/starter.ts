@@ -21,9 +21,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       if (persistentConfig.parsed) {
         Object.assign(process.env, persistentConfig.parsed);
       }
-    } catch {
-      // Ignore errors if .env file doesn't exist
-    }
+    } catch {}
 
     let version = "unknown";
 

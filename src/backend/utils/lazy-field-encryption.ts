@@ -82,9 +82,7 @@ export class LazyFieldEncryption {
               legacyFieldName,
             );
             return decrypted;
-          } catch {
-            // Ignore legacy format errors
-          }
+          } catch {}
         }
 
         const sensitiveFields = [
@@ -176,9 +174,7 @@ export class LazyFieldEncryption {
               wasPlaintext: false,
               wasLegacyEncryption: true,
             };
-          } catch {
-            // Ignore legacy format errors
-          }
+          } catch {}
         }
         return {
           encrypted: fieldValue,

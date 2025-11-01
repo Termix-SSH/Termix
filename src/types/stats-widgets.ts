@@ -9,12 +9,10 @@ export type WidgetType =
 
 export interface StatsConfig {
   enabledWidgets: WidgetType[];
-  // Status monitoring configuration
   statusCheckEnabled: boolean;
-  statusCheckInterval: number; // seconds (5-3600)
-  // Metrics monitoring configuration
+  statusCheckInterval: number;
   metricsEnabled: boolean;
-  metricsInterval: number; // seconds (5-3600)
+  metricsInterval: number;
 }
 
 export const DEFAULT_STATS_CONFIG: StatsConfig = {

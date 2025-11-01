@@ -12,10 +12,8 @@ import type { AuthenticatedRequest } from "../types/index.js";
 const app = express();
 const authManager = AuthManager.getInstance();
 
-// Track server start time
 const serverStartTime = Date.now();
 
-// In-memory rate limiter for activity logging
 const activityRateLimiter = new Map<string, number>();
 const RATE_LIMIT_MS = 1000; // 1 second window
 
@@ -60,7 +58,6 @@ app.use(express.json({ limit: "1mb" }));
 
 app.use(authManager.createAuthMiddleware());
 
-// Get server uptime
 app.get("/uptime", async (req, res) => {
   try {
     const uptimeMs = Date.now() - serverStartTime;
@@ -80,7 +77,6 @@ app.get("/uptime", async (req, res) => {
   }
 });
 
-// Get recent activity for current user
 app.get("/activity/recent", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -112,7 +108,6 @@ app.get("/activity/recent", async (req, res) => {
   }
 });
 
-// Log new activity
 app.post("/activity/log", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -138,22 +133,18 @@ app.post("/activity/log", async (req, res) => {
       });
     }
 
-    // In-memory rate limiting to prevent duplicate requests
     const rateLimitKey = `${userId}:${hostId}:${type}`;
     const now = Date.now();
     const lastLogged = activityRateLimiter.get(rateLimitKey);
 
     if (lastLogged && now - lastLogged < RATE_LIMIT_MS) {
-      // Too soon after last request, reject as duplicate
       return res.json({
         message: "Activity already logged recently (rate limited)",
       });
     }
 
-    // Update rate limiter
     activityRateLimiter.set(rateLimitKey, now);
 
-    // Clean up old entries from rate limiter (keep it from growing indefinitely)
     if (activityRateLimiter.size > 10000) {
       const entriesToDelete: string[] = [];
       for (const [key, timestamp] of activityRateLimiter.entries()) {
@@ -164,7 +155,6 @@ app.post("/activity/log", async (req, res) => {
       entriesToDelete.forEach((key) => activityRateLimiter.delete(key));
     }
 
-    // Verify the host belongs to the user
     const hosts = await SimpleDBOps.select(
       getDb()
         .select()
@@ -178,7 +168,6 @@ app.post("/activity/log", async (req, res) => {
       return res.status(404).json({ error: "Host not found" });
     }
 
-    // Insert new activity
     const result = (await SimpleDBOps.insert(
       recentActivity,
       "recent_activity",
@@ -191,7 +180,6 @@ app.post("/activity/log", async (req, res) => {
       userId,
     )) as unknown as { id: number };
 
-    // Keep only the last 100 activities per user to prevent bloat
     const allActivities = await SimpleDBOps.select(
       getDb()
         .select()
@@ -216,7 +204,6 @@ app.post("/activity/log", async (req, res) => {
   }
 });
 
-// Reset recent activity for current user
 app.delete("/activity/reset", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -228,7 +215,6 @@ app.delete("/activity/reset", async (req, res) => {
       });
     }
 
-    // Delete all activities for the user
     await SimpleDBOps.delete(
       recentActivity,
       "recent_activity",

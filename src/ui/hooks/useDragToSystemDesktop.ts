@@ -48,9 +48,7 @@ export function useDragToSystemDesktop({ sshSessionId }: UseDragToSystemProps) {
           store.put({ handle: dirHandle }, "lastSaveDir");
         };
       }
-    } catch {
-      // Failed to save directory handle
-    }
+    } catch {}
   };
 
   const isFileSystemAPISupported = () => {

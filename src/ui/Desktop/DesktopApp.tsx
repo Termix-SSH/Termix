@@ -60,9 +60,7 @@ function AppContent() {
     localStorage.setItem("topNavbarOpen", JSON.stringify(isTopbarOpen));
   }, [isTopbarOpen]);
 
-  const handleSelectView = () => {
-    // View switching is now handled by tabs context
-  };
+  const handleSelectView = () => {};
 
   const handleAuthSuccess = (authData: {
     isAdmin: boolean;

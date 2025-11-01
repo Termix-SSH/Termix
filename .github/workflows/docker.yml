@@ -42,22 +42,18 @@ jobs:
           ALL_TAGS=()
 
           if [ "$BUILD_TYPE" = "Production" ]; then
-            # Production build → push release + latest to both GHCR and Docker Hub
             TAGS+=("release-$VERSION" "latest")
             for tag in "${TAGS[@]}"; do
               ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
               ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
             done
           else
-            # Dev build → push only dev-x.x.x to GHCR
             TAGS+=("dev-$VERSION")
             for tag in "${TAGS[@]}"; do
               ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
             done
           fi
 
-          echo "ALL_TAGS=${ALL_TAGS[*]}" >> $GITHUB_ENV
-          echo "All tags to build:"
           printf '%s\n' "${ALL_TAGS[@]}"
 
       - name: Login to GHCR

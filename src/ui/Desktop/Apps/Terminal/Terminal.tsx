@@ -122,14 +122,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isConnectingRef = useRef(false);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
-    const activityLoggingRef = useRef(false); // Prevent concurrent logging calls
+    const activityLoggingRef = useRef(false);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
     const DEBOUNCE_MS = 140;
 
-    // Centralized activity logging to prevent duplicates
     const logTerminalActivity = async () => {
       if (
         !hostConfig.id ||
@@ -139,7 +138,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
-      // Set flags IMMEDIATELY to prevent race conditions
       activityLoggingRef.current = true;
       activityLoggedRef.current = true;
 
@@ -147,10 +145,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         const hostName =
           hostConfig.name || `${hostConfig.username}@${hostConfig.ip}`;
         await logActivity("terminal", hostConfig.id, hostName);
-        // Don't reset activityLoggedRef on success - we want to prevent future calls
       } catch (err) {
         console.warn("Failed to log terminal activity:", err);
-        // Reset on error so it can be retried
         activityLoggedRef.current = false;
       } finally {
         activityLoggingRef.current = false;
@@ -193,9 +189,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             terminal as { refresh?: (start: number, end: number) => void }
           ).refresh(0, terminal.rows - 1);
         }
-      } catch {
-        // Ignore terminal refresh errors
-      }
+      } catch {}
     }
 
     function performFit() {
@@ -250,7 +244,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       keyPassword?: string;
     }) {
       if (webSocketRef.current && terminal) {
-        // Send reconnect message with credentials
         webSocketRef.current.send(
           JSON.stringify({
             type: "reconnect_with_credentials",
@@ -335,9 +328,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               scheduleNotify(cols, rows);
               hardRefresh();
             }
-          } catch {
-            // Ignore resize notification errors
-          }
+          } catch {}
         },
         refresh: () => hardRefresh(),
       }),
@@ -587,18 +578,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             reconnectAttempts.current = 0;
             isReconnectingRef.current = false;
 
-            // Log activity for recent connections
             logTerminalActivity();
 
-            // Execute post-connection actions
             setTimeout(async () => {
-              // Merge default config with host-specific config
               const terminalConfig = {
                 ...DEFAULT_TERMINAL_CONFIG,
                 ...hostConfig.terminalConfig,
               };
 
-              // Set environment variables
               if (
                 terminalConfig.environmentVariables &&
                 terminalConfig.environmentVariables.length > 0
@@ -616,7 +603,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }
               }
 
-              // Execute startup snippet
               if (terminalConfig.startupSnippetId) {
                 try {
                   const snippets = await getSnippets();
@@ -638,7 +624,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }
               }
 
-              // Execute MOSH command
               if (terminalConfig.autoMosh && ws.readyState === 1) {
                 ws.send(
                   JSON.stringify({
@@ -675,8 +660,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               connectionTimeoutRef.current = null;
             }
           } else if (msg.type === "keyboard_interactive_available") {
-            // Keyboard-interactive auth is available (e.g., Warpgate OIDC)
-            // Show terminal immediately so user can see auth prompts
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
             if (connectionTimeoutRef.current) {
@@ -684,8 +667,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               connectionTimeoutRef.current = null;
             }
           } else if (msg.type === "auth_method_not_available") {
-            // Server doesn't support keyboard-interactive for "none" auth
-            // Show SSHAuthDialog for manual credential entry
             setAuthDialogReason("no_keyboard");
             setShowAuthDialog(true);
             setIsConnecting(false);
@@ -751,9 +732,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           await navigator.clipboard.writeText(text);
           return;
         }
-      } catch {
-        // Clipboard API not available, fallback to textarea method
-      }
+      } catch {}
       const textarea = document.createElement("textarea");
       textarea.value = text;
       textarea.style.position = "fixed";
@@ -773,26 +752,21 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (navigator.clipboard && navigator.clipboard.readText) {
           return await navigator.clipboard.readText();
         }
-      } catch {
-        // Clipboard read not available or not permitted
-      }
+      } catch {}
       return "";
     }
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
 
-      // Merge default config with host-specific config
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
         ...hostConfig.terminalConfig,
       };
 
-      // Get theme colors
       const themeColors =
         TERMINAL_THEMES[config.theme]?.colors || TERMINAL_THEMES.termix.colors;
 
-      // Get font family with fallback
       const fontConfig = TERMINAL_FONTS.find(
         (f) => f.value === config.fontFamily,
       );
@@ -875,9 +849,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             const pasteText = await readTextFromClipboard();
             if (pasteText) terminal.paste(pasteText);
           }
-        } catch {
-          // Ignore clipboard operation errors
-        }
+        } catch {}
       };
       element?.addEventListener("contextmenu", handleContextMenu);
 
@@ -886,7 +858,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           navigator.platform.toUpperCase().indexOf("MAC") >= 0 ||
           navigator.userAgent.toUpperCase().indexOf("MAC") >= 0;
 
-        // Handle backspace mode (Control-H)
         if (
           config.backspaceMode === "control-h" &&
           e.key === "Backspace" &&
@@ -943,7 +914,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         resizeTimeout.current = setTimeout(() => {
           if (!isVisibleRef.current || !isReady) return;
           performFit();
-        }, 50); // Reduced from 150ms to 50ms for snappier response
+        }, 50);
       });
 
       resizeObserver.observe(xtermRef.current);
@@ -1022,31 +993,21 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     useEffect(() => {
       if (!isVisible || !isReady || !fitAddonRef.current || !terminal) {
-        // Reset fitted state when becoming invisible
         if (!isVisible && isFitted) {
           setIsFitted(false);
         }
         return;
       }
 
-      // When becoming visible, we need to:
-      // 1. Mark as not fitted
-      // 2. Clear any rendering artifacts
-      // 3. Fit to the container size
-      // 4. Mark as fitted (happens in performFit)
       setIsFitted(false);
 
-      // Use double requestAnimationFrame to ensure container has laid out
       let rafId1: number;
       let rafId2: number;
 
       rafId1 = requestAnimationFrame(() => {
         rafId2 = requestAnimationFrame(() => {
-          // Force a hard refresh to clear any artifacts
           hardRefresh();
-          // Fit the terminal to the new size
           performFit();
-          // Focus will happen after isFitted becomes true
         });
       });
 
@@ -1056,7 +1017,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
     }, [isVisible, isReady, splitScreen, terminal]);
 
-    // Focus the terminal after it's been fitted and is visible
     useEffect(() => {
       if (
         isFitted &&
@@ -1066,7 +1026,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         terminal &&
         !splitScreen
       ) {
-        // Use requestAnimationFrame to ensure the terminal is actually visible in the DOM
         const rafId = requestAnimationFrame(() => {
           terminal.focus();
         });
@@ -1131,7 +1090,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
 const style = document.createElement("style");
 style.innerHTML = `
-/* Import popular terminal fonts from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap');

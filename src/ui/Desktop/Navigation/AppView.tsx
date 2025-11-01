@@ -133,8 +133,6 @@ export function AppView({
       prev.splitScreenTabsStr !== allSplitScreenTab.join(",");
     const tabIdsChanged = prev.terminalTabIds !== currentTabIds;
 
-    // Only trigger hideThenFit if tabs were added/removed (not just reordered)
-    // or if current tab or split screen changed
     const isJustReorder =
       !lengthChanged && tabIdsChanged && !currentTabChanged && !splitChanged;
 
@@ -145,7 +143,6 @@ export function AppView({
       hideThenFit();
     }
 
-    // Update the ref for next comparison
     prevStateRef.current = {
       terminalTabsLength: terminalTabs.length,
       currentTab,
@@ -186,10 +183,8 @@ export function AppView({
 
   const HEADER_H = 28;
 
-  // Create a stable map of terminal IDs to preserve component identity
   const terminalIdMapRef = useRef<Set<number>>(new Set());
 
-  // Track all terminal IDs that have ever existed
   useEffect(() => {
     terminalTabs.forEach((t) => terminalIdMapRef.current.add(t.id));
   }, [terminalTabs]);
@@ -240,8 +235,6 @@ export function AppView({
       });
     }
 
-    // Render in a STABLE order by ID to prevent React from unmounting
-    // Sort by ID instead of array position
     const sortedTerminalTabs = [...terminalTabs].sort((a, b) => a.id - b.id);
 
     return (
@@ -628,7 +621,6 @@ export function AppView({
   const isTerminal = currentTabData?.type === "terminal";
   const isSplitScreen = allSplitScreenTab.length > 0;
 
-  // Get terminal background color for the current tab
   const terminalConfig = {
     ...DEFAULT_TERMINAL_CONFIG,
     ...(currentTabData?.hostConfig as any)?.terminalConfig,
@@ -642,7 +634,6 @@ export function AppView({
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
 
-  // Determine background color based on current tab type
   let containerBackground = "var(--color-dark-bg)";
   if (isFileManager && !isSplitScreen) {
     containerBackground = "var(--color-dark-bg-darkest)";

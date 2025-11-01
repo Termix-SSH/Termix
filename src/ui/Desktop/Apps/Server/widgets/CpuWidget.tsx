@@ -22,7 +22,6 @@ interface CpuWidgetProps {
 export function CpuWidget({ metrics, metricsHistory }: CpuWidgetProps) {
   const { t } = useTranslation();
 
-  // Prepare chart data
   const chartData = React.useMemo(() => {
     return metricsHistory.map((m, index) => ({
       index,

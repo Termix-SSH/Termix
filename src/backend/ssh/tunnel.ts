@@ -217,9 +217,7 @@ function cleanupTunnelResources(
     if (verification?.timeout) clearTimeout(verification.timeout);
     try {
       verification?.conn.end();
-    } catch {
-      // Ignore errors
-    }
+    } catch {}
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -284,9 +282,7 @@ function handleDisconnect(
       const verification = tunnelVerifications.get(tunnelName);
       if (verification?.timeout) clearTimeout(verification.timeout);
       verification?.conn.end();
-    } catch {
-      // Ignore errors
-    }
+    } catch {}
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -642,9 +638,7 @@ async function connectSSHTunnel(
 
       try {
         conn.end();
-      } catch {
-        // Ignore errors
-      }
+      } catch {}
 
       activeTunnels.delete(tunnelName);
 
@@ -784,9 +778,7 @@ async function connectSSHTunnel(
             const verification = tunnelVerifications.get(tunnelName);
             if (verification?.timeout) clearTimeout(verification.timeout);
             verification?.conn.end();
-          } catch {
-            // Ignore errors
-          }
+          } catch {}
           tunnelVerifications.delete(tunnelName);
         }
 
@@ -837,13 +829,9 @@ async function connectSSHTunnel(
         }
       });
 
-      stream.stdout?.on("data", () => {
-        // Silently consume stdout data
-      });
+      stream.stdout?.on("data", () => {});
 
-      stream.on("error", () => {
-        // Silently consume stream errors
-      });
+      stream.on("error", () => {});
 
       stream.stderr.on("data", (data) => {
         const errorMsg = data.toString().trim();
@@ -1222,9 +1210,7 @@ async function killRemoteTunnelByMarker(
               executeNextKillCommand();
             });
 
-            stream.on("data", () => {
-              // Silently consume stream data
-            });
+            stream.on("data", () => {});
 
             stream.stderr.on("data", (data) => {
               const output = data.toString().trim();

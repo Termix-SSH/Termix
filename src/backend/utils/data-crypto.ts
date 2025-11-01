@@ -393,18 +393,6 @@ class DataCrypto {
 
       result.success = result.errors.length === 0;
 
-      databaseLogger.info(
-        "User data re-encryption completed after password reset",
-        {
-          operation: "password_reset_reencrypt_completed",
-          userId,
-          success: result.success,
-          reencryptedTables: result.reencryptedTables,
-          reencryptedFieldsCount: result.reencryptedFieldsCount,
-          errorsCount: result.errors.length,
-        },
-      );
-
       return result;
     } catch (error) {
       databaseLogger.error(

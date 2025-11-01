@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useContext,
@@ -97,24 +96,19 @@ export function TabProvider({ children }: TabProviderProps) {
   }
 
   const addTab = (tabData: Omit<Tab, "id">): number => {
-    // Check if an ssh_manager tab already exists
     if (tabData.type === "ssh_manager") {
       const existingTab = tabs.find((t) => t.type === "ssh_manager");
       if (existingTab) {
-        // Update the existing tab with new data
-        // Create a new object reference to force React to detect the change
         setTabs((prev) =>
           prev.map((t) =>
             t.id === existingTab.id
               ? {
                   ...t,
-                  // Keep the original title (Host Manager)
                   title: existingTab.title,
                   hostConfig: tabData.hostConfig
                     ? { ...tabData.hostConfig }
                     : undefined,
                   initialTab: tabData.initialTab,
-                  // Add a timestamp to force re-render
                   _updateTimestamp: Date.now(),
                 }
               : t,
@@ -222,7 +216,6 @@ export function TabProvider({ children }: TabProviderProps) {
     setTabs((prev) =>
       prev.map((tab) => {
         if (tab.hostConfig && tab.hostConfig.id === hostId) {
-          // Don't update the title for ssh_manager tabs - they should stay as "Host Manager"
           if (tab.type === "ssh_manager") {
             return {
               ...tab,
@@ -230,7 +223,6 @@ export function TabProvider({ children }: TabProviderProps) {
             };
           }
 
-          // For other tabs (terminal, server, file_manager), update both config and title
           return {
             ...tab,
             hostConfig: newHostConfig,

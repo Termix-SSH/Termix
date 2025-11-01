@@ -73,7 +73,6 @@ export function SnippetsSidebar({
     try {
       setLoading(true);
       const data = await getSnippets();
-      // Defensive: ensure data is an array
       setSnippets(Array.isArray(data) ? data : []);
     } catch {
       toast.error(t("snippets.failedToFetch"));
@@ -118,7 +117,6 @@ export function SnippetsSidebar({
   };
 
   const handleSubmit = async () => {
-    // Validate required fields
     const errors = {
       name: !formData.name.trim(),
       content: !formData.content.trim(),
@@ -159,7 +157,6 @@ export function SnippetsSidebar({
 
   const handleExecute = (snippet: Snippet) => {
     if (selectedTabIds.length > 0) {
-      // Execute on selected terminals
       selectedTabIds.forEach((tabId) => {
         const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
@@ -173,7 +170,6 @@ export function SnippetsSidebar({
         }),
       );
     } else {
-      // Execute on current terminal (legacy behavior)
       onExecute(snippet.content);
       toast.success(t("snippets.executeSuccess", { name: snippet.name }));
     }
@@ -190,7 +186,6 @@ export function SnippetsSidebar({
 
   return (
     <>
-      {/* Overlay and Sidebar */}
       <div
         className="fixed top-0 left-0 right-0 bottom-0 z-[999999] flex justify-end pointer-events-auto isolate"
         style={{
@@ -207,7 +202,6 @@ export function SnippetsSidebar({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-dark-border">
             <h2 className="text-lg font-semibold text-white">
               {t("snippets.title")}
@@ -223,10 +217,8 @@ export function SnippetsSidebar({
             </Button>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
-              {/* Terminal Selection */}
               {terminalTabs.length > 0 && (
                 <>
                   <div className="space-y-2">
@@ -386,7 +378,6 @@ export function SnippetsSidebar({
         </div>
       </div>
 
-      {/* Create/Edit Dialog - centered modal */}
       {showDialog && (
         <div
           className="fixed inset-0 flex items-center justify-center z-[9999999] bg-black/50 backdrop-blur-sm"

@@ -12,10 +12,6 @@ import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
 if (!fs.existsSync(dbDir)) {
-  databaseLogger.info(`Creating database directory`, {
-    operation: "db_init",
-    path: dbDir,
-  });
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
@@ -31,7 +27,6 @@ let sqlite: Database.Database;
 async function initializeDatabaseAsync(): Promise<void> {
   const systemCrypto = SystemCrypto.getInstance();
 
-  // Ensure database key is initialized
   await systemCrypto.getDatabaseKey();
   if (enableFileEncryption) {
     try {
@@ -41,18 +36,11 @@ async function initializeDatabaseAsync(): Promise<void> {
 
         memoryDatabase = new Database(decryptedBuffer);
 
-        // Count sessions after loading
         try {
           const sessionCount = memoryDatabase
             .prepare("SELECT COUNT(*) as count FROM sessions")
             .get() as { count: number };
-          databaseLogger.info("Database loaded from encrypted file", {
-            operation: "db_load",
-            sessionCount: sessionCount.count,
-            bufferSize: decryptedBuffer.length,
-          });
         } catch (countError) {
-          // Ignore count errors
         }
       } else {
         const migration = new DatabaseMigration(dataDir);
@@ -297,9 +285,6 @@ async function initializeCompleteDatabase(): Promise<void> {
 
   try {
     sqlite.prepare("DELETE FROM sessions").run();
-    databaseLogger.info("All sessions cleared on startup", {
-      operation: "db_init_session_cleanup",
-    });
   } catch (e) {
     databaseLogger.warn("Could not clear sessions on startup", {
       operation: "db_init_session_cleanup_failed",
@@ -453,7 +438,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_shortcuts", "host_id", "INTEGER NOT NULL");
 
-  // Create sessions table if it doesn't exist (for existing databases)
   try {
     sqlite
       .prepare("SELECT id FROM sessions LIMIT 1")
@@ -473,9 +457,6 @@ const migrateSchema = () => {
           FOREIGN KEY (user_id) REFERENCES users (id)
         );
       `);
-      databaseLogger.info("Sessions table created via migration", {
-        operation: "schema_migration",
-      });
     } catch (createError) {
       databaseLogger.warn("Failed to create sessions table", {
         operation: "schema_migration",
@@ -499,18 +480,11 @@ async function saveMemoryDatabaseToFile() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
 
-    // Count sessions before saving
     try {
       const sessionCount = memoryDatabase
         .prepare("SELECT COUNT(*) as count FROM sessions")
         .get() as { count: number };
-      databaseLogger.info("Saving database to file", {
-        operation: "db_save",
-        sessionCount: sessionCount.count,
-        bufferSize: buffer.length,
-      });
     } catch (countError) {
-      // Ignore count errors
     }
 
     if (enableFileEncryption) {
@@ -605,18 +579,15 @@ async function cleanupDatabase() {
         try {
           fs.unlinkSync(path.join(tempDir, file));
         } catch {
-          // Ignore cleanup errors
         }
       }
 
       try {
         fs.rmdirSync(tempDir);
       } catch {
-        // Ignore cleanup errors
       }
     }
   } catch {
-    // Ignore cleanup errors
   }
 }
 
@@ -625,7 +596,6 @@ process.on("exit", () => {
     try {
       sqlite.close();
     } catch {
-      // Ignore close errors on exit
     }
   }
 });

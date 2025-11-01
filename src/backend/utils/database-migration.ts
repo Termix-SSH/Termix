@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+/import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
@@ -62,10 +62,6 @@ export class DatabaseMigration {
           "Empty unencrypted database found alongside encrypted database. Removing empty file.";
         try {
           fs.unlinkSync(this.unencryptedDbPath);
-          databaseLogger.info("Removed empty unencrypted database file", {
-            operation: "migration_cleanup_empty",
-            path: this.unencryptedDbPath,
-          });
         } catch (error) {
           databaseLogger.warn("Failed to remove empty unencrypted database", {
             operation: "migration_cleanup_empty_failed",

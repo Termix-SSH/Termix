@@ -37,9 +37,7 @@ export function ElectronServerConfig({
       if (config?.serverUrl) {
         setServerUrl(config.serverUrl);
       }
-    } catch {
-      // Ignore config loading errors
-    }
+    } catch {}
   };
 
   const handleSaveConfig = async () => {
@@ -54,7 +52,6 @@ export function ElectronServerConfig({
     try {
       let normalizedUrl = serverUrl.trim();
 
-      // Ensure URL has http:// or https://
       if (
         !normalizedUrl.startsWith("http://") &&
         !normalizedUrl.startsWith("https://")

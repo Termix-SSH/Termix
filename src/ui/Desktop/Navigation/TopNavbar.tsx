@@ -103,7 +103,7 @@ export function TopNavbar({
 
   React.useEffect(() => {
     if (justDroppedTabId !== null) {
-      const timer = setTimeout(() => setJustDroppedTabId(null), 50); // Clear after a short delay
+      const timer = setTimeout(() => setJustDroppedTabId(null), 50);
       return () => clearTimeout(timer);
     }
   }, [justDroppedTabId]);
@@ -138,7 +138,6 @@ export function TopNavbar({
 
     const draggedIndex = dragState.draggedIndex;
 
-    // Build array of tab boundaries in ORIGINAL order
     const tabBoundaries: {
       index: number;
       start: number;
@@ -158,25 +157,21 @@ export function TopNavbar({
         end: accumulatedX + tabWidth,
         mid: accumulatedX + tabWidth / 2,
       });
-      accumulatedX += tabWidth + 4; // 4px gap
+      accumulatedX += tabWidth + 4;
     });
 
     if (tabBoundaries.length === 0) return null;
 
-    // Calculate the dragged tab's center in container coordinates
     const containerRect = containerRef.current.getBoundingClientRect();
     const draggedTab = tabBoundaries[draggedIndex];
-    // Convert absolute positions to container-relative coordinates
     const currentX = dragState.currentX - containerRect.left;
     const startX = dragState.startX - containerRect.left;
     const offset = currentX - startX;
     const draggedCenter = draggedTab.mid + offset;
 
-    // Determine target index based on where the dragged tab's center is
     let newTargetIndex = draggedIndex;
 
     if (offset < 0) {
-      // Moving left - find the leftmost tab whose midpoint we've passed
       for (let i = draggedIndex - 1; i >= 0; i--) {
         if (draggedCenter < tabBoundaries[i].mid) {
           newTargetIndex = i;
@@ -185,7 +180,6 @@ export function TopNavbar({
         }
       }
     } else if (offset > 0) {
-      // Moving right - find the rightmost tab whose midpoint we've passed
       for (let i = draggedIndex + 1; i < tabBoundaries.length; i++) {
         if (draggedCenter > tabBoundaries[i].mid) {
           newTargetIndex = i;
@@ -193,18 +187,14 @@ export function TopNavbar({
           break;
         }
       }
-      // Edge case: if dragged past the last tab, target should be at the very end
       const lastTabIndex = tabBoundaries.length - 1;
       if (lastTabIndex >= 0) {
-        // Ensure there's at least one tab
         const lastTabEl = tabRefs.current.get(lastTabIndex);
         if (lastTabEl) {
           const lastTabRect = lastTabEl.getBoundingClientRect();
           const containerRect = containerRef.current.getBoundingClientRect();
           const lastTabEndInContainer = lastTabRect.right - containerRect.left;
           if (currentX > lastTabEndInContainer) {
-            // When dragging past the last tab, insert at the very end
-            // Use the last valid index (length - 1) not length itself
             newTargetIndex = lastTabIndex;
           }
         }
@@ -217,13 +207,11 @@ export function TopNavbar({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
 
-    // Firefox compatibility - track position via dragover
     if (dragState.draggedIndex === null) return;
 
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) return;
 
-    // Update currentX if we have a valid clientX (Firefox may not provide it in onDrag)
     if (e.clientX !== 0) {
       setDragState((prev) => ({
         ...prev,
@@ -253,7 +241,6 @@ export function TopNavbar({
     if (fromIndex !== null && toIndex !== null && fromIndex !== toIndex) {
       prevTabsRef.current = tabs;
 
-      // Set animation flag and clear drag state synchronously
       flushSync(() => {
         setIsInDropAnimation(true);
         setDragState({
@@ -356,14 +343,13 @@ export function TopNavbar({
 
             const isDraggingThisTab = dragState.draggedIndex === index;
             const isTheDraggedTab = tab.id === dragState.draggedId;
-            const isDroppedAndSnapping = tab.id === justDroppedTabId; // New condition
+            const isDroppedAndSnapping = tab.id === justDroppedTabId;
             const dragOffset = isDraggingThisTab
               ? dragState.currentX - dragState.startX
               : 0;
 
             let transform = "";
 
-            // Skip all transforms if we just dropped to prevent glitches
             if (!isInDropAnimation) {
               if (isDraggingThisTab) {
                 transform = `translateX(${dragOffset}px)`;
@@ -374,13 +360,11 @@ export function TopNavbar({
                 const draggedOriginalIndex = dragState.draggedIndex;
                 const currentTargetIndex = dragState.targetIndex;
 
-                // Determine if this tab should shift left or right
                 if (
-                  draggedOriginalIndex < currentTargetIndex && // Dragging rightwards
-                  index > draggedOriginalIndex && // This tab is to the right of the original position
-                  index <= currentTargetIndex // This tab is at or before the target position
+                  draggedOriginalIndex < currentTargetIndex &&
+                  index > draggedOriginalIndex &&
+                  index <= currentTargetIndex
                 ) {
-                  // Shift left to make space
                   const draggedTabWidth =
                     tabRefs.current
                       .get(draggedOriginalIndex)
@@ -388,11 +372,10 @@ export function TopNavbar({
                   const gap = 4;
                   transform = `translateX(-${draggedTabWidth + gap}px)`;
                 } else if (
-                  draggedOriginalIndex > currentTargetIndex && // Dragging leftwards
-                  index >= currentTargetIndex && // This tab is at or after the target position
-                  index < draggedOriginalIndex // This tab is to the left of the original position
+                  draggedOriginalIndex > currentTargetIndex &&
+                  index >= currentTargetIndex &&
+                  index < draggedOriginalIndex
                 ) {
-                  // Shift right to make space
                   const draggedTabWidth =
                     tabRefs.current
                       .get(draggedOriginalIndex)
@@ -424,7 +407,6 @@ export function TopNavbar({
                 onDragEnd={handleDragEnd}
                 e
                 onMouseDown={(e) => {
-                  // Middle mouse button (button === 1)
                   if (e.button === 1 && !disableClose) {
                     e.preventDefault();
                     handleTabClose(tab.id);

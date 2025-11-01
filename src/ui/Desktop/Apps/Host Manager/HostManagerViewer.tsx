@@ -126,7 +126,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           await fetchHosts();
           window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
-          // Refresh backend polling to remove deleted host
           const { refreshServerPolling } = await import("@/ui/main-axios.ts");
           refreshServerPolling();
         } catch {
@@ -392,7 +391,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     }
   };
 
-  // Helper function to parse stats config and format monitoring status
   const getMonitoringStatus = (host: SSHHost) => {
     try {
       const statsConfig = host.statsConfig

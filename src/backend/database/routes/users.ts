@@ -336,14 +336,10 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
             userId,
             adminDataKey,
           );
-          authLogger.info("OIDC configuration encrypted with admin data key", {
-            operation: "oidc_config_encrypt",
-            userId,
-          });
         } else {
           encryptedConfig = {
             ...config,
-            client_secret: `encrypted:${Buffer.from(client_secret).toString("base64")}`, // Simple base64 encoding
+            client_secret: `encrypted:${Buffer.from(client_secret).toString("base64")}`,
           };
           authLogger.warn(
             "OIDC configuration stored with basic encoding - admin should re-save with password",
@@ -421,7 +417,6 @@ router.get("/oidc-config", async (req, res) => {
 
     const config = JSON.parse((row as Record<string, unknown>).value as string);
 
-    // Only return public fields needed for login page
     const publicConfig = {
       client_id: config.client_id,
       issuer_url: config.issuer_url,
@@ -661,7 +656,6 @@ router.get("/oidc/callback", async (req, res) => {
           config.client_id,
         );
       } catch {
-        // Fallback to manual decoding
         try {
           const parts = (tokenData.id_token as string).split(".");
           if (parts.length === 3) {
@@ -812,7 +806,6 @@ router.get("/oidc/callback", async (req, res) => {
       });
     }
 
-    // Detect platform and device info
     const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
@@ -838,7 +831,6 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendUrl);
     redirectUrl.searchParams.set("success", "true");
 
-    // Calculate max age based on device type
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
@@ -965,7 +957,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Detect platform and device info
     const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
@@ -995,7 +986,6 @@ router.post("/login", async (req, res) => {
       response.token = token;
     }
 
-    // Calculate max age based on device type
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
@@ -1018,7 +1008,6 @@ router.post("/logout", authenticateJWT, async (req, res) => {
     const userId = authReq.userId;
 
     if (userId) {
-      // Get sessionId from JWT if available
       const token =
         req.cookies?.jwt || req.headers["authorization"]?.split(" ")[1];
       let sessionId: string | undefined;
@@ -1027,9 +1016,7 @@ router.post("/logout", authenticateJWT, async (req, res) => {
         try {
           const payload = await authManager.verifyJWTToken(token);
           sessionId = payload?.sessionId;
-        } catch (error) {
-          // Ignore token verification errors during logout
-        }
+        } catch (error) {}
       }
 
       await authManager.logoutUser(userId, sessionId);
@@ -1435,7 +1422,6 @@ router.post("/complete-reset", async (req, res) => {
     const saltRounds = parseInt(process.env.SALT || "10", 10);
     const password_hash = await bcrypt.hash(newPassword, saltRounds);
 
-    // Check if user is logged in and data is unlocked
     let userIdFromJwt: string | null = null;
     const cookie = req.cookies?.jwt;
     let header: string | undefined;
@@ -1452,7 +1438,6 @@ router.post("/complete-reset", async (req, res) => {
     }
 
     if (userIdFromJwt === userId) {
-      // Logged-in user: preserve data
       try {
         const success = await authManager.resetUserPasswordWithPreservedDEK(
           userId,
@@ -1491,15 +1476,12 @@ router.post("/complete-reset", async (req, res) => {
         });
       }
     } else {
-      // Logged-out user: data is lost
       await db
         .update(users)
         .set({ password_hash })
         .where(eq(users.username, username));
 
       try {
-        // Delete all encrypted data since we're creating a new DEK
-        // The old DEK is lost, so old encrypted data becomes unreadable
         await db
           .delete(sshCredentialUsage)
           .where(eq(sshCredentialUsage.userId, userId));
@@ -1524,11 +1506,9 @@ router.post("/complete-reset", async (req, res) => {
           .delete(sshCredentials)
           .where(eq(sshCredentials.userId, userId));
 
-        // Now setup new encryption with new DEK
         await authManager.registerUser(userId, newPassword);
         authManager.logoutUser(userId);
 
-        // Clear TOTP settings
         await db
           .update(users)
           .set({
@@ -1597,13 +1577,11 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
     return res.status(404).json({ error: "User not found" });
   }
 
-  // Verify old password for login hash
   const isMatch = await bcrypt.compare(oldPassword, user[0].password_hash);
   if (!isMatch) {
     return res.status(401).json({ error: "Incorrect current password" });
   }
 
-  // Change encryption keys and login hash
   const success = await authManager.changeUserPassword(
     userId,
     oldPassword,
@@ -1619,7 +1597,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
   const password_hash = await bcrypt.hash(newPassword, saltRounds);
   await db.update(users).set({ password_hash }).where(eq(users.id, userId));
 
-  authManager.logoutUser(userId); // Log out user for security
+  authManager.logoutUser(userId);
 
   res.json({ message: "Password changed successfully. Please log in again." });
 });
@@ -1836,7 +1814,6 @@ router.post("/totp/verify-login", async (req, res) => {
         .where(eq(users.id, userRecord.id));
     }
 
-    // Detect platform and device info
     const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
@@ -1867,7 +1844,6 @@ router.post("/totp/verify-login", async (req, res) => {
       response.token = token;
     }
 
-    // Calculate max age based on device type
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
@@ -2230,7 +2206,6 @@ router.get("/data-status", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
   try {
-    // Data lock functionality has been removed - always return unlocked for authenticated users
     res.json({
       unlocked: true,
       message: "Data is unlocked",
@@ -2320,10 +2295,8 @@ router.get("/sessions", authenticateJWT, async (req, res) => {
     let sessionList;
 
     if (userRecord.is_admin) {
-      // Admin: Get all sessions with user info
       sessionList = await authManager.getAllSessions();
 
-      // Join with users to get usernames
       const enrichedSessions = await Promise.all(
         sessionList.map(async (session) => {
           const sessionUser = await db
@@ -2341,7 +2314,6 @@ router.get("/sessions", authenticateJWT, async (req, res) => {
 
       return res.json({ sessions: enrichedSessions });
     } else {
-      // Regular user: Get only their own sessions
       sessionList = await authManager.getUserSessions(userId);
       return res.json({ sessions: sessionList });
     }
@@ -2369,7 +2341,6 @@ router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
 
     const userRecord = user[0];
 
-    // Check if session exists
     const sessionRecords = await db
       .select()
       .from(sessions)
@@ -2382,7 +2353,6 @@ router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
 
     const session = sessionRecords[0];
 
-    // Non-admin users can only revoke their own sessions
     if (!userRecord.is_admin && session.userId !== userId) {
       return res
         .status(403)
@@ -2421,19 +2391,15 @@ router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
 
     const userRecord = user[0];
 
-    // Determine which user's sessions to revoke
     let revokeUserId = userId;
     if (targetUserId && userRecord.is_admin) {
-      // Admin can revoke any user's sessions
       revokeUserId = targetUserId;
     } else if (targetUserId && targetUserId !== userId) {
-      // Non-admin can only revoke their own sessions
       return res.status(403).json({
         error: "Not authorized to revoke sessions for other users",
       });
     }
 
-    // Get current session ID if needed
     let currentSessionId: string | undefined;
     if (exceptCurrent) {
       const token =

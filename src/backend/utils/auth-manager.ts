@@ -54,7 +54,6 @@ class AuthManager {
       this.invalidateUserTokens(userId);
     });
 
-    // Run session cleanup every 5 minutes
     setInterval(
       () => {
         this.cleanupExpiredSessions().catch((error) => {
@@ -162,16 +161,15 @@ class AuthManager {
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
 
-    // Determine expiration based on device type
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
       if (options.deviceType === "desktop" || options.deviceType === "mobile") {
-        expiresIn = "30d"; // 30 days for desktop and mobile
+        expiresIn = "30d";
       } else {
-        expiresIn = "7d"; // 7 days for web
+        expiresIn = "7d";
       }
     } else if (!expiresIn) {
-      expiresIn = "7d"; // Default
+      expiresIn = "7d";
     }
 
     const payload: JWTPayload = { userId };
@@ -179,23 +177,19 @@ class AuthManager {
       payload.pendingTOTP = true;
     }
 
-    // Create session in database if not a temporary TOTP token
     if (!options.pendingTOTP && options.deviceType && options.deviceInfo) {
       const sessionId = nanoid();
       payload.sessionId = sessionId;
 
-      // Generate the token first to get it for storage
       const token = jwt.sign(payload, jwtSecret, {
         expiresIn,
       } as jwt.SignOptions);
 
-      // Calculate expiration timestamp
       const expirationMs = this.parseExpiresIn(expiresIn);
       const now = new Date();
       const expiresAt = new Date(now.getTime() + expirationMs).toISOString();
       const createdAt = now.toISOString();
 
-      // Store session in database
       try {
         await db.insert(sessions).values({
           id: sessionId,
@@ -208,27 +202,11 @@ class AuthManager {
           lastActiveAt: createdAt,
         });
 
-        databaseLogger.info("Session created", {
-          operation: "session_create",
-          userId,
-          sessionId,
-          deviceType: options.deviceType,
-          expiresAt,
-        });
-
-        // Immediately save database to disk to ensure session persists across restarts
         try {
           const { saveMemoryDatabaseToFile } = await import(
             "../database/db/index.js"
           );
           await saveMemoryDatabaseToFile();
-          databaseLogger.info(
-            "Database saved immediately after session creation",
-            {
-              operation: "session_create_db_save",
-              sessionId,
-            },
-          );
         } catch (saveError) {
           databaseLogger.error(
             "Failed to save database after session creation",
@@ -245,7 +223,6 @@ class AuthManager {
           userId,
           sessionId,
         });
-        // Continue anyway - session tracking is non-critical
       }
 
       return token;
@@ -259,7 +236,7 @@ class AuthManager {
    */
   private parseExpiresIn(expiresIn: string): number {
     const match = expiresIn.match(/^(\d+)([smhd])$/);
-    if (!match) return 7 * 24 * 60 * 60 * 1000; // Default 7 days
+    if (!match) return 7 * 24 * 60 * 60 * 1000;
 
     const value = parseInt(match[1]);
     const unit = match[2];
@@ -282,26 +259,8 @@ class AuthManager {
     try {
       const jwtSecret = await this.systemCrypto.getJWTSecret();
 
-      databaseLogger.info("Attempting JWT verification", {
-        operation: "jwt_verify_attempt",
-        tokenLength: token.length,
-        secretLength: jwtSecret.length,
-      });
-
       const payload = jwt.verify(token, jwtSecret) as JWTPayload;
 
-      databaseLogger.info("JWT signature verified successfully", {
-        operation: "jwt_signature_verified",
-        userId: payload.userId,
-        sessionId: payload.sessionId,
-        hasExpiration: !!payload.exp,
-        expiresAt: payload.exp
-          ? new Date(payload.exp * 1000).toISOString()
-          : "N/A",
-      });
-
-      // For tokens with sessionId, verify the session exists in database
-      // This ensures revoked sessions are rejected even after backend restart
       if (payload.sessionId) {
         try {
           const sessionRecords = await db
@@ -322,13 +281,6 @@ class AuthManager {
             );
             return null;
           }
-
-          databaseLogger.info("Session found in database", {
-            operation: "jwt_session_found",
-            sessionId: payload.sessionId,
-            userId: payload.userId,
-            sessionExpiresAt: sessionRecords[0].expiresAt,
-          });
         } catch (dbError) {
           databaseLogger.error(
             "Failed to check session in database during JWT verification",
@@ -338,15 +290,8 @@ class AuthManager {
               sessionId: payload.sessionId,
             },
           );
-          // Continue anyway - database errors shouldn't block valid JWTs
         }
       }
-
-      databaseLogger.info("JWT verification successful", {
-        operation: "jwt_verify_success",
-        userId: payload.userId,
-        sessionId: payload.sessionId,
-      });
       return payload;
     } catch (error) {
       databaseLogger.warn("JWT verification failed", {
@@ -358,34 +303,13 @@ class AuthManager {
     }
   }
 
-  invalidateJWTToken(token: string): void {
-    // No-op: Token invalidation is now handled through database session deletion
-    databaseLogger.info(
-      "Token invalidation requested (handled via session deletion)",
-      {
-        operation: "token_invalidate",
-      },
-    );
-  }
+  invalidateJWTToken(token: string): void {}
 
-  invalidateUserTokens(userId: string): void {
-    databaseLogger.info("User tokens invalidation requested due to data lock", {
-      operation: "user_tokens_invalidate",
-      userId,
-    });
-    // Session cleanup will happen through revokeAllUserSessions if needed
-  }
+  invalidateUserTokens(userId: string): void {}
 
   async revokeSession(sessionId: string): Promise<boolean> {
     try {
-      // Delete the session from database
-      // The JWT will be invalidated because verifyJWTToken checks for session existence
       await db.delete(sessions).where(eq(sessions.id, sessionId));
-
-      databaseLogger.info("Session deleted", {
-        operation: "session_delete",
-        sessionId,
-      });
 
       return true;
     } catch (error) {
@@ -402,7 +326,6 @@ class AuthManager {
     exceptSessionId?: string,
   ): Promise<number> {
     try {
-      // Get session count before deletion
       const userSessions = await db
         .select()
         .from(sessions)
@@ -412,8 +335,6 @@ class AuthManager {
         (s) => !exceptSessionId || s.id !== exceptSessionId,
       ).length;
 
-      // Delete sessions from database
-      // JWTs will be invalidated because verifyJWTToken checks for session existence
       if (exceptSessionId) {
         await db
           .delete(sessions)
@@ -427,13 +348,6 @@ class AuthManager {
         await db.delete(sessions).where(eq(sessions.userId, userId));
       }
 
-      databaseLogger.info("User sessions deleted", {
-        operation: "user_sessions_delete",
-        userId,
-        exceptSessionId,
-        deletedCount,
-      });
-
       return deletedCount;
     } catch (error) {
       databaseLogger.error("Failed to delete user sessions", error, {
@@ -446,7 +360,6 @@ class AuthManager {
 
   async cleanupExpiredSessions(): Promise<number> {
     try {
-      // Get expired sessions count
       const expiredSessions = await db
         .select()
         .from(sessions)
@@ -454,18 +367,9 @@ class AuthManager {
 
       const expiredCount = expiredSessions.length;
 
-      // Delete expired sessions
-      // JWTs will be invalidated because verifyJWTToken checks for session existence
       await db
         .delete(sessions)
         .where(sql`${sessions.expiresAt} < datetime('now')`);
-
-      if (expiredCount > 0) {
-        databaseLogger.info("Expired sessions cleaned up", {
-          operation: "sessions_cleanup",
-          count: expiredCount,
-        });
-      }
 
       return expiredCount;
     } catch (error) {
@@ -539,7 +443,6 @@ class AuthManager {
         return res.status(401).json({ error: "Invalid token" });
       }
 
-      // Check session status if sessionId is present
       if (payload.sessionId) {
         try {
           const sessionRecords = await db
@@ -557,9 +460,6 @@ class AuthManager {
 
           const session = sessionRecords[0];
 
-          // Session exists, no need to check isRevoked since we delete sessions instead
-
-          // Check if session has expired by comparing timestamps
           const sessionExpiryTime = new Date(session.expiresAt).getTime();
           const currentTime = Date.now();
           const isExpired = sessionExpiryTime < currentTime;
@@ -579,7 +479,6 @@ class AuthManager {
             });
           }
 
-          // Update lastActiveAt timestamp (async, non-blocking)
           db.update(sessions)
             .set({ lastActiveAt: new Date().toISOString() })
             .where(eq(sessions.id, payload.sessionId))
@@ -596,7 +495,6 @@ class AuthManager {
             operation: "session_check_failed",
             sessionId: payload.sessionId,
           });
-          // Continue anyway - session tracking failures shouldn't block auth
         }
       }
 
@@ -614,14 +512,8 @@ class AuthManager {
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      // Try to get data key if available (may be null after restart)
       const dataKey = this.userCrypto.getUserDataKey(userId);
       authReq.dataKey = dataKey || undefined;
-
-      // Note: Data key will be null after backend restart until user performs
-      // an operation that requires decryption. This is expected behavior.
-      // Individual routes that need encryption should check dataKey explicitly.
-
       next();
     };
   }
@@ -688,15 +580,9 @@ class AuthManager {
   async logoutUser(userId: string, sessionId?: string): Promise<void> {
     this.userCrypto.logoutUser(userId);
 
-    // Delete the specific session from database if sessionId provided
     if (sessionId) {
       try {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
-        databaseLogger.info("Session deleted on logout", {
-          operation: "session_delete_logout",
-          userId,
-          sessionId,
-        });
       } catch (error) {
         databaseLogger.error("Failed to delete session on logout", error, {
           operation: "session_delete_logout_failed",
@@ -705,13 +591,8 @@ class AuthManager {
         });
       }
     } else {
-      // If no sessionId, delete all sessions for this user
       try {
         await db.delete(sessions).where(eq(sessions.userId, userId));
-        databaseLogger.info("All user sessions deleted on logout", {
-          operation: "sessions_delete_logout",
-          userId,
-        });
       } catch (error) {
         databaseLogger.error(
           "Failed to delete user sessions on logout",

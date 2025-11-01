@@ -28,7 +28,6 @@ export interface TerminalTheme {
 }
 
 export const TERMINAL_THEMES: Record<string, TerminalTheme> = {
-  // Current default theme
   termix: {
     name: "Termix Default",
     category: "dark",
@@ -666,14 +665,12 @@ export const TERMINAL_FONTS = [
   },
 ];
 
-// Cursor styles
 export const CURSOR_STYLES = [
   { value: "block", label: "Block" },
   { value: "underline", label: "Underline" },
   { value: "bar", label: "Bar" },
 ] as const;
 
-// Bell styles
 export const BELL_STYLES = [
   { value: "none", label: "None" },
   { value: "sound", label: "Sound" },
@@ -681,16 +678,13 @@ export const BELL_STYLES = [
   { value: "both", label: "Both" },
 ] as const;
 
-// Fast scroll modifiers
 export const FAST_SCROLL_MODIFIERS = [
   { value: "alt", label: "Alt" },
   { value: "ctrl", label: "Ctrl" },
   { value: "shift", label: "Shift" },
 ] as const;
 
-// Default terminal configuration
 export const DEFAULT_TERMINAL_CONFIG = {
-  // Appearance
   cursorBlink: true,
   cursorStyle: "bar" as const,
   fontSize: 14,
@@ -699,7 +693,6 @@ export const DEFAULT_TERMINAL_CONFIG = {
   lineHeight: 1.2,
   theme: "termix",
 
-  // Behavior
   scrollback: 10000,
   bellStyle: "none" as const,
   rightClickSelectsWord: false,
@@ -707,7 +700,6 @@ export const DEFAULT_TERMINAL_CONFIG = {
   fastScrollSensitivity: 5,
   minimumContrastRatio: 1,
 
-  // Advanced
   backspaceMode: "normal" as const,
   agentForwarding: false,
   environmentVariables: [] as Array<{ key: string; value: string }>,

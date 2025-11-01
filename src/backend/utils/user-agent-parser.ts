@@ -7,59 +7,43 @@ export interface DeviceInfo {
   browser: string;
   version: string;
   os: string;
-  deviceInfo: string; // Formatted string like "Chrome 120 on Windows 11"
+  deviceInfo: string;
 }
 
-/**
- * Detect the platform type based on request headers
- */
 export function detectPlatform(req: Request): DeviceType {
   const userAgent = req.headers["user-agent"] || "";
   const electronHeader = req.headers["x-electron-app"];
 
-  // Electron app detection
   if (electronHeader === "true") {
     return "desktop";
   }
 
-  // Mobile app detection
   if (userAgent.includes("Termix-Mobile")) {
     return "mobile";
   }
 
-  // Default to web
   return "web";
 }
 
-/**
- * Parse User-Agent string to extract device information
- */
 export function parseUserAgent(req: Request): DeviceInfo {
   const userAgent = req.headers["user-agent"] || "Unknown";
   const platform = detectPlatform(req);
 
-  // For Electron
   if (platform === "desktop") {
     return parseElectronUserAgent(userAgent);
   }
 
-  // For Mobile app
   if (platform === "mobile") {
     return parseMobileUserAgent(userAgent);
   }
 
-  // For web browsers
   return parseWebUserAgent(userAgent);
 }
 
-/**
- * Parse Electron app user agent
- */
 function parseElectronUserAgent(userAgent: string): DeviceInfo {
   let os = "Unknown OS";
   let version = "Unknown";
 
-  // Detect OS
   if (userAgent.includes("Windows")) {
     os = parseWindowsVersion(userAgent);
   } else if (userAgent.includes("Mac OS X")) {
@@ -68,7 +52,6 @@ function parseElectronUserAgent(userAgent: string): DeviceInfo {
     os = "Linux";
   }
 
-  // Try to extract Electron version
   const electronMatch = userAgent.match(/Electron\/([\d.]+)/);
   if (electronMatch) {
     version = electronMatch[1];
@@ -83,23 +66,17 @@ function parseElectronUserAgent(userAgent: string): DeviceInfo {
   };
 }
 
-/**
- * Parse mobile app user agent
- */
 function parseMobileUserAgent(userAgent: string): DeviceInfo {
   let os = "Unknown OS";
   let version = "Unknown";
 
-  // Check for Termix-Mobile/Platform format first (e.g., "Termix-Mobile/Android" or "Termix-Mobile/iOS")
   const termixPlatformMatch = userAgent.match(/Termix-Mobile\/(Android|iOS)/i);
   if (termixPlatformMatch) {
     const platform = termixPlatformMatch[1];
     if (platform.toLowerCase() === "android") {
-      // Try to get Android version from full UA string
       const androidMatch = userAgent.match(/Android ([\d.]+)/);
       os = androidMatch ? `Android ${androidMatch[1]}` : "Android";
     } else if (platform.toLowerCase() === "ios") {
-      // Try to get iOS version from full UA string
       const iosMatch = userAgent.match(/OS ([\d_]+)/);
       if (iosMatch) {
         const iosVersion = iosMatch[1].replace(/_/g, ".");
@@ -109,7 +86,6 @@ function parseMobileUserAgent(userAgent: string): DeviceInfo {
       }
     }
   } else {
-    // Fallback: Check for standard Android/iOS patterns in the user agent
     if (userAgent.includes("Android")) {
       const androidMatch = userAgent.match(/Android ([\d.]+)/);
       os = androidMatch ? `Android ${androidMatch[1]}` : "Android";
@@ -128,8 +104,6 @@ function parseMobileUserAgent(userAgent: string): DeviceInfo {
     }
   }
 
-  // Try to extract app version (if included in UA)
-  // Match patterns like "Termix-Mobile/1.0.0" or just "Termix-Mobile"
   const versionMatch = userAgent.match(
     /Termix-Mobile\/(?:Android|iOS|)([\d.]+)/i,
   );
@@ -146,15 +120,11 @@ function parseMobileUserAgent(userAgent: string): DeviceInfo {
   };
 }
 
-/**
- * Parse web browser user agent
- */
 function parseWebUserAgent(userAgent: string): DeviceInfo {
   let browser = "Unknown Browser";
   let version = "Unknown";
   let os = "Unknown OS";
 
-  // Detect browser
   if (userAgent.includes("Edg/")) {
     const match = userAgent.match(/Edg\/([\d.]+)/);
     browser = "Edge";
@@ -177,7 +147,6 @@ function parseWebUserAgent(userAgent: string): DeviceInfo {
     version = match ? match[1] : "Unknown";
   }
 
-  // Detect OS
   if (userAgent.includes("Windows")) {
     os = parseWindowsVersion(userAgent);
   } else if (userAgent.includes("Mac OS X")) {
@@ -201,7 +170,6 @@ function parseWebUserAgent(userAgent: string): DeviceInfo {
     }
   }
 
-  // Shorten version to major.minor
   if (version !== "Unknown") {
     const versionParts = version.split(".");
     version = versionParts.slice(0, 2).join(".");
@@ -216,9 +184,6 @@ function parseWebUserAgent(userAgent: string): DeviceInfo {
   };
 }
 
-/**
- * Parse Windows version from user agent
- */
 function parseWindowsVersion(userAgent: string): string {
   if (userAgent.includes("Windows NT 10.0")) {
     return "Windows 10/11";
@@ -239,9 +204,6 @@ function parseWindowsVersion(userAgent: string): string {
   return "Windows";
 }
 
-/**
- * Parse macOS version from user agent
- */
 function parseMacVersion(userAgent: string): string {
   const match = userAgent.match(/Mac OS X ([\d_]+)/);
   if (match) {
@@ -250,7 +212,6 @@ function parseMacVersion(userAgent: string): string {
     const major = parseInt(parts[0]);
     const minor = parseInt(parts[1]);
 
-    // macOS naming
     if (major === 10) {
       if (minor >= 15) return `macOS ${major}.${minor}`;
       if (minor === 14) return "macOS Mojave";

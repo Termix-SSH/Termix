@@ -129,7 +129,6 @@ export function HostManagerEditor({
   );
   const isSubmittingRef = useRef(false);
 
-  // Monitoring interval states
   const [statusIntervalUnit, setStatusIntervalUnit] = useState<
     "seconds" | "minutes"
   >("seconds");
@@ -168,9 +167,7 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch {
-        // Failed to load hosts data
-      }
+      } catch {}
     };
 
     fetchData();
@@ -199,9 +196,7 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch {
-        // Failed to reload hosts after credential change
-      }
+      } catch {}
     };
 
     window.addEventListener("credentials:changed", handleCredentialChange);
@@ -319,7 +314,6 @@ export function HostManagerEditor({
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
-        // No credentials required for "none" auth type - will use keyboard-interactive
         return;
       }
 
@@ -444,7 +438,6 @@ export function HostManagerEditor({
             : "none";
       setAuthTab(defaultAuthType);
 
-      // Parse statsConfig from JSON string if needed
       let parsedStatsConfig = DEFAULT_STATS_CONFIG;
       try {
         if (cleanedHost.statsConfig) {
@@ -457,7 +450,6 @@ export function HostManagerEditor({
         console.error("Failed to parse statsConfig:", error);
       }
 
-      // Merge with defaults to ensure all new fields are present
       parsedStatsConfig = { ...DEFAULT_STATS_CONFIG, ...parsedStatsConfig };
 
       const formData = {
@@ -552,7 +544,6 @@ export function HostManagerEditor({
         data.name = `${data.username}@${data.ip}`;
       }
 
-      // Validate monitoring intervals
       if (data.statsConfig) {
         const statusInterval = data.statsConfig.statusCheckInterval || 30;
         const metricsInterval = data.statsConfig.metricsInterval || 30;
@@ -663,7 +654,6 @@ export function HostManagerEditor({
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
-      // Refresh backend polling to pick up new/updated host configuration
       const { refreshServerPolling } = await import("@/ui/main-axios.ts");
       refreshServerPolling();
     } catch {
@@ -1391,7 +1381,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Font Family */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.fontFamily"
@@ -1425,7 +1414,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Font Size */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.fontSize"
@@ -1450,7 +1438,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Letter Spacing */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.letterSpacing"
@@ -1477,7 +1464,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Line Height */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.lineHeight"
@@ -1502,7 +1488,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Cursor Style */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.cursorStyle"
@@ -1533,7 +1518,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Cursor Blink */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.cursorBlink"
@@ -1557,11 +1541,9 @@ export function HostManagerEditor({
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Behavior Settings */}
                     <AccordionItem value="behavior">
                       <AccordionTrigger>Behavior</AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
-                        {/* Scrollback Buffer */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.scrollback"
@@ -1588,7 +1570,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Bell Style */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.bellStyle"
@@ -1623,7 +1604,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Right Click Selects Word */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.rightClickSelectsWord"
@@ -1645,7 +1625,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Fast Scroll Modifier */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.fastScrollModifier"
@@ -1674,7 +1653,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Fast Scroll Sensitivity */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.fastScrollSensitivity"
@@ -1701,7 +1679,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Minimum Contrast Ratio */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.minimumContrastRatio"
@@ -1731,11 +1708,9 @@ export function HostManagerEditor({
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Advanced Settings */}
                     <AccordionItem value="advanced">
                       <AccordionTrigger>Advanced</AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
-                        {/* Agent Forwarding */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.agentForwarding"
@@ -1758,7 +1733,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Backspace Mode */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.backspaceMode"
@@ -1790,7 +1764,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Startup Snippet */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.startupSnippetId"
@@ -1862,7 +1835,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* Auto MOSH */}
                         <FormField
                           control={form.control}
                           name="terminalConfig.autoMosh"
@@ -1884,7 +1856,6 @@ export function HostManagerEditor({
                           )}
                         />
 
-                        {/* MOSH Command */}
                         {form.watch("terminalConfig.autoMosh") && (
                           <FormField
                             control={form.control}
@@ -1906,7 +1877,6 @@ export function HostManagerEditor({
                           />
                         )}
 
-                        {/* Environment Variables */}
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
                             Environment Variables
@@ -2395,9 +2365,7 @@ export function HostManagerEditor({
                   )}
                 </TabsContent>
                 <TabsContent value="statistics" className="space-y-6">
-                  {/* Monitoring Configuration Section */}
                   <div className="space-y-4">
-                    {/* Status Check Monitoring */}
                     <div className="space-y-3">
                       <FormField
                         control={form.control}
@@ -2463,7 +2431,6 @@ export function HostManagerEditor({
                                       value: "seconds" | "minutes",
                                     ) => {
                                       setStatusIntervalUnit(value);
-                                      // Convert current value to new unit
                                       const currentSeconds = field.value || 30;
                                       if (value === "minutes") {
                                         const minutes = Math.round(
@@ -2496,7 +2463,6 @@ export function HostManagerEditor({
                       )}
                     </div>
 
-                    {/* Metrics Monitoring */}
                     <div className="space-y-3">
                       <FormField
                         control={form.control}
@@ -2560,7 +2526,6 @@ export function HostManagerEditor({
                                       value: "seconds" | "minutes",
                                     ) => {
                                       setMetricsIntervalUnit(value);
-                                      // Convert current value to new unit
                                       const currentSeconds = field.value || 30;
                                       if (value === "minutes") {
                                         const minutes = Math.round(
@@ -2594,7 +2559,6 @@ export function HostManagerEditor({
                     </div>
                   </div>
 
-                  {/* Only show widget selection if metrics monitoring is enabled */}
                   {form.watch("statsConfig.metricsEnabled") && (
                     <>
                       <FormField

@@ -80,7 +80,6 @@ export function Server({
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [showStatsUI, setShowStatsUI] = React.useState(true);
 
-  // Parse stats config for monitoring settings
   const statsConfig = React.useMemo((): StatsConfig => {
     if (!currentHostConfig?.statsConfig) {
       return DEFAULT_STATS_CONFIG;
@@ -181,7 +180,6 @@ export function Server({
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
   }, [hostConfig?.id]);
 
-  // Separate effect for status monitoring
   React.useEffect(() => {
     if (!statusCheckEnabled || !currentHostConfig?.id || !isVisible) {
       setServerStatus("offline");
@@ -207,7 +205,6 @@ export function Server({
           } else if (err?.response?.status === 504) {
             setServerStatus("offline");
           } else if (err?.response?.status === 404) {
-            // Status not available - monitoring disabled
             setServerStatus("offline");
           } else {
             setServerStatus("offline");
@@ -217,7 +214,7 @@ export function Server({
     };
 
     fetchStatus();
-    intervalId = window.setInterval(fetchStatus, 10000); // Poll backend every 10 seconds
+    intervalId = window.setInterval(fetchStatus, 10000);
 
     return () => {
       cancelled = true;
@@ -225,7 +222,6 @@ export function Server({
     };
   }, [currentHostConfig?.id, isVisible, statusCheckEnabled]);
 
-  // Separate effect for metrics monitoring
   React.useEffect(() => {
     if (!metricsEnabled || !currentHostConfig?.id || !isVisible) {
       setShowStatsUI(false);
@@ -244,7 +240,6 @@ export function Server({
           setMetrics(data);
           setMetricsHistory((prev) => {
             const newHistory = [...prev, data];
-            // Keep last 20 data points for chart
             return newHistory.slice(-20);
           });
           setShowStatsUI(true);
@@ -256,7 +251,6 @@ export function Server({
             response?: { status?: number; data?: { error?: string } };
           };
           if (err?.response?.status === 404) {
-            // Metrics not available - monitoring disabled
             setMetrics(null);
             setShowStatsUI(false);
           } else if (
@@ -281,7 +275,7 @@ export function Server({
     };
 
     fetchMetrics();
-    intervalId = window.setInterval(fetchMetrics, 10000); // Poll backend every 10 seconds
+    intervalId = window.setInterval(fetchMetrics, 10000);
 
     return () => {
       cancelled = true;

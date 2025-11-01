@@ -6,7 +6,6 @@ type TableName = "users" | "ssh_data" | "ssh_credentials" | "recent_activity";
 
 class SimpleDBOps {
   static async insert<T extends Record<string, unknown>>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     table: SQLiteTable<any>,
     tableName: TableName,
     data: T,
@@ -91,7 +90,6 @@ class SimpleDBOps {
   }
 
   static async update<T extends Record<string, unknown>>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     table: SQLiteTable<any>,
     tableName: TableName,
     where: unknown,
@@ -110,7 +108,6 @@ class SimpleDBOps {
     const result = await getDb()
       .update(table)
       .set(encryptedData)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .where(where as any)
       .returning();
 
@@ -127,14 +124,12 @@ class SimpleDBOps {
   }
 
   static async delete(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     table: SQLiteTable<any>,
     tableName: TableName,
     where: unknown,
   ): Promise<unknown[]> {
     const result = await getDb()
       .delete(table)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .where(where as any)
       .returning();
 
