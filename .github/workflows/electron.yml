@@ -409,11 +409,10 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [ "${{ steps.check_certs.outputs.has_certs }}" == "true" ]; then
-            npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
-          else
-            npm run build && npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
+          if [ "${{ steps.check_certs.outputs.has_certs }}" != "true" ]; then
+            npm run build
           fi
+          npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
 
       - name: List release directory
         if: steps.check_certs.outputs.has_certs == 'true'

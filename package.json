@@ -18,16 +18,13 @@
     "build:backend": "tsc -p tsconfig.node.json",
     "dev:backend": "tsc -p tsconfig.node.json && node ./dist/backend/backend/starter.js",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "concurrently \"npm run dev\" \"powershell -c \\\"Start-Sleep -Seconds 5\\\" && electron .\"",
     "build:win-portable": "npm run build && electron-builder --win --dir",
     "build:win-installer": "npm run build && electron-builder --win --publish=never",
     "build:linux-portable": "npm run build && electron-builder --linux --dir",
     "build:linux-appimage": "npm run build && electron-builder --linux AppImage",
     "build:linux-targz": "npm run build && electron-builder --linux tar.gz",
-    "build:mac": "npm run build && electron-builder --mac --universal",
-    "test:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-test.js",
-    "migrate:encryption": "tsc -p tsconfig.node.json && node ./dist/backend/backend/utils/encryption-migration.js",
-    "prepare": "husky"
+    "build:mac": "npm run build && electron-builder --mac --universal"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.7",

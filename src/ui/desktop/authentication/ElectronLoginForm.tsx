@@ -23,6 +23,7 @@ export function ElectronLoginForm({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasAuthenticatedRef = useRef(false);
   const [currentUrl, setCurrentUrl] = useState(serverUrl);
+  const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -52,7 +53,7 @@ export function ElectronLoginForm({
                 throw new Error("Failed to save JWT to localStorage");
               }
 
-              await new Promise((resolve) => setTimeout(resolve, 200));
+              await new Promise((resolve) => setTimeout(resolve, 500));
 
               onAuthSuccess();
             } catch (err) {
@@ -81,6 +82,8 @@ export function ElectronLoginForm({
 
     const handleLoad = () => {
       setLoading(false);
+      hasLoadedOnce.current = true;
+      setError(null);
 
       try {
         if (iframe.contentWindow) {
@@ -200,7 +203,9 @@ export function ElectronLoginForm({
 
     const handleError = () => {
       setLoading(false);
-      setError(t("errors.failedToLoadServer"));
+      if (hasLoadedOnce.current) {
+        setError(t("errors.failedToLoadServer"));
+      }
     };
 
     iframe.addEventListener("load", handleLoad);

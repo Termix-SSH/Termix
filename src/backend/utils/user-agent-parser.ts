@@ -14,7 +14,7 @@ export function detectPlatform(req: Request): DeviceType {
   const userAgent = req.headers["user-agent"] || "";
   const electronHeader = req.headers["x-electron-app"];
 
-  if (electronHeader === "true") {
+  if (electronHeader === "true" || userAgent.includes("Termix-Desktop")) {
     return "desktop";
   }
 
@@ -44,22 +44,30 @@ function parseElectronUserAgent(userAgent: string): DeviceInfo {
   let os = "Unknown OS";
   let version = "Unknown";
 
-  if (userAgent.includes("Windows")) {
-    os = parseWindowsVersion(userAgent);
-  } else if (userAgent.includes("Mac OS X")) {
-    os = parseMacVersion(userAgent);
-  } else if (userAgent.includes("Linux")) {
-    os = "Linux";
-  }
+  const termixMatch = userAgent.match(/Termix-Desktop\/([\d.]+) \(([^;]+);/);
+  if (termixMatch) {
+    version = termixMatch[1];
+    os = termixMatch[2];
+  } else {
+    if (userAgent.includes("Windows")) {
+      os = parseWindowsVersion(userAgent);
+    } else if (userAgent.includes("Mac OS X")) {
+      os = parseMacVersion(userAgent);
+    } else if (userAgent.includes("macOS")) {
+      os = "macOS";
+    } else if (userAgent.includes("Linux")) {
+      os = "Linux";
+    }
 
-  const electronMatch = userAgent.match(/Electron\/([\d.]+)/);
-  if (electronMatch) {
-    version = electronMatch[1];
+    const electronMatch = userAgent.match(/Electron\/([\d.]+)/);
+    if (electronMatch) {
+      version = electronMatch[1];
+    }
   }
 
   return {
     type: "desktop",
-    browser: "Electron",
+    browser: "Termix Desktop",
     version,
     os,
     deviceInfo: `Termix Desktop on ${os}`,

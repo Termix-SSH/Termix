@@ -41,6 +41,10 @@ if (!gotTheLock) {
 }
 
 function createWindow() {
+  const appVersion = app.getVersion();
+  const electronVersion = process.versions.electron;
+  const platform = process.platform === "win32" ? "Windows" : process.platform === "darwin" ? "macOS" : "Linux";
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -62,6 +66,10 @@ function createWindow() {
   if (process.platform !== "darwin") {
     mainWindow.setMenuBarVisibility(false);
   }
+
+  mainWindow.webContents.setUserAgent(
+    `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`
+  );
 
   if (isDev) {
     mainWindow.loadURL("http:://localhost:5173");

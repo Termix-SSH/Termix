@@ -267,15 +267,6 @@ class AuthManager {
             .limit(1);
 
           if (sessionRecords.length === 0) {
-            databaseLogger.warn(
-              "JWT token has no matching session in database",
-              {
-                operation: "jwt_verify_failed",
-                reason: "session_not_found",
-                sessionId: payload.sessionId,
-                userId: payload.userId,
-              },
-            );
             return null;
           }
         } catch (dbError) {
