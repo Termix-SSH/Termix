@@ -595,19 +595,15 @@ app.use(
         "http://127.0.0.1:3000",
       ];
 
-      if (origin.startsWith("https://")) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("http://")) {
-        return callback(null, true);
-      }
-
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      callback(new Error("Not allowed by CORS"));
+      if (origin.startsWith("https://")) {
+        return callback(null, true);
+      }
+
+      callback(null, true);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
