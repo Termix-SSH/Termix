@@ -93,6 +93,11 @@ export function ElectronLoginForm({
       try {
         const injectedScript = `
           (function() {
+            window.IS_ELECTRON = true;
+            if (typeof window.electronAPI === 'undefined') {
+              window.electronAPI = { isElectron: true };
+            }
+
             let hasNotified = false;
 
             function postJWTToParent(token, source) {

@@ -91,7 +91,7 @@ interface OIDCAuthorize {
 // ============================================================================
 
 export function isElectron(): boolean {
-  return (
+  const hasISElectron =
     (
       window as Window &
         typeof globalThis & {
@@ -99,16 +99,20 @@ export function isElectron(): boolean {
           electronAPI?: unknown;
           configuredServerUrl?: string;
         }
-    ).IS_ELECTRON === true ||
-    (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-          configuredServerUrl?: string;
-        }
-    ).electronAPI?.isElectron === true
-  );
+    ).IS_ELECTRON === true;
+
+  const hasElectronAPI = !!(
+    window as Window &
+      typeof globalThis & {
+        IS_ELECTRON?: boolean;
+        electronAPI?: unknown;
+        configuredServerUrl?: string;
+      }
+  ).electronAPI;
+
+  const result = hasISElectron || hasElectronAPI;
+
+  return result;
 }
 
 function getLoggerForService(serviceName: string) {
@@ -477,15 +481,21 @@ export async function checkElectronUpdate(): Promise<{
 }
 
 function getApiUrl(path: string, defaultPort: number): string {
-  if (isDev()) {
+  const devMode = isDev();
+  const electronMode = isElectron();
+
+  if (devMode) {
     const protocol = window.location.protocol === "https:" ? "https" : "http";
     const sslPort = protocol === "https" ? 8443 : defaultPort;
-    return `${protocol}://${apiHost}:${sslPort}${path}`;
-  } else if (isElectron()) {
+    const url = `${protocol}://${apiHost}:${sslPort}${path}`;
+    return url;
+  } else if (electronMode) {
     if (configuredServerUrl) {
       const baseUrl = configuredServerUrl.replace(/\/$/, "");
-      return `${baseUrl}${path}`;
+      const url = `${baseUrl}${path}`;
+      return url;
     }
+    console.warn("Electron mode but no server configured!");
     return "http://no-server-configured";
   } else {
     return path;
@@ -533,31 +543,41 @@ export let authApi: AxiosInstance;
 // Homepage API (port 30006)
 export let homepageApi: AxiosInstance;
 
-if (isElectron()) {
-  getServerConfig()
-    .then((config) => {
-      if (config?.serverUrl) {
-        configuredServerUrl = config.serverUrl;
-        (
-          window as Window &
-            typeof globalThis & {
-              IS_ELECTRON?: boolean;
-              electronAPI?: unknown;
-              configuredServerUrl?: string;
-            }
-        ).configuredServerUrl = configuredServerUrl;
-      }
-      initializeApiInstances();
-    })
-    .catch((error) => {
-      console.error(
-        "Failed to load server config, initializing with default:",
-        error,
-      );
-      initializeApiInstances();
-    });
+function initializeApp() {
+  if (isElectron()) {
+    getServerConfig()
+      .then((config) => {
+        if (config?.serverUrl) {
+          configuredServerUrl = config.serverUrl;
+          (
+            window as Window &
+              typeof globalThis & {
+                IS_ELECTRON?: boolean;
+                electronAPI?: unknown;
+                configuredServerUrl?: string;
+              }
+          ).configuredServerUrl = configuredServerUrl;
+        } else {
+          console.warn("No server URL in config");
+        }
+        initializeApiInstances();
+      })
+      .catch((error) => {
+        console.error(
+          "Failed to load server config, initializing with default:",
+          error,
+        );
+        initializeApiInstances();
+      });
+  } else {
+    initializeApiInstances();
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeApp);
 } else {
-  initializeApiInstances();
+  initializeApp();
 }
 
 function updateApiInstances() {
