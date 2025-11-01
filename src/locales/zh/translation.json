@@ -345,6 +345,8 @@
     "settingUp": "设置中...",
     "next": "下一步",
     "previous": "上一步",
+    "connect": "连接",
+    "connecting": "连接中...",
     "refresh": "刷新",
     "settings": "设置",
     "profile": "个人资料",
@@ -1280,7 +1282,17 @@
     "passwordResetSuccess": "成功！",
     "passwordResetSuccessDesc": "您的密码已成功重置！您现在可以使用新密码登录。",
     "signUp": "注册",
-    "dataLossWarning": "以这种方式重置密码将删除所有已保存的 SSH 主机、凭据和其他加密数据。此操作无法撤销。仅当您忘记密码且未登录时才使用此功能。"
+    "dataLossWarning": "以这种方式重置密码将删除所有已保存的 SSH 主机、凭据和其他加密数据。此操作无法撤销。仅当您忘记密码且未登录时才使用此功能。",
+    "sshAuthenticationRequired": "需要 SSH 身份验证",
+    "sshNoKeyboardInteractive": "键盘交互式身份验证不可用",
+    "sshAuthenticationFailed": "身份验证失败",
+    "sshAuthenticationTimeout": "身份验证超时",
+    "sshNoKeyboardInteractiveDescription": "服务器不支持键盘交互式身份验证。请提供您的密码或 SSH 密钥。",
+    "sshAuthFailedDescription": "提供的凭据不正确。请使用有效凭据重试。",
+    "sshTimeoutDescription": "身份验证尝试超时。请重试。",
+    "sshProvideCredentialsDescription": "请提供您的 SSH 凭据以连接到此服务器。",
+    "sshPasswordDescription": "输入此 SSH 连接的密码。",
+    "sshKeyPasswordDescription": "如果您的 SSH 密钥已加密，请在此处输入密码。"
   },
   "errors": {
     "notFound": "页面未找到",

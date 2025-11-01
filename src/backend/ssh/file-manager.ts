@@ -459,6 +459,18 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "The server does not support keyboard-interactive authentication. Please provide credentials.",
         reason: "no_keyboard",
       });
+    } else if (
+      resolvedCredentials.authType === "none" &&
+      (err.message.includes("All configured authentication methods failed") ||
+        err.message.includes("No supported authentication methods available") ||
+        err.message.includes("authentication methods failed"))
+    ) {
+      res.status(200).json({
+        status: "auth_required",
+        message:
+          "The server does not support keyboard-interactive authentication. Please provide credentials.",
+        reason: "no_keyboard",
+      });
     } else {
       fileLogger.error("SSH connection failed for file manager", {
         operation: "file_connect",

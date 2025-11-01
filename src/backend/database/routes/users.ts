@@ -1039,26 +1039,19 @@ router.post("/logout", authenticateJWT, async (req, res) => {
 // Route: Get current user's info using JWT
 // GET /users/me
 router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
-  console.log("=== /users/me CALLED ===");
   const userId = (req as AuthenticatedRequest).userId;
-  console.log("User ID from JWT:", userId);
 
   if (!isNonEmptyString(userId)) {
-    console.log("ERROR: Invalid userId");
     authLogger.warn("Invalid userId in JWT for /users/me");
     return res.status(401).json({ error: "Invalid userId" });
   }
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
-    console.log("User found:", user.length > 0 ? "YES" : "NO");
-
     if (!user || user.length === 0) {
-      console.log("ERROR: User not found in database");
       authLogger.warn(`User not found for /users/me: ${userId}`);
       return res.status(401).json({ error: "User not found" });
     }
 
-    console.log("SUCCESS: Returning user info");
     res.json({
       userId: user[0].id,
       username: user[0].username,
@@ -1067,7 +1060,6 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       totp_enabled: !!user[0].totp_enabled,
     });
   } catch (err) {
-    console.log("ERROR: Exception thrown:", err);
     authLogger.error("Failed to get username", err);
     res.status(500).json({ error: "Failed to get username" });
   }

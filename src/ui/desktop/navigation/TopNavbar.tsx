@@ -8,7 +8,7 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
 import { SnippetsSidebar } from "@/ui/desktop/apps/terminal/SnippetsSidebar.tsx";
-import { SshToolsSidebar } from "@/ui/desktop/apps/tools/SshToolsSidebar.tsx";
+import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
 import { ToolsMenu } from "@/ui/desktop/apps/tools/ToolsMenu.tsx";
 
 interface TabData {
@@ -497,7 +497,7 @@ export function TopNavbar({
         </div>
       )}
 
-      <SshToolsSidebar
+      <SSHToolsSidebar
         isOpen={toolsSheetOpen}
         onClose={() => setToolsSheetOpen(false)}
       />

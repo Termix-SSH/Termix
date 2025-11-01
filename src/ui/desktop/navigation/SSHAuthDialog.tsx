@@ -137,7 +137,7 @@ export function SSHAuthDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       style={{ backgroundColor: `${backgroundColor}dd` }}
     >
       <Card className="w-full max-w-2xl mx-4 shadow-2xl">

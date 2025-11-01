@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Terminal } from "@/ui/desktop/apps/terminal/Terminal.tsx";
 import { Server as ServerView } from "@/ui/desktop/apps/server/Server.tsx";
-import { FileManager } from "@/ui/desktop/apps/file manager/FileManager.tsx";
+import { FileManager } from "@/ui/desktop/apps/file-manager/FileManager.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,

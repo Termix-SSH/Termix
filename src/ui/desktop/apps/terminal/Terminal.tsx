@@ -250,6 +250,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             data: {
               cols: terminal.cols,
               rows: terminal.rows,
+              password: credentials.password,
+              sshKey: credentials.sshKey,
+              keyPassword: credentials.keyPassword,
               hostConfig: {
                 ...hostConfig,
                 password: credentials.password,
@@ -526,26 +529,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             const errorMessage = msg.message || t("terminal.unknownError");
 
             if (
-              errorMessage.toLowerCase().includes("auth") ||
-              errorMessage.toLowerCase().includes("password") ||
-              errorMessage.toLowerCase().includes("permission") ||
-              errorMessage.toLowerCase().includes("denied") ||
-              errorMessage.toLowerCase().includes("invalid") ||
-              errorMessage.toLowerCase().includes("failed") ||
-              errorMessage.toLowerCase().includes("incorrect")
-            ) {
-              toast.error(t("terminal.authError", { message: errorMessage }));
-              shouldNotReconnectRef.current = true;
-              if (webSocketRef.current) {
-                webSocketRef.current.close();
-              }
-              if (onClose) {
-                onClose();
-              }
-              return;
-            }
-
-            if (
               errorMessage.toLowerCase().includes("connection") ||
               errorMessage.toLowerCase().includes("timeout") ||
               errorMessage.toLowerCase().includes("network")
@@ -560,6 +543,26 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               setIsConnecting(true);
               wasDisconnectedBySSH.current = false;
               attemptReconnection();
+              return;
+            }
+
+            if (
+              (errorMessage.toLowerCase().includes("auth") &&
+                errorMessage.toLowerCase().includes("failed")) ||
+              errorMessage.toLowerCase().includes("permission denied") ||
+              (errorMessage.toLowerCase().includes("invalid") &&
+                (errorMessage.toLowerCase().includes("password") ||
+                  errorMessage.toLowerCase().includes("key"))) ||
+              errorMessage.toLowerCase().includes("incorrect password")
+            ) {
+              toast.error(t("terminal.authError", { message: errorMessage }));
+              shouldNotReconnectRef.current = true;
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+              if (onClose) {
+                onClose();
+              }
               return;
             }
 

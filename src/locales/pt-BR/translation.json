@@ -326,6 +326,8 @@
     "next": "Próximo",
     "previous": "Anterior",
     "refresh": "Atualizar",
+    "connect": "Conectar",
+    "connecting": "Conectando...",
     "settings": "Configurações",
     "profile": "Perfil",
     "help": "Ajuda",
@@ -1220,7 +1222,17 @@
     "enterNewPassword": "Digite sua nova senha para o usuário:",
     "passwordResetSuccess": "Sucesso!",
     "signUp": "Cadastrar",
-    "dataLossWarning": "Redefinir sua senha desta forma excluirá todos os seus hosts SSH salvos, credenciais e outros dados criptografados. Esta ação não pode ser desfeita. Use isso apenas se você esqueceu sua senha e não está logado."
+    "dataLossWarning": "Redefinir sua senha desta forma excluirá todos os seus hosts SSH salvos, credenciais e outros dados criptografados. Esta ação não pode ser desfeita. Use isso apenas se você esqueceu sua senha e não está logado.",
+    "sshAuthenticationRequired": "Autenticação SSH Necessária",
+    "sshNoKeyboardInteractive": "Autenticação Interativa por Teclado Indisponível",
+    "sshAuthenticationFailed": "Falha na Autenticação",
+    "sshAuthenticationTimeout": "Tempo Limite de Autenticação",
+    "sshNoKeyboardInteractiveDescription": "O servidor não suporta autenticação interativa por teclado. Por favor, forneça sua senha ou chave SSH.",
+    "sshAuthFailedDescription": "As credenciais fornecidas estavam incorretas. Por favor, tente novamente com credenciais válidas.",
+    "sshTimeoutDescription": "A tentativa de autenticação expirou. Por favor, tente novamente.",
+    "sshProvideCredentialsDescription": "Por favor, forneça suas credenciais SSH para conectar a este servidor.",
+    "sshPasswordDescription": "Digite a senha para esta conexão SSH.",
+    "sshKeyPasswordDescription": "Se sua chave SSH estiver criptografada, digite a senha aqui."
   },
   "errors": {
     "notFound": "Página não encontrada",

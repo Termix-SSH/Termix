@@ -403,7 +403,6 @@ jobs:
       - name: Build macOS DMG
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
@@ -412,6 +411,7 @@ jobs:
           if [ "${{ steps.check_certs.outputs.has_certs }}" != "true" ]; then
             npm run build
           fi
+          export GH_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
 
       - name: List release directory

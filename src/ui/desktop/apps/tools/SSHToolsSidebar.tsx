@@ -25,7 +25,7 @@ interface SshToolsSidebarProps {
   onClose: () => void;
 }
 
-export function SshToolsSidebar({
+export function SSHToolsSidebar({
   isOpen,
   onClose,
 }: SshToolsSidebarProps): React.ReactElement | null {

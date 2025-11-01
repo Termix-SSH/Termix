@@ -485,6 +485,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }, 60000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
+    let authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
       try {
         const credentials = await SimpleDBOps.select(
@@ -707,6 +708,23 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     sshConn.on("error", (err: Error) => {
       clearTimeout(connectionTimeout);
+
+      if (
+        (authMethodNotAvailable && resolvedCredentials.authType === "none") ||
+        (resolvedCredentials.authType === "none" &&
+          err.message.includes("All configured authentication methods failed"))
+      ) {
+        ws.send(
+          JSON.stringify({
+            type: "auth_method_not_available",
+            message:
+              "The server does not support keyboard-interactive authentication. Please provide credentials.",
+          }),
+        );
+        cleanupSSH(connectionTimeout);
+        return;
+      }
+
       sshLogger.error("SSH connection error", err, {
         operation: "ssh_connect",
         hostId: id,
@@ -880,7 +898,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       host: ip,
       port,
       username,
-      tryKeyboard: true,
+      tryKeyboard: resolvedCredentials.authType === "none",
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
       readyTimeout: 60000,
@@ -955,14 +973,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           if (methodsLeft.includes("keyboard-interactive")) {
             callback("keyboard-interactive");
           } else {
-            ws.send(
-              JSON.stringify({
-                type: "auth_method_not_available",
-                message:
-                  "The server does not support keyboard-interactive authentication. Please provide credentials.",
-                methodsAvailable: methodsLeft,
-              }),
-            );
+            authMethodNotAvailable = true;
             callback(false);
           }
         } else {

@@ -311,6 +311,8 @@
     "next": "Weiter",
     "previous": "Vorherige",
     "refresh": "Aktualisieren",
+    "connect": "Verbinden",
+    "connecting": "Verbinde...",
     "settings": "Einstellungen",
     "profile": "Profil",
     "help": "Hilfe",
@@ -1173,7 +1175,17 @@
     "passwordResetSuccess": "Erfolgreich!",
     "passwordResetSuccessDesc": "Ihr Passwort wurde erfolgreich zurückgesetzt! Sie können sich jetzt mit Ihrem neuen Passwort anmelden.",
     "signUp": "Registrierung",
-    "dataLossWarning": "Wenn Sie Ihr Passwort auf diese Weise zurücksetzen, werden alle Ihre gespeicherten SSH-Hosts, Anmeldeinformationen und andere verschlüsselte Daten gelöscht. Diese Aktion kann nicht rückgängig gemacht werden. Verwenden Sie diese Option nur, wenn Sie Ihr Passwort vergessen haben und nicht angemeldet sind."
+    "dataLossWarning": "Wenn Sie Ihr Passwort auf diese Weise zurücksetzen, werden alle Ihre gespeicherten SSH-Hosts, Anmeldeinformationen und andere verschlüsselte Daten gelöscht. Diese Aktion kann nicht rückgängig gemacht werden. Verwenden Sie diese Option nur, wenn Sie Ihr Passwort vergessen haben und nicht angemeldet sind.",
+    "sshAuthenticationRequired": "SSH-Authentifizierung erforderlich",
+    "sshNoKeyboardInteractive": "Keyboard-Interactive-Authentifizierung nicht verfügbar",
+    "sshAuthenticationFailed": "Authentifizierung fehlgeschlagen",
+    "sshAuthenticationTimeout": "Authentifizierungs-Timeout",
+    "sshNoKeyboardInteractiveDescription": "Der Server unterstützt keine Keyboard-Interactive-Authentifizierung. Bitte geben Sie Ihr Passwort oder Ihren SSH-Schlüssel ein.",
+    "sshAuthFailedDescription": "Die angegebenen Anmeldeinformationen waren falsch. Bitte versuchen Sie es erneut mit gültigen Anmeldeinformationen.",
+    "sshTimeoutDescription": "Der Authentifizierungsversuch ist abgelaufen. Bitte versuchen Sie es erneut.",
+    "sshProvideCredentialsDescription": "Bitte geben Sie Ihre SSH-Anmeldeinformationen ein, um eine Verbindung zu diesem Server herzustellen.",
+    "sshPasswordDescription": "Geben Sie das Passwort für diese SSH-Verbindung ein.",
+    "sshKeyPasswordDescription": "Wenn Ihr SSH-Schlüssel verschlüsselt ist, geben Sie hier die Passphrase ein."
   },
   "errors": {
     "notFound": "Seite nicht gefunden",
