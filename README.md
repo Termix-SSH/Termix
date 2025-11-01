@@ -87,7 +87,7 @@ Supported Devices:
   - Apple App Store
   - DMG
   - Homebrew
-- iOS (v15.1+)
+- iOS/iPadOS (v15.1+)
   - Apple App Store
   - ISO
 - Android (v7.0+)
