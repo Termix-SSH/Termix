@@ -43,7 +43,12 @@ if (!gotTheLock) {
 function createWindow() {
   const appVersion = app.getVersion();
   const electronVersion = process.versions.electron;
-  const platform = process.platform === "win32" ? "Windows" : process.platform === "darwin" ? "macOS" : "Linux";
+  const platform =
+    process.platform === "win32"
+      ? "Windows"
+      : process.platform === "darwin"
+        ? "macOS"
+        : "Linux";
 
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -68,7 +73,7 @@ function createWindow() {
   }
 
   mainWindow.webContents.setUserAgent(
-    `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`
+    `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`,
   );
 
   if (isDev) {

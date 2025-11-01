@@ -464,7 +464,7 @@ jobs:
         if: steps.check_asc_creds.outputs.has_credentials == 'true' && github.event.inputs.artifact_destination == 'submit'
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
+          ruby-version: "3.2"
           bundler-cache: false
 
       - name: Install Fastlane
