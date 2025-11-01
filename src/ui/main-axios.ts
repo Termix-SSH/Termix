@@ -200,7 +200,20 @@ function createApiInstance(
     }
 
     if (typeof window !== "undefined" && (window as any).ReactNativeWebView) {
-      config.headers["User-Agent"] = "Termix-Mobile";
+      // Try to detect platform from navigator
+      let platform = "Unknown";
+      if (typeof navigator !== "undefined" && navigator.userAgent) {
+        if (navigator.userAgent.includes("Android")) {
+          platform = "Android";
+        } else if (
+          navigator.userAgent.includes("iPhone") ||
+          navigator.userAgent.includes("iPad") ||
+          navigator.userAgent.includes("iOS")
+        ) {
+          platform = "iOS";
+        }
+      }
+      config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
     }
 
     return config;

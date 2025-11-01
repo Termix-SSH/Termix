@@ -90,26 +90,49 @@ function parseMobileUserAgent(userAgent: string): DeviceInfo {
   let os = "Unknown OS";
   let version = "Unknown";
 
-  // Detect mobile OS
-  if (userAgent.includes("Android")) {
-    const androidMatch = userAgent.match(/Android ([\d.]+)/);
-    os = androidMatch ? `Android ${androidMatch[1]}` : "Android";
-  } else if (
-    userAgent.includes("iOS") ||
-    userAgent.includes("iPhone") ||
-    userAgent.includes("iPad")
-  ) {
-    const iosMatch = userAgent.match(/OS ([\d_]+)/);
-    if (iosMatch) {
-      const iosVersion = iosMatch[1].replace(/_/g, ".");
-      os = `iOS ${iosVersion}`;
-    } else {
-      os = "iOS";
+  // Check for Termix-Mobile/Platform format first (e.g., "Termix-Mobile/Android" or "Termix-Mobile/iOS")
+  const termixPlatformMatch = userAgent.match(/Termix-Mobile\/(Android|iOS)/i);
+  if (termixPlatformMatch) {
+    const platform = termixPlatformMatch[1];
+    if (platform.toLowerCase() === "android") {
+      // Try to get Android version from full UA string
+      const androidMatch = userAgent.match(/Android ([\d.]+)/);
+      os = androidMatch ? `Android ${androidMatch[1]}` : "Android";
+    } else if (platform.toLowerCase() === "ios") {
+      // Try to get iOS version from full UA string
+      const iosMatch = userAgent.match(/OS ([\d_]+)/);
+      if (iosMatch) {
+        const iosVersion = iosMatch[1].replace(/_/g, ".");
+        os = `iOS ${iosVersion}`;
+      } else {
+        os = "iOS";
+      }
+    }
+  } else {
+    // Fallback: Check for standard Android/iOS patterns in the user agent
+    if (userAgent.includes("Android")) {
+      const androidMatch = userAgent.match(/Android ([\d.]+)/);
+      os = androidMatch ? `Android ${androidMatch[1]}` : "Android";
+    } else if (
+      userAgent.includes("iOS") ||
+      userAgent.includes("iPhone") ||
+      userAgent.includes("iPad")
+    ) {
+      const iosMatch = userAgent.match(/OS ([\d_]+)/);
+      if (iosMatch) {
+        const iosVersion = iosMatch[1].replace(/_/g, ".");
+        os = `iOS ${iosVersion}`;
+      } else {
+        os = "iOS";
+      }
     }
   }
 
   // Try to extract app version (if included in UA)
-  const versionMatch = userAgent.match(/Termix-Mobile\/([\d.]+)/);
+  // Match patterns like "Termix-Mobile/1.0.0" or just "Termix-Mobile"
+  const versionMatch = userAgent.match(
+    /Termix-Mobile\/(?:Android|iOS|)([\d.]+)/i,
+  );
   if (versionMatch) {
     version = versionMatch[1];
   }

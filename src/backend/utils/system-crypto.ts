@@ -23,11 +23,21 @@ class SystemCrypto {
       const envSecret = process.env.JWT_SECRET;
       if (envSecret && envSecret.length >= 64) {
         this.jwtSecret = envSecret;
+        databaseLogger.info("JWT secret loaded from environment variable", {
+          operation: "jwt_init_from_env",
+          secretLength: envSecret.length,
+          secretPrefix: envSecret.substring(0, 8) + "...",
+        });
         return;
       }
 
       const dataDir = process.env.DATA_DIR || "./db/data";
       const envPath = path.join(dataDir, ".env");
+
+      databaseLogger.info("Attempting to load JWT secret from .env file", {
+        operation: "jwt_init_from_file",
+        envPath,
+      });
 
       try {
         const envContent = await fs.readFile(envPath, "utf8");
@@ -35,12 +45,33 @@ class SystemCrypto {
         if (jwtMatch && jwtMatch[1] && jwtMatch[1].length >= 64) {
           this.jwtSecret = jwtMatch[1];
           process.env.JWT_SECRET = jwtMatch[1];
+          databaseLogger.success("JWT secret loaded from .env file", {
+            operation: "jwt_init_from_file_success",
+            secretLength: jwtMatch[1].length,
+            secretPrefix: jwtMatch[1].substring(0, 8) + "...",
+          });
           return;
+        } else {
+          databaseLogger.warn(
+            "JWT_SECRET in .env file is invalid or too short",
+            {
+              operation: "jwt_init_invalid_secret",
+              hasMatch: !!jwtMatch,
+              secretLength: jwtMatch?.[1]?.length || 0,
+            },
+          );
         }
-      } catch {
-        // Ignore file read errors, will generate new secret
+      } catch (fileError) {
+        databaseLogger.warn("Failed to read .env file for JWT secret", {
+          operation: "jwt_init_file_read_failed",
+          error:
+            fileError instanceof Error ? fileError.message : "Unknown error",
+        });
       }
 
+      databaseLogger.warn("Generating new JWT secret", {
+        operation: "jwt_generating_new_secret",
+      });
       await this.generateAndGuideUser();
     } catch (error) {
       databaseLogger.error("Failed to initialize JWT secret", error, {

@@ -40,6 +40,20 @@ async function initializeDatabaseAsync(): Promise<void> {
           await DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
 
         memoryDatabase = new Database(decryptedBuffer);
+
+        // Count sessions after loading
+        try {
+          const sessionCount = memoryDatabase
+            .prepare("SELECT COUNT(*) as count FROM sessions")
+            .get() as { count: number };
+          databaseLogger.info("Database loaded from encrypted file", {
+            operation: "db_load",
+            sessionCount: sessionCount.count,
+            bufferSize: decryptedBuffer.length,
+          });
+        } catch (countError) {
+          // Ignore count errors
+        }
       } else {
         const migration = new DatabaseMigration(dataDir);
         const migrationStatus = migration.checkMigrationStatus();
@@ -281,6 +295,18 @@ async function initializeCompleteDatabase(): Promise<void> {
 
 `);
 
+  try {
+    sqlite.prepare("DELETE FROM sessions").run();
+    databaseLogger.info("All sessions cleared on startup", {
+      operation: "db_init_session_cleanup",
+    });
+  } catch (e) {
+    databaseLogger.warn("Could not clear sessions on startup", {
+      operation: "db_init_session_cleanup_failed",
+      error: e,
+    });
+  }
+
   migrateSchema();
 
   try {
@@ -471,6 +497,20 @@ async function saveMemoryDatabaseToFile() {
 
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    // Count sessions before saving
+    try {
+      const sessionCount = memoryDatabase
+        .prepare("SELECT COUNT(*) as count FROM sessions")
+        .get() as { count: number };
+      databaseLogger.info("Saving database to file", {
+        operation: "db_save",
+        sessionCount: sessionCount.count,
+        bufferSize: buffer.length,
+      });
+    } catch (countError) {
+      // Ignore count errors
     }
 
     if (enableFileEncryption) {

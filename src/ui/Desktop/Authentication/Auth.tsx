@@ -57,6 +57,22 @@ export function Auth({
   ...props
 }: AuthProps) {
   const { t } = useTranslation();
+
+  // Detect if we're running in Electron's WebView/iframe
+  const isInElectronWebView = () => {
+    try {
+      // Check if we're in an iframe AND the parent is Electron
+      if (window.self !== window.top) {
+        // We're in an iframe, likely Electron's ElectronLoginForm
+        return true;
+      }
+    } catch (e) {
+      // Cross-origin iframe, can't access parent
+      return false;
+    }
+    return false;
+  };
+
   const [tab, setTab] = useState<"login" | "signup" | "external" | "reset">(
     "login",
   );
@@ -92,12 +108,22 @@ export function Auth({
   }, [loggedIn]);
 
   useEffect(() => {
+    // Skip when in Electron WebView iframe
+    if (isInElectronWebView()) {
+      return;
+    }
+
     getRegistrationAllowed().then((res) => {
       setRegistrationAllowed(res.allowed);
     });
   }, []);
 
   useEffect(() => {
+    // Skip when in Electron WebView iframe
+    if (isInElectronWebView()) {
+      return;
+    }
+
     getPasswordLoginAllowed()
       .then((res) => {
         setPasswordLoginAllowed(res.allowed);
@@ -110,6 +136,11 @@ export function Auth({
   }, []);
 
   useEffect(() => {
+    // Skip when in Electron WebView iframe
+    if (isInElectronWebView()) {
+      return;
+    }
+
     getOIDCConfig()
       .then((response) => {
         if (response) {
@@ -128,6 +159,14 @@ export function Auth({
   }, []);
 
   useEffect(() => {
+    // Skip database health check when in Electron WebView iframe
+    // The parent Electron window will handle authentication
+    if (isInElectronWebView()) {
+      setDbHealthChecking(false);
+      setDbConnectionFailed(false);
+      return;
+    }
+
     setDbHealthChecking(true);
     getSetupRequired()
       .then((res) => {
@@ -690,21 +729,6 @@ export function Auth({
       </div>
     );
   }
-
-  // Detect if we're running in Electron's WebView/iframe
-  const isInElectronWebView = () => {
-    try {
-      // Check if we're in an iframe AND the parent is Electron
-      if (window.self !== window.top) {
-        // We're in an iframe, likely Electron's ElectronLoginForm
-        return true;
-      }
-    } catch (e) {
-      // Cross-origin iframe, can't access parent
-      return false;
-    }
-    return false;
-  };
 
   return (
     <div

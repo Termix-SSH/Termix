@@ -191,7 +191,9 @@ class AuthManager {
 
       // Calculate expiration timestamp
       const expirationMs = this.parseExpiresIn(expiresIn);
-      const expiresAt = new Date(Date.now() + expirationMs).toISOString();
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + expirationMs).toISOString();
+      const createdAt = now.toISOString();
 
       // Store session in database
       try {
@@ -201,7 +203,9 @@ class AuthManager {
           jwtToken: token,
           deviceType: options.deviceType,
           deviceInfo: options.deviceInfo,
+          createdAt,
           expiresAt,
+          lastActiveAt: createdAt,
         });
 
         databaseLogger.info("Session created", {
@@ -211,6 +215,30 @@ class AuthManager {
           deviceType: options.deviceType,
           expiresAt,
         });
+
+        // Immediately save database to disk to ensure session persists across restarts
+        try {
+          const { saveMemoryDatabaseToFile } = await import(
+            "../database/db/index.js"
+          );
+          await saveMemoryDatabaseToFile();
+          databaseLogger.info(
+            "Database saved immediately after session creation",
+            {
+              operation: "session_create_db_save",
+              sessionId,
+            },
+          );
+        } catch (saveError) {
+          databaseLogger.error(
+            "Failed to save database after session creation",
+            saveError,
+            {
+              operation: "session_create_db_save_failed",
+              sessionId,
+            },
+          );
+        }
       } catch (error) {
         databaseLogger.error("Failed to create session", error, {
           operation: "session_create_failed",
@@ -253,7 +281,24 @@ class AuthManager {
   async verifyJWTToken(token: string): Promise<JWTPayload | null> {
     try {
       const jwtSecret = await this.systemCrypto.getJWTSecret();
+
+      databaseLogger.info("Attempting JWT verification", {
+        operation: "jwt_verify_attempt",
+        tokenLength: token.length,
+        secretLength: jwtSecret.length,
+      });
+
       const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+
+      databaseLogger.info("JWT signature verified successfully", {
+        operation: "jwt_signature_verified",
+        userId: payload.userId,
+        sessionId: payload.sessionId,
+        hasExpiration: !!payload.exp,
+        expiresAt: payload.exp
+          ? new Date(payload.exp * 1000).toISOString()
+          : "N/A",
+      });
 
       // For tokens with sessionId, verify the session exists in database
       // This ensures revoked sessions are rejected even after backend restart
@@ -272,10 +317,18 @@ class AuthManager {
                 operation: "jwt_verify_failed",
                 reason: "session_not_found",
                 sessionId: payload.sessionId,
+                userId: payload.userId,
               },
             );
             return null;
           }
+
+          databaseLogger.info("Session found in database", {
+            operation: "jwt_session_found",
+            sessionId: payload.sessionId,
+            userId: payload.userId,
+            sessionExpiresAt: sessionRecords[0].expiresAt,
+          });
         } catch (dbError) {
           databaseLogger.error(
             "Failed to check session in database during JWT verification",

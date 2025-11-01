@@ -56,7 +56,8 @@ function RootApp() {
   const width = useWindowWidth();
   const isMobile = width < 768;
 
-  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  const userAgent =
+    navigator.userAgent || navigator.vendor || (window as any).opera || "";
   const isTermixMobile = /Termix-Mobile/.test(userAgent);
 
   if (isElectron()) {
