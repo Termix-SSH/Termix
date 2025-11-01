@@ -28,6 +28,8 @@ jobs:
   build-windows:
     runs-on: windows-latest
     if: github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'windows' || github.event.inputs.build_type == ''
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -66,6 +68,8 @@ jobs:
           echo "version=$VERSION" >> $env:GITHUB_OUTPUT
 
       - name: Build Windows (All Architectures)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build && npx electron-builder --win --x64 --ia32
 
       - name: List release files
@@ -135,6 +139,8 @@ jobs:
   build-linux:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == ''
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -166,6 +172,8 @@ jobs:
           npm install --force @rollup/rollup-linux-arm-gnueabihf
 
       - name: Build Linux (All Architectures)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build && npx electron-builder --linux --x64 --arm64 --armv7l
 
       - name: Rename Linux artifacts for consistency
@@ -267,6 +275,8 @@ jobs:
     runs-on: macos-latest
     if: github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all'
     needs: []
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -341,6 +351,7 @@ jobs:
         if: steps.check_certs.outputs.has_certs == 'true'
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           BUILD_VERSION="${{ github.run_number }}"
