@@ -23,21 +23,11 @@ class SystemCrypto {
       const envSecret = process.env.JWT_SECRET;
       if (envSecret && envSecret.length >= 64) {
         this.jwtSecret = envSecret;
-        databaseLogger.info("JWT secret loaded from environment variable", {
-          operation: "jwt_init_from_env",
-          secretLength: envSecret.length,
-          secretPrefix: envSecret.substring(0, 8) + "...",
-        });
         return;
       }
 
       const dataDir = process.env.DATA_DIR || "./db/data";
       const envPath = path.join(dataDir, ".env");
-
-      databaseLogger.info("Attempting to load JWT secret from .env file", {
-        operation: "jwt_init_from_file",
-        envPath,
-      });
 
       try {
         const envContent = await fs.readFile(envPath, "utf8");

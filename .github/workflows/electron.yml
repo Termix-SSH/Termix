@@ -764,10 +764,11 @@ jobs:
         with:
           path: artifacts
 
-      - name: Get latest release
+      - name: Get latest release tag
         id: get_release
         run: |
-                    LATEST_RELEASE=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName,name,isLatest -q '.[0]')        env:
+          echo "RELEASE_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName -q '.[0].tagName')" >> $GITHUB_ENV
+        env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Display artifact structure
