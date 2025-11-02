@@ -298,8 +298,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     [systemDrag, clearSelection],
   );
 
+  const isConnectingRef = useRef(false);
+
   async function initializeSSHConnection() {
-    if (!currentHost) return;
+    if (!currentHost || isConnectingRef.current) return;
+
+    isConnectingRef.current = true;
 
     try {
       setIsLoading(true);
@@ -318,6 +322,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         authType: currentHost.authType,
         credentialId: currentHost.credentialId,
         userId: currentHost.userId,
+        forceKeyboardInteractive: currentHost.forceKeyboardInteractive,
       });
 
       if (result?.requires_totp) {
@@ -359,6 +364,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       );
     } finally {
       setIsLoading(false);
+      isConnectingRef.current = false;
     }
   }
 

@@ -311,6 +311,7 @@ export function HostManagerEditor({
           moshCommand: z.string(),
         })
         .optional(),
+      forceKeyboardInteractive: z.boolean().optional(),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -399,6 +400,7 @@ export function HostManagerEditor({
       tunnelConnections: [],
       statsConfig: DEFAULT_STATS_CONFIG,
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
+      forceKeyboardInteractive: false,
     },
   });
 
@@ -473,6 +475,7 @@ export function HostManagerEditor({
         tunnelConnections: cleanedHost.tunnelConnections || [],
         statsConfig: parsedStatsConfig,
         terminalConfig: cleanedHost.terminalConfig || DEFAULT_TERMINAL_CONFIG,
+        forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
       };
 
       if (defaultAuthType === "password") {
@@ -520,6 +523,7 @@ export function HostManagerEditor({
         tunnelConnections: [],
         statsConfig: DEFAULT_STATS_CONFIG,
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
+        forceKeyboardInteractive: false,
       };
 
       form.reset(defaultFormData);
@@ -577,6 +581,7 @@ export function HostManagerEditor({
         tunnelConnections: data.tunnelConnections || [],
         statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
         terminalConfig: data.terminalConfig || DEFAULT_TERMINAL_CONFIG,
+        forceKeyboardInteractive: Boolean(data.forceKeyboardInteractive),
       };
 
       submitData.credentialId = null;
@@ -1296,6 +1301,28 @@ export function HostManagerEditor({
                       </Alert>
                     </TabsContent>
                   </Tabs>
+                  <FormField
+                    control={form.control}
+                    name="forceKeyboardInteractive"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 mt-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>
+                            {t("hosts.forceKeyboardInteractive")}
+                          </FormLabel>
+                          <FormDescription>
+                            {t("hosts.forceKeyboardInteractiveDesc")}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </TabsContent>
                 <TabsContent value="terminal" className="space-y-1">
                   <FormField

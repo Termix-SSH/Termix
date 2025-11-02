@@ -50,8 +50,8 @@ export function TopNavbar({
     allSplitScreenTab: number[];
     reorderTabs: (fromIndex: number, toIndex: number) => void;
   };
-  // Use CSS variable for dynamic sidebar width + divider width (4px) + some padding
-  const leftPosition = state === "collapsed" ? "26px" : "calc(var(--sidebar-width) + 20px)";
+  const leftPosition =
+    state === "collapsed" ? "26px" : "calc(var(--sidebar-width) + 8px)";
   const { t } = useTranslation();
 
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
@@ -301,7 +301,7 @@ export function TopNavbar({
           top: isTopbarOpen ? "0.5rem" : "-3rem",
           left: leftPosition,
           right: "17px",
-          backgroundColor: "#1e1e21",
+          backgroundColor: "#18181b",
         }}
       >
         <div
@@ -491,8 +491,7 @@ export function TopNavbar({
       {!isTopbarOpen && (
         <div
           onClick={() => setIsTopbarOpen(true)}
-          className="absolute top-0 left-0 w-full h-[10px] cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md"
-          style={{ backgroundColor: "#1e1e21" }}
+          className="absolute top-0 left-0 w-full h-[10px] cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md bg-dark"
         >
           <ChevronDown size={10} />
         </div>

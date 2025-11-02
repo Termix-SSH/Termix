@@ -60,6 +60,7 @@ export const sshData = sqliteTable("ssh_data", {
   tags: text("tags"),
   pin: integer("pin", { mode: "boolean" }).notNull().default(false),
   authType: text("auth_type").notNull(),
+  forceKeyboardInteractive: text("force_keyboard_interactive"),
 
   password: text("password"),
   key: text("key", { length: 8192 }),

@@ -236,6 +236,7 @@ router.post(
       tunnelConnections,
       statsConfig,
       terminalConfig,
+      forceKeyboardInteractive,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -273,6 +274,7 @@ router.post(
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
+      forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
     };
 
     if (effectiveAuthType === "password") {
@@ -424,6 +426,7 @@ router.put(
       tunnelConnections,
       statsConfig,
       terminalConfig,
+      forceKeyboardInteractive,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -462,6 +465,7 @@ router.put(
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
+      forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
     };
 
     if (effectiveAuthType === "password") {
@@ -611,6 +615,7 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
           terminalConfig: row.terminalConfig
             ? JSON.parse(row.terminalConfig as string)
             : undefined,
+          forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
         };
 
         return (await resolveHostCredentials(baseHost)) || baseHost;
@@ -681,6 +686,7 @@ router.get(
         terminalConfig: host.terminalConfig
           ? JSON.parse(host.terminalConfig)
           : undefined,
+        forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
       };
 
       res.json((await resolveHostCredentials(result)) || result);

@@ -780,7 +780,9 @@
     "terminalCustomizationNotice": "Note: Terminal customizations only work on desktop (website and Electron app). Mobile apps and mobile website use system default terminal settings.",
     "noneAuthTitle": "Keyboard-Interactive Authentication",
     "noneAuthDescription": "This authentication method will use keyboard-interactive authentication when connecting to the SSH server.",
-    "noneAuthDetails": "Keyboard-interactive authentication allows the server to prompt you for credentials during connection. This is useful for servers that require multi-factor authentication or if you do not want to save credentials locally."
+    "noneAuthDetails": "Keyboard-interactive authentication allows the server to prompt you for credentials during connection. This is useful for servers that require multi-factor authentication or if you do not want to save credentials locally.",
+    "forceKeyboardInteractive": "Force Keyboard-Interactive",
+    "forceKeyboardInteractiveDesc": "Forces the use of keyboard-interactive authentication. This is often required for servers that use Two-Factor Authentication (TOTP/2FA)."
   },
   "terminal": {
     "title": "Terminal",

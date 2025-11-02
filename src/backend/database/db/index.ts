@@ -180,6 +180,10 @@ async function initializeCompleteDatabase(): Promise<void> {
         tunnel_connections TEXT,
         enable_file_manager INTEGER NOT NULL DEFAULT 1,
         default_path TEXT,
+        autostart_password TEXT,
+        autostart_key TEXT,
+        autostart_key_password TEXT,
+        force_keyboard_interactive TEXT,
         stats_config TEXT,
         terminal_config TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -417,7 +421,10 @@ const migrateSchema = () => {
     "updated_at",
     "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
   );
-
+  addColumnIfNotExists("ssh_data", "force_keyboard_interactive", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "credential_id",

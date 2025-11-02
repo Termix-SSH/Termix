@@ -698,7 +698,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
           localStorage.removeItem("jwt");
 
-          toast.error("Authentication failed. Please log in again.");
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
 
           return;
         }

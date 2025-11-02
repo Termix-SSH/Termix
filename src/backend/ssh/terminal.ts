@@ -30,6 +30,7 @@ interface ConnectToHostData {
     authType?: string;
     credentialId?: number;
     userId?: string;
+    forceKeyboardInteractive?: boolean;
   };
   initialPath?: string;
   executeCommand?: string;
@@ -149,6 +150,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let pingInterval: NodeJS.Timeout | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
+  let isKeyboardInteractive = false;
   let keyboardInteractiveResponded = false;
 
   ws.on("close", () => {
@@ -362,10 +364,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
   });
 
-  async function handleConnectToHost(
-    data: ConnectToHostData,
-    retryWithPassword = false,
-  ) {
+  async function handleConnectToHost(data: ConnectToHostData) {
     const { hostConfig, initialPath, executeCommand } = data;
     const {
       id,
@@ -662,22 +661,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       clearTimeout(connectionTimeout);
 
       if (
-        (err.message.includes("All configured authentication methods failed") ||
-          err.message.includes("No authentication methods remaining")) &&
-        resolvedCredentials.authType === "password" &&
-        !retryWithPassword &&
-        !(hostConfig as any).userProvidedPassword
-      ) {
-        sshLogger.info("Retrying password auth with password method", {
-          operation: "ssh_connect_retry",
-          hostId: id,
-        });
-        cleanupSSH();
-        handleConnectToHost(data, true);
-        return;
-      }
-
-      if (
         (authMethodNotAvailable && resolvedCredentials.authType === "none") ||
         (resolvedCredentials.authType === "none" &&
           err.message.includes("All configured authentication methods failed"))
@@ -756,6 +739,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         prompts: Array<{ prompt: string; echo: boolean }>,
         finish: (responses: string[]) => void,
       ) => {
+        isKeyboardInteractive = true;
         const promptTexts = prompts.map((p) => p.prompt);
         const totpPromptIndex = prompts.findIndex((p) =>
           /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
@@ -840,7 +824,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             return "";
           });
 
-          keyboardInteractiveResponded = true;
           finish(responses);
         }
       },
@@ -931,7 +914,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
-      if ((hostConfig as any).userProvidedPassword || retryWithPassword) {
+      if (!hostConfig.forceKeyboardInteractive) {
         connectConfig.password = resolvedCredentials.password;
       }
     } else if (
@@ -1033,6 +1016,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     totpPromptSent = false;
+    isKeyboardInteractive = false;
     keyboardInteractiveResponded = false;
     keyboardInteractiveFinish = null;
   }

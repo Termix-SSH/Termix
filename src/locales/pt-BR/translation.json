@@ -718,7 +718,9 @@
     "terminalCustomizationNotice": "Nota: As personalizações do terminal funcionam apenas na versão Desktop Website. Aplicativos Mobile e Electron usam as configurações padrão do terminal do sistema.",
     "noneAuthTitle": "Autenticação Interativa por Teclado",
     "noneAuthDescription": "Este método de autenticação usará autenticação interativa por teclado ao conectar ao servidor SSH.",
-    "noneAuthDetails": "A autenticação interativa por teclado permite que o servidor solicite credenciais durante a conexão. Isso é útil para servidores que requerem autenticação multifator ou entrada de senha dinâmica."
+    "noneAuthDetails": "A autenticação interativa por teclado permite que o servidor solicite credenciais durante a conexão. Isso é útil para servidores que requerem autenticação multifator ou entrada de senha dinâmica.",
+    "forceKeyboardInteractive": "Forçar Interativo com Teclado",
+    "forceKeyboardInteractiveDesc": "Força o uso da autenticação interativa com teclado. Isso é frequentemente necessário para servidores que usam Autenticação de Dois Fatores (TOTP/2FA)."
   },
   "terminal": {
     "title": "Terminal",

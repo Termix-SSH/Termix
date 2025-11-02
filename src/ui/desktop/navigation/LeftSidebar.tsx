@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { ChevronUp, User2, HardDrive, Menu, ChevronRight } from "lucide-react";
+import {
+  ChevronUp,
+  User2,
+  HardDrive,
+  Menu,
+  ChevronRight,
+  RotateCcw,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { isElectron, logoutUser } from "@/ui/main-axios.ts";
 
@@ -241,10 +248,9 @@ export function LeftSidebar({
     localStorage.setItem("leftSidebarOpen", JSON.stringify(isSidebarOpen));
   }, [isSidebarOpen]);
 
-  // Sidebar width state for resizing
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem("leftSidebarWidth");
-    return saved !== null ? parseInt(saved, 10) : 320;
+    return saved !== null ? parseInt(saved, 10) : 250;
   });
 
   const [isResizing, setIsResizing] = useState(false);
@@ -350,151 +356,171 @@ export function LeftSidebar({
 
   return (
     <div className="min-h-svh">
-      <SidebarProvider 
+      <SidebarProvider
         open={isSidebarOpen}
-        style={{ "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
+        style={
+          { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties
+        }
       >
         <div className="flex h-screen w-full">
-          <Sidebar variant="floating" className="">
-          <SidebarHeader>
-            <SidebarGroupLabel className="text-lg font-bold text-white">
-              Termix
-              <Button
-                variant="outline"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="w-[28px] h-[28px] absolute right-5"
-                title={t("common.toggleSidebar")}
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SidebarGroupLabel>
-          </SidebarHeader>
-          <Separator className="p-0.25" />
-          <SidebarContent>
-            <SidebarGroup className="!m-0 !p-0 !-mb-2">
-              <Button
-                className="m-2 flex flex-row font-semibold border-2 !border-dark-border"
-                variant="outline"
-                onClick={openSshManagerTab}
-                disabled={!!sshManagerTab || isSplitScreenActive}
-                title={
-                  sshManagerTab
-                    ? t("interface.sshManagerAlreadyOpen")
-                    : isSplitScreenActive
-                      ? t("interface.disabledDuringSplitScreen")
-                      : undefined
-                }
-              >
-                <HardDrive strokeWidth="2.5" />
-                {t("nav.hostManager")}
-              </Button>
-            </SidebarGroup>
-            <Separator className="p-0.25" />
-            <SidebarGroup className="flex flex-col gap-y-2 !-mt-2">
-              <div className="!bg-dark-bg-input rounded-lg">
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t("placeholders.searchHostsAny")}
-                  className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md"
-                  autoComplete="off"
-                />
-              </div>
-
-              {hostsError && (
-                <div className="!bg-dark-bg-input rounded-lg">
-                  <div className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md px-3 py-1.5 flex items-center text-red-500">
-                    {t("leftSidebar.failedToLoadHosts")}
-                  </div>
-                </div>
-              )}
-
-              {hostsLoading && (
-                <div className="px-4 pb-2">
-                  <div className="text-xs text-muted-foreground text-center">
-                    {t("hosts.loadingHosts")}
-                  </div>
-                </div>
-              )}
-
-              {sortedFolders.map((folder, idx) => (
-                <FolderCard
-                  key={`folder-${folder}-${hostsByFolder[folder]?.length || 0}`}
-                  folderName={folder}
-                  hosts={getSortedHosts(hostsByFolder[folder])}
-                  isFirst={idx === 0}
-                  isLast={idx === sortedFolders.length - 1}
-                />
-              ))}
-            </SidebarGroup>
-          </SidebarContent>
-          <Separator className="p-0.25 mt-1 mb-1" />
-          <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton
-                      className="data-[state=open]:opacity-90 w-full"
-                      disabled={disabled}
-                    >
-                      <User2 /> {username ? username : t("common.logout")}
-                      <ChevronUp className="ml-auto" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    side="top"
-                    align="start"
-                    sideOffset={6}
-                    className="min-w-[var(--radix-popper-anchor-width)] bg-sidebar-accent text-sidebar-accent-foreground border border-border rounded-md shadow-2xl p-1"
+          <Sidebar variant="floating">
+            <SidebarHeader>
+              <SidebarGroupLabel className="text-lg font-bold text-white">
+                Termix
+                <div className="absolute right-5 flex gap-1">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSidebarWidth(250)}
+                    className="w-[28px] h-[28px]"
+                    title="Reset sidebar width"
                   >
-                    <DropdownMenuItem
-                      className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
-                      onClick={() => {
-                        openUserProfileTab();
-                      }}
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className="w-[28px] h-[28px]"
+                    title={t("common.toggleSidebar")}
+                  >
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </div>
+              </SidebarGroupLabel>
+            </SidebarHeader>
+            <Separator className="p-0.25" />
+            <SidebarContent>
+              <SidebarGroup className="!m-0 !p-0 !-mb-2">
+                <Button
+                  className="m-2 flex flex-row font-semibold border-2 !border-dark-border"
+                  variant="outline"
+                  onClick={openSshManagerTab}
+                  disabled={!!sshManagerTab || isSplitScreenActive}
+                  title={
+                    sshManagerTab
+                      ? t("interface.sshManagerAlreadyOpen")
+                      : isSplitScreenActive
+                        ? t("interface.disabledDuringSplitScreen")
+                        : undefined
+                  }
+                >
+                  <HardDrive strokeWidth="2.5" />
+                  {t("nav.hostManager")}
+                </Button>
+              </SidebarGroup>
+              <Separator className="p-0.25" />
+              <SidebarGroup className="flex flex-col gap-y-2 !-mt-2">
+                <div className="!bg-dark-bg-input rounded-lg">
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t("placeholders.searchHostsAny")}
+                    className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md"
+                    autoComplete="off"
+                  />
+                </div>
+
+                {hostsError && (
+                  <div className="!bg-dark-bg-input rounded-lg">
+                    <div className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md px-3 py-1.5 flex items-center text-red-500">
+                      {t("leftSidebar.failedToLoadHosts")}
+                    </div>
+                  </div>
+                )}
+
+                {hostsLoading && (
+                  <div className="px-4 pb-2">
+                    <div className="text-xs text-muted-foreground text-center">
+                      {t("hosts.loadingHosts")}
+                    </div>
+                  </div>
+                )}
+
+                {sortedFolders.map((folder, idx) => (
+                  <FolderCard
+                    key={`folder-${folder}-${hostsByFolder[folder]?.length || 0}`}
+                    folderName={folder}
+                    hosts={getSortedHosts(hostsByFolder[folder])}
+                    isFirst={idx === 0}
+                    isLast={idx === sortedFolders.length - 1}
+                  />
+                ))}
+              </SidebarGroup>
+            </SidebarContent>
+            <Separator className="p-0.25 mt-1 mb-1" />
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuButton
+                        className="data-[state=open]:opacity-90 w-full"
+                        disabled={disabled}
+                      >
+                        <User2 /> {username ? username : t("common.logout")}
+                        <ChevronUp className="ml-auto" />
+                      </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      side="top"
+                      align="start"
+                      sideOffset={6}
+                      className="min-w-[var(--radix-popper-anchor-width)] bg-sidebar-accent text-sidebar-accent-foreground border border-border rounded-md shadow-2xl p-1"
                     >
-                      <span>{t("profile.title")}</span>
-                    </DropdownMenuItem>
-                    {isAdmin && (
                       <DropdownMenuItem
                         className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
                         onClick={() => {
-                          if (isAdmin) openAdminTab();
+                          openUserProfileTab();
                         }}
                       >
-                        <span>{t("admin.title")}</span>
+                        <span>{t("profile.title")}</span>
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem
-                      className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
-                      onClick={handleLogout}
-                    >
-                      <span>{t("common.logout")}</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-          </Sidebar>
-
-          {/* Resizable divider */}
-          {isSidebarOpen && (
-            <div
-              className="w-4 cursor-col-resize h-screen z-50 bg-transparent hover:bg-dark-border/30 flex items-center justify-center"
-              onMouseDown={handleMouseDown}
-              title="Drag to resize sidebar"
-            >
-              <div 
-                className={`w-1 h-full transition-colors duration-200 ${
-                  isResizing 
-                    ? "bg-dark-active" 
-                    : "bg-dark-border hover:bg-dark-border-hover"
-                }`}
+                      {isAdmin && (
+                        <DropdownMenuItem
+                          className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
+                          onClick={() => {
+                            if (isAdmin) openAdminTab();
+                          }}
+                        >
+                          <span>{t("admin.title")}</span>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
+                        onClick={handleLogout}
+                      >
+                        <span>{t("common.logout")}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+            {isSidebarOpen && (
+              <div
+                className="absolute top-0 h-full cursor-col-resize z-[60]"
+                onMouseDown={handleMouseDown}
+                style={{
+                  right: "-8px",
+                  width: "18px",
+                  backgroundColor: isResizing
+                    ? "var(--dark-active)"
+                    : "transparent",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isResizing) {
+                    e.currentTarget.style.backgroundColor =
+                      "var(--dark-border-hover)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isResizing) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }
+                }}
+                title="Drag to resize sidebar"
               />
-            </div>
-          )}
+            )}
+          </Sidebar>
 
           <SidebarInset>{children}</SidebarInset>
         </div>

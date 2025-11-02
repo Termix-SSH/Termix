@@ -19,6 +19,7 @@ export interface SSHHost {
   key?: string;
   keyPassword?: string;
   keyType?: string;
+  forceKeyboardInteractive?: boolean;
 
   autostartPassword?: string;
   autostartKey?: string;
@@ -55,6 +56,7 @@ export interface SSHHostData {
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   defaultPath?: string;
+  forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;

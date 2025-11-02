@@ -316,7 +316,13 @@ function createApiInstance(
       if (status === 401) {
         const errorCode = (error.response?.data as Record<string, unknown>)
           ?.code;
+        const errorMessage = (error.response?.data as Record<string, unknown>)
+          ?.error;
         const isSessionExpired = errorCode === "SESSION_EXPIRED";
+        const isInvalidToken =
+          errorCode === "AUTH_REQUIRED" ||
+          errorMessage === "Invalid token" ||
+          errorMessage === "Authentication required";
 
         if (isElectron()) {
           localStorage.removeItem("jwt");
@@ -324,17 +330,22 @@ function createApiInstance(
           localStorage.removeItem("jwt");
         }
 
-        if (isSessionExpired && typeof window !== "undefined") {
-          console.warn("Session expired - please log in again");
+        if (
+          (isSessionExpired || isInvalidToken) &&
+          typeof window !== "undefined"
+        ) {
+          console.warn(
+            "Session expired or invalid token - please log in again",
+          );
 
           document.cookie =
             "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
           import("sonner").then(({ toast }) => {
-            toast.warning("Session expired - please log in again");
+            toast.warning("Session expired. Please log in again.");
           });
 
-          setTimeout(() => window.location.reload(), 100);
+          setTimeout(() => window.location.reload(), 1000);
         }
       }
 
@@ -792,6 +803,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
           : JSON.stringify(hostData.statsConfig)
         : null,
       terminalConfig: hostData.terminalConfig || null,
+      forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
     };
 
     if (!submitData.enableTunnel) {
@@ -854,6 +866,7 @@ export async function updateSSHHost(
           : JSON.stringify(hostData.statsConfig)
         : null,
       terminalConfig: hostData.terminalConfig || null,
+      forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
     };
 
     if (!submitData.enableTunnel) {
@@ -1164,6 +1177,7 @@ export async function connectSSH(
     authType?: string;
     credentialId?: number;
     userId?: string;
+    forceKeyboardInteractive?: boolean;
   },
 ): Promise<Record<string, unknown>> {
   try {

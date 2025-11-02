@@ -42,7 +42,7 @@ export function SSHAuthDialog({
   onSubmit,
   onCancel,
   hostInfo,
-  backgroundColor = "#1e1e1e",
+  backgroundColor = "#18181b",
 }: SSHAuthDialogProps) {
   const { t } = useTranslation();
   const [authTab, setAuthTab] = useState<"password" | "key">("password");
@@ -136,7 +136,10 @@ export function SSHAuthDialog({
     : `${hostInfo.username}@${hostInfo.ip}:${hostInfo.port}`;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-dark-bg">
+    <div
+      className="absolute inset-0 z-50 flex items-center justify-center bg-dark-bg"
+      style={{ backgroundColor }}
+    >
       <Card className="w-full max-w-2xl mx-4 border-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
