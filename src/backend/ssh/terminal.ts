@@ -362,7 +362,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
   });
 
-  async function handleConnectToHost(data: ConnectToHostData) {
+  async function handleConnectToHost(
+    data: ConnectToHostData,
+    retryWithPassword = false,
+  ) {
     const { hostConfig, initialPath, executeCommand } = data;
     const {
       id,
@@ -659,6 +662,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
       clearTimeout(connectionTimeout);
 
       if (
+        (err.message.includes("All configured authentication methods failed") ||
+          err.message.includes("No authentication methods remaining")) &&
+        resolvedCredentials.authType === "password" &&
+        !retryWithPassword &&
+        !(hostConfig as any).userProvidedPassword
+      ) {
+        sshLogger.info("Retrying password auth with password method", {
+          operation: "ssh_connect_retry",
+          hostId: id,
+        });
+        cleanupSSH();
+        handleConnectToHost(data, true);
+        return;
+      }
+
+      if (
         (authMethodNotAvailable && resolvedCredentials.authType === "none") ||
         (resolvedCredentials.authType === "none" &&
           err.message.includes("All configured authentication methods failed"))
@@ -912,7 +931,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
-      if ((hostConfig as any).userProvidedPassword) {
+      if ((hostConfig as any).userProvidedPassword || retryWithPassword) {
         connectConfig.password = resolvedCredentials.password;
       }
     } else if (

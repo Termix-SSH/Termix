@@ -75,12 +75,12 @@ Supported Devices:
 
 - Website (any modern browser on any platform like Chrome, Safari, and Firefox)
 - Windows (x64/ia32)
-  - Portable EXE
+  - Portable
   - MSI Installer
   - Chocolatey Package Manager
 - Linux (x64/ia32)
-  - Portable EXE
-  - Appimage
+  - Portable
+  - AppImage
   - Deb
   - Flatpak
 - macOS (x64/ia32 on v12.0+)
@@ -147,6 +147,7 @@ channel, however, response times may be longer.
     Your browser does not support the video tag.
   </video>
 </p>
+Videos and images may be out of date.
 
 # License
 

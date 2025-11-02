@@ -413,6 +413,27 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   });
 
   client.on("error", (err) => {
+    if (
+      (err.message.includes("All configured authentication methods failed") ||
+        err.message.includes("No authentication methods remaining")) &&
+      resolvedCredentials.authType === "password" &&
+      !config.password &&
+      resolvedCredentials.password &&
+      !userProvidedPassword
+    ) {
+      fileLogger.info(
+        "Retrying password auth with password method for file manager",
+        {
+          operation: "file_connect_retry",
+          sessionId,
+          hostId,
+        },
+      );
+      config.password = resolvedCredentials.password;
+      client.connect(config);
+      return;
+    }
+
     if (responseSent) return;
     responseSent = true;
     fileLogger.error("SSH connection failed for file manager", {
