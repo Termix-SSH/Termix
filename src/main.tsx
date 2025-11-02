@@ -76,25 +76,23 @@ function RootApp() {
 
   return (
     <>
-      {isElectron() && (
-        <div
-          className="fixed inset-0 pointer-events-none"
-          style={{
-            backgroundColor: "#09090b",
-            backgroundImage: `linear-gradient(
-              135deg,
-              transparent 0%,
-              transparent 49%,
-              rgba(255, 255, 255, 0.03) 49%,
-              rgba(255, 255, 255, 0.03) 51%,
-              transparent 51%,
-              transparent 100%
-            )`,
-            backgroundSize: "80px 80px",
-            zIndex: 0,
-          }}
-        />
-      )}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundColor: "#09090b",
+          backgroundImage: `linear-gradient(
+            135deg,
+            transparent 0%,
+            transparent 49%,
+            rgba(255, 255, 255, 0.03) 49%,
+            rgba(255, 255, 255, 0.03) 51%,
+            transparent 51%,
+            transparent 100%
+          )`,
+          backgroundSize: "80px 80px",
+          zIndex: 0,
+        }}
+      />
       <div className="relative min-h-screen" style={{ zIndex: 1 }}>
         {isElectron() && showVersionCheck ? (
           <ElectronVersionCheck

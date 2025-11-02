@@ -129,6 +129,36 @@ export function ElectronLoginForm({
               }
             }
 
+            function clearAuthData() {
+              try {
+                localStorage.removeItem('jwt');
+                sessionStorage.removeItem('jwt');
+
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                  const cookie = cookies[i];
+                  const eqPos = cookie.indexOf('=');
+                  const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                  if (name === 'jwt') {
+                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
+                  }
+                }
+              } catch (error) {
+              }
+            }
+
+            window.addEventListener('message', function(event) {
+              try {
+                if (event.data && typeof event.data === 'object') {
+                  if (event.data.type === 'CLEAR_AUTH_DATA') {
+                    clearAuthData();
+                  }
+                }
+              } catch (error) {
+              }
+            });
+
             function checkAuth() {
               try {
                 const localToken = localStorage.getItem('jwt');
@@ -312,7 +342,8 @@ export function ElectronLoginForm({
           className="w-full h-full border-0"
           title="Server Authentication"
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
-          allow="clipboard-read; clipboard-write; cross-origin-isolated; camera; microphone; geolocation"
+          allow="clipboard-read; clipboard-write; cross-origin-isolated; camera; microphone; geolocation; storage-access"
+          credentialless={false}
         />
       </div>
     </div>

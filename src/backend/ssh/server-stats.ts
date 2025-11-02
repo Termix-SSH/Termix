@@ -603,7 +603,11 @@ app.use(
         return callback(null, true);
       }
 
-      callback(null, true);
+      if (origin.startsWith("http://")) {
+        return callback(null, true);
+      }
+
+      callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

@@ -395,7 +395,7 @@ export function LeftSidebar({
                     >
                       <span>{t("profile.title")}</span>
                     </DropdownMenuItem>
-                    {isAdmin && !isElectron() && (
+                    {isAdmin && (
                       <DropdownMenuItem
                         className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
                         onClick={() => {

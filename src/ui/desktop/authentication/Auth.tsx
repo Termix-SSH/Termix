@@ -646,7 +646,21 @@ export function Auth({
     );
   }
 
-  if (isElectron() && currentServerUrl && !loggedIn && !authLoading) {
+  if (isElectron() && currentServerUrl && authLoading) {
+    return (
+      <div
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        style={{ maxHeight: "calc(100vh - 1rem)" }}
+        {...props}
+      >
+        <div className="flex items-center justify-center h-32">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isElectron() && currentServerUrl && !loggedIn) {
     return (
       <div
         className="w-full h-screen flex items-center justify-center p-4"

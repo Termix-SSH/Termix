@@ -34,6 +34,29 @@ async function handleLogout() {
 
     if (isElectron()) {
       localStorage.removeItem("jwt");
+
+      const configuredServerUrl = (
+        window as Window &
+          typeof globalThis & {
+            configuredServerUrl?: string;
+          }
+      ).configuredServerUrl;
+
+      if (configuredServerUrl) {
+        const iframe = document.querySelector("iframe");
+        if (iframe && iframe.contentWindow) {
+          try {
+            const serverOrigin = new URL(configuredServerUrl).origin;
+            iframe.contentWindow.postMessage(
+              {
+                type: "CLEAR_AUTH_DATA",
+                timestamp: Date.now(),
+              },
+              serverOrigin,
+            );
+          } catch (err) {}
+        }
+      }
     }
 
     window.location.reload();

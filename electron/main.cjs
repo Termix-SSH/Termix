@@ -64,6 +64,8 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: true,
       preload: path.join(__dirname, "preload.js"),
+      partition: "persist:termix",
+      allowRunningInsecureContent: false,
     },
     show: false,
   });
@@ -122,6 +124,20 @@ function createWindow() {
           if (headers["Content-Security-Policy"].length === 0) {
             delete headers["Content-Security-Policy"];
           }
+        }
+
+        if (headers["set-cookie"]) {
+          headers["set-cookie"] = headers["set-cookie"].map((cookie) => {
+            let modified = cookie.replace(/;\s*SameSite=Strict/gi, "; SameSite=None");
+            modified = modified.replace(/;\s*SameSite=Lax/gi, "; SameSite=None");
+            if (!modified.includes("SameSite=")) {
+              modified += "; SameSite=None";
+            }
+            if (!modified.includes("Secure") && details.url.startsWith("https")) {
+              modified += "; Secure";
+            }
+            return modified;
+          });
         }
       }
 
