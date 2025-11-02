@@ -50,7 +50,8 @@ export function TopNavbar({
     allSplitScreenTab: number[];
     reorderTabs: (fromIndex: number, toIndex: number) => void;
   };
-  const leftPosition = state === "collapsed" ? "26px" : "264px";
+  // Use CSS variable for dynamic sidebar width + divider width (4px) + some padding
+  const leftPosition = state === "collapsed" ? "26px" : "calc(var(--sidebar-width) + 20px)";
   const { t } = useTranslation();
 
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);

@@ -241,6 +241,63 @@ export function LeftSidebar({
     localStorage.setItem("leftSidebarOpen", JSON.stringify(isSidebarOpen));
   }, [isSidebarOpen]);
 
+  // Sidebar width state for resizing
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    const saved = localStorage.getItem("leftSidebarWidth");
+    return saved !== null ? parseInt(saved, 10) : 320;
+  });
+
+  const [isResizing, setIsResizing] = useState(false);
+  const startXRef = React.useRef<number | null>(null);
+  const startWidthRef = React.useRef<number>(sidebarWidth);
+
+  React.useEffect(() => {
+    localStorage.setItem("leftSidebarWidth", String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    startXRef.current = e.clientX;
+    startWidthRef.current = sidebarWidth;
+  };
+
+  React.useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (startXRef.current == null) return;
+      const dx = e.clientX - startXRef.current;
+      const newWidth = Math.round(startWidthRef.current + dx);
+      const minWidth = 200;
+      const maxWidth = Math.round(window.innerWidth * 0.5);
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setSidebarWidth(newWidth);
+      } else if (newWidth < minWidth) {
+        setSidebarWidth(minWidth);
+      } else if (newWidth > maxWidth) {
+        setSidebarWidth(maxWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      startXRef.current = null;
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing]);
+
   const filteredHosts = React.useMemo(() => {
     if (!debouncedSearch.trim()) return hosts;
     const q = debouncedSearch.trim().toLowerCase();
@@ -293,8 +350,12 @@ export function LeftSidebar({
 
   return (
     <div className="min-h-svh">
-      <SidebarProvider open={isSidebarOpen}>
-        <Sidebar variant="floating" className="">
+      <SidebarProvider 
+        open={isSidebarOpen}
+        style={{ "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
+      >
+        <div className="flex h-screen w-full">
+          <Sidebar variant="floating" className="">
           <SidebarHeader>
             <SidebarGroupLabel className="text-lg font-bold text-white">
               Termix
@@ -416,8 +477,27 @@ export function LeftSidebar({
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
-        </Sidebar>
-        <SidebarInset>{children}</SidebarInset>
+          </Sidebar>
+
+          {/* Resizable divider */}
+          {isSidebarOpen && (
+            <div
+              className="w-4 cursor-col-resize h-screen z-50 bg-transparent hover:bg-dark-border/30 flex items-center justify-center"
+              onMouseDown={handleMouseDown}
+              title="Drag to resize sidebar"
+            >
+              <div 
+                className={`w-1 h-full transition-colors duration-200 ${
+                  isResizing 
+                    ? "bg-dark-active" 
+                    : "bg-dark-border hover:bg-dark-border-hover"
+                }`}
+              />
+            </div>
+          )}
+
+          <SidebarInset>{children}</SidebarInset>
+        </div>
       </SidebarProvider>
 
       {!isSidebarOpen && (
