@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
-import { HostManager } from "@/ui/desktop/apps/host manager/HostManager.tsx";
+import { HostManager } from "@/ui/desktop/apps/host-manager/HostManager.tsx";
 import {
   TabProvider,
   useTabs,
@@ -11,7 +11,6 @@ import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
 import { AdminSettings } from "@/ui/desktop/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
-import { VersionCheckModal } from "@/components/ui/version-check-modal.tsx";
 import { getUserInfo } from "@/ui/main-axios.ts";
 
 function AppContent() {
@@ -19,7 +18,6 @@ function AppContent() {
   const [username, setUsername] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [showVersionCheck, setShowVersionCheck] = useState(true);
   const [isTopbarOpen, setIsTopbarOpen] = useState<boolean>(() => {
     const saved = localStorage.getItem("topNavbarOpen");
     return saved !== null ? JSON.parse(saved) : true;
@@ -31,9 +29,16 @@ function AppContent() {
       setAuthLoading(true);
       getUserInfo()
         .then((meRes) => {
-          setIsAuthenticated(true);
-          setIsAdmin(!!meRes.is_admin);
-          setUsername(meRes.username || null);
+          // Check if response is actually HTML (Vite dev server page)
+          if (typeof meRes === "string" || !meRes.username) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
+          } else {
+            setIsAuthenticated(true);
+            setIsAdmin(!!meRes.is_admin);
+            setUsername(meRes.username || null);
+          }
         })
         .catch((err) => {
           setIsAuthenticated(false);
@@ -45,7 +50,9 @@ function AppContent() {
             console.warn("Session expired - please log in again");
           }
         })
-        .finally(() => setAuthLoading(false));
+        .finally(() => {
+          setAuthLoading(false);
+        });
     };
 
     checkAuth();
@@ -84,35 +91,7 @@ function AppContent() {
 
   return (
     <div>
-      {showVersionCheck && (
-        <VersionCheckModal
-          onDismiss={() => setShowVersionCheck(false)}
-          onContinue={() => setShowVersionCheck(false)}
-          isAuthenticated={isAuthenticated}
-        />
-      )}
-
-      {!isAuthenticated && !authLoading && !showVersionCheck && (
-        <div>
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `linear-gradient(
-                            135deg,
-                            transparent 0%,
-                            transparent 49%,
-                            rgba(255, 255, 255, 0.03) 49%,
-                            rgba(255, 255, 255, 0.03) 51%,
-                            transparent 51%,
-                            transparent 100%
-                        )`,
-              backgroundSize: "80px 80px",
-            }}
-          />
-        </div>
-      )}
-
-      {!isAuthenticated && !authLoading && !showVersionCheck && (
+      {!isAuthenticated && !authLoading && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000]">
           <Dashboard
             onSelectView={handleSelectView}

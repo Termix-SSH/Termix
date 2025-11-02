@@ -44,10 +44,10 @@ function parseElectronUserAgent(userAgent: string): DeviceInfo {
   let os = "Unknown OS";
   let version = "Unknown";
 
-  const termixMatch = userAgent.match(/Termix-Desktop\/([\d.]+) \(([^;]+);/);
+  const termixMatch = userAgent.match(/Termix-Desktop\/([\d.]+)\s*\(([^;)]+)/);
   if (termixMatch) {
     version = termixMatch[1];
-    os = termixMatch[2];
+    os = termixMatch[2].trim();
   } else {
     if (userAgent.includes("Windows")) {
       os = parseWindowsVersion(userAgent);

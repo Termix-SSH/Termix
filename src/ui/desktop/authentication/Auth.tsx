@@ -104,20 +104,12 @@ export function Auth({
   }, [loggedIn]);
 
   useEffect(() => {
-    if (isInElectronWebView()) {
-      return;
-    }
-
     getRegistrationAllowed().then((res) => {
       setRegistrationAllowed(res.allowed);
     });
   }, []);
 
   useEffect(() => {
-    if (isInElectronWebView()) {
-      return;
-    }
-
     getPasswordLoginAllowed()
       .then((res) => {
         setPasswordLoginAllowed(res.allowed);
@@ -130,10 +122,6 @@ export function Auth({
   }, []);
 
   useEffect(() => {
-    if (isInElectronWebView()) {
-      return;
-    }
-
     getOIDCConfig()
       .then((response) => {
         if (response) {

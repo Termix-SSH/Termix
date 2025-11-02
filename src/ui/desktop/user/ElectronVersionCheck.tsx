@@ -9,7 +9,7 @@ interface VersionCheckModalProps {
   isAuthenticated?: boolean;
 }
 
-export function VersionCheckModal({
+export function ElectronVersionCheck({
   onContinue,
   isAuthenticated = false,
 }: VersionCheckModalProps) {
@@ -35,7 +35,26 @@ export function VersionCheckModal({
       const updateInfo = await checkElectronUpdate();
       setVersionInfo(updateInfo);
 
+      // Get current app version
+      const currentVersion = await (window as any).electronAPI?.getAppVersion();
+      const dismissedVersion = localStorage.getItem(
+        "electron-version-check-dismissed",
+      );
+
+      // If this version was already dismissed, skip the modal
+      if (dismissedVersion === currentVersion) {
+        onContinue();
+        return;
+      }
+
       if (updateInfo?.status === "up_to_date") {
+        // Store this version as checked (but don't show modal since up to date)
+        if (currentVersion) {
+          localStorage.setItem(
+            "electron-version-check-dismissed",
+            currentVersion,
+          );
+        }
         onContinue();
         return;
       }
@@ -53,7 +72,12 @@ export function VersionCheckModal({
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    // Store the current version as dismissed
+    const currentVersion = await (window as any).electronAPI?.getAppVersion();
+    if (currentVersion) {
+      localStorage.setItem("electron-version-check-dismissed", currentVersion);
+    }
     onContinue();
   };
 
@@ -64,23 +88,6 @@ export function VersionCheckModal({
   if (versionChecking && !versionInfo) {
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
-        {!isAuthenticated && (
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `linear-gradient(
-                135deg,
-                transparent 0%,
-                transparent 49%,
-                rgba(255, 255, 255, 0.03) 49%,
-                rgba(255, 255, 255, 0.03) 51%,
-                transparent 51%,
-                transparent 100%
-              )`,
-              backgroundSize: "80px 80px",
-            }}
-          />
-        )}
         <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
           <div className="flex items-center justify-center mb-4">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -96,23 +103,6 @@ export function VersionCheckModal({
   if (!versionInfo || versionDismissed) {
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
-        {!isAuthenticated && (
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `linear-gradient(
-                135deg,
-                transparent 0%,
-                transparent 49%,
-                rgba(255, 255, 255, 0.03) 49%,
-                rgba(255, 255, 255, 0.03) 51%,
-                transparent 51%,
-                transparent 100%
-              )`,
-              backgroundSize: "80px 80px",
-            }}
-          />
-        )}
         <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">
@@ -141,23 +131,6 @@ export function VersionCheckModal({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
-      {!isAuthenticated && (
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `linear-gradient(
-              135deg,
-              transparent 0%,
-              transparent 49%,
-              rgba(255, 255, 255, 0.03) 49%,
-              rgba(255, 255, 255, 0.03) 51%,
-              transparent 51%,
-              transparent 100%
-            )`,
-            backgroundSize: "80px 80px",
-          }}
-        />
-      )}
       <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">

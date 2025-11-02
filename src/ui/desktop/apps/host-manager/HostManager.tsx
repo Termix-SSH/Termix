@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { HostManagerViewer } from "@/ui/desktop/apps/host manager/HostManagerViewer.tsx";
+import { HostManagerViewer } from "@/ui/desktop/apps/host-manager/HostManagerViewer.tsx";
 import {
   Tabs,
   TabsContent,
@@ -7,7 +7,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
-import { HostManagerEditor } from "@/ui/desktop/apps/host manager/HostManagerEditor.tsx";
+import { HostManagerEditor } from "@/ui/desktop/apps/host-manager/HostManagerEditor.tsx";
 import { CredentialsManager } from "@/ui/desktop/apps/credentials/CredentialsManager.tsx";
 import { CredentialEditor } from "@/ui/desktop/apps/credentials/CredentialEditor.tsx";
 import { useSidebar } from "@/components/ui/sidebar.tsx";

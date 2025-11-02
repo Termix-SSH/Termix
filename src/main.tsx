@@ -5,6 +5,7 @@ import "./index.css";
 import DesktopApp from "@/ui/desktop/DesktopApp.tsx";
 import { MobileApp } from "@/ui/mobile/MobileApp.tsx";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ElectronVersionCheck } from "@/ui/desktop/user/ElectronVersionCheck.tsx";
 import "./i18n/i18n";
 import { isElectron } from "./ui/main-axios.ts";
 
@@ -55,20 +56,57 @@ function useWindowWidth() {
 function RootApp() {
   const width = useWindowWidth();
   const isMobile = width < 768;
+  const [showVersionCheck, setShowVersionCheck] = useState(true);
 
   const userAgent =
     navigator.userAgent || navigator.vendor || (window as any).opera || "";
   const isTermixMobile = /Termix-Mobile/.test(userAgent);
 
-  if (isElectron()) {
-    return <DesktopApp />;
-  }
+  const renderApp = () => {
+    if (isElectron()) {
+      return <DesktopApp />;
+    }
 
-  if (isTermixMobile) {
-    return <MobileApp key="mobile" />;
-  }
+    if (isTermixMobile) {
+      return <MobileApp key="mobile" />;
+    }
 
-  return isMobile ? <MobileApp key="mobile" /> : <DesktopApp key="desktop" />;
+    return isMobile ? <MobileApp key="mobile" /> : <DesktopApp key="desktop" />;
+  };
+
+  return (
+    <>
+      {isElectron() && (
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundColor: "#09090b",
+            backgroundImage: `linear-gradient(
+              135deg,
+              transparent 0%,
+              transparent 49%,
+              rgba(255, 255, 255, 0.03) 49%,
+              rgba(255, 255, 255, 0.03) 51%,
+              transparent 51%,
+              transparent 100%
+            )`,
+            backgroundSize: "80px 80px",
+            zIndex: 0,
+          }}
+        />
+      )}
+      <div className="relative min-h-screen" style={{ zIndex: 1 }}>
+        {isElectron() && showVersionCheck ? (
+          <ElectronVersionCheck
+            onContinue={() => setShowVersionCheck(false)}
+            isAuthenticated={false}
+          />
+        ) : (
+          renderApp()
+        )}
+      </div>
+    </>
+  );
 }
 
 createRoot(document.getElementById("root")!).render(

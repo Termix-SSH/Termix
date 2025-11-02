@@ -484,12 +484,7 @@ function getApiUrl(path: string, defaultPort: number): string {
   const devMode = isDev();
   const electronMode = isElectron();
 
-  if (devMode) {
-    const protocol = window.location.protocol === "https:" ? "https" : "http";
-    const sslPort = protocol === "https" ? 8443 : defaultPort;
-    const url = `${protocol}://${apiHost}:${sslPort}${path}`;
-    return url;
-  } else if (electronMode) {
+  if (electronMode) {
     if (configuredServerUrl) {
       const baseUrl = configuredServerUrl.replace(/\/$/, "");
       const url = `${baseUrl}${path}`;
@@ -497,6 +492,11 @@ function getApiUrl(path: string, defaultPort: number): string {
     }
     console.warn("Electron mode but no server configured!");
     return "http://no-server-configured";
+  } else if (devMode) {
+    const protocol = window.location.protocol === "https:" ? "https" : "http";
+    const sslPort = protocol === "https" ? 8443 : defaultPort;
+    const url = `${protocol}://${apiHost}:${sslPort}${path}`;
+    return url;
   } else {
     return path;
   }
