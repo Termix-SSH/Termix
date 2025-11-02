@@ -29,7 +29,6 @@ function AppContent() {
       setAuthLoading(true);
       getUserInfo()
         .then((meRes) => {
-          // Check if response is actually HTML (Vite dev server page)
           if (typeof meRes === "string" || !meRes.username) {
             setIsAuthenticated(false);
             setIsAdmin(false);

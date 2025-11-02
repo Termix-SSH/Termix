@@ -62,10 +62,11 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true,
+      webSecurity: false,
       preload: path.join(__dirname, "preload.js"),
       partition: "persist:termix",
-      allowRunningInsecureContent: false,
+      allowRunningInsecureContent: true,
+      webviewTag: true,
     },
     show: false,
   });

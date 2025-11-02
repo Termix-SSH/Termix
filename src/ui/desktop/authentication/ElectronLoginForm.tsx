@@ -5,6 +5,22 @@ import { useTranslation } from "react-i18next";
 import { AlertCircle, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
 import { getCookie, getUserInfo } from "@/ui/main-axios.ts";
 
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      webview: React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement>,
+        HTMLElement
+      > & {
+        src?: string;
+        partition?: string;
+        allowpopups?: string;
+        ref?: React.Ref<any>;
+      };
+    }
+  }
+}
+
 interface ElectronLoginFormProps {
   serverUrl: string;
   onAuthSuccess: () => void;
@@ -20,10 +36,12 @@ export function ElectronLoginForm({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const webviewRef = useRef<any>(null);
   const hasAuthenticatedRef = useRef(false);
   const [currentUrl, setCurrentUrl] = useState(serverUrl);
   const hasLoadedOnce = useRef(false);
+  const urlCheckInterval = useRef<NodeJS.Timeout | null>(null);
+  const loadTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -57,7 +75,17 @@ export function ElectronLoginForm({
                 await getUserInfo();
               } catch (verifyErr) {
                 localStorage.removeItem("jwt");
-                throw new Error("Invalid or expired authentication token");
+                const errorMsg =
+                  verifyErr instanceof Error
+                    ? verifyErr.message
+                    : "Failed to verify authentication";
+                console.error("Authentication verification failed:", verifyErr);
+                throw new Error(
+                  errorMsg.includes("registration") ||
+                  errorMsg.includes("allowed")
+                    ? "Authentication failed. Please check your server connection and try again."
+                    : errorMsg,
+                );
               }
 
               await new Promise((resolve) => setTimeout(resolve, 500));
@@ -85,159 +113,186 @@ export function ElectronLoginForm({
   }, [serverUrl, isAuthenticating, onAuthSuccess, t]);
 
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
+    const checkWebviewUrl = () => {
+      const webview = webviewRef.current;
+      if (!webview) return;
+
+      try {
+        const webviewUrl = webview.getURL();
+        if (webviewUrl && webviewUrl !== currentUrl) {
+          setCurrentUrl(webviewUrl);
+        }
+      } catch (e) {}
+    };
+
+    urlCheckInterval.current = setInterval(checkWebviewUrl, 500);
+
+    return () => {
+      if (urlCheckInterval.current) {
+        clearInterval(urlCheckInterval.current);
+        urlCheckInterval.current = null;
+      }
+    };
+  }, [currentUrl]);
+
+  useEffect(() => {
+    const webview = webviewRef.current;
+    if (!webview) return;
+
+    loadTimeout.current = setTimeout(() => {
+      if (!hasLoadedOnce.current && loading) {
+        setLoading(false);
+        setError(
+          "Unable to connect to server. Please check the server URL and try again.",
+        );
+      }
+    }, 15000);
 
     const handleLoad = () => {
+      if (loadTimeout.current) {
+        clearTimeout(loadTimeout.current);
+        loadTimeout.current = null;
+      }
+
       setLoading(false);
       hasLoadedOnce.current = true;
       setError(null);
 
       try {
-        if (iframe.contentWindow) {
-          setCurrentUrl(iframe.contentWindow.location.href);
-        }
+        const webviewUrl = webview.getURL();
+        setCurrentUrl(webviewUrl || serverUrl);
       } catch (e) {
         setCurrentUrl(serverUrl);
       }
 
-      try {
-        const injectedScript = `
-          (function() {
-            window.IS_ELECTRON = true;
-            if (typeof window.electronAPI === 'undefined') {
-              window.electronAPI = { isElectron: true };
+      const injectedScript = `
+        (function() {
+          window.IS_ELECTRON = true;
+          if (typeof window.electronAPI === 'undefined') {
+            window.electronAPI = { isElectron: true };
+          }
+
+          let hasNotified = false;
+
+          function postJWTToParent(token, source) {
+            if (hasNotified) {
+              return;
             }
+            hasNotified = true;
 
-            let hasNotified = false;
-
-            function postJWTToParent(token, source) {
-              if (hasNotified) {
-                return;
-              }
-              hasNotified = true;
-
-              try {
-                window.parent.postMessage({
-                  type: 'AUTH_SUCCESS',
-                  token: token,
-                  source: source,
-                  platform: 'desktop',
-                  timestamp: Date.now()
-                }, '*');
-              } catch (e) {
-              }
-            }
-
-            function clearAuthData() {
-              try {
-                localStorage.removeItem('jwt');
-                sessionStorage.removeItem('jwt');
-
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                  const cookie = cookies[i];
-                  const eqPos = cookie.indexOf('=');
-                  const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-                  if (name === 'jwt') {
-                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
-                  }
-                }
-              } catch (error) {
-              }
-            }
-
-            window.addEventListener('message', function(event) {
-              try {
-                if (event.data && typeof event.data === 'object') {
-                  if (event.data.type === 'CLEAR_AUTH_DATA') {
-                    clearAuthData();
-                  }
-                }
-              } catch (error) {
-              }
-            });
-
-            function checkAuth() {
-              try {
-                const localToken = localStorage.getItem('jwt');
-                if (localToken && localToken.length > 20) {
-                  postJWTToParent(localToken, 'localStorage');
-                  return true;
-                }
-
-                const sessionToken = sessionStorage.getItem('jwt');
-                if (sessionToken && sessionToken.length > 20) {
-                  postJWTToParent(sessionToken, 'sessionStorage');
-                  return true;
-                }
-
-                const cookies = document.cookie;
-                if (cookies && cookies.length > 0) {
-                  const cookieArray = cookies.split('; ');
-                  const tokenCookie = cookieArray.find(row => row.startsWith('jwt='));
-
-                  if (tokenCookie) {
-                    const token = tokenCookie.split('=')[1];
-                    if (token && token.length > 20) {
-                      postJWTToParent(token, 'cookie');
-                      return true;
-                    }
-                  }
-                }
-              } catch (error) {
-              }
-              return false;
-            }
-
-            const originalSetItem = localStorage.setItem;
-            localStorage.setItem = function(key, value) {
-              originalSetItem.apply(this, arguments);
-              if (key === 'jwt' && value && value.length > 20 && !hasNotified) {
-                setTimeout(() => checkAuth(), 100);
-              }
-            };
-
-            const originalSessionSetItem = sessionStorage.setItem;
-            sessionStorage.setItem = function(key, value) {
-              originalSessionSetItem.apply(this, arguments);
-              if (key === 'jwt' && value && value.length > 20 && !hasNotified) {
-                setTimeout(() => checkAuth(), 100);
-              }
-            };
-
-            const intervalId = setInterval(() => {
-              if (hasNotified) {
-                clearInterval(intervalId);
-                return;
-              }
-              if (checkAuth()) {
-                clearInterval(intervalId);
-              }
-            }, 500);
-
-            setTimeout(() => {
-              clearInterval(intervalId);
-            }, 300000);
-
-            setTimeout(() => checkAuth(), 500);
-          })();
-        `;
-
-        try {
-          if (iframe.contentWindow) {
             try {
-              iframe.contentWindow.eval(injectedScript);
-            } catch (evalError) {
-              iframe.contentWindow.postMessage(
-                { type: "INJECT_SCRIPT", script: injectedScript },
-                "*",
-              );
+              window.parent.postMessage({
+                type: 'AUTH_SUCCESS',
+                token: token,
+                source: source,
+                platform: 'desktop',
+                timestamp: Date.now()
+              }, '*');
+            } catch (e) {
             }
           }
-        } catch (err) {}
-      } catch (err) {}
+
+          function clearAuthData() {
+            try {
+              localStorage.removeItem('jwt');
+              sessionStorage.removeItem('jwt');
+
+              const cookies = document.cookie.split(';');
+              for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i];
+                const eqPos = cookie.indexOf('=');
+                const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                if (name === 'jwt') {
+                  document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                  document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
+                }
+              }
+            } catch (error) {
+            }
+          }
+
+          window.addEventListener('message', function(event) {
+            try {
+              if (event.data && typeof event.data === 'object') {
+                if (event.data.type === 'CLEAR_AUTH_DATA') {
+                  clearAuthData();
+                }
+              }
+            } catch (error) {
+            }
+          });
+
+          function checkAuth() {
+            try {
+              const localToken = localStorage.getItem('jwt');
+              if (localToken && localToken.length > 20) {
+                postJWTToParent(localToken, 'localStorage');
+                return true;
+              }
+
+              const sessionToken = sessionStorage.getItem('jwt');
+              if (sessionToken && sessionToken.length > 20) {
+                postJWTToParent(sessionToken, 'sessionStorage');
+                return true;
+              }
+
+              const cookies = document.cookie;
+              if (cookies && cookies.length > 0) {
+                const cookieArray = cookies.split('; ');
+                const tokenCookie = cookieArray.find(row => row.startsWith('jwt='));
+
+                if (tokenCookie) {
+                  const token = tokenCookie.split('=')[1];
+                  if (token && token.length > 20) {
+                    postJWTToParent(token, 'cookie');
+                    return true;
+                  }
+                }
+              }
+            } catch (error) {
+            }
+            return false;
+          }
+
+          const originalSetItem = localStorage.setItem;
+          localStorage.setItem = function(key, value) {
+            originalSetItem.apply(this, arguments);
+            if (key === 'jwt' && value && value.length > 20 && !hasNotified) {
+              setTimeout(() => checkAuth(), 100);
+            }
+          };
+
+          const originalSessionSetItem = sessionStorage.setItem;
+          sessionStorage.setItem = function(key, value) {
+            originalSessionSetItem.apply(this, arguments);
+            if (key === 'jwt' && value && value.length > 20 && !hasNotified) {
+              setTimeout(() => checkAuth(), 100);
+            }
+          };
+
+          const intervalId = setInterval(() => {
+            if (hasNotified) {
+              clearInterval(intervalId);
+              return;
+            }
+            if (checkAuth()) {
+              clearInterval(intervalId);
+            }
+          }, 500);
+
+          setTimeout(() => {
+            clearInterval(intervalId);
+          }, 300000);
+
+          setTimeout(() => checkAuth(), 500);
+        })();
+      `;
+
+      try {
+        webview.executeJavaScript(injectedScript);
+      } catch (err) {
+        console.error("Failed to inject authentication script:", err);
+      }
     };
 
     const handleError = () => {
@@ -247,18 +302,27 @@ export function ElectronLoginForm({
       }
     };
 
-    iframe.addEventListener("load", handleLoad);
-    iframe.addEventListener("error", handleError);
+    webview.addEventListener("did-finish-load", handleLoad);
+    webview.addEventListener("did-fail-load", handleError);
 
     return () => {
-      iframe.removeEventListener("load", handleLoad);
-      iframe.removeEventListener("error", handleError);
+      webview.removeEventListener("did-finish-load", handleLoad);
+      webview.removeEventListener("did-fail-load", handleError);
+      if (loadTimeout.current) {
+        clearTimeout(loadTimeout.current);
+        loadTimeout.current = null;
+      }
     };
-  }, [t]);
+  }, [t, loading, serverUrl]);
 
   const handleRefresh = () => {
-    if (iframeRef.current) {
-      iframeRef.current.src = serverUrl;
+    if (webviewRef.current) {
+      if (loadTimeout.current) {
+        clearTimeout(loadTimeout.current);
+        loadTimeout.current = null;
+      }
+
+      webviewRef.current.src = serverUrl;
       setLoading(true);
       setError(null);
     }
@@ -336,14 +400,13 @@ export function ElectronLoginForm({
       )}
 
       <div className="flex-1 overflow-hidden">
-        <iframe
-          ref={iframeRef}
+        <webview
+          ref={webviewRef}
           src={serverUrl}
           className="w-full h-full border-0"
-          title="Server Authentication"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
-          allow="clipboard-read; clipboard-write; cross-origin-isolated; camera; microphone; geolocation; storage-access"
-          credentialless={false}
+          partition="persist:termix"
+          allowpopups="false"
+          style={{ width: "100%", height: "100%" }}
         />
       </div>
     </div>

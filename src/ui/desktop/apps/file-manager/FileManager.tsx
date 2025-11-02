@@ -1344,6 +1344,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         authType: credentials.password ? "password" : "key",
         credentialId: currentHost.credentialId,
         userId: currentHost.userId,
+        userProvidedPassword: true,
       });
 
       if (result?.requires_totp) {

@@ -57,15 +57,15 @@ app.use(
         "http://127.0.0.1:3000",
       ];
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
       if (origin.startsWith("https://")) {
         return callback(null, true);
       }
 
       if (origin.startsWith("http://")) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
@@ -172,6 +172,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keyPassword,
     authType,
     credentialId,
+    userProvidedPassword,
   } = req.body;
 
   const userId = (req as AuthenticatedRequest).userId;
@@ -264,52 +265,37 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keepaliveCountMax: 3,
     algorithms: {
       kex: [
-        "curve25519-sha256",
-        "curve25519-sha256@libssh.org",
-        "ecdh-sha2-nistp521",
-        "ecdh-sha2-nistp384",
-        "ecdh-sha2-nistp256",
-        "diffie-hellman-group-exchange-sha256",
         "diffie-hellman-group14-sha256",
         "diffie-hellman-group14-sha1",
-        "diffie-hellman-group-exchange-sha1",
         "diffie-hellman-group1-sha1",
-      ],
-      serverHostKey: [
-        "ssh-ed25519",
-        "ecdsa-sha2-nistp521",
-        "ecdsa-sha2-nistp384",
-        "ecdsa-sha2-nistp256",
-        "rsa-sha2-512",
-        "rsa-sha2-256",
-        "ssh-rsa",
-        "ssh-dss",
+        "diffie-hellman-group-exchange-sha256",
+        "diffie-hellman-group-exchange-sha1",
+        "ecdh-sha2-nistp256",
+        "ecdh-sha2-nistp384",
+        "ecdh-sha2-nistp521",
       ],
       cipher: [
-        "chacha20-poly1305@openssh.com",
-        "aes256-gcm@openssh.com",
-        "aes128-gcm@openssh.com",
-        "aes256-ctr",
-        "aes192-ctr",
         "aes128-ctr",
-        "aes256-cbc",
-        "aes192-cbc",
+        "aes192-ctr",
+        "aes256-ctr",
+        "aes128-gcm@openssh.com",
+        "aes256-gcm@openssh.com",
         "aes128-cbc",
+        "aes192-cbc",
+        "aes256-cbc",
         "3des-cbc",
       ],
       hmac: [
-        "hmac-sha2-512-etm@openssh.com",
         "hmac-sha2-256-etm@openssh.com",
-        "hmac-sha2-512",
+        "hmac-sha2-512-etm@openssh.com",
         "hmac-sha2-256",
+        "hmac-sha2-512",
         "hmac-sha1",
         "hmac-md5",
       ],
       compress: ["none", "zlib@openssh.com", "zlib"],
     },
   };
-
-  let authMethodNotAvailable = false;
 
   if (
     resolvedCredentials.authType === "key" &&
@@ -348,33 +334,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         .status(400)
         .json({ error: "Password required for password authentication" });
     }
-    config.password = resolvedCredentials.password;
+
+    if (userProvidedPassword) {
+      config.password = resolvedCredentials.password;
+    }
   } else if (resolvedCredentials.authType === "none") {
-    config.authHandler = (
-      methodsLeft: string[] | null,
-      partialSuccess: boolean,
-      callback: (nextMethod: string | false) => void,
-    ) => {
-      if (methodsLeft && methodsLeft.length > 0) {
-        if (methodsLeft.includes("keyboard-interactive")) {
-          callback("keyboard-interactive");
-        } else {
-          authMethodNotAvailable = true;
-          fileLogger.error(
-            "Server does not support keyboard-interactive auth",
-            {
-              operation: "ssh_auth_handler_no_keyboard",
-              hostId,
-              sessionId,
-              methodsAvailable: methodsLeft,
-            },
-          );
-          callback(false);
-        }
-      } else {
-        callback(false);
-      }
-    };
   } else {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
@@ -451,36 +415,26 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   client.on("error", (err) => {
     if (responseSent) return;
     responseSent = true;
+    fileLogger.error("SSH connection failed for file manager", {
+      operation: "file_connect",
+      sessionId,
+      hostId,
+      ip,
+      port,
+      username,
+      error: err.message,
+    });
 
-    if (authMethodNotAvailable && resolvedCredentials.authType === "none") {
-      res.status(200).json({
-        status: "auth_required",
-        message:
-          "The server does not support keyboard-interactive authentication. Please provide credentials.",
-        reason: "no_keyboard",
-      });
-    } else if (
+    if (
       resolvedCredentials.authType === "none" &&
-      (err.message.includes("All configured authentication methods failed") ||
-        err.message.includes("No supported authentication methods available") ||
-        err.message.includes("authentication methods failed"))
+      (err.message.includes("authentication") ||
+        err.message.includes("All configured authentication methods failed"))
     ) {
-      res.status(200).json({
+      res.json({
         status: "auth_required",
-        message:
-          "The server does not support keyboard-interactive authentication. Please provide credentials.",
         reason: "no_keyboard",
       });
     } else {
-      fileLogger.error("SSH connection failed for file manager", {
-        operation: "file_connect",
-        sessionId,
-        hostId,
-        ip,
-        port,
-        username,
-        error: err.message,
-      });
       res.status(500).json({ status: "error", message: err.message });
     }
   });
@@ -564,13 +518,43 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           /password/i.test(p.prompt),
         );
 
+        if (
+          resolvedCredentials.authType === "none" &&
+          passwordPromptIndex !== -1
+        ) {
+          if (responseSent) return;
+          responseSent = true;
+
+          client.end();
+
+          res.json({
+            status: "auth_required",
+            reason: "no_keyboard",
+          });
+          return;
+        }
+
         if (!hasStoredPassword && passwordPromptIndex !== -1) {
           if (responseSent) {
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+                return resolvedCredentials.password;
+              }
+              return "";
+            });
+            finish(responses);
             return;
           }
           responseSent = true;
 
           if (pendingTOTPSessions[sessionId]) {
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+                return resolvedCredentials.password;
+              }
+              return "";
+            });
+            finish(responses);
             return;
           }
 
@@ -2445,6 +2429,15 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
             ? parseInt(exitCodeMatch[1])
             : code;
           const cleanOutput = output.replace(/EXIT_CODE:\d+$/, "").trim();
+
+          fileLogger.info("File execution completed", {
+            operation: "execute_file",
+            sessionId,
+            filePath,
+            exitCode: actualExitCode,
+            outputLength: cleanOutput.length,
+            errorLength: errorOutput.length,
+          });
 
           res.json({
             success: true,

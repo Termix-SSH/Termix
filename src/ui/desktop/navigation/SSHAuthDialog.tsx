@@ -136,11 +136,8 @@ export function SSHAuthDialog({
     : `${hostInfo.username}@${hostInfo.ip}:${hostInfo.port}`;
 
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      style={{ backgroundColor: `${backgroundColor}dd` }}
-    >
-      <Card className="w-full max-w-2xl mx-4 shadow-2xl">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-dark-bg">
+      <Card className="w-full max-w-2xl mx-4 border-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
