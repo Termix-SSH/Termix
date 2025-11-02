@@ -596,6 +596,11 @@ export function Auth({
 
   useEffect(() => {
     const checkServerConfig = async () => {
+      if (isInElectronWebView()) {
+        setShowServerConfig(false);
+        return;
+      }
+
       if (isElectron()) {
         try {
           const config = await getServerConfig();
