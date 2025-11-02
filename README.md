@@ -43,7 +43,7 @@ If you would like, you can support the project here!\
     <img alt="Termix Banner" src=./public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
-Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a web-based
+Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a multi-platform
 solution for managing your servers and infrastructure through a single, intuitive interface. Termix offers SSH terminal
 access, SSH tunneling capabilities, and remote file management, with many more tools to come. Termix is the perfect
 free and self-hosted alternative to Termius available for all platforms.
