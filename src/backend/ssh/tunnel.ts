@@ -1409,7 +1409,11 @@ async function initializeAutoStartTunnels(): Promise<void> {
 
             if (endpointHost) {
               const tunnelConfig: TunnelConfig = {
-                name: `${host.name || `${host.username}@${host.ip}`}_${tunnelConnection.sourcePort}_${tunnelConnection.endpointPort}`,
+                name: `${host.name || `${host.username}@${host.ip}`}_${
+                  tunnelConnection.sourcePort
+                }_${tunnelConnection.endpointHost}_${
+                  tunnelConnection.endpointPort
+                }`,
                 hostName: host.name || `${host.username}@${host.ip}`,
                 sourceIP: host.ip,
                 sourceSSHPort: host.port,

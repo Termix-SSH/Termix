@@ -126,7 +126,9 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
     tunnelIndex: number,
   ) => {
     const tunnel = host.tunnelConnections[tunnelIndex];
-    const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${tunnel.sourcePort}_${tunnel.endpointPort}`;
+    const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${
+      tunnel.sourcePort
+    }_${tunnel.endpointHost}_${tunnel.endpointPort}`;
 
     setTunnelActions((prev) => ({ ...prev, [tunnelName]: true }));
 

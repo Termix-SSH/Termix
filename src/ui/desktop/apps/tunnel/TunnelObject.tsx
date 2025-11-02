@@ -34,7 +34,9 @@ export function TunnelObject({
 
   const getTunnelStatus = (tunnelIndex: number): TunnelStatus | undefined => {
     const tunnel = host.tunnelConnections[tunnelIndex];
-    const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${tunnel.sourcePort}_${tunnel.endpointPort}`;
+    const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${
+      tunnel.sourcePort
+    }_${tunnel.endpointHost}_${tunnel.endpointPort}`;
     return tunnelStatuses[tunnelName];
   };
 
@@ -119,7 +121,9 @@ export function TunnelObject({
               {host.tunnelConnections.map((tunnel, tunnelIndex) => {
                 const status = getTunnelStatus(tunnelIndex);
                 const statusDisplay = getTunnelStatusDisplay(status);
-                const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${tunnel.sourcePort}_${tunnel.endpointPort}`;
+                const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${
+                  tunnel.sourcePort
+                }_${tunnel.endpointHost}_${tunnel.endpointPort}`;
                 const isActionLoading = tunnelActions[tunnelName];
                 const statusValue =
                   status?.status?.toUpperCase() || "DISCONNECTED";
@@ -352,7 +356,9 @@ export function TunnelObject({
               {host.tunnelConnections.map((tunnel, tunnelIndex) => {
                 const status = getTunnelStatus(tunnelIndex);
                 const statusDisplay = getTunnelStatusDisplay(status);
-                const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${tunnel.sourcePort}_${tunnel.endpointPort}`;
+                const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${
+                  tunnel.sourcePort
+                }_${tunnel.endpointHost}_${tunnel.endpointPort}`;
                 const isActionLoading = tunnelActions[tunnelName];
                 const statusValue =
                   status?.status?.toUpperCase() || "DISCONNECTED";
