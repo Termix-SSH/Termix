@@ -204,7 +204,6 @@ function createApiInstance(
     }
 
     if (typeof window !== "undefined" && (window as any).ReactNativeWebView) {
-      // Try to detect platform from navigator
       let platform = "Unknown";
       if (typeof navigator !== "undefined" && navigator.userAgent) {
         if (navigator.userAgent.includes("Android")) {
