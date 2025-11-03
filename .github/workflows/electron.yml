@@ -152,6 +152,11 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      - name: Install system dependencies for AppImage
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2
+
       - name: Install dependencies
         run: |
           for i in 1 2 3;
@@ -169,10 +174,16 @@ jobs:
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
 
-      - name: Build Linux (All Architectures)
+      - name: Build Linux x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build && npx electron-builder --linux --x64 --arm64 --armv7l
+          DEBUG: electron-builder
+        run: npm run build && npx electron-builder --linux --x64
+
+      - name: Build Linux arm64 and armv7l
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux --arm64 --armv7l
 
       - name: Rename Linux artifacts for consistency
         run: |
@@ -200,6 +211,13 @@ jobs:
       - name: List release files
         run: |
           ls -la release/
+
+      - name: Debug electron-builder output
+        if: always()
+        run: |
+          if [ -f "release/builder-debug.yml" ]; then
+            cat release/builder-debug.yml
+          fi
 
       - name: Upload Linux x64 AppImage
         uses: actions/upload-artifact@v4

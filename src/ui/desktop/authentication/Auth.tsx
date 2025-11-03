@@ -617,7 +617,7 @@ export function Auth({
     checkServerConfig();
   }, []);
 
-  if (showServerConfig === null) {
+  if (showServerConfig === null && !isInElectronWebView()) {
     return (
       <div
         className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
@@ -631,7 +631,7 @@ export function Auth({
     );
   }
 
-  if (showServerConfig) {
+  if (showServerConfig && !isInElectronWebView()) {
     return (
       <div
         className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
