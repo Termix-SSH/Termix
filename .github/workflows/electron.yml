@@ -201,9 +201,13 @@ jobs:
           if [ -f "termix-${VERSION}-armv7l.tar.gz" ]; then
             mv "termix-${VERSION}-armv7l.tar.gz" "termix_linux_armv7l_portable.tar.gz"
           fi
-          # Rename Debian amd64 to x64 for consistency
+
           if [ -f "termix_linux_amd64_deb.deb" ]; then
             mv "termix_linux_amd64_deb.deb" "termix_linux_x64_deb.deb"
+          fi
+
+          if [ -f "termix_linux_x86_64_appimage.AppImage" ]; then
+            mv "termix_linux_x86_64_appimage.AppImage" "termix_linux_x64_appimage.AppImage"
           fi
 
           cd ..

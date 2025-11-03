@@ -168,6 +168,7 @@ export function ElectronLoginForm({
       const injectedScript = `
         (function() {
           window.IS_ELECTRON = true;
+          window.IS_ELECTRON_WEBVIEW = true;
           if (typeof window.electronAPI === 'undefined') {
             window.electronAPI = { isElectron: true };
           }

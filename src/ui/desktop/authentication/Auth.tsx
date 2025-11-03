@@ -59,6 +59,9 @@ export function Auth({
   const { t } = useTranslation();
 
   const isInElectronWebView = () => {
+    if ((window as any).IS_ELECTRON_WEBVIEW) {
+      return true;
+    }
     try {
       if (window.self !== window.top) {
         return true;
@@ -140,12 +143,6 @@ export function Auth({
   }, []);
 
   useEffect(() => {
-    if (isInElectronWebView()) {
-      setDbHealthChecking(false);
-      setDbConnectionFailed(false);
-      return;
-    }
-
     setDbHealthChecking(true);
     getSetupRequired()
       .then((res) => {
