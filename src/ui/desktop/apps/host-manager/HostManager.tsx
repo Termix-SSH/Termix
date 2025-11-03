@@ -91,7 +91,6 @@ export function HostManager({
     setActiveTab(value);
     if (value !== "add_host") {
       setEditingHost(null);
-      isEditingRef.current = false;
     }
     if (value !== "add_credential") {
       setEditingCredential(null);
