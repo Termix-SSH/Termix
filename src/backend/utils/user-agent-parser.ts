@@ -157,10 +157,6 @@ function parseWebUserAgent(userAgent: string): DeviceInfo {
 
   if (userAgent.includes("Windows")) {
     os = parseWindowsVersion(userAgent);
-  } else if (userAgent.includes("Mac OS X")) {
-    os = parseMacVersion(userAgent);
-  } else if (userAgent.includes("Linux")) {
-    os = "Linux";
   } else if (userAgent.includes("Android")) {
     const match = userAgent.match(/Android ([\d.]+)/);
     os = match ? `Android ${match[1]}` : "Android";
@@ -176,6 +172,10 @@ function parseWebUserAgent(userAgent: string): DeviceInfo {
     } else {
       os = "iOS";
     }
+  } else if (userAgent.includes("Mac OS X")) {
+    os = parseMacVersion(userAgent);
+  } else if (userAgent.includes("Linux")) {
+    os = "Linux";
   }
 
   if (version !== "Unknown") {
