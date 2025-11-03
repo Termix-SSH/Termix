@@ -402,6 +402,7 @@ export function AdminSettings({
     setExportLoading(true);
     try {
       const isDev =
+        !isElectron() &&
         process.env.NODE_ENV === "development" &&
         (window.location.port === "3000" ||
           window.location.port === "5173" ||
@@ -472,6 +473,7 @@ export function AdminSettings({
     setImportLoading(true);
     try {
       const isDev =
+        !isElectron() &&
         process.env.NODE_ENV === "development" &&
         (window.location.port === "3000" ||
           window.location.port === "5173" ||
@@ -564,6 +566,7 @@ export function AdminSettings({
     setSessionsLoading(true);
     try {
       const isDev =
+        !isElectron() &&
         process.env.NODE_ENV === "development" &&
         (window.location.port === "3000" ||
           window.location.port === "5173" ||
@@ -610,6 +613,7 @@ export function AdminSettings({
       async () => {
         try {
           const isDev =
+            !isElectron() &&
             process.env.NODE_ENV === "development" &&
             (window.location.port === "3000" ||
               window.location.port === "5173" ||
@@ -660,6 +664,7 @@ export function AdminSettings({
       async () => {
         try {
           const isDev =
+            !isElectron() &&
             process.env.NODE_ENV === "development" &&
             (window.location.port === "3000" ||
               window.location.port === "5173" ||

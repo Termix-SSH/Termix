@@ -418,6 +418,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       isConnectingRef.current = true;
 
       const isDev =
+        !isElectron() &&
         process.env.NODE_ENV === "development" &&
         (window.location.port === "3000" ||
           window.location.port === "5173" ||

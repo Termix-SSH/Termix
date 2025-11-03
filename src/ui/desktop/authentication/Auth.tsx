@@ -37,6 +37,7 @@ interface AuthProps extends React.ComponentProps<"div"> {
   loggedIn: boolean;
   authLoading: boolean;
   setDbError: (error: string | null) => void;
+  dbError?: string | null;
   onAuthSuccess: (authData: {
     isAdmin: boolean;
     username: string | null;
@@ -53,6 +54,7 @@ export function Auth({
   loggedIn,
   authLoading,
   setDbError,
+  dbError,
   onAuthSuccess,
   ...props
 }: AuthProps) {
