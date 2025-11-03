@@ -194,7 +194,7 @@ export function Dashboard({
 
         setServerStatsLoading(true);
         const serversWithStats = await Promise.all(
-          hosts.slice(0, 5).map(async (host: { id: number; name: string }) => {
+          hosts.slice(0, 50).map(async (host: { id: number; name: string }) => {
             try {
               const metrics = await getServerMetricsById(host.id);
               return {
@@ -213,7 +213,10 @@ export function Dashboard({
             }
           }),
         );
-        setServerStats(serversWithStats);
+        const validServerStats = serversWithStats.filter(
+          (server) => server.cpu !== null && server.ram !== null,
+        );
+        setServerStats(validServerStats);
         setServerStatsLoading(false);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);

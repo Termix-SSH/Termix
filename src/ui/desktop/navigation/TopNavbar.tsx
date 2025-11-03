@@ -491,7 +491,16 @@ export function TopNavbar({
       {!isTopbarOpen && (
         <div
           onClick={() => setIsTopbarOpen(true)}
-          className="absolute top-0 left-0 w-full h-[10px] cursor-pointer z-20 flex items-center justify-center rounded-bl-md rounded-br-md bg-dark"
+          className="fixed top-0 cursor-pointer flex items-center justify-center rounded-bl-md rounded-br-md"
+          style={{
+            left: leftPosition,
+            right: "17px",
+            height: "10px",
+            zIndex: 9999,
+            backgroundColor: "#18181b",
+            border: "2px solid #27272a",
+            borderTop: "none",
+          }}
         >
           <ChevronDown size={10} />
         </div>

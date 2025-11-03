@@ -651,7 +651,12 @@ export function Auth({
     );
   }
 
-  if (isElectron() && currentServerUrl && authLoading) {
+  if (
+    isElectron() &&
+    currentServerUrl &&
+    authLoading &&
+    !isInElectronWebView()
+  ) {
     return (
       <div
         className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
@@ -665,7 +670,7 @@ export function Auth({
     );
   }
 
-  if (isElectron() && currentServerUrl && !loggedIn) {
+  if (isElectron() && currentServerUrl && !loggedIn && !isInElectronWebView()) {
     return (
       <div
         className="w-full h-screen flex items-center justify-center p-4"

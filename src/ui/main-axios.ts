@@ -345,7 +345,15 @@ function createApiInstance(
             toast.warning("Session expired. Please log in again.");
           });
 
-          setTimeout(() => window.location.reload(), 1000);
+          const currentPath = window.location.pathname;
+          const isOnAuthPage =
+            currentPath === "/" ||
+            currentPath === "/login" ||
+            currentPath === "/auth";
+
+          if (!isOnAuthPage) {
+            setTimeout(() => window.location.reload(), 1000);
+          }
         }
       }
 

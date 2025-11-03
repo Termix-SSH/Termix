@@ -529,7 +529,13 @@ export function LeftSidebar({
       {!isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(true)}
-          className="absolute top-0 left-0 w-[10px] h-full bg-dark-bg cursor-pointer z-20 flex items-center justify-center rounded-tr-md rounded-br-md"
+          className="fixed top-0 left-0 w-[10px] h-full cursor-pointer flex items-center justify-center rounded-tr-md rounded-br-md"
+          style={{
+            zIndex: 9999,
+            backgroundColor: "#18181b",
+            border: "2px solid #27272a",
+            borderLeft: "none",
+          }}
         >
           <ChevronRight size={10} />
         </div>
