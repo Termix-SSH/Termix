@@ -52,6 +52,9 @@ import {
   getUserInfo,
   getCookie,
   isElectron,
+  getSessions,
+  revokeSession,
+  revokeAllUserSessions,
 } from "@/ui/main-axios.ts";
 
 interface AdminSettingsProps {
@@ -126,6 +129,7 @@ export function AdminSettings({
       expiresAt: string;
       lastActiveAt: string;
       jwtToken: string;
+      isRevoked?: boolean;
     }>
   >([]);
   const [sessionsLoading, setSessionsLoading] = React.useState(false);
@@ -565,35 +569,8 @@ export function AdminSettings({
 
     setSessionsLoading(true);
     try {
-      const isDev =
-        !isElectron() &&
-        process.env.NODE_ENV === "development" &&
-        (window.location.port === "3000" ||
-          window.location.port === "5173" ||
-          window.location.port === "" ||
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1");
-
-      const apiUrl = isElectron()
-        ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/users/sessions`
-        : isDev
-          ? `http://localhost:30001/users/sessions`
-          : `/users/sessions`;
-
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${getCookie("jwt")}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSessions(data.sessions || []);
-      } else {
-        toast.error(t("admin.failedToFetchSessions"));
-      }
+      const data = await getSessions();
+      setSessions(data.sessions || []);
     } catch (err) {
       if (!err?.message?.includes("No server configured")) {
         toast.error(t("admin.failedToFetchSessions"));
@@ -612,41 +589,15 @@ export function AdminSettings({
       t("admin.confirmRevokeSession"),
       async () => {
         try {
-          const isDev =
-            !isElectron() &&
-            process.env.NODE_ENV === "development" &&
-            (window.location.port === "3000" ||
-              window.location.port === "5173" ||
-              window.location.port === "" ||
-              window.location.hostname === "localhost" ||
-              window.location.hostname === "127.0.0.1");
+          await revokeSession(sessionId);
+          toast.success(t("admin.sessionRevokedSuccessfully"));
 
-          const apiUrl = isElectron()
-            ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/users/sessions/${sessionId}`
-            : isDev
-              ? `http://localhost:30001/users/sessions/${sessionId}`
-              : `/users/sessions/${sessionId}`;
-
-          const response = await fetch(apiUrl, {
-            method: "DELETE",
-            credentials: "include",
-            headers: {
-              Authorization: `Bearer ${getCookie("jwt")}`,
-            },
-          });
-
-          if (response.ok) {
-            toast.success(t("admin.sessionRevokedSuccessfully"));
-
-            if (isCurrentSession) {
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
-            } else {
-              fetchSessions();
-            }
+          if (isCurrentSession) {
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
           } else {
-            toast.error(t("admin.failedToRevokeSession"));
+            fetchSessions();
           }
         } catch {
           toast.error(t("admin.failedToRevokeSession"));
@@ -663,49 +614,15 @@ export function AdminSettings({
       t("admin.confirmRevokeAllSessions"),
       async () => {
         try {
-          const isDev =
-            !isElectron() &&
-            process.env.NODE_ENV === "development" &&
-            (window.location.port === "3000" ||
-              window.location.port === "5173" ||
-              window.location.port === "" ||
-              window.location.hostname === "localhost" ||
-              window.location.hostname === "127.0.0.1");
+          const data = await revokeAllUserSessions(userId);
+          toast.success(data.message || t("admin.sessionsRevokedSuccessfully"));
 
-          const apiUrl = isElectron()
-            ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/users/sessions/revoke-all`
-            : isDev
-              ? `http://localhost:30001/users/sessions/revoke-all`
-              : `/users/sessions/revoke-all`;
-
-          const response = await fetch(apiUrl, {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${getCookie("jwt")}`,
-            },
-            body: JSON.stringify({
-              targetUserId: userId,
-              exceptCurrent: false,
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            toast.success(
-              data.message || t("admin.sessionsRevokedSuccessfully"),
-            );
-
-            if (isCurrentUser) {
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
-            } else {
-              fetchSessions();
-            }
+          if (isCurrentUser) {
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
           } else {
-            toast.error(t("admin.failedToRevokeSessions"));
+            fetchSessions();
           }
         } catch {
           toast.error(t("admin.failedToRevokeSessions"));

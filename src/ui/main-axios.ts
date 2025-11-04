@@ -342,6 +342,7 @@ function createApiInstance(
 
           import("sonner").then(({ toast }) => {
             toast.warning("Session expired. Please log in again.");
+            window.location.reload();
           });
 
           const currentPath = window.location.pathname;
@@ -1941,6 +1942,53 @@ export async function getUserList(): Promise<{ users: UserInfo[] }> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user list");
+  }
+}
+
+export async function getSessions(): Promise<{
+  sessions: {
+    id: string;
+    userId: string;
+    username?: string;
+    deviceType: string;
+    deviceInfo: string;
+    createdAt: string;
+    expiresAt: string;
+    lastActiveAt: string;
+    jwtToken: string;
+    isRevoked?: boolean;
+  }[];
+}> {
+  try {
+    const response = await authApi.get("/users/sessions");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch sessions");
+  }
+}
+
+export async function revokeSession(
+  sessionId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await authApi.delete(`/users/sessions/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "revoke session");
+  }
+}
+
+export async function revokeAllUserSessions(
+  userId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await authApi.post("/users/sessions/revoke-all", {
+      targetUserId: userId,
+      exceptCurrent: false,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "revoke all user sessions");
   }
 }
 

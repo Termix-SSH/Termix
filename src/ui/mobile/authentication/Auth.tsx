@@ -244,12 +244,6 @@ export function Auth({
       setUsername(meRes.username || null);
       setUserId(meRes.userId || null);
       setDbError(null);
-      onAuthSuccess({
-        isAdmin: !!meRes.is_admin,
-        username: meRes.username || null,
-        userId: meRes.userId || null,
-      });
-
       postJWTToWebView();
 
       if (isReactNativeWebView()) {
@@ -257,6 +251,12 @@ export function Auth({
         setLoading(false);
         return;
       }
+
+      onAuthSuccess({
+        isAdmin: !!meRes.is_admin,
+        username: meRes.username || null,
+        userId: meRes.userId || null,
+      });
 
       setInternalLoggedIn(true);
       if (tab === "signup") {
@@ -417,11 +417,6 @@ export function Auth({
       setUserId(res.userId || null);
       setDbError(null);
 
-      onAuthSuccess({
-        isAdmin: !!res.is_admin,
-        username: res.username || null,
-        userId: res.userId || null,
-      });
       postJWTToWebView();
 
       if (isReactNativeWebView()) {
@@ -429,6 +424,12 @@ export function Auth({
         setTotpLoading(false);
         return;
       }
+
+      onAuthSuccess({
+        isAdmin: !!res.is_admin,
+        username: res.username || null,
+        userId: res.userId || null,
+      });
 
       setInternalLoggedIn(true);
       setTotpRequired(false);
@@ -510,12 +511,6 @@ export function Auth({
           setUsername(meRes.username || null);
           setUserId(meRes.userId || null);
           setDbError(null);
-          onAuthSuccess({
-            isAdmin: !!meRes.is_admin,
-            username: meRes.username || null,
-            userId: meRes.userId || null,
-          });
-
           postJWTToWebView();
 
           if (isReactNativeWebView()) {
@@ -528,6 +523,12 @@ export function Auth({
             );
             return;
           }
+
+          onAuthSuccess({
+            isAdmin: !!meRes.is_admin,
+            username: meRes.username || null,
+            userId: meRes.userId || null,
+          });
 
           setInternalLoggedIn(true);
           window.history.replaceState(

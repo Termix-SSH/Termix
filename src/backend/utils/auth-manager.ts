@@ -578,19 +578,6 @@ class AuthManager {
           sessionId,
         });
       }
-    } else {
-      try {
-        await db.delete(sessions).where(eq(sessions.userId, userId));
-      } catch (error) {
-        databaseLogger.error(
-          "Failed to delete user sessions on logout",
-          error,
-          {
-            operation: "sessions_delete_logout_failed",
-            userId,
-          },
-        );
-      }
     }
   }
 
