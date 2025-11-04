@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
@@ -68,15 +68,18 @@ function AppContent() {
 
   const handleSelectView = () => {};
 
-  const handleAuthSuccess = (authData: {
-    isAdmin: boolean;
-    username: string | null;
-    userId: string | null;
-  }) => {
-    setIsAuthenticated(true);
-    setIsAdmin(authData.isAdmin);
-    setUsername(authData.username);
-  };
+  const handleAuthSuccess = useCallback(
+    (authData: {
+      isAdmin: boolean;
+      username: string | null;
+      userId: string | null;
+    }) => {
+      setIsAuthenticated(true);
+      setIsAdmin(authData.isAdmin);
+      setUsername(authData.username);
+    },
+    [],
+  );
 
   const currentTabData = tabs.find((tab) => tab.id === currentTab);
   const showTerminalView =

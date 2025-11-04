@@ -1252,6 +1252,7 @@
     "enterCode": "Enter verification code",
     "backupCode": "Or use backup code",
     "verifyCode": "Verify Code",
+    "redirectingToApp": "Redirecting to app...",
     "enableTwoFactor": "Enable Two-Factor Authentication",
     "disableTwoFactor": "Disable Two-Factor Authentication",
     "scanQRCode": "Scan this QR code with your authenticator app",

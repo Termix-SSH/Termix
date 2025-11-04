@@ -57,8 +57,7 @@ export function ElectronLoginForm({
           if (
             data.type === "AUTH_SUCCESS" &&
             data.token &&
-            !hasAuthenticatedRef.current &&
-            !isAuthenticating
+            !hasAuthenticatedRef.current
           ) {
             hasAuthenticatedRef.current = true;
             setIsAuthenticating(true);
@@ -110,7 +109,7 @@ export function ElectronLoginForm({
     return () => {
       window.removeEventListener("message", handleMessage);
     };
-  }, [serverUrl, isAuthenticating, onAuthSuccess, t]);
+  }, [serverUrl, onAuthSuccess, t]);
 
   useEffect(() => {
     const checkWebviewUrl = () => {

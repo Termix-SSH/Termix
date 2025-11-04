@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -104,6 +104,33 @@ export function Auth({
   const [totpTempToken, setTotpTempToken] = useState("");
   const [totpLoading, setTotpLoading] = useState(false);
   const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
+
+  const handleElectronAuthSuccess = useCallback(async () => {
+    try {
+      const meRes = await getUserInfo();
+      setInternalLoggedIn(true);
+      setLoggedIn(true);
+      setIsAdmin(!!meRes.is_admin);
+      setUsername(meRes.username || null);
+      setUserId(meRes.userId || null);
+      onAuthSuccess({
+        isAdmin: !!meRes.is_admin,
+        username: meRes.username || null,
+        userId: meRes.userId || null,
+      });
+      toast.success(t("messages.loginSuccess"));
+    } catch (err) {
+      toast.error(t("errors.failedUserInfo"));
+    }
+  }, [
+    onAuthSuccess,
+    setLoggedIn,
+    setIsAdmin,
+    setUsername,
+    setUserId,
+    t,
+    setInternalLoggedIn,
+  ]);
 
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
@@ -688,24 +715,7 @@ export function Auth({
         <div className="w-full max-w-4xl h-[90vh]">
           <ElectronLoginForm
             serverUrl={currentServerUrl}
-            onAuthSuccess={async () => {
-              try {
-                const meRes = await getUserInfo();
-                setInternalLoggedIn(true);
-                setLoggedIn(true);
-                setIsAdmin(!!meRes.is_admin);
-                setUsername(meRes.username || null);
-                setUserId(meRes.userId || null);
-                onAuthSuccess({
-                  isAdmin: !!meRes.is_admin,
-                  username: meRes.username || null,
-                  userId: meRes.userId || null,
-                });
-                toast.success(t("messages.loginSuccess"));
-              } catch (err) {
-                toast.error(t("errors.failedUserInfo"));
-              }
-            }}
+            onAuthSuccess={handleElectronAuthSuccess}
             onChangeServer={() => {
               setShowServerConfig(true);
             }}
