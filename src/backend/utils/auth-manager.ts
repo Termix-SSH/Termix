@@ -393,9 +393,40 @@ class AuthManager {
 
       const expiredCount = expiredSessions.length;
 
+      if (expiredCount === 0) {
+        return 0;
+      }
+
       await db
         .delete(sessions)
         .where(sql`${sessions.expiresAt} < datetime('now')`);
+
+      try {
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
+        await saveMemoryDatabaseToFile();
+      } catch (saveError) {
+        databaseLogger.error(
+          "Failed to save database after cleaning up expired sessions",
+          saveError,
+          {
+            operation: "sessions_cleanup_db_save_failed",
+          },
+        );
+      }
+
+      const affectedUsers = new Set(expiredSessions.map((s) => s.userId));
+      for (const userId of affectedUsers) {
+        const remainingSessions = await db
+          .select()
+          .from(sessions)
+          .where(eq(sessions.userId, userId));
+
+        if (remainingSessions.length === 0) {
+          this.userCrypto.logoutUser(userId);
+        }
+      }
 
       return expiredCount;
     } catch (error) {
@@ -504,6 +535,46 @@ class AuthManager {
               currentTime: currentTime,
               difference: currentTime - sessionExpiryTime,
             });
+
+            db.delete(sessions)
+              .where(eq(sessions.id, payload.sessionId))
+              .then(async () => {
+                try {
+                  const { saveMemoryDatabaseToFile } = await import(
+                    "../database/db/index.js"
+                  );
+                  await saveMemoryDatabaseToFile();
+
+                  const remainingSessions = await db
+                    .select()
+                    .from(sessions)
+                    .where(eq(sessions.userId, payload.userId));
+
+                  if (remainingSessions.length === 0) {
+                    this.userCrypto.logoutUser(payload.userId);
+                  }
+                } catch (cleanupError) {
+                  databaseLogger.error(
+                    "Failed to cleanup after expired session",
+                    cleanupError,
+                    {
+                      operation: "expired_session_cleanup_failed",
+                      sessionId: payload.sessionId,
+                    },
+                  );
+                }
+              })
+              .catch((error) => {
+                databaseLogger.error(
+                  "Failed to delete expired session",
+                  error,
+                  {
+                    operation: "expired_session_delete_failed",
+                    sessionId: payload.sessionId,
+                  },
+                );
+              });
+
             return res.status(401).json({
               error: "Session has expired",
               code: "SESSION_EXPIRED",
