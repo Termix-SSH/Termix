@@ -267,6 +267,11 @@ class AuthManager {
             .limit(1);
 
           if (sessionRecords.length === 0) {
+            databaseLogger.warn("Session not found during JWT verification", {
+              operation: "jwt_verify_session_not_found",
+              sessionId: payload.sessionId,
+              userId: payload.userId,
+            });
             return null;
           }
         } catch (dbError) {
@@ -278,6 +283,7 @@ class AuthManager {
               sessionId: payload.sessionId,
             },
           );
+          return null;
         }
       }
       return payload;
@@ -298,6 +304,22 @@ class AuthManager {
   async revokeSession(sessionId: string): Promise<boolean> {
     try {
       await db.delete(sessions).where(eq(sessions.id, sessionId));
+
+      try {
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
+        await saveMemoryDatabaseToFile();
+      } catch (saveError) {
+        databaseLogger.error(
+          "Failed to save database after session revocation",
+          saveError,
+          {
+            operation: "session_revoke_db_save_failed",
+            sessionId,
+          },
+        );
+      }
 
       return true;
     } catch (error) {
@@ -334,6 +356,22 @@ class AuthManager {
           );
       } else {
         await db.delete(sessions).where(eq(sessions.userId, userId));
+      }
+
+      try {
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
+        await saveMemoryDatabaseToFile();
+      } catch (saveError) {
+        databaseLogger.error(
+          "Failed to save database after revoking all user sessions",
+          saveError,
+          {
+            operation: "user_sessions_revoke_db_save_failed",
+            userId,
+          },
+        );
       }
 
       return deletedCount;
@@ -440,6 +478,11 @@ class AuthManager {
             .limit(1);
 
           if (sessionRecords.length === 0) {
+            databaseLogger.warn("Session not found in middleware", {
+              operation: "middleware_session_not_found",
+              sessionId: payload.sessionId,
+              userId: payload.userId,
+            });
             return res.status(401).json({
               error: "Session not found",
               code: "SESSION_NOT_FOUND",
@@ -479,10 +522,11 @@ class AuthManager {
               });
             });
         } catch (error) {
-          databaseLogger.error("Session check failed", error, {
-            operation: "session_check_failed",
+          databaseLogger.error("Session check failed in middleware", error, {
+            operation: "middleware_session_check_failed",
             sessionId: payload.sessionId,
           });
+          return res.status(500).json({ error: "Session check failed" });
         }
       }
 

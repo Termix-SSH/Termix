@@ -2358,8 +2358,9 @@ router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
         operation: "session_revoke",
         sessionId,
         revokedBy: userId,
+        sessionUserId: session.userId,
       });
-      res.json({ message: "Session revoked successfully" });
+      res.json({ success: true, message: "Session revoked successfully" });
     } else {
       res.status(500).json({ error: "Failed to revoke session" });
     }

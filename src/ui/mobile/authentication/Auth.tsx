@@ -239,7 +239,6 @@ export function Auth({
 
       const [meRes] = await Promise.all([getUserInfo()]);
 
-      setLoggedIn(true);
       setIsAdmin(!!meRes.is_admin);
       setUsername(meRes.username || null);
       setUserId(meRes.userId || null);
@@ -252,6 +251,7 @@ export function Auth({
         return;
       }
 
+      setLoggedIn(true);
       onAuthSuccess({
         isAdmin: !!meRes.is_admin,
         username: meRes.username || null,
@@ -411,7 +411,6 @@ export function Auth({
         localStorage.setItem("jwt", res.token);
       }
 
-      setLoggedIn(true);
       setIsAdmin(!!res.is_admin);
       setUsername(res.username || null);
       setUserId(res.userId || null);
@@ -425,6 +424,7 @@ export function Auth({
         return;
       }
 
+      setLoggedIn(true);
       onAuthSuccess({
         isAdmin: !!res.is_admin,
         username: res.username || null,
@@ -506,7 +506,6 @@ export function Auth({
 
       getUserInfo()
         .then((meRes) => {
-          setLoggedIn(true);
           setIsAdmin(!!meRes.is_admin);
           setUsername(meRes.username || null);
           setUserId(meRes.userId || null);
@@ -524,6 +523,7 @@ export function Auth({
             return;
           }
 
+          setLoggedIn(true);
           onAuthSuccess({
             isAdmin: !!meRes.is_admin,
             username: meRes.username || null,
@@ -578,21 +578,14 @@ export function Auth({
     </svg>
   );
 
-  return (
-    <div
-      className={`w-full max-w-md flex flex-col bg-dark-bg overflow-y-auto my-2 ${className || ""}`}
-      style={{ maxHeight: "calc(100vh - 1rem)" }}
-      {...props}
-    >
-      {isReactNativeWebView() && !mobileAuthSuccess && (
-        <Alert className="mb-4 border-blue-500 bg-blue-500/10">
-          <Smartphone className="h-4 w-4" />
-          <AlertTitle>{t("auth.mobileApp")}</AlertTitle>
-          <AlertDescription>{t("auth.loggingInToMobileApp")}</AlertDescription>
-        </Alert>
-      )}
-      {isReactNativeWebView() && mobileAuthSuccess && (
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
+  if (isReactNativeWebView() && mobileAuthSuccess) {
+    return (
+      <div
+        className={`w-full max-w-md flex flex-col bg-dark-bg overflow-y-auto my-2 ${className || ""}`}
+        style={{ maxHeight: "calc(100vh - 1rem)" }}
+        {...props}
+      >
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 px-4">
           <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
             <svg
               className="w-10 h-10 text-green-500"
@@ -617,6 +610,22 @@ export function Auth({
             </p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`w-full max-w-md flex flex-col bg-dark-bg overflow-y-auto my-2 ${className || ""}`}
+      style={{ maxHeight: "calc(100vh - 1rem)" }}
+      {...props}
+    >
+      {isReactNativeWebView() && !mobileAuthSuccess && (
+        <Alert className="mb-4 border-blue-500 bg-blue-500/10">
+          <Smartphone className="h-4 w-4" />
+          <AlertTitle>{t("auth.mobileApp")}</AlertTitle>
+          <AlertDescription>{t("auth.loggingInToMobileApp")}</AlertDescription>
+        </Alert>
       )}
       {!mobileAuthSuccess && error && (
         <Alert variant="destructive" className="mb-4">

@@ -12,6 +12,10 @@ import { Auth } from "@/ui/mobile/authentication/Auth.tsx";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner.tsx";
 
+function isReactNativeWebView(): boolean {
+  return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
+}
+
 const AppContent: FC = () => {
   const { t } = useTranslation();
   const { tabs, currentTab, getTab } = useTabs();
@@ -114,7 +118,7 @@ const AppContent: FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || isReactNativeWebView()) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-dark-bg p-4">
         <Auth
