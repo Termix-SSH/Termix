@@ -22,6 +22,10 @@ export function detectPlatform(req: Request): DeviceType {
     return "mobile";
   }
 
+  if (userAgent.includes("Android")) {
+    return "mobile";
+  }
+
   return "web";
 }
 

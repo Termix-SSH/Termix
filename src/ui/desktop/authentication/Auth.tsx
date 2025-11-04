@@ -103,6 +103,7 @@ export function Auth({
   const [totpCode, setTotpCode] = useState("");
   const [totpTempToken, setTotpTempToken] = useState("");
   const [totpLoading, setTotpLoading] = useState(false);
+  const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
 
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
@@ -241,6 +242,9 @@ export function Auth({
             },
             "*",
           );
+          setWebviewAuthSuccess(true);
+          setLoading(false);
+          return;
         } catch (e) {}
       }
 
@@ -414,6 +418,9 @@ export function Auth({
             },
             "*",
           );
+          setWebviewAuthSuccess(true);
+          setTotpLoading(false);
+          return;
         } catch (e) {}
       }
 
@@ -518,6 +525,9 @@ export function Auth({
                   },
                   "*",
                 );
+                setWebviewAuthSuccess(true);
+                setOidcLoading(false);
+                return;
               } catch (e) {}
             }
           }
@@ -791,14 +801,41 @@ export function Auth({
       style={{ maxHeight: "calc(100vh - 1rem)" }}
       {...props}
     >
-      {isInElectronWebView() && (
+      {isInElectronWebView() && !webviewAuthSuccess && (
         <Alert className="mb-4 border-blue-500 bg-blue-500/10">
           <Monitor className="h-4 w-4" />
           <AlertTitle>{t("auth.desktopApp")}</AlertTitle>
           <AlertDescription>{t("auth.loggingInToDesktopApp")}</AlertDescription>
         </Alert>
       )}
-      {totpRequired && (
+      {isInElectronWebView() && webviewAuthSuccess && (
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
+            <svg
+              className="w-10 h-10 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <div className="text-center">
+            <h2 className="text-xl font-bold mb-2">
+              {t("messages.loginSuccess")}
+            </h2>
+            <p className="text-muted-foreground">
+              {t("auth.redirectingToApp")}
+            </p>
+          </div>
+        </div>
+      )}
+      {!webviewAuthSuccess && totpRequired && (
         <div className="flex flex-col gap-5">
           <div className="mb-6 text-center">
             <h2 className="text-xl font-bold mb-1">
@@ -850,7 +887,7 @@ export function Auth({
         </div>
       )}
 
-      {!loggedIn && !authLoading && !totpRequired && (
+      {!webviewAuthSuccess && !loggedIn && !authLoading && !totpRequired && (
         <>
           {(() => {
             const hasLogin = passwordLoginAllowed && !firstUser;
