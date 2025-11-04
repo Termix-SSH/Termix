@@ -18,6 +18,7 @@ const languages = [
     name: "Brazilian Portuguese",
     nativeName: "Português Brasileiro",
   },
+  { code: "ru", name: "Russian", nativeName: "Русский" },
 ];
 
 export function LanguageSwitcher() {

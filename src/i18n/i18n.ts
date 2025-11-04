@@ -6,12 +6,13 @@ import enTranslation from "../locales/en/translation.json";
 import zhTranslation from "../locales/zh/translation.json";
 import deTranslation from "../locales/de/translation.json";
 import ptbrTranslation from "../locales/pt-BR/translation.json";
+import ruTranslation from "../locales/ru/translation.json";
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    supportedLngs: ["en", "zh", "de", "ptbr"],
+    supportedLngs: ["en", "zh", "de", "ptbr", "ru"],
     fallbackLng: "en",
     debug: false,
 
@@ -35,6 +36,9 @@ i18n
       },
       ptbr: {
         translation: ptbrTranslation,
+      },
+      ru: {
+        translation: ruTranslation,
       },
     },
 
