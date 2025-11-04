@@ -610,11 +610,36 @@ class AuthManager {
   }
 
   async logoutUser(userId: string, sessionId?: string): Promise<void> {
-    this.userCrypto.logoutUser(userId);
-
     if (sessionId) {
       try {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
+
+        try {
+          const { saveMemoryDatabaseToFile } = await import(
+            "../database/db/index.js"
+          );
+          await saveMemoryDatabaseToFile();
+        } catch (saveError) {
+          databaseLogger.error(
+            "Failed to save database after logout",
+            saveError,
+            {
+              operation: "logout_db_save_failed",
+              userId,
+              sessionId,
+            },
+          );
+        }
+
+        const remainingSessions = await db
+          .select()
+          .from(sessions)
+          .where(eq(sessions.userId, userId));
+
+        if (remainingSessions.length === 0) {
+          this.userCrypto.logoutUser(userId);
+        } else {
+        }
       } catch (error) {
         databaseLogger.error("Failed to delete session on logout", error, {
           operation: "session_delete_logout_failed",
@@ -622,6 +647,8 @@ class AuthManager {
           sessionId,
         });
       }
+    } else {
+      this.userCrypto.logoutUser(userId);
     }
   }
 
