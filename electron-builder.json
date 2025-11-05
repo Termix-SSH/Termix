@@ -64,6 +64,9 @@
         "arch": ["x64", "arm64", "armv7l"]
       }
     ],
+    "portable": {
+      "artifactName": "termix_linux_${arch}_portable.${ext}"
+    },
     "icon": "public/icon.png",
     "category": "Development",
     "executableName": "termix",
