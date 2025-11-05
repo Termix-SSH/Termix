@@ -2,6 +2,9 @@
   "appId": "com.karmaa.termix",
   "productName": "Termix",
   "publish": null,
+  "portable": {
+    "artifactName": "termix_${os}_${arch}_portable.${ext}"
+  },
   "directories": {
     "output": "release"
   },
@@ -83,9 +86,7 @@
   "deb": {
     "artifactName": "termix_linux_${arch}_deb.${ext}"
   },
-  "tar": {
-    "artifactName": "termix_linux_${arch}_portable.${ext}"
-  },
+
   "mac": {
     "target": [
       {
