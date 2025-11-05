@@ -345,15 +345,7 @@ function createApiInstance(
             window.location.reload();
           });
 
-          const currentPath = window.location.pathname;
-          const isOnAuthPage =
-            currentPath === "/" ||
-            currentPath === "/login" ||
-            currentPath === "/auth";
-
-          if (!isOnAuthPage) {
-            setTimeout(() => window.location.reload(), 1000);
-          }
+          setTimeout(() => window.location.reload(), 1000);
         }
       }
 

@@ -1340,7 +1340,7 @@
     "forbidden": "Access forbidden",
     "serverError": "Server error",
     "networkError": "Network error",
-    "databaseConnection": "Could not connect to the database.",
+    "databaseConnection": "Could not connect to the database",
     "unknownError": "Unknown error",
     "loginFailed": "Login failed",
     "failedPasswordReset": "Failed to initiate password reset",
