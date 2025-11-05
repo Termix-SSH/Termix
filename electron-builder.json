@@ -61,8 +61,7 @@
       },
       {
         "target": "tar.gz",
-        "arch": ["x64", "arm64", "armv7l"],
-        "artifactName": "termix_linux_${arch}_portable.${ext}"
+        "arch": ["x64", "arm64", "armv7l"]
       }
     ],
     "icon": "public/icon.png",
@@ -83,6 +82,9 @@
   },
   "deb": {
     "artifactName": "termix_linux_${arch}_deb.${ext}"
+  },
+  "tar": {
+    "artifactName": "termix_linux_${arch}_portable.${ext}"
   },
   "mac": {
     "target": [
