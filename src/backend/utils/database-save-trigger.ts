@@ -71,11 +71,6 @@ export class DatabaseSaveTrigger {
     this.pendingSave = true;
 
     try {
-      databaseLogger.info("Force saving database", {
-        operation: "db_save_trigger_force_start",
-        reason,
-      });
-
       await this.saveFunction();
     } catch (error) {
       databaseLogger.error("Database force save failed", error, {
@@ -110,9 +105,5 @@ export class DatabaseSaveTrigger {
     this.pendingSave = false;
     this.isInitialized = false;
     this.saveFunction = null;
-
-    databaseLogger.info("Database save trigger cleaned up", {
-      operation: "db_save_trigger_cleanup",
-    });
   }
 }

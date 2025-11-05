@@ -1,6 +1,7 @@
 {
-  "appId": "com.termix.app",
+  "appId": "com.karmaa.termix",
   "productName": "Termix",
+  "publish": null,
   "directories": {
     "output": "release"
   },
@@ -21,35 +22,53 @@
   },
   "buildDependenciesFromSource": false,
   "nodeGypRebuild": false,
-  "npmRebuild": false,
+  "npmRebuild": true,
   "win": {
-    "target": "nsis",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      },
+      {
+        "target": "msi",
+        "arch": ["x64", "ia32"]
+      }
+    ],
     "icon": "public/icon.ico",
     "executableName": "Termix"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "artifactName": "termix_windows_${arch}_nsis.${ext}",
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Termix",
     "uninstallDisplayName": "Termix"
   },
+  "msi": {
+    "artifactName": "termix_windows_${arch}_msi.${ext}"
+  },
   "linux": {
+    "artifactName": "termix_linux_${arch}_portable.${ext}",
     "target": [
       {
         "target": "AppImage",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64", "armv7l"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64", "arm64", "armv7l"]
       },
       {
         "target": "tar.gz",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64", "armv7l"]
       }
     ],
     "icon": "public/icon.png",
     "category": "Development",
     "executableName": "termix",
+    "maintainer": "Termix <mail@termix.site>",
     "desktop": {
       "entry": {
         "Name": "Termix",
@@ -57,6 +76,53 @@
         "Keywords": "terminal;ssh;server;management;",
         "StartupWMClass": "termix"
       }
+    }
+  },
+  "appImage": {
+    "artifactName": "termix_linux_${arch}_appimage.${ext}"
+  },
+  "deb": {
+    "artifactName": "termix_linux_${arch}_deb.${ext}"
+  },
+
+  "mac": {
+    "target": [
+      {
+        "target": "mas",
+        "arch": "universal"
+      },
+      {
+        "target": "dmg",
+        "arch": ["universal", "x64", "arm64"]
+      }
+    ],
+    "icon": "public/icon.icns",
+    "category": "public.app-category.developer-tools",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+    "type": "distribution",
+    "minimumSystemVersion": "10.15"
+  },
+  "dmg": {
+    "artifactName": "termix_macos_${arch}_dmg.${ext}",
+    "sign": true
+  },
+  "afterSign": "build/notarize.cjs",
+  "mas": {
+    "provisioningProfile": "build/Termix_Mac_App_Store.provisionprofile",
+    "entitlements": "build/entitlements.mas.plist",
+    "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
+    "asarUnpack": ["**/*.node"],
+    "type": "distribution",
+    "category": "public.app-category.developer-tools",
+    "artifactName": "termix_macos_${arch}_mas.${ext}",
+    "extendInfo": {
+      "ITSAppUsesNonExemptEncryption": false,
+      "NSAppleEventsUsageDescription": "Termix needs access to control other applications for terminal operations."
     }
   }
 }

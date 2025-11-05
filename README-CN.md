@@ -1,7 +1,7 @@
 # 仓库统计
 
 <p align="center">
-  <a href="README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> 英文</a> | 
+  <a href="README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> 英文</a> |
   <img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文
 </p>
 
@@ -44,22 +44,24 @@
 </p>
 
 Termix 是一个开源、永久免费、自托管的一体化服务器管理平台。它提供了一个基于网页的解决方案，通过一个直观的界面管理你的服务器和基础设施。Termix
-提供 SSH 终端访问、SSH 隧道功能以及远程文件管理，还会陆续添加更多工具。
+提供 SSH 终端访问、SSH 隧道功能以及远程文件管理，还会陆续添加更多工具。Termix 是适用于所有平台的完美免费自托管 Termius 替代品。
 
 # 功能
 
-- **SSH 终端访问** - 功能完整的终端，支持分屏（最多 4 个面板）和标签系统
-- **SSH 隧道管理** - 创建和管理 SSH 隧道，支持自动重连和健康监控
-- **远程文件管理器** - 直接在远程服务器上管理文件，支持查看和编辑代码、图片、音频和视频。无缝上传、下载、重命名、删除和移动文件。
-- **SSH 主机管理器** - 保存、组织和管理 SSH 连接，支持标签和文件夹，轻松保存可重用的登录信息，同时能够自动部署 SSH 密钥
-- **服务器统计** - 查看任意 SSH 服务器的 CPU、内存和硬盘使用情况
-- **用户认证** - 安全的用户管理，支持管理员控制、OIDC 和双因素认证（TOTP）
-- **数据库加密** - SQLite 数据库文件在静态时加密，支持自动加密/解密
-- **数据导出/导入** - 导出和导入 SSH 主机、凭据和文件管理器数据，支持增量同步
+- **SSH 终端访问** - 功能齐全的终端，具有分屏支持（最多 4 个面板）和类似浏览器的选项卡系统。包括对自定义终端的支持，包括常见终端主题、字体和其他组件
+- **SSH 隧道管理** - 创建和管理 SSH 隧道，具有自动重新连接和健康监控功能
+- **远程文件管理器** - 直接在远程服务器上管理文件，支持查看和编辑代码、图像、音频和视频。无缝上传、下载、重命名、删除和移动文件
+- **SSH 主机管理器** - 保存、组织和管理您的 SSH 连接，支持标签和文件夹，并轻松保存可重用的登录信息，同时能够自动部署 SSH 密钥
+- **服务器统计** - 在任何 SSH 服务器上查看 CPU、内存和磁盘使用情况以及网络、正常运行时间和系统信息
+- **仪表板** - 在仪表板上一目了然地查看服务器信息
+- **用户认证** - 安全的用户管理，具有管理员控制以及 OIDC 和 2FA (TOTP) 支持。查看所有平台上的活动用户会话并撤销权限。
+- **数据库加密** - 后端存储为加密的 SQLite 数据库文件
+- **数据导出/导入** - 导出和导入 SSH 主机、凭据和文件管理器数据
 - **自动 SSL 设置** - 内置 SSL 证书生成和管理，支持 HTTPS 重定向
-- **现代化界面** - 使用 React、Tailwind CSS 和 Shadcn 构建的简洁桌面/移动友好界面
-- **语言支持** - 内置英语、中文和德语支持
-- **平台支持** - 提供 Web 应用、桌面应用程序（Windows 和 Linux）以及 iOS 和 Android 专用移动应用。计划支持 macOS 和 iPadOS。
+- **现代用户界面** - 使用 React、Tailwind CSS 和 Shadcn 构建的简洁的桌面/移动设备友好界面
+- **语言** - 内置支持英语、中文、德语和葡萄牙语
+- **平台支持** - 可作为 Web 应用程序、桌面应用程序（Windows、Linux 和 macOS）以及适用于 iOS 和 Android 的专用移动/平板电脑应用程序。
+- **SSH 工具** - 创建可重用的命令片段，单击即可执行。在多个打开的终端上同时运行一个命令。
 
 # 计划功能
 
@@ -69,14 +71,28 @@ Termix 是一个开源、永久免费、自托管的一体化服务器管理平�
 
 支持的设备：
 
-- 网站（任何现代浏览器，如 Google、Safari 和 Firefox）
-- Windows（应用程序）
-- Linux（应用程序）
-- iOS（应用程序）
-- Android（应用程序）
-- iPadOS 和 macOS 正在开发中
+- 网站（任何平台上的任何现代浏览器，如 Chrome、Safari 和 Firefox）
+- Windows（x64/ia32）
+  - 便携版
+  - MSI 安装程序
+  - Chocolatey 软件包管理器
+- Linux（x64/ia32）
+  - 便携版
+  - AppImage
+  - Deb
+  - Flatpak
+- macOS（x64/ia32 on v12.0+）
+  - Apple App Store
+  - DMG
+  - Homebrew
+- iOS/iPadOS（v15.1+）
+  - Apple App Store
+  - ISO
+- Android（v7.0+）
+  - Google Play 商店
+  - APK
 
-访问 Termix [文档](https://docs.termix.site/install) 获取所有平台的安装信息。或者可以参考以下示例 docker-compose 文件：
+访问 Termix [文档](https://docs.termix.site/install) 了解有关如何在所有平台上安装 Termix 的更多信息。或者，在此处查看示例 Docker Compose 文件：
 
 ```yaml
 services:
@@ -128,6 +144,7 @@ volumes:
     你的浏览器不支持 video 标签。
   </video>
 </p>
+视频和图像可能已过时。
 
 # 许可证
 

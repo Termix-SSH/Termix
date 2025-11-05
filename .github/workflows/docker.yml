@@ -6,11 +6,14 @@ on:
       version:
         description: "Version to build (e.g., 1.8.0)"
         required: true
-      production:
-        description: "Is this a production build?"
+      build_type:
+        description: "Build type"
         required: true
-        default: false
-        type: boolean
+        default: "Development"
+        type: choice
+        options:
+          - Development
+          - Production
 
 jobs:
   build:
@@ -33,29 +36,25 @@ jobs:
         id: tags
         run: |
           VERSION=${{ github.event.inputs.version }}
-          PROD=${{ github.event.inputs.production }}
+          BUILD_TYPE=${{ github.event.inputs.build_type }}
 
           TAGS=()
           ALL_TAGS=()
 
-          if [ "$PROD" = "true" ]; then
-            # Production build → push release + latest to both GHCR and Docker Hub
+          if [ "$BUILD_TYPE" = "Production" ]; then
             TAGS+=("release-$VERSION" "latest")
             for tag in "${TAGS[@]}"; do
               ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
               ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
             done
           else
-            # Dev build → push only dev-x.x.x to GHCR
             TAGS+=("dev-$VERSION")
             for tag in "${TAGS[@]}"; do
               ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
             done
           fi
 
-          echo "ALL_TAGS=${ALL_TAGS[*]}" >> $GITHUB_ENV
-          echo "All tags to build:"
-          printf '%s\n' "${ALL_TAGS[@]}"
+          echo "ALL_TAGS=$(printf '%s\n' "${ALL_TAGS[@]}")" >> $GITHUB_ENV
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -65,7 +64,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Login to Docker Hub (prod only)
-        if: ${{ github.event.inputs.production == 'true' }}
+        if: ${{ github.event.inputs.build_type == 'Production' }}
         uses: docker/login-action@v3
         with:
           username: bugattiguy527

@@ -2,10 +2,10 @@ import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
 import { DataCrypto } from "./data-crypto.js";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
-type TableName = "users" | "ssh_data" | "ssh_credentials";
+type TableName = "users" | "ssh_data" | "ssh_credentials" | "recent_activity";
 
 class SimpleDBOps {
-  static async insert<T extends Record<string, any>>(
+  static async insert<T extends Record<string, unknown>>(
     table: SQLiteTable<any>,
     tableName: TableName,
     data: T,
@@ -44,8 +44,8 @@ class SimpleDBOps {
     return decryptedResult as T;
   }
 
-  static async select<T extends Record<string, any>>(
-    query: any,
+  static async select<T extends Record<string, unknown>>(
+    query: unknown,
     tableName: TableName,
     userId: string,
   ): Promise<T[]> {
@@ -56,9 +56,9 @@ class SimpleDBOps {
 
     const results = await query;
 
-    const decryptedResults = DataCrypto.decryptRecords(
+    const decryptedResults = DataCrypto.decryptRecords<T>(
       tableName,
-      results,
+      results as T[],
       userId,
       userDataKey,
     );
@@ -66,8 +66,8 @@ class SimpleDBOps {
     return decryptedResults;
   }
 
-  static async selectOne<T extends Record<string, any>>(
-    query: any,
+  static async selectOne<T extends Record<string, unknown>>(
+    query: unknown,
     tableName: TableName,
     userId: string,
   ): Promise<T | undefined> {
@@ -79,9 +79,9 @@ class SimpleDBOps {
     const result = await query;
     if (!result) return undefined;
 
-    const decryptedResult = DataCrypto.decryptRecord(
+    const decryptedResult = DataCrypto.decryptRecord<T>(
       tableName,
-      result,
+      result as T,
       userId,
       userDataKey,
     );
@@ -89,10 +89,10 @@ class SimpleDBOps {
     return decryptedResult;
   }
 
-  static async update<T extends Record<string, any>>(
+  static async update<T extends Record<string, unknown>>(
     table: SQLiteTable<any>,
     tableName: TableName,
-    where: any,
+    where: unknown,
     data: Partial<T>,
     userId: string,
   ): Promise<T[]> {
@@ -108,7 +108,7 @@ class SimpleDBOps {
     const result = await getDb()
       .update(table)
       .set(encryptedData)
-      .where(where)
+      .where(where as any)
       .returning();
 
     DatabaseSaveTrigger.triggerSave(`update_${tableName}`);
@@ -126,10 +126,12 @@ class SimpleDBOps {
   static async delete(
     table: SQLiteTable<any>,
     tableName: TableName,
-    where: any,
-    userId: string,
-  ): Promise<any[]> {
-    const result = await getDb().delete(table).where(where).returning();
+    where: unknown,
+  ): Promise<unknown[]> {
+    const result = await getDb()
+      .delete(table)
+      .where(where as any)
+      .returning();
 
     DatabaseSaveTrigger.triggerSave(`delete_${tableName}`);
 
@@ -144,13 +146,10 @@ class SimpleDBOps {
     return DataCrypto.getUserDataKey(userId) !== null;
   }
 
-  static async selectEncrypted(
-    query: any,
-    tableName: TableName,
-  ): Promise<any[]> {
+  static async selectEncrypted(query: unknown): Promise<unknown[]> {
     const results = await query;
 
-    return results;
+    return results as unknown[];
   }
 }
 

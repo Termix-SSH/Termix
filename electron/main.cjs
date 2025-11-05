@@ -1,22 +1,34 @@
-const { app, BrowserWindow, shell, ipcMain, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  dialog,
+  Menu,
+} = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+
+if (process.platform === "linux") {
+  app.commandLine.appendSwitch("--no-sandbox");
+  app.commandLine.appendSwitch("--disable-setuid-sandbox");
+  app.commandLine.appendSwitch("--disable-dev-shm-usage");
+
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch("--disable-gpu");
+  app.commandLine.appendSwitch("--disable-gpu-compositing");
+}
 
 app.commandLine.appendSwitch("--ignore-certificate-errors");
 app.commandLine.appendSwitch("--ignore-ssl-errors");
 app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
-if (process.platform === "linux") {
-  app.commandLine.appendSwitch("--no-sandbox");
-  app.commandLine.appendSwitch("--disable-setuid-sandbox");
-  app.commandLine.appendSwitch("--disable-dev-shm-usage");
-}
-
 let mainWindow = null;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -34,39 +46,130 @@ if (!gotTheLock) {
 }
 
 function createWindow() {
+  const appVersion = app.getVersion();
+  const electronVersion = process.versions.electron;
+  const platform =
+    process.platform === "win32"
+      ? "Windows"
+      : process.platform === "darwin"
+        ? "macOS"
+        : "Linux";
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     title: "Termix",
-    icon: isDev
-      ? path.join(__dirname, "..", "public", "icon.png")
-      : path.join(process.resourcesPath, "public", "icon.png"),
+    icon: path.join(appRoot, "public", "icon.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true,
+      webSecurity: false,
       preload: path.join(__dirname, "preload.js"),
+      partition: "persist:termix",
+      allowRunningInsecureContent: true,
+      webviewTag: true,
+      offscreen: false,
     },
-    show: false,
+    show: true,
   });
 
   if (process.platform !== "darwin") {
     mainWindow.setMenuBarVisibility(false);
   }
 
+  const customUserAgent = `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`;
+  mainWindow.webContents.setUserAgent(customUserAgent);
+
+  mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
+    (details, callback) => {
+      details.requestHeaders["X-Electron-App"] = "true";
+
+      details.requestHeaders["User-Agent"] = customUserAgent;
+
+      callback({ requestHeaders: details.requestHeaders });
+    },
+  );
+
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    const indexPath = path.join(__dirname, "..", "dist", "index.html");
-    mainWindow.loadFile(indexPath);
+    const indexPath = path.join(appRoot, "dist", "index.html");
+    mainWindow.loadFile(indexPath).catch((err) => {
+      console.error("Failed to load file:", err);
+    });
   }
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      const headers = details.responseHeaders;
+
+      if (headers) {
+        delete headers["x-frame-options"];
+        delete headers["X-Frame-Options"];
+
+        if (headers["content-security-policy"]) {
+          headers["content-security-policy"] = headers[
+            "content-security-policy"
+          ]
+            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
+            .filter((value) => value.trim().length > 0);
+
+          if (headers["content-security-policy"].length === 0) {
+            delete headers["content-security-policy"];
+          }
+        }
+        if (headers["Content-Security-Policy"]) {
+          headers["Content-Security-Policy"] = headers[
+            "Content-Security-Policy"
+          ]
+            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
+            .filter((value) => value.trim().length > 0);
+
+          if (headers["Content-Security-Policy"].length === 0) {
+            delete headers["Content-Security-Policy"];
+          }
+        }
+
+        if (headers["set-cookie"]) {
+          headers["set-cookie"] = headers["set-cookie"].map((cookie) => {
+            let modified = cookie.replace(
+              /;\s*SameSite=Strict/gi,
+              "; SameSite=None",
+            );
+            modified = modified.replace(
+              /;\s*SameSite=Lax/gi,
+              "; SameSite=None",
+            );
+            if (!modified.includes("SameSite=")) {
+              modified += "; SameSite=None";
+            }
+            if (
+              !modified.includes("Secure") &&
+              details.url.startsWith("https")
+            ) {
+              modified += "; Secure";
+            }
+            return modified;
+          });
+        }
+      }
+
+      callback({ responseHeaders: headers });
+    },
+  );
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
   });
+
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+  }, 3000);
 
   mainWindow.webContents.on(
     "did-fail-load",
@@ -82,13 +185,6 @@ function createWindow() {
 
   mainWindow.webContents.on("did-finish-load", () => {
     console.log("Frontend loaded successfully");
-  });
-
-  mainWindow.on("close", (event) => {
-    if (process.platform === "darwin") {
-      event.preventDefault();
-      mainWindow.hide();
-    }
   });
 
   mainWindow.on("closed", () => {
@@ -462,21 +558,78 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   }
 });
 
+function createMenu() {
+  if (process.platform === "darwin") {
+    const template = [
+      {
+        label: app.name,
+        submenu: [
+          { role: "about" },
+          { type: "separator" },
+          { role: "services" },
+          { type: "separator" },
+          { role: "hide" },
+          { role: "hideOthers" },
+          { role: "unhide" },
+          { type: "separator" },
+          { role: "quit" },
+        ],
+      },
+      {
+        label: "Edit",
+        submenu: [
+          { role: "undo" },
+          { role: "redo" },
+          { type: "separator" },
+          { role: "cut" },
+          { role: "copy" },
+          { role: "paste" },
+          { role: "selectAll" },
+        ],
+      },
+      {
+        label: "View",
+        submenu: [
+          { role: "reload" },
+          { role: "forceReload" },
+          { role: "toggleDevTools" },
+          { type: "separator" },
+          { role: "resetZoom" },
+          { role: "zoomIn" },
+          { role: "zoomOut" },
+          { type: "separator" },
+          { role: "togglefullscreen" },
+        ],
+      },
+      {
+        label: "Window",
+        submenu: [
+          { role: "minimize" },
+          { role: "zoom" },
+          { type: "separator" },
+          { role: "front" },
+          { type: "separator" },
+          { role: "window" },
+        ],
+      },
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+  }
+}
+
 app.whenReady().then(() => {
+  createMenu();
   createWindow();
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  app.quit();
 });
 
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
-  } else if (mainWindow) {
-    mainWindow.show();
   }
 });
 

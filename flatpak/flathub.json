@@ -1,0 +1,5 @@
+{
+  "only-arches": ["x86_64", "aarch64"],
+  "skip-icons-check": false,
+  "skip-appstream-check": false
+}

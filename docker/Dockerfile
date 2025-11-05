@@ -2,16 +2,12 @@
 FROM node:22-slim AS deps
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/* 
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 
-ENV npm_config_target_platform=linux
-ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
-
 RUN rm -rf node_modules package-lock.json && \
-    npm install --force && \
+    npm install --ignore-scripts --force && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -31,10 +27,6 @@ WORKDIR /app
 
 COPY . .
 
-ENV npm_config_target_platform=linux
-ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
-
 RUN npm rebuild better-sqlite3 --force
 
 RUN npm run build:backend
@@ -46,10 +38,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
-
-ENV npm_config_target_platform=linux
-ENV npm_config_target_arch=x64
-ENV npm_config_target_libc=glibc
 
 RUN npm ci --only=production --ignore-scripts --force && \
     npm rebuild better-sqlite3 bcryptjs --force && \
@@ -82,7 +70,7 @@ COPY --chown=node:node package.json ./
 
 VOLUME ["/app/data"]
 
-EXPOSE ${PORT} 30001 30002 30003 30004 30005
+EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

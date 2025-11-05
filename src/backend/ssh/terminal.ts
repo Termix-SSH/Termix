@@ -1,13 +1,56 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
-import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
+import {
+  Client,
+  type ClientChannel,
+  type PseudoTtyOptions,
+  type ConnectConfig,
+} from "ssh2";
 import { parse as parseUrl } from "url";
+import axios from "axios";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials } from "../database/db/schema.js";
+import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
+
+interface ConnectToHostData {
+  cols: number;
+  rows: number;
+  hostConfig: {
+    id: number;
+    ip: string;
+    port: number;
+    username: string;
+    password?: string;
+    key?: string;
+    keyPassword?: string;
+    keyType?: string;
+    authType?: string;
+    credentialId?: number;
+    userId?: string;
+    forceKeyboardInteractive?: boolean;
+  };
+  initialPath?: string;
+  executeCommand?: string;
+}
+
+interface ResizeData {
+  cols: number;
+  rows: number;
+}
+
+interface TOTPResponseData {
+  code?: string;
+}
+
+interface WebSocketMessage {
+  type: string;
+  data?: ConnectToHostData | ResizeData | TOTPResponseData | string | unknown;
+  code?: string;
+  [key: string]: unknown;
+}
 
 const authManager = AuthManager.getInstance();
 const userCrypto = UserCrypto.getInstance();
@@ -22,47 +65,21 @@ const wss = new WebSocketServer({
       const token = url.query.token as string;
 
       if (!token) {
-        sshLogger.warn("WebSocket connection rejected: missing token", {
-          operation: "websocket_auth_reject",
-          reason: "missing_token",
-          ip: info.req.socket.remoteAddress,
-        });
         return false;
       }
 
       const payload = await authManager.verifyJWTToken(token);
 
       if (!payload) {
-        sshLogger.warn("WebSocket connection rejected: invalid token", {
-          operation: "websocket_auth_reject",
-          reason: "invalid_token",
-          ip: info.req.socket.remoteAddress,
-        });
         return false;
       }
 
       if (payload.pendingTOTP) {
-        sshLogger.warn(
-          "WebSocket connection rejected: TOTP verification pending",
-          {
-            operation: "websocket_auth_reject",
-            reason: "totp_pending",
-            userId: payload.userId,
-            ip: info.req.socket.remoteAddress,
-          },
-        );
         return false;
       }
 
       const existingConnections = userConnections.get(payload.userId);
       if (existingConnections && existingConnections.size >= 3) {
-        sshLogger.warn("WebSocket connection rejected: too many connections", {
-          operation: "websocket_auth_reject",
-          reason: "connection_limit",
-          userId: payload.userId,
-          currentConnections: existingConnections.size,
-          ip: info.req.socket.remoteAddress,
-        });
         return false;
       }
 
@@ -79,41 +96,23 @@ const wss = new WebSocketServer({
 
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
-  let userPayload: any;
 
   try {
     const url = parseUrl(req.url!, true);
     const token = url.query.token as string;
 
     if (!token) {
-      sshLogger.warn(
-        "WebSocket connection rejected: missing token in connection",
-        {
-          operation: "websocket_connection_reject",
-          reason: "missing_token",
-          ip: req.socket.remoteAddress,
-        },
-      );
       ws.close(1008, "Authentication required");
       return;
     }
 
     const payload = await authManager.verifyJWTToken(token);
     if (!payload) {
-      sshLogger.warn(
-        "WebSocket connection rejected: invalid token in connection",
-        {
-          operation: "websocket_connection_reject",
-          reason: "invalid_token",
-          ip: req.socket.remoteAddress,
-        },
-      );
       ws.close(1008, "Authentication required");
       return;
     }
 
     userId = payload.userId;
-    userPayload = payload;
   } catch (error) {
     sshLogger.error(
       "WebSocket JWT verification failed during connection",
@@ -129,11 +128,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   const dataKey = userCrypto.getUserDataKey(userId);
   if (!dataKey) {
-    sshLogger.warn("WebSocket connection rejected: data locked", {
-      operation: "websocket_data_locked",
-      userId,
-      ip: req.socket.remoteAddress,
-    });
     ws.send(
       JSON.stringify({
         type: "error",
@@ -154,6 +148,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
   let pingInterval: NodeJS.Timeout | null = null;
+  let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
+  let totpPromptSent = false;
+  let isKeyboardInteractive = false;
+  let keyboardInteractiveResponded = false;
 
   ws.on("close", () => {
     const userWs = userConnections.get(userId);
@@ -170,11 +168,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   ws.on("message", (msg: RawData) => {
     const currentDataKey = userCrypto.getUserDataKey(userId);
     if (!currentDataKey) {
-      sshLogger.warn("WebSocket message rejected: data access expired", {
-        operation: "websocket_message_rejected",
-        userId,
-        reason: "data_access_expired",
-      });
       ws.send(
         JSON.stringify({
           type: "error",
@@ -186,9 +179,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
-    let parsed: any;
+    let parsed: WebSocketMessage;
     try {
-      parsed = JSON.parse(msg.toString());
+      parsed = JSON.parse(msg.toString()) as WebSocketMessage;
     } catch (e) {
       sshLogger.error("Invalid JSON received", e, {
         operation: "websocket_message_invalid_json",
@@ -202,16 +195,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const { type, data } = parsed;
 
     switch (type) {
-      case "connectToHost":
-        if (data.hostConfig) {
-          data.hostConfig.userId = userId;
+      case "connectToHost": {
+        const connectData = data as ConnectToHostData;
+        if (connectData.hostConfig) {
+          connectData.hostConfig.userId = userId;
         }
-        handleConnectToHost(data).catch((error) => {
+        handleConnectToHost(connectData).catch((error) => {
           sshLogger.error("Failed to connect to host", error, {
             operation: "ssh_connect",
             userId,
-            hostId: data.hostConfig?.id,
-            ip: data.hostConfig?.ip,
+            hostId: connectData.hostConfig?.id,
+            ip: connectData.hostConfig?.ip,
           });
           ws.send(
             JSON.stringify({
@@ -223,39 +217,143 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
         });
         break;
+      }
 
-      case "resize":
-        handleResize(data);
+      case "resize": {
+        const resizeData = data as ResizeData;
+        handleResize(resizeData);
         break;
+      }
 
       case "disconnect":
         cleanupSSH();
         break;
 
-      case "input":
+      case "input": {
+        const inputData = data as string;
         if (sshStream) {
-          if (data === "\t") {
-            sshStream.write(data);
-          } else if (data.startsWith("\x1b")) {
-            sshStream.write(data);
+          if (inputData === "\t") {
+            sshStream.write(inputData);
+          } else if (
+            typeof inputData === "string" &&
+            inputData.startsWith("\x1b")
+          ) {
+            sshStream.write(inputData);
           } else {
             try {
-              sshStream.write(Buffer.from(data, "utf8"));
+              sshStream.write(Buffer.from(inputData, "utf8"));
             } catch (error) {
               sshLogger.error("Error writing input to SSH stream", error, {
                 operation: "ssh_input_encoding",
                 userId,
-                dataLength: data.length,
+                dataLength: inputData.length,
               });
-              sshStream.write(Buffer.from(data, "latin1"));
+              sshStream.write(Buffer.from(inputData, "latin1"));
             }
           }
         }
         break;
+      }
 
       case "ping":
         ws.send(JSON.stringify({ type: "pong" }));
         break;
+
+      case "totp_response": {
+        const totpData = data as TOTPResponseData;
+        if (keyboardInteractiveFinish && totpData?.code) {
+          const totpCode = totpData.code;
+          keyboardInteractiveFinish([totpCode]);
+          keyboardInteractiveFinish = null;
+        } else {
+          sshLogger.warn("TOTP response received but no callback available", {
+            operation: "totp_response_error",
+            userId,
+            hasCallback: !!keyboardInteractiveFinish,
+            hasCode: !!totpData?.code,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "TOTP authentication state lost. Please reconnect.",
+            }),
+          );
+        }
+        break;
+      }
+
+      case "password_response": {
+        const passwordData = data as TOTPResponseData;
+        if (keyboardInteractiveFinish && passwordData?.code) {
+          const password = passwordData.code;
+          keyboardInteractiveFinish([password]);
+          keyboardInteractiveFinish = null;
+        } else {
+          sshLogger.warn(
+            "Password response received but no callback available",
+            {
+              operation: "password_response_error",
+              userId,
+              hasCallback: !!keyboardInteractiveFinish,
+              hasCode: !!passwordData?.code,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Password authentication state lost. Please reconnect.",
+            }),
+          );
+        }
+        break;
+      }
+
+      case "reconnect_with_credentials": {
+        const credentialsData = data as {
+          cols: number;
+          rows: number;
+          hostConfig: ConnectToHostData["hostConfig"];
+          password?: string;
+          sshKey?: string;
+          keyPassword?: string;
+        };
+
+        if (credentialsData.password) {
+          credentialsData.hostConfig.password = credentialsData.password;
+          credentialsData.hostConfig.authType = "password";
+          (credentialsData.hostConfig as any).userProvidedPassword = true;
+        } else if (credentialsData.sshKey) {
+          credentialsData.hostConfig.key = credentialsData.sshKey;
+          credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
+          credentialsData.hostConfig.authType = "key";
+        }
+
+        cleanupSSH();
+
+        const reconnectData: ConnectToHostData = {
+          cols: credentialsData.cols,
+          rows: credentialsData.rows,
+          hostConfig: credentialsData.hostConfig,
+        };
+
+        handleConnectToHost(reconnectData).catch((error) => {
+          sshLogger.error("Failed to reconnect with credentials", error, {
+            operation: "ssh_reconnect_with_credentials",
+            userId,
+            hostId: credentialsData.hostConfig?.id,
+            ip: credentialsData.hostConfig?.ip,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Failed to connect with provided credentials: " +
+                (error instanceof Error ? error.message : "Unknown error"),
+            }),
+          );
+        });
+        break;
+      }
 
       default:
         sshLogger.warn("Unknown message type received", {
@@ -266,26 +364,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
   });
 
-  async function handleConnectToHost(data: {
-    cols: number;
-    rows: number;
-    hostConfig: {
-      id: number;
-      ip: string;
-      port: number;
-      username: string;
-      password?: string;
-      key?: string;
-      keyPassword?: string;
-      keyType?: string;
-      authType?: string;
-      credentialId?: number;
-      userId?: string;
-    };
-    initialPath?: string;
-    executeCommand?: string;
-  }) {
-    const { cols, rows, hostConfig, initialPath, executeCommand } = data;
+  async function handleConnectToHost(data: ConnectToHostData) {
+    const { hostConfig, initialPath, executeCommand } = data;
     const {
       id,
       ip,
@@ -356,6 +436,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }, 60000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
+    let authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
       try {
         const credentials = await SimpleDBOps.select(
@@ -375,12 +456,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedCredentials = {
-            password: credential.password,
-            key:
-              credential.private_key || credential.privateKey || credential.key,
-            keyPassword: credential.key_password || credential.keyPassword,
-            keyType: credential.key_type || credential.keyType,
-            authType: credential.auth_type || credential.authType,
+            password: credential.password as string | undefined,
+            key: (credential.private_key ||
+              credential.privateKey ||
+              credential.key) as string | undefined,
+            keyPassword: (credential.key_password || credential.keyPassword) as
+              | string
+              | undefined,
+            keyType: (credential.key_type || credential.keyType) as
+              | string
+              | undefined,
+            authType: (credential.auth_type || credential.authType) as
+              | string
+              | undefined,
           };
         } else {
           sshLogger.warn(`No credentials found for host ${id}`, {
@@ -410,7 +498,28 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
 
-      sshConn!.shell(
+      if (!sshConn) {
+        sshLogger.warn(
+          "SSH connection was cleaned up before shell could be created",
+          {
+            operation: "ssh_shell",
+            hostId: id,
+            ip,
+            port,
+            username,
+          },
+        );
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "SSH connection was closed before terminal could be created",
+          }),
+        );
+        return;
+      }
+
+      sshConn.shell(
         {
           rows: data.rows,
           cols: data.cols,
@@ -497,12 +606,76 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ws.send(
             JSON.stringify({ type: "connected", message: "SSH connected" }),
           );
+
+          if (id && hostConfig.userId) {
+            (async () => {
+              try {
+                const hosts = await SimpleDBOps.select(
+                  getDb()
+                    .select()
+                    .from(sshData)
+                    .where(
+                      and(
+                        eq(sshData.id, id),
+                        eq(sshData.userId, hostConfig.userId!),
+                      ),
+                    ),
+                  "ssh_data",
+                  hostConfig.userId!,
+                );
+
+                const hostName =
+                  hosts.length > 0 && hosts[0].name
+                    ? hosts[0].name
+                    : `${username}@${ip}:${port}`;
+
+                await axios.post(
+                  "http://localhost:30006/activity/log",
+                  {
+                    type: "terminal",
+                    hostId: id,
+                    hostName,
+                  },
+                  {
+                    headers: {
+                      Authorization: `Bearer ${await authManager.generateJWTToken(hostConfig.userId!)}`,
+                    },
+                  },
+                );
+              } catch (error) {
+                sshLogger.warn("Failed to log terminal activity", {
+                  operation: "activity_log_error",
+                  userId: hostConfig.userId,
+                  hostId: id,
+                  error:
+                    error instanceof Error ? error.message : "Unknown error",
+                });
+              }
+            })();
+          }
         },
       );
     });
 
     sshConn.on("error", (err: Error) => {
       clearTimeout(connectionTimeout);
+
+      if (
+        (authMethodNotAvailable && resolvedCredentials.authType === "none") ||
+        (resolvedCredentials.authType === "none" &&
+          err.message.includes("All configured authentication methods failed"))
+      ) {
+        ws.send(
+          JSON.stringify({
+            type: "auth_method_not_available",
+            message:
+              "The server does not support keyboard-interactive authentication. Please provide credentials.",
+          }),
+        );
+        cleanupSSH(connectionTimeout);
+        return;
+      }
+
       sshLogger.error("SSH connection error", err, {
         operation: "ssh_connect",
         hostId: id,
@@ -557,16 +730,115 @@ wss.on("connection", async (ws: WebSocket, req) => {
       cleanupSSH(connectionTimeout);
     });
 
+    sshConn.on(
+      "keyboard-interactive",
+      (
+        name: string,
+        instructions: string,
+        instructionsLang: string,
+        prompts: Array<{ prompt: string; echo: boolean }>,
+        finish: (responses: string[]) => void,
+      ) => {
+        isKeyboardInteractive = true;
+        const promptTexts = prompts.map((p) => p.prompt);
+        const totpPromptIndex = prompts.findIndex((p) =>
+          /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
+            p.prompt,
+          ),
+        );
+
+        if (totpPromptIndex !== -1) {
+          if (totpPromptSent) {
+            sshLogger.warn("TOTP prompt asked again - ignoring duplicate", {
+              operation: "ssh_keyboard_interactive_totp_duplicate",
+              hostId: id,
+              prompts: promptTexts,
+            });
+            return;
+          }
+          totpPromptSent = true;
+          keyboardInteractiveResponded = true;
+
+          keyboardInteractiveFinish = (totpResponses: string[]) => {
+            const totpCode = (totpResponses[0] || "").trim();
+
+            const responses = prompts.map((p, index) => {
+              if (index === totpPromptIndex) {
+                return totpCode;
+              }
+              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+                return resolvedCredentials.password;
+              }
+              return "";
+            });
+
+            finish(responses);
+          };
+          ws.send(
+            JSON.stringify({
+              type: "totp_required",
+              prompt: prompts[totpPromptIndex].prompt,
+            }),
+          );
+        } else {
+          const hasStoredPassword =
+            resolvedCredentials.password &&
+            resolvedCredentials.authType !== "none";
+
+          const passwordPromptIndex = prompts.findIndex((p) =>
+            /password/i.test(p.prompt),
+          );
+
+          if (!hasStoredPassword && passwordPromptIndex !== -1) {
+            if (keyboardInteractiveResponded) {
+              return;
+            }
+            keyboardInteractiveResponded = true;
+
+            keyboardInteractiveFinish = (userResponses: string[]) => {
+              const userInput = (userResponses[0] || "").trim();
+
+              const responses = prompts.map((p, index) => {
+                if (index === passwordPromptIndex) {
+                  return userInput;
+                }
+                return "";
+              });
+
+              finish(responses);
+            };
+
+            ws.send(
+              JSON.stringify({
+                type: "password_required",
+                prompt: prompts[passwordPromptIndex].prompt,
+              }),
+            );
+            return;
+          }
+
+          const responses = prompts.map((p) => {
+            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+              return resolvedCredentials.password;
+            }
+            return "";
+          });
+
+          finish(responses);
+        }
+      },
+    );
+
     const connectConfig: any = {
       host: ip,
       port,
       username,
+      tryKeyboard: true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
       readyTimeout: 60000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
-
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",
@@ -579,45 +851,72 @@ wss.on("connection", async (ws: WebSocket, req) => {
         LC_COLLATE: "en_US.UTF-8",
         COLORTERM: "truecolor",
       },
-
       algorithms: {
         kex: [
+          "curve25519-sha256",
+          "curve25519-sha256@libssh.org",
+          "ecdh-sha2-nistp521",
+          "ecdh-sha2-nistp384",
+          "ecdh-sha2-nistp256",
+          "diffie-hellman-group-exchange-sha256",
           "diffie-hellman-group14-sha256",
           "diffie-hellman-group14-sha1",
-          "diffie-hellman-group1-sha1",
-          "diffie-hellman-group-exchange-sha256",
           "diffie-hellman-group-exchange-sha1",
-          "ecdh-sha2-nistp256",
-          "ecdh-sha2-nistp384",
-          "ecdh-sha2-nistp521",
+          "diffie-hellman-group1-sha1",
+        ],
+        serverHostKey: [
+          "ssh-ed25519",
+          "ecdsa-sha2-nistp521",
+          "ecdsa-sha2-nistp384",
+          "ecdsa-sha2-nistp256",
+          "rsa-sha2-512",
+          "rsa-sha2-256",
+          "ssh-rsa",
+          "ssh-dss",
         ],
         cipher: [
-          "aes128-ctr",
-          "aes192-ctr",
-          "aes256-ctr",
-          "aes128-gcm@openssh.com",
+          "chacha20-poly1305@openssh.com",
           "aes256-gcm@openssh.com",
-          "aes128-cbc",
-          "aes192-cbc",
+          "aes128-gcm@openssh.com",
+          "aes256-ctr",
+          "aes192-ctr",
+          "aes128-ctr",
           "aes256-cbc",
+          "aes192-cbc",
+          "aes128-cbc",
           "3des-cbc",
         ],
         hmac: [
-          "hmac-sha2-256-etm@openssh.com",
           "hmac-sha2-512-etm@openssh.com",
-          "hmac-sha2-256",
+          "hmac-sha2-256-etm@openssh.com",
           "hmac-sha2-512",
+          "hmac-sha2-256",
           "hmac-sha1",
           "hmac-md5",
         ],
         compress: ["none", "zlib@openssh.com", "zlib"],
       },
     };
-    if (
-      resolvedCredentials.authType === "password" &&
-      resolvedCredentials.password
-    ) {
-      connectConfig.password = resolvedCredentials.password;
+
+    if (resolvedCredentials.authType === "none") {
+    } else if (resolvedCredentials.authType === "password") {
+      if (!resolvedCredentials.password) {
+        sshLogger.error(
+          "Password authentication requested but no password provided",
+        );
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Password authentication requested but no password provided",
+          }),
+        );
+        return;
+      }
+
+      if (!hostConfig.forceKeyboardInteractive) {
+        connectConfig.password = resolvedCredentials.password;
+      }
     } else if (
       resolvedCredentials.authType === "key" &&
       resolvedCredentials.key
@@ -639,13 +938,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         if (resolvedCredentials.keyPassword) {
           connectConfig.passphrase = resolvedCredentials.keyPassword;
-        }
-
-        if (
-          resolvedCredentials.keyType &&
-          resolvedCredentials.keyType !== "auto"
-        ) {
-          connectConfig.privateKeyType = resolvedCredentials.keyType;
         }
       } catch (keyError) {
         sshLogger.error("SSH key format error: " + keyError.message);
@@ -680,7 +972,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.connect(connectConfig);
   }
 
-  function handleResize(data: { cols: number; rows: number }) {
+  function handleResize(data: ResizeData) {
     if (sshStream && sshStream.setWindow) {
       sshStream.setWindow(data.rows, data.cols, data.rows, data.cols);
       ws.send(
@@ -702,8 +994,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (sshStream) {
       try {
         sshStream.end();
-      } catch (e: any) {
-        sshLogger.error("Error closing stream: " + e.message);
+      } catch (e: unknown) {
+        sshLogger.error(
+          "Error closing stream: " +
+            (e instanceof Error ? e.message : "Unknown error"),
+        );
       }
       sshStream = null;
     }
@@ -711,11 +1006,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (sshConn) {
       try {
         sshConn.end();
-      } catch (e: any) {
-        sshLogger.error("Error closing connection: " + e.message);
+      } catch (e: unknown) {
+        sshLogger.error(
+          "Error closing connection: " +
+            (e instanceof Error ? e.message : "Unknown error"),
+        );
       }
       sshConn = null;
     }
+
+    totpPromptSent = false;
+    isKeyboardInteractive = false;
+    keyboardInteractiveResponded = false;
+    keyboardInteractiveFinish = null;
   }
 
   function setupPingInterval() {
@@ -723,8 +1026,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       if (sshConn && sshStream) {
         try {
           sshStream.write("\x00");
-        } catch (e: any) {
-          sshLogger.error("SSH keepalive failed: " + e.message);
+        } catch (e: unknown) {
+          sshLogger.error(
+            "SSH keepalive failed: " +
+              (e instanceof Error ? e.message : "Unknown error"),
+          );
           cleanupSSH();
         }
       }

@@ -1,0 +1,155 @@
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button.tsx";
+import { Input } from "@/components/ui/input.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
+import { useTranslation } from "react-i18next";
+import {
+  getServerConfig,
+  saveServerConfig,
+  type ServerConfig,
+} from "@/ui/main-axios.ts";
+import { Server } from "lucide-react";
+
+interface ServerConfigProps {
+  onServerConfigured: (serverUrl: string) => void;
+  onCancel?: () => void;
+  isFirstTime?: boolean;
+}
+
+export function ElectronServerConfig({
+  onServerConfigured,
+  onCancel,
+  isFirstTime = false,
+}: ServerConfigProps) {
+  const { t } = useTranslation();
+  const [serverUrl, setServerUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadServerConfig();
+  }, []);
+
+  const loadServerConfig = async () => {
+    try {
+      const config = await getServerConfig();
+      if (config?.serverUrl) {
+        setServerUrl(config.serverUrl);
+      }
+    } catch {}
+  };
+
+  const handleSaveConfig = async () => {
+    if (!serverUrl.trim()) {
+      setError(t("serverConfig.enterServerUrl"));
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let normalizedUrl = serverUrl.trim();
+
+      if (
+        !normalizedUrl.startsWith("http://") &&
+        !normalizedUrl.startsWith("https://")
+      ) {
+        setError(t("serverConfig.mustIncludeProtocol"));
+        setLoading(false);
+        return;
+      }
+
+      const config: ServerConfig = {
+        serverUrl: normalizedUrl,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      const success = await saveServerConfig(config);
+
+      if (success) {
+        onServerConfigured(normalizedUrl);
+      } else {
+        setError(t("serverConfig.saveFailed"));
+      }
+    } catch {
+      setError(t("serverConfig.saveError"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUrlChange = (value: string) => {
+    setServerUrl(value);
+    setError(null);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+          <Server className="w-6 h-6 text-primary" />
+        </div>
+        <h2 className="text-xl font-semibold">{t("serverConfig.title")}</h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          {t("serverConfig.description")}
+        </p>
+      </div>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="server-url">{t("serverConfig.serverUrl")}</Label>
+          <Input
+            id="server-url"
+            type="text"
+            placeholder="http://localhost:30001 or https://your-server.com"
+            value={serverUrl}
+            onChange={(e) => handleUrlChange(e.target.value)}
+            className="w-full h-10"
+            disabled={loading}
+          />
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>{t("common.error")}</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex space-x-2">
+          {onCancel && !isFirstTime && (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={onCancel}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+          )}
+          <Button
+            type="button"
+            className={onCancel && !isFirstTime ? "flex-1" : "w-full"}
+            onClick={handleSaveConfig}
+            disabled={loading || !serverUrl.trim()}
+          >
+            {loading ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>{t("serverConfig.saving")}</span>
+              </div>
+            ) : (
+              t("serverConfig.saveConfig")
+            )}
+          </Button>
+        </div>
+
+        <div className="text-xs text-muted-foreground text-center">
+          {t("serverConfig.helpText")}
+        </div>
+      </div>
+    </div>
+  );
+}

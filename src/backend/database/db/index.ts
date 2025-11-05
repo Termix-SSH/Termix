@@ -12,10 +12,6 @@ import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
 if (!fs.existsSync(dbDir)) {
-  databaseLogger.info(`Creating database directory`, {
-    operation: "db_init",
-    path: dbDir,
-  });
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
@@ -23,7 +19,7 @@ const enableFileEncryption = process.env.DB_FILE_ENCRYPTION !== "false";
 const dbPath = path.join(dataDir, "db.sqlite");
 const encryptedDbPath = `${dbPath}.encrypted`;
 
-let actualDbPath = ":memory:";
+const actualDbPath = ":memory:";
 let memoryDatabase: Database.Database;
 let isNewDatabase = false;
 let sqlite: Database.Database;
@@ -31,7 +27,7 @@ let sqlite: Database.Database;
 async function initializeDatabaseAsync(): Promise<void> {
   const systemCrypto = SystemCrypto.getInstance();
 
-  const dbKey = await systemCrypto.getDatabaseKey();
+  await systemCrypto.getDatabaseKey();
   if (enableFileEncryption) {
     try {
       if (DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath)) {
@@ -39,6 +35,13 @@ async function initializeDatabaseAsync(): Promise<void> {
           await DatabaseFileEncryption.decryptDatabaseToBuffer(encryptedDbPath);
 
         memoryDatabase = new Database(decryptedBuffer);
+
+        try {
+          const sessionCount = memoryDatabase
+            .prepare("SELECT COUNT(*) as count FROM sessions")
+            .get() as { count: number };
+        } catch (countError) {
+        }
       } else {
         const migration = new DatabaseMigration(dataDir);
         const migrationStatus = migration.checkMigrationStatus();
@@ -145,6 +148,18 @@ async function initializeCompleteDatabase(): Promise<void> {
         value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        jwt_token TEXT NOT NULL,
+        device_type TEXT NOT NULL,
+        device_info TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        last_active_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    );
+
     CREATE TABLE IF NOT EXISTS ssh_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -165,6 +180,12 @@ async function initializeCompleteDatabase(): Promise<void> {
         tunnel_connections TEXT,
         enable_file_manager INTEGER NOT NULL DEFAULT 1,
         default_path TEXT,
+        autostart_password TEXT,
+        autostart_key TEXT,
+        autostart_key_password TEXT,
+        force_keyboard_interactive TEXT,
+        stats_config TEXT,
+        terminal_config TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id)
@@ -242,7 +263,38 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id)
     );
 
+    CREATE TABLE IF NOT EXISTS snippets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        description TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    );
+
+    CREATE TABLE IF NOT EXISTS recent_activity (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        host_name TEXT NOT NULL,
+        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id)
+    );
+
 `);
+
+  try {
+    sqlite.prepare("DELETE FROM sessions").run();
+  } catch (e) {
+    databaseLogger.warn("Could not clear sessions on startup", {
+      operation: "db_init_session_cleanup_failed",
+      error: e,
+    });
+  }
 
   migrateSchema();
 
@@ -263,6 +315,24 @@ async function initializeCompleteDatabase(): Promise<void> {
       error: e,
     });
   }
+
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
+      .get();
+    if (!row) {
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('allow_password_login', 'true')",
+        )
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize allow_password_login setting", {
+      operation: "db_init",
+      error: e,
+    });
+  }
 }
 
 const addColumnIfNotExists = (
@@ -277,7 +347,7 @@ const addColumnIfNotExists = (
                         FROM ${table} LIMIT 1`,
       )
       .get();
-  } catch (e) {
+  } catch {
     try {
       sqlite.exec(`ALTER TABLE ${table}
                 ADD COLUMN ${column} ${definition};`);
@@ -351,7 +421,10 @@ const migrateSchema = () => {
     "updated_at",
     "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
   );
-
+  addColumnIfNotExists("ssh_data", "force_keyboard_interactive", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
+  addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "credential_id",
@@ -361,6 +434,8 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "stats_config", "TEXT");
+  addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
@@ -369,6 +444,33 @@ const migrateSchema = () => {
   addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_shortcuts", "host_id", "INTEGER NOT NULL");
+
+  try {
+    sqlite
+      .prepare("SELECT id FROM sessions LIMIT 1")
+      .get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          jwt_token TEXT NOT NULL,
+          device_type TEXT NOT NULL,
+          device_info TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          expires_at TEXT NOT NULL,
+          last_active_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id)
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create sessions table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",
@@ -383,6 +485,13 @@ async function saveMemoryDatabaseToFile() {
 
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    try {
+      const sessionCount = memoryDatabase
+        .prepare("SELECT COUNT(*) as count FROM sessions")
+        .get() as { count: number };
+    } catch (countError) {
     }
 
     if (enableFileEncryption) {
@@ -476,21 +585,25 @@ async function cleanupDatabase() {
       for (const file of files) {
         try {
           fs.unlinkSync(path.join(tempDir, file));
-        } catch {}
+        } catch {
+        }
       }
 
       try {
         fs.rmdirSync(tempDir);
-      } catch {}
+      } catch {
+      }
     }
-  } catch (error) {}
+  } catch {
+  }
 }
 
 process.on("exit", () => {
   if (sqlite) {
     try {
       sqlite.close();
-    } catch {}
+    } catch {
+    }
   }
 });
 

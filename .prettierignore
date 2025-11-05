@@ -1,3 +1,18 @@
-# Ignore artifacts:
 build
 coverage
+dist
+dist-ssr
+release
+
+node_modules
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+db
+
+.env
+
+*.min.js
+*.min.css
+openapi.json

@@ -49,7 +49,7 @@ function detectKeyTypeFromContent(keyContent: string): string {
       }
 
       return "ssh-rsa";
-    } catch (error) {
+    } catch {
       return "ssh-rsa";
     }
   }
@@ -84,7 +84,7 @@ function detectKeyTypeFromContent(keyContent: string): string {
       } else if (decodedString.includes("1.3.101.112")) {
         return "ssh-ed25519";
       }
-    } catch (error) {}
+    } catch {}
 
     if (content.length < 800) {
       return "ssh-ed25519";
@@ -140,7 +140,7 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
       } else if (decodedString.includes("1.3.101.112")) {
         return "ssh-ed25519";
       }
-    } catch (error) {}
+    } catch {}
 
     if (content.length < 400) {
       return "ssh-ed25519";
@@ -236,13 +236,13 @@ export function parseSSHKey(
             } else {
               publicKey = "";
             }
-          } catch (error) {
+          } catch {
             publicKey = "";
           }
 
           useSSH2 = true;
         }
-      } catch (error) {}
+      } catch {}
     }
 
     if (!useSSH2) {
@@ -268,7 +268,7 @@ export function parseSSHKey(
           success: true,
         };
       }
-    } catch (fallbackError) {}
+    } catch {}
 
     return {
       privateKey: privateKeyData,
@@ -310,7 +310,7 @@ export function detectKeyType(privateKeyData: string): string {
       return "unknown";
     }
     return parsedKey.type || "unknown";
-  } catch (error) {
+  } catch {
     return "unknown";
   }
 }

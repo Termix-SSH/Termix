@@ -1,9 +1,5 @@
-// ============================================================================
-// CENTRAL TYPE DEFINITIONS
-// ============================================================================
-// This file contains all shared interfaces and types used across the application
-
 import type { Client } from "ssh2";
+import type { Request } from "express";
 
 // ============================================================================
 // SSH HOST TYPES
@@ -18,11 +14,12 @@ export interface SSHHost {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential";
+  authType: "password" | "key" | "credential" | "none";
   password?: string;
   key?: string;
   keyPassword?: string;
   keyType?: string;
+  forceKeyboardInteractive?: boolean;
 
   autostartPassword?: string;
   autostartKey?: string;
@@ -35,6 +32,8 @@ export interface SSHHost {
   enableFileManager: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
+  statsConfig?: string;
+  terminalConfig?: TerminalConfig;
   createdAt: string;
   updatedAt: string;
 }
@@ -47,7 +46,7 @@ export interface SSHHostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential";
+  authType: "password" | "key" | "credential" | "none";
   password?: string;
   key?: File | null;
   keyPassword?: string;
@@ -57,7 +56,10 @@ export interface SSHHostData {
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   defaultPath?: string;
-  tunnelConnections?: any[];
+  forceKeyboardInteractive?: boolean;
+  tunnelConnections?: TunnelConnection[];
+  statsConfig?: string | Record<string, unknown>;
+  terminalConfig?: TerminalConfig;
 }
 
 // ============================================================================
@@ -106,7 +108,6 @@ export interface TunnelConnection {
   endpointPort: number;
   endpointHost: string;
 
-  // Endpoint host credentials for tunnel authentication
   endpointPassword?: string;
   endpointKey?: string;
   endpointKeyPassword?: string;
@@ -247,6 +248,34 @@ export interface TermixAlert {
 }
 
 // ============================================================================
+// TERMINAL CONFIGURATION TYPES
+// ============================================================================
+
+export interface TerminalConfig {
+  cursorBlink: boolean;
+  cursorStyle: "block" | "underline" | "bar";
+  fontSize: number;
+  fontFamily: string;
+  letterSpacing: number;
+  lineHeight: number;
+  theme: string;
+
+  scrollback: number;
+  bellStyle: "none" | "sound" | "visual" | "both";
+  rightClickSelectsWord: boolean;
+  fastScrollModifier: "alt" | "ctrl" | "shift";
+  fastScrollSensitivity: number;
+  minimumContrastRatio: number;
+
+  backspaceMode: "normal" | "control-h";
+  agentForwarding: boolean;
+  environmentVariables: Array<{ key: string; value: string }>;
+  startupSnippetId: number | null;
+  autoMosh: boolean;
+  moshCommand: string;
+}
+
+// ============================================================================
 // TAB TYPES
 // ============================================================================
 
@@ -261,8 +290,9 @@ export interface TabContextTab {
     | "file_manager"
     | "user_profile";
   title: string;
-  hostConfig?: any;
-  terminalRef?: React.RefObject<any>;
+  hostConfig?: SSHHost;
+  terminalRef?: any;
+  initialTab?: string;
 }
 
 // ============================================================================
@@ -295,7 +325,7 @@ export type ErrorType =
 // AUTHENTICATION TYPES
 // ============================================================================
 
-export type AuthType = "password" | "key" | "credential";
+export type AuthType = "password" | "key" | "credential" | "none";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 
@@ -303,7 +333,7 @@ export type KeyType = "rsa" | "ecdsa" | "ed25519";
 // API RESPONSE TYPES
 // ============================================================================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
@@ -337,6 +367,8 @@ export interface CredentialSelectorProps {
 export interface HostManagerProps {
   onSelectView?: (view: string) => void;
   isTopbarOpen?: boolean;
+  initialTab?: string;
+  hostConfig?: SSHHost;
 }
 
 export interface SSHManagerHostEditorProps {
@@ -366,13 +398,13 @@ export interface SSHTunnelViewerProps {
       action: "connect" | "disconnect" | "cancel",
       host: SSHHost,
       tunnelIndex: number,
-    ) => Promise<any>
+    ) => Promise<void>
   >;
   onTunnelAction?: (
     action: "connect" | "disconnect" | "cancel",
     host: SSHHost,
     tunnelIndex: number,
-  ) => Promise<any>;
+  ) => Promise<void>;
 }
 
 export interface FileManagerProps {
@@ -400,7 +432,7 @@ export interface SSHTunnelObjectProps {
     action: "connect" | "disconnect" | "cancel",
     host: SSHHost,
     tunnelIndex: number,
-  ) => Promise<any>;
+  ) => Promise<void>;
   compact?: boolean;
   bare?: boolean;
 }
@@ -411,6 +443,26 @@ export interface FolderStats {
     type: string;
     count: number;
   }>;
+}
+
+// ============================================================================
+// SNIPPETS TYPES
+// ============================================================================
+
+export interface Snippet {
+  id: number;
+  userId: string;
+  name: string;
+  content: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SnippetData {
+  name: string;
+  content: string;
+  description?: string;
 }
 
 // ============================================================================
@@ -439,3 +491,95 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
 export type PartialExcept<T, K extends keyof T> = Partial<T> & Pick<T, K>;
+
+// ============================================================================
+// EXPRESS REQUEST TYPES
+// ============================================================================
+
+export interface AuthenticatedRequest extends Request {
+  userId: string;
+  user?: {
+    id: string;
+    username: string;
+    isAdmin: boolean;
+  };
+}
+
+// ============================================================================
+// GITHUB API TYPES
+// ============================================================================
+
+export interface GitHubAsset {
+  id: number;
+  name: string;
+  size: number;
+  download_count: number;
+  browser_download_url: string;
+}
+
+export interface GitHubRelease {
+  id: number;
+  tag_name: string;
+  name: string;
+  body: string;
+  published_at: string;
+  html_url: string;
+  assets: GitHubAsset[];
+  prerelease: boolean;
+  draft: boolean;
+}
+
+export interface GitHubAPIResponse<T> {
+  data: T;
+  cached: boolean;
+  cache_age?: number;
+  timestamp?: number;
+}
+
+// ============================================================================
+// CACHE TYPES
+// ============================================================================
+
+export interface CacheEntry<T = unknown> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
+// ============================================================================
+// DATABASE EXPORT/IMPORT TYPES
+// ============================================================================
+
+export interface ExportSummary {
+  sshHostsImported: number;
+  sshCredentialsImported: number;
+  fileManagerItemsImported: number;
+  dismissedAlertsImported: number;
+  credentialUsageImported: number;
+  settingsImported: number;
+  skippedItems: number;
+  errors: string[];
+}
+
+export interface ImportResult {
+  success: boolean;
+  summary: ExportSummary;
+}
+
+export interface ExportRequestBody {
+  password: string;
+}
+
+export interface ImportRequestBody {
+  password: string;
+}
+
+export interface ExportPreviewBody {
+  scope?: string;
+  includeCredentials?: boolean;
+}
+
+export interface RestoreRequestBody {
+  backupPath: string;
+  targetPath?: string;
+}

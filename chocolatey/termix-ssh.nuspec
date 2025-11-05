@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>termix-ssh</id>
+    <version>VERSION_PLACEHOLDER</version>
+    <packageSourceUrl>https://github.com/Termix-SSH/Termix</packageSourceUrl>
+    <owners>bugattiguy527</owners>
+    <title>Termix SSH</title>
+    <authors>bugattiguy527</authors>
+    <projectUrl>https://github.com/Termix-SSH/Termix</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.png</iconUrl>
+    <licenseUrl>https://raw.githubusercontent.com/Termix-SSH/Termix/refs/heads/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/Termix-SSH/Termix</projectSourceUrl>
+    <docsUrl>https://docs.termix.site/install</docsUrl>
+    <bugTrackerUrl>https://github.com/Termix-SSH/Support/issues</bugTrackerUrl>
+    <tags>docker ssh self-hosted file-management ssh-tunnel termix server-management terminal</tags>
+    <summary>Termix is a web-based server management platform with SSH terminal, tunneling, and file editing capabilities.</summary>
+    <description>
+Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a web-based solution for managing your servers and infrastructure through a single, intuitive interface.
+
+Termix offers:
+- SSH terminal access
+- SSH tunneling capabilities
+- Remote file management
+- Server monitoring and management
+
+This package installs the desktop application version of Termix.
+    </description>
+    <releaseNotes>https://github.com/Termix-SSH/Termix/releases</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -8,7 +8,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   const originalToast = toast;
 
-  const rateLimitedToast = (message: string, options?: any) => {
+  const rateLimitedToast = (
+    message: string,
+    options?: Record<string, unknown>,
+  ) => {
     const now = Date.now();
     const lastToast = lastToastRef.current;
 
@@ -25,13 +28,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
   };
 
   Object.assign(toast, {
-    success: (message: string, options?: any) =>
+    success: (message: string, options?: Record<string, unknown>) =>
       rateLimitedToast(message, { ...options, type: "success" }),
-    error: (message: string, options?: any) =>
+    error: (message: string, options?: Record<string, unknown>) =>
       rateLimitedToast(message, { ...options, type: "error" }),
-    warning: (message: string, options?: any) =>
+    warning: (message: string, options?: Record<string, unknown>) =>
       rateLimitedToast(message, { ...options, type: "warning" }),
-    info: (message: string, options?: any) =>
+    info: (message: string, options?: Record<string, unknown>) =>
       rateLimitedToast(message, { ...options, type: "info" }),
     message: rateLimitedToast,
   });

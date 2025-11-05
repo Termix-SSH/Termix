@@ -55,7 +55,6 @@ export class DatabaseMigration {
 
     if (hasEncryptedDb && hasUnencryptedDb) {
       const unencryptedSize = fs.statSync(this.unencryptedDbPath).size;
-      const encryptedSize = fs.statSync(this.encryptedDbPath).size;
 
       if (unencryptedSize === 0) {
         needsMigration = false;
@@ -63,10 +62,6 @@ export class DatabaseMigration {
           "Empty unencrypted database found alongside encrypted database. Removing empty file.";
         try {
           fs.unlinkSync(this.unencryptedDbPath);
-          databaseLogger.info("Removed empty unencrypted database file", {
-            operation: "migration_cleanup_empty",
-            path: this.unencryptedDbPath,
-          });
         } catch (error) {
           databaseLogger.warn("Failed to remove empty unencrypted database", {
             operation: "migration_cleanup_empty_failed",
@@ -168,9 +163,6 @@ export class DatabaseMigration {
         return false;
       }
 
-      let totalOriginalRows = 0;
-      let totalMemoryRows = 0;
-
       for (const table of originalTables) {
         const originalCount = originalDb
           .prepare(`SELECT COUNT(*) as count FROM ${table.name}`)
@@ -178,9 +170,6 @@ export class DatabaseMigration {
         const memoryCount = memoryDb
           .prepare(`SELECT COUNT(*) as count FROM ${table.name}`)
           .get() as { count: number };
-
-        totalOriginalRows += originalCount.count;
-        totalMemoryRows += memoryCount.count;
 
         if (originalCount.count !== memoryCount.count) {
           databaseLogger.error(
@@ -241,7 +230,9 @@ export class DatabaseMigration {
         memoryDb.exec("PRAGMA foreign_keys = OFF");
 
         for (const table of tables) {
-          const rows = originalDb.prepare(`SELECT * FROM ${table.name}`).all();
+          const rows = originalDb
+            .prepare(`SELECT * FROM ${table.name}`)
+            .all() as Record<string, unknown>[];
 
           if (rows.length > 0) {
             const columns = Object.keys(rows[0]);
@@ -251,7 +242,7 @@ export class DatabaseMigration {
             );
 
             const insertTransaction = memoryDb.transaction(
-              (dataRows: any[]) => {
+              (dataRows: Record<string, unknown>[]) => {
                 for (const row of dataRows) {
                   const values = columns.map((col) => row[col]);
                   insertStmt.run(values);

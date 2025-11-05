@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.karmaa.termix</id>
+  <name>Termix</name>
+  <summary>Web-based server management platform with SSH terminal, tunneling, and file editing</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <developer_name>bugattiguy527</developer_name>
+
+  <description>
+    <p>
+      Termix is an open-source, forever-free, self-hosted all-in-one server management platform.
+      It provides a web-based solution for managing your servers and infrastructure through a single, intuitive interface.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>SSH terminal access with full terminal emulation</li>
+      <li>SSH tunneling capabilities for secure port forwarding</li>
+      <li>Remote file management with editor support</li>
+      <li>Server monitoring and management tools</li>
+      <li>Self-hosted solution - keep your data private</li>
+      <li>Modern, intuitive web interface</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">com.karmaa.termix.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/screenshots/terminal.png</image>
+      <caption>SSH Terminal Interface</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/Termix-SSH/Termix</url>
+  <url type="bugtracker">https://github.com/Termix-SSH/Support/issues</url>
+  <url type="help">https://docs.termix.site</url>
+  <url type="vcs-browser">https://github.com/Termix-SSH/Termix</url>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-info">moderate</content_attribute>
+  </content_rating>
+
+  <releases>
+    <release version="VERSION_PLACEHOLDER" date="DATE_PLACEHOLDER">
+      <description>
+        <p>Latest release of Termix</p>
+      </description>
+      <url>https://github.com/Termix-SSH/Termix/releases</url>
+    </release>
+  </releases>
+
+  <categories>
+    <category>Development</category>
+    <category>Network</category>
+    <category>System</category>
+  </categories>
+
+  <keywords>
+    <keyword>ssh</keyword>
+    <keyword>terminal</keyword>
+    <keyword>server</keyword>
+    <keyword>management</keyword>
+    <keyword>tunnel</keyword>
+    <keyword>file-manager</keyword>
+  </keywords>
+
+  <provides>
+    <binary>termix</binary>
+  </provides>
+
+  <requires>
+    <internet>always</internet>
+  </requires>
+</component>

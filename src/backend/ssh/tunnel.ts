@@ -33,15 +33,15 @@ app.use(
         "http://127.0.0.1:3000",
       ];
 
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
       if (origin.startsWith("https://")) {
         return callback(null, true);
       }
 
       if (origin.startsWith("http://")) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
@@ -217,7 +217,7 @@ function cleanupTunnelResources(
     if (verification?.timeout) clearTimeout(verification.timeout);
     try {
       verification?.conn.end();
-    } catch (e) {}
+    } catch {}
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -282,7 +282,7 @@ function handleDisconnect(
       const verification = tunnelVerifications.get(tunnelName);
       if (verification?.timeout) clearTimeout(verification.timeout);
       verification?.conn.end();
-    } catch (e) {}
+    } catch {}
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -511,16 +511,19 @@ async function connectSSHTunnel(
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedSourceCredentials = {
-            password: credential.password,
-            sshKey:
-              credential.private_key || credential.privateKey || credential.key,
-            keyPassword: credential.key_password || credential.keyPassword,
-            keyType: credential.key_type || credential.keyType,
-            authMethod: credential.auth_type || credential.authType,
+            password: credential.password as string | undefined,
+            sshKey: (credential.private_key ||
+              credential.privateKey ||
+              credential.key) as string | undefined,
+            keyPassword: (credential.key_password || credential.keyPassword) as
+              | string
+              | undefined,
+            keyType: (credential.key_type || credential.keyType) as
+              | string
+              | undefined,
+            authMethod: (credential.auth_type || credential.authType) as string,
           };
-        } else {
         }
-      } else {
       }
     } catch (error) {
       tunnelLogger.warn("Failed to resolve source credentials from database", {
@@ -591,12 +594,17 @@ async function connectSSHTunnel(
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedEndpointCredentials = {
-            password: credential.password,
-            sshKey:
-              credential.private_key || credential.privateKey || credential.key,
-            keyPassword: credential.key_password || credential.keyPassword,
-            keyType: credential.key_type || credential.keyType,
-            authMethod: credential.auth_type || credential.authType,
+            password: credential.password as string | undefined,
+            sshKey: (credential.private_key ||
+              credential.privateKey ||
+              credential.key) as string | undefined,
+            keyPassword: (credential.key_password || credential.keyPassword) as
+              | string
+              | undefined,
+            keyType: (credential.key_type || credential.keyType) as
+              | string
+              | undefined,
+            authMethod: (credential.auth_type || credential.authType) as string,
           };
         } else {
           tunnelLogger.warn("No endpoint credentials found in database", {
@@ -605,7 +613,6 @@ async function connectSSHTunnel(
             credentialId: tunnelConfig.endpointCredentialId,
           });
         }
-      } else {
       }
     } catch (error) {
       tunnelLogger.warn(
@@ -631,7 +638,7 @@ async function connectSSHTunnel(
 
       try {
         conn.end();
-      } catch (e) {}
+      } catch {}
 
       activeTunnels.delete(tunnelName);
 
@@ -771,7 +778,7 @@ async function connectSSHTunnel(
             const verification = tunnelVerifications.get(tunnelName);
             if (verification?.timeout) clearTimeout(verification.timeout);
             verification?.conn.end();
-          } catch (e) {}
+          } catch {}
           tunnelVerifications.delete(tunnelName);
         }
 
@@ -822,13 +829,9 @@ async function connectSSHTunnel(
         }
       });
 
-      stream.stdout?.on("data", (data: Buffer) => {
-        const output = data.toString().trim();
-        if (output) {
-        }
-      });
+      stream.stdout?.on("data", () => {});
 
-      stream.on("error", (err: Error) => {});
+      stream.on("error", () => {});
 
       stream.stderr.on("data", (data) => {
         const errorMsg = data.toString().trim();
@@ -888,42 +891,68 @@ async function connectSSHTunnel(
     });
   });
 
-  const connOptions: any = {
+  const connOptions: Record<string, unknown> = {
     host: tunnelConfig.sourceIP,
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
+    tryKeyboard: true,
     keepaliveInterval: 30000,
     keepaliveCountMax: 3,
     readyTimeout: 60000,
     tcpKeepAlive: true,
-    tcpKeepAliveInitialDelay: 15000,
+    tcpKeepAliveInitialDelay: 30000,
+    env: {
+      TERM: "xterm-256color",
+      LANG: "en_US.UTF-8",
+      LC_ALL: "en_US.UTF-8",
+      LC_CTYPE: "en_US.UTF-8",
+      LC_MESSAGES: "en_US.UTF-8",
+      LC_MONETARY: "en_US.UTF-8",
+      LC_NUMERIC: "en_US.UTF-8",
+      LC_TIME: "en_US.UTF-8",
+      LC_COLLATE: "en_US.UTF-8",
+      COLORTERM: "truecolor",
+    },
     algorithms: {
       kex: [
+        "curve25519-sha256",
+        "curve25519-sha256@libssh.org",
+        "ecdh-sha2-nistp521",
+        "ecdh-sha2-nistp384",
+        "ecdh-sha2-nistp256",
+        "diffie-hellman-group-exchange-sha256",
         "diffie-hellman-group14-sha256",
         "diffie-hellman-group14-sha1",
-        "diffie-hellman-group1-sha1",
-        "diffie-hellman-group-exchange-sha256",
         "diffie-hellman-group-exchange-sha1",
-        "ecdh-sha2-nistp256",
-        "ecdh-sha2-nistp384",
-        "ecdh-sha2-nistp521",
+        "diffie-hellman-group1-sha1",
+      ],
+      serverHostKey: [
+        "ssh-ed25519",
+        "ecdsa-sha2-nistp521",
+        "ecdsa-sha2-nistp384",
+        "ecdsa-sha2-nistp256",
+        "rsa-sha2-512",
+        "rsa-sha2-256",
+        "ssh-rsa",
+        "ssh-dss",
       ],
       cipher: [
-        "aes128-ctr",
-        "aes192-ctr",
-        "aes256-ctr",
-        "aes128-gcm@openssh.com",
+        "chacha20-poly1305@openssh.com",
         "aes256-gcm@openssh.com",
-        "aes128-cbc",
-        "aes192-cbc",
+        "aes128-gcm@openssh.com",
+        "aes256-ctr",
+        "aes192-ctr",
+        "aes128-ctr",
         "aes256-cbc",
+        "aes192-cbc",
+        "aes128-cbc",
         "3des-cbc",
       ],
       hmac: [
-        "hmac-sha2-256-etm@openssh.com",
         "hmac-sha2-512-etm@openssh.com",
-        "hmac-sha2-256",
+        "hmac-sha2-256-etm@openssh.com",
         "hmac-sha2-512",
+        "hmac-sha2-256",
         "hmac-sha1",
         "hmac-md5",
       ],
@@ -1026,15 +1055,19 @@ async function killRemoteTunnelByMarker(
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedSourceCredentials = {
-            password: credential.password,
-            sshKey:
-              credential.private_key || credential.privateKey || credential.key,
-            keyPassword: credential.key_password || credential.keyPassword,
-            keyType: credential.key_type || credential.keyType,
-            authMethod: credential.auth_type || credential.authType,
+            password: credential.password as string | undefined,
+            sshKey: (credential.private_key ||
+              credential.privateKey ||
+              credential.key) as string | undefined,
+            keyPassword: (credential.key_password || credential.keyPassword) as
+              | string
+              | undefined,
+            keyType: (credential.key_type || credential.keyType) as
+              | string
+              | undefined,
+            authMethod: (credential.auth_type || credential.authType) as string,
           };
         }
-      } else {
       }
     } catch (error) {
       tunnelLogger.warn("Failed to resolve source credentials for cleanup", {
@@ -1046,7 +1079,7 @@ async function killRemoteTunnelByMarker(
   }
 
   const conn = new Client();
-  const connOptions: any = {
+  const connOptions: Record<string, unknown> = {
     host: tunnelConfig.sourceIP,
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
@@ -1122,7 +1155,7 @@ async function killRemoteTunnelByMarker(
   conn.on("ready", () => {
     const checkCmd = `ps aux | grep -E '(${tunnelMarker}|ssh.*-R.*${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}|sshpass.*ssh.*-R.*${tunnelConfig.endpointPort})' | grep -v grep`;
 
-    conn.exec(checkCmd, (err, stream) => {
+    conn.exec(checkCmd, (_err, stream) => {
       let foundProcesses = false;
 
       stream.on("data", (data) => {
@@ -1150,7 +1183,7 @@ async function killRemoteTunnelByMarker(
 
         function executeNextKillCommand() {
           if (commandIndex >= killCmds.length) {
-            conn.exec(checkCmd, (err, verifyStream) => {
+            conn.exec(checkCmd, (_err, verifyStream) => {
               let stillRunning = false;
 
               verifyStream.on("data", (data) => {
@@ -1183,19 +1216,14 @@ async function killRemoteTunnelByMarker(
               tunnelLogger.warn(
                 `Kill command ${commandIndex + 1} failed for '${tunnelName}': ${err.message}`,
               );
-            } else {
             }
 
-            stream.on("close", (code) => {
+            stream.on("close", () => {
               commandIndex++;
               executeNextKillCommand();
             });
 
-            stream.on("data", (data) => {
-              const output = data.toString().trim();
-              if (output) {
-              }
-            });
+            stream.on("data", () => {});
 
             stream.stderr.on("data", (data) => {
               const output = data.toString().trim();
@@ -1381,7 +1409,11 @@ async function initializeAutoStartTunnels(): Promise<void> {
 
             if (endpointHost) {
               const tunnelConfig: TunnelConfig = {
-                name: `${host.name || `${host.username}@${host.ip}`}_${tunnelConnection.sourcePort}_${tunnelConnection.endpointPort}`,
+                name: `${host.name || `${host.username}@${host.ip}`}_${
+                  tunnelConnection.sourcePort
+                }_${tunnelConnection.endpointHost}_${
+                  tunnelConnection.endpointPort
+                }`,
                 hostName: host.name || `${host.username}@${host.ip}`,
                 sourceIP: host.ip,
                 sourceSSHPort: host.port,
@@ -1423,14 +1455,6 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 isPinned: host.pin,
               };
 
-              const hasSourcePassword = host.autostartPassword;
-              const hasSourceKey = host.autostartKey;
-              const hasEndpointPassword =
-                tunnelConnection.endpointPassword ||
-                endpointHost.autostartPassword;
-              const hasEndpointKey =
-                tunnelConnection.endpointKey || endpointHost.autostartKey;
-
               autoStartTunnels.push(tunnelConfig);
             } else {
               tunnelLogger.error(
@@ -1453,10 +1477,10 @@ async function initializeAutoStartTunnels(): Promise<void> {
         });
       }, 1000);
     }
-  } catch (error: any) {
+  } catch (error) {
     tunnelLogger.error(
       "Failed to initialize auto-start tunnels:",
-      error.message,
+      error instanceof Error ? error.message : "Unknown error",
     );
   }
 }

@@ -30,6 +30,23 @@ export const settings = sqliteTable("settings", {
   value: text("value").notNull(),
 });
 
+export const sessions = sqliteTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  jwtToken: text("jwt_token").notNull(),
+  deviceType: text("device_type").notNull(),
+  deviceInfo: text("device_info").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  lastActiveAt: text("last_active_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const sshData = sqliteTable("ssh_data", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
@@ -43,6 +60,7 @@ export const sshData = sqliteTable("ssh_data", {
   tags: text("tags"),
   pin: integer("pin", { mode: "boolean" }).notNull().default(false),
   authType: text("auth_type").notNull(),
+  forceKeyboardInteractive: text("force_keyboard_interactive"),
 
   password: text("password"),
   key: text("key", { length: 8192 }),
@@ -65,6 +83,8 @@ export const sshData = sqliteTable("ssh_data", {
     .notNull()
     .default(true),
   defaultPath: text("default_path"),
+  statsConfig: text("stats_config"),
+  terminalConfig: text("terminal_config"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -169,6 +189,37 @@ export const sshCredentialUsage = sqliteTable("ssh_credential_usage", {
     .notNull()
     .references(() => users.id),
   usedAt: text("used_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const snippets = sqliteTable("snippets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  content: text("content").notNull(),
+  description: text("description"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const recentActivity = sqliteTable("recent_activity", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  type: text("type").notNull(),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => sshData.id),
+  hostName: text("host_name").notNull(),
+  timestamp: text("timestamp")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
