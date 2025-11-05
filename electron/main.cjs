@@ -55,12 +55,6 @@ function createWindow() {
         ? "macOS"
         : "Linux";
 
-  if (process.platform === "linux") {
-    console.log("DISPLAY:", process.env.DISPLAY);
-    console.log("WAYLAND_DISPLAY:", process.env.WAYLAND_DISPLAY);
-    console.log("XDG_SESSION_TYPE:", process.env.XDG_SESSION_TYPE);
-  }
-
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -76,9 +70,9 @@ function createWindow() {
       partition: "persist:termix",
       allowRunningInsecureContent: true,
       webviewTag: true,
-      offscreen: process.platform === "linux",
+      offscreen: false,
     },
-    show: process.platform === "linux",
+    show: true,
   });
 
   if (process.platform !== "darwin") {
@@ -99,13 +93,10 @@ function createWindow() {
   );
 
   if (isDev) {
-    console.log("Loading dev URL: http://localhost:5173");
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
     const indexPath = path.join(appRoot, "dist", "index.html");
-    console.log("Loading file:", indexPath);
-    console.log("File exists:", fs.existsSync(indexPath));
     mainWindow.loadFile(indexPath).catch(err => {
       console.error("Failed to load file:", err);
     });
@@ -171,13 +162,11 @@ function createWindow() {
   );
 
   mainWindow.once("ready-to-show", () => {
-    console.log("Window ready-to-show event fired");
     mainWindow.show();
   });
 
   setTimeout(() => {
     if (mainWindow && !mainWindow.isVisible()) {
-      console.log("Forcing window to show after timeout");
       mainWindow.show();
     }
   }, 3000);
