@@ -10,16 +10,30 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 
-app.disableHardwareAcceleration();
-app.commandLine.appendSwitch("--no-sandbox");
+// Only disable hardware acceleration if explicitly requested or on older systems
+if (process.env.DISABLE_GPU === "1") {
+  app.disableHardwareAcceleration();
+}
+
 app.commandLine.appendSwitch("--ignore-certificate-errors");
 app.commandLine.appendSwitch("--ignore-ssl-errors");
 app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 if (process.platform === "linux") {
-  app.commandLine.appendSwitch("--disable-setuid-sandbox");
+  // Use GPU acceleration on Linux
+  app.commandLine.appendSwitch("--enable-features", "VaapiVideoDecoder");
   app.commandLine.appendSwitch("--disable-dev-shm-usage");
+
+  // Only disable sandboxing if running in problematic environments
+  // Check if we're in an AppImage or if CHROME_DEVEL_SANDBOX is not set properly
+  const isAppImage = process.env.APPIMAGE != null;
+  const hasProperSandbox = process.env.CHROME_DEVEL_SANDBOX != null;
+
+  if (isAppImage && !hasProperSandbox) {
+    // AppImage environments often have sandbox issues
+    app.commandLine.appendSwitch("--no-sandbox");
+  }
 }
 
 let mainWindow = null;

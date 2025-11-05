@@ -51,7 +51,6 @@
   },
   "linux": {
     "artifactName": "termix_linux_${arch}_portable.${ext}",
-    "executableArgs": ["--no-sandbox"],
     "target": [
       {
         "target": "AppImage",
