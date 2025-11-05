@@ -105,6 +105,13 @@ export function Auth({
   const [totpLoading, setTotpLoading] = useState(false);
   const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
 
+  const [showServerConfig, setShowServerConfig] = useState<boolean | null>(
+    null,
+  );
+  const [currentServerUrl, setCurrentServerUrl] = useState<string>("");
+  const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
+  const [dbHealthChecking, setDbHealthChecking] = useState(false);
+
   const handleElectronAuthSuccess = useCallback(async () => {
     try {
       const meRes = await getUserInfo();
@@ -623,13 +630,6 @@ export function Auth({
       />
     </svg>
   );
-
-  const [showServerConfig, setShowServerConfig] = useState<boolean | null>(
-    null,
-  );
-  const [currentServerUrl, setCurrentServerUrl] = useState<string>("");
-  const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
-  const [dbHealthChecking, setDbHealthChecking] = useState(false);
 
   useEffect(() => {
     if (dbConnectionFailed) {
