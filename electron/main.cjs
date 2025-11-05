@@ -10,13 +10,14 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch("--no-sandbox");
 app.commandLine.appendSwitch("--ignore-certificate-errors");
 app.commandLine.appendSwitch("--ignore-ssl-errors");
 app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 if (process.platform === "linux") {
-  app.commandLine.appendSwitch("--no-sandbox");
   app.commandLine.appendSwitch("--disable-setuid-sandbox");
   app.commandLine.appendSwitch("--disable-dev-shm-usage");
 }
@@ -24,6 +25,7 @@ if (process.platform === "linux") {
 let mainWindow = null;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -56,9 +58,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: "Termix",
-    icon: isDev
-      ? path.join(__dirname, "..", "public", "icon.png")
-      : path.join(process.resourcesPath, "public", "icon.png"),
+    icon: path.join(appRoot, "public", "icon.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -92,7 +92,7 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    const indexPath = path.join(__dirname, "..", "dist", "index.html");
+    const indexPath = path.join(appRoot, "dist", "index.html");
     mainWindow.loadFile(indexPath);
   }
 
