@@ -97,7 +97,7 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     const indexPath = path.join(appRoot, "dist", "index.html");
-    mainWindow.loadFile(indexPath).catch(err => {
+    mainWindow.loadFile(indexPath).catch((err) => {
       console.error("Failed to load file:", err);
     });
   }

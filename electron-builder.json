@@ -67,7 +67,7 @@
     ],
     "icon": "public/icon.png",
     "category": "Development",
-    "executableName": "run.sh",
+    "executableName": "termix",
     "maintainer": "Termix <mail@termix.site>",
     "desktop": {
       "entry": {
