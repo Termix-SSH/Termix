@@ -10,31 +10,20 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 
-// Only disable hardware acceleration if explicitly requested or on older systems
-if (process.env.DISABLE_GPU === "1") {
+if (process.platform === "linux") {
+  app.commandLine.appendSwitch("--no-sandbox");
+  app.commandLine.appendSwitch("--disable-setuid-sandbox");
+  app.commandLine.appendSwitch("--disable-dev-shm-usage");
+
   app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch("--disable-gpu");
+  app.commandLine.appendSwitch("--disable-gpu-compositing");
 }
 
 app.commandLine.appendSwitch("--ignore-certificate-errors");
 app.commandLine.appendSwitch("--ignore-ssl-errors");
 app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
 app.commandLine.appendSwitch("--enable-features=NetworkService");
-
-if (process.platform === "linux") {
-  // Use GPU acceleration on Linux
-  app.commandLine.appendSwitch("--enable-features", "VaapiVideoDecoder");
-  app.commandLine.appendSwitch("--disable-dev-shm-usage");
-
-  // Only disable sandboxing if running in problematic environments
-  // Check if we're in an AppImage or if CHROME_DEVEL_SANDBOX is not set properly
-  const isAppImage = process.env.APPIMAGE != null;
-  const hasProperSandbox = process.env.CHROME_DEVEL_SANDBOX != null;
-
-  if (isAppImage && !hasProperSandbox) {
-    // AppImage environments often have sandbox issues
-    app.commandLine.appendSwitch("--no-sandbox");
-  }
-}
 
 let mainWindow = null;
 
@@ -66,6 +55,12 @@ function createWindow() {
         ? "macOS"
         : "Linux";
 
+  if (process.platform === "linux") {
+    console.log("DISPLAY:", process.env.DISPLAY);
+    console.log("WAYLAND_DISPLAY:", process.env.WAYLAND_DISPLAY);
+    console.log("XDG_SESSION_TYPE:", process.env.XDG_SESSION_TYPE);
+  }
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -81,8 +76,9 @@ function createWindow() {
       partition: "persist:termix",
       allowRunningInsecureContent: true,
       webviewTag: true,
+      offscreen: process.platform === "linux",
     },
-    show: false,
+    show: process.platform === "linux",
   });
 
   if (process.platform !== "darwin") {
@@ -103,11 +99,16 @@ function createWindow() {
   );
 
   if (isDev) {
+    console.log("Loading dev URL: http://localhost:5173");
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
     const indexPath = path.join(appRoot, "dist", "index.html");
-    mainWindow.loadFile(indexPath);
+    console.log("Loading file:", indexPath);
+    console.log("File exists:", fs.existsSync(indexPath));
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error("Failed to load file:", err);
+    });
   }
 
   mainWindow.webContents.session.webRequest.onHeadersReceived(
@@ -170,8 +171,16 @@ function createWindow() {
   );
 
   mainWindow.once("ready-to-show", () => {
+    console.log("Window ready-to-show event fired");
     mainWindow.show();
   });
+
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isVisible()) {
+      console.log("Forcing window to show after timeout");
+      mainWindow.show();
+    }
+  }, 3000);
 
   mainWindow.webContents.on(
     "did-fail-load",
