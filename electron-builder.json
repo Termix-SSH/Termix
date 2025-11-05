@@ -2,9 +2,6 @@
   "appId": "com.karmaa.termix",
   "productName": "Termix",
   "publish": null,
-  "portable": {
-    "artifactName": "termix_${os}_${arch}_portable.${ext}"
-  },
   "directories": {
     "output": "release"
   },
@@ -53,6 +50,8 @@
     "artifactName": "termix_windows_${arch}_msi.${ext}"
   },
   "linux": {
+    "artifactName": "termix_linux_${arch}_portable.${ext}",
+    "executableArgs": ["--no-sandbox"],
     "target": [
       {
         "target": "AppImage",
