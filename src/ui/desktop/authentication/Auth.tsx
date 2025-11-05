@@ -173,6 +173,10 @@ export function Auth({
   }, []);
 
   useEffect(() => {
+    if (showServerConfig) {
+      return;
+    }
+
     setDbHealthChecking(true);
     getSetupRequired()
       .then((res) => {
@@ -195,7 +199,7 @@ export function Auth({
       .finally(() => {
         setDbHealthChecking(false);
       });
-  }, [setDbError, firstUserToastShown]);
+  }, [setDbError, firstUserToastShown, showServerConfig]);
 
   useEffect(() => {
     if (!registrationAllowed && !internalLoggedIn) {
