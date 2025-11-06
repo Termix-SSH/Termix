@@ -80,14 +80,34 @@ class SystemCrypto {
 
   async initializeDatabaseKey(): Promise<void> {
     try {
+      const dataDir = process.env.DATA_DIR || "./db/data";
+      const envPath = path.join(dataDir, ".env");
+
       const envKey = process.env.DATABASE_KEY;
       if (envKey && envKey.length >= 64) {
         this.databaseKey = Buffer.from(envKey, "hex");
+        const keyFingerprint = crypto
+          .createHash("sha256")
+          .update(this.databaseKey)
+          .digest("hex")
+          .substring(0, 16);
+
+        databaseLogger.info("DATABASE_KEY loaded from environment variable", {
+          operation: "db_key_loaded_from_env",
+          keyFingerprint,
+          keyLength: envKey.length,
+          dataDir,
+        });
         return;
       }
 
-      const dataDir = process.env.DATA_DIR || "./db/data";
-      const envPath = path.join(dataDir, ".env");
+      databaseLogger.debug(
+        "DATABASE_KEY not found in environment, checking .env file",
+        {
+          operation: "db_key_checking_file",
+          envPath,
+        },
+      );
 
       try {
         const envContent = await fs.readFile(envPath, "utf8");
@@ -95,14 +115,47 @@ class SystemCrypto {
         if (dbKeyMatch && dbKeyMatch[1] && dbKeyMatch[1].length >= 64) {
           this.databaseKey = Buffer.from(dbKeyMatch[1], "hex");
           process.env.DATABASE_KEY = dbKeyMatch[1];
+
+          const keyFingerprint = crypto
+            .createHash("sha256")
+            .update(this.databaseKey)
+            .digest("hex")
+            .substring(0, 16);
+
+          databaseLogger.info("DATABASE_KEY loaded from .env file", {
+            operation: "db_key_loaded_from_file",
+            keyFingerprint,
+            keyLength: dbKeyMatch[1].length,
+            envPath,
+          });
           return;
+        } else {
+          databaseLogger.warn(
+            "DATABASE_KEY found in .env but invalid or too short",
+            {
+              operation: "db_key_invalid_in_file",
+              envPath,
+              hasMatch: !!dbKeyMatch,
+              keyLength: dbKeyMatch?.[1]?.length || 0,
+              requiredLength: 64,
+            },
+          );
         }
-      } catch {}
+      } catch (fileError) {
+        databaseLogger.warn("Failed to read .env file for DATABASE_KEY", {
+          operation: "db_key_file_read_failed",
+          envPath,
+          error:
+            fileError instanceof Error ? fileError.message : "Unknown error",
+          willGenerateNew: true,
+        });
+      }
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
       databaseLogger.error("Failed to initialize database key", error, {
         operation: "db_key_init_failed",
+        dataDir: process.env.DATA_DIR || "./db/data",
       });
       throw new Error("Database key initialization failed");
     }

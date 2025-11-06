@@ -95,6 +95,32 @@ async function initializeDatabaseAsync(): Promise<void> {
         databaseKeyLength: process.env.DATABASE_KEY?.length || 0,
       });
 
+      try {
+        databaseLogger.info(
+          "Generating diagnostic information for database encryption failure",
+          {
+            operation: "db_encryption_diagnostic",
+          },
+        );
+        const diagnosticInfo =
+          DatabaseFileEncryption.getDiagnosticInfo(encryptedDbPath);
+        databaseLogger.error(
+          "Database encryption diagnostic completed - check logs above for details",
+          null,
+          {
+            operation: "db_encryption_diagnostic_completed",
+            filesConsistent: diagnosticInfo.validation.filesConsistent,
+            sizeMismatch: diagnosticInfo.validation.sizeMismatch,
+          },
+        );
+      } catch (diagError) {
+        databaseLogger.warn("Failed to generate diagnostic information", {
+          operation: "db_diagnostic_failed",
+          error:
+            diagError instanceof Error ? diagError.message : "Unknown error",
+        });
+      }
+
       throw new Error(
         `Database decryption failed: ${error instanceof Error ? error.message : "Unknown error"}. This prevents data loss.`,
       );
