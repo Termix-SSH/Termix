@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
@@ -11,6 +11,7 @@ import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
 import { AdminSettings } from "@/ui/desktop/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
+import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
 import { getUserInfo } from "@/ui/main-axios.ts";
 
 function AppContent() {
@@ -23,6 +24,29 @@ function AppContent() {
     return saved !== null ? JSON.parse(saved) : true;
   });
   const { currentTab, tabs } = useTabs();
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  const lastShiftPressTime = useRef(0);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code === "ShiftLeft") {
+        const now = Date.now();
+        if (now - lastShiftPressTime.current < 300) {
+          setIsCommandPaletteOpen((isOpen) => !isOpen);
+        }
+        lastShiftPressTime.current = now;
+      }
+      if (event.key === "Escape") {
+        setIsCommandPaletteOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -93,6 +117,10 @@ function AppContent() {
 
   return (
     <div>
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        setIsOpen={setIsCommandPaletteOpen}
+      />
       {!isAuthenticated && !authLoading && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000]">
           <Dashboard
