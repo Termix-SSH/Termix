@@ -746,7 +746,6 @@ jobs:
           mkdir -p homebrew-submission/Casks/t
 
           cp homebrew/termix.rb homebrew-submission/Casks/t/termix.rb
-          cp homebrew/README.md homebrew-submission/
 
           sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-submission/Casks/t/termix.rb
           sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-submission/Casks/t/termix.rb

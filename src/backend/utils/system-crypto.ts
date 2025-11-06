@@ -51,17 +51,8 @@ class SystemCrypto {
             },
           );
         }
-      } catch (fileError) {
-        databaseLogger.warn("Failed to read .env file for JWT secret", {
-          operation: "jwt_init_file_read_failed",
-          error:
-            fileError instanceof Error ? fileError.message : "Unknown error",
-        });
-      }
+      } catch (fileError) {}
 
-      databaseLogger.warn("Generating new JWT secret", {
-        operation: "jwt_generating_new_secret",
-      });
       await this.generateAndGuideUser();
     } catch (error) {
       databaseLogger.error("Failed to initialize JWT secret", error, {
@@ -80,14 +71,20 @@ class SystemCrypto {
 
   async initializeDatabaseKey(): Promise<void> {
     try {
+      const dataDir = process.env.DATA_DIR || "./db/data";
+      const envPath = path.join(dataDir, ".env");
+
       const envKey = process.env.DATABASE_KEY;
       if (envKey && envKey.length >= 64) {
         this.databaseKey = Buffer.from(envKey, "hex");
+        const keyFingerprint = crypto
+          .createHash("sha256")
+          .update(this.databaseKey)
+          .digest("hex")
+          .substring(0, 16);
+
         return;
       }
-
-      const dataDir = process.env.DATA_DIR || "./db/data";
-      const envPath = path.join(dataDir, ".env");
 
       try {
         const envContent = await fs.readFile(envPath, "utf8");
@@ -95,14 +92,23 @@ class SystemCrypto {
         if (dbKeyMatch && dbKeyMatch[1] && dbKeyMatch[1].length >= 64) {
           this.databaseKey = Buffer.from(dbKeyMatch[1], "hex");
           process.env.DATABASE_KEY = dbKeyMatch[1];
+
+          const keyFingerprint = crypto
+            .createHash("sha256")
+            .update(this.databaseKey)
+            .digest("hex")
+            .substring(0, 16);
+
           return;
+        } else {
         }
-      } catch {}
+      } catch (fileError) {}
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
       databaseLogger.error("Failed to initialize database key", error, {
         operation: "db_key_init_failed",
+        dataDir: process.env.DATA_DIR || "./db/data",
       });
       throw new Error("Database key initialization failed");
     }

@@ -24,10 +24,19 @@ import {
   verifyTOTPLogin,
   getServerConfig,
   isElectron,
-  logoutUser,
 } from "../../main-axios.ts";
 import { ElectronServerConfig as ServerConfigComponent } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/ui/desktop/authentication/ElectronLoginForm.tsx";
+
+function getCookie(name: string): string | undefined {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift();
+}
+
+interface ExtendedWindow extends Window {
+  IS_ELECTRON_WEBVIEW?: boolean;
+}
 
 interface AuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
@@ -37,7 +46,6 @@ interface AuthProps extends React.ComponentProps<"div"> {
   loggedIn: boolean;
   authLoading: boolean;
   setDbError: (error: string | null) => void;
-  dbError?: string | null;
   onAuthSuccess: (authData: {
     isAdmin: boolean;
     username: string | null;
@@ -54,21 +62,20 @@ export function Auth({
   loggedIn,
   authLoading,
   setDbError,
-  dbError,
   onAuthSuccess,
   ...props
 }: AuthProps) {
   const { t } = useTranslation();
 
   const isInElectronWebView = () => {
-    if ((window as any).IS_ELECTRON_WEBVIEW) {
+    if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) {
       return true;
     }
     try {
       if (window.self !== window.top) {
         return true;
       }
-    } catch (e) {
+    } catch (_e) {
       return false;
     }
     return false;
@@ -126,7 +133,7 @@ export function Auth({
         userId: meRes.userId || null,
       });
       toast.success(t("messages.loginSuccess"));
-    } catch (err) {
+    } catch (_err) {
       toast.error(t("errors.failedUserInfo"));
     }
   }, [
@@ -206,7 +213,7 @@ export function Auth({
       .finally(() => {
         setDbHealthChecking(false);
       });
-  }, [setDbError, firstUserToastShown, showServerConfig]);
+  }, [setDbError, firstUserToastShown, showServerConfig, t]);
 
   useEffect(() => {
     if (!registrationAllowed && !internalLoggedIn) {
@@ -282,9 +289,9 @@ export function Auth({
           );
           setWebviewAuthSuccess(true);
           setTimeout(() => window.location.reload(), 100);
-          setLoading(false);
-          return;
-        } catch (e) {}
+        } catch (e) {
+          console.error("Error posting auth success message:", e);
+        }
       }
 
       const [meRes] = await Promise.all([getUserInfo()]);
@@ -461,7 +468,9 @@ export function Auth({
           setTimeout(() => window.location.reload(), 100);
           setTotpLoading(false);
           return;
-        } catch (e) {}
+        } catch (e) {
+          console.error("Error posting auth success message:", e);
+        }
       }
 
       setInternalLoggedIn(true);
@@ -569,7 +578,9 @@ export function Auth({
                 setTimeout(() => window.location.reload(), 100);
                 setOidcLoading(false);
                 return;
-              } catch (e) {}
+              } catch (e) {
+                console.error("Error posting auth success message:", e);
+              }
             }
           }
 
@@ -607,7 +618,16 @@ export function Auth({
           setOidcLoading(false);
         });
     }
-  }, []);
+  }, [
+    onAuthSuccess,
+    setDbError,
+    setIsAdmin,
+    setLoggedIn,
+    setUserId,
+    setUsername,
+    t,
+    isInElectronWebView,
+  ]);
 
   const Spinner = (
     <svg
