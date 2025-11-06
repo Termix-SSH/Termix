@@ -1210,7 +1210,6 @@
     "totpRequired": "TOTP Authentication Required",
     "totpUnavailable": "Server Stats unavailable for TOTP-enabled servers",
     "load": "Load",
-    "free": "Free",
     "available": "Available",
     "editLayout": "Edit Layout",
     "cancelEdit": "Cancel",
