@@ -62,14 +62,7 @@ class DatabaseFileEncryption {
       fs.writeFileSync(tmpPath, encrypted);
       fs.writeFileSync(tmpMetadataPath, JSON.stringify(metadata, null, 2));
 
-      if (fs.existsSync(targetPath)) {
-        fs.unlinkSync(targetPath);
-      }
       fs.renameSync(tmpPath, targetPath);
-
-      if (fs.existsSync(metadataPath)) {
-        fs.unlinkSync(metadataPath);
-      }
       fs.renameSync(tmpMetadataPath, metadataPath);
 
       return targetPath;
