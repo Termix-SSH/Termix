@@ -187,7 +187,7 @@
     "commandsWillBeSent": "Befehle werden an {{count}} ausgewählte Terminals gesendet.",
     "settings": "Einstellungen",
     "enableRightClickCopyPaste": "Rechtsklick-Kopieren\/Einfügen aktivieren",
-    "shareIdeas": "Haben Sie Ideen, was als nächstes für SSH-Tools kommen sollte? Teilen Sie diese mit uns"
+    "shareIdeas": "Haben Sie Vorschläge welche weiteren SSH-Tools ergänzt werden sollen? Dann teilen Sie diese gerne mit uns auf"
   },
   "homepage": {
     "loggedInTitle": "Eingeloggt!",
@@ -416,6 +416,13 @@
     "userDeletedSuccessfully": "Benutzer {{username}} wurde erfolgreich gelöscht",
     "failedToDeleteUser": "Benutzer konnte nicht gelöscht werden",
     "overrideUserInfoUrl": "URL für Benutzerinformationen überschreiben (nicht erforderlich)",
+    "failedToFetchSessions": "Fehler beim Abrufen der Sitzungen",
+    "sessionRevokedSuccessfully": "Sitzung erfolgreich widerrufen",
+    "failedToRevokeSession": "Sitzung konnte nicht widerrufen werden",
+    "confirmRevokeSession": "Möchten Sie diese Sitzung wirklich beenden?",
+    "confirmRevokeAllSessions": "Möchten Sie wirklich alle Sitzungen dieses Benutzers beenden?",
+    "failedToRevokeSessions": "Sitzungen konnten nicht widerrufen werden",
+    "sessionsRevokedSuccessfully": "Sitzungen erfolgreich beendet",
     "databaseSecurity": "Datenbanksicherheit",
     "encryptionStatus": "Verschlüsselungsstatus",
     "encryptionEnabled": "Verschlüsselung aktiviert",
@@ -620,7 +627,7 @@
     "autoStartContainer": "Automatischer Start beim Container-Start",
     "autoStartDesc": "Diesen Tunnel beim Start des Containers automatisch starten",
     "addConnection": "Tunnelverbindung hinzufügen",
-    "sshpassRequired": "Sshpass erforderlich für die Passwort-Authentifizierung",
+    "sshpassRequired": "sshpass erforderlich für die Passwort-Authentifizierung",
     "sshpassRequiredDesc": "Für die Passwortauthentifizierung in Tunneln muss sshpass auf dem System installiert sein.",
     "otherInstallMethods": "Andere Installationsmethoden:",
     "debianUbuntuEquivalent": "(Debian\/Ubuntu) oder das entsprechende Pendant für Ihr Betriebssystem.",
