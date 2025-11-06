@@ -576,7 +576,7 @@ class DatabaseFileEncryption {
       ) {
         result.validation.filesConsistent = true;
 
-        if (result.metadataFile.content.dataSize) {
+        if (result.metadataFile.content.dataSize !== undefined) {
           result.validation.expectedSize = result.metadataFile.content.dataSize;
           result.validation.actualSize = result.dataFile.size;
           result.validation.sizeMismatch =
