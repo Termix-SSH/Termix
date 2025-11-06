@@ -211,7 +211,7 @@ class DatabaseFileEncryption {
 
       const encryptedData = fs.readFileSync(encryptedPath);
 
-      if (metadata.dataSize && encryptedData.length !== metadata.dataSize) {
+      if (metadata.dataSize !== undefined && encryptedData.length !== metadata.dataSize) {
         databaseLogger.error(
           "Encrypted file size mismatch - possible corrupted write or mismatched metadata",
           null,
