@@ -59,28 +59,8 @@ class DatabaseFileEncryption {
         dataSize: encrypted.length,
       };
 
-      databaseLogger.debug("Starting atomic encryption write", {
-        operation: "database_buffer_encryption_start",
-        targetPath,
-        tmpPath,
-        originalSize: buffer.length,
-        encryptedSize: encrypted.length,
-        keyFingerprint,
-        ivPrefix: metadata.iv.substring(0, 8),
-        tagPrefix: metadata.tag.substring(0, 8),
-      });
-
       fs.writeFileSync(tmpPath, encrypted);
       fs.writeFileSync(tmpMetadataPath, JSON.stringify(metadata, null, 2));
-
-      databaseLogger.debug(
-        "Temporary files written, performing atomic rename",
-        {
-          operation: "database_buffer_encryption_rename",
-          tmpPath,
-          targetPath,
-        },
-      );
 
       if (fs.existsSync(targetPath)) {
         fs.unlinkSync(targetPath);
@@ -91,13 +71,6 @@ class DatabaseFileEncryption {
         fs.unlinkSync(metadataPath);
       }
       fs.renameSync(tmpMetadataPath, metadataPath);
-
-      databaseLogger.debug("Database buffer encrypted with atomic write", {
-        operation: "database_buffer_encryption_atomic",
-        targetPath,
-        encryptedSize: encrypted.length,
-        keyFingerprint,
-      });
 
       return targetPath;
     } catch (error) {
@@ -177,28 +150,8 @@ class DatabaseFileEncryption {
         dataSize: encrypted.length,
       };
 
-      databaseLogger.debug("Starting atomic file encryption", {
-        operation: "database_file_encryption_start",
-        sourcePath,
-        encryptedPath,
-        tmpPath,
-        originalSize: sourceData.length,
-        encryptedSize: encrypted.length,
-        keyFingerprint,
-        ivPrefix: metadata.iv.substring(0, 8),
-      });
-
       fs.writeFileSync(tmpPath, encrypted);
       fs.writeFileSync(tmpMetadataPath, JSON.stringify(metadata, null, 2));
-
-      databaseLogger.debug(
-        "Temporary files written, performing atomic rename",
-        {
-          operation: "database_file_encryption_rename",
-          tmpPath,
-          encryptedPath,
-        },
-      );
 
       if (fs.existsSync(encryptedPath)) {
         fs.unlinkSync(encryptedPath);
@@ -267,30 +220,8 @@ class DatabaseFileEncryption {
       const dataFileStats = fs.statSync(encryptedPath);
       const metaFileStats = fs.statSync(metadataPath);
 
-      databaseLogger.debug("Starting database decryption", {
-        operation: "database_buffer_decryption_start",
-        encryptedPath,
-        metadataPath,
-        dataFileSize: dataFileStats.size,
-        dataFileMtime: dataFileStats.mtime.toISOString(),
-        metaFileMtime: metaFileStats.mtime.toISOString(),
-        dataDir: process.env.DATA_DIR || "./db/data",
-      });
-
       const metadataContent = fs.readFileSync(metadataPath, "utf8");
       const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
-
-      databaseLogger.debug("Metadata loaded", {
-        operation: "database_metadata_loaded",
-        version: metadata.version,
-        algorithm: metadata.algorithm,
-        keySource: metadata.keySource,
-        fingerprint: metadata.fingerprint,
-        hasDataSize: !!metadata.dataSize,
-        expectedDataSize: metadata.dataSize,
-        ivPrefix: metadata.iv?.substring(0, 8),
-        tagPrefix: metadata.tag?.substring(0, 8),
-      });
 
       const encryptedData = fs.readFileSync(encryptedPath);
 
@@ -342,15 +273,6 @@ class DatabaseFileEncryption {
         .digest("hex")
         .substring(0, 16);
 
-      databaseLogger.debug("Starting decryption with loaded key", {
-        operation: "database_decryption_attempt",
-        keyFingerprint,
-        algorithm: metadata.algorithm,
-        ivPrefix: metadata.iv.substring(0, 8),
-        tagPrefix: metadata.tag.substring(0, 8),
-        dataSize: encryptedData.length,
-      });
-
       const decipher = crypto.createDecipheriv(
         metadata.algorithm,
         key,
@@ -362,14 +284,6 @@ class DatabaseFileEncryption {
         decipher.update(encryptedData),
         decipher.final(),
       ]);
-
-      databaseLogger.debug("Database decryption successful", {
-        operation: "database_buffer_decryption_success",
-        encryptedPath,
-        encryptedSize: encryptedData.length,
-        decryptedSize: decryptedBuffer.length,
-        keyFingerprint,
-      });
 
       return decryptedBuffer;
     } catch (error) {

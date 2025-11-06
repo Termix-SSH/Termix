@@ -51,17 +51,8 @@ class SystemCrypto {
             },
           );
         }
-      } catch (fileError) {
-        databaseLogger.warn("Failed to read .env file for JWT secret", {
-          operation: "jwt_init_file_read_failed",
-          error:
-            fileError instanceof Error ? fileError.message : "Unknown error",
-        });
-      }
+      } catch (fileError) {}
 
-      databaseLogger.warn("Generating new JWT secret", {
-        operation: "jwt_generating_new_secret",
-      });
       await this.generateAndGuideUser();
     } catch (error) {
       databaseLogger.error("Failed to initialize JWT secret", error, {
@@ -92,22 +83,8 @@ class SystemCrypto {
           .digest("hex")
           .substring(0, 16);
 
-        databaseLogger.info("DATABASE_KEY loaded from environment variable", {
-          operation: "db_key_loaded_from_env",
-          keyFingerprint,
-          keyLength: envKey.length,
-          dataDir,
-        });
         return;
       }
-
-      databaseLogger.debug(
-        "DATABASE_KEY not found in environment, checking .env file",
-        {
-          operation: "db_key_checking_file",
-          envPath,
-        },
-      );
 
       try {
         const envContent = await fs.readFile(envPath, "utf8");
@@ -122,34 +99,10 @@ class SystemCrypto {
             .digest("hex")
             .substring(0, 16);
 
-          databaseLogger.info("DATABASE_KEY loaded from .env file", {
-            operation: "db_key_loaded_from_file",
-            keyFingerprint,
-            keyLength: dbKeyMatch[1].length,
-            envPath,
-          });
           return;
         } else {
-          databaseLogger.warn(
-            "DATABASE_KEY found in .env but invalid or too short",
-            {
-              operation: "db_key_invalid_in_file",
-              envPath,
-              hasMatch: !!dbKeyMatch,
-              keyLength: dbKeyMatch?.[1]?.length || 0,
-              requiredLength: 64,
-            },
-          );
         }
-      } catch (fileError) {
-        databaseLogger.warn("Failed to read .env file for DATABASE_KEY", {
-          operation: "db_key_file_read_failed",
-          envPath,
-          error:
-            fileError instanceof Error ? fileError.message : "Unknown error",
-          willGenerateNew: true,
-        });
-      }
+      } catch (fileError) {}
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
