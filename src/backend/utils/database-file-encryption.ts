@@ -27,14 +27,11 @@ class DatabaseFileEncryption {
     targetPath: string,
   ): Promise<string> {
     const tmpPath = `${targetPath}.tmp-${Date.now()}-${process.pid}`;
-    const tmpMetadataPath = `${tmpPath}${this.METADATA_FILE_SUFFIX}`;
     const metadataPath = `${targetPath}${this.METADATA_FILE_SUFFIX}`;
 
     try {
       const key = await this.systemCrypto.getDatabaseKey();
-
       const iv = crypto.randomBytes(16);
-
       const cipher = crypto.createCipheriv(
         this.ALGORITHM,
         key,
@@ -42,12 +39,6 @@ class DatabaseFileEncryption {
       ) as crypto.CipherGCM;
       const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
       const tag = cipher.getAuthTag();
-
-      const keyFingerprint = crypto
-        .createHash("sha256")
-        .update(key)
-        .digest("hex")
-        .substring(0, 16);
 
       const metadata: EncryptedFileMetadata = {
         iv: iv.toString("hex"),
@@ -59,20 +50,40 @@ class DatabaseFileEncryption {
         dataSize: encrypted.length,
       };
 
-      fs.writeFileSync(tmpPath, encrypted);
-      fs.writeFileSync(tmpMetadataPath, JSON.stringify(metadata, null, 2));
+      const metadataJson = JSON.stringify(metadata, null, 2);
+      const metadataBuffer = Buffer.from(metadataJson, "utf8");
+      const metadataLengthBuffer = Buffer.alloc(4);
+      metadataLengthBuffer.writeUInt32BE(metadataBuffer.length, 0);
 
+      const finalBuffer = Buffer.concat([
+        metadataLengthBuffer,
+        metadataBuffer,
+        encrypted,
+      ]);
+
+      fs.writeFileSync(tmpPath, finalBuffer);
       fs.renameSync(tmpPath, targetPath);
-      fs.renameSync(tmpMetadataPath, metadataPath);
+
+      try {
+        if (fs.existsSync(metadataPath)) {
+          fs.unlinkSync(metadataPath);
+        }
+      } catch (cleanupError) {
+        databaseLogger.warn("Failed to cleanup old metadata file", {
+          operation: "old_meta_cleanup_failed",
+          path: metadataPath,
+          error:
+            cleanupError instanceof Error
+              ? cleanupError.message
+              : "Unknown error",
+        });
+      }
 
       return targetPath;
     } catch (error) {
       try {
         if (fs.existsSync(tmpPath)) {
           fs.unlinkSync(tmpPath);
-        }
-        if (fs.existsSync(tmpMetadataPath)) {
-          fs.unlinkSync(tmpMetadataPath);
         }
       } catch (cleanupError) {
         databaseLogger.warn("Failed to cleanup temporary files", {
@@ -197,21 +208,54 @@ class DatabaseFileEncryption {
       );
     }
 
-    const metadataPath = `${encryptedPath}${this.METADATA_FILE_SUFFIX}`;
-    if (!fs.existsSync(metadataPath)) {
-      throw new Error(`Metadata file does not exist: ${metadataPath}`);
+    let metadata: EncryptedFileMetadata;
+    let encryptedData: Buffer;
+
+    const fileBuffer = fs.readFileSync(encryptedPath);
+
+    try {
+      const metadataLength = fileBuffer.readUInt32BE(0);
+      const metadataEnd = 4 + metadataLength;
+
+      if (
+        metadataLength <= 0 ||
+        metadataEnd > fileBuffer.length ||
+        metadataEnd <= 4
+      ) {
+        throw new Error("Invalid metadata length in single-file format");
+      }
+
+      const metadataJson = fileBuffer.slice(4, metadataEnd).toString("utf8");
+      metadata = JSON.parse(metadataJson);
+      encryptedData = fileBuffer.slice(metadataEnd);
+
+      if (!metadata.iv || !metadata.tag || !metadata.version) {
+        throw new Error("Invalid metadata structure in single-file format");
+      }
+    } catch (singleFileError) {
+      const metadataPath = `${encryptedPath}${this.METADATA_FILE_SUFFIX}`;
+      if (!fs.existsSync(metadataPath)) {
+        throw new Error(
+          `Could not read database: Not a valid single-file format and metadata file is missing: ${metadataPath}. Error: ${singleFileError.message}`,
+        );
+      }
+
+      try {
+        const metadataContent = fs.readFileSync(metadataPath, "utf8");
+        metadata = JSON.parse(metadataContent);
+        encryptedData = fileBuffer;
+      } catch (twoFileError) {
+        throw new Error(
+          `Failed to read database using both single-file and two-file formats. Error: ${twoFileError.message}`,
+        );
+      }
     }
 
     try {
-      const dataFileStats = fs.statSync(encryptedPath);
-      const metaFileStats = fs.statSync(metadataPath);
-
-      const metadataContent = fs.readFileSync(metadataPath, "utf8");
-      const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
-
-      const encryptedData = fs.readFileSync(encryptedPath);
-
-      if (metadata.dataSize !== undefined && encryptedData.length !== metadata.dataSize) {
+      if (
+        metadata.dataSize !== undefined &&
+        encryptedData.length !== metadata.dataSize
+      ) {
         databaseLogger.error(
           "Encrypted file size mismatch - possible corrupted write or mismatched metadata",
           null,
@@ -220,9 +264,6 @@ class DatabaseFileEncryption {
             encryptedPath,
             actualSize: encryptedData.length,
             expectedSize: metadata.dataSize,
-            difference: encryptedData.length - metadata.dataSize,
-            dataFileMtime: dataFileStats.mtime.toISOString(),
-            metaFileMtime: metaFileStats.mtime.toISOString(),
           },
         );
         throw new Error(
@@ -252,12 +293,6 @@ class DatabaseFileEncryption {
       } else {
         throw new Error(`Unsupported encryption version: ${metadata.version}`);
       }
-
-      const keyFingerprint = crypto
-        .createHash("sha256")
-        .update(key)
-        .digest("hex")
-        .substring(0, 16);
 
       const decipher = crypto.createDecipheriv(
         metadata.algorithm,
@@ -300,7 +335,6 @@ class DatabaseFileEncryption {
           {
             operation: "database_buffer_decryption_auth_failed",
             encryptedPath,
-            metadataPath,
             dataDir,
             envPath,
             envFileExists,
@@ -358,7 +392,10 @@ class DatabaseFileEncryption {
 
       const encryptedData = fs.readFileSync(encryptedPath);
 
-      if (metadata.dataSize !== undefined && encryptedData.length !== metadata.dataSize) {
+      if (
+        metadata.dataSize !== undefined &&
+        encryptedData.length !== metadata.dataSize
+      ) {
         databaseLogger.error(
           "Encrypted file size mismatch - possible corrupted write or mismatched metadata",
           null,
@@ -434,18 +471,43 @@ class DatabaseFileEncryption {
   }
 
   static isEncryptedDatabaseFile(filePath: string): boolean {
-    const metadataPath = `${filePath}${this.METADATA_FILE_SUFFIX}`;
-
-    if (!fs.existsSync(filePath) || !fs.existsSync(metadataPath)) {
+    if (!fs.existsSync(filePath)) {
       return false;
     }
 
+    const metadataPath = `${filePath}${this.METADATA_FILE_SUFFIX}`;
+    if (fs.existsSync(metadataPath)) {
+      try {
+        const metadataContent = fs.readFileSync(metadataPath, "utf8");
+        const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
+        return (
+          metadata.version === this.VERSION &&
+          metadata.algorithm === this.ALGORITHM
+        );
+      } catch {
+        return false;
+      }
+    }
+
     try {
-      const metadataContent = fs.readFileSync(metadataPath, "utf8");
-      const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
+      const fileBuffer = fs.readFileSync(filePath);
+      if (fileBuffer.length < 4) return false;
+
+      const metadataLength = fileBuffer.readUInt32BE(0);
+      const metadataEnd = 4 + metadataLength;
+
+      if (metadataLength <= 0 || metadataEnd > fileBuffer.length) {
+        return false;
+      }
+
+      const metadataJson = fileBuffer.slice(4, metadataEnd).toString("utf8");
+      const metadata: EncryptedFileMetadata = JSON.parse(metadataJson);
+
       return (
         metadata.version === this.VERSION &&
-        metadata.algorithm === this.ALGORITHM
+        metadata.algorithm === this.ALGORITHM &&
+        !!metadata.iv &&
+        !!metadata.tag
       );
     } catch {
       return false;
