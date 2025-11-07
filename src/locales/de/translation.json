@@ -1100,7 +1100,7 @@
     "refreshing": "Aktualisieren...",
     "serverOffline": "Server offline",
     "cannotFetchMetrics": "Metriken können nicht vom Offline-Server abgerufen werden",
-    "load": "Last"
+    "load": "Last",
     "available": "Verfügbar",
     "editLayout": "Layout anpassen",
     "cancelEdit": "Abbrechen",

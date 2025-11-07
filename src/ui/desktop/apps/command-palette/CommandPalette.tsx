@@ -3,21 +3,59 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandShortcut,
   CommandGroup,
   CommandSeparator,
 } from "@/components/ui/command.tsx";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-  Calculator,
-  Calendar,
-  CreditCard,
+  Key,
+  Server,
   Settings,
-  Smile,
   User,
+  Github,
+  Terminal,
+  FolderOpen,
+  Pencil,
+  EllipsisVertical,
 } from "lucide-react";
-import { CommandEmpty } from "cmdk";
+import { BiMoney, BiSupport } from "react-icons/bi";
+import { BsDiscord } from "react-icons/bs";
+import { GrUpdate } from "react-icons/gr";
+import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
+import { getRecentActivity, getSSHHosts } from "@/ui/main-axios.ts";
+import type { RecentActivityItem } from "@/ui/main-axios.ts";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button.tsx";
+
+interface SSHHost {
+  id: number;
+  name: string;
+  ip: string;
+  port: number;
+  username: string;
+  folder: string;
+  tags: string[];
+  pin: boolean;
+  authType: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  enableTerminal: boolean;
+  enableTunnel: boolean;
+  enableFileManager: boolean;
+  defaultPath: string;
+  tunnelConnections: unknown[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export function CommandPalette({
   isOpen,
   setIsOpen,
@@ -26,59 +64,316 @@ export function CommandPalette({
   setIsOpen: (isOpen: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { addTab, setCurrentTab, tabs: tabList, updateTab } = useTabs();
+  const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
+    [],
+  );
+  const [hosts, setHosts] = useState<SSHHost[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       inputRef.current?.focus();
+      getRecentActivity(50).then((activity) => {
+        setRecentActivity(activity.slice(0, 5));
+      });
+      getSSHHosts().then((allHosts) => {
+        setHosts(allHosts);
+      });
     }
   }, [isOpen]);
+
+  const handleAddHost = () => {
+    const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
+    if (sshManagerTab) {
+      updateTab(sshManagerTab.id, { initialTab: "add_host" });
+      setCurrentTab(sshManagerTab.id);
+    } else {
+      const id = addTab({
+        type: "ssh_manager",
+        title: "Host Manager",
+        initialTab: "add_host",
+      });
+      setCurrentTab(id);
+    }
+    setIsOpen(false);
+  };
+
+  const handleAddCredential = () => {
+    const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
+    if (sshManagerTab) {
+      updateTab(sshManagerTab.id, { initialTab: "add_credential" });
+      setCurrentTab(sshManagerTab.id);
+    } else {
+      const id = addTab({
+        type: "ssh_manager",
+        title: "Host Manager",
+        initialTab: "add_credential",
+      });
+      setCurrentTab(id);
+    }
+    setIsOpen(false);
+  };
+
+  const handleOpenAdminSettings = () => {
+    const adminTab = tabList.find((t) => t.type === "admin");
+    if (adminTab) {
+      setCurrentTab(adminTab.id);
+    } else {
+      const id = addTab({ type: "admin", title: "Admin Settings" });
+      setCurrentTab(id);
+    }
+    setIsOpen(false);
+  };
+
+  const handleOpenUserProfile = () => {
+    const userProfileTab = tabList.find((t) => t.type === "user_profile");
+    if (userProfileTab) {
+      setCurrentTab(userProfileTab.id);
+    } else {
+      const id = addTab({ type: "user_profile", title: "User Profile" });
+      setCurrentTab(id);
+    }
+    setIsOpen(false);
+  };
+
+  const handleOpenUpdateLog = () => {
+    window.open("https://github.com/Termix-SSH/Termix/releases", "_blank");
+    setIsOpen(false);
+  };
+
+  const handleGitHub = () => {
+    window.open("https://github.com/Termix-SSH/Termix", "_blank");
+    setIsOpen(false);
+  };
+
+  const handleSupport = () => {
+    window.open("https://github.com/Termix-SSH/Support/issues/new", "_blank");
+    setIsOpen(false);
+  };
+
+  const handleDiscord = () => {
+    window.open("https://discord.com/invite/jVQGdvHDrf", "_blank");
+    setIsOpen(false);
+  };
+
+  const handleDonate = () => {
+    window.open("https://github.com/sponsors/LukeGus", "_blank");
+    setIsOpen(false);
+  };
+
+  const handleActivityClick = (item: RecentActivityItem) => {
+    getSSHHosts().then((hosts) => {
+      const host = hosts.find((h: { id: number }) => h.id === item.hostId);
+      if (!host) return;
+
+      if (item.type === "terminal") {
+        addTab({
+          type: "terminal",
+          title: item.hostName,
+          hostConfig: host,
+        });
+      } else if (item.type === "file_manager") {
+        addTab({
+          type: "file_manager",
+          title: item.hostName,
+          hostConfig: host,
+        });
+      }
+    });
+    setIsOpen(false);
+  };
+
+  const handleHostTerminalClick = (host: SSHHost) => {
+    const title = host.name?.trim()
+      ? host.name
+      : `${host.username}@${host.ip}:${host.port}`;
+    addTab({ type: "terminal", title, hostConfig: host });
+    setIsOpen(false);
+  };
+
+  const handleHostFileManagerClick = (host: SSHHost) => {
+    const title = host.name?.trim()
+      ? host.name
+      : `${host.username}@${host.ip}:${host.port}`;
+    addTab({ type: "file_manager", title, hostConfig: host });
+    setIsOpen(false);
+  };
+
+  const handleHostServerDetailsClick = (host: SSHHost) => {
+    const title = host.name?.trim()
+      ? host.name
+      : `${host.username}@${host.ip}:${host.port}`;
+    addTab({ type: "server", title, hostConfig: host });
+    setIsOpen(false);
+  };
+
+  const handleHostEditClick = (host: SSHHost) => {
+    const title = host.name?.trim()
+      ? host.name
+      : `${host.username}@${host.ip}:${host.port}`;
+    addTab({
+      type: "ssh_manager",
+      title: "Host Manager",
+      hostConfig: host,
+      initialTab: "add_host",
+    });
+    setIsOpen(false);
+  };
+
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm",
+        "fixed inset-0 z-50 flex items-center justify-center bg-black/30",
         !isOpen && "hidden",
       )}
       onClick={() => setIsOpen(false)}
     >
       <Command
-        className="w-3/4 max-w-2xl max-h-[60vh] rounded-lg border-2 border-dark-border shadow-md"
+        className="w-3/4 max-w-2xl max-h-[60vh] rounded-lg border-2 border-dark-border shadow-md flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <CommandInput
           ref={inputRef}
           placeholder="Search for hosts or quick actions..."
         />
-        <CommandList>
-          <CommandGroup heading="Suggestions">
-            <CommandItem>
-              <Calendar />
-              <span>Calendar</span>
+        <CommandList
+          key={recentActivity.length}
+          className="w-full h-auto flex-grow overflow-y-auto"
+          style={{ maxHeight: "inherit" }}
+        >
+          {recentActivity.length > 0 && (
+            <>
+              <CommandGroup heading="Recent Activity">
+                {recentActivity.map((item, index) => (
+                  <CommandItem
+                    key={`recent-activity-${index}-${item.type}-${item.hostId}-${item.timestamp}`}
+                    value={`recent-activity-${index}-${item.hostName}-${item.type}`}
+                    onSelect={() => handleActivityClick(item)}
+                  >
+                    {item.type === "terminal" ? <Terminal /> : <FolderOpen />}
+                    <span>{item.hostName}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
+          <CommandGroup heading="Navigation">
+            <CommandItem onSelect={handleAddHost}>
+              <Server />
+              <span>Add Host</span>
             </CommandItem>
-            <CommandItem>
-              <Smile />
-              <span>Search Emoji</span>
+            <CommandItem onSelect={handleAddCredential}>
+              <Key />
+              <span>Add Credential</span>
             </CommandItem>
-            <CommandItem disabled>
-              <Calculator />
-              <span>Calculator</span>
+            <CommandItem onSelect={handleOpenAdminSettings}>
+              <Settings />
+              <span>Admin Settings</span>
+            </CommandItem>
+            <CommandItem onSelect={handleOpenUserProfile}>
+              <User />
+              <span>User Profile</span>
+            </CommandItem>
+            <CommandItem onSelect={handleOpenUpdateLog}>
+              <GrUpdate />
+              <span>Update Log</span>
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />
-          <CommandGroup heading="Settings">
-            <CommandItem>
-              <User />
-              <span>Profile</span>
-              <CommandShortcut>⌘P</CommandShortcut>
+          <CommandGroup heading="Hosts">
+            {hosts.map((host, index) => {
+              const title = host.name?.trim()
+                ? host.name
+                : `${host.username}@${host.ip}:${host.port}`;
+              return (
+                <CommandItem
+                  key={`host-${index}-${host.id}`}
+                  value={`host-${index}-${title}-${host.id}`}
+                  onSelect={() => {
+                    if (host.enableTerminal) {
+                      handleHostTerminalClick(host);
+                    }
+                  }}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <Server className="h-4 w-4" />
+                    <span>{title}</span>
+                  </div>
+                  <div
+                    className="flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="!px-2 h-7 border-1 border-dark-border"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <EllipsisVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        side="right"
+                        className="w-56 bg-dark-bg border-dark-border text-white"
+                      >
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleHostServerDetailsClick(host);
+                          }}
+                          className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                        >
+                          <Server className="h-4 w-4" />
+                          <span className="flex-1">Open Server Details</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleHostFileManagerClick(host);
+                          }}
+                          className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                        >
+                          <FolderOpen className="h-4 w-4" />
+                          <span className="flex-1">Open File Manager</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleHostEditClick(host);
+                          }}
+                          className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="flex-1">Edit</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Links">
+            <CommandItem onSelect={handleGitHub}>
+              <Github />
+              <span>GitHub</span>
             </CommandItem>
-            <CommandItem>
-              <CreditCard />
-              <span>Billing</span>
-              <CommandShortcut>⌘B</CommandShortcut>
+            <CommandItem onSelect={handleSupport}>
+              <BiSupport />
+              <span>Support</span>
             </CommandItem>
-            <CommandItem>
-              <Settings />
-              <span>Settings</span>
-              <CommandShortcut>⌘S</CommandShortcut>
+            <CommandItem onSelect={handleDiscord}>
+              <BsDiscord />
+              <span>Discord</span>
+            </CommandItem>
+            <CommandItem onSelect={handleDonate}>
+              <BiMoney />
+              <span>Donate</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>

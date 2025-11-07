@@ -85,7 +85,7 @@ export function Dashboard({
   >([]);
   const [serverStatsLoading, setServerStatsLoading] = useState<boolean>(true);
 
-  const { addTab, setCurrentTab, tabs: tabList } = useTabs();
+  const { addTab, setCurrentTab, tabs: tabList, updateTab } = useTabs();
 
   let sidebarState: "expanded" | "collapsed" = "expanded";
   try {
@@ -264,6 +264,7 @@ export function Dashboard({
   const handleAddHost = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
+      updateTab(sshManagerTab.id, { initialTab: "add_host" });
       setCurrentTab(sshManagerTab.id);
     } else {
       const id = addTab({
@@ -278,6 +279,7 @@ export function Dashboard({
   const handleAddCredential = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
+      updateTab(sshManagerTab.id, { initialTab: "add_credential" });
       setCurrentTab(sshManagerTab.id);
     } else {
       const id = addTab({
@@ -671,7 +673,7 @@ export function Dashboard({
                                   {server.name}
                                 </p>
                               </div>
-                              <div className="flex flex-row justify-between text-xs text-muted-foreground">
+                              <div className="flex flex-row justify-start gap-4 text-xs text-muted-foreground">
                                 <span>
                                   {t("dashboard.cpu")}:{" "}
                                   {server.cpu !== null

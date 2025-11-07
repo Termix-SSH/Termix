@@ -26,11 +26,13 @@ interface TabData {
 interface TopNavbarProps {
   isTopbarOpen: boolean;
   setIsTopbarOpen: (open: boolean) => void;
+  onOpenCommandPalette: () => void;
 }
 
 export function TopNavbar({
   isTopbarOpen,
   setIsTopbarOpen,
+  onOpenCommandPalette,
 }: TopNavbarProps): React.ReactElement {
   const { state } = useSidebar();
   const {
@@ -476,6 +478,7 @@ export function TopNavbar({
           <ToolsMenu
             onOpenSshTools={() => setToolsSheetOpen(true)}
             onOpenSnippets={() => setSnippetsSidebarOpen(true)}
+            onOpenCommandPalette={onOpenCommandPalette}
           />
 
           <Button

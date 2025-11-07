@@ -35,28 +35,10 @@ export function HostManager({
   const lastProcessedHostIdRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (ignoreNextHostConfigChangeRef.current) {
-      ignoreNextHostConfigChangeRef.current = false;
-      return;
+    if (initialTab) {
+      setActiveTab(initialTab);
     }
-
-    if (hostConfig && initialTab === "add_host") {
-      const currentHostId = hostConfig.id;
-
-      if (currentHostId !== lastProcessedHostIdRef.current) {
-        setEditingHost(hostConfig);
-        setActiveTab("add_host");
-        lastProcessedHostIdRef.current = currentHostId;
-      } else if (
-        activeTab === "host_viewer" ||
-        activeTab === "credentials" ||
-        activeTab === "add_credential"
-      ) {
-        setEditingHost(hostConfig);
-        setActiveTab("add_host");
-      }
-    }
-  }, [hostConfig, initialTab]);
+  }, [initialTab]);
 
   const handleEditHost = (host: SSHHost) => {
     setEditingHost(host);

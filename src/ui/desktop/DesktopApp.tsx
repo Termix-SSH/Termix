@@ -185,6 +185,7 @@ function AppContent() {
           <TopNavbar
             isTopbarOpen={isTopbarOpen}
             setIsTopbarOpen={setIsTopbarOpen}
+            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           />
         </LeftSidebar>
       )}
