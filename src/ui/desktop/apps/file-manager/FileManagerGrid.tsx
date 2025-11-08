@@ -92,6 +92,8 @@ interface FileManagerGridProps {
   createIntent?: CreateIntent | null;
   onConfirmCreate?: (name: string) => void;
   onCancelCreate?: () => void;
+  onNewFile?: () => void;
+  onNewFolder?: () => void;
 }
 
 const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
@@ -192,6 +194,8 @@ export function FileManagerGrid({
   createIntent,
   onConfirmCreate,
   onCancelCreate,
+  onNewFile,
+  onNewFolder,
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -772,6 +776,42 @@ export function FileManagerGrid({
             onUndo();
           }
           break;
+        case "d":
+        case "D":
+          if (
+            (event.ctrlKey || event.metaKey) &&
+            selectedFiles.length > 0 &&
+            onDownload
+          ) {
+            event.preventDefault();
+            onDownload(selectedFiles);
+          }
+          break;
+        case "n":
+        case "N":
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            if (event.shiftKey && onNewFolder) {
+              onNewFolder();
+            } else if (!event.shiftKey && onNewFile) {
+              onNewFile();
+            }
+          }
+          break;
+        case "u":
+        case "U":
+          if ((event.ctrlKey || event.metaKey) && onUpload) {
+            event.preventDefault();
+            const input = document.createElement("input");
+            input.type = "file";
+            input.multiple = true;
+            input.onchange = (e) => {
+              const files = (e.target as HTMLInputElement).files;
+              if (files) onUpload(files);
+            };
+            input.click();
+          }
+          break;
         case "Delete":
           if (selectedFiles.length > 0 && onDelete) {
             onDelete(selectedFiles);
@@ -781,6 +821,12 @@ export function FileManagerGrid({
           if (selectedFiles.length === 1 && onStartEdit) {
             event.preventDefault();
             onStartEdit(selectedFiles[0]);
+          }
+          break;
+        case "Enter":
+          if (selectedFiles.length === 1) {
+            event.preventDefault();
+            onFileOpen(selectedFiles[0]);
           }
           break;
         case "y":

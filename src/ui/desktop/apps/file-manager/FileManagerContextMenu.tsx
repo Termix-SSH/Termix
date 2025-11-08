@@ -19,6 +19,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 
 interface FileItem {
   name: string;
@@ -425,6 +426,20 @@ export function FileManagerContextMenu({
     return index > 0 && index < filteredMenuItems.length - 1;
   });
 
+  const renderShortcut = (shortcut: string) => {
+    const keys = shortcut.split("+");
+    if (keys.length === 1) {
+      return <Kbd>{keys[0]}</Kbd>;
+    }
+    return (
+      <KbdGroup>
+        {keys.map((key, index) => (
+          <Kbd key={index}>{key}</Kbd>
+        ))}
+      </KbdGroup>
+    );
+  };
+
   return (
     <>
       <div className="fixed inset-0 z-[99990]" />
@@ -470,9 +485,9 @@ export function FileManagerContextMenu({
                 <span className="flex-1">{item.label}</span>
               </div>
               {item.shortcut && (
-                <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                  {item.shortcut}
-                </span>
+                <div className="ml-2 flex-shrink-0">
+                  {renderShortcut(item.shortcut)}
+                </div>
               )}
             </button>
           );

@@ -1928,6 +1928,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             createIntent={createIntent}
             onConfirmCreate={handleConfirmCreate}
             onCancelCreate={handleCancelCreate}
+            onNewFile={handleCreateNewFile}
+            onNewFolder={handleCreateNewFolder}
           />
 
           <FileManagerContextMenu

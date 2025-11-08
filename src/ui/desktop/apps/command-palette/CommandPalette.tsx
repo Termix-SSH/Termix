@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/command.tsx";
 import React, { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Key,
   Server,
@@ -377,6 +378,20 @@ export function CommandPalette({
             </CommandItem>
           </CommandGroup>
         </CommandList>
+        <div className="border-t border-dark-border px-4 py-2 bg-dark-hover/50 flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Press</span>
+            <KbdGroup>
+              <Kbd>Shift</Kbd>
+              <Kbd>Shift</Kbd>
+            </KbdGroup>
+            <span>to toggle</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>Close</span>
+            <Kbd>Esc</Kbd>
+          </div>
+        </div>
       </Command>
     </div>
   );
