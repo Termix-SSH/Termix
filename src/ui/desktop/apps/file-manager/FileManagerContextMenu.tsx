@@ -102,9 +102,15 @@ export function FileManagerContextMenu({
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      setIsMounted(false);
+      return;
+    }
+
+    setIsMounted(true);
 
     const adjustPosition = () => {
       const menuWidth = 200;
@@ -182,8 +188,6 @@ export function FileManagerContextMenu({
       }
     };
   }, [isVisible, x, y, onClose]);
-
-  if (!isVisible) return null;
 
   const isFileContext = files.length > 0;
   const isSingleFile = files.length === 1;
@@ -440,13 +444,24 @@ export function FileManagerContextMenu({
     );
   };
 
+  if (!isVisible && !isMounted) return null;
+
   return (
     <>
-      <div className="fixed inset-0 z-[99990]" />
+      <div
+        className={cn(
+          "fixed inset-0 z-[99990] transition-opacity duration-150",
+          !isMounted && "opacity-0"
+        )}
+      />
 
       <div
         data-context-menu
-        className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden"
+        className={cn(
+          "fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden",
+          "transition-all duration-150 ease-out origin-top-left",
+          isMounted ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        )}
         style={{
           left: menuPosition.x,
           top: menuPosition.y,

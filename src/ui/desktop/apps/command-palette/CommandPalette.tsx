@@ -226,13 +226,17 @@ export function CommandPalette({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/30",
-        !isOpen && "hidden",
+        "fixed inset-0 z-50 flex items-center justify-center bg-black/30 transition-opacity duration-200",
+        !isOpen && "opacity-0 pointer-events-none",
       )}
       onClick={() => setIsOpen(false)}
     >
       <Command
-        className="w-3/4 max-w-2xl max-h-[60vh] rounded-lg border-2 border-dark-border shadow-md flex flex-col"
+        className={cn(
+          "w-3/4 max-w-2xl max-h-[60vh] rounded-lg border-2 border-dark-border shadow-md flex flex-col",
+          "transition-all duration-200 ease-out",
+          !isOpen && "scale-95 opacity-0",
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         <CommandInput

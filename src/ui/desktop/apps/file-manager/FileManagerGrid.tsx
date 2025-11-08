@@ -1049,8 +1049,9 @@ export function FileManagerGrid({
                     draggable={true}
                     className={cn(
                       "group p-3 rounded-lg cursor-pointer",
-                      "hover:bg-accent hover:text-accent-foreground border-2 border-transparent",
-                      isSelected && "bg-primary/20 border-primary",
+                      "transition-all duration-150 ease-out",
+                      "hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] border-2 border-transparent",
+                      isSelected && "bg-primary/20 border-primary ring-2 ring-primary/20",
                       dragState.target?.path === file.path &&
                         "bg-muted border-primary border-dashed relative z-10",
                       dragState.files.some((f) => f.path === file.path) &&
@@ -1138,8 +1139,9 @@ export function FileManagerGrid({
                     draggable={true}
                     className={cn(
                       "flex items-center gap-3 p-2 rounded cursor-pointer",
+                      "transition-all duration-150 ease-out",
                       "hover:bg-accent hover:text-accent-foreground",
-                      isSelected && "bg-primary/20",
+                      isSelected && "bg-primary/20 ring-2 ring-primary/20",
                       dragState.target?.path === file.path &&
                         "bg-muted border-primary border-dashed relative z-10",
                       dragState.files.some((f) => f.path === file.path) &&
