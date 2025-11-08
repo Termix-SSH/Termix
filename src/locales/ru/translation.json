@@ -1657,5 +1657,28 @@
     "cpu": "CPU",
     "ram": "RAM",
     "notAvailable": "N/A"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "Поиск хостов или быстрых действий...",
+    "recentActivity": "Недавняя активность",
+    "navigation": "Навигация",
+    "addHost": "Добавить хост",
+    "addCredential": "Добавить учетные данные",
+    "adminSettings": "Настройки администратора",
+    "userProfile": "Профиль пользователя",
+    "updateLog": "Журнал обновлений",
+    "hosts": "Хосты",
+    "openServerDetails": "Открыть детали сервера",
+    "openFileManager": "Открыть файловый менеджер",
+    "edit": "Редактировать",
+    "links": "Ссылки",
+    "github": "GitHub",
+    "support": "Поддержка",
+    "discord": "Discord",
+    "donate": "Пожертвовать",
+    "press": "Нажмите",
+    "toToggle": "для переключения",
+    "close": "Закрыть",
+    "hostManager": "Менеджер хостов"
   }
 }

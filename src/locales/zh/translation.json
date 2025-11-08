@@ -1582,5 +1582,28 @@
     "cpu": "CPU",
     "ram": "内存",
     "notAvailable": "不可用"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "搜索主机或快速操作...",
+    "recentActivity": "最近活动",
+    "navigation": "导航",
+    "addHost": "添加主机",
+    "addCredential": "添加凭据",
+    "adminSettings": "管理员设置",
+    "userProfile": "用户资料",
+    "updateLog": "更新日志",
+    "hosts": "主机",
+    "openServerDetails": "打开服务器详情",
+    "openFileManager": "打开文件管理器",
+    "edit": "编辑",
+    "links": "链接",
+    "github": "GitHub",
+    "support": "支持",
+    "discord": "Discord",
+    "donate": "捐赠",
+    "press": "按下",
+    "toToggle": "来切换",
+    "close": "关闭",
+    "hostManager": "主机管理器"
   }
 }

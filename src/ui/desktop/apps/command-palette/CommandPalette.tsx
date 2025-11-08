@@ -20,6 +20,7 @@ import {
   Pencil,
   EllipsisVertical,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { BiMoney, BiSupport } from "react-icons/bi";
 import { BsDiscord } from "react-icons/bs";
 import { GrUpdate } from "react-icons/gr";
@@ -64,6 +65,7 @@ export function CommandPalette({
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const { addTab, setCurrentTab, tabs: tabList, updateTab } = useTabs();
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
@@ -91,7 +93,7 @@ export function CommandPalette({
     } else {
       const id = addTab({
         type: "ssh_manager",
-        title: "Host Manager",
+        title: t("commandPalette.hostManager"),
         initialTab: "add_host",
       });
       setCurrentTab(id);
@@ -107,7 +109,7 @@ export function CommandPalette({
     } else {
       const id = addTab({
         type: "ssh_manager",
-        title: "Host Manager",
+        title: t("commandPalette.hostManager"),
         initialTab: "add_credential",
       });
       setCurrentTab(id);
@@ -120,7 +122,7 @@ export function CommandPalette({
     if (adminTab) {
       setCurrentTab(adminTab.id);
     } else {
-      const id = addTab({ type: "admin", title: "Admin Settings" });
+      const id = addTab({ type: "admin", title: t("commandPalette.adminSettings") });
       setCurrentTab(id);
     }
     setIsOpen(false);
@@ -131,7 +133,7 @@ export function CommandPalette({
     if (userProfileTab) {
       setCurrentTab(userProfileTab.id);
     } else {
-      const id = addTab({ type: "user_profile", title: "User Profile" });
+      const id = addTab({ type: "user_profile", title: t("commandPalette.userProfile") });
       setCurrentTab(id);
     }
     setIsOpen(false);
@@ -214,7 +216,7 @@ export function CommandPalette({
       : `${host.username}@${host.ip}:${host.port}`;
     addTab({
       type: "ssh_manager",
-      title: "Host Manager",
+      title: t("commandPalette.hostManager"),
       hostConfig: host,
       initialTab: "add_host",
     });
@@ -235,7 +237,7 @@ export function CommandPalette({
       >
         <CommandInput
           ref={inputRef}
-          placeholder="Search for hosts or quick actions..."
+          placeholder={t("commandPalette.searchPlaceholder")}
         />
         <CommandList
           key={recentActivity.length}
@@ -244,7 +246,7 @@ export function CommandPalette({
         >
           {recentActivity.length > 0 && (
             <>
-              <CommandGroup heading="Recent Activity">
+              <CommandGroup heading={t("commandPalette.recentActivity")}>
                 {recentActivity.map((item, index) => (
                   <CommandItem
                     key={`recent-activity-${index}-${item.type}-${item.hostId}-${item.timestamp}`}
@@ -259,30 +261,30 @@ export function CommandPalette({
               <CommandSeparator />
             </>
           )}
-          <CommandGroup heading="Navigation">
+          <CommandGroup heading={t("commandPalette.navigation")}>
             <CommandItem onSelect={handleAddHost}>
               <Server />
-              <span>Add Host</span>
+              <span>{t("commandPalette.addHost")}</span>
             </CommandItem>
             <CommandItem onSelect={handleAddCredential}>
               <Key />
-              <span>Add Credential</span>
+              <span>{t("commandPalette.addCredential")}</span>
             </CommandItem>
             <CommandItem onSelect={handleOpenAdminSettings}>
               <Settings />
-              <span>Admin Settings</span>
+              <span>{t("commandPalette.adminSettings")}</span>
             </CommandItem>
             <CommandItem onSelect={handleOpenUserProfile}>
               <User />
-              <span>User Profile</span>
+              <span>{t("commandPalette.userProfile")}</span>
             </CommandItem>
             <CommandItem onSelect={handleOpenUpdateLog}>
               <GrUpdate />
-              <span>Update Log</span>
+              <span>{t("commandPalette.updateLog")}</span>
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />
-          <CommandGroup heading="Hosts">
+          <CommandGroup heading={t("commandPalette.hosts")}>
             {hosts.map((host, index) => {
               const title = host.name?.trim()
                 ? host.name
@@ -329,7 +331,7 @@ export function CommandPalette({
                           className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
                         >
                           <Server className="h-4 w-4" />
-                          <span className="flex-1">Open Server Details</span>
+                          <span className="flex-1">{t("commandPalette.openServerDetails")}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -339,7 +341,7 @@ export function CommandPalette({
                           className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
                         >
                           <FolderOpen className="h-4 w-4" />
-                          <span className="flex-1">Open File Manager</span>
+                          <span className="flex-1">{t("commandPalette.openFileManager")}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -349,7 +351,7 @@ export function CommandPalette({
                           className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
                         >
                           <Pencil className="h-4 w-4" />
-                          <span className="flex-1">Edit</span>
+                          <span className="flex-1">{t("commandPalette.edit")}</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -359,36 +361,36 @@ export function CommandPalette({
             })}
           </CommandGroup>
           <CommandSeparator />
-          <CommandGroup heading="Links">
+          <CommandGroup heading={t("commandPalette.links")}>
             <CommandItem onSelect={handleGitHub}>
               <Github />
-              <span>GitHub</span>
+              <span>{t("commandPalette.github")}</span>
             </CommandItem>
             <CommandItem onSelect={handleSupport}>
               <BiSupport />
-              <span>Support</span>
+              <span>{t("commandPalette.support")}</span>
             </CommandItem>
             <CommandItem onSelect={handleDiscord}>
               <BsDiscord />
-              <span>Discord</span>
+              <span>{t("commandPalette.discord")}</span>
             </CommandItem>
             <CommandItem onSelect={handleDonate}>
               <BiMoney />
-              <span>Donate</span>
+              <span>{t("commandPalette.donate")}</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>
         <div className="border-t border-dark-border px-4 py-2 bg-dark-hover/50 flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <span>Press</span>
+            <span>{t("commandPalette.press")}</span>
             <KbdGroup>
               <Kbd>Shift</Kbd>
               <Kbd>Shift</Kbd>
             </KbdGroup>
-            <span>to toggle</span>
+            <span>{t("commandPalette.toToggle")}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span>Close</span>
+            <span>{t("commandPalette.close")}</span>
             <Kbd>Esc</Kbd>
           </div>
         </div>

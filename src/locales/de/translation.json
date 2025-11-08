@@ -1571,5 +1571,28 @@
     "cpu": "CPU",
     "ram": "RAM",
     "notAvailable": "Nicht verfügbar"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "Nach Hosts oder Schnellaktionen suchen...",
+    "recentActivity": "Kürzliche Aktivität",
+    "navigation": "Navigation",
+    "addHost": "Host hinzufügen",
+    "addCredential": "Anmeldedaten hinzufügen",
+    "adminSettings": "Admin-Einstellungen",
+    "userProfile": "Benutzerprofil",
+    "updateLog": "Aktualisierungsprotokoll",
+    "hosts": "Hosts",
+    "openServerDetails": "Serverdetails öffnen",
+    "openFileManager": "Dateimanager öffnen",
+    "edit": "Bearbeiten",
+    "links": "Links",
+    "github": "GitHub",
+    "support": "Support",
+    "discord": "Discord",
+    "donate": "Spenden",
+    "press": "Drücken Sie",
+    "toToggle": "zum Umschalten",
+    "close": "Schließen",
+    "hostManager": "Host-Manager"
   }
 }
