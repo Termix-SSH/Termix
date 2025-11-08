@@ -529,7 +529,7 @@ export function Dashboard({
                     </div>
                   </div>
                 </div>
-                <div className="flex-1 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden">
+                <div className="flex-1 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
                   <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
                     <div className="flex flex-row items-center justify-between mb-3 mt-1">
                       <p className="text-xl font-semibold flex flex-row items-center">
@@ -549,7 +549,7 @@ export function Dashboard({
                       className={`grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-x-hidden ${recentActivityLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
                     >
                       {recentActivityLoading ? (
-                        <div className="flex flex-row items-center text-muted-foreground text-sm">
+                        <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse">
                           <Loader2 className="animate-spin mr-2" size={16} />
                           <span>{t("dashboard.loadingRecentActivity")}</span>
                         </div>
@@ -581,7 +581,7 @@ export function Dashboard({
                 </div>
               </div>
               <div className="flex flex-row flex-1 gap-4 min-h-0">
-                <div className="flex-1 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden">
+                <div className="flex-1 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
                   <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden">
                     <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
                       <FastForward className="mr-3" />
@@ -645,7 +645,7 @@ export function Dashboard({
                     </div>
                   </div>
                 </div>
-                <div className="flex-1 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden">
+                <div className="flex-1 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
                   <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
                     <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
                       <ChartLine className="mr-3" />
@@ -655,7 +655,7 @@ export function Dashboard({
                       className={`grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-min overflow-x-hidden ${serverStatsLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
                     >
                       {serverStatsLoading ? (
-                        <div className="flex flex-row items-center text-muted-foreground text-sm">
+                        <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse">
                           <Loader2 className="animate-spin mr-2" size={16} />
                           <span>{t("dashboard.loadingServerStats")}</span>
                         </div>
