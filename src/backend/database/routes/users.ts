@@ -226,6 +226,16 @@ router.post("/create", async (req, res) => {
       });
     }
 
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist user to disk", saveError, {
+        operation: "user_create_save_failed",
+        userId: id,
+      });
+    }
+
     authLogger.success(
       `Traditional user created: ${username} (is_admin: ${isFirstUser})`,
       {
@@ -785,6 +795,16 @@ router.get("/oidc/callback", async (req, res) => {
         });
       }
 
+      try {
+        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+        await saveMemoryDatabaseToFile();
+      } catch (saveError) {
+        authLogger.error("Failed to persist OIDC user to disk", saveError, {
+          operation: "oidc_user_create_save_failed",
+          userId: id,
+        });
+      }
+
       user = await db.select().from(users).where(eq(users.id, id));
     } else {
       await db
@@ -835,6 +855,9 @@ router.get("/oidc/callback", async (req, res) => {
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
         : 7 * 24 * 60 * 60 * 1000;
+
+    // Clear any existing JWT cookie first to prevent conflicts
+    res.clearCookie("jwt", authManager.getSecureCookieOptions(req));
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -1653,6 +1676,16 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
       .set({ is_admin: true })
       .where(eq(users.username, username));
 
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist admin promotion to disk", saveError, {
+        operation: "make_admin_save_failed",
+        username,
+      });
+    }
+
     authLogger.success(
       `User ${username} made admin by ${adminUser[0].username}`,
     );
@@ -1701,6 +1734,16 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
       .update(users)
       .set({ is_admin: false })
       .where(eq(users.username, username));
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist admin removal to disk", saveError, {
+        operation: "remove_admin_save_failed",
+        username,
+      });
+    }
 
     authLogger.success(
       `Admin status removed from ${username} by ${adminUser[0].username}`,

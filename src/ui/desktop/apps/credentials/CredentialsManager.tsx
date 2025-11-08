@@ -641,6 +641,9 @@ export function CredentialsManager({
                                         {credential.username}
                                       </p>
                                       <p className="text-xs text-muted-foreground truncate">
+                                        ID: {credential.id}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground truncate">
                                         {credential.authType === "password"
                                           ? t("credentials.password")
                                           : t("credentials.sshKey")}

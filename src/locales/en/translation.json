@@ -109,6 +109,7 @@
     "orCreateNewFolder": "Or create new folder",
     "addTag": "Add tag",
     "saving": "Saving...",
+    "credentialId": "Credential ID",
     "overview": "Overview",
     "security": "Security",
     "usage": "Usage",
@@ -782,7 +783,9 @@
     "noneAuthDescription": "This authentication method will use keyboard-interactive authentication when connecting to the SSH server.",
     "noneAuthDetails": "Keyboard-interactive authentication allows the server to prompt you for credentials during connection. This is useful for servers that require multi-factor authentication or if you do not want to save credentials locally.",
     "forceKeyboardInteractive": "Force Keyboard-Interactive",
-    "forceKeyboardInteractiveDesc": "Forces the use of keyboard-interactive authentication. This is often required for servers that use Two-Factor Authentication (TOTP/2FA)."
+    "forceKeyboardInteractiveDesc": "Forces the use of keyboard-interactive authentication. This is often required for servers that use Two-Factor Authentication (TOTP/2FA).",
+    "overrideCredentialUsername": "Override Credential Username",
+    "overrideCredentialUsernameDesc": "Use a different username than the one stored in the credential. This allows you to use the same credential with different usernames."
   },
   "terminal": {
     "title": "Terminal",

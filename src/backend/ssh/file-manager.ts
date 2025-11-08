@@ -845,7 +845,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   sshConn.lastActive = Date.now();
 
   const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
-  sshConn.client.exec(`ls -la '${escapedPath}'`, (err, stream) => {
+  sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
     if (err) {
       fileLogger.error("SSH listFiles error:", err);
       return res.status(500).json({ error: err.message });

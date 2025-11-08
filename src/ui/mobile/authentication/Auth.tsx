@@ -504,55 +504,45 @@ export function Auth({
       setOidcLoading(true);
       setError(null);
 
-      getUserInfo()
-        .then((meRes) => {
-          setIsAdmin(!!meRes.is_admin);
-          setUsername(meRes.username || null);
-          setUserId(meRes.userId || null);
-          setDbError(null);
-          postJWTToWebView();
+      window.history.replaceState({}, document.title, window.location.pathname);
 
-          if (isReactNativeWebView()) {
-            setMobileAuthSuccess(true);
+      setTimeout(() => {
+        getUserInfo()
+          .then((meRes) => {
+            setIsAdmin(!!meRes.is_admin);
+            setUsername(meRes.username || null);
+            setUserId(meRes.userId || null);
+            setDbError(null);
+            postJWTToWebView();
+
+            if (isReactNativeWebView()) {
+              setMobileAuthSuccess(true);
+              setOidcLoading(false);
+              return;
+            }
+
+            setLoggedIn(true);
+            onAuthSuccess({
+              isAdmin: !!meRes.is_admin,
+              username: meRes.username || null,
+              userId: meRes.userId || null,
+            });
+
+            setInternalLoggedIn(true);
+          })
+          .catch((err) => {
+            console.error("Failed to get user info after OIDC callback:", err);
+            setError(t("errors.failedUserInfo"));
+            setInternalLoggedIn(false);
+            setLoggedIn(false);
+            setIsAdmin(false);
+            setUsername(null);
+            setUserId(null);
+          })
+          .finally(() => {
             setOidcLoading(false);
-            window.history.replaceState(
-              {},
-              document.title,
-              window.location.pathname,
-            );
-            return;
-          }
-
-          setLoggedIn(true);
-          onAuthSuccess({
-            isAdmin: !!meRes.is_admin,
-            username: meRes.username || null,
-            userId: meRes.userId || null,
           });
-
-          setInternalLoggedIn(true);
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-          );
-        })
-        .catch(() => {
-          setError(t("errors.failedUserInfo"));
-          setInternalLoggedIn(false);
-          setLoggedIn(false);
-          setIsAdmin(false);
-          setUsername(null);
-          setUserId(null);
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-          );
-        })
-        .finally(() => {
-          setOidcLoading(false);
-        });
+      }, 200);
     }
   }, []);
 

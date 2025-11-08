@@ -558,65 +558,61 @@ export function Auth({
     if (success) {
       setOidcLoading(true);
 
-      getUserInfo()
-        .then((meRes) => {
-          if (isInElectronWebView()) {
-            const token = getCookie("jwt") || localStorage.getItem("jwt");
-            if (token) {
-              try {
-                window.parent.postMessage(
-                  {
-                    type: "AUTH_SUCCESS",
-                    token: token,
-                    source: "oidc_callback",
-                    platform: "desktop",
-                    timestamp: Date.now(),
-                  },
-                  "*",
-                );
-                setWebviewAuthSuccess(true);
-                setTimeout(() => window.location.reload(), 100);
-                setOidcLoading(false);
-                return;
-              } catch (e) {
-                console.error("Error posting auth success message:", e);
+      // Clear the success parameter first to prevent re-processing
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      setTimeout(() => {
+        getUserInfo()
+          .then((meRes) => {
+            if (isInElectronWebView()) {
+              const token = getCookie("jwt") || localStorage.getItem("jwt");
+              if (token) {
+                try {
+                  window.parent.postMessage(
+                    {
+                      type: "AUTH_SUCCESS",
+                      token: token,
+                      source: "oidc_callback",
+                      platform: "desktop",
+                      timestamp: Date.now(),
+                    },
+                    "*",
+                  );
+                  setWebviewAuthSuccess(true);
+                  setTimeout(() => window.location.reload(), 100);
+                  setOidcLoading(false);
+                  return;
+                } catch (e) {
+                  console.error("Error posting auth success message:", e);
+                }
               }
             }
-          }
 
-          setInternalLoggedIn(true);
-          setLoggedIn(true);
-          setIsAdmin(!!meRes.is_admin);
-          setUsername(meRes.username || null);
-          setUserId(meRes.userId || null);
-          setDbError(null);
-          onAuthSuccess({
-            isAdmin: !!meRes.is_admin,
-            username: meRes.username || null,
-            userId: meRes.userId || null,
+            setInternalLoggedIn(true);
+            setLoggedIn(true);
+            setIsAdmin(!!meRes.is_admin);
+            setUsername(meRes.username || null);
+            setUserId(meRes.userId || null);
+            setDbError(null);
+            onAuthSuccess({
+              isAdmin: !!meRes.is_admin,
+              username: meRes.username || null,
+              userId: meRes.userId || null,
+            });
+            setInternalLoggedIn(true);
+          })
+          .catch((err) => {
+            console.error("Failed to get user info after OIDC callback:", err);
+            setInternalLoggedIn(false);
+            setLoggedIn(false);
+            setIsAdmin(false);
+            setUsername(null);
+            setUserId(null);
+          })
+          .finally(() => {
+            setOidcLoading(false);
           });
-          setInternalLoggedIn(true);
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-          );
-        })
-        .catch(() => {
-          setInternalLoggedIn(false);
-          setLoggedIn(false);
-          setIsAdmin(false);
-          setUsername(null);
-          setUserId(null);
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-          );
-        })
-        .finally(() => {
-          setOidcLoading(false);
-        });
+      }, 200);
     }
   }, [
     onAuthSuccess,

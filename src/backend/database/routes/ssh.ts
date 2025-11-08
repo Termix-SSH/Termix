@@ -8,6 +8,7 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
+  recentActivity,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -225,6 +226,7 @@ router.post(
       authMethod,
       authType,
       credentialId,
+      overrideCredentialUsername,
       key,
       keyPassword,
       keyType,
@@ -264,6 +266,7 @@ router.post(
       username,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
+      overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
@@ -323,6 +326,7 @@ router.post(
               : []
             : [],
         pin: !!createdHost.pin,
+        overrideCredentialUsername: !!createdHost.overrideCredentialUsername,
         enableTerminal: !!createdHost.enableTerminal,
         enableTunnel: !!createdHost.enableTunnel,
         tunnelConnections: createdHost.tunnelConnections
@@ -348,6 +352,27 @@ router.post(
           authType: effectiveAuthType,
         },
       );
+
+      try {
+        const fetch = (await import("node-fetch")).default;
+        const token =
+          req.cookies?.jwt || req.headers.authorization?.replace("Bearer ", "");
+        await fetch("http://localhost:30005/refresh", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Cookie: `jwt=${token}` }),
+          },
+        });
+      } catch (refreshError) {
+        sshLogger.warn("Failed to refresh server stats polling", {
+          operation: "stats_refresh_after_create",
+          error:
+            refreshError instanceof Error
+              ? refreshError.message
+              : "Unknown error",
+        });
+      }
 
       res.json(resolvedHost);
     } catch (err) {
@@ -415,6 +440,7 @@ router.put(
       authMethod,
       authType,
       credentialId,
+      overrideCredentialUsername,
       key,
       keyPassword,
       keyType,
@@ -455,6 +481,7 @@ router.put(
       username,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
+      overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
@@ -532,6 +559,7 @@ router.put(
               : []
             : [],
         pin: !!updatedHost.pin,
+        overrideCredentialUsername: !!updatedHost.overrideCredentialUsername,
         enableTerminal: !!updatedHost.enableTerminal,
         enableTunnel: !!updatedHost.enableTunnel,
         tunnelConnections: updatedHost.tunnelConnections
@@ -557,6 +585,27 @@ router.put(
           authType: effectiveAuthType,
         },
       );
+
+      try {
+        const fetch = (await import("node-fetch")).default;
+        const token =
+          req.cookies?.jwt || req.headers.authorization?.replace("Bearer ", "");
+        await fetch("http://localhost:30005/refresh", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Cookie: `jwt=${token}` }),
+          },
+        });
+      } catch (refreshError) {
+        sshLogger.warn("Failed to refresh server stats polling", {
+          operation: "stats_refresh_after_update",
+          error:
+            refreshError instanceof Error
+              ? refreshError.message
+              : "Unknown error",
+        });
+      }
 
       res.json(resolvedHost);
     } catch (err) {
@@ -585,6 +634,18 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
     });
     return res.status(400).json({ error: "Invalid userId" });
   }
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    sshLogger.warn("User data not unlocked for SSH host fetch", {
+      operation: "host_fetch",
+      userId,
+    });
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
   try {
     const data = await SimpleDBOps.select(
       db.select().from(sshData).where(eq(sshData.userId, userId)),
@@ -603,6 +664,7 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
                 : []
               : [],
           pin: !!row.pin,
+          overrideCredentialUsername: !!row.overrideCredentialUsername,
           enableTerminal: !!row.enableTerminal,
           enableTunnel: !!row.enableTunnel,
           tunnelConnections: row.tunnelConnections
@@ -649,6 +711,19 @@ router.get(
       });
       return res.status(400).json({ error: "Invalid userId or hostId" });
     }
+
+    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+      sshLogger.warn("User data not unlocked for SSH host fetch by ID", {
+        operation: "host_fetch_by_id",
+        hostId: parseInt(hostId),
+        userId,
+      });
+      return res.status(401).json({
+        error: "Session expired - please log in again",
+        code: "SESSION_EXPIRED",
+      });
+    }
+
     try {
       const data = await db
         .select()
@@ -674,6 +749,7 @@ router.get(
               : []
             : [],
         pin: !!host.pin,
+        overrideCredentialUsername: !!host.overrideCredentialUsername,
         enableTerminal: !!host.enableTerminal,
         enableTunnel: !!host.enableTunnel,
         tunnelConnections: host.tunnelConnections
@@ -845,6 +921,15 @@ router.delete(
           and(
             eq(sshCredentialUsage.userId, userId),
             eq(sshCredentialUsage.hostId, numericHostId),
+          ),
+        );
+
+      await db
+        .delete(recentActivity)
+        .where(
+          and(
+            eq(recentActivity.userId, userId),
+            eq(recentActivity.hostId, numericHostId),
           ),
         );
 
@@ -1267,7 +1352,9 @@ async function resolveHostCredentials(
         const credential = credentials[0];
         return {
           ...host,
-          username: credential.username,
+          username: host.overrideCredentialUsername
+            ? host.username
+            : credential.username,
           authType: credential.auth_type || credential.authType,
           password: credential.password,
           key: credential.key,
@@ -1446,8 +1533,10 @@ router.post(
           username: hostData.username,
           password: hostData.authType === "password" ? hostData.password : null,
           authType: hostData.authType,
-          credentialId:
-            hostData.authType === "credential" ? hostData.credentialId : null,
+          credentialId: hostData.credentialId || null,
+          overrideCredentialUsername: hostData.overrideCredentialUsername
+            ? 1
+            : 0,
           key: hostData.authType === "key" ? hostData.key : null,
           keyPassword:
             hostData.authType === "key"

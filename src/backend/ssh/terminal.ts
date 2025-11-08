@@ -152,6 +152,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let totpPromptSent = false;
   let isKeyboardInteractive = false;
   let keyboardInteractiveResponded = false;
+  let isConnecting = false;
+  let isConnected = false;
+  let isCleaningUp = false;
 
   ws.on("close", () => {
     const userWs = userConnections.get(userId);
@@ -417,10 +420,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
+    if (isConnecting || isConnected) {
+      sshLogger.warn("Connection already in progress or established", {
+        operation: "ssh_connect",
+        hostId: id,
+        isConnecting,
+        isConnected,
+      });
+      return;
+    }
+
+    isConnecting = true;
     sshConn = new Client();
 
     const connectionTimeout = setTimeout(() => {
-      if (sshConn) {
+      if (sshConn && isConnecting && !isConnected) {
         sshLogger.error("SSH connection timeout", undefined, {
           operation: "ssh_connect",
           hostId: id,
@@ -433,7 +447,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
         cleanupSSH(connectionTimeout);
       }
-    }, 60000);
+    }, 120000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     let authMethodNotAvailable = false;
@@ -498,7 +512,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
 
-      if (!sshConn) {
+      const conn = sshConn;
+
+      if (!conn || isCleaningUp) {
         sshLogger.warn(
           "SSH connection was cleaned up before shell could be created",
           {
@@ -507,6 +523,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             ip,
             port,
             username,
+            isCleaningUp,
           },
         );
         ws.send(
@@ -519,7 +536,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
-      sshConn.shell(
+      isConnecting = false;
+      isConnected = true;
+
+      conn.shell(
         {
           rows: data.rows,
           cols: data.cols,
@@ -836,9 +856,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
       tryKeyboard: true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
-      readyTimeout: 60000,
+      readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
+      timeout: 120000,
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",
@@ -982,6 +1003,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   function cleanupSSH(timeoutId?: NodeJS.Timeout) {
+    if (isCleaningUp) {
+      return;
+    }
+    isCleaningUp = true;
+
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
@@ -1019,6 +1045,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
     isKeyboardInteractive = false;
     keyboardInteractiveResponded = false;
     keyboardInteractiveFinish = null;
+    isConnecting = false;
+    isConnected = false;
+
+    setTimeout(() => {
+      isCleaningUp = false;
+    }, 100);
   }
 
   function setupPingInterval() {

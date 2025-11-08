@@ -112,6 +112,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
       useState(false);
     const isVisibleRef = useRef<boolean>(false);
+    const isReadyRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
@@ -156,6 +157,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       isVisibleRef.current = isVisible;
     }, [isVisible]);
+
+    useEffect(() => {
+      isReadyRef.current = isReady;
+    }, [isReady]);
 
     useEffect(() => {
       const checkAuth = () => {
@@ -507,6 +512,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           }),
         );
         terminal.onData((data) => {
+          if (data === "\x00" || data === "\u0000") {
+            return;
+          }
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
@@ -915,15 +923,21 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       element?.addEventListener("keydown", handleMacKeyboard, true);
 
-      const resizeObserver = new ResizeObserver(() => {
+      const handleResize = () => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
-          if (!isVisibleRef.current || !isReady) return;
+          if (!isVisibleRef.current || !isReadyRef.current) return;
           performFit();
-        }, 50);
-      });
+        }, 100);
+      };
 
-      resizeObserver.observe(xtermRef.current);
+      const resizeObserver = new ResizeObserver(handleResize);
+
+      if (xtermRef.current) {
+        resizeObserver.observe(xtermRef.current);
+      }
+
+      window.addEventListener("resize", handleResize);
 
       setVisible(true);
 
@@ -936,6 +950,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         setIsReady(false);
         isFittingRef.current = false;
         resizeObserver.disconnect();
+        window.removeEventListener("resize", handleResize);
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("keydown", handleMacKeyboard, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);

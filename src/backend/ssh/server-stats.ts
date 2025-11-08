@@ -455,6 +455,13 @@ class PollingManager {
       }
     }
 
+    if (!statsConfig.statusCheckEnabled && !statsConfig.metricsEnabled) {
+      this.pollingConfigs.delete(host.id);
+      this.statusStore.delete(host.id);
+      this.metricsStore.delete(host.id);
+      return;
+    }
+
     const config: HostPollingConfig = {
       host,
       statsConfig,
@@ -514,7 +521,7 @@ class PollingManager {
     } catch (error) {}
   }
 
-  stopPollingForHost(hostId: number): void {
+  stopPollingForHost(hostId: number, clearData = true): void {
     const config = this.pollingConfigs.get(hostId);
     if (config) {
       if (config.statusTimer) {
@@ -524,8 +531,10 @@ class PollingManager {
         clearInterval(config.metricsTimer);
       }
       this.pollingConfigs.delete(hostId);
-      this.statusStore.delete(hostId);
-      this.metricsStore.delete(hostId);
+      if (clearData) {
+        this.statusStore.delete(hostId);
+        this.metricsStore.delete(hostId);
+      }
     }
   }
 
@@ -554,11 +563,23 @@ class PollingManager {
   }
 
   async refreshHostPolling(userId: string): Promise<void> {
+    const hosts = await fetchAllHosts(userId);
+    const currentHostIds = new Set(hosts.map((h) => h.id));
+
     for (const hostId of this.pollingConfigs.keys()) {
-      this.stopPollingForHost(hostId);
+      this.stopPollingForHost(hostId, false);
     }
 
-    await this.initializePolling(userId);
+    for (const hostId of this.statusStore.keys()) {
+      if (!currentHostIds.has(hostId)) {
+        this.statusStore.delete(hostId);
+        this.metricsStore.delete(hostId);
+      }
+    }
+
+    for (const host of hosts) {
+      await this.startPollingForHost(host);
+    }
   }
 
   destroy(): void {

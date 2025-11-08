@@ -527,41 +527,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         const reader = new FileReader();
         reader.onerror = () => reject(reader.error);
 
-        const isTextFile =
-          file.type.startsWith("text/") ||
-          file.type === "application/json" ||
-          file.type === "application/javascript" ||
-          file.type === "application/xml" ||
-          file.type === "image/svg+xml" ||
-          file.name.match(
-            /\.(txt|json|js|ts|jsx|tsx|css|scss|less|html|htm|xml|svg|yaml|yml|md|markdown|mdown|mkdn|mdx|py|java|c|cpp|h|sh|bash|zsh|bat|ps1|toml|ini|conf|config|sql|vue|svelte)$/i,
-          );
-
-        if (isTextFile) {
-          reader.onload = () => {
-            if (reader.result) {
-              resolve(reader.result as string);
-            } else {
-              reject(new Error("Failed to read text file content"));
+        reader.onload = () => {
+          if (reader.result instanceof ArrayBuffer) {
+            const bytes = new Uint8Array(reader.result);
+            let binary = "";
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
             }
-          };
-          reader.readAsText(file);
-        } else {
-          reader.onload = () => {
-            if (reader.result instanceof ArrayBuffer) {
-              const bytes = new Uint8Array(reader.result);
-              let binary = "";
-              for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-              }
-              const base64 = btoa(binary);
-              resolve(base64);
-            } else {
-              reject(new Error("Failed to read binary file"));
-            }
-          };
-          reader.readAsArrayBuffer(file);
-        }
+            const base64 = btoa(binary);
+            resolve(base64);
+          } else {
+            reject(new Error("Failed to read file"));
+          }
+        };
+        reader.readAsArrayBuffer(file);
       });
 
       await uploadSSHFile(

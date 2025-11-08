@@ -318,34 +318,37 @@ function createApiInstance(
         const errorMessage = (error.response?.data as Record<string, unknown>)
           ?.error;
         const isSessionExpired = errorCode === "SESSION_EXPIRED";
+        const isSessionNotFound = errorCode === "SESSION_NOT_FOUND";
         const isInvalidToken =
           errorCode === "AUTH_REQUIRED" ||
           errorMessage === "Invalid token" ||
           errorMessage === "Authentication required";
 
-        if (isElectron()) {
-          localStorage.removeItem("jwt");
-        } else {
-          localStorage.removeItem("jwt");
-        }
+        if (isSessionExpired || isSessionNotFound) {
+          if (isElectron()) {
+            localStorage.removeItem("jwt");
+          } else {
+            localStorage.removeItem("jwt");
+          }
 
-        if (
-          (isSessionExpired || isInvalidToken) &&
-          typeof window !== "undefined"
-        ) {
+          if (typeof window !== "undefined") {
+            console.warn("Session expired or not found - please log in again");
+
+            document.cookie =
+              "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+            import("sonner").then(({ toast }) => {
+              toast.warning("Session expired. Please log in again.");
+              window.location.reload();
+            });
+
+            setTimeout(() => window.location.reload(), 1000);
+          }
+        } else if (isInvalidToken && typeof window !== "undefined") {
           console.warn(
-            "Session expired or invalid token - please log in again",
+            "Authentication error - token may be invalid",
+            errorMessage,
           );
-
-          document.cookie =
-            "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-
-          import("sonner").then(({ toast }) => {
-            toast.warning("Session expired. Please log in again.");
-            window.location.reload();
-          });
-
-          setTimeout(() => window.location.reload(), 1000);
         }
       }
 
@@ -792,6 +795,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       keyType: hostData.authType === "key" ? hostData.keyType : null,
       credentialId:
         hostData.authType === "credential" ? hostData.credentialId : null,
+      overrideCredentialUsername: Boolean(hostData.overrideCredentialUsername),
       enableTerminal: Boolean(hostData.enableTerminal),
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
@@ -855,6 +859,7 @@ export async function updateSSHHost(
       keyType: hostData.authType === "key" ? hostData.keyType : null,
       credentialId:
         hostData.authType === "credential" ? hostData.credentialId : null,
+      overrideCredentialUsername: Boolean(hostData.overrideCredentialUsername),
       enableTerminal: Boolean(hostData.enableTerminal),
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),

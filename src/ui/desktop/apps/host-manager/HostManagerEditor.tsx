@@ -217,6 +217,7 @@ export function HostManagerEditor({
       pin: z.boolean().default(false),
       authType: z.enum(["password", "key", "credential", "none"]),
       credentialId: z.number().optional().nullable(),
+      overrideCredentialUsername: z.boolean().optional(),
       password: z.string().optional(),
       key: z.any().optional().nullable(),
       keyPassword: z.string().optional(),
@@ -389,6 +390,7 @@ export function HostManagerEditor({
       pin: false,
       authType: "password" as const,
       credentialId: null,
+      overrideCredentialUsername: false,
       password: "",
       key: null,
       keyPassword: "",
@@ -407,7 +409,8 @@ export function HostManagerEditor({
   useEffect(() => {
     if (authTab === "credential") {
       const currentCredentialId = form.getValues("credentialId");
-      if (currentCredentialId) {
+      const overrideUsername = form.getValues("overrideCredentialUsername");
+      if (currentCredentialId && !overrideUsername) {
         const selectedCredential = credentials.find(
           (c) => c.id === currentCredentialId,
         );
@@ -464,6 +467,9 @@ export function HostManagerEditor({
         pin: Boolean(cleanedHost.pin),
         authType: defaultAuthType as "password" | "key" | "credential" | "none",
         credentialId: null,
+        overrideCredentialUsername: Boolean(
+          cleanedHost.overrideCredentialUsername,
+        ),
         password: "",
         key: null,
         keyPassword: "",
@@ -512,6 +518,7 @@ export function HostManagerEditor({
         pin: false,
         authType: "password" as const,
         credentialId: null,
+        overrideCredentialUsername: false,
         password: "",
         key: null,
         keyPassword: "",
@@ -574,6 +581,7 @@ export function HostManagerEditor({
         tags: data.tags || [],
         pin: Boolean(data.pin),
         authType: data.authType,
+        overrideCredentialUsername: Boolean(data.overrideCredentialUsername),
         enableTerminal: Boolean(data.enableTerminal),
         enableTunnel: Boolean(data.enableTunnel),
         enableFileManager: Boolean(data.enableFileManager),
@@ -882,17 +890,28 @@ export function HostManagerEditor({
                     <FormField
                       control={form.control}
                       name="username"
-                      render={({ field }) => (
-                        <FormItem className="col-span-6">
-                          <FormLabel>{t("hosts.username")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("placeholders.username")}
-                              {...field}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const isCredentialAuth = authTab === "credential";
+                        const hasCredential = !!form.watch("credentialId");
+                        const overrideEnabled = !!form.watch(
+                          "overrideCredentialUsername",
+                        );
+                        const shouldDisable =
+                          isCredentialAuth && hasCredential && !overrideEnabled;
+
+                        return (
+                          <FormItem className="col-span-6">
+                            <FormLabel>{t("hosts.username")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={t("placeholders.username")}
+                                disabled={shouldDisable}
+                                {...field}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        );
+                      }}
                     />
                   </div>
                   <FormLabel className="mb-3 mt-3 font-bold">
@@ -1263,29 +1282,60 @@ export function HostManagerEditor({
                       </div>
                     </TabsContent>
                     <TabsContent value="credential">
-                      <FormField
-                        control={form.control}
-                        name="credentialId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <CredentialSelector
-                              value={field.value}
-                              onValueChange={field.onChange}
-                              onCredentialSelect={(credential) => {
-                                if (credential) {
-                                  form.setValue(
-                                    "username",
-                                    credential.username,
-                                  );
-                                }
-                              }}
-                            />
-                            <FormDescription>
-                              {t("hosts.credentialDescription")}
-                            </FormDescription>
-                          </FormItem>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="credentialId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <CredentialSelector
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                onCredentialSelect={(credential) => {
+                                  if (
+                                    credential &&
+                                    !form.getValues(
+                                      "overrideCredentialUsername",
+                                    )
+                                  ) {
+                                    form.setValue(
+                                      "username",
+                                      credential.username,
+                                    );
+                                  }
+                                }}
+                              />
+                              <FormDescription>
+                                {t("hosts.credentialDescription")}
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                        {form.watch("credentialId") && (
+                          <FormField
+                            control={form.control}
+                            name="overrideCredentialUsername"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                <div className="space-y-0.5">
+                                  <FormLabel>
+                                    {t("hosts.overrideCredentialUsername")}
+                                  </FormLabel>
+                                  <FormDescription>
+                                    {t("hosts.overrideCredentialUsernameDesc")}
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                         )}
-                      />
+                      </div>
                     </TabsContent>
                     <TabsContent value="none">
                       <Alert className="mt-2">

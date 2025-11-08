@@ -456,6 +456,11 @@ const migrateSchema = () => {
     "credential_id",
     "INTEGER REFERENCES ssh_credentials(id)",
   );
+  addColumnIfNotExists(
+    "ssh_data",
+    "override_credential_username",
+    "INTEGER",
+  );
 
   addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");

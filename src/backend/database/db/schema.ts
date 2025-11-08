@@ -72,6 +72,9 @@ export const sshData = sqliteTable("ssh_data", {
   autostartKeyPassword: text("autostart_key_password"),
 
   credentialId: integer("credential_id").references(() => sshCredentials.id),
+  overrideCredentialUsername: integer("override_credential_username", {
+    mode: "boolean",
+  }),
   enableTerminal: integer("enable_terminal", { mode: "boolean" })
     .notNull()
     .default(true),

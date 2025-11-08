@@ -26,6 +26,7 @@ export interface SSHHost {
   autostartKeyPassword?: string;
 
   credentialId?: number;
+  overrideCredentialUsername?: boolean;
   userId?: string;
   enableTerminal: boolean;
   enableTunnel: boolean;
@@ -52,6 +53,7 @@ export interface SSHHostData {
   keyPassword?: string;
   keyType?: string;
   credentialId?: number | null;
+  overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
