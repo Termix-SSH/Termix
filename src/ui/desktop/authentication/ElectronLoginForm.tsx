@@ -63,7 +63,9 @@ export function ElectronLoginForm({
             }
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error("Authentication operation failed:", err);
+      }
     };
 
     window.addEventListener("message", handleMessage);
@@ -190,8 +192,12 @@ export function ElectronLoginForm({
               );
             }
           }
-        } catch (err) {}
-      } catch (err) {}
+        } catch (err) {
+          console.error("Authentication operation failed:", err);
+        }
+      } catch (err) {
+        console.error("Authentication operation failed:", err);
+      }
     };
 
     const handleError = () => {

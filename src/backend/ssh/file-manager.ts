@@ -120,7 +120,9 @@ function cleanupSession(sessionId: string) {
   if (session) {
     try {
       session.client.end();
-    } catch {}
+    } catch (error) {
+      sshLogger.debug("Operation failed, continuing", { error });
+    }
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -663,7 +665,9 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch (error) {
+      sshLogger.debug("Operation failed, continuing", { error });
+    }
     fileLogger.warn("TOTP session timeout before code submission", {
       operation: "file_totp_verify",
       sessionId,

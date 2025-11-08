@@ -167,7 +167,9 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch {}
+      } catch (error) {
+        console.error("Host manager operation failed:", error);
+      }
     };
 
     fetchData();
@@ -196,7 +198,9 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch {}
+      } catch (error) {
+        console.error("Host manager operation failed:", error);
+      }
     };
 
     window.addEventListener("credentials:changed", handleCredentialChange);

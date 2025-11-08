@@ -82,7 +82,11 @@ export class LazyFieldEncryption {
               legacyFieldName,
             );
             return decrypted;
-          } catch {}
+          } catch (error) {
+            databaseLogger.debug("Operation failed, continuing", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
         }
 
         const sensitiveFields = [
@@ -174,7 +178,11 @@ export class LazyFieldEncryption {
               wasPlaintext: false,
               wasLegacyEncryption: true,
             };
-          } catch {}
+          } catch (error) {
+            databaseLogger.debug("Operation failed, continuing", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
         }
         return {
           encrypted: fieldValue,

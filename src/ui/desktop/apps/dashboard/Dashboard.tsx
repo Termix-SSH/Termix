@@ -91,7 +91,9 @@ export function Dashboard({
   try {
     const sidebar = useSidebar();
     sidebarState = sidebar.state;
-  } catch {}
+  } catch (error) {
+    console.error("Dashboard operation failed:", error);
+  }
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
@@ -173,7 +175,9 @@ export function Dashboard({
               if (Array.isArray(tunnelConnections)) {
                 totalTunnelsCount += tunnelConnections.length;
               }
-            } catch {}
+            } catch (error) {
+              console.error("Dashboard operation failed:", error);
+            }
           }
         }
         setTotalTunnels(totalTunnelsCount);

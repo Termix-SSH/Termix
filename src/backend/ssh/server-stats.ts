@@ -156,7 +156,9 @@ class SSHConnectionPool {
         if (!conn.inUse && now - conn.lastUsed > maxAge) {
           try {
             conn.client.end();
-          } catch {}
+          } catch (error) {
+            sshLogger.debug("Operation failed, continuing", { error });
+          }
           return false;
         }
         return true;
@@ -176,7 +178,9 @@ class SSHConnectionPool {
       for (const conn of connections) {
         try {
           conn.client.end();
-        } catch {}
+        } catch (error) {
+          sshLogger.debug("Operation failed, continuing", { error });
+        }
       }
     }
     this.connections.clear();
@@ -214,7 +218,9 @@ class RequestQueue {
       if (request) {
         try {
           await request();
-        } catch {}
+        } catch (error) {
+          sshLogger.debug("Operation failed, continuing", { error });
+        }
       }
     }
 
@@ -511,7 +517,14 @@ class PollingManager {
         data: metrics,
         timestamp: Date.now(),
       });
-    } catch (error) {}
+    } catch (error) {
+      statsLogger.warn("Failed to collect metrics for host", {
+        operation: "metrics_poll_failed",
+        hostId: host.id,
+        hostName: host.name,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   stopPollingForHost(hostId: number): void {
@@ -1212,7 +1225,12 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
               txBytes: null,
             });
           }
-        } catch (e) {}
+        } catch (e) {
+          statsLogger.debug("Failed to collect network interface stats", {
+            operation: "network_stats_failed",
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
 
         let uptimeSeconds: number | null = null;
         let uptimeFormatted: string | null = null;
@@ -1228,7 +1246,12 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
               uptimeFormatted = `${days}d ${hours}h ${minutes}m`;
             }
           }
-        } catch (e) {}
+        } catch (e) {
+          statsLogger.debug("Failed to collect uptime", {
+            operation: "uptime_failed",
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
 
         let totalProcesses: number | null = null;
         let runningProcesses: number | null = null;
@@ -1270,7 +1293,12 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           );
           totalProcesses = Number(procCount.stdout.trim()) - 1;
           runningProcesses = Number(runningCount.stdout.trim());
-        } catch (e) {}
+        } catch (e) {
+          statsLogger.debug("Failed to collect process stats", {
+            operation: "process_stats_failed",
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
 
         let hostname: string | null = null;
         let kernel: string | null = null;
@@ -1286,7 +1314,12 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           hostname = hostnameOut.stdout.trim() || null;
           kernel = kernelOut.stdout.trim() || null;
           os = osOut.stdout.trim() || null;
-        } catch (e) {}
+        } catch (e) {
+          statsLogger.debug("Failed to collect system info", {
+            operation: "system_info_failed",
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
 
         const result = {
           cpu: { percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet },
@@ -1365,7 +1398,9 @@ function tcpPing(
       settled = true;
       try {
         socket.destroy();
-      } catch {}
+      } catch (error) {
+        sshLogger.debug("Operation failed, continuing", { error });
+      }
       resolve(result);
     };
 

@@ -52,7 +52,9 @@ function postJWTToWebView() {
         timestamp: Date.now(),
       }),
     );
-  } catch (error) {}
+  } catch (error) {
+    console.error("Auth operation failed:", error);
+  }
 }
 
 interface AuthProps extends React.ComponentProps<"div"> {

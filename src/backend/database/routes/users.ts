@@ -935,7 +935,9 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch {}
+    } catch (error) {
+      databaseLogger.debug("Operation failed, continuing", { error });
+    }
 
     const dataUnlocked = await authManager.authenticateUser(
       userRecord.id,
@@ -1016,7 +1018,15 @@ router.post("/logout", authenticateJWT, async (req, res) => {
         try {
           const payload = await authManager.verifyJWTToken(token);
           sessionId = payload?.sessionId;
-        } catch (error) {}
+        } catch (error) {
+          authLogger.debug(
+            "Token verification failed during logout (expected if token expired)",
+            {
+              operation: "logout_token_verify_failed",
+              userId,
+            },
+          );
+        }
       }
 
       await authManager.logoutUser(userId, sessionId);
