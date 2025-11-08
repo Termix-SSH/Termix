@@ -15,7 +15,7 @@ import type {
   ErrorType,
 } from "../../types/index.js";
 import { CONNECTION_STATES } from "../../types/index.js";
-import { tunnelLogger } from "../utils/logger.js";
+import { tunnelLogger, sshLogger } from "../utils/logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { DataCrypto } from "../utils/data-crypto.js";

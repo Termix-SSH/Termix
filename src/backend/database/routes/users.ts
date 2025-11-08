@@ -22,7 +22,7 @@ import { nanoid } from "nanoid";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import type { Request, Response } from "express";
-import { authLogger } from "../../utils/logger.js";
+import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";

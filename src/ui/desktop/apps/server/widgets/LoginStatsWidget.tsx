@@ -41,7 +41,7 @@ export function LoginStatsWidget({
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <UserCheck className="h-5 w-5 text-green-400" />
         <h3 className="font-semibold text-lg text-white">
-          SSH Login Statistics
+          {t("serverStats.loginStats")}
         </h3>
       </div>
 
@@ -50,14 +50,14 @@ export function LoginStatsWidget({
           <div className="bg-dark-bg-darker p-2 rounded border border-dark-border/30">
             <div className="flex items-center gap-1 text-xs text-gray-400 mb-1">
               <Activity className="h-3 w-3" />
-              <span>Total Logins</span>
+              <span>{t("serverStats.totalLogins")}</span>
             </div>
             <div className="text-xl font-bold text-green-400">{totalLogins}</div>
           </div>
           <div className="bg-dark-bg-darker p-2 rounded border border-dark-border/30">
             <div className="flex items-center gap-1 text-xs text-gray-400 mb-1">
               <MapPin className="h-3 w-3" />
-              <span>Unique IPs</span>
+              <span>{t("serverStats.uniqueIPs")}</span>
             </div>
             <div className="text-xl font-bold text-blue-400">{uniqueIPs}</div>
           </div>
@@ -68,12 +68,12 @@ export function LoginStatsWidget({
             <div className="flex items-center gap-2 mb-1">
               <UserCheck className="h-4 w-4 text-green-400" />
               <span className="text-sm font-semibold text-gray-300">
-                Recent Successful Logins
+                {t("serverStats.recentSuccessfulLogins")}
               </span>
             </div>
             {recentLogins.length === 0 ? (
               <div className="text-xs text-gray-500 italic p-2">
-                No recent login data
+                {t("serverStats.noRecentLoginData")}
               </div>
             ) : (
               <div className="space-y-1">
@@ -86,7 +86,7 @@ export function LoginStatsWidget({
                       <span className="text-green-400 font-mono truncate">
                         {login.user}
                       </span>
-                      <span className="text-gray-500">from</span>
+                      <span className="text-gray-500">{t("serverStats.from")}</span>
                       <span className="text-blue-400 font-mono truncate">
                         {login.ip}
                       </span>
@@ -105,7 +105,7 @@ export function LoginStatsWidget({
               <div className="flex items-center gap-2 mb-1">
                 <UserX className="h-4 w-4 text-red-400" />
                 <span className="text-sm font-semibold text-gray-300">
-                  Recent Failed Attempts
+                  {t("serverStats.recentFailedAttempts")}
                 </span>
               </div>
               <div className="space-y-1">
@@ -118,7 +118,7 @@ export function LoginStatsWidget({
                       <span className="text-red-400 font-mono truncate">
                         {login.user}
                       </span>
-                      <span className="text-gray-500">from</span>
+                      <span className="text-gray-500">{t("serverStats.from")}</span>
                       <span className="text-blue-400 font-mono truncate">
                         {login.ip}
                       </span>

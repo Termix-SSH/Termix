@@ -1,4 +1,5 @@
 import ssh2Pkg from "ssh2";
+import { sshLogger } from "./logger.js";
 const ssh2Utils = ssh2Pkg.utils;
 
 function detectKeyTypeFromContent(keyContent: string): string {
