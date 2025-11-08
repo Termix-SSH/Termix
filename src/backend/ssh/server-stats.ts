@@ -6,10 +6,18 @@ import { Client, type ConnectConfig } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { statsLogger } from "../utils/logger.js";
+import { statsLogger, sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
+import { collectCpuMetrics } from "./widgets/cpu-collector.js";
+import { collectMemoryMetrics } from "./widgets/memory-collector.js";
+import { collectDiskMetrics } from "./widgets/disk-collector.js";
+import { collectNetworkMetrics } from "./widgets/network-collector.js";
+import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
+import { collectProcessesMetrics } from "./widgets/processes-collector.js";
+import { collectSystemMetrics } from "./widgets/system-collector.js";
+import { collectLoginStats } from "./widgets/login-stats-collector.js";
 
 interface PooledConnection {
   client: Client;
@@ -924,59 +932,6 @@ async function withSshConnection<T>(
   }
 }
 
-function execCommand(
-  client: Client,
-  command: string,
-): Promise<{
-  stdout: string;
-  stderr: string;
-  code: number | null;
-}> {
-  return new Promise((resolve, reject) => {
-    client.exec(command, { pty: false }, (err, stream) => {
-      if (err) return reject(err);
-      let stdout = "";
-      let stderr = "";
-      let exitCode: number | null = null;
-      stream
-        .on("close", (code: number | undefined) => {
-          exitCode = typeof code === "number" ? code : null;
-          resolve({ stdout, stderr, code: exitCode });
-        })
-        .on("data", (data: Buffer) => {
-          stdout += data.toString("utf8");
-        })
-        .stderr.on("data", (data: Buffer) => {
-          stderr += data.toString("utf8");
-        });
-    });
-  });
-}
-
-function parseCpuLine(
-  cpuLine: string,
-): { total: number; idle: number } | undefined {
-  const parts = cpuLine.trim().split(/\s+/);
-  if (parts[0] !== "cpu") return undefined;
-  const nums = parts
-    .slice(1)
-    .map((n) => Number(n))
-    .filter((n) => Number.isFinite(n));
-  if (nums.length < 4) return undefined;
-  const idle = (nums[3] ?? 0) + (nums[4] ?? 0);
-  const total = nums.reduce((a, b) => a + b, 0);
-  return { total, idle };
-}
-
-function toFixedNum(n: number | null | undefined, digits = 2): number | null {
-  if (typeof n !== "number" || !Number.isFinite(n)) return null;
-  return Number(n.toFixed(digits));
-}
-
-function kibToGiB(kib: number): number {
-  return kib / (1024 * 1024);
-}
-
 async function collectMetrics(host: SSHHostWithCredentials): Promise<{
   cpu: {
     percent: number | null;
@@ -1039,318 +994,38 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
   return requestQueue.queueRequest(host.id, async () => {
     try {
       return await withSshConnection(host, async (client) => {
-        let cpuPercent: number | null = null;
-        let cores: number | null = null;
-        let loadTriplet: [number, number, number] | null = null;
+        const cpu = await collectCpuMetrics(client);
+        const memory = await collectMemoryMetrics(client);
+        const disk = await collectDiskMetrics(client);
+        const network = await collectNetworkMetrics(client);
+        const uptime = await collectUptimeMetrics(client);
+        const processes = await collectProcessesMetrics(client);
+        const system = await collectSystemMetrics(client);
 
+        let login_stats = {
+          recentLogins: [],
+          failedLogins: [],
+          totalLogins: 0,
+          uniqueIPs: 0,
+        };
         try {
-          const [stat1, loadAvgOut, coresOut] = await Promise.all([
-            execCommand(client, "cat /proc/stat"),
-            execCommand(client, "cat /proc/loadavg"),
-            execCommand(
-              client,
-              "nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo",
-            ),
-          ]);
-
-          await new Promise((r) => setTimeout(r, 500));
-          const stat2 = await execCommand(client, "cat /proc/stat");
-
-          const cpuLine1 = (
-            stat1.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
-          ).trim();
-          const cpuLine2 = (
-            stat2.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
-          ).trim();
-          const a = parseCpuLine(cpuLine1);
-          const b = parseCpuLine(cpuLine2);
-          if (a && b) {
-            const totalDiff = b.total - a.total;
-            const idleDiff = b.idle - a.idle;
-            const used = totalDiff - idleDiff;
-            if (totalDiff > 0)
-              cpuPercent = Math.max(0, Math.min(100, (used / totalDiff) * 100));
-          }
-
-          const laParts = loadAvgOut.stdout.trim().split(/\s+/);
-          if (laParts.length >= 3) {
-            loadTriplet = [
-              Number(laParts[0]),
-              Number(laParts[1]),
-              Number(laParts[2]),
-            ].map((v) => (Number.isFinite(v) ? Number(v) : 0)) as [
-              number,
-              number,
-              number,
-            ];
-          }
-
-          const coresNum = Number((coresOut.stdout || "").trim());
-          cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
+          login_stats = await collectLoginStats(client);
         } catch (e) {
-          cpuPercent = null;
-          cores = null;
-          loadTriplet = null;
-        }
-
-        let memPercent: number | null = null;
-        let usedGiB: number | null = null;
-        let totalGiB: number | null = null;
-        try {
-          const memInfo = await execCommand(client, "cat /proc/meminfo");
-          const lines = memInfo.stdout.split("\n");
-          const getVal = (key: string) => {
-            const line = lines.find((l) => l.startsWith(key));
-            if (!line) return null;
-            const m = line.match(/\d+/);
-            return m ? Number(m[0]) : null;
-          };
-          const totalKb = getVal("MemTotal:");
-          const availKb = getVal("MemAvailable:");
-          if (totalKb && availKb && totalKb > 0) {
-            const usedKb = totalKb - availKb;
-            memPercent = Math.max(0, Math.min(100, (usedKb / totalKb) * 100));
-            usedGiB = kibToGiB(usedKb);
-            totalGiB = kibToGiB(totalKb);
-          }
-        } catch (e) {
-          memPercent = null;
-          usedGiB = null;
-          totalGiB = null;
-        }
-
-        let diskPercent: number | null = null;
-        let usedHuman: string | null = null;
-        let totalHuman: string | null = null;
-        let availableHuman: string | null = null;
-        try {
-          const [diskOutHuman, diskOutBytes] = await Promise.all([
-            execCommand(client, "df -h -P / | tail -n +2"),
-            execCommand(client, "df -B1 -P / | tail -n +2"),
-          ]);
-
-          const humanLine =
-            diskOutHuman.stdout
-              .split("\n")
-              .map((l) => l.trim())
-              .filter(Boolean)[0] || "";
-          const bytesLine =
-            diskOutBytes.stdout
-              .split("\n")
-              .map((l) => l.trim())
-              .filter(Boolean)[0] || "";
-
-          const humanParts = humanLine.split(/\s+/);
-          const bytesParts = bytesLine.split(/\s+/);
-
-          if (humanParts.length >= 6 && bytesParts.length >= 6) {
-            totalHuman = humanParts[1] || null;
-            usedHuman = humanParts[2] || null;
-            availableHuman = humanParts[3] || null;
-
-            const totalBytes = Number(bytesParts[1]);
-            const usedBytes = Number(bytesParts[2]);
-
-            if (
-              Number.isFinite(totalBytes) &&
-              Number.isFinite(usedBytes) &&
-              totalBytes > 0
-            ) {
-              diskPercent = Math.max(
-                0,
-                Math.min(100, (usedBytes / totalBytes) * 100),
-              );
-            }
-          }
-        } catch (e) {
-          diskPercent = null;
-          usedHuman = null;
-          totalHuman = null;
-          availableHuman = null;
-        }
-
-        const interfaces: Array<{
-          name: string;
-          ip: string;
-          state: string;
-          rxBytes: string | null;
-          txBytes: string | null;
-        }> = [];
-        try {
-          const ifconfigOut = await execCommand(
-            client,
-            "ip -o addr show | awk '{print $2,$4}' | grep -v '^lo'",
-          );
-          const netStatOut = await execCommand(
-            client,
-            "ip -o link show | awk '{gsub(/:/, \"\", $2); print $2,$9}'",
-          );
-
-          const addrs = ifconfigOut.stdout
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean);
-          const states = netStatOut.stdout
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean);
-
-          const ifMap = new Map<string, { ip: string; state: string }>();
-          for (const line of addrs) {
-            const parts = line.split(/\s+/);
-            if (parts.length >= 2) {
-              const name = parts[0];
-              const ip = parts[1].split("/")[0];
-              if (!ifMap.has(name)) ifMap.set(name, { ip, state: "UNKNOWN" });
-            }
-          }
-          for (const line of states) {
-            const parts = line.split(/\s+/);
-            if (parts.length >= 2) {
-              const name = parts[0];
-              const state = parts[1];
-              const existing = ifMap.get(name);
-              if (existing) {
-                existing.state = state;
-              }
-            }
-          }
-
-          for (const [name, data] of ifMap.entries()) {
-            interfaces.push({
-              name,
-              ip: data.ip,
-              state: data.state,
-              rxBytes: null,
-              txBytes: null,
-            });
-          }
-        } catch (e) {
-          statsLogger.debug("Failed to collect network interface stats", {
-            operation: "network_stats_failed",
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
-
-        let uptimeSeconds: number | null = null;
-        let uptimeFormatted: string | null = null;
-        try {
-          const uptimeOut = await execCommand(client, "cat /proc/uptime");
-          const uptimeParts = uptimeOut.stdout.trim().split(/\s+/);
-          if (uptimeParts.length >= 1) {
-            uptimeSeconds = Number(uptimeParts[0]);
-            if (Number.isFinite(uptimeSeconds)) {
-              const days = Math.floor(uptimeSeconds / 86400);
-              const hours = Math.floor((uptimeSeconds % 86400) / 3600);
-              const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-              uptimeFormatted = `${days}d ${hours}h ${minutes}m`;
-            }
-          }
-        } catch (e) {
-          statsLogger.debug("Failed to collect uptime", {
-            operation: "uptime_failed",
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
-
-        let totalProcesses: number | null = null;
-        let runningProcesses: number | null = null;
-        const topProcesses: Array<{
-          pid: string;
-          user: string;
-          cpu: string;
-          mem: string;
-          command: string;
-        }> = [];
-        try {
-          const psOut = await execCommand(
-            client,
-            "ps aux --sort=-%cpu | head -n 11",
-          );
-          const psLines = psOut.stdout
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean);
-          if (psLines.length > 1) {
-            for (let i = 1; i < Math.min(psLines.length, 11); i++) {
-              const parts = psLines[i].split(/\s+/);
-              if (parts.length >= 11) {
-                topProcesses.push({
-                  pid: parts[1],
-                  user: parts[0],
-                  cpu: parts[2],
-                  mem: parts[3],
-                  command: parts.slice(10).join(" ").substring(0, 50),
-                });
-              }
-            }
-          }
-
-          const procCount = await execCommand(client, "ps aux | wc -l");
-          const runningCount = await execCommand(
-            client,
-            "ps aux | grep -c ' R '",
-          );
-          totalProcesses = Number(procCount.stdout.trim()) - 1;
-          runningProcesses = Number(runningCount.stdout.trim());
-        } catch (e) {
-          statsLogger.debug("Failed to collect process stats", {
-            operation: "process_stats_failed",
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
-
-        let hostname: string | null = null;
-        let kernel: string | null = null;
-        let os: string | null = null;
-        try {
-          const hostnameOut = await execCommand(client, "hostname");
-          const kernelOut = await execCommand(client, "uname -r");
-          const osOut = await execCommand(
-            client,
-            "cat /etc/os-release | grep '^PRETTY_NAME=' | cut -d'\"' -f2",
-          );
-
-          hostname = hostnameOut.stdout.trim() || null;
-          kernel = kernelOut.stdout.trim() || null;
-          os = osOut.stdout.trim() || null;
-        } catch (e) {
-          statsLogger.debug("Failed to collect system info", {
-            operation: "system_info_failed",
+          statsLogger.debug("Failed to collect login stats", {
+            operation: "login_stats_failed",
             error: e instanceof Error ? e.message : String(e),
           });
         }
 
         const result = {
-          cpu: { percent: toFixedNum(cpuPercent, 0), cores, load: loadTriplet },
-          memory: {
-            percent: toFixedNum(memPercent, 0),
-            usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
-            totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null,
-          },
-          disk: {
-            percent: toFixedNum(diskPercent, 0),
-            usedHuman,
-            totalHuman,
-            availableHuman,
-          },
-          network: {
-            interfaces,
-          },
-          uptime: {
-            seconds: uptimeSeconds,
-            formatted: uptimeFormatted,
-          },
-          processes: {
-            total: totalProcesses,
-            running: runningProcesses,
-            top: topProcesses,
-          },
-          system: {
-            hostname,
-            kernel,
-            os,
-          },
+          cpu,
+          memory,
+          disk,
+          network,
+          uptime,
+          processes,
+          system,
+          login_stats,
         };
 
         metricsCache.set(host.id, result);

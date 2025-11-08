@@ -265,9 +265,18 @@ export function HostManagerEditor({
                 "uptime",
                 "processes",
                 "system",
+                "login_stats",
               ]),
             )
-            .default(["cpu", "memory", "disk", "network", "uptime", "system"]),
+            .default([
+              "cpu",
+              "memory",
+              "disk",
+              "network",
+              "uptime",
+              "system",
+              "login_stats",
+            ]),
           statusCheckEnabled: z.boolean().default(true),
           statusCheckInterval: z.number().min(5).max(3600).default(30),
           metricsEnabled: z.boolean().default(true),
@@ -281,6 +290,7 @@ export function HostManagerEditor({
             "network",
             "uptime",
             "system",
+            "login_stats",
           ],
           statusCheckEnabled: true,
           statusCheckInterval: 30,
@@ -2611,6 +2621,7 @@ export function HostManagerEditor({
                                   "uptime",
                                   "processes",
                                   "system",
+                                  "login_stats",
                                 ] as const
                               ).map((widget) => (
                                 <div
@@ -2650,6 +2661,8 @@ export function HostManagerEditor({
                                       t("serverStats.processes")}
                                     {widget === "system" &&
                                       t("serverStats.systemInfo")}
+                                    {widget === "login_stats" &&
+                                      "SSH Login Statistics"}
                                   </label>
                                 </div>
                               ))}
