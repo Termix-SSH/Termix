@@ -7,6 +7,7 @@ import zhTranslation from "../locales/zh/translation.json";
 import deTranslation from "../locales/de/translation.json";
 import ptbrTranslation from "../locales/pt-BR/translation.json";
 import ruTranslation from "../locales/ru/translation.json";
+import frTranslation from "../locales/fr/translation.json";
 
 i18n
   .use(LanguageDetector)
@@ -39,6 +40,9 @@ i18n
       },
       ru: {
         translation: ruTranslation,
+      },
+      fr: {
+        translation: frTranslation,
       },
     },
 
