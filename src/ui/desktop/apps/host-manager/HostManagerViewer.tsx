@@ -25,10 +25,12 @@ import {
   getSSHFolders,
   updateFolderMetadata,
   deleteAllHostsInFolder,
+  getServerStatusById,
 } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { Status, StatusIndicator } from "@/components/ui/shadcn-io/status";
 import {
   Edit,
   Trash2,
@@ -58,6 +60,7 @@ import {
   Archive,
   HardDrive,
   Globe,
+  FolderOpen,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -66,10 +69,12 @@ import type {
 } from "../../../../types/index.js";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { FolderEditDialog } from "./components/FolderEditDialog";
+import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
 
 export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
+  const { addTab } = useTabs();
   const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +87,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const [operationLoading, setOperationLoading] = useState(false);
   const [folderMetadata, setFolderMetadata] = useState<Map<string, SSHFolder>>(new Map());
   const [editingFolderAppearance, setEditingFolderAppearance] = useState<string | null>(null);
+  const [serverStatuses, setServerStatuses] = useState<Map<number, "online" | "offline" | "degraded">>(new Map());
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -190,6 +196,71 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       "destructive",
     );
   };
+
+  useEffect(() => {
+    if (hosts.length === 0) return;
+
+    const statusIntervals: NodeJS.Timeout[] = [];
+    const statusCancelled: boolean[] = [];
+
+    hosts.forEach((host, index) => {
+      const statsConfig = (() => {
+        try {
+          return host.statsConfig
+            ? JSON.parse(host.statsConfig)
+            : DEFAULT_STATS_CONFIG;
+        } catch {
+          return DEFAULT_STATS_CONFIG;
+        }
+      })();
+
+      const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
+
+      if (!shouldShowStatus) {
+        setServerStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(host.id, "offline");
+          return next;
+        });
+        return;
+      }
+
+      const fetchStatus = async () => {
+        try {
+          const res = await getServerStatusById(host.id);
+          if (!statusCancelled[index]) {
+            setServerStatuses((prev) => {
+              const next = new Map(prev);
+              next.set(host.id, res?.status === "online" ? "online" : "offline");
+              return next;
+            });
+          }
+        } catch (error: unknown) {
+          if (!statusCancelled[index]) {
+            const err = error as { response?: { status?: number } };
+            let status: "online" | "offline" | "degraded" = "offline";
+            if (err?.response?.status === 504) {
+              status = "degraded";
+            }
+            setServerStatuses((prev) => {
+              const next = new Map(prev);
+              next.set(host.id, status);
+              return next;
+            });
+          }
+        }
+      };
+
+      fetchStatus();
+      const intervalId = setInterval(fetchStatus, 10000);
+      statusIntervals.push(intervalId);
+    });
+
+    return () => {
+      statusCancelled.fill(true);
+      statusIntervals.forEach((interval) => clearInterval(interval));
+    };
+  }, [hosts]);
 
   const getFolderIcon = (folderName: string) => {
     const metadata = folderMetadata.get(folderName);
@@ -1110,6 +1181,28 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1">
+                                      {(() => {
+                                        const statsConfig = (() => {
+                                          try {
+                                            return host.statsConfig
+                                              ? JSON.parse(host.statsConfig)
+                                              : DEFAULT_STATS_CONFIG;
+                                          } catch {
+                                            return DEFAULT_STATS_CONFIG;
+                                          }
+                                        })();
+                                        const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
+                                        const serverStatus = serverStatuses.get(host.id) || "degraded";
+
+                                        return shouldShowStatus ? (
+                                          <Status
+                                            status={serverStatus}
+                                            className="!bg-transparent !p-0.75 flex-shrink-0"
+                                          >
+                                            <StatusIndicator />
+                                          </Status>
+                                        ) : null;
+                                      })()}
                                       {host.pin && (
                                         <Pin className="h-3 w-3 text-yellow-500 flex-shrink-0" />
                                       )}
@@ -1331,6 +1424,76 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                       );
                                     })()}
                                   </div>
+                                </div>
+
+                                <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-center gap-1">
+                                  {host.enableTerminal && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const title = host.name?.trim()
+                                              ? host.name
+                                              : `${host.username}@${host.ip}:${host.port}`;
+                                            addTab({ type: "terminal", title, hostConfig: host });
+                                          }}
+                                          className="h-7 px-2 hover:bg-blue-500/10 hover:border-blue-500/50 flex-1"
+                                        >
+                                          <Terminal className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Open Terminal</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  {host.enableFileManager && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const title = host.name?.trim()
+                                              ? host.name
+                                              : `${host.username}@${host.ip}:${host.port}`;
+                                            addTab({ type: "file_manager", title, hostConfig: host });
+                                          }}
+                                          className="h-7 px-2 hover:bg-emerald-500/10 hover:border-emerald-500/50 flex-1"
+                                        >
+                                          <FolderOpen className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Open File Manager</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const title = host.name?.trim()
+                                            ? host.name
+                                            : `${host.username}@${host.ip}:${host.port}`;
+                                          addTab({ type: "server", title, hostConfig: host });
+                                        }}
+                                        className="h-7 px-2 hover:bg-purple-500/10 hover:border-purple-500/50 flex-1"
+                                      >
+                                        <Server className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Open Server Details</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 </div>
                               </div>
                             </TooltipTrigger>
