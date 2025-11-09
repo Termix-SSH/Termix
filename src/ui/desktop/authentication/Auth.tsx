@@ -683,7 +683,7 @@ export function Auth({
   if (showServerConfig === null && !isInElectronWebView()) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -697,7 +697,7 @@ export function Auth({
   if (showServerConfig && !isInElectronWebView()) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -722,7 +722,7 @@ export function Auth({
   ) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -755,7 +755,7 @@ export function Auth({
   if (dbHealthChecking && !dbConnectionFailed) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -774,7 +774,7 @@ export function Auth({
   if (dbConnectionFailed) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -834,10 +834,61 @@ export function Auth({
 
   return (
     <div
-      className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
-      style={{ maxHeight: "calc(100vh - 1rem)" }}
+      className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
       {...props}
     >
+      {/* Split Screen Layout */}
+      <div className="w-full h-full flex flex-col md:flex-row">
+
+        {/* Left Side - Brand Showcase */}
+        <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden items-center justify-center">
+          {/* Animated Ripples Background */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute w-0 h-0 bg-white/10 rounded-full animate-[ripple_4s_ease-out_infinite]" />
+            <div className="absolute w-0 h-0 bg-white/8 rounded-full animate-[ripple_4s_ease-out_infinite_1s]" />
+            <div className="absolute w-0 h-0 bg-white/5 rounded-full animate-[ripple_4s_ease-out_infinite_2s]" />
+          </div>
+
+          {/* Logo and Branding */}
+          <div className="relative z-10 text-center px-8">
+            <div
+              className="text-7xl font-bold tracking-wider text-white mb-4"
+              style={{
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                textShadow: '0 0 30px rgba(255,255,255,0.3), 0 0 60px rgba(255,255,255,0.2)'
+              }}
+            >
+              TERMIX
+            </div>
+            <div className="text-lg text-white/80 tracking-widest font-light">
+              SSH TERMINAL MANAGER
+            </div>
+            <div className="mt-8 text-sm text-white/60 max-w-md">
+              Secure, powerful, and intuitive SSH connection management for modern teams
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes ripple {
+              0% {
+                width: 0;
+                height: 0;
+                opacity: 1;
+              }
+              100% {
+                width: 150vmax;
+                height: 150vmax;
+                opacity: 0;
+              }
+            }
+          `}</style>
+        </div>
+
+        {/* Right Side - Auth Form */}
+        <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-background overflow-y-auto">
+          <div className="w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500"
+            style={{ maxHeight: "calc(100vh - 3rem)" }}
+          >
       {isInElectronWebView() && !webviewAuthSuccess && (
         <Alert className="mb-4 border-blue-500 bg-blue-500/10">
           <Monitor className="h-4 w-4" />
@@ -948,15 +999,16 @@ export function Auth({
 
             return (
               <>
-                <div className="flex gap-2 mb-6">
+                {/* Tab Navigation */}
+                <div className="flex gap-1 p-1 mb-8 bg-muted/50 rounded-lg">
                   {passwordLoginAllowed && (
                     <button
                       type="button"
                       className={cn(
-                        "flex-1 py-2 text-base font-medium rounded-md transition-all",
+                        "flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-200",
                         tab === "login"
-                          ? "bg-primary text-primary-foreground shadow"
-                          : "bg-muted text-muted-foreground hover:bg-accent",
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
                       onClick={() => {
                         setTab("login");
@@ -974,10 +1026,10 @@ export function Auth({
                       <button
                         type="button"
                         className={cn(
-                          "flex-1 py-2 text-base font-medium rounded-md transition-all",
+                          "flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-200",
                           tab === "signup"
-                            ? "bg-primary text-primary-foreground shadow"
-                            : "bg-muted text-muted-foreground hover:bg-accent",
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
                         )}
                         onClick={() => {
                           setTab("signup");
@@ -994,10 +1046,10 @@ export function Auth({
                     <button
                       type="button"
                       className={cn(
-                        "flex-1 py-2 text-base font-medium rounded-md transition-all",
+                        "flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-200",
                         tab === "external"
-                          ? "bg-primary text-primary-foreground shadow"
-                          : "bg-muted text-muted-foreground hover:bg-accent",
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
                       onClick={() => {
                         setTab("external");
@@ -1012,8 +1064,10 @@ export function Auth({
                     </button>
                   )}
                 </div>
-                <div className="mb-6 text-center">
-                  <h2 className="text-xl font-bold mb-1">
+
+                {/* Page Title */}
+                <div className="mb-8 text-center">
+                  <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                     {tab === "login"
                       ? t("auth.loginTitle")
                       : tab === "signup"
@@ -1022,6 +1076,13 @@ export function Auth({
                           ? t("auth.loginWithExternal")
                           : t("auth.forgotPassword")}
                   </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {tab === "login"
+                      ? "Welcome back to TERMIX"
+                      : tab === "signup"
+                        ? "Create your TERMIX account"
+                        : "Continue with external provider"}
+                  </p>
                 </div>
 
                 {tab === "external" || tab === "reset" ? (
@@ -1339,6 +1400,9 @@ export function Auth({
           })()}
         </>
       )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
