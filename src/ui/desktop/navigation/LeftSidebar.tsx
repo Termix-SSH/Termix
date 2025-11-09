@@ -34,8 +34,9 @@ import {
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { FolderCard } from "@/ui/desktop/navigation/hosts/FolderCard.tsx";
-import { getSSHHosts } from "@/ui/main-axios.ts";
+import { getSSHHosts, getSSHFolders } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
+import type { SSHFolder } from "@/types/index.ts";
 
 interface SSHHost {
   id: number;
@@ -145,6 +146,20 @@ export function LeftSidebar({
   const prevHostsRef = React.useRef<SSHHost[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [folderMetadata, setFolderMetadata] = useState<Map<string, SSHFolder>>(new Map());
+
+  const fetchFolderMetadata = React.useCallback(async () => {
+    try {
+      const folders = await getSSHFolders();
+      const metadataMap = new Map<string, SSHFolder>();
+      folders.forEach((folder) => {
+        metadataMap.set(folder.name, folder);
+      });
+      setFolderMetadata(metadataMap);
+    } catch (error) {
+      console.error("Failed to fetch folder metadata:", error);
+    }
+  }, []);
 
   const fetchHosts = React.useCallback(async () => {
     try {
@@ -210,13 +225,18 @@ export function LeftSidebar({
 
   React.useEffect(() => {
     fetchHosts();
-    const interval = setInterval(fetchHosts, 300000);
+    fetchFolderMetadata();
+    const interval = setInterval(() => {
+      fetchHosts();
+      fetchFolderMetadata();
+    }, 300000);
     return () => clearInterval(interval);
-  }, [fetchHosts]);
+  }, [fetchHosts, fetchFolderMetadata]);
 
   React.useEffect(() => {
     const handleHostsChanged = () => {
       fetchHosts();
+      fetchFolderMetadata();
     };
     const handleCredentialsChanged = () => {
       fetchHosts();
@@ -239,7 +259,7 @@ export function LeftSidebar({
         handleCredentialsChanged as EventListener,
       );
     };
-  }, [fetchHosts]);
+  }, [fetchHosts, fetchFolderMetadata]);
 
   React.useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(search), 200);
@@ -437,15 +457,20 @@ export function LeftSidebar({
                   </div>
                 )}
 
-                {sortedFolders.map((folder, idx) => (
-                  <FolderCard
-                    key={`folder-${folder}-${hostsByFolder[folder]?.length || 0}`}
-                    folderName={folder}
-                    hosts={getSortedHosts(hostsByFolder[folder])}
-                    isFirst={idx === 0}
-                    isLast={idx === sortedFolders.length - 1}
-                  />
-                ))}
+                {sortedFolders.map((folder, idx) => {
+                  const metadata = folderMetadata.get(folder);
+                  return (
+                    <FolderCard
+                      key={`folder-${folder}-${hostsByFolder[folder]?.length || 0}`}
+                      folderName={folder}
+                      hosts={getSortedHosts(hostsByFolder[folder])}
+                      isFirst={idx === 0}
+                      isLast={idx === sortedFolders.length - 1}
+                      folderColor={metadata?.color}
+                      folderIcon={metadata?.icon}
+                    />
+                  );
+                })}
               </SidebarGroup>
             </SidebarContent>
             <Separator className="p-0.25 mt-1 mb-1" />
