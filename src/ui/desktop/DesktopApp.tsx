@@ -229,7 +229,46 @@ function AppContent() {
           className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-300 ${
             transitionPhase === 'fadeOut' ? 'opacity-100' : 'opacity-0'
           }`}
-        />
+        >
+          {transitionPhase === 'fadeOut' && (
+            <>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute w-0 h-0 bg-primary/20 rounded-full animate-[ping_1s_ease-out]"
+                     style={{
+                       animation: 'ripple 0.8s ease-out forwards',
+                       animationDelay: '0ms'
+                     }}
+                />
+                <div className="absolute w-0 h-0 bg-primary/15 rounded-full"
+                     style={{
+                       animation: 'ripple 0.8s ease-out forwards',
+                       animationDelay: '150ms'
+                     }}
+                />
+                <div className="absolute w-0 h-0 bg-primary/10 rounded-full"
+                     style={{
+                       animation: 'ripple 0.8s ease-out forwards',
+                       animationDelay: '300ms'
+                     }}
+                />
+              </div>
+              <style>{`
+                @keyframes ripple {
+                  0% {
+                    width: 0;
+                    height: 0;
+                    opacity: 1;
+                  }
+                  100% {
+                    width: 200vmax;
+                    height: 200vmax;
+                    opacity: 0;
+                  }
+                }
+              `}</style>
+            </>
+          )}
+        </div>
       )}
 
       <Toaster
