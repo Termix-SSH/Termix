@@ -20,14 +20,18 @@ export function LoadingOverlay({
 }: LoadingOverlayProps) {
   const [isShowing, setIsShowing] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
-  const [animationType, setAnimationType] = useState<'glitch' | 'breathe'>('glitch');
+  const [animationType, setAnimationType] = useState<'glitch' | 'breathe' | 'typewriter' | 'scanner' | 'pulse'>('glitch');
   const showStartTimeRef = useRef<number | null>(null);
   const minDurationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (visible) {
-      // Randomly choose animation type
-      setAnimationType(Math.random() > 0.5 ? 'glitch' : 'breathe');
+      // Randomly choose animation type from 5 options
+      const animations: ('glitch' | 'breathe' | 'typewriter' | 'scanner' | 'pulse')[] = [
+        'glitch', 'breathe', 'typewriter', 'scanner', 'pulse'
+      ];
+      const randomIndex = Math.floor(Math.random() * 5);
+      setAnimationType(animations[randomIndex]);
 
       // Start showing immediately
       setIsShowing(true);
@@ -635,6 +639,292 @@ export function LoadingOverlay({
           .particle:nth-child(6) { left: 50%; top: 50%; --tx: 0px; --ty: 100px; animation-delay: 0.45s; }
           .particle:nth-child(7) { left: 50%; top: 50%; --tx: -100px; --ty: 0px; animation-delay: 0.75s; }
           .particle:nth-child(8) { left: 50%; top: 50%; --tx: 100px; --ty: 0px; animation-delay: 1.05s; }
+
+          /* Typewriter Animation Styles */
+          @keyframes type-letter {
+            0% {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes cursor-blink {
+            0%, 49% {
+              opacity: 1;
+              background-color: rgba(59, 130, 246, 1);
+            }
+            50%, 100% {
+              opacity: 0;
+              background-color: rgba(59, 130, 246, 0);
+            }
+          }
+
+          .typewriter-container {
+            position: relative;
+          }
+
+          .typewriter-text {
+            color: #fff;
+            display: inline-flex;
+          }
+
+          .typewriter-text .type-letter {
+            display: inline-block;
+            opacity: 0;
+            animation: type-letter 0.1s forwards;
+          }
+
+          .typewriter-text .type-letter:nth-child(1) { animation-delay: 0s; }
+          .typewriter-text .type-letter:nth-child(2) { animation-delay: 0.15s; }
+          .typewriter-text .type-letter:nth-child(3) { animation-delay: 0.3s; }
+          .typewriter-text .type-letter:nth-child(4) { animation-delay: 0.45s; }
+          .typewriter-text .type-letter:nth-child(5) { animation-delay: 0.6s; }
+          .typewriter-text .type-letter:nth-child(6) { animation-delay: 0.75s; }
+
+          .typing-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1em;
+            margin-left: 4px;
+            background-color: rgba(59, 130, 246, 1);
+            animation: cursor-blink 1s infinite;
+            animation-delay: 0.9s;
+          }
+
+          /* Scanner Animation Styles */
+          @keyframes vertical-scan {
+            0% {
+              top: -20%;
+            }
+            100% {
+              top: 120%;
+            }
+          }
+
+          @keyframes horizontal-scan {
+            0% {
+              left: -20%;
+            }
+            100% {
+              left: 120%;
+            }
+          }
+
+          @keyframes scanner-glow {
+            0%, 100% {
+              text-shadow:
+                0 0 10px rgba(0, 255, 255, 0.3),
+                0 0 20px rgba(0, 255, 255, 0.2);
+            }
+            50% {
+              text-shadow:
+                0 0 30px rgba(0, 255, 255, 1),
+                0 0 60px rgba(0, 255, 255, 0.8),
+                0 0 90px rgba(0, 255, 255, 0.6),
+                0 0 120px rgba(0, 255, 255, 0.4);
+            }
+          }
+
+          .scanner-container {
+            position: relative;
+            overflow: hidden;
+          }
+
+          .scanner-text {
+            color: #fff;
+            animation: scanner-glow 3s ease-in-out infinite;
+            position: relative;
+            z-index: 1;
+          }
+
+          .vertical-scan-line {
+            position: absolute;
+            width: 100%;
+            height: 80px;
+            left: 0;
+            background: linear-gradient(
+              to bottom,
+              transparent 0%,
+              rgba(0, 255, 255, 0.1) 20%,
+              rgba(0, 255, 255, 0.8) 50%,
+              rgba(0, 255, 255, 0.1) 80%,
+              transparent 100%
+            );
+            animation: vertical-scan 3s linear infinite;
+            z-index: 2;
+            pointer-events: none;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+          }
+
+          .vertical-scan-line:nth-child(2) {
+            animation-delay: 1.5s;
+            background: linear-gradient(
+              to bottom,
+              transparent 0%,
+              rgba(255, 0, 255, 0.1) 20%,
+              rgba(255, 0, 255, 0.6) 50%,
+              rgba(255, 0, 255, 0.1) 80%,
+              transparent 100%
+            );
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+          }
+
+          .horizontal-scan-line {
+            position: absolute;
+            width: 80px;
+            height: 100%;
+            top: 0;
+            background: linear-gradient(
+              to right,
+              transparent 0%,
+              rgba(0, 255, 255, 0.1) 20%,
+              rgba(0, 255, 255, 0.5) 50%,
+              rgba(0, 255, 255, 0.1) 80%,
+              transparent 100%
+            );
+            animation: horizontal-scan 2.5s linear infinite;
+            z-index: 2;
+            pointer-events: none;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+          }
+
+          .scanner-grid {
+            position: absolute;
+            inset: -40px;
+            background-image:
+              linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            pointer-events: none;
+          }
+
+          /* Pulse Ripple Animation Styles */
+          @keyframes wave-expand {
+            0% {
+              width: 80px;
+              height: 80px;
+              opacity: 1;
+              border-width: 4px;
+            }
+            100% {
+              width: 500px;
+              height: 500px;
+              opacity: 0;
+              border-width: 1px;
+            }
+          }
+
+          @keyframes pulse-text-glow {
+            0%, 100% {
+              text-shadow:
+                0 0 20px rgba(59, 130, 246, 0.8),
+                0 0 40px rgba(59, 130, 246, 0.5),
+                0 0 60px rgba(59, 130, 246, 0.3);
+              transform: scale(1);
+            }
+            50% {
+              text-shadow:
+                0 0 40px rgba(59, 130, 246, 1),
+                0 0 80px rgba(59, 130, 246, 0.8),
+                0 0 120px rgba(59, 130, 246, 0.6),
+                0 0 160px rgba(59, 130, 246, 0.4);
+              transform: scale(1.02);
+            }
+          }
+
+          @keyframes radar-sweep {
+            0% {
+              transform: rotate(0deg);
+            }
+            100% {
+              transform: rotate(360deg);
+            }
+          }
+
+          .pulse-container {
+            position: relative;
+          }
+
+          .pulse-text {
+            color: #fff;
+            animation: pulse-text-glow 2s ease-in-out infinite;
+            position: relative;
+            z-index: 10;
+          }
+
+          .wave-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border: 3px solid rgba(59, 130, 246, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: wave-expand 2.5s ease-out infinite;
+            pointer-events: none;
+          }
+
+          .wave-ring:nth-child(2) {
+            animation-delay: 0.5s;
+            border-color: rgba(139, 92, 246, 0.7);
+          }
+
+          .wave-ring:nth-child(3) {
+            animation-delay: 1s;
+            border-color: rgba(6, 182, 212, 0.7);
+          }
+
+          .wave-ring:nth-child(4) {
+            animation-delay: 1.5s;
+            border-color: rgba(59, 130, 246, 0.6);
+          }
+
+          .wave-ring:nth-child(5) {
+            animation-delay: 2s;
+            border-color: rgba(139, 92, 246, 0.5);
+          }
+
+          .radar-sweep {
+            position: absolute;
+            inset: -100px;
+            pointer-events: none;
+            animation: radar-sweep 4s linear infinite;
+          }
+
+          .radar-sweep::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 50%;
+            background: linear-gradient(
+              to bottom,
+              rgba(59, 130, 246, 0) 0%,
+              rgba(59, 130, 246, 0.8) 100%
+            );
+            transform-origin: top center;
+            transform: translateX(-50%) translateY(-100%);
+          }
+
+          .pulse-center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 1) 0%, rgba(59, 130, 246, 0.3) 100%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow:
+              0 0 20px rgba(59, 130, 246, 1),
+              0 0 40px rgba(59, 130, 246, 0.8);
+            z-index: 5;
+          }
         `}
       </style>
 
@@ -677,7 +967,7 @@ export function LoadingOverlay({
               )}
             </div>
           </>
-        ) : (
+        ) : animationType === 'breathe' ? (
           <>
             <div className="flex flex-col items-center gap-8">
               <div className="breathe-container relative">
@@ -719,6 +1009,107 @@ export function LoadingOverlay({
                   <span className="letter">M</span>
                   <span className="letter">I</span>
                   <span className="letter">X</span>
+                </div>
+              </div>
+
+              {message && (
+                <div className="text-center">
+                  <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
+                    {message}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : animationType === 'typewriter' ? (
+          <>
+            <div className="flex flex-col items-center gap-8">
+              <div className="typewriter-container relative">
+                {/* TERMIX Typewriter Text */}
+                <div
+                  className="typewriter-text text-6xl font-bold tracking-wider select-none"
+                  style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                  }}
+                >
+                  <span className="type-letter">T</span>
+                  <span className="type-letter">E</span>
+                  <span className="type-letter">R</span>
+                  <span className="type-letter">M</span>
+                  <span className="type-letter">I</span>
+                  <span className="type-letter">X</span>
+                  <span className="typing-cursor"></span>
+                </div>
+              </div>
+
+              {message && (
+                <div className="text-center">
+                  <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
+                    {message}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : animationType === 'scanner' ? (
+          <>
+            <div className="flex flex-col items-center gap-8">
+              <div className="scanner-container relative">
+                {/* Scanner Grid Background */}
+                <div className="scanner-grid"></div>
+
+                {/* Vertical Scan Lines */}
+                <div className="vertical-scan-line"></div>
+                <div className="vertical-scan-line"></div>
+
+                {/* Horizontal Scan Line */}
+                <div className="horizontal-scan-line"></div>
+
+                {/* TERMIX Scanner Text */}
+                <div
+                  className="scanner-text text-6xl font-bold tracking-wider select-none"
+                  style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                  }}
+                >
+                  TERMIX
+                </div>
+              </div>
+
+              {message && (
+                <div className="text-center">
+                  <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
+                    {message}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col items-center gap-8">
+              <div className="pulse-container relative">
+                {/* Wave Rings */}
+                <div className="wave-ring"></div>
+                <div className="wave-ring"></div>
+                <div className="wave-ring"></div>
+                <div className="wave-ring"></div>
+                <div className="wave-ring"></div>
+
+                {/* Radar Sweep */}
+                <div className="radar-sweep"></div>
+
+                {/* Center Dot */}
+                <div className="pulse-center-dot"></div>
+
+                {/* TERMIX Pulse Text */}
+                <div
+                  className="pulse-text text-6xl font-bold tracking-wider select-none"
+                  style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                  }}
+                >
+                  TERMIX
                 </div>
               </div>
 
