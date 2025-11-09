@@ -2681,9 +2681,45 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
           exitCode: code,
           error: errorOutput,
         });
-        return res.status(500).json({
-          error: errorOutput || "Failed to extract archive"
-        });
+
+        // Check if command not found
+        let friendlyError = errorOutput || "Failed to extract archive";
+        if (errorOutput.includes("command not found") || errorOutput.includes("not found")) {
+          // Detect which command is missing based on file extension
+          let missingCmd = "";
+          let installHint = "";
+
+          if (fileExt.endsWith(".zip")) {
+            missingCmd = "unzip";
+            installHint = "apt install unzip / yum install unzip / brew install unzip";
+          } else if (fileExt.endsWith(".tar.gz") || fileExt.endsWith(".tgz") ||
+                     fileExt.endsWith(".tar.bz2") || fileExt.endsWith(".tbz2") ||
+                     fileExt.endsWith(".tar.xz") || fileExt.endsWith(".tar")) {
+            missingCmd = "tar";
+            installHint = "Usually pre-installed on Linux/Unix systems";
+          } else if (fileExt.endsWith(".gz")) {
+            missingCmd = "gunzip";
+            installHint = "apt install gzip / yum install gzip / Usually pre-installed";
+          } else if (fileExt.endsWith(".bz2")) {
+            missingCmd = "bunzip2";
+            installHint = "apt install bzip2 / yum install bzip2 / brew install bzip2";
+          } else if (fileExt.endsWith(".xz")) {
+            missingCmd = "unxz";
+            installHint = "apt install xz-utils / yum install xz / brew install xz";
+          } else if (fileExt.endsWith(".7z")) {
+            missingCmd = "7z";
+            installHint = "apt install p7zip-full / yum install p7zip / brew install p7zip";
+          } else if (fileExt.endsWith(".rar")) {
+            missingCmd = "unrar";
+            installHint = "apt install unrar / yum install unrar / brew install unrar";
+          }
+
+          if (missingCmd) {
+            friendlyError = `Command '${missingCmd}' not found on remote server. Please install it first: ${installHint}`;
+          }
+        }
+
+        return res.status(500).json({ error: friendlyError });
       }
 
       fileLogger.success("Archive extracted successfully", {
@@ -2708,6 +2744,162 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
       });
       if (!res.headersSent) {
         res.status(500).json({ error: "Stream error while extracting archive" });
+      }
+    });
+  });
+});
+
+// Route: Compress files/folders (requires JWT)
+// POST /ssh/file_manager/ssh/compressFiles
+app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
+  const { sessionId, paths, archiveName, format } = req.body;
+
+  if (!sessionId || !paths || !Array.isArray(paths) || paths.length === 0 || !archiveName) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const session = sshSessions[sessionId];
+  if (!session || !session.isConnected) {
+    return res.status(400).json({ error: "SSH session not connected" });
+  }
+
+  session.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  // Determine compression format
+  const compressionFormat = format || "zip"; // Default to zip
+  let compressCommand = "";
+
+  // Get the directory where the first file is located
+  const firstPath = paths[0];
+  const workingDir = firstPath.substring(0, firstPath.lastIndexOf("/")) || "/";
+
+  // Extract just the file/folder names for the command
+  const fileNames = paths.map(p => {
+    const name = p.split("/").pop();
+    return `"${name}"`;
+  }).join(" ");
+
+  // Construct archive path
+  let archivePath = "";
+  if (archiveName.includes("/")) {
+    archivePath = archiveName;
+  } else {
+    archivePath = workingDir.endsWith("/")
+      ? `${workingDir}${archiveName}`
+      : `${workingDir}/${archiveName}`;
+  }
+
+  if (compressionFormat === "zip") {
+    // Use zip command - need to cd to directory first
+    compressCommand = `cd "${workingDir}" && zip -r "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "tar.gz" || compressionFormat === "tgz") {
+    compressCommand = `cd "${workingDir}" && tar -czf "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "tar.bz2" || compressionFormat === "tbz2") {
+    compressCommand = `cd "${workingDir}" && tar -cjf "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "tar.xz") {
+    compressCommand = `cd "${workingDir}" && tar -cJf "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "tar") {
+    compressCommand = `cd "${workingDir}" && tar -cf "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "7z") {
+    compressCommand = `cd "${workingDir}" && 7z a "${archivePath}" ${fileNames}`;
+  } else {
+    return res.status(400).json({ error: "Unsupported compression format" });
+  }
+
+  fileLogger.info("Compressing files", {
+    operation: "compress_files",
+    sessionId,
+    paths,
+    archivePath,
+    format: compressionFormat,
+    command: compressCommand,
+  });
+
+  session.client.exec(compressCommand, (err, stream) => {
+    if (err) {
+      fileLogger.error("SSH exec error during compress:", err, {
+        operation: "compress_files",
+        sessionId,
+        paths,
+      });
+      return res.status(500).json({ error: "Failed to execute compress command" });
+    }
+
+    let errorOutput = "";
+
+    stream.on("data", (data: Buffer) => {
+      fileLogger.debug("Compress stdout", {
+        operation: "compress_files",
+        sessionId,
+        output: data.toString(),
+      });
+    });
+
+    stream.stderr.on("data", (data: Buffer) => {
+      errorOutput += data.toString();
+      fileLogger.debug("Compress stderr", {
+        operation: "compress_files",
+        sessionId,
+        error: data.toString(),
+      });
+    });
+
+    stream.on("close", (code: number) => {
+      if (code !== 0) {
+        fileLogger.error("Compress command failed", {
+          operation: "compress_files",
+          sessionId,
+          paths,
+          archivePath,
+          exitCode: code,
+          error: errorOutput,
+        });
+
+        // Check if command not found
+        let friendlyError = errorOutput || "Failed to compress files";
+        if (errorOutput.includes("command not found") || errorOutput.includes("not found")) {
+          const commandMap: Record<string, { cmd: string; install: string }> = {
+            "zip": { cmd: "zip", install: "apt install zip / yum install zip / brew install zip" },
+            "tar.gz": { cmd: "tar", install: "Usually pre-installed on Linux/Unix systems" },
+            "tar.bz2": { cmd: "tar", install: "Usually pre-installed on Linux/Unix systems" },
+            "tar.xz": { cmd: "tar", install: "Usually pre-installed on Linux/Unix systems" },
+            "tar": { cmd: "tar", install: "Usually pre-installed on Linux/Unix systems" },
+            "7z": { cmd: "7z", install: "apt install p7zip-full / yum install p7zip / brew install p7zip" },
+          };
+
+          const info = commandMap[compressionFormat];
+          if (info) {
+            friendlyError = `Command '${info.cmd}' not found on remote server. Please install it first: ${info.install}`;
+          }
+        }
+
+        return res.status(500).json({ error: friendlyError });
+      }
+
+      fileLogger.success("Files compressed successfully", {
+        operation: "compress_files",
+        sessionId,
+        paths,
+        archivePath,
+        format: compressionFormat,
+      });
+
+      res.json({
+        success: true,
+        message: "Files compressed successfully",
+        archivePath: archivePath
+      });
+    });
+
+    stream.on("error", (streamErr) => {
+      fileLogger.error("SSH compressFiles stream error:", streamErr, {
+        operation: "compress_files",
+        sessionId,
+        paths,
+      });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Stream error while compressing files" });
       }
     });
   });

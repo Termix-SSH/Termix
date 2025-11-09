@@ -62,6 +62,7 @@ interface ContextMenuProps {
   isPinned?: (file: FileItem) => boolean;
   currentPath?: string;
   onExtractArchive?: (file: FileItem) => void;
+  onCompress?: (files: FileItem[]) => void;
 }
 
 interface MenuItem {
@@ -102,6 +103,7 @@ export function FileManagerContextMenu({
   isPinned,
   currentPath,
   onExtractArchive,
+  onCompress,
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
@@ -282,6 +284,18 @@ export function FileManagerContextMenu({
           shortcut: "Ctrl+E",
         });
       }
+    }
+
+    // Add compress option for selected files/folders
+    if (isFileContext && onCompress) {
+      menuItems.push({
+        icon: <FileArchive className="w-4 h-4" />,
+        label: isMultipleFiles
+          ? t("fileManager.compressFiles")
+          : t("fileManager.compressFile"),
+        action: () => onCompress(files),
+        shortcut: "Ctrl+Shift+C",
+      });
     }
 
     if (isSingleFile && files[0].type === "file") {

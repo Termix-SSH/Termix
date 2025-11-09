@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
 import { PermissionsDialog } from "./components/PermissionsDialog";
+import { CompressDialog } from "./components/CompressDialog";
 import {
   Upload,
   FolderPlus,
@@ -52,6 +53,7 @@ import {
   logActivity,
   changeSSHPermissions,
   extractSSHArchive,
+  compressSSHFiles,
 } from "@/ui/main-axios.ts";
 import type { SidebarItem } from "./FileManagerSidebar";
 
@@ -150,6 +152,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [createIntent, setCreateIntent] = useState<CreateIntent | null>(null);
   const [editingFile, setEditingFile] = useState<FileItem | null>(null);
   const [permissionsDialogFile, setPermissionsDialogFile] = useState<FileItem | null>(null);
+  const [compressDialogFiles, setCompressDialogFiles] = useState<FileItem[]>([]);
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
@@ -1086,6 +1089,48 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       const err = error as { message?: string };
       toast.error(
         `${t("fileManager.extractFailed")}: ${err.message || t("fileManager.unknownError")}`,
+      );
+    }
+  }
+
+  function handleOpenCompressDialog(files: FileItem[]) {
+    setCompressDialogFiles(files);
+  }
+
+  async function handleCompress(archiveName: string, format: string) {
+    if (!sshSessionId || compressDialogFiles.length === 0) return;
+
+    try {
+      await ensureSSHConnection();
+
+      const paths = compressDialogFiles.map(f => f.path);
+      const fileNames = compressDialogFiles.map(f => f.name);
+
+      toast.info(t("fileManager.compressingFiles", {
+        count: fileNames.length,
+        name: archiveName
+      }));
+
+      await compressSSHFiles(
+        sshSessionId,
+        paths,
+        archiveName,
+        format,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(t("fileManager.filesCompressedSuccessfully", {
+        name: archiveName
+      }));
+
+      // Refresh directory to show compressed file
+      handleRefreshDirectory();
+      clearSelection();
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(
+        `${t("fileManager.compressFailed")}: ${err.message || t("fileManager.unknownError")}`,
       );
     }
   }
@@ -2030,9 +2075,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             currentPath={currentPath}
             onProperties={handleOpenPermissionsDialog}
             onExtractArchive={handleExtractArchive}
+            onCompress={handleOpenCompressDialog}
           />
         </div>
       </div>
+
+      <CompressDialog
+        open={compressDialogFiles.length > 0}
+        onOpenChange={(open) => !open && setCompressDialogFiles([])}
+        fileNames={compressDialogFiles.map(f => f.name)}
+        onCompress={handleCompress}
+      />
 
       <TOTPDialog
         isOpen={totpRequired}
