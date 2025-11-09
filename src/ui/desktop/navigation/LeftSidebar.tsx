@@ -115,7 +115,11 @@ export function LeftSidebar({
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
   const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
   const openSshManagerTab = () => {
-    if (sshManagerTab || isSplitScreenActive) return;
+    if (isSplitScreenActive) return;
+    if (sshManagerTab) {
+      setCurrentTab(sshManagerTab.id);
+      return;
+    }
     const id = addTab({ type: "ssh_manager", title: "Host Manager" });
     setCurrentTab(id);
   };
@@ -416,13 +420,11 @@ export function LeftSidebar({
                   className="m-2 flex flex-row font-semibold border-2 !border-dark-border"
                   variant="outline"
                   onClick={openSshManagerTab}
-                  disabled={!!sshManagerTab || isSplitScreenActive}
+                  disabled={isSplitScreenActive}
                   title={
-                    sshManagerTab
-                      ? t("interface.sshManagerAlreadyOpen")
-                      : isSplitScreenActive
-                        ? t("interface.disabledDuringSplitScreen")
-                        : undefined
+                    isSplitScreenActive
+                      ? t("interface.disabledDuringSplitScreen")
+                      : undefined
                   }
                 >
                   <HardDrive strokeWidth="2.5" />
