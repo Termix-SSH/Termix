@@ -112,8 +112,8 @@ function AppContent() {
         setTimeout(() => {
           setIsTransitioning(false);
           setTransitionPhase('idle');
-        }, 600);
-      }, 800);
+        }, 800);
+      }, 1200);
     },
     [],
   );
@@ -135,7 +135,7 @@ function AppContent() {
       }
 
       window.location.reload();
-    }, 800);
+    }, 1200);
   }, []);
 
   const currentTabData = tabs.find((tab) => tab.id === currentTab);
@@ -226,34 +226,52 @@ function AppContent() {
 
       {isTransitioning && (
         <div
-          className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-500 ${
+          className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-700 ${
             transitionPhase === 'fadeOut' ? 'opacity-100' : 'opacity-0'
           }`}
         >
           {transitionPhase === 'fadeOut' && (
             <>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="absolute w-0 h-0 bg-primary/8 rounded-full"
+              <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                <div className="absolute w-0 h-0 bg-primary/10 rounded-full"
                      style={{
-                       animation: 'ripple 2s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                       animation: 'ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
                        animationDelay: '0ms'
+                     }}
+                />
+                <div className="absolute w-0 h-0 bg-primary/7 rounded-full"
+                     style={{
+                       animation: 'ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                       animationDelay: '200ms'
                      }}
                 />
                 <div className="absolute w-0 h-0 bg-primary/5 rounded-full"
                      style={{
-                       animation: 'ripple 2s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-                       animationDelay: '300ms'
+                       animation: 'ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                       animationDelay: '400ms'
+                     }}
+                />
+                <div className="absolute w-0 h-0 bg-primary/3 rounded-full"
+                     style={{
+                       animation: 'ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                       animationDelay: '600ms'
                      }}
                 />
                 <div className="relative z-10 text-center"
                      style={{
-                       animation: 'logoFade 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+                       animation: 'logoFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards'
                      }}>
-                  <div className="text-6xl font-bold tracking-wider text-primary"
-                       style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
+                  <div className="text-7xl font-bold tracking-wider"
+                       style={{
+                         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                         animation: 'logoGlow 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+                       }}>
                     TERMIX
                   </div>
-                  <div className="text-sm text-muted-foreground mt-2 tracking-widest">
+                  <div className="text-sm text-muted-foreground mt-3 tracking-widest"
+                       style={{
+                         animation: 'subtitleFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+                       }}>
                     SSH TERMINAL MANAGER
                   </div>
                 </div>
@@ -263,10 +281,13 @@ function AppContent() {
                   0% {
                     width: 0;
                     height: 0;
-                    opacity: 0.8;
+                    opacity: 1;
                   }
-                  50% {
-                    opacity: 0.4;
+                  30% {
+                    opacity: 0.6;
+                  }
+                  70% {
+                    opacity: 0.3;
                   }
                   100% {
                     width: 200vmax;
@@ -277,19 +298,65 @@ function AppContent() {
                 @keyframes logoFade {
                   0% {
                     opacity: 0;
-                    transform: scale(0.8);
+                    transform: scale(0.85);
+                    filter: blur(8px);
                   }
-                  20% {
+                  25% {
                     opacity: 1;
                     transform: scale(1);
+                    filter: blur(0px);
                   }
-                  80% {
+                  75% {
                     opacity: 1;
                     transform: scale(1);
+                    filter: blur(0px);
                   }
                   100% {
                     opacity: 0;
-                    transform: scale(1.1);
+                    transform: scale(1.05);
+                    filter: blur(4px);
+                  }
+                }
+                @keyframes logoGlow {
+                  0% {
+                    color: hsl(var(--primary));
+                    text-shadow: none;
+                  }
+                  25% {
+                    color: hsl(var(--primary));
+                    text-shadow:
+                      0 0 20px hsla(var(--primary), 0.3),
+                      0 0 40px hsla(var(--primary), 0.2),
+                      0 0 60px hsla(var(--primary), 0.1);
+                  }
+                  75% {
+                    color: hsl(var(--primary));
+                    text-shadow:
+                      0 0 20px hsla(var(--primary), 0.3),
+                      0 0 40px hsla(var(--primary), 0.2),
+                      0 0 60px hsla(var(--primary), 0.1);
+                  }
+                  100% {
+                    color: hsl(var(--primary));
+                    text-shadow: none;
+                  }
+                }
+                @keyframes subtitleFade {
+                  0%, 30% {
+                    opacity: 0;
+                    transform: translateY(10px);
+                  }
+                  50% {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                  75% {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                  100% {
+                    opacity: 0;
+                    transform: translateY(-5px);
                   }
                 }
               `}</style>
