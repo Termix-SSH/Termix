@@ -66,12 +66,14 @@ export function TopNavbar({
     currentX: number;
     startX: number;
     targetIndex: number | null;
+    hoverTabIndex: number | null;
   }>({
     draggedId: null,
     draggedIndex: null,
     currentX: 0,
     startX: 0,
     targetIndex: null,
+    hoverTabIndex: null,
   });
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const tabRefs = React.useRef<Map<number, HTMLDivElement>>(new Map());
@@ -123,6 +125,7 @@ export function TopNavbar({
       startX: e.clientX,
       currentX: e.clientX,
       targetIndex: index,
+      hoverTabIndex: null,
     });
   };
 
@@ -207,6 +210,22 @@ export function TopNavbar({
     return newTargetIndex;
   };
 
+  const findHoveredTab = (clientX: number, clientY: number): number | null => {
+    for (const [index, tabEl] of tabRefs.current.entries()) {
+      if (!tabEl) continue;
+      const rect = tabEl.getBoundingClientRect();
+      if (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      ) {
+        return index;
+      }
+    }
+    return null;
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
 
@@ -219,6 +238,14 @@ export function TopNavbar({
       setDragState((prev) => ({
         ...prev,
         currentX: e.clientX,
+      }));
+    }
+
+    const hoveredTabIndex = findHoveredTab(e.clientX, e.clientY);
+    if (hoveredTabIndex !== dragState.hoverTabIndex) {
+      setDragState((prev) => ({
+        ...prev,
+        hoverTabIndex: hoveredTabIndex,
       }));
     }
 
@@ -240,7 +267,57 @@ export function TopNavbar({
     const fromIndex = dragState.draggedIndex;
     const toIndex = dragState.targetIndex;
     const draggedId = dragState.draggedId;
+    const hoverTabIndex = dragState.hoverTabIndex;
 
+    // Check if dropping onto another tab for split screen
+    if (
+      fromIndex !== null &&
+      hoverTabIndex !== null &&
+      fromIndex !== hoverTabIndex &&
+      draggedId !== null
+    ) {
+      const draggedTab = tabs[fromIndex];
+      const targetTab = tabs[hoverTabIndex];
+
+      const isDraggedSplittable =
+        draggedTab.type === "terminal" ||
+        draggedTab.type === "server" ||
+        draggedTab.type === "file_manager";
+      const isTargetSplittable =
+        targetTab.type === "terminal" ||
+        targetTab.type === "server" ||
+        targetTab.type === "file_manager";
+
+      // Both tabs must be splittable and target must not already be in split screen
+      if (
+        isDraggedSplittable &&
+        isTargetSplittable &&
+        !allSplitScreenTab.includes(targetTab.id) &&
+        allSplitScreenTab.length < 3
+      ) {
+        // Trigger split screen for the dragged tab
+        setSplitScreenTab(draggedId);
+        setCurrentTab(targetTab.id);
+
+        setDragState({
+          draggedId: null,
+          draggedIndex: null,
+          startX: 0,
+          currentX: 0,
+          targetIndex: null,
+          hoverTabIndex: null,
+        });
+
+        setTimeout(() => {
+          isProcessingDropRef.current = false;
+          setIsInDropAnimation(false);
+        }, 50);
+
+        return;
+      }
+    }
+
+    // Original reorder logic
     if (fromIndex !== null && toIndex !== null && fromIndex !== toIndex) {
       prevTabsRef.current = tabs;
 
@@ -252,6 +329,7 @@ export function TopNavbar({
           startX: 0,
           currentX: 0,
           targetIndex: null,
+          hoverTabIndex: null,
         });
       });
 
@@ -267,6 +345,7 @@ export function TopNavbar({
         startX: 0,
         currentX: 0,
         targetIndex: null,
+        hoverTabIndex: null,
       });
     }
 
@@ -284,6 +363,7 @@ export function TopNavbar({
       startX: 0,
       currentX: 0,
       targetIndex: null,
+      hoverTabIndex: null,
     });
   };
 
@@ -350,6 +430,25 @@ export function TopNavbar({
             const dragOffset = isDraggingThisTab
               ? dragState.currentX - dragState.startX
               : 0;
+
+            // Check if this tab is a valid drop target for split screen
+            const draggedTab =
+              dragState.draggedIndex !== null
+                ? tabs[dragState.draggedIndex]
+                : null;
+            const isDraggedSplittable =
+              draggedTab &&
+              (draggedTab.type === "terminal" ||
+                draggedTab.type === "server" ||
+                draggedTab.type === "file_manager");
+            const isValidDropTarget =
+              isDraggedSplittable &&
+              isSplittable &&
+              !isDraggingThisTab &&
+              !isSplit &&
+              allSplitScreenTab.length < 3;
+            const isHoveredDropTarget =
+              isValidDropTarget && dragState.hoverTabIndex === index;
 
             let transform = "";
 
@@ -466,6 +565,8 @@ export function TopNavbar({
                   disableClose={disableClose}
                   isDragging={isDraggingThisTab}
                   isDragOver={false}
+                  isValidDropTarget={isValidDropTarget}
+                  isHoveredDropTarget={isHoveredDropTarget}
                 />
               </div>
             );
