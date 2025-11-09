@@ -112,8 +112,8 @@ function AppContent() {
         setTimeout(() => {
           setIsTransitioning(false);
           setTransitionPhase('idle');
-        }, 400);
-      }, 300);
+        }, 600);
+      }, 800);
     },
     [],
   );
@@ -135,7 +135,7 @@ function AppContent() {
       }
 
       window.location.reload();
-    }, 300);
+    }, 800);
   }, []);
 
   const currentTabData = tabs.find((tab) => tab.id === currentTab);
@@ -226,43 +226,70 @@ function AppContent() {
 
       {isTransitioning && (
         <div
-          className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-300 ${
+          className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-500 ${
             transitionPhase === 'fadeOut' ? 'opacity-100' : 'opacity-0'
           }`}
         >
           {transitionPhase === 'fadeOut' && (
             <>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="absolute w-0 h-0 bg-primary/20 rounded-full animate-[ping_1s_ease-out]"
+                <div className="absolute w-0 h-0 bg-primary/8 rounded-full"
                      style={{
-                       animation: 'ripple 0.8s ease-out forwards',
+                       animation: 'ripple 2s cubic-bezier(0.4, 0, 0.2, 1) forwards',
                        animationDelay: '0ms'
                      }}
                 />
-                <div className="absolute w-0 h-0 bg-primary/15 rounded-full"
+                <div className="absolute w-0 h-0 bg-primary/5 rounded-full"
                      style={{
-                       animation: 'ripple 0.8s ease-out forwards',
-                       animationDelay: '150ms'
-                     }}
-                />
-                <div className="absolute w-0 h-0 bg-primary/10 rounded-full"
-                     style={{
-                       animation: 'ripple 0.8s ease-out forwards',
+                       animation: 'ripple 2s cubic-bezier(0.4, 0, 0.2, 1) forwards',
                        animationDelay: '300ms'
                      }}
                 />
+                <div className="relative z-10 text-center"
+                     style={{
+                       animation: 'logoFade 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+                     }}>
+                  <div className="text-6xl font-bold tracking-wider text-primary"
+                       style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
+                    TERMIX
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-2 tracking-widest">
+                    SSH TERMINAL MANAGER
+                  </div>
+                </div>
               </div>
               <style>{`
                 @keyframes ripple {
                   0% {
                     width: 0;
                     height: 0;
-                    opacity: 1;
+                    opacity: 0.8;
+                  }
+                  50% {
+                    opacity: 0.4;
                   }
                   100% {
                     width: 200vmax;
                     height: 200vmax;
                     opacity: 0;
+                  }
+                }
+                @keyframes logoFade {
+                  0% {
+                    opacity: 0;
+                    transform: scale(0.8);
+                  }
+                  20% {
+                    opacity: 1;
+                    transform: scale(1);
+                  }
+                  80% {
+                    opacity: 1;
+                    transform: scale(1);
+                  }
+                  100% {
+                    opacity: 0;
+                    transform: scale(1.1);
                   }
                 }
               `}</style>
