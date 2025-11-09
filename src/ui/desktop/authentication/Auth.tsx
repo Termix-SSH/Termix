@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
 import { toast } from "sonner";
@@ -890,7 +891,7 @@ export function Auth({
 
         {/* Right Side - Auth Form */}
         <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-background overflow-y-auto">
-          <div className="w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500"
+          <div className="w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border-2 border-dark-border animate-in fade-in slide-in-from-bottom-4 duration-500"
             style={{ maxHeight: "calc(100vh - 3rem)" }}
           >
       {isInElectronWebView() && !webviewAuthSuccess && (
@@ -902,21 +903,6 @@ export function Auth({
       )}
       {isInElectronWebView() && webviewAuthSuccess && (
         <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-            <svg
-              className="w-10 h-10 text-green-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
           <div className="text-center">
             <h2 className="text-xl font-bold mb-2">
               {t("messages.loginSuccess")}
@@ -1004,70 +990,44 @@ export function Auth({
             return (
               <>
                 {/* Tab Navigation */}
-                <div className="flex gap-1 p-1 mb-8 bg-muted/50 rounded-lg">
-                  {passwordLoginAllowed && (
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-200",
-                        tab === "login"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                      onClick={() => {
-                        setTab("login");
-                        if (tab === "reset") resetPasswordState();
-                        if (tab === "signup") clearFormFields();
-                      }}
-                      aria-selected={tab === "login"}
-                      disabled={loading || firstUser}
-                    >
-                      {t("common.login")}
-                    </button>
-                  )}
-                  {(passwordLoginAllowed || firstUser) &&
-                    registrationAllowed && (
-                      <button
-                        type="button"
-                        className={cn(
-                          "flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-200",
-                          tab === "signup"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                        onClick={() => {
-                          setTab("signup");
-                          if (tab === "reset") resetPasswordState();
-                          if (tab === "login") clearFormFields();
-                        }}
-                        aria-selected={tab === "signup"}
+                <Tabs value={tab} onValueChange={(value) => {
+                  const newTab = value as "login" | "signup" | "external" | "reset";
+                  setTab(newTab);
+                  if (tab === "reset") resetPasswordState();
+                  if ((tab === "login" && newTab === "signup") || (tab === "signup" && newTab === "login")) {
+                    clearFormFields();
+                  }
+                }} className="w-full mb-8">
+                  <TabsList className="w-full">
+                    {passwordLoginAllowed && (
+                      <TabsTrigger
+                        value="login"
+                        disabled={loading || firstUser}
+                        className="flex-1"
+                      >
+                        {t("common.login")}
+                      </TabsTrigger>
+                    )}
+                    {(passwordLoginAllowed || firstUser) && registrationAllowed && (
+                      <TabsTrigger
+                        value="signup"
                         disabled={loading}
+                        className="flex-1"
                       >
                         {t("common.register")}
-                      </button>
+                      </TabsTrigger>
                     )}
-                  {oidcConfigured && (
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-200",
-                        tab === "external"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                      onClick={() => {
-                        setTab("external");
-                        if (tab === "reset") resetPasswordState();
-                        if (tab === "login" || tab === "signup")
-                          clearFormFields();
-                      }}
-                      aria-selected={tab === "external"}
-                      disabled={oidcLoading}
-                    >
-                      {t("auth.external")}
-                    </button>
-                  )}
-                </div>
+                    {oidcConfigured && (
+                      <TabsTrigger
+                        value="external"
+                        disabled={oidcLoading}
+                        className="flex-1"
+                      >
+                        {t("auth.external")}
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
+                </Tabs>
 
                 {/* Page Title */}
                 <div className="mb-8 text-center">
