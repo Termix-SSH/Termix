@@ -842,22 +842,21 @@ export function Auth({
       <div className="w-full h-full flex flex-col md:flex-row">
 
         {/* Left Side - Brand Showcase */}
-        <div className="hidden md:flex md:w-2/5 bg-dark-bg-darker items-center justify-center relative overflow-hidden">
-          {/* Diagonal Lines Background */}
-          <div
-            className="absolute inset-0 opacity-[0.03]"
-            style={{
-              backgroundImage: `repeating-linear-gradient(
-                45deg,
-                hsl(var(--primary)),
-                hsl(var(--primary)) 1px,
-                transparent 1px,
-                transparent 40px
-              )`
-            }}
-          />
+        <div
+          className="hidden md:flex md:w-2/5 items-center justify-center relative"
+          style={{
+            background: '#0e0e10',
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 35px,
+              rgba(255, 255, 255, 0.03) 35px,
+              rgba(255, 255, 255, 0.03) 37px
+            )`
+          }}
+        >
           {/* Logo and Branding */}
-          <div className="relative z-10 text-center px-8">
+          <div className="relative text-center px-8">
             <div
               className="text-7xl font-bold tracking-wider mb-4 text-foreground"
               style={{
