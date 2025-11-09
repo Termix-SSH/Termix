@@ -239,3 +239,17 @@ export const recentActivity = sqliteTable("recent_activity", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const commandHistory = sqliteTable("command_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => sshData.id),
+  command: text("command").notNull(),
+  executedAt: text("executed_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});

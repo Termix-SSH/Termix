@@ -1606,6 +1606,55 @@ export async function extractSSHArchive(
   }
 }
 
+export async function compressSSHFiles(
+  sessionId: string,
+  paths: string[],
+  archiveName: string,
+  format?: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string; archivePath: string }> {
+  try {
+    fileLogger.info("Compressing files", {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archiveName,
+      format,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/compressFiles", {
+      sessionId,
+      paths,
+      archiveName,
+      format: format || "zip",
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("Files compressed successfully", {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archivePath: response.data.archivePath,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to compress files", error, {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archiveName,
+      format,
+    });
+    handleApiError(error, "compress files");
+    throw error;
+  }
+}
+
 // ============================================================================
 // FILE MANAGER DATA
 // ============================================================================
@@ -2799,5 +2848,74 @@ export async function resetRecentActivity(): Promise<{ message: string }> {
     return response.data;
   } catch (error) {
     throw handleApiError(error, "reset recent activity");
+  }
+}
+
+// ============================================================================
+// COMMAND HISTORY API
+// ============================================================================
+
+/**
+ * Save a command to history for a specific host
+ */
+export async function saveCommandToHistory(
+  hostId: number,
+  command: string,
+): Promise<{ id: number; command: string; executedAt: string }> {
+  try {
+    const response = await authApi.post("/terminal/command_history", {
+      hostId,
+      command,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "save command to history");
+  }
+}
+
+/**
+ * Get command history for a specific host
+ * Returns array of unique commands ordered by most recent
+ */
+export async function getCommandHistory(
+  hostId: number,
+): Promise<string[]> {
+  try {
+    const response = await authApi.get(`/terminal/command_history/${hostId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch command history");
+  }
+}
+
+/**
+ * Delete a specific command from history
+ */
+export async function deleteCommandFromHistory(
+  hostId: number,
+  command: string,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.post("/terminal/command_history/delete", {
+      hostId,
+      command,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete command from history");
+  }
+}
+
+/**
+ * Clear command history for a specific host (optional feature)
+ */
+export async function clearCommandHistory(
+  hostId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.delete(`/terminal/command_history/${hostId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "clear command history");
   }
 }
