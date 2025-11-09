@@ -2,6 +2,7 @@ import axios, { AxiosError, type AxiosInstance } from "axios";
 import type {
   SSHHost,
   SSHHostData,
+  SSHFolder,
   TunnelConfig,
   TunnelStatus,
   FileManagerFile,
@@ -2448,6 +2449,90 @@ export async function renameFolder(
     return response.data;
   } catch (error) {
     handleApiError(error, "rename folder");
+  }
+}
+
+export async function getSSHFolders(): Promise<SSHFolder[]> {
+  try {
+    sshLogger.info("Fetching SSH folders", {
+      operation: "fetch_ssh_folders",
+    });
+
+    const response = await authApi.get("/ssh/folders");
+
+    sshLogger.success("SSH folders fetched successfully", {
+      operation: "fetch_ssh_folders",
+      count: response.data.length,
+    });
+
+    return response.data;
+  } catch (error) {
+    sshLogger.error("Failed to fetch SSH folders", error, {
+      operation: "fetch_ssh_folders",
+    });
+    handleApiError(error, "fetch SSH folders");
+    throw error;
+  }
+}
+
+export async function updateFolderMetadata(
+  name: string,
+  color?: string,
+  icon?: string,
+): Promise<void> {
+  try {
+    sshLogger.info("Updating folder metadata", {
+      operation: "update_folder_metadata",
+      name,
+      color,
+      icon,
+    });
+
+    await authApi.put("/ssh/folders/metadata", {
+      name,
+      color,
+      icon,
+    });
+
+    sshLogger.success("Folder metadata updated successfully", {
+      operation: "update_folder_metadata",
+      name,
+    });
+  } catch (error) {
+    sshLogger.error("Failed to update folder metadata", error, {
+      operation: "update_folder_metadata",
+      name,
+    });
+    handleApiError(error, "update folder metadata");
+    throw error;
+  }
+}
+
+export async function deleteAllHostsInFolder(
+  folderName: string,
+): Promise<{ deletedCount: number }> {
+  try {
+    sshLogger.info("Deleting all hosts in folder", {
+      operation: "delete_folder_hosts",
+      folderName,
+    });
+
+    const response = await authApi.delete(`/ssh/folders/${encodeURIComponent(folderName)}/hosts`);
+
+    sshLogger.success("All hosts in folder deleted successfully", {
+      operation: "delete_folder_hosts",
+      folderName,
+      deletedCount: response.data.deletedCount,
+    });
+
+    return response.data;
+  } catch (error) {
+    sshLogger.error("Failed to delete hosts in folder", error, {
+      operation: "delete_folder_hosts",
+      folderName,
+    });
+    handleApiError(error, "delete hosts in folder");
+    throw error;
   }
 }
 

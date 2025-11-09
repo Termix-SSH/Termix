@@ -22,6 +22,9 @@ import {
   updateSSHHost,
   renameFolder,
   exportSSHHostWithCredentials,
+  getSSHFolders,
+  updateFolderMetadata,
+  deleteAllHostsInFolder,
 } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -45,12 +48,24 @@ import {
   Copy,
   Activity,
   Clock,
+  Palette,
+  Trash,
+  Cloud,
+  Database,
+  Box,
+  Package,
+  Layers,
+  Archive,
+  HardDrive,
+  Globe,
 } from "lucide-react";
 import type {
   SSHHost,
+  SSHFolder,
   SSHManagerHostViewerProps,
 } from "../../../../types/index.js";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
+import { FolderEditDialog } from "./components/FolderEditDialog";
 
 export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const { t } = useTranslation();
@@ -65,13 +80,17 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState("");
   const [operationLoading, setOperationLoading] = useState(false);
+  const [folderMetadata, setFolderMetadata] = useState<Map<string, SSHFolder>>(new Map());
+  const [editingFolderAppearance, setEditingFolderAppearance] = useState<string | null>(null);
   const dragCounter = useRef(0);
 
   useEffect(() => {
     fetchHosts();
+    fetchFolderMetadata();
 
     const handleHostsRefresh = () => {
       fetchHosts();
+      fetchFolderMetadata();
     };
 
     window.addEventListener("hosts:refresh", handleHostsRefresh);
@@ -114,6 +133,87 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFolderMetadata = async () => {
+    try {
+      const folders = await getSSHFolders();
+      const metadataMap = new Map<string, SSHFolder>();
+      folders.forEach((folder) => {
+        metadataMap.set(folder.name, folder);
+      });
+      setFolderMetadata(metadataMap);
+    } catch (error) {
+      console.error("Failed to fetch folder metadata:", error);
+    }
+  };
+
+  const handleSaveFolderAppearance = async (folderName: string, color: string, icon: string) => {
+    try {
+      await updateFolderMetadata(folderName, color, icon);
+      toast.success(t("hosts.folderAppearanceUpdated"));
+      await fetchFolderMetadata();
+      window.dispatchEvent(new CustomEvent("folders:changed"));
+    } catch (error) {
+      console.error("Failed to update folder appearance:", error);
+      toast.error(t("hosts.failedToUpdateFolderAppearance"));
+    }
+  };
+
+  const handleDeleteAllHostsInFolder = async (folderName: string) => {
+    const hostsInFolder = hostsByFolder[folderName] || [];
+    confirmWithToast(
+      t("hosts.confirmDeleteAllHostsInFolder", {
+        folder: folderName,
+        count: hostsInFolder.length,
+      }),
+      async () => {
+        try {
+          const result = await deleteAllHostsInFolder(folderName);
+          toast.success(
+            t("hosts.allHostsInFolderDeleted", {
+              folder: folderName,
+              count: result.deletedCount,
+            })
+          );
+          await fetchHosts();
+          await fetchFolderMetadata();
+          window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
+
+          const { refreshServerPolling } = await import("@/ui/main-axios.ts");
+          refreshServerPolling();
+        } catch (error) {
+          console.error("Failed to delete hosts in folder:", error);
+          toast.error(t("hosts.failedToDeleteHostsInFolder"));
+        }
+      },
+      "destructive",
+    );
+  };
+
+  const getFolderIcon = (folderName: string) => {
+    const metadata = folderMetadata.get(folderName);
+    if (!metadata?.icon) return Folder;
+
+    const iconMap: Record<string, React.ComponentType> = {
+      Folder,
+      Server,
+      Cloud,
+      Database,
+      Box,
+      Package,
+      Layers,
+      Archive,
+      HardDrive,
+      Globe,
+    };
+
+    return iconMap[metadata.icon] || Folder;
+  };
+
+  const getFolderColor = (folderName: string) => {
+    const metadata = folderMetadata.get(folderName);
+    return metadata?.color;
   };
 
   const handleDelete = async (hostId: number, hostName: string) => {
@@ -854,7 +954,16 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                 <AccordionItem value={folder} className="border-none">
                   <AccordionTrigger className="px-2 py-1 bg-muted/20 border-b hover:no-underline rounded-t-md">
                     <div className="flex items-center gap-2 flex-1">
-                      <Folder className="h-4 w-4" />
+                      {(() => {
+                        const FolderIcon = getFolderIcon(folder);
+                        const folderColor = getFolderColor(folder);
+                        return (
+                          <FolderIcon
+                            className="h-4 w-4"
+                            style={folderColor ? { color: folderColor } : undefined}
+                          />
+                        );
+                      })()}
                       {editingFolder === folder ? (
                         <div
                           className="flex items-center gap-2"
@@ -935,6 +1044,50 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                       <Badge variant="secondary" className="text-xs">
                         {folderHosts.length}
                       </Badge>
+                      {folder !== t("hosts.uncategorized") && (
+                        <div className="flex items-center gap-1 ml-auto">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingFolderAppearance(folder);
+                                  }}
+                                  className="h-6 w-6 p-0 opacity-50 hover:opacity-100 transition-opacity"
+                                >
+                                  <Palette className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {t("hosts.editFolderAppearance")}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteAllHostsInFolder(folder);
+                                  }}
+                                  className="h-6 w-6 p-0 opacity-50 hover:opacity-100 hover:text-red-400 transition-all"
+                                >
+                                  <Trash className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {t("hosts.deleteAllHostsInFolder")}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      )}
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="p-2">
@@ -1202,6 +1355,22 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           ))}
         </div>
       </ScrollArea>
+
+      {editingFolderAppearance && (
+        <FolderEditDialog
+          folderName={editingFolderAppearance}
+          currentColor={getFolderColor(editingFolderAppearance)}
+          currentIcon={folderMetadata.get(editingFolderAppearance)?.icon}
+          open={editingFolderAppearance !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingFolderAppearance(null);
+          }}
+          onSave={async (color, icon) => {
+            await handleSaveFolderAppearance(editingFolderAppearance, color, icon);
+            setEditingFolderAppearance(null);
+          }}
+        />
+      )}
     </div>
   );
 }

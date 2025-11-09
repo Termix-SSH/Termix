@@ -209,6 +209,22 @@ export const snippets = sqliteTable("snippets", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const sshFolders = sqliteTable("ssh_folders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  color: text("color"),
+  icon: text("icon"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const recentActivity = sqliteTable("recent_activity", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")

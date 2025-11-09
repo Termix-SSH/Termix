@@ -8,6 +8,7 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
+  sshFolders,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -1341,6 +1342,17 @@ router.put(
 
       DatabaseSaveTrigger.triggerSave("folder_rename");
 
+      // Also update folder metadata if exists
+      await db
+        .update(sshFolders)
+        .set({
+          name: newName,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(
+          and(eq(sshFolders.userId, userId), eq(sshFolders.name, oldName)),
+        );
+
       res.json({
         message: "Folder renamed successfully",
         updatedHosts: updatedHosts.length,
@@ -1354,6 +1366,157 @@ router.put(
         newName,
       });
       res.status(500).json({ error: "Failed to rename folder" });
+    }
+  },
+);
+
+// Route: Get all folders with metadata (requires JWT)
+// GET /ssh/db/folders
+router.get(
+  "/folders",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    try {
+      const folders = await db
+        .select()
+        .from(sshFolders)
+        .where(eq(sshFolders.userId, userId));
+
+      res.json(folders);
+    } catch (err) {
+      sshLogger.error("Failed to fetch folders", err, {
+        operation: "fetch_folders",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch folders" });
+    }
+  },
+);
+
+// Route: Update folder metadata (requires JWT)
+// PUT /ssh/db/folders/metadata
+router.put(
+  "/folders/metadata",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { name, color, icon } = req.body;
+
+    if (!isNonEmptyString(userId) || !name) {
+      return res.status(400).json({ error: "Folder name is required" });
+    }
+
+    try {
+      // Check if folder metadata exists
+      const existing = await db
+        .select()
+        .from(sshFolders)
+        .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)))
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Update existing
+        await db
+          .update(sshFolders)
+          .set({
+            color,
+            icon,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(
+            and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)),
+          );
+      } else {
+        // Create new
+        await db.insert(sshFolders).values({
+          userId,
+          name,
+          color,
+          icon,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      DatabaseSaveTrigger.triggerSave("folder_metadata_update");
+
+      res.json({ message: "Folder metadata updated successfully" });
+    } catch (err) {
+      sshLogger.error("Failed to update folder metadata", err, {
+        operation: "update_folder_metadata",
+        userId,
+        name,
+      });
+      res.status(500).json({ error: "Failed to update folder metadata" });
+    }
+  },
+);
+
+// Route: Delete all hosts in folder (requires JWT)
+// DELETE /ssh/db/folders/:name/hosts
+router.delete(
+  "/folders/:name/hosts",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const folderName = req.params.name;
+
+    if (!isNonEmptyString(userId) || !folderName) {
+      return res.status(400).json({ error: "Invalid folder name" });
+    }
+
+    try {
+      // Get all hosts in the folder
+      const hostsToDelete = await db
+        .select()
+        .from(sshData)
+        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+
+      if (hostsToDelete.length === 0) {
+        return res.json({
+          message: "No hosts found in folder",
+          deletedCount: 0,
+        });
+      }
+
+      // Delete all hosts
+      await db
+        .delete(sshData)
+        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+
+      // Delete folder metadata
+      await db
+        .delete(sshFolders)
+        .where(
+          and(eq(sshFolders.userId, userId), eq(sshFolders.name, folderName)),
+        );
+
+      DatabaseSaveTrigger.triggerSave("folder_hosts_delete");
+
+      sshLogger.info("Deleted all hosts in folder", {
+        operation: "delete_folder_hosts",
+        userId,
+        folderName,
+        deletedCount: hostsToDelete.length,
+      });
+
+      res.json({
+        message: "All hosts in folder deleted successfully",
+        deletedCount: hostsToDelete.length,
+      });
+    } catch (err) {
+      sshLogger.error("Failed to delete hosts in folder", err, {
+        operation: "delete_folder_hosts",
+        userId,
+        folderName,
+      });
+      res.status(500).json({ error: "Failed to delete hosts in folder" });
     }
   },
 );
