@@ -51,7 +51,15 @@ class SystemCrypto {
             },
           );
         }
-      } catch (fileError) {}
+      } catch (fileError) {
+        // OK: .env file not found or unreadable, will generate new JWT secret
+        databaseLogger.debug(
+          ".env file not accessible, will generate new JWT secret",
+          {
+            operation: "jwt_env_not_found",
+          },
+        );
+      }
 
       await this.generateAndGuideUser();
     } catch (error) {
@@ -102,7 +110,15 @@ class SystemCrypto {
           return;
         } else {
         }
-      } catch (fileError) {}
+      } catch (fileError) {
+        // OK: .env file not found or unreadable, will generate new database key
+        databaseLogger.debug(
+          ".env file not accessible, will generate new database key",
+          {
+            operation: "db_key_env_not_found",
+          },
+        );
+      }
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
@@ -140,7 +156,11 @@ class SystemCrypto {
           process.env.INTERNAL_AUTH_TOKEN = tokenMatch[1];
           return;
         }
-      } catch {}
+      } catch (error) {
+        databaseLogger.debug("Operation failed, continuing", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
 
       await this.generateAndGuideInternalAuthToken();
     } catch (error) {

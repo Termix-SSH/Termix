@@ -25,6 +25,7 @@ import {
   UptimeWidget,
   ProcessesWidget,
   SystemWidget,
+  LoginStatsWidget,
 } from "./widgets";
 
 interface HostConfig {
@@ -135,6 +136,11 @@ export function Server({
       case "system":
         return (
           <SystemWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
+
+      case "login_stats":
+        return (
+          <LoginStatsWidget metrics={metrics} metricsHistory={metricsHistory} />
         );
 
       default:

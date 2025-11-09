@@ -54,7 +54,9 @@ async function handleLogout() {
               },
               serverOrigin,
             );
-          } catch (err) {}
+          } catch (err) {
+            console.error("User profile operation failed:", err);
+          }
         }
       }
     }

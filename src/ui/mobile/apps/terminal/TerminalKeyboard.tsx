@@ -110,7 +110,9 @@ export function TerminalKeyboard({
         if (navigator.vibrate) {
           navigator.vibrate(20);
         }
-      } catch {}
+      } catch (error) {
+        console.error("Keyboard operation failed:", error);
+      }
 
       onSendInput(input);
     },

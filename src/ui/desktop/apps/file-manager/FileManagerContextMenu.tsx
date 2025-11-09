@@ -19,6 +19,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 
 interface FileItem {
   name: string;
@@ -101,9 +102,15 @@ export function FileManagerContextMenu({
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      setIsMounted(false);
+      return;
+    }
+
+    setIsMounted(true);
 
     const adjustPosition = () => {
       const menuWidth = 200;
@@ -181,8 +188,6 @@ export function FileManagerContextMenu({
       }
     };
   }, [isVisible, x, y, onClose]);
-
-  if (!isVisible) return null;
 
   const isFileContext = files.length > 0;
   const isSingleFile = files.length === 1;
@@ -425,13 +430,38 @@ export function FileManagerContextMenu({
     return index > 0 && index < filteredMenuItems.length - 1;
   });
 
+  const renderShortcut = (shortcut: string) => {
+    const keys = shortcut.split("+");
+    if (keys.length === 1) {
+      return <Kbd>{keys[0]}</Kbd>;
+    }
+    return (
+      <KbdGroup>
+        {keys.map((key, index) => (
+          <Kbd key={index}>{key}</Kbd>
+        ))}
+      </KbdGroup>
+    );
+  };
+
+  if (!isVisible && !isMounted) return null;
+
   return (
     <>
-      <div className="fixed inset-0 z-[99990]" />
+      <div
+        className={cn(
+          "fixed inset-0 z-[99990] transition-opacity duration-150",
+          !isMounted && "opacity-0"
+        )}
+      />
 
       <div
         data-context-menu
-        className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden"
+        className={cn(
+          "fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden",
+          "transition-all duration-150 ease-out origin-top-left",
+          isMounted ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        )}
         style={{
           left: menuPosition.x,
           top: menuPosition.y,
@@ -470,9 +500,9 @@ export function FileManagerContextMenu({
                 <span className="flex-1">{item.label}</span>
               </div>
               {item.shortcut && (
-                <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                  {item.shortcut}
-                </span>
+                <div className="ml-2 flex-shrink-0">
+                  {renderShortcut(item.shortcut)}
+                </div>
               )}
             </button>
           );

@@ -65,6 +65,7 @@ interface SidebarProps {
   isAdmin?: boolean;
   username?: string | null;
   children?: React.ReactNode;
+  onLogout?: () => void;
 }
 
 async function handleLogout() {
@@ -87,6 +88,7 @@ export function LeftSidebar({
   isAdmin,
   username,
   children,
+  onLogout,
 }: SidebarProps): React.ReactElement {
   const { t } = useTranslation();
 
@@ -486,7 +488,7 @@ export function LeftSidebar({
                       )}
                       <DropdownMenuItem
                         className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
-                        onClick={handleLogout}
+                        onClick={onLogout || handleLogout}
                       >
                         <span>{t("common.logout")}</span>
                       </DropdownMenuItem>

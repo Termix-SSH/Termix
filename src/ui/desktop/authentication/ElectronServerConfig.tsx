@@ -37,7 +37,9 @@ export function ElectronServerConfig({
       if (config?.serverUrl) {
         setServerUrl(config.serverUrl);
       }
-    } catch {}
+    } catch (error) {
+      console.error("Server config operation failed:", error);
+    }
   };
 
   const handleSaveConfig = async () => {

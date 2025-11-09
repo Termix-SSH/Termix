@@ -194,7 +194,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             terminal as { refresh?: (start: number, end: number) => void }
           ).refresh(0, terminal.rows - 1);
         }
-      } catch {}
+      } catch (error) {
+        console.error("Terminal operation failed:", error);
+      }
     }
 
     function performFit() {
@@ -336,7 +338,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               scheduleNotify(cols, rows);
               hardRefresh();
             }
-          } catch {}
+          } catch (error) {
+            console.error("Terminal operation failed:", error);
+          }
         },
         refresh: () => hardRefresh(),
       }),
@@ -746,7 +750,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           await navigator.clipboard.writeText(text);
           return;
         }
-      } catch {}
+      } catch (error) {
+        console.error("Terminal operation failed:", error);
+      }
       const textarea = document.createElement("textarea");
       textarea.value = text;
       textarea.style.position = "fixed";
@@ -766,7 +772,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (navigator.clipboard && navigator.clipboard.readText) {
           return await navigator.clipboard.readText();
         }
-      } catch {}
+      } catch (error) {
+        console.error("Terminal operation failed:", error);
+      }
       return "";
     }
 
@@ -863,7 +871,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             const pasteText = await readTextFromClipboard();
             if (pasteText) terminal.paste(pasteText);
           }
-        } catch {}
+        } catch (error) {
+          console.error("Terminal operation failed:", error);
+        }
       };
       element?.addEventListener("contextmenu", handleContextMenu);
 

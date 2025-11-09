@@ -167,7 +167,9 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch {}
+      } catch (error) {
+        console.error("Host manager operation failed:", error);
+      }
     };
 
     fetchData();
@@ -196,7 +198,9 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch {}
+      } catch (error) {
+        console.error("Host manager operation failed:", error);
+      }
     };
 
     window.addEventListener("credentials:changed", handleCredentialChange);
@@ -262,9 +266,18 @@ export function HostManagerEditor({
                 "uptime",
                 "processes",
                 "system",
+                "login_stats",
               ]),
             )
-            .default(["cpu", "memory", "disk", "network", "uptime", "system"]),
+            .default([
+              "cpu",
+              "memory",
+              "disk",
+              "network",
+              "uptime",
+              "system",
+              "login_stats",
+            ]),
           statusCheckEnabled: z.boolean().default(true),
           statusCheckInterval: z.number().min(5).max(3600).default(30),
           metricsEnabled: z.boolean().default(true),
@@ -278,6 +291,7 @@ export function HostManagerEditor({
             "network",
             "uptime",
             "system",
+            "login_stats",
           ],
           statusCheckEnabled: true,
           statusCheckInterval: 30,
@@ -1399,15 +1413,15 @@ export function HostManagerEditor({
                     </AlertDescription>
                   </Alert>
                   <h1 className="text-xl font-semibold mt-7">
-                    Terminal Customization
+                    {t("hosts.terminalCustomization")}
                   </h1>
                   <Accordion type="multiple" className="w-full">
                     <AccordionItem value="appearance">
-                      <AccordionTrigger>Appearance</AccordionTrigger>
+                      <AccordionTrigger>{t("hosts.appearance")}</AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
-                            Theme Preview
+                            {t("hosts.themePreview")}
                           </label>
                           <TerminalPreview
                             theme={form.watch("terminalConfig.theme")}
@@ -1431,14 +1445,14 @@ export function HostManagerEditor({
                           name="terminalConfig.theme"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Theme</FormLabel>
+                              <FormLabel>{t("hosts.theme")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select theme" />
+                                    <SelectValue placeholder={t("hosts.selectTheme")} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -1452,7 +1466,7 @@ export function HostManagerEditor({
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Choose a color theme for the terminal
+                                {t("hosts.chooseColorTheme")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1463,14 +1477,14 @@ export function HostManagerEditor({
                           name="terminalConfig.fontFamily"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Font Family</FormLabel>
+                              <FormLabel>{t("hosts.fontFamily")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select font" />
+                                    <SelectValue placeholder={t("hosts.selectFont")} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -1485,7 +1499,7 @@ export function HostManagerEditor({
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Select the font to use in the terminal
+                                {t("hosts.selectFontDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1496,7 +1510,7 @@ export function HostManagerEditor({
                           name="terminalConfig.fontSize"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Font Size: {field.value}px</FormLabel>
+                              <FormLabel>{t("hosts.fontSizeValue", { value: field.value })}</FormLabel>
                               <FormControl>
                                 <Slider
                                   min={8}
@@ -1509,7 +1523,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Adjust the terminal font size
+                                {t("hosts.adjustFontSize")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1521,7 +1535,7 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Letter Spacing: {field.value}px
+                                {t("hosts.letterSpacingValue", { value: field.value })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1535,7 +1549,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Adjust spacing between characters
+                                {t("hosts.adjustLetterSpacing")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1546,7 +1560,7 @@ export function HostManagerEditor({
                           name="terminalConfig.lineHeight"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Line Height: {field.value}</FormLabel>
+                              <FormLabel>{t("hosts.lineHeightValue", { value: field.value })}</FormLabel>
                               <FormControl>
                                 <Slider
                                   min={1}
@@ -1559,7 +1573,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Adjust spacing between lines
+                                {t("hosts.adjustLineHeight")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1570,26 +1584,26 @@ export function HostManagerEditor({
                           name="terminalConfig.cursorStyle"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Cursor Style</FormLabel>
+                              <FormLabel>{t("hosts.cursorStyle")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select cursor style" />
+                                    <SelectValue placeholder={t("hosts.selectCursorStyle")} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="block">Block</SelectItem>
+                                  <SelectItem value="block">{t("hosts.cursorStyleBlock")}</SelectItem>
                                   <SelectItem value="underline">
-                                    Underline
+                                    {t("hosts.cursorStyleUnderline")}
                                   </SelectItem>
-                                  <SelectItem value="bar">Bar</SelectItem>
+                                  <SelectItem value="bar">{t("hosts.cursorStyleBar")}</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Choose the cursor appearance
+                                {t("hosts.chooseCursorAppearance")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1601,9 +1615,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>Cursor Blink</FormLabel>
+                                <FormLabel>{t("hosts.cursorBlink")}</FormLabel>
                                 <FormDescription>
-                                  Enable cursor blinking animation
+                                  {t("hosts.enableCursorBlink")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -1619,7 +1633,7 @@ export function HostManagerEditor({
                     </AccordionItem>
 
                     <AccordionItem value="behavior">
-                      <AccordionTrigger>Behavior</AccordionTrigger>
+                      <AccordionTrigger>{t("hosts.behavior")}</AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
                         <FormField
                           control={form.control}
@@ -1627,7 +1641,7 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Scrollback Buffer: {field.value} lines
+                                {t("hosts.scrollbackBufferValue", { value: field.value })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1641,7 +1655,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Number of lines to keep in scrollback history
+                                {t("hosts.scrollbackBufferDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1652,30 +1666,25 @@ export function HostManagerEditor({
                           name="terminalConfig.bellStyle"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Bell Style</FormLabel>
+                              <FormLabel>{t("hosts.bellStyle")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select bell style" />
+                                    <SelectValue placeholder={t("hosts.selectBellStyle")} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  <SelectItem value="sound">Sound</SelectItem>
-                                  <SelectItem value="visual">Visual</SelectItem>
-                                  <SelectItem value="both">Both</SelectItem>
+                                  <SelectItem value="none">{t("hosts.bellStyleNone")}</SelectItem>
+                                  <SelectItem value="sound">{t("hosts.bellStyleSound")}</SelectItem>
+                                  <SelectItem value="visual">{t("hosts.bellStyleVisual")}</SelectItem>
+                                  <SelectItem value="both">{t("hosts.bellStyleBoth")}</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                How to handle terminal bell (BEL character,
-                                \x07). Programs trigger this when completing
-                                tasks, encountering errors, or for
-                                notifications. "Sound" plays an audio beep,
-                                "Visual" flashes the screen briefly, "Both" does
-                                both, "None" disables bell alerts.
+                                {t("hosts.bellStyleDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1687,9 +1696,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>Right Click Selects Word</FormLabel>
+                                <FormLabel>{t("hosts.rightClickSelectsWord")}</FormLabel>
                                 <FormDescription>
-                                  Right-clicking selects the word under cursor
+                                  {t("hosts.rightClickSelectsWordDesc")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -1707,24 +1716,24 @@ export function HostManagerEditor({
                           name="terminalConfig.fastScrollModifier"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Fast Scroll Modifier</FormLabel>
+                              <FormLabel>{t("hosts.fastScrollModifier")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select modifier" />
+                                    <SelectValue placeholder={t("hosts.selectModifier")} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="alt">Alt</SelectItem>
-                                  <SelectItem value="ctrl">Ctrl</SelectItem>
-                                  <SelectItem value="shift">Shift</SelectItem>
+                                  <SelectItem value="alt">{t("hosts.modifierAlt")}</SelectItem>
+                                  <SelectItem value="ctrl">{t("hosts.modifierCtrl")}</SelectItem>
+                                  <SelectItem value="shift">{t("hosts.modifierShift")}</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Modifier key for fast scrolling
+                                {t("hosts.fastScrollModifierDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1736,7 +1745,7 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Fast Scroll Sensitivity: {field.value}
+                                {t("hosts.fastScrollSensitivityValue", { value: field.value })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1750,7 +1759,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Scroll speed multiplier when modifier is held
+                                {t("hosts.fastScrollSensitivityDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1762,7 +1771,7 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Minimum Contrast Ratio: {field.value}
+                                {t("hosts.minimumContrastRatioValue", { value: field.value })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1776,8 +1785,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Automatically adjust colors for better
-                                readability
+                                {t("hosts.minimumContrastRatioDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1786,7 +1794,7 @@ export function HostManagerEditor({
                     </AccordionItem>
 
                     <AccordionItem value="advanced">
-                      <AccordionTrigger>Advanced</AccordionTrigger>
+                      <AccordionTrigger>{t("hosts.advanced")}</AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
                         <FormField
                           control={form.control}
@@ -1794,10 +1802,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>SSH Agent Forwarding</FormLabel>
+                                <FormLabel>{t("hosts.sshAgentForwarding")}</FormLabel>
                                 <FormDescription>
-                                  Forward SSH authentication agent to remote
-                                  host
+                                  {t("hosts.sshAgentForwardingDesc")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -1815,27 +1822,27 @@ export function HostManagerEditor({
                           name="terminalConfig.backspaceMode"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Backspace Mode</FormLabel>
+                              <FormLabel>{t("hosts.backspaceMode")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select backspace mode" />
+                                    <SelectValue placeholder={t("hosts.selectBackspaceMode")} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="normal">
-                                    Normal (DEL)
+                                    {t("hosts.backspaceModeNormal")}
                                   </SelectItem>
                                   <SelectItem value="control-h">
-                                    Control-H (^H)
+                                    {t("hosts.backspaceModeControlH")}
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Backspace key behavior for compatibility
+                                {t("hosts.backspaceModeDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1846,7 +1853,7 @@ export function HostManagerEditor({
                           name="terminalConfig.startupSnippetId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Startup Snippet</FormLabel>
+                              <FormLabel>{t("hosts.startupSnippet")}</FormLabel>
                               <Select
                                 onValueChange={(value) => {
                                   field.onChange(
@@ -1858,13 +1865,13 @@ export function HostManagerEditor({
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select snippet" />
+                                    <SelectValue placeholder={t("hosts.selectSnippet")} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
                                   <div className="px-2 pb-2 sticky top-0 bg-popover z-10">
                                     <Input
-                                      placeholder="Search snippets..."
+                                      placeholder={t("hosts.searchSnippets")}
                                       value={snippetSearch}
                                       onChange={(e) =>
                                         setSnippetSearch(e.target.value)
@@ -1875,7 +1882,7 @@ export function HostManagerEditor({
                                     />
                                   </div>
                                   <div className="max-h-[200px] overflow-y-auto">
-                                    <SelectItem value="none">None</SelectItem>
+                                    <SelectItem value="none">{t("hosts.snippetNone")}</SelectItem>
                                     {snippets
                                       .filter((snippet) =>
                                         snippet.name
@@ -2657,6 +2664,7 @@ export function HostManagerEditor({
                                   "uptime",
                                   "processes",
                                   "system",
+                                  "login_stats",
                                 ] as const
                               ).map((widget) => (
                                 <div
@@ -2696,6 +2704,8 @@ export function HostManagerEditor({
                                       t("serverStats.processes")}
                                     {widget === "system" &&
                                       t("serverStats.systemInfo")}
+                                    {widget === "login_stats" &&
+                                      t("serverStats.loginStats")}
                                   </label>
                                 </div>
                               ))}

@@ -22,11 +22,12 @@ import { nanoid } from "nanoid";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import type { Request, Response } from "express";
-import { authLogger } from "../../utils/logger.js";
+import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
+import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -885,6 +886,7 @@ router.get("/oidc/callback", async (req, res) => {
 // POST /users/login
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
+  const clientIp = req.ip || req.socket.remoteAddress || "unknown";
 
   if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
     authLogger.warn("Invalid traditional login attempt", {
@@ -893,6 +895,21 @@ router.post("/login", async (req, res) => {
       hasPassword: !!password,
     });
     return res.status(400).json({ error: "Invalid username or password" });
+  }
+
+  // Check rate limiting
+  const lockStatus = loginRateLimiter.isLocked(clientIp, username);
+  if (lockStatus.locked) {
+    authLogger.warn("Login attempt blocked due to rate limiting", {
+      operation: "user_login_blocked",
+      username,
+      ip: clientIp,
+      remainingTime: lockStatus.remainingTime,
+    });
+    return res.status(429).json({
+      error: "Too many login attempts. Please try again later.",
+      remainingTime: lockStatus.remainingTime,
+    });
   }
 
   try {
@@ -919,11 +936,14 @@ router.post("/login", async (req, res) => {
       .where(eq(users.username, username));
 
     if (!user || user.length === 0) {
-      authLogger.warn(`User not found: ${username}`, {
+      loginRateLimiter.recordFailedAttempt(clientIp, username);
+      authLogger.warn(`Login failed: user not found`, {
         operation: "user_login",
         username,
+        ip: clientIp,
+        remainingAttempts: loginRateLimiter.getRemainingAttempts(clientIp, username),
       });
-      return res.status(404).json({ error: "User not found" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
 
     const userRecord = user[0];
@@ -941,12 +961,15 @@ router.post("/login", async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, userRecord.password_hash);
     if (!isMatch) {
-      authLogger.warn(`Incorrect password for user: ${username}`, {
+      loginRateLimiter.recordFailedAttempt(clientIp, username);
+      authLogger.warn(`Login failed: incorrect password`, {
         operation: "user_login",
         username,
         userId: userRecord.id,
+        ip: clientIp,
+        remainingAttempts: loginRateLimiter.getRemainingAttempts(clientIp, username),
       });
-      return res.status(401).json({ error: "Incorrect password" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
 
     try {
@@ -958,7 +981,9 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch {}
+    } catch (error) {
+      databaseLogger.debug("Operation failed, continuing", { error });
+    }
 
     const dataUnlocked = await authManager.authenticateUser(
       userRecord.id,
@@ -986,6 +1011,9 @@ router.post("/login", async (req, res) => {
       deviceInfo: deviceInfo.deviceInfo,
     });
 
+    // Reset rate limiter on successful login
+    loginRateLimiter.resetAttempts(clientIp, username);
+
     authLogger.success(`User logged in successfully: ${username}`, {
       operation: "user_login_success",
       username,
@@ -993,6 +1021,7 @@ router.post("/login", async (req, res) => {
       dataUnlocked: true,
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
+      ip: clientIp,
     });
 
     const response: Record<string, unknown> = {
@@ -1039,7 +1068,15 @@ router.post("/logout", authenticateJWT, async (req, res) => {
         try {
           const payload = await authManager.verifyJWTToken(token);
           sessionId = payload?.sessionId;
-        } catch (error) {}
+        } catch (error) {
+          authLogger.debug(
+            "Token verification failed during logout (expected if token expired)",
+            {
+              operation: "logout_token_verify_failed",
+              userId,
+            },
+          );
+        }
       }
 
       await authManager.logoutUser(userId, sessionId);

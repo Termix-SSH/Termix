@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
 import { toast } from "sonner";
@@ -679,7 +680,7 @@ export function Auth({
   if (showServerConfig === null && !isInElectronWebView()) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -693,7 +694,7 @@ export function Auth({
   if (showServerConfig && !isInElectronWebView()) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -718,7 +719,7 @@ export function Auth({
   ) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -751,7 +752,7 @@ export function Auth({
   if (dbHealthChecking && !dbConnectionFailed) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -770,7 +771,7 @@ export function Auth({
   if (dbConnectionFailed) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -830,10 +831,50 @@ export function Auth({
 
   return (
     <div
-      className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 ${className || ""}`}
-      style={{ maxHeight: "calc(100vh - 1rem)" }}
+      className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
       {...props}
     >
+      {/* Split Screen Layout */}
+      <div className="w-full h-full flex flex-col md:flex-row">
+
+        {/* Left Side - Brand Showcase */}
+        <div
+          className="hidden md:flex md:w-2/5 items-center justify-center relative"
+          style={{
+            background: '#0e0e10',
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 35px,
+              rgba(255, 255, 255, 0.03) 35px,
+              rgba(255, 255, 255, 0.03) 37px
+            )`
+          }}
+        >
+          {/* Logo and Branding */}
+          <div className="relative text-center px-8">
+            <div
+              className="text-7xl font-bold tracking-wider mb-4 text-foreground"
+              style={{
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+              }}
+            >
+              TERMIX
+            </div>
+            <div className="text-lg text-muted-foreground tracking-widest font-light">
+              {t("auth.tagline") || "SSH TERMINAL MANAGER"}
+            </div>
+            <div className="mt-8 text-sm text-muted-foreground/80 max-w-md">
+              {t("auth.description") || "Secure, powerful, and intuitive SSH connection management"}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Auth Form */}
+        <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-background overflow-y-auto">
+          <div className="w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border-2 border-dark-border animate-in fade-in slide-in-from-bottom-4 duration-500"
+            style={{ maxHeight: "calc(100vh - 3rem)" }}
+          >
       {isInElectronWebView() && !webviewAuthSuccess && (
         <Alert className="mb-4 border-blue-500 bg-blue-500/10">
           <Monitor className="h-4 w-4" />
@@ -843,21 +884,6 @@ export function Auth({
       )}
       {isInElectronWebView() && webviewAuthSuccess && (
         <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-            <svg
-              className="w-10 h-10 text-green-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
           <div className="text-center">
             <h2 className="text-xl font-bold mb-2">
               {t("messages.loginSuccess")}
@@ -944,72 +970,49 @@ export function Auth({
 
             return (
               <>
-                <div className="flex gap-2 mb-6">
-                  {passwordLoginAllowed && (
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex-1 py-2 text-base font-medium rounded-md transition-all",
-                        tab === "login"
-                          ? "bg-primary text-primary-foreground shadow"
-                          : "bg-muted text-muted-foreground hover:bg-accent",
-                      )}
-                      onClick={() => {
-                        setTab("login");
-                        if (tab === "reset") resetPasswordState();
-                        if (tab === "signup") clearFormFields();
-                      }}
-                      aria-selected={tab === "login"}
-                      disabled={loading || firstUser}
-                    >
-                      {t("common.login")}
-                    </button>
-                  )}
-                  {(passwordLoginAllowed || firstUser) &&
-                    registrationAllowed && (
-                      <button
-                        type="button"
-                        className={cn(
-                          "flex-1 py-2 text-base font-medium rounded-md transition-all",
-                          tab === "signup"
-                            ? "bg-primary text-primary-foreground shadow"
-                            : "bg-muted text-muted-foreground hover:bg-accent",
-                        )}
-                        onClick={() => {
-                          setTab("signup");
-                          if (tab === "reset") resetPasswordState();
-                          if (tab === "login") clearFormFields();
-                        }}
-                        aria-selected={tab === "signup"}
+                {/* Tab Navigation */}
+                <Tabs value={tab} onValueChange={(value) => {
+                  const newTab = value as "login" | "signup" | "external" | "reset";
+                  setTab(newTab);
+                  if (tab === "reset") resetPasswordState();
+                  if ((tab === "login" && newTab === "signup") || (tab === "signup" && newTab === "login")) {
+                    clearFormFields();
+                  }
+                }} className="w-full mb-8">
+                  <TabsList className="w-full">
+                    {passwordLoginAllowed && (
+                      <TabsTrigger
+                        value="login"
+                        disabled={loading || firstUser}
+                        className="flex-1"
+                      >
+                        {t("common.login")}
+                      </TabsTrigger>
+                    )}
+                    {(passwordLoginAllowed || firstUser) && registrationAllowed && (
+                      <TabsTrigger
+                        value="signup"
                         disabled={loading}
+                        className="flex-1"
                       >
                         {t("common.register")}
-                      </button>
+                      </TabsTrigger>
                     )}
-                  {oidcConfigured && (
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex-1 py-2 text-base font-medium rounded-md transition-all",
-                        tab === "external"
-                          ? "bg-primary text-primary-foreground shadow"
-                          : "bg-muted text-muted-foreground hover:bg-accent",
-                      )}
-                      onClick={() => {
-                        setTab("external");
-                        if (tab === "reset") resetPasswordState();
-                        if (tab === "login" || tab === "signup")
-                          clearFormFields();
-                      }}
-                      aria-selected={tab === "external"}
-                      disabled={oidcLoading}
-                    >
-                      {t("auth.external")}
-                    </button>
-                  )}
-                </div>
-                <div className="mb-6 text-center">
-                  <h2 className="text-xl font-bold mb-1">
+                    {oidcConfigured && (
+                      <TabsTrigger
+                        value="external"
+                        disabled={oidcLoading}
+                        className="flex-1"
+                      >
+                        {t("auth.external")}
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
+                </Tabs>
+
+                {/* Page Title */}
+                <div className="mb-8 text-center">
+                  <h2 className="text-2xl font-bold">
                     {tab === "login"
                       ? t("auth.loginTitle")
                       : tab === "signup"
@@ -1335,6 +1338,9 @@ export function Auth({
           })()}
         </>
       )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
