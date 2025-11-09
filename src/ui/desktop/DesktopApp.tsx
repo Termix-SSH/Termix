@@ -178,15 +178,11 @@ function AppContent() {
             className="h-screen w-full visible pointer-events-auto static overflow-hidden"
             style={{ display: showTerminalView ? "block" : "none" }}
           >
-            {showTerminalView && (
-              <div key={currentTab} className="animate-in fade-in slide-in-from-right-4 duration-300">
-                <AppView isTopbarOpen={isTopbarOpen} />
-              </div>
-            )}
+            <AppView isTopbarOpen={isTopbarOpen} />
           </div>
 
           {showHome && (
-            <div key={currentTab} className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
               <Dashboard
                 onSelectView={handleSelectView}
                 isAuthenticated={isAuthenticated}
@@ -198,7 +194,7 @@ function AppContent() {
           )}
 
           {showSshManager && (
-            <div key={currentTab} className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
               <HostManager
                 onSelectView={handleSelectView}
                 isTopbarOpen={isTopbarOpen}
@@ -209,13 +205,13 @@ function AppContent() {
           )}
 
           {showAdmin && (
-            <div key={currentTab} className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
               <AdminSettings isTopbarOpen={isTopbarOpen} />
             </div>
           )}
 
           {showProfile && (
-            <div key={currentTab} className="h-screen w-full visible pointer-events-auto static overflow-auto animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-auto">
               <UserProfile isTopbarOpen={isTopbarOpen} />
             </div>
           )}
