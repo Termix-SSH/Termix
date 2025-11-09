@@ -20,11 +20,15 @@ export function LoadingOverlay({
 }: LoadingOverlayProps) {
   const [isShowing, setIsShowing] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
+  const [animationType, setAnimationType] = useState<'glitch' | 'breathe'>('glitch');
   const showStartTimeRef = useRef<number | null>(null);
   const minDurationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (visible) {
+      // Randomly choose animation type
+      setAnimationType(Math.random() > 0.5 ? 'glitch' : 'breathe');
+
       // Start showing immediately
       setIsShowing(true);
       setIsFadingOut(false);
@@ -439,6 +443,198 @@ export function LoadingOverlay({
               transform: translateX(0);
             }
           }
+
+          /* Breathe Animation Styles */
+          @keyframes breathe-glow {
+            0%, 100% {
+              text-shadow:
+                0 0 20px rgba(59, 130, 246, 0.8),
+                0 0 40px rgba(59, 130, 246, 0.6),
+                0 0 60px rgba(59, 130, 246, 0.4),
+                0 0 80px rgba(59, 130, 246, 0.3),
+                0 0 100px rgba(59, 130, 246, 0.2);
+              filter: brightness(1.1);
+              transform: scale(1);
+            }
+            50% {
+              text-shadow:
+                0 0 30px rgba(59, 130, 246, 1),
+                0 0 60px rgba(59, 130, 246, 0.8),
+                0 0 90px rgba(59, 130, 246, 0.6),
+                0 0 120px rgba(59, 130, 246, 0.4),
+                0 0 150px rgba(59, 130, 246, 0.3);
+              filter: brightness(1.3);
+              transform: scale(1.05);
+            }
+          }
+
+          @keyframes letter-appear {
+            0% {
+              opacity: 0;
+              transform: translateY(30px) scale(0.5);
+              filter: blur(10px);
+            }
+            60% {
+              transform: translateY(-5px) scale(1.05);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+              filter: blur(0);
+            }
+          }
+
+          @keyframes letter-float {
+            0%, 100% {
+              transform: translateY(0);
+            }
+            50% {
+              transform: translateY(-8px);
+            }
+          }
+
+          .breathe-container {
+            position: relative;
+          }
+
+          .breathe-text {
+            position: relative;
+            color: #fff;
+            animation: breathe-glow 2.5s ease-in-out infinite;
+          }
+
+          .breathe-text .letter {
+            display: inline-block;
+            opacity: 0;
+            animation:
+              letter-appear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+              letter-float 3s ease-in-out infinite;
+          }
+
+          .breathe-text .letter:nth-child(1) {
+            animation-delay: 0s, 0.6s;
+          }
+          .breathe-text .letter:nth-child(2) {
+            animation-delay: 0.08s, 0.68s;
+          }
+          .breathe-text .letter:nth-child(3) {
+            animation-delay: 0.16s, 0.76s;
+          }
+          .breathe-text .letter:nth-child(4) {
+            animation-delay: 0.24s, 0.84s;
+          }
+          .breathe-text .letter:nth-child(5) {
+            animation-delay: 0.32s, 0.92s;
+          }
+          .breathe-text .letter:nth-child(6) {
+            animation-delay: 0.4s, 1s;
+          }
+
+          @keyframes pulse-ring {
+            0% {
+              transform: scale(0.8);
+              opacity: 0;
+              border-width: 3px;
+            }
+            50% {
+              opacity: 0.6;
+            }
+            100% {
+              transform: scale(1.5);
+              opacity: 0;
+              border-width: 0px;
+            }
+          }
+
+          .pulse-ring {
+            position: absolute;
+            inset: -30px;
+            border: 2px solid rgba(59, 130, 246, 0.6);
+            border-radius: 50%;
+            animation: pulse-ring 2.5s ease-out infinite;
+            pointer-events: none;
+          }
+
+          .pulse-ring:nth-child(2) {
+            animation-delay: 0.8s;
+            border-color: rgba(139, 92, 246, 0.5);
+          }
+
+          .pulse-ring:nth-child(3) {
+            animation-delay: 1.6s;
+            border-color: rgba(6, 182, 212, 0.5);
+          }
+
+          @keyframes orbit-dots {
+            0% {
+              transform: rotate(0deg);
+            }
+            100% {
+              transform: rotate(360deg);
+            }
+          }
+
+          .orbit-container {
+            position: absolute;
+            inset: -60px;
+            animation: orbit-dots 8s linear infinite;
+            pointer-events: none;
+          }
+
+          .orbit-dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 1) 0%, rgba(59, 130, 246, 0.3) 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+          }
+
+          .orbit-dot:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+          .orbit-dot:nth-child(2) { top: 50%; right: 0; transform: translateY(-50%); }
+          .orbit-dot:nth-child(3) { bottom: 0; left: 50%; transform: translateX(-50%); }
+          .orbit-dot:nth-child(4) { top: 50%; left: 0; transform: translateY(-50%); }
+
+          @keyframes particle-float {
+            0% {
+              transform: translate(0, 0) scale(0);
+              opacity: 0;
+            }
+            10% {
+              opacity: 1;
+            }
+            90% {
+              opacity: 1;
+            }
+            100% {
+              transform: translate(var(--tx), var(--ty)) scale(1);
+              opacity: 0;
+            }
+          }
+
+          .particles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+          }
+
+          .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: particle-float 3s ease-out infinite;
+          }
+
+          .particle:nth-child(1) { left: 50%; top: 50%; --tx: -80px; --ty: -80px; animation-delay: 0s; }
+          .particle:nth-child(2) { left: 50%; top: 50%; --tx: 80px; --ty: -80px; animation-delay: 0.3s; }
+          .particle:nth-child(3) { left: 50%; top: 50%; --tx: -80px; --ty: 80px; animation-delay: 0.6s; }
+          .particle:nth-child(4) { left: 50%; top: 50%; --tx: 80px; --ty: 80px; animation-delay: 0.9s; }
+          .particle:nth-child(5) { left: 50%; top: 50%; --tx: 0px; --ty: -100px; animation-delay: 0.15s; }
+          .particle:nth-child(6) { left: 50%; top: 50%; --tx: 0px; --ty: 100px; animation-delay: 0.45s; }
+          .particle:nth-child(7) { left: 50%; top: 50%; --tx: -100px; --ty: 0px; animation-delay: 0.75s; }
+          .particle:nth-child(8) { left: 50%; top: 50%; --tx: 100px; --ty: 0px; animation-delay: 1.05s; }
         `}
       </style>
 
@@ -450,34 +646,92 @@ export function LoadingOverlay({
         )}
         style={{ backgroundColor: backgroundColor || "rgba(0, 0, 0, 0.92)" }}
       >
-        <div className="noise-overlay"></div>
-        <div className="glitch-blocks"></div>
+        {animationType === 'glitch' ? (
+          <>
+            <div className="noise-overlay"></div>
+            <div className="glitch-blocks"></div>
 
-        <div className="flex flex-col items-center gap-8">
-          <div className="glitch-container relative">
-            {/* TERMIX Glitch Text */}
-            <div
-              className="glitch-text text-6xl font-bold tracking-wider select-none"
-              style={{
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                textShadow: '0 0 30px rgba(255, 255, 255, 0.3), 0 0 60px rgba(0, 255, 255, 0.2)'
-              }}
-            >
-              TERMIX
+            <div className="flex flex-col items-center gap-8">
+              <div className="glitch-container relative">
+                {/* TERMIX Glitch Text */}
+                <div
+                  className="glitch-text text-6xl font-bold tracking-wider select-none"
+                  style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                    textShadow: '0 0 30px rgba(255, 255, 255, 0.3), 0 0 60px rgba(0, 255, 255, 0.2)'
+                  }}
+                >
+                  TERMIX
+                </div>
+
+                {/* Scan line effect */}
+                <div className="scan-line"></div>
+              </div>
+
+              {message && (
+                <div className="text-center">
+                  <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
+                    {message}
+                  </p>
+                </div>
+              )}
             </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col items-center gap-8">
+              <div className="breathe-container relative">
+                {/* Pulse rings */}
+                <div className="pulse-ring"></div>
+                <div className="pulse-ring"></div>
+                <div className="pulse-ring"></div>
 
-            {/* Scan line effect */}
-            <div className="scan-line"></div>
-          </div>
+                {/* Orbiting dots */}
+                <div className="orbit-container">
+                  <div className="orbit-dot"></div>
+                  <div className="orbit-dot"></div>
+                  <div className="orbit-dot"></div>
+                  <div className="orbit-dot"></div>
+                </div>
 
-          {message && (
-            <div className="text-center">
-              <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
-                {message}
-              </p>
+                {/* Particles */}
+                <div className="particles">
+                  <div className="particle"></div>
+                  <div className="particle"></div>
+                  <div className="particle"></div>
+                  <div className="particle"></div>
+                  <div className="particle"></div>
+                  <div className="particle"></div>
+                  <div className="particle"></div>
+                  <div className="particle"></div>
+                </div>
+
+                {/* TERMIX Breathe Text */}
+                <div
+                  className="breathe-text text-6xl font-bold tracking-wider select-none"
+                  style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                  }}
+                >
+                  <span className="letter">T</span>
+                  <span className="letter">E</span>
+                  <span className="letter">R</span>
+                  <span className="letter">M</span>
+                  <span className="letter">I</span>
+                  <span className="letter">X</span>
+                </div>
+              </div>
+
+              {message && (
+                <div className="text-center">
+                  <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
+                    {message}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </>
   );
