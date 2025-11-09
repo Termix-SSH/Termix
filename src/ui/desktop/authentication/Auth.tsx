@@ -853,6 +853,12 @@ export function Auth({
             >
               TERMIX
             </div>
+            {/* Decorative Slash */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="h-px w-12 bg-gradient-to-r from-transparent to-primary/50"></div>
+              <div className="text-primary text-2xl font-light">/</div>
+              <div className="h-px w-12 bg-gradient-to-l from-transparent to-primary/50"></div>
+            </div>
             <div className="text-lg text-muted-foreground tracking-widest font-light">
               {t("auth.tagline") || "SSH TERMINAL MANAGER"}
             </div>
@@ -1004,7 +1010,7 @@ export function Auth({
 
                 {/* Page Title */}
                 <div className="mb-8 text-center">
-                  <h2 className="text-2xl font-bold mb-2">
+                  <h2 className="text-2xl font-bold">
                     {tab === "login"
                       ? t("auth.loginTitle")
                       : tab === "signup"
@@ -1013,13 +1019,6 @@ export function Auth({
                           ? t("auth.loginWithExternal")
                           : t("auth.forgotPassword")}
                   </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {tab === "login"
-                      ? t("auth.welcomeBack")
-                      : tab === "signup"
-                        ? t("auth.createAccount")
-                        : t("auth.continueExternal")}
-                  </p>
                 </div>
 
                 {tab === "external" || tab === "reset" ? (
