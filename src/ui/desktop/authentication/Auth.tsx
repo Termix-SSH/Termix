@@ -842,9 +842,22 @@ export function Auth({
       <div className="w-full h-full flex flex-col md:flex-row">
 
         {/* Left Side - Brand Showcase */}
-        <div className="hidden md:flex md:w-2/5 bg-dark-bg-darker items-center justify-center">
+        <div className="hidden md:flex md:w-2/5 bg-dark-bg-darker items-center justify-center relative overflow-hidden">
+          {/* Diagonal Lines Background */}
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg,
+                hsl(var(--primary)),
+                hsl(var(--primary)) 1px,
+                transparent 1px,
+                transparent 40px
+              )`
+            }}
+          />
           {/* Logo and Branding */}
-          <div className="text-center px-8">
+          <div className="relative z-10 text-center px-8">
             <div
               className="text-7xl font-bold tracking-wider mb-4 text-foreground"
               style={{
@@ -852,12 +865,6 @@ export function Auth({
               }}
             >
               TERMIX
-            </div>
-            {/* Decorative Slash */}
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="h-px w-12 bg-gradient-to-r from-transparent to-primary/50"></div>
-              <div className="text-primary text-2xl font-light">/</div>
-              <div className="h-px w-12 bg-gradient-to-l from-transparent to-primary/50"></div>
             </div>
             <div className="text-lg text-muted-foreground tracking-widest font-light">
               {t("auth.tagline") || "SSH TERMINAL MANAGER"}
