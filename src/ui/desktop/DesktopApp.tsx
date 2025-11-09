@@ -179,14 +179,14 @@ function AppContent() {
             style={{ display: showTerminalView ? "block" : "none" }}
           >
             {showTerminalView && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <div key={currentTab} className="animate-in fade-in slide-in-from-right-4 duration-300">
                 <AppView isTopbarOpen={isTopbarOpen} />
               </div>
             )}
           </div>
 
           {showHome && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            <div key={currentTab} className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
               <Dashboard
                 onSelectView={handleSelectView}
                 isAuthenticated={isAuthenticated}
@@ -198,7 +198,7 @@ function AppContent() {
           )}
 
           {showSshManager && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            <div key={currentTab} className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
               <HostManager
                 onSelectView={handleSelectView}
                 isTopbarOpen={isTopbarOpen}
@@ -209,13 +209,13 @@ function AppContent() {
           )}
 
           {showAdmin && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            <div key={currentTab} className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
               <AdminSettings isTopbarOpen={isTopbarOpen} />
             </div>
           )}
 
           {showProfile && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-auto animate-in fade-in slide-in-from-right-4 duration-300">
+            <div key={currentTab} className="h-screen w-full visible pointer-events-auto static overflow-auto animate-in fade-in slide-in-from-right-4 duration-300">
               <UserProfile isTopbarOpen={isTopbarOpen} />
             </div>
           )}
