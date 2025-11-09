@@ -17,6 +17,7 @@ import {
   type StatsConfig,
   DEFAULT_STATS_CONFIG,
 } from "@/types/stats-widgets";
+import { LoadingOverlay } from "@/ui/components/LoadingOverlay";
 import {
   CpuWidget,
   MemoryWidget,
@@ -443,17 +444,8 @@ export function Server({
 
         <div className="flex-1 overflow-y-auto min-h-0">
           {metricsEnabled && showStatsUI && (
-            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4 max-h-[50vh] overflow-y-auto">
-              {isLoadingMetrics && !metrics ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-gray-300">
-                      {t("serverStats.loadingMetrics")}
-                    </span>
-                  </div>
-                </div>
-              ) : !metrics && serverStatus === "offline" ? (
+            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4 max-h-[50vh] overflow-y-auto relative">
+              {!metrics && serverStatus === "offline" ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-center">
                     <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -476,6 +468,13 @@ export function Server({
                   ))}
                 </div>
               )}
+
+              <LoadingOverlay
+                visible={isLoadingMetrics && !metrics}
+                minDuration={700}
+                message={t("serverStats.loadingMetrics")}
+                showLogo={true}
+              />
             </div>
           )}
 

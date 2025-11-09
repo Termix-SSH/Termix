@@ -31,6 +31,7 @@ import { useCommandTracker } from "@/ui/hooks/useCommandTracker";
 import { useCommandHistory } from "@/ui/hooks/useCommandHistory";
 import { CommandHistoryDialog } from "./CommandHistoryDialog";
 import { CommandAutocomplete } from "./CommandAutocomplete";
+import { LoadingOverlay } from "@/ui/components/LoadingOverlay";
 
 interface HostConfig {
   id?: number;
@@ -1450,17 +1451,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           onSelect={handleAutocompleteSelect}
         />
 
-        {isConnecting && (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ backgroundColor }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-gray-300">{t("terminal.connecting")}</span>
-            </div>
-          </div>
-        )}
+        <LoadingOverlay
+          visible={isConnecting}
+          minDuration={800}
+          message={t("terminal.connecting")}
+          backgroundColor={backgroundColor}
+          showLogo={true}
+        />
       </div>
     );
   },
