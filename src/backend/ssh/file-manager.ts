@@ -2490,6 +2490,103 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   });
 });
 
+app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
+  const { sessionId, path, permissions } = req.body;
+  const sshConn = sshSessions[sessionId];
+
+  if (!sshConn || !sshConn.isConnected) {
+    fileLogger.error(
+      "SSH connection not found or not connected for changePermissions",
+      {
+        operation: "change_permissions",
+        sessionId,
+        hasConnection: !!sshConn,
+        isConnected: sshConn?.isConnected,
+      },
+    );
+    return res.status(400).json({ error: "SSH connection not available" });
+  }
+
+  if (!path) {
+    return res.status(400).json({ error: "File path is required" });
+  }
+
+  if (!permissions || !/^\d{3,4}$/.test(permissions)) {
+    return res.status(400).json({
+      error: "Valid permissions required (e.g., 755, 644)"
+    });
+  }
+
+  const octalPerms = permissions.slice(-3);
+  const escapedPath = path.replace(/'/g, "'\"'\"'");
+  const command = `chmod ${octalPerms} '${escapedPath}'`;
+
+  fileLogger.info("Changing file permissions", {
+    operation: "change_permissions",
+    sessionId,
+    path,
+    permissions: octalPerms,
+  });
+
+  sshConn.client.exec(command, (err, stream) => {
+    if (err) {
+      fileLogger.error("SSH changePermissions exec error:", err, {
+        operation: "change_permissions",
+        sessionId,
+        path,
+        permissions: octalPerms,
+      });
+      return res.status(500).json({ error: "Failed to change permissions" });
+    }
+
+    let errorOutput = "";
+
+    stream.stderr.on("data", (data) => {
+      errorOutput += data.toString();
+    });
+
+    stream.on("close", (code) => {
+      if (code !== 0) {
+        fileLogger.error("chmod command failed", {
+          operation: "change_permissions",
+          sessionId,
+          path,
+          permissions: octalPerms,
+          exitCode: code,
+          error: errorOutput,
+        });
+        return res.status(500).json({
+          error: errorOutput || "Failed to change permissions"
+        });
+      }
+
+      fileLogger.success("File permissions changed successfully", {
+        operation: "change_permissions",
+        sessionId,
+        path,
+        permissions: octalPerms,
+      });
+
+      res.json({
+        success: true,
+        message: "Permissions changed successfully"
+      });
+    });
+
+    stream.on("error", (streamErr) => {
+      fileLogger.error("SSH changePermissions stream error:", streamErr, {
+        operation: "change_permissions",
+        sessionId,
+        path,
+        permissions: octalPerms,
+      });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Stream error while changing permissions" });
+      }
+    });
+  });
+});
+
 process.on("SIGINT", () => {
   Object.keys(sshSessions).forEach(cleanupSession);
   process.exit(0);

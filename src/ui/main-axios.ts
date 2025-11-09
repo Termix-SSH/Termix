@@ -1515,6 +1515,51 @@ export async function moveSSHItem(
   }
 }
 
+export async function changeSSHPermissions(
+  sessionId: string,
+  path: string,
+  permissions: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    fileLogger.info("Changing SSH file permissions", {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/changePermissions", {
+      sessionId,
+      path,
+      permissions,
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("SSH file permissions changed successfully", {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to change SSH file permissions", error, {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+    });
+    handleApiError(error, "change SSH permissions");
+    throw error;
+  }
+}
+
 // ============================================================================
 // FILE MANAGER DATA
 // ============================================================================

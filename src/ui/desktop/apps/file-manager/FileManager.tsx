@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
+import { PermissionsDialog } from "./components/PermissionsDialog";
 import {
   Upload,
   FolderPlus,
@@ -49,6 +50,7 @@ import {
   addFolderShortcut,
   getPinnedFiles,
   logActivity,
+  changeSSHPermissions,
 } from "@/ui/main-axios.ts";
 import type { SidebarItem } from "./FileManagerSidebar";
 
@@ -146,6 +148,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const [createIntent, setCreateIntent] = useState<CreateIntent | null>(null);
   const [editingFile, setEditingFile] = useState<FileItem | null>(null);
+  const [permissionsDialogFile, setPermissionsDialogFile] = useState<FileItem | null>(null);
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
@@ -1180,6 +1183,34 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     setEditingFile(file);
   }
 
+  function handleOpenPermissionsDialog(file: FileItem) {
+    setPermissionsDialogFile(file);
+  }
+
+  async function handleSavePermissions(file: FileItem, permissions: string) {
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    try {
+      await changeSSHPermissions(
+        sshSessionId,
+        file.path,
+        permissions,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(t("fileManager.permissionsChangedSuccessfully"));
+      await handleRefreshDirectory();
+    } catch (error: unknown) {
+      console.error("Failed to change permissions:", error);
+      toast.error(t("fileManager.failedToChangePermissions"));
+      throw error;
+    }
+  }
+
   async function ensureSSHConnection() {
     if (!sshSessionId || !currentHost || isReconnecting) return;
 
@@ -1968,6 +1999,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             onAddShortcut={handleAddShortcut}
             isPinned={isPinnedFile}
             currentPath={currentPath}
+            onProperties={handleOpenPermissionsDialog}
           />
         </div>
       </div>
@@ -1993,6 +2025,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           }}
         />
       )}
+
+      <PermissionsDialog
+        file={permissionsDialogFile}
+        open={permissionsDialogFile !== null}
+        onOpenChange={(open) => {
+          if (!open) setPermissionsDialogFile(null);
+        }}
+        onSave={handleSavePermissions}
+      />
     </div>
   );
 }

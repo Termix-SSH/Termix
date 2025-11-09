@@ -1169,7 +1169,19 @@
     "sshConnectionFailed": "SSH connection failed. Please check your connection to {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Failed to load file: {{error}}",
     "connectedSuccessfully": "Connected successfully",
-    "totpVerificationFailed": "TOTP verification failed"
+    "totpVerificationFailed": "TOTP verification failed",
+    "changePermissions": "Change Permissions",
+    "changePermissionsDesc": "Modify file permissions for",
+    "currentPermissions": "Current Permissions",
+    "newPermissions": "New Permissions",
+    "owner": "Owner",
+    "group": "Group",
+    "others": "Others",
+    "read": "Read",
+    "write": "Write",
+    "execute": "Execute",
+    "permissionsChangedSuccessfully": "Permissions changed successfully",
+    "failedToChangePermissions": "Failed to change permissions"
   },
   "tunnels": {
     "title": "SSH Tunnels",

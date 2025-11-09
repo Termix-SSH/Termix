@@ -1151,7 +1151,19 @@
     "sshConnectionFailed": "SSH 连接失败。请检查与 {{name}} ({{ip}}:{{port}}) 的连接",
     "loadFileFailed": "加载文件失败：{{error}}",
     "connectedSuccessfully": "连接成功",
-    "totpVerificationFailed": "TOTP 验证失败"
+    "totpVerificationFailed": "TOTP 验证失败",
+    "changePermissions": "修改权限",
+    "changePermissionsDesc": "修改文件权限",
+    "currentPermissions": "当前权限",
+    "newPermissions": "新权限",
+    "owner": "所有者",
+    "group": "组",
+    "others": "其他",
+    "read": "读取",
+    "write": "写入",
+    "execute": "执行",
+    "permissionsChangedSuccessfully": "权限修改成功",
+    "failedToChangePermissions": "权限修改失败"
   },
   "tunnels": {
     "title": "SSH 隧道",
