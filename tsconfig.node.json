@@ -8,6 +8,7 @@
     "moduleResolution": "nodenext",
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
+    "esModuleInterop": true,
     "noEmit": false,
     "outDir": "./dist/backend",
     "strict": false,

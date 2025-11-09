@@ -23,6 +23,8 @@ function AppContent() {
     const saved = localStorage.getItem("topNavbarOpen");
     return saved !== null ? JSON.parse(saved) : true;
   });
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionPhase, setTransitionPhase] = useState<'idle' | 'fadeOut' | 'fadeIn'>('idle');
   const { currentTab, tabs } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
@@ -98,12 +100,43 @@ function AppContent() {
       username: string | null;
       userId: string | null;
     }) => {
-      setIsAuthenticated(true);
-      setIsAdmin(authData.isAdmin);
-      setUsername(authData.username);
+      setIsTransitioning(true);
+      setTransitionPhase('fadeOut');
+
+      setTimeout(() => {
+        setIsAuthenticated(true);
+        setIsAdmin(authData.isAdmin);
+        setUsername(authData.username);
+        setTransitionPhase('fadeIn');
+
+        setTimeout(() => {
+          setIsTransitioning(false);
+          setTransitionPhase('idle');
+        }, 400);
+      }, 300);
     },
     [],
   );
+
+  const handleLogout = useCallback(async () => {
+    setIsTransitioning(true);
+    setTransitionPhase('fadeOut');
+
+    setTimeout(async () => {
+      try {
+        const { logoutUser, isElectron } = await import("@/ui/main-axios.ts");
+        await logoutUser();
+
+        if (isElectron()) {
+          localStorage.removeItem("jwt");
+        }
+      } catch (error) {
+        console.error("Logout failed:", error);
+      }
+
+      window.location.reload();
+    }, 300);
+  }, []);
 
   const currentTabData = tabs.find((tab) => tab.id === currentTab);
   const showTerminalView =
@@ -135,20 +168,25 @@ function AppContent() {
 
       {isAuthenticated && (
         <LeftSidebar
-          onSelectView={handleSelectView}
-          disabled={!isAuthenticated || authLoading}
-          isAdmin={isAdmin}
-          username={username}
-        >
+            onSelectView={handleSelectView}
+            disabled={!isAuthenticated || authLoading}
+            isAdmin={isAdmin}
+            username={username}
+            onLogout={handleLogout}
+          >
           <div
             className="h-screen w-full visible pointer-events-auto static overflow-hidden"
             style={{ display: showTerminalView ? "block" : "none" }}
           >
-            <AppView isTopbarOpen={isTopbarOpen} />
+            {showTerminalView && (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                <AppView isTopbarOpen={isTopbarOpen} />
+              </div>
+            )}
           </div>
 
           {showHome && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
               <Dashboard
                 onSelectView={handleSelectView}
                 isAuthenticated={isAuthenticated}
@@ -160,7 +198,7 @@ function AppContent() {
           )}
 
           {showSshManager && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
               <HostManager
                 onSelectView={handleSelectView}
                 isTopbarOpen={isTopbarOpen}
@@ -171,13 +209,13 @@ function AppContent() {
           )}
 
           {showAdmin && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
               <AdminSettings isTopbarOpen={isTopbarOpen} />
             </div>
           )}
 
           {showProfile && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-auto">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-auto animate-in fade-in slide-in-from-right-4 duration-300">
               <UserProfile isTopbarOpen={isTopbarOpen} />
             </div>
           )}
@@ -189,6 +227,15 @@ function AppContent() {
           />
         </LeftSidebar>
       )}
+
+      {isTransitioning && (
+        <div
+          className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-300 ${
+            transitionPhase === 'fadeOut' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      )}
+
       <Toaster
         position="bottom-right"
         richColors={false}
