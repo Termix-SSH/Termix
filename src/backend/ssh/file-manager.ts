@@ -2587,6 +2587,132 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
   });
 });
 
+// Route: Extract archive file (requires JWT)
+// POST /ssh/file_manager/ssh/extractArchive
+app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
+  const { sessionId, archivePath, extractPath } = req.body;
+
+  if (!sessionId || !archivePath) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const session = sshSessions[sessionId];
+  if (!session || !session.isConnected) {
+    return res.status(400).json({ error: "SSH session not connected" });
+  }
+
+  session.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  const fileName = archivePath.split("/").pop() || "";
+  const fileExt = fileName.toLowerCase();
+
+  // Determine extraction command based on file extension
+  let extractCommand = "";
+  const targetPath = extractPath || archivePath.substring(0, archivePath.lastIndexOf("/"));
+
+  if (fileExt.endsWith(".tar.gz") || fileExt.endsWith(".tgz")) {
+    extractCommand = `tar -xzf "${archivePath}" -C "${targetPath}"`;
+  } else if (fileExt.endsWith(".tar.bz2") || fileExt.endsWith(".tbz2")) {
+    extractCommand = `tar -xjf "${archivePath}" -C "${targetPath}"`;
+  } else if (fileExt.endsWith(".tar.xz")) {
+    extractCommand = `tar -xJf "${archivePath}" -C "${targetPath}"`;
+  } else if (fileExt.endsWith(".tar")) {
+    extractCommand = `tar -xf "${archivePath}" -C "${targetPath}"`;
+  } else if (fileExt.endsWith(".zip")) {
+    extractCommand = `unzip -o "${archivePath}" -d "${targetPath}"`;
+  } else if (fileExt.endsWith(".gz") && !fileExt.endsWith(".tar.gz")) {
+    extractCommand = `gunzip -c "${archivePath}" > "${archivePath.replace(/\.gz$/, "")}"`;
+  } else if (fileExt.endsWith(".bz2") && !fileExt.endsWith(".tar.bz2")) {
+    extractCommand = `bunzip2 -k "${archivePath}"`;
+  } else if (fileExt.endsWith(".xz") && !fileExt.endsWith(".tar.xz")) {
+    extractCommand = `unxz -k "${archivePath}"`;
+  } else if (fileExt.endsWith(".7z")) {
+    extractCommand = `7z x "${archivePath}" -o"${targetPath}"`;
+  } else if (fileExt.endsWith(".rar")) {
+    extractCommand = `unrar x "${archivePath}" "${targetPath}/"`;
+  } else {
+    return res.status(400).json({ error: "Unsupported archive format" });
+  }
+
+  fileLogger.info("Extracting archive", {
+    operation: "extract_archive",
+    sessionId,
+    archivePath,
+    extractPath: targetPath,
+    command: extractCommand,
+  });
+
+  session.client.exec(extractCommand, (err, stream) => {
+    if (err) {
+      fileLogger.error("SSH exec error during extract:", err, {
+        operation: "extract_archive",
+        sessionId,
+        archivePath,
+      });
+      return res.status(500).json({ error: "Failed to execute extract command" });
+    }
+
+    let errorOutput = "";
+
+    stream.on("data", (data: Buffer) => {
+      fileLogger.debug("Extract stdout", {
+        operation: "extract_archive",
+        sessionId,
+        output: data.toString(),
+      });
+    });
+
+    stream.stderr.on("data", (data: Buffer) => {
+      errorOutput += data.toString();
+      fileLogger.debug("Extract stderr", {
+        operation: "extract_archive",
+        sessionId,
+        error: data.toString(),
+      });
+    });
+
+    stream.on("close", (code: number) => {
+      if (code !== 0) {
+        fileLogger.error("Extract command failed", {
+          operation: "extract_archive",
+          sessionId,
+          archivePath,
+          exitCode: code,
+          error: errorOutput,
+        });
+        return res.status(500).json({
+          error: errorOutput || "Failed to extract archive"
+        });
+      }
+
+      fileLogger.success("Archive extracted successfully", {
+        operation: "extract_archive",
+        sessionId,
+        archivePath,
+        extractPath: targetPath,
+      });
+
+      res.json({
+        success: true,
+        message: "Archive extracted successfully",
+        extractPath: targetPath
+      });
+    });
+
+    stream.on("error", (streamErr) => {
+      fileLogger.error("SSH extractArchive stream error:", streamErr, {
+        operation: "extract_archive",
+        sessionId,
+        archivePath,
+      });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Stream error while extracting archive" });
+      }
+    });
+  });
+});
+
 process.on("SIGINT", () => {
   Object.keys(sshSessions).forEach(cleanupSession);
   process.exit(0);

@@ -51,6 +51,7 @@ import {
   getPinnedFiles,
   logActivity,
   changeSSHPermissions,
+  extractSSHArchive,
 } from "@/ui/main-axios.ts";
 import type { SidebarItem } from "./FileManagerSidebar";
 
@@ -1061,6 +1062,34 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     }
   }
 
+  async function handleExtractArchive(file: FileItem) {
+    if (!sshSessionId) return;
+
+    try {
+      await ensureSSHConnection();
+
+      toast.info(t("fileManager.extractingArchive", { name: file.name }));
+
+      await extractSSHArchive(
+        sshSessionId,
+        file.path,
+        undefined,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(t("fileManager.archiveExtractedSuccessfully", { name: file.name }));
+
+      // Refresh directory to show extracted files
+      handleRefreshDirectory();
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(
+        `${t("fileManager.extractFailed")}: ${err.message || t("fileManager.unknownError")}`,
+      );
+    }
+  }
+
   async function handleUndo() {
     if (undoHistory.length === 0) {
       toast.info(t("fileManager.noUndoableActions"));
@@ -2000,6 +2029,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             isPinned={isPinnedFile}
             currentPath={currentPath}
             onProperties={handleOpenPermissionsDialog}
+            onExtractArchive={handleExtractArchive}
           />
         </div>
       </div>

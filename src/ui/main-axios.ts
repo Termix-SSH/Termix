@@ -1561,6 +1561,51 @@ export async function changeSSHPermissions(
   }
 }
 
+export async function extractSSHArchive(
+  sessionId: string,
+  archivePath: string,
+  extractPath?: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string; extractPath: string }> {
+  try {
+    fileLogger.info("Extracting archive", {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/extractArchive", {
+      sessionId,
+      archivePath,
+      extractPath,
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("Archive extracted successfully", {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath: response.data.extractPath,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to extract archive", error, {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath,
+    });
+    handleApiError(error, "extract archive");
+    throw error;
+  }
+}
+
 // ============================================================================
 // FILE MANAGER DATA
 // ============================================================================

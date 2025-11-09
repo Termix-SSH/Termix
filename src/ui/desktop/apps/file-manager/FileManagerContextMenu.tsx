@@ -17,6 +17,7 @@ import {
   Play,
   Star,
   Bookmark,
+  FileArchive,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -60,6 +61,7 @@ interface ContextMenuProps {
   onAddShortcut?: (path: string) => void;
   isPinned?: (file: FileItem) => boolean;
   currentPath?: string;
+  onExtractArchive?: (file: FileItem) => void;
 }
 
 interface MenuItem {
@@ -99,6 +101,7 @@ export function FileManagerContextMenu({
   onAddShortcut,
   isPinned,
   currentPath,
+  onExtractArchive,
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
@@ -252,6 +255,33 @@ export function FileManagerContextMenu({
         action: () => onDownload(files),
         shortcut: "Ctrl+D",
       });
+    }
+
+    // Add extract option for archive files
+    if (isSingleFile && files[0].type === "file" && onExtractArchive) {
+      const fileName = files[0].name.toLowerCase();
+      const isArchive =
+        fileName.endsWith(".zip") ||
+        fileName.endsWith(".tar") ||
+        fileName.endsWith(".tar.gz") ||
+        fileName.endsWith(".tgz") ||
+        fileName.endsWith(".tar.bz2") ||
+        fileName.endsWith(".tbz2") ||
+        fileName.endsWith(".tar.xz") ||
+        fileName.endsWith(".gz") ||
+        fileName.endsWith(".bz2") ||
+        fileName.endsWith(".xz") ||
+        fileName.endsWith(".7z") ||
+        fileName.endsWith(".rar");
+
+      if (isArchive) {
+        menuItems.push({
+          icon: <FileArchive className="w-4 h-4" />,
+          label: t("fileManager.extractArchive"),
+          action: () => onExtractArchive(files[0]),
+          shortcut: "Ctrl+E",
+        });
+      }
     }
 
     if (isSingleFile && files[0].type === "file") {
