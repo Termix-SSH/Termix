@@ -1442,6 +1442,8 @@
     "local": "本地",
     "external": "外部 (OIDC)",
     "selectPreferredLanguage": "选择您的界面首选语言",
+    "fileColorCoding": "文件颜色编码",
+    "fileColorCodingDesc": "按类型对文件进行颜色编码：文件夹（红色）、文件（蓝色）、符号链接（绿色）",
     "currentPassword": "当前密码",
     "passwordChangedSuccess": "密码修改成功！请重新登录。",
     "failedToChangePassword": "修改密码失败。请检查您当前的密码并重试。"

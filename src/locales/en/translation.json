@@ -1479,6 +1479,8 @@
     "local": "Local",
     "external": "External (OIDC)",
     "selectPreferredLanguage": "Select your preferred language for the interface",
+    "fileColorCoding": "File Color Coding",
+    "fileColorCodingDesc": "Color-code files by type: folders (red), files (blue), symlinks (green)",
     "currentPassword": "Current Password",
     "passwordChangedSuccess": "Password changed successfully! Please log in again.",
     "failedToChangePassword": "Failed to change password. Please check your current password and try again."
