@@ -896,11 +896,11 @@ router.post("/login", async (req, res) => {
       .where(eq(users.username, username));
 
     if (!user || user.length === 0) {
-      authLogger.warn(`User not found: ${username}`, {
+      authLogger.warn(`Login failed: user not found`, {
         operation: "user_login",
         username,
       });
-      return res.status(404).json({ error: "User not found" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
 
     const userRecord = user[0];
@@ -918,12 +918,12 @@ router.post("/login", async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, userRecord.password_hash);
     if (!isMatch) {
-      authLogger.warn(`Incorrect password for user: ${username}`, {
+      authLogger.warn(`Login failed: incorrect password`, {
         operation: "user_login",
         username,
         userId: userRecord.id,
       });
-      return res.status(401).json({ error: "Incorrect password" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
 
     try {
