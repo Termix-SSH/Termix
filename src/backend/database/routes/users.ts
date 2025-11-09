@@ -27,6 +27,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
+import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -862,6 +863,7 @@ router.get("/oidc/callback", async (req, res) => {
 // POST /users/login
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
+  const clientIp = req.ip || req.socket.remoteAddress || "unknown";
 
   if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
     authLogger.warn("Invalid traditional login attempt", {
@@ -870,6 +872,21 @@ router.post("/login", async (req, res) => {
       hasPassword: !!password,
     });
     return res.status(400).json({ error: "Invalid username or password" });
+  }
+
+  // Check rate limiting
+  const lockStatus = loginRateLimiter.isLocked(clientIp, username);
+  if (lockStatus.locked) {
+    authLogger.warn("Login attempt blocked due to rate limiting", {
+      operation: "user_login_blocked",
+      username,
+      ip: clientIp,
+      remainingTime: lockStatus.remainingTime,
+    });
+    return res.status(429).json({
+      error: "Too many login attempts. Please try again later.",
+      remainingTime: lockStatus.remainingTime,
+    });
   }
 
   try {
@@ -896,9 +913,12 @@ router.post("/login", async (req, res) => {
       .where(eq(users.username, username));
 
     if (!user || user.length === 0) {
+      loginRateLimiter.recordFailedAttempt(clientIp, username);
       authLogger.warn(`Login failed: user not found`, {
         operation: "user_login",
         username,
+        ip: clientIp,
+        remainingAttempts: loginRateLimiter.getRemainingAttempts(clientIp, username),
       });
       return res.status(401).json({ error: "Invalid username or password" });
     }
@@ -918,10 +938,13 @@ router.post("/login", async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, userRecord.password_hash);
     if (!isMatch) {
+      loginRateLimiter.recordFailedAttempt(clientIp, username);
       authLogger.warn(`Login failed: incorrect password`, {
         operation: "user_login",
         username,
         userId: userRecord.id,
+        ip: clientIp,
+        remainingAttempts: loginRateLimiter.getRemainingAttempts(clientIp, username),
       });
       return res.status(401).json({ error: "Invalid username or password" });
     }
@@ -965,6 +988,9 @@ router.post("/login", async (req, res) => {
       deviceInfo: deviceInfo.deviceInfo,
     });
 
+    // Reset rate limiter on successful login
+    loginRateLimiter.resetAttempts(clientIp, username);
+
     authLogger.success(`User logged in successfully: ${username}`, {
       operation: "user_login_success",
       username,
@@ -972,6 +998,7 @@ router.post("/login", async (req, res) => {
       dataUnlocked: true,
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
+      ip: clientIp,
     });
 
     const response: Record<string, unknown> = {
