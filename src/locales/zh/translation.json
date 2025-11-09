@@ -1272,6 +1272,11 @@
     "from": "来自"
   },
   "auth": {
+    "tagline": "SSH 终端管理器",
+    "description": "安全、强大、直观的 SSH 连接管理",
+    "welcomeBack": "欢迎回到 TERMIX",
+    "createAccount": "创建您的 TERMIX 账户",
+    "continueExternal": "使用外部提供商继续",
     "loginTitle": "登录 Termix",
     "registerTitle": "创建账户",
     "loginButton": "登录",

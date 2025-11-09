@@ -1288,6 +1288,11 @@
     "from": "с"
   },
   "auth": {
+    "tagline": "SSH ТЕРМИНАЛ МЕНЕДЖЕР",
+    "description": "Безопасное, мощное и интуитивное управление SSH-соединениями",
+    "welcomeBack": "Добро пожаловать обратно в TERMIX",
+    "createAccount": "Создайте вашу учетную запись TERMIX",
+    "continueExternal": "Продолжить с внешним провайдером",
     "loginTitle": "Вход в Termix",
     "registerTitle": "Создать учетную запись",
     "loginButton": "Войти",

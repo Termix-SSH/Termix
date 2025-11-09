@@ -841,30 +841,34 @@ export function Auth({
       <div className="w-full h-full flex flex-col md:flex-row">
 
         {/* Left Side - Brand Showcase */}
-        <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden items-center justify-center">
+        <div className="hidden md:flex md:w-2/5 relative overflow-hidden items-center justify-center"
+          style={{
+            background: 'linear-gradient(to bottom right, hsl(var(--background)), #0e0e10, #09090b)'
+          }}
+        >
           {/* Animated Ripples Background */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="absolute w-0 h-0 bg-white/10 rounded-full animate-[ripple_4s_ease-out_infinite]" />
-            <div className="absolute w-0 h-0 bg-white/8 rounded-full animate-[ripple_4s_ease-out_infinite_1s]" />
-            <div className="absolute w-0 h-0 bg-white/5 rounded-full animate-[ripple_4s_ease-out_infinite_2s]" />
+            <div className="absolute w-0 h-0 bg-primary/10 rounded-full animate-[ripple_4s_ease-out_infinite]" />
+            <div className="absolute w-0 h-0 bg-primary/7 rounded-full animate-[ripple_4s_ease-out_infinite_1s]" />
+            <div className="absolute w-0 h-0 bg-primary/5 rounded-full animate-[ripple_4s_ease-out_infinite_2s]" />
           </div>
 
           {/* Logo and Branding */}
           <div className="relative z-10 text-center px-8">
             <div
-              className="text-7xl font-bold tracking-wider text-white mb-4"
+              className="text-7xl font-bold tracking-wider mb-4 text-foreground"
               style={{
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                textShadow: '0 0 30px rgba(255,255,255,0.3), 0 0 60px rgba(255,255,255,0.2)'
+                textShadow: '0 0 30px hsl(var(--primary) / 0.3), 0 0 60px hsl(var(--primary) / 0.2)'
               }}
             >
               TERMIX
             </div>
-            <div className="text-lg text-white/80 tracking-widest font-light">
-              SSH TERMINAL MANAGER
+            <div className="text-lg text-muted-foreground tracking-widest font-light">
+              {t("auth.tagline") || "SSH TERMINAL MANAGER"}
             </div>
-            <div className="mt-8 text-sm text-white/60 max-w-md">
-              Secure, powerful, and intuitive SSH connection management for modern teams
+            <div className="mt-8 text-sm text-muted-foreground/80 max-w-md">
+              {t("auth.description") || "Secure, powerful, and intuitive SSH connection management"}
             </div>
           </div>
 
@@ -1067,7 +1071,7 @@ export function Auth({
 
                 {/* Page Title */}
                 <div className="mb-8 text-center">
-                  <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  <h2 className="text-2xl font-bold mb-2">
                     {tab === "login"
                       ? t("auth.loginTitle")
                       : tab === "signup"
@@ -1078,10 +1082,10 @@ export function Auth({
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     {tab === "login"
-                      ? "Welcome back to TERMIX"
+                      ? t("auth.welcomeBack")
                       : tab === "signup"
-                        ? "Create your TERMIX account"
-                        : "Continue with external provider"}
+                        ? t("auth.createAccount")
+                        : t("auth.continueExternal")}
                   </p>
                 </div>
 

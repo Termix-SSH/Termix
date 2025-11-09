@@ -137,10 +137,10 @@ export function SSHAuthDialog({
 
   return (
     <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-dark-bg"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-dark-bg animate-in fade-in duration-200"
       style={{ backgroundColor }}
     >
-      <Card className="w-full max-w-2xl mx-4 border-2">
+      <Card className="w-full max-w-2xl mx-4 border-2 animate-in fade-in zoom-in-95 duration-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />

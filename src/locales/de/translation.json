@@ -1192,6 +1192,11 @@
     "from": "von"
   },
   "auth": {
+    "tagline": "SSH TERMINAL MANAGER",
+    "description": "Sichere, leistungsstarke und intuitive SSH-Verbindungsverwaltung",
+    "welcomeBack": "Willkommen zurück bei TERMIX",
+    "createAccount": "Erstellen Sie Ihr TERMIX-Konto",
+    "continueExternal": "Mit externem Anbieter fortfahren",
     "loginTitle": "Melden Sie sich bei Termix an",
     "registerTitle": "Benutzerkonto erstellen",
     "loginButton": "Anmelden",

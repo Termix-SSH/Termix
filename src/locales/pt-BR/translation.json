@@ -1143,6 +1143,11 @@
     "available": "Disponível"
   },
   "auth": {
+    "tagline": "GERENCIADOR DE TERMINAL SSH",
+    "description": "Gerenciamento de conexão SSH seguro, poderoso e intuitivo",
+    "welcomeBack": "Bem-vindo de volta ao TERMIX",
+    "createAccount": "Crie sua conta TERMIX",
+    "continueExternal": "Continuar com provedor externo",
     "loginTitle": "Entrar no Termix",
     "registerTitle": "Criar Conta",
     "loginButton": "Entrar",

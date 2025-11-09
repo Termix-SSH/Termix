@@ -1301,6 +1301,11 @@
     "from": "from"
   },
   "auth": {
+    "tagline": "SSH TERMINAL MANAGER",
+    "description": "Secure, powerful, and intuitive SSH connection management",
+    "welcomeBack": "Welcome back to TERMIX",
+    "createAccount": "Create your TERMIX account",
+    "continueExternal": "Continue with external provider",
     "loginTitle": "Login to Termix",
     "registerTitle": "Create Account",
     "loginButton": "Login",
