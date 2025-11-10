@@ -13,7 +13,7 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    supportedLngs: ["en", "zh", "de", "ptbr", "ru"],
+    supportedLngs: ["en", "zh", "de", "ptbr", "ru", "fr"],
     fallbackLng: "en",
     debug: false,
 
