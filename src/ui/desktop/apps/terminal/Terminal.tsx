@@ -31,7 +31,7 @@ import { useCommandTracker } from "@/ui/hooks/useCommandTracker";
 import { useCommandHistory } from "@/ui/hooks/useCommandHistory";
 import { CommandHistoryDialog } from "./CommandHistoryDialog";
 import { CommandAutocomplete } from "./CommandAutocomplete";
-import { LoadingOverlay } from "@/ui/components/LoadingOverlay";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface HostConfig {
   id?: number;
@@ -1446,7 +1446,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           style={{
             visibility:
               isReady && !isConnecting && isFitted ? "visible" : "hidden",
-            opacity: isReady && !isConnecting && isFitted ? 1 : 0,
           }}
           onClick={() => {
             if (terminal && !splitScreen) {
@@ -1494,12 +1493,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           onSelect={handleAutocompleteSelect}
         />
 
-        <LoadingOverlay
+        <SimpleLoader
           visible={isConnecting}
-          minDuration={800}
           message={t("terminal.connecting")}
           backgroundColor={backgroundColor}
-          showLogo={true}
         />
       </div>
     );

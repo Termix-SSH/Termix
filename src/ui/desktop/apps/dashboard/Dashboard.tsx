@@ -101,7 +101,7 @@ export function Dashboard({
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
-  const rightMarginPx = rightSidebarOpen ? rightSidebarWidth + 17 : 17;
+  const rightMarginPx = 17; // Base margin when closed
   const bottomMarginPx = 8;
 
   useEffect(() => {
@@ -341,10 +341,14 @@ export function Dashboard({
           className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden flex"
           style={{
             marginLeft: leftMarginPx,
-            marginRight: rightMarginPx,
+            marginRight: rightSidebarOpen
+              ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
+              : rightMarginPx,
             marginTop: topMarginPx,
             marginBottom: bottomMarginPx,
             height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
+            transition:
+              "margin-left 200ms linear, margin-right 200ms linear, margin-top 200ms linear",
           }}
         >
           <div className="flex flex-col relative z-10 w-full h-full">

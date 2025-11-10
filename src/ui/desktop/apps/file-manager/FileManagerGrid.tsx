@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
-import { LoadingOverlay } from "@/ui/components/LoadingOverlay";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface CreateIntent {
   id: string;
@@ -1004,7 +1004,7 @@ export function FileManagerGrid({
           tabIndex={0}
         >
           {dragState.type === "external" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 pointer-events-none animate-in fade-in-0">
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 pointer-events-none">
               <div className="text-center p-8 bg-background/95 border-2 border-dashed border-primary rounded-lg shadow-lg">
                 <Upload className="w-16 h-16 mx-auto mb-4 text-primary" />
                 <p className="text-xl font-semibold text-foreground mb-2">
@@ -1057,7 +1057,6 @@ export function FileManagerGrid({
                     draggable={true}
                     className={cn(
                       "group p-3 rounded-lg cursor-pointer",
-                      "transition-all duration-150 ease-out",
                       "hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] border-2 border-transparent",
                       isSelected &&
                         "bg-primary/20 border-primary ring-2 ring-primary/20",
@@ -1148,7 +1147,6 @@ export function FileManagerGrid({
                     draggable={true}
                     className={cn(
                       "flex items-center gap-3 p-2 rounded cursor-pointer",
-                      "transition-all duration-150 ease-out",
                       "hover:bg-accent hover:text-accent-foreground",
                       isSelected && "bg-primary/20 ring-2 ring-primary/20",
                       dragState.target?.path === file.path &&
@@ -1322,12 +1320,7 @@ export function FileManagerGrid({
           document.body,
         )}
 
-      <LoadingOverlay
-        visible={isLoading}
-        minDuration={600}
-        message={t("common.loading")}
-        showLogo={true}
-      />
+      <SimpleLoader visible={isLoading} message={t("common.loading")} />
     </div>
   );
 }

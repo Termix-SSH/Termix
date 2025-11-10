@@ -652,10 +652,14 @@ export function AppView({
       style={{
         background: containerBackground,
         marginLeft: leftMarginPx,
-        marginRight: rightSidebarOpen ? rightSidebarWidth + 17 : 17,
+        marginRight: rightSidebarOpen
+          ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
+          : 17,
         marginTop: topMarginPx,
         marginBottom: bottomMarginPx,
         height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
+        transition:
+          "margin-left 200ms linear, margin-right 200ms linear, margin-top 200ms linear",
       }}
     >
       {renderTerminalsLayer()}

@@ -73,7 +73,7 @@ export function TopNavbar({
   }, [toolsSidebarOpen, rightSidebarWidth, onRightSidebarStateChange]);
 
   const rightPosition = toolsSidebarOpen
-    ? `${rightSidebarWidth + 17}px`
+    ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
     : "17px";
   const [justDroppedTabId, setJustDroppedTabId] = useState<number | null>(null);
   const [isInDropAnimation, setIsInDropAnimation] = useState(false);
@@ -315,12 +315,13 @@ export function TopNavbar({
   return (
     <div>
       <div
-        className="fixed z-10 h-[50px] border-2 border-dark-border rounded-lg transition-all duration-200 ease-linear flex flex-row transform-none m-0 p-0"
+        className="fixed z-10 h-[50px] border-2 border-dark-border rounded-lg flex flex-row transform-none m-0 p-0"
         style={{
           top: isTopbarOpen ? "0.5rem" : "-3rem",
           left: leftPosition,
           right: rightPosition,
           backgroundColor: "#18181b",
+          transition: "top 200ms linear, left 200ms linear, right 200ms linear",
         }}
       >
         <div

@@ -92,10 +92,14 @@ export function HostManager({
           className="bg-dark-bg text-white p-4 pt-0 rounded-lg border-2 border-dark-border flex flex-col min-h-0 overflow-hidden"
           style={{
             marginLeft: leftMarginPx,
-            marginRight: rightSidebarOpen ? rightSidebarWidth + 17 : 17,
+            marginRight: rightSidebarOpen
+              ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
+              : 17,
             marginTop: topMarginPx,
             marginBottom: bottomMarginPx,
             height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
+            transition:
+              "margin-left 200ms linear, margin-right 200ms linear, margin-top 200ms linear",
           }}
         >
           <Tabs

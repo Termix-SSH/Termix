@@ -23,16 +23,7 @@ import {
   SidebarProvider,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar.tsx";
-import {
-  Plus,
-  Play,
-  Edit,
-  Trash2,
-  Copy,
-  X,
-  RotateCcw,
-  ChevronRight,
-} from "lucide-react";
+import { Plus, Play, Edit, Trash2, Copy, X, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -108,6 +99,14 @@ export function SSHUtilitySidebar({
 
   const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
 
+  // Initialize CSS variable on mount and when sidebar width changes
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--right-sidebar-width",
+      `${sidebarWidth}px`,
+    );
+  }, [sidebarWidth]);
+
   useEffect(() => {
     if (isOpen && activeTab === "snippets") {
       fetchSnippets();
@@ -131,13 +130,22 @@ export function SSHUtilitySidebar({
       const newWidth = Math.round(startWidthRef.current + dx);
       const minWidth = 300;
       const maxWidth = Math.round(window.innerWidth * 0.5);
-      if (newWidth >= minWidth && newWidth <= maxWidth) {
-        setSidebarWidth(newWidth);
-      } else if (newWidth < minWidth) {
-        setSidebarWidth(minWidth);
+
+      let finalWidth = newWidth;
+      if (newWidth < minWidth) {
+        finalWidth = minWidth;
       } else if (newWidth > maxWidth) {
-        setSidebarWidth(maxWidth);
+        finalWidth = maxWidth;
       }
+
+      // Update CSS variable immediately for smooth animation
+      document.documentElement.style.setProperty(
+        "--right-sidebar-width",
+        `${finalWidth}px`,
+      );
+
+      // Update React state (this will be batched/debounced naturally)
+      setSidebarWidth(finalWidth);
     };
 
     const handleMouseUp = () => {
@@ -156,7 +164,7 @@ export function SSHUtilitySidebar({
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isResizing, sidebarWidth, setSidebarWidth]);
+  }, [isResizing]);
 
   // SSH Tools handlers
   const handleTabToggle = (tabId: number) => {
@@ -433,19 +441,22 @@ export function SSHUtilitySidebar({
     toast.success(t("snippets.copySuccess", { name: snippet.name }));
   };
 
-  if (!isOpen) return null;
-
   return (
     <>
-      <div className="min-h-svh">
-        <SidebarProvider
-          open={isOpen}
-          style={
-            { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties
-          }
-        >
-          <div className="flex h-screen w-full justify-end">
-            <Sidebar variant="floating" side="right">
+      {isOpen && (
+        <div className="fixed top-0 right-0 h-0 w-0 pointer-events-none">
+          <SidebarProvider
+            open={isOpen}
+            style={
+              { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties
+            }
+            className="!min-h-0 !h-0 !w-0"
+          >
+            <Sidebar
+              variant="floating"
+              side="right"
+              className="pointer-events-auto"
+            >
               <SidebarHeader>
                 <SidebarGroupLabel className="text-lg font-bold text-white">
                   {t("nav.tools")}
@@ -780,24 +791,9 @@ export function SSHUtilitySidebar({
                 />
               )}
             </Sidebar>
-          </div>
-        </SidebarProvider>
-
-        {!isOpen && (
-          <div
-            onClick={onClose}
-            className="fixed top-0 right-0 w-[10px] h-full cursor-pointer flex items-center justify-center rounded-tl-md rounded-bl-md"
-            style={{
-              zIndex: 9999,
-              backgroundColor: "#18181b",
-              border: "2px solid #27272a",
-              borderRight: "none",
-            }}
-          >
-            <ChevronRight size={10} />
-          </div>
-        )}
-      </div>
+          </SidebarProvider>
+        </div>
+      )}
 
       {showDialog && (
         <div

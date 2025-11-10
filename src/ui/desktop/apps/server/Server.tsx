@@ -17,7 +17,6 @@ import {
   type StatsConfig,
   DEFAULT_STATS_CONFIG,
 } from "@/types/stats-widgets";
-import { LoadingOverlay } from "@/ui/components/LoadingOverlay";
 import {
   CpuWidget,
   MemoryWidget,
@@ -28,6 +27,7 @@ import {
   SystemWidget,
   LoginStatsWidget,
 } from "./widgets";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface HostConfig {
   id: number;
@@ -469,11 +469,9 @@ export function Server({
                 </div>
               )}
 
-              <LoadingOverlay
+              <SimpleLoader
                 visible={isLoadingMetrics && !metrics}
-                minDuration={700}
                 message={t("serverStats.loadingMetrics")}
-                showLogo={true}
               />
             </div>
           )}

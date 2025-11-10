@@ -436,7 +436,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     return (
       <div
         ref={xtermRef}
-        className={`h-full w-full m-1 ${isReady && isVisible ? "opacity-100" : "opacity-0"} transition-opacity duration-150 overflow-hidden`}
+        className="h-full w-full m-1 overflow-hidden"
         style={{ visibility: isReady ? "visible" : "hidden" }}
       />
     );
