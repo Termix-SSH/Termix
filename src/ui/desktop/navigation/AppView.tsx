@@ -35,10 +35,14 @@ interface TabData {
 
 interface TerminalViewProps {
   isTopbarOpen?: boolean;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
 }
 
 export function AppView({
   isTopbarOpen = true,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
 }: TerminalViewProps): React.ReactElement {
   const { tabs, currentTab, allSplitScreenTab, removeTab } = useTabs() as {
     tabs: TabData[];
@@ -648,7 +652,7 @@ export function AppView({
       style={{
         background: containerBackground,
         marginLeft: leftMarginPx,
-        marginRight: 17,
+        marginRight: rightSidebarOpen ? rightSidebarWidth + 17 : 17,
         marginTop: topMarginPx,
         marginBottom: bottomMarginPx,
         height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,

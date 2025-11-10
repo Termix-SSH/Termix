@@ -24,9 +24,13 @@ function AppContent() {
     return saved !== null ? JSON.parse(saved) : true;
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [transitionPhase, setTransitionPhase] = useState<'idle' | 'fadeOut' | 'fadeIn'>('idle');
+  const [transitionPhase, setTransitionPhase] = useState<
+    "idle" | "fadeOut" | "fadeIn"
+  >("idle");
   const { currentTab, tabs } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
 
   const lastShiftPressTime = useRef(0);
 
@@ -101,17 +105,17 @@ function AppContent() {
       userId: string | null;
     }) => {
       setIsTransitioning(true);
-      setTransitionPhase('fadeOut');
+      setTransitionPhase("fadeOut");
 
       setTimeout(() => {
         setIsAuthenticated(true);
         setIsAdmin(authData.isAdmin);
         setUsername(authData.username);
-        setTransitionPhase('fadeIn');
+        setTransitionPhase("fadeIn");
 
         setTimeout(() => {
           setIsTransitioning(false);
-          setTransitionPhase('idle');
+          setTransitionPhase("idle");
         }, 800);
       }, 1200);
     },
@@ -120,7 +124,7 @@ function AppContent() {
 
   const handleLogout = useCallback(async () => {
     setIsTransitioning(true);
-    setTransitionPhase('fadeOut');
+    setTransitionPhase("fadeOut");
 
     setTimeout(async () => {
       try {
@@ -168,17 +172,21 @@ function AppContent() {
 
       {isAuthenticated && (
         <LeftSidebar
-            onSelectView={handleSelectView}
-            disabled={!isAuthenticated || authLoading}
-            isAdmin={isAdmin}
-            username={username}
-            onLogout={handleLogout}
-          >
+          onSelectView={handleSelectView}
+          disabled={!isAuthenticated || authLoading}
+          isAdmin={isAdmin}
+          username={username}
+          onLogout={handleLogout}
+        >
           <div
             className="h-screen w-full visible pointer-events-auto static overflow-hidden"
             style={{ display: showTerminalView ? "block" : "none" }}
           >
-            <AppView isTopbarOpen={isTopbarOpen} />
+            <AppView
+              isTopbarOpen={isTopbarOpen}
+              rightSidebarOpen={rightSidebarOpen}
+              rightSidebarWidth={rightSidebarWidth}
+            />
           </div>
 
           {showHome && (
@@ -189,6 +197,8 @@ function AppContent() {
                 authLoading={authLoading}
                 onAuthSuccess={handleAuthSuccess}
                 isTopbarOpen={isTopbarOpen}
+                rightSidebarOpen={rightSidebarOpen}
+                rightSidebarWidth={rightSidebarWidth}
               />
             </div>
           )}
@@ -200,19 +210,29 @@ function AppContent() {
                 isTopbarOpen={isTopbarOpen}
                 initialTab={currentTabData?.initialTab}
                 hostConfig={currentTabData?.hostConfig}
+                rightSidebarOpen={rightSidebarOpen}
+                rightSidebarWidth={rightSidebarWidth}
               />
             </div>
           )}
 
           {showAdmin && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <AdminSettings isTopbarOpen={isTopbarOpen} />
+              <AdminSettings
+                isTopbarOpen={isTopbarOpen}
+                rightSidebarOpen={rightSidebarOpen}
+                rightSidebarWidth={rightSidebarWidth}
+              />
             </div>
           )}
 
           {showProfile && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-auto">
-              <UserProfile isTopbarOpen={isTopbarOpen} />
+              <UserProfile
+                isTopbarOpen={isTopbarOpen}
+                rightSidebarOpen={rightSidebarOpen}
+                rightSidebarWidth={rightSidebarWidth}
+              />
             </div>
           )}
 
@@ -220,6 +240,10 @@ function AppContent() {
             isTopbarOpen={isTopbarOpen}
             setIsTopbarOpen={setIsTopbarOpen}
             onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+            onRightSidebarStateChange={(isOpen, width) => {
+              setRightSidebarOpen(isOpen);
+              setRightSidebarWidth(width);
+            }}
           />
         </LeftSidebar>
       )}
@@ -227,51 +251,69 @@ function AppContent() {
       {isTransitioning && (
         <div
           className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-700 ${
-            transitionPhase === 'fadeOut' ? 'opacity-100' : 'opacity-0'
+            transitionPhase === "fadeOut" ? "opacity-100" : "opacity-0"
           }`}
         >
-          {transitionPhase === 'fadeOut' && (
+          {transitionPhase === "fadeOut" && (
             <>
               <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-                <div className="absolute w-0 h-0 bg-primary/10 rounded-full"
-                     style={{
-                       animation: 'ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-                       animationDelay: '0ms'
-                     }}
+                <div
+                  className="absolute w-0 h-0 bg-primary/10 rounded-full"
+                  style={{
+                    animation:
+                      "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                    animationDelay: "0ms",
+                  }}
                 />
-                <div className="absolute w-0 h-0 bg-primary/7 rounded-full"
-                     style={{
-                       animation: 'ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-                       animationDelay: '200ms'
-                     }}
+                <div
+                  className="absolute w-0 h-0 bg-primary/7 rounded-full"
+                  style={{
+                    animation:
+                      "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                    animationDelay: "200ms",
+                  }}
                 />
-                <div className="absolute w-0 h-0 bg-primary/5 rounded-full"
-                     style={{
-                       animation: 'ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-                       animationDelay: '400ms'
-                     }}
+                <div
+                  className="absolute w-0 h-0 bg-primary/5 rounded-full"
+                  style={{
+                    animation:
+                      "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                    animationDelay: "400ms",
+                  }}
                 />
-                <div className="absolute w-0 h-0 bg-primary/3 rounded-full"
-                     style={{
-                       animation: 'ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-                       animationDelay: '600ms'
-                     }}
+                <div
+                  className="absolute w-0 h-0 bg-primary/3 rounded-full"
+                  style={{
+                    animation:
+                      "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                    animationDelay: "600ms",
+                  }}
                 />
-                <div className="relative z-10 text-center"
-                     style={{
-                       animation: 'logoFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards'
-                     }}>
-                  <div className="text-7xl font-bold tracking-wider"
-                       style={{
-                         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                         animation: 'logoGlow 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards'
-                       }}>
+                <div
+                  className="relative z-10 text-center"
+                  style={{
+                    animation:
+                      "logoFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                  }}
+                >
+                  <div
+                    className="text-7xl font-bold tracking-wider"
+                    style={{
+                      fontFamily:
+                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                      animation:
+                        "logoGlow 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                    }}
+                  >
                     TERMIX
                   </div>
-                  <div className="text-sm text-muted-foreground mt-3 tracking-widest"
-                       style={{
-                         animation: 'subtitleFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards'
-                       }}>
+                  <div
+                    className="text-sm text-muted-foreground mt-3 tracking-widest"
+                    style={{
+                      animation:
+                        "subtitleFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                    }}
+                  >
                     SSH TERMINAL MANAGER
                   </div>
                 </div>

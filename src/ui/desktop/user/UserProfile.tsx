@@ -26,6 +26,8 @@ import { useSidebar } from "@/components/ui/sidebar.tsx";
 
 interface UserProfileProps {
   isTopbarOpen?: boolean;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
 }
 
 async function handleLogout() {
@@ -68,7 +70,11 @@ async function handleLogout() {
   }
 }
 
-export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
+export function UserProfile({
+  isTopbarOpen = true,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
+}: UserProfileProps) {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
   const [userInfo, setUserInfo] = useState<{
@@ -156,7 +162,7 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
   const bottomMarginPx = 8;
   const wrapperStyle: React.CSSProperties = {
     marginLeft: leftMarginPx,
-    marginRight: 17,
+    marginRight: rightSidebarOpen ? rightSidebarWidth + 17 : 17,
     marginTop: topMarginPx,
     marginBottom: bottomMarginPx,
     height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,

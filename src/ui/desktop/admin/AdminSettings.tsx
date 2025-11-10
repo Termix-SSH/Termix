@@ -59,10 +59,14 @@ import {
 
 interface AdminSettingsProps {
   isTopbarOpen?: boolean;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
 }
 
 export function AdminSettings({
   isTopbarOpen = true,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
 }: AdminSettingsProps): React.ReactElement {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
@@ -637,7 +641,7 @@ export function AdminSettings({
   const bottomMarginPx = 8;
   const wrapperStyle: React.CSSProperties = {
     marginLeft: leftMarginPx,
-    marginRight: 17,
+    marginRight: rightSidebarOpen ? rightSidebarWidth + 17 : 17,
     marginTop: topMarginPx,
     marginBottom: bottomMarginPx,
     height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,

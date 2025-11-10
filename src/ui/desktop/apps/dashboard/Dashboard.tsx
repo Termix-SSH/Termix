@@ -50,6 +50,8 @@ interface DashboardProps {
     userId: string | null;
   }) => void;
   isTopbarOpen: boolean;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
 }
 
 export function Dashboard({
@@ -58,6 +60,8 @@ export function Dashboard({
   onAuthSuccess,
   isTopbarOpen,
   onSelectView,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
 }: DashboardProps): React.ReactElement {
   const { t } = useTranslation();
   const [loggedIn, setLoggedIn] = useState(isAuthenticated);
@@ -97,6 +101,7 @@ export function Dashboard({
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
+  const rightMarginPx = rightSidebarOpen ? rightSidebarWidth + 17 : 17;
   const bottomMarginPx = 8;
 
   useEffect(() => {
@@ -336,7 +341,7 @@ export function Dashboard({
           className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden flex"
           style={{
             marginLeft: leftMarginPx,
-            marginRight: 17,
+            marginRight: rightMarginPx,
             marginTop: topMarginPx,
             marginBottom: bottomMarginPx,
             height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,

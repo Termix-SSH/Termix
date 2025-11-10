@@ -371,6 +371,8 @@ export interface HostManagerProps {
   isTopbarOpen?: boolean;
   initialTab?: string;
   hostConfig?: SSHHost;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
 }
 
 export interface SSHManagerHostEditorProps {

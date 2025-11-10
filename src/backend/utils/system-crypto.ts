@@ -111,7 +111,6 @@ class SystemCrypto {
         } else {
         }
       } catch (fileError) {
-        // OK: .env file not found or unreadable, will generate new database key
         databaseLogger.debug(
           ".env file not accessible, will generate new database key",
           {

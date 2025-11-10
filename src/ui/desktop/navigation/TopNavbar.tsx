@@ -2,14 +2,12 @@ import React, { useState } from "react";
 import { flushSync } from "react-dom";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronDown, ChevronUpIcon } from "lucide-react";
+import { ChevronDown, ChevronUpIcon, Hammer } from "lucide-react";
 import { Tab } from "@/ui/desktop/navigation/tabs/Tab.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
-import { SnippetsSidebar } from "@/ui/desktop/apps/terminal/SnippetsSidebar.tsx";
-import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
-import { ToolsMenu } from "@/ui/desktop/apps/tools/ToolsMenu.tsx";
+import { SSHUtilitySidebar } from "@/ui/desktop/apps/tools/SSHUtilitySidebar.tsx";
 
 interface TabData {
   id: number;
@@ -27,12 +25,14 @@ interface TopNavbarProps {
   isTopbarOpen: boolean;
   setIsTopbarOpen: (open: boolean) => void;
   onOpenCommandPalette: () => void;
+  onRightSidebarStateChange?: (isOpen: boolean, width: number) => void;
 }
 
 export function TopNavbar({
   isTopbarOpen,
   setIsTopbarOpen,
   onOpenCommandPalette,
+  onRightSidebarStateChange,
 }: TopNavbarProps): React.ReactElement {
   const { state } = useSidebar();
   const {
@@ -56,8 +56,25 @@ export function TopNavbar({
     state === "collapsed" ? "26px" : "calc(var(--sidebar-width) + 8px)";
   const { t } = useTranslation();
 
-  const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
-  const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(false);
+  const [toolsSidebarOpen, setToolsSidebarOpen] = useState(false);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(() => {
+    const saved = localStorage.getItem("rightSidebarWidth");
+    return saved !== null ? parseInt(saved, 10) : 400;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("rightSidebarWidth", String(rightSidebarWidth));
+  }, [rightSidebarWidth]);
+
+  React.useEffect(() => {
+    if (onRightSidebarStateChange) {
+      onRightSidebarStateChange(toolsSidebarOpen, rightSidebarWidth);
+    }
+  }, [toolsSidebarOpen, rightSidebarWidth, onRightSidebarStateChange]);
+
+  const rightPosition = toolsSidebarOpen
+    ? `${rightSidebarWidth + 17}px`
+    : "17px";
   const [justDroppedTabId, setJustDroppedTabId] = useState<number | null>(null);
   const [isInDropAnimation, setIsInDropAnimation] = useState(false);
   const [dragState, setDragState] = useState<{
@@ -302,7 +319,7 @@ export function TopNavbar({
         style={{
           top: isTopbarOpen ? "0.5rem" : "-3rem",
           left: leftPosition,
-          right: "17px",
+          right: rightPosition,
           backgroundColor: "#18181b",
         }}
       >
@@ -475,11 +492,14 @@ export function TopNavbar({
         <div className="flex items-center justify-center gap-2 flex-1 px-2">
           <TabDropdown />
 
-          <ToolsMenu
-            onOpenSshTools={() => setToolsSheetOpen(true)}
-            onOpenSnippets={() => setSnippetsSidebarOpen(true)}
-            onOpenCommandPalette={onOpenCommandPalette}
-          />
+          <Button
+            variant="outline"
+            onClick={() => setToolsSidebarOpen(!toolsSidebarOpen)}
+            className="w-[30px] h-[30px] border-dark-border"
+            title={t("nav.tools")}
+          >
+            <Hammer className="h-4 w-4" />
+          </Button>
 
           <Button
             variant="outline"
@@ -497,7 +517,7 @@ export function TopNavbar({
           className="fixed top-0 cursor-pointer flex items-center justify-center rounded-bl-md rounded-br-md"
           style={{
             left: leftPosition,
-            right: "17px",
+            right: rightPosition,
             height: "10px",
             zIndex: 9999,
             backgroundColor: "#18181b",
@@ -509,15 +529,12 @@ export function TopNavbar({
         </div>
       )}
 
-      <SSHToolsSidebar
-        isOpen={toolsSheetOpen}
-        onClose={() => setToolsSheetOpen(false)}
-      />
-
-      <SnippetsSidebar
-        isOpen={snippetsSidebarOpen}
-        onClose={() => setSnippetsSidebarOpen(false)}
-        onExecute={handleSnippetExecute}
+      <SSHUtilitySidebar
+        isOpen={toolsSidebarOpen}
+        onClose={() => setToolsSidebarOpen(false)}
+        onSnippetExecute={handleSnippetExecute}
+        sidebarWidth={rightSidebarWidth}
+        setSidebarWidth={setRightSidebarWidth}
       />
     </div>
   );

@@ -18,6 +18,8 @@ export function HostManager({
   isTopbarOpen,
   initialTab = "host_viewer",
   hostConfig,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
 }: HostManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -90,7 +92,7 @@ export function HostManager({
           className="bg-dark-bg text-white p-4 pt-0 rounded-lg border-2 border-dark-border flex flex-col min-h-0 overflow-hidden"
           style={{
             marginLeft: leftMarginPx,
-            marginRight: 17,
+            marginRight: rightSidebarOpen ? rightSidebarWidth + 17 : 17,
             marginTop: topMarginPx,
             marginBottom: bottomMarginPx,
             height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
