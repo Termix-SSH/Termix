@@ -340,7 +340,7 @@ export function TopNavbar({
                 isSplitScreenActive);
             const isHome = tab.type === "home";
             const disableClose =
-              (isSplitScreenActive && isActive) || isSplit || isHome;
+              (isSplitScreenActive && isActive) || isHome;
 
             const isDraggingThisTab = dragState.draggedIndex === index;
             const isTheDraggedTab = tab.id === dragState.draggedId;
