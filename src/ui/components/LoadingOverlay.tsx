@@ -20,16 +20,22 @@ export function LoadingOverlay({
 }: LoadingOverlayProps) {
   const [isShowing, setIsShowing] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
-  const [animationType, setAnimationType] = useState<'glitch' | 'breathe' | 'typewriter' | 'scanner' | 'pulse'>('glitch');
+  const [animationType, setAnimationType] = useState<
+    "glitch" | "breathe" | "typewriter" | "scanner" | "pulse"
+  >("glitch");
   const showStartTimeRef = useRef<number | null>(null);
   const minDurationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (visible) {
       // Randomly choose animation type from 5 options
-      const animations: ('glitch' | 'breathe' | 'typewriter' | 'scanner' | 'pulse')[] = [
-        'glitch', 'breathe', 'typewriter', 'scanner', 'pulse'
-      ];
+      const animations: (
+        | "glitch"
+        | "breathe"
+        | "typewriter"
+        | "scanner"
+        | "pulse"
+      )[] = ["glitch", "breathe", "typewriter", "scanner", "pulse"];
       const randomIndex = Math.floor(Math.random() * 5);
       setAnimationType(animations[randomIndex]);
 
@@ -448,7 +454,96 @@ export function LoadingOverlay({
             }
           }
 
-          /* Breathe Animation Styles */
+          /* Enhanced Glitch Fullscreen Effects */
+          @keyframes rgb-split-bg {
+            0%, 100% {
+              transform: translate(0, 0);
+            }
+            33% {
+              transform: translate(-10px, 5px);
+            }
+            66% {
+              transform: translate(10px, -5px);
+            }
+          }
+
+          @keyframes signal-distort {
+            0%, 100% {
+              clip-path: inset(0 0 0 0);
+            }
+            10% {
+              clip-path: inset(20% 0 0 0);
+            }
+            20% {
+              clip-path: inset(0 0 30% 0);
+            }
+            30% {
+              clip-path: inset(40% 0 0 0);
+            }
+            40% {
+              clip-path: inset(0 0 50% 0);
+            }
+            50% {
+              clip-path: inset(0 0 0 0);
+            }
+          }
+
+          .glitch-fullscreen {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            background: transparent;
+          }
+
+          .rgb-split-layers {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+          }
+
+          .rgb-layer {
+            position: absolute;
+            inset: 0;
+            mix-blend-mode: screen;
+            animation: rgb-split-bg 0.5s steps(1, end) infinite;
+          }
+
+          .rgb-layer.red {
+            background: radial-gradient(circle at 30% 40%, rgba(255, 0, 100, 0.15) 0%, transparent 50%);
+            animation-delay: 0s;
+          }
+
+          .rgb-layer.green {
+            background: radial-gradient(circle at 70% 60%, rgba(0, 255, 100, 0.15) 0%, transparent 50%);
+            animation-delay: 0.1s;
+          }
+
+          .rgb-layer.blue {
+            background: radial-gradient(circle at 50% 50%, rgba(0, 100, 255, 0.15) 0%, transparent 50%);
+            animation-delay: 0.2s;
+          }
+
+          .signal-bars {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            animation: signal-distort 4s steps(1, end) infinite;
+          }
+
+          .signal-bar {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            animation: signal-distort 3s steps(1, end) infinite;
+          }
+
+          .signal-bar:nth-child(1) { top: 20%; animation-delay: 0s; }
+          .signal-bar:nth-child(2) { top: 40%; animation-delay: 0.5s; }
+          .signal-bar:nth-child(3) { top: 60%; animation-delay: 1s; }
+          .signal-bar:nth-child(4) { top: 80%; animation-delay: 1.5s; }
+
+          /* Breathe Animation Styles - Elegant Dream Theme */
           @keyframes breathe-glow {
             0%, 100% {
               text-shadow:
@@ -470,6 +565,88 @@ export function LoadingOverlay({
               filter: brightness(1.3);
               transform: scale(1.05);
             }
+          }
+
+          @keyframes float-particle {
+            0%, 100% {
+              transform: translate(0, 0) scale(1);
+              opacity: 0.3;
+            }
+            25% {
+              transform: translate(var(--dx1), var(--dy1)) scale(1.2);
+              opacity: 0.6;
+            }
+            50% {
+              transform: translate(var(--dx2), var(--dy2)) scale(0.8);
+              opacity: 0.4;
+            }
+            75% {
+              transform: translate(var(--dx3), var(--dy3)) scale(1.1);
+              opacity: 0.5;
+            }
+          }
+
+          @keyframes bg-gradient-shift {
+            0%, 100% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+          }
+
+          .breathe-fullscreen {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            background: radial-gradient(ellipse at 30% 40%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 60%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                        radial-gradient(ellipse at 50% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 60%);
+            background-size: 200% 200%;
+            animation: bg-gradient-shift 10s ease-in-out infinite;
+          }
+
+          .breathe-particles-field {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+          }
+
+          .float-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float-particle 12s ease-in-out infinite;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+          }
+
+          .float-particle:nth-child(1) { left: 10%; top: 20%; --dx1: 60px; --dy1: -80px; --dx2: -40px; --dy2: 60px; --dx3: 20px; --dy3: -30px; animation-delay: 0s; }
+          .float-particle:nth-child(2) { left: 20%; top: 60%; --dx1: -50px; --dy1: -60px; --dx2: 70px; --dy2: 40px; --dx3: -30px; --dy3: -50px; animation-delay: -2s; }
+          .float-particle:nth-child(3) { left: 80%; top: 30%; --dx1: -60px; --dy1: 70px; --dx2: 40px; --dy2: -80px; --dx3: -20px; --dy3: 40px; animation-delay: -4s; }
+          .float-particle:nth-child(4) { left: 70%; top: 70%; --dx1: 50px; --dy1: 60px; --dx2: -60px; --dy2: -40px; --dx3: 30px; --dy3: 50px; animation-delay: -6s; }
+          .float-particle:nth-child(5) { left: 40%; top: 15%; --dx1: -70px; --dy1: 50px; --dx2: 60px; --dy2: -60px; --dx3: -40px; --dy3: 30px; animation-delay: -1s; }
+          .float-particle:nth-child(6) { left: 60%; top: 85%; --dx1: 40px; --dy1: -70px; --dx2: -50px; --dy2: 50px; --dx3: 60px; --dy3: -40px; animation-delay: -3s; }
+          .float-particle:nth-child(7) { left: 15%; top: 80%; --dx1: 70px; --dy1: -50px; --dx2: -60px; --dy2: 70px; --dx3: 40px; --dy3: -60px; animation-delay: -5s; }
+          .float-particle:nth-child(8) { left: 85%; top: 50%; --dx1: -40px; --dy1: 60px; --dx2: 50px; --dy2: -50px; --dx3: -70px; --dy3: 40px; animation-delay: -7s; }
+          .float-particle:nth-child(9) { left: 50%; top: 10%; --dx1: 30px; --dy1: 80px; --dx2: -70px; --dy2: -30px; --dx3: 50px; --dy3: 60px; animation-delay: -8s; }
+          .float-particle:nth-child(10) { left: 30%; top: 90%; --dx1: -80px; --dy1: -40px; --dx2: 60px; --dy2: 60px; --dx3: -50px; --dy3: -70px; animation-delay: -9s; }
+          .float-particle:nth-child(11) { left: 90%; top: 80%; --dx1: 60px; --dy1: 40px; --dx2: -80px; --dy2: -60px; --dx3: 70px; --dy3: 50px; animation-delay: -10s; }
+          .float-particle:nth-child(12) { left: 5%; top: 40%; --dx1: -50px; --dy1: -70px; --dx2: 80px; --dy2: 50px; --dx3: -60px; --dy3: -80px; animation-delay: -11s; }
+
+          .float-particle.large {
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.6) 0%, transparent 70%);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+          }
+
+          .float-particle.small {
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.7) 0%, transparent 70%);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
           }
 
           @keyframes letter-appear {
@@ -640,7 +817,7 @@ export function LoadingOverlay({
           .particle:nth-child(7) { left: 50%; top: 50%; --tx: -100px; --ty: 0px; animation-delay: 0.75s; }
           .particle:nth-child(8) { left: 50%; top: 50%; --tx: 100px; --ty: 0px; animation-delay: 1.05s; }
 
-          /* Typewriter Animation Styles */
+          /* Typewriter Animation Styles - Retro Terminal Theme */
           @keyframes type-letter {
             0% {
               opacity: 0;
@@ -655,21 +832,135 @@ export function LoadingOverlay({
           @keyframes cursor-blink {
             0%, 49% {
               opacity: 1;
-              background-color: rgba(59, 130, 246, 1);
+              background-color: rgba(0, 255, 0, 1);
             }
             50%, 100% {
               opacity: 0;
-              background-color: rgba(59, 130, 246, 0);
+              background-color: rgba(0, 255, 0, 0);
             }
           }
 
+          @keyframes char-rain {
+            0% {
+              transform: translateY(-20px);
+              opacity: 0;
+            }
+            10% {
+              opacity: 0.7;
+            }
+            90% {
+              opacity: 0.3;
+            }
+            100% {
+              transform: translateY(100vh);
+              opacity: 0;
+            }
+          }
+
+          @keyframes crt-scan {
+            0% {
+              top: 0;
+            }
+            100% {
+              top: 100%;
+            }
+          }
+
+          @keyframes cursor-trail {
+            0% {
+              transform: translate(0, 0);
+              opacity: 0.6;
+            }
+            100% {
+              transform: translate(var(--trail-x), var(--trail-y));
+              opacity: 0;
+            }
+          }
+
+          .typewriter-fullscreen {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            background:
+              linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 20, 0, 0.05) 50%),
+              linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.03));
+            background-size: 100% 4px, 3px 100%;
+          }
+
+          .terminal-chars-rain {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            color: rgba(0, 255, 0, 0.4);
+          }
+
+          .char-column {
+            position: absolute;
+            top: -50px;
+            animation: char-rain linear infinite;
+            text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+            white-space: pre;
+          }
+
+          .char-column:nth-child(1) { left: 8%; animation-duration: 6s; animation-delay: 0s; }
+          .char-column:nth-child(2) { left: 18%; animation-duration: 8s; animation-delay: -1s; }
+          .char-column:nth-child(3) { left: 28%; animation-duration: 7s; animation-delay: -2s; }
+          .char-column:nth-child(4) { left: 38%; animation-duration: 9s; animation-delay: -0.5s; }
+          .char-column:nth-child(5) { left: 48%; animation-duration: 6.5s; animation-delay: -1.5s; }
+          .char-column:nth-child(6) { left: 58%; animation-duration: 8.5s; animation-delay: -3s; }
+          .char-column:nth-child(7) { left: 68%; animation-duration: 7.5s; animation-delay: -2.5s; }
+          .char-column:nth-child(8) { left: 78%; animation-duration: 9.5s; animation-delay: -1.8s; }
+          .char-column:nth-child(9) { left: 88%; animation-duration: 6.8s; animation-delay: -0.8s; }
+
+          .crt-scanline {
+            position: absolute;
+            width: 100%;
+            height: 100px;
+            left: 0;
+            top: 0;
+            background: linear-gradient(
+              to bottom,
+              transparent 0%,
+              rgba(0, 255, 0, 0.03) 50%,
+              transparent 100%
+            );
+            animation: crt-scan 6s linear infinite;
+            pointer-events: none;
+          }
+
+          .cursor-trails {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+          }
+
+          .cursor-trail {
+            position: absolute;
+            width: 3px;
+            height: 20px;
+            background: rgba(0, 255, 0, 0.6);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            animation: cursor-trail 3s ease-out infinite;
+          }
+
+          .cursor-trail:nth-child(1) { left: 20%; top: 30%; --trail-x: 200px; --trail-y: -150px; animation-delay: 0s; }
+          .cursor-trail:nth-child(2) { left: 60%; top: 70%; --trail-x: -180px; --trail-y: 120px; animation-delay: 1s; }
+          .cursor-trail:nth-child(3) { left: 80%; top: 20%; --trail-x: -220px; --trail-y: 180px; animation-delay: 2s; }
+          .cursor-trail:nth-child(4) { left: 40%; top: 80%; --trail-x: 150px; --trail-y: -200px; animation-delay: 0.5s; }
+          .cursor-trail:nth-child(5) { left: 70%; top: 50%; --trail-x: -160px; --trail-y: -140px; animation-delay: 1.5s; }
+
           .typewriter-container {
             position: relative;
+            z-index: 10;
           }
 
           .typewriter-text {
-            color: #fff;
+            color: #0f0;
             display: inline-flex;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+            filter: drop-shadow(0 0 5px rgba(0, 255, 0, 0.4));
           }
 
           .typewriter-text .type-letter {
@@ -690,12 +981,13 @@ export function LoadingOverlay({
             width: 3px;
             height: 1em;
             margin-left: 4px;
-            background-color: rgba(59, 130, 246, 1);
+            background-color: rgba(0, 255, 0, 1);
             animation: cursor-blink 1s infinite;
             animation-delay: 0.9s;
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
           }
 
-          /* Scanner Animation Styles */
+          /* Scanner Animation Styles - Matrix/Hacker Theme */
           @keyframes vertical-scan {
             0% {
               top: -20%;
@@ -705,105 +997,179 @@ export function LoadingOverlay({
             }
           }
 
-          @keyframes horizontal-scan {
+          @keyframes code-fall {
             0% {
-              left: -20%;
+              transform: translateY(-100%);
+              opacity: 0;
+            }
+            10% {
+              opacity: 1;
+            }
+            90% {
+              opacity: 1;
             }
             100% {
-              left: 120%;
+              transform: translateY(100vh);
+              opacity: 0;
             }
           }
 
           @keyframes scanner-glow {
             0%, 100% {
               text-shadow:
-                0 0 10px rgba(0, 255, 255, 0.3),
-                0 0 20px rgba(0, 255, 255, 0.2);
+                0 0 20px rgba(0, 255, 0, 0.6),
+                0 0 40px rgba(0, 255, 0, 0.4),
+                0 0 60px rgba(0, 255, 0, 0.2);
+              color: #0f0;
             }
             50% {
               text-shadow:
-                0 0 30px rgba(0, 255, 255, 1),
-                0 0 60px rgba(0, 255, 255, 0.8),
-                0 0 90px rgba(0, 255, 255, 0.6),
-                0 0 120px rgba(0, 255, 255, 0.4);
+                0 0 40px rgba(0, 255, 0, 1),
+                0 0 80px rgba(0, 255, 0, 0.8),
+                0 0 120px rgba(0, 255, 0, 0.6),
+                0 0 160px rgba(0, 255, 0, 0.4);
+              color: #0ff;
             }
+          }
+
+          @keyframes code-flicker {
+            0%, 100% {
+              opacity: 0.05;
+            }
+            50% {
+              opacity: 0.15;
+            }
+          }
+
+          .scanner-fullscreen {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, rgba(0, 20, 0, 0.3) 0%, rgba(0, 0, 0, 0.95) 100%);
           }
 
           .scanner-container {
             position: relative;
-            overflow: hidden;
+            overflow: visible;
+            z-index: 10;
           }
 
           .scanner-text {
-            color: #fff;
-            animation: scanner-glow 3s ease-in-out infinite;
+            color: #0f0;
+            animation: scanner-glow 2s ease-in-out infinite;
             position: relative;
-            z-index: 1;
+            z-index: 10;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.8));
           }
 
+          /* Matrix digital rain */
+          .matrix-rain {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+          }
+
+          .matrix-column {
+            position: absolute;
+            top: 0;
+            width: 20px;
+            height: 100%;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #0f0;
+            opacity: 0.6;
+            animation: code-fall linear infinite;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
+            white-space: pre;
+            line-height: 20px;
+          }
+
+          /* Stagger the columns */
+          .matrix-column:nth-child(1) { left: 5%; animation-duration: 8s; animation-delay: 0s; }
+          .matrix-column:nth-child(2) { left: 15%; animation-duration: 10s; animation-delay: -2s; }
+          .matrix-column:nth-child(3) { left: 25%; animation-duration: 7s; animation-delay: -4s; }
+          .matrix-column:nth-child(4) { left: 35%; animation-duration: 9s; animation-delay: -1s; }
+          .matrix-column:nth-child(5) { left: 45%; animation-duration: 11s; animation-delay: -3s; }
+          .matrix-column:nth-child(6) { left: 55%; animation-duration: 8s; animation-delay: -5s; }
+          .matrix-column:nth-child(7) { left: 65%; animation-duration: 10s; animation-delay: -2.5s; }
+          .matrix-column:nth-child(8) { left: 75%; animation-duration: 9s; animation-delay: -4.5s; }
+          .matrix-column:nth-child(9) { left: 85%; animation-duration: 7s; animation-delay: -1.5s; }
+          .matrix-column:nth-child(10) { left: 95%; animation-duration: 10s; animation-delay: -3.5s; }
+
+          /* Powerful scan beam */
           .vertical-scan-line {
             position: absolute;
             width: 100%;
-            height: 80px;
+            height: 150px;
             left: 0;
             background: linear-gradient(
               to bottom,
               transparent 0%,
-              rgba(0, 255, 255, 0.1) 20%,
-              rgba(0, 255, 255, 0.8) 50%,
-              rgba(0, 255, 255, 0.1) 80%,
+              rgba(0, 255, 0, 0.05) 20%,
+              rgba(0, 255, 255, 0.4) 45%,
+              rgba(0, 255, 255, 1) 50%,
+              rgba(0, 255, 255, 0.4) 55%,
+              rgba(0, 255, 0, 0.05) 80%,
               transparent 100%
             );
-            animation: vertical-scan 3s linear infinite;
-            z-index: 2;
+            animation: vertical-scan 4s linear infinite;
+            z-index: 5;
             pointer-events: none;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+            box-shadow:
+              0 0 50px rgba(0, 255, 255, 0.8),
+              0 0 100px rgba(0, 255, 255, 0.4);
+            filter: blur(1px);
           }
 
-          .vertical-scan-line:nth-child(2) {
-            animation-delay: 1.5s;
+          .vertical-scan-line::before {
+            content: '';
+            position: absolute;
+            inset: 0;
             background: linear-gradient(
               to bottom,
-              transparent 0%,
-              rgba(255, 0, 255, 0.1) 20%,
-              rgba(255, 0, 255, 0.6) 50%,
-              rgba(255, 0, 255, 0.1) 80%,
-              transparent 100%
+              transparent 48%,
+              rgba(255, 255, 255, 0.8) 50%,
+              transparent 52%
             );
-            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
           }
 
-          .horizontal-scan-line {
-            position: absolute;
-            width: 80px;
-            height: 100%;
-            top: 0;
-            background: linear-gradient(
-              to right,
-              transparent 0%,
-              rgba(0, 255, 255, 0.1) 20%,
-              rgba(0, 255, 255, 0.5) 50%,
-              rgba(0, 255, 255, 0.1) 80%,
-              transparent 100%
-            );
-            animation: horizontal-scan 2.5s linear infinite;
-            z-index: 2;
-            pointer-events: none;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
-          }
-
+          /* Dense grid */
           .scanner-grid {
             position: absolute;
-            inset: -40px;
+            inset: 0;
             background-image:
-              linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
-            background-size: 20px 20px;
-            opacity: 0.3;
+              linear-gradient(rgba(0, 255, 0, 0.15) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0, 255, 0, 0.15) 1px, transparent 1px);
+            background-size: 15px 15px;
+            opacity: 0.4;
             pointer-events: none;
+            animation: code-flicker 3s ease-in-out infinite;
           }
 
-          /* Pulse Ripple Animation Styles */
+          /* Random code snippets */
+          .code-fragments {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: rgba(0, 255, 0, 0.3);
+          }
+
+          .code-fragment {
+            position: absolute;
+            animation: code-flicker 2s ease-in-out infinite;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+          }
+
+          .code-fragment:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+          .code-fragment:nth-child(2) { top: 20%; right: 15%; animation-delay: 0.5s; }
+          .code-fragment:nth-child(3) { top: 40%; left: 20%; animation-delay: 1s; }
+          .code-fragment:nth-child(4) { bottom: 30%; right: 25%; animation-delay: 1.5s; }
+          .code-fragment:nth-child(5) { bottom: 15%; left: 30%; animation-delay: 0.8s; }
+
+          /* Pulse Ripple Animation Styles - Sonar/Radar Theme */
           @keyframes wave-expand {
             0% {
               width: 80px;
@@ -845,6 +1211,130 @@ export function LoadingOverlay({
               transform: rotate(360deg);
             }
           }
+
+          @keyframes target-blink {
+            0%, 100% {
+              opacity: 0.3;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.2);
+            }
+          }
+
+          @keyframes sonar-pulse {
+            0% {
+              transform: scale(0.5);
+              opacity: 0;
+            }
+            50% {
+              opacity: 0.8;
+            }
+            100% {
+              transform: scale(2);
+              opacity: 0;
+            }
+          }
+
+          .pulse-fullscreen {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at center, rgba(0, 30, 60, 0.3) 0%, rgba(0, 0, 0, 0.95) 100%);
+          }
+
+          .radar-grid {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+          }
+
+          .radar-circle {
+            position: absolute;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            opacity: 0.4;
+          }
+
+          .radar-circle:nth-child(1) { width: 200px; height: 200px; }
+          .radar-circle:nth-child(2) { width: 350px; height: 350px; }
+          .radar-circle:nth-child(3) { width: 500px; height: 500px; }
+          .radar-circle:nth-child(4) { width: 650px; height: 650px; }
+          .radar-circle:nth-child(5) { width: 800px; height: 800px; }
+
+          .radar-lines {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+          }
+
+          .radar-line {
+            position: absolute;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent 45%, rgba(59, 130, 246, 0.15) 50%, transparent 55%);
+          }
+
+          .radar-line:nth-child(1) { transform: rotate(0deg); }
+          .radar-line:nth-child(2) { transform: rotate(45deg); }
+          .radar-line:nth-child(3) { transform: rotate(90deg); }
+          .radar-line:nth-child(4) { transform: rotate(135deg); }
+
+          .sonar-waves {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+          }
+
+          .sonar-wave {
+            position: absolute;
+            border: 2px solid rgba(59, 130, 246, 0.6);
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            animation: sonar-pulse 3s ease-out infinite;
+          }
+
+          .sonar-wave:nth-child(1) { animation-delay: 0s; }
+          .sonar-wave:nth-child(2) { animation-delay: 0.6s; }
+          .sonar-wave:nth-child(3) { animation-delay: 1.2s; }
+          .sonar-wave:nth-child(4) { animation-delay: 1.8s; }
+          .sonar-wave:nth-child(5) { animation-delay: 2.4s; }
+
+          .radar-targets {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+          }
+
+          .radar-target {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            animation: target-blink 2s ease-in-out infinite;
+          }
+
+          .radar-target:nth-child(1) { left: 20%; top: 25%; animation-delay: 0s; }
+          .radar-target:nth-child(2) { left: 75%; top: 35%; animation-delay: 0.5s; }
+          .radar-target:nth-child(3) { left: 45%; top: 70%; animation-delay: 1s; }
+          .radar-target:nth-child(4) { left: 65%; top: 60%; animation-delay: 1.5s; }
+          .radar-target:nth-child(5) { left: 30%; top: 80%; animation-delay: 0.3s; }
+          .radar-target:nth-child(6) { left: 85%; top: 75%; animation-delay: 0.8s; }
+          .radar-target:nth-child(7) { left: 15%; top: 55%; animation-delay: 1.3s; }
+          .radar-target:nth-child(8) { left: 55%; top: 20%; animation-delay: 0.6s; }
 
           .pulse-container {
             position: relative;
@@ -932,14 +1422,32 @@ export function LoadingOverlay({
         className={cn(
           "absolute inset-0 flex items-center justify-center z-50 transition-opacity duration-300",
           isFadingOut ? "opacity-0" : "opacity-100",
-          className
+          className,
         )}
         style={{ backgroundColor: backgroundColor || "rgba(0, 0, 0, 0.92)" }}
       >
-        {animationType === 'glitch' ? (
+        {animationType === "glitch" ? (
           <>
-            <div className="noise-overlay"></div>
-            <div className="glitch-blocks"></div>
+            {/* Fullscreen Glitch Background */}
+            <div className="glitch-fullscreen">
+              {/* RGB Split Layers */}
+              <div className="rgb-split-layers">
+                <div className="rgb-layer red"></div>
+                <div className="rgb-layer green"></div>
+                <div className="rgb-layer blue"></div>
+              </div>
+
+              {/* Signal Distortion Bars */}
+              <div className="signal-bars">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="signal-bar"></div>
+                ))}
+              </div>
+
+              {/* Original Effects */}
+              <div className="noise-overlay"></div>
+              <div className="glitch-blocks"></div>
+            </div>
 
             <div className="flex flex-col items-center gap-8">
               <div className="glitch-container relative">
@@ -947,8 +1455,10 @@ export function LoadingOverlay({
                 <div
                   className="glitch-text text-6xl font-bold tracking-wider select-none"
                   style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                    textShadow: '0 0 30px rgba(255, 255, 255, 0.3), 0 0 60px rgba(0, 255, 255, 0.2)'
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                    textShadow:
+                      "0 0 30px rgba(255, 255, 255, 0.3), 0 0 60px rgba(0, 255, 255, 0.2)",
                   }}
                 >
                   TERMIX
@@ -959,7 +1469,7 @@ export function LoadingOverlay({
               </div>
 
               {message && (
-                <div className="text-center">
+                <div className="text-center relative z-10">
                   <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
                     {message}
                   </p>
@@ -967,8 +1477,24 @@ export function LoadingOverlay({
               )}
             </div>
           </>
-        ) : animationType === 'breathe' ? (
+        ) : animationType === "breathe" ? (
           <>
+            {/* Fullscreen Elegant Background */}
+            <div className="breathe-fullscreen">
+              {/* Floating Particles Field */}
+              <div className="breathe-particles-field">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "float-particle",
+                      i % 3 === 0 ? "large" : i % 3 === 1 ? "small" : "",
+                    )}
+                  ></div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex flex-col items-center gap-8">
               <div className="breathe-container relative">
                 {/* Pulse rings */}
@@ -1000,7 +1526,8 @@ export function LoadingOverlay({
                 <div
                   className="breathe-text text-6xl font-bold tracking-wider select-none"
                   style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                   }}
                 >
                   <span className="letter">T</span>
@@ -1013,7 +1540,7 @@ export function LoadingOverlay({
               </div>
 
               {message && (
-                <div className="text-center">
+                <div className="text-center relative z-10">
                   <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
                     {message}
                   </p>
@@ -1021,15 +1548,38 @@ export function LoadingOverlay({
               )}
             </div>
           </>
-        ) : animationType === 'typewriter' ? (
+        ) : animationType === "typewriter" ? (
           <>
+            {/* Fullscreen Retro Terminal Background */}
+            <div className="typewriter-fullscreen">
+              {/* ASCII Character Rain */}
+              <div className="terminal-chars-rain">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div key={i} className="char-column">
+                    {`$\n>\n_\n{\n}\n[\n]\n|\n/\n\\\n-\n+\n*\n#\n@\n%`}
+                  </div>
+                ))}
+              </div>
+
+              {/* CRT Scanline */}
+              <div className="crt-scanline"></div>
+
+              {/* Cursor Trails */}
+              <div className="cursor-trails">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="cursor-trail"></div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex flex-col items-center gap-8">
               <div className="typewriter-container relative">
                 {/* TERMIX Typewriter Text */}
                 <div
                   className="typewriter-text text-6xl font-bold tracking-wider select-none"
                   style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                   }}
                 >
                   <span className="type-letter">T</span>
@@ -1043,33 +1593,58 @@ export function LoadingOverlay({
               </div>
 
               {message && (
-                <div className="text-center">
-                  <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
+                <div className="text-center relative z-10">
+                  <p
+                    className="text-sm text-green-400 font-medium tracking-wide"
+                    style={{ textShadow: "0 0 10px rgba(0, 255, 0, 0.6)" }}
+                  >
                     {message}
                   </p>
                 </div>
               )}
             </div>
           </>
-        ) : animationType === 'scanner' ? (
+        ) : animationType === "scanner" ? (
           <>
+            {/* Fullscreen Matrix Background */}
+            <div className="scanner-fullscreen">
+              {/* Grid Background */}
+              <div className="scanner-grid"></div>
+
+              {/* Matrix Digital Rain */}
+              <div className="matrix-rain">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="matrix-column">
+                    {`01\n10\n11\n00\n01\n10\n11\n00\n01\n10\n11\n00\n01\n10\n11\n00\n01\n10\n11\n00`}
+                  </div>
+                ))}
+              </div>
+
+              {/* Random Code Fragments */}
+              <div className="code-fragments">
+                <div className="code-fragment">
+                  {"{"} ssh: 22 {"}"}
+                </div>
+                <div className="code-fragment">
+                  {"<"} connect... {">"}
+                </div>
+                <div className="code-fragment">0x4A3F2B1D</div>
+                <div className="code-fragment">[SCANNING...]</div>
+                <div className="code-fragment">{">"} _</div>
+              </div>
+
+              {/* Powerful Scan Beam */}
+              <div className="vertical-scan-line"></div>
+            </div>
+
             <div className="flex flex-col items-center gap-8">
               <div className="scanner-container relative">
-                {/* Scanner Grid Background */}
-                <div className="scanner-grid"></div>
-
-                {/* Vertical Scan Lines */}
-                <div className="vertical-scan-line"></div>
-                <div className="vertical-scan-line"></div>
-
-                {/* Horizontal Scan Line */}
-                <div className="horizontal-scan-line"></div>
-
                 {/* TERMIX Scanner Text */}
                 <div
                   className="scanner-text text-6xl font-bold tracking-wider select-none"
                   style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                   }}
                 >
                   TERMIX
@@ -1077,8 +1652,11 @@ export function LoadingOverlay({
               </div>
 
               {message && (
-                <div className="text-center">
-                  <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
+                <div className="text-center relative z-10">
+                  <p
+                    className="text-sm text-green-400 font-medium tracking-wide"
+                    style={{ textShadow: "0 0 10px rgba(0, 255, 0, 0.6)" }}
+                  >
                     {message}
                   </p>
                 </div>
@@ -1087,6 +1665,37 @@ export function LoadingOverlay({
           </>
         ) : (
           <>
+            {/* Fullscreen Radar/Sonar Background */}
+            <div className="pulse-fullscreen">
+              {/* Radar Circular Grid */}
+              <div className="radar-grid">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="radar-circle"></div>
+                ))}
+              </div>
+
+              {/* Radar Cross Lines */}
+              <div className="radar-lines">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="radar-line"></div>
+                ))}
+              </div>
+
+              {/* Sonar Pulse Waves */}
+              <div className="sonar-waves">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="sonar-wave"></div>
+                ))}
+              </div>
+
+              {/* Radar Targets (Detection Points) */}
+              <div className="radar-targets">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="radar-target"></div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex flex-col items-center gap-8">
               <div className="pulse-container relative">
                 {/* Wave Rings */}
@@ -1106,7 +1715,8 @@ export function LoadingOverlay({
                 <div
                   className="pulse-text text-6xl font-bold tracking-wider select-none"
                   style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                   }}
                 >
                   TERMIX
@@ -1114,7 +1724,7 @@ export function LoadingOverlay({
               </div>
 
               {message && (
-                <div className="text-center">
+                <div className="text-center relative z-10">
                   <p className="text-sm text-gray-300 font-medium tracking-wide animate-pulse">
                     {message}
                   </p>
