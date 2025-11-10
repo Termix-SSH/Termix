@@ -8,7 +8,7 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
-  recentActivity,
+  sshFolders,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -226,7 +226,6 @@ router.post(
       authMethod,
       authType,
       credentialId,
-      overrideCredentialUsername,
       key,
       keyPassword,
       keyType,
@@ -266,7 +265,6 @@ router.post(
       username,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
-      overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
@@ -326,7 +324,6 @@ router.post(
               : []
             : [],
         pin: !!createdHost.pin,
-        overrideCredentialUsername: !!createdHost.overrideCredentialUsername,
         enableTerminal: !!createdHost.enableTerminal,
         enableTunnel: !!createdHost.enableTunnel,
         tunnelConnections: createdHost.tunnelConnections
@@ -352,27 +349,6 @@ router.post(
           authType: effectiveAuthType,
         },
       );
-
-      try {
-        const fetch = (await import("node-fetch")).default;
-        const token =
-          req.cookies?.jwt || req.headers.authorization?.replace("Bearer ", "");
-        await fetch("http://localhost:30005/refresh", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token && { Cookie: `jwt=${token}` }),
-          },
-        });
-      } catch (refreshError) {
-        sshLogger.warn("Failed to refresh server stats polling", {
-          operation: "stats_refresh_after_create",
-          error:
-            refreshError instanceof Error
-              ? refreshError.message
-              : "Unknown error",
-        });
-      }
 
       res.json(resolvedHost);
     } catch (err) {
@@ -440,7 +416,6 @@ router.put(
       authMethod,
       authType,
       credentialId,
-      overrideCredentialUsername,
       key,
       keyPassword,
       keyType,
@@ -481,7 +456,6 @@ router.put(
       username,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
-      overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
@@ -559,7 +533,6 @@ router.put(
               : []
             : [],
         pin: !!updatedHost.pin,
-        overrideCredentialUsername: !!updatedHost.overrideCredentialUsername,
         enableTerminal: !!updatedHost.enableTerminal,
         enableTunnel: !!updatedHost.enableTunnel,
         tunnelConnections: updatedHost.tunnelConnections
@@ -585,27 +558,6 @@ router.put(
           authType: effectiveAuthType,
         },
       );
-
-      try {
-        const fetch = (await import("node-fetch")).default;
-        const token =
-          req.cookies?.jwt || req.headers.authorization?.replace("Bearer ", "");
-        await fetch("http://localhost:30005/refresh", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token && { Cookie: `jwt=${token}` }),
-          },
-        });
-      } catch (refreshError) {
-        sshLogger.warn("Failed to refresh server stats polling", {
-          operation: "stats_refresh_after_update",
-          error:
-            refreshError instanceof Error
-              ? refreshError.message
-              : "Unknown error",
-        });
-      }
 
       res.json(resolvedHost);
     } catch (err) {
@@ -634,18 +586,6 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
     });
     return res.status(400).json({ error: "Invalid userId" });
   }
-
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
-    sshLogger.warn("User data not unlocked for SSH host fetch", {
-      operation: "host_fetch",
-      userId,
-    });
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
   try {
     const data = await SimpleDBOps.select(
       db.select().from(sshData).where(eq(sshData.userId, userId)),
@@ -664,7 +604,6 @@ router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
                 : []
               : [],
           pin: !!row.pin,
-          overrideCredentialUsername: !!row.overrideCredentialUsername,
           enableTerminal: !!row.enableTerminal,
           enableTunnel: !!row.enableTunnel,
           tunnelConnections: row.tunnelConnections
@@ -711,19 +650,6 @@ router.get(
       });
       return res.status(400).json({ error: "Invalid userId or hostId" });
     }
-
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
-      sshLogger.warn("User data not unlocked for SSH host fetch by ID", {
-        operation: "host_fetch_by_id",
-        hostId: parseInt(hostId),
-        userId,
-      });
-      return res.status(401).json({
-        error: "Session expired - please log in again",
-        code: "SESSION_EXPIRED",
-      });
-    }
-
     try {
       const data = await db
         .select()
@@ -749,7 +675,6 @@ router.get(
               : []
             : [],
         pin: !!host.pin,
-        overrideCredentialUsername: !!host.overrideCredentialUsername,
         enableTerminal: !!host.enableTerminal,
         enableTunnel: !!host.enableTunnel,
         tunnelConnections: host.tunnelConnections
@@ -921,15 +846,6 @@ router.delete(
           and(
             eq(sshCredentialUsage.userId, userId),
             eq(sshCredentialUsage.hostId, numericHostId),
-          ),
-        );
-
-      await db
-        .delete(recentActivity)
-        .where(
-          and(
-            eq(recentActivity.userId, userId),
-            eq(recentActivity.hostId, numericHostId),
           ),
         );
 
@@ -1352,9 +1268,7 @@ async function resolveHostCredentials(
         const credential = credentials[0];
         return {
           ...host,
-          username: host.overrideCredentialUsername
-            ? host.username
-            : credential.username,
+          username: credential.username,
           authType: credential.auth_type || credential.authType,
           password: credential.password,
           key: credential.key,
@@ -1428,6 +1342,17 @@ router.put(
 
       DatabaseSaveTrigger.triggerSave("folder_rename");
 
+      // Also update folder metadata if exists
+      await db
+        .update(sshFolders)
+        .set({
+          name: newName,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(
+          and(eq(sshFolders.userId, userId), eq(sshFolders.name, oldName)),
+        );
+
       res.json({
         message: "Folder renamed successfully",
         updatedHosts: updatedHosts.length,
@@ -1441,6 +1366,151 @@ router.put(
         newName,
       });
       res.status(500).json({ error: "Failed to rename folder" });
+    }
+  },
+);
+
+// Route: Get all folders with metadata (requires JWT)
+// GET /ssh/db/folders
+router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!isNonEmptyString(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+
+  try {
+    const folders = await db
+      .select()
+      .from(sshFolders)
+      .where(eq(sshFolders.userId, userId));
+
+    res.json(folders);
+  } catch (err) {
+    sshLogger.error("Failed to fetch folders", err, {
+      operation: "fetch_folders",
+      userId,
+    });
+    res.status(500).json({ error: "Failed to fetch folders" });
+  }
+});
+
+// Route: Update folder metadata (requires JWT)
+// PUT /ssh/db/folders/metadata
+router.put(
+  "/folders/metadata",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { name, color, icon } = req.body;
+
+    if (!isNonEmptyString(userId) || !name) {
+      return res.status(400).json({ error: "Folder name is required" });
+    }
+
+    try {
+      // Check if folder metadata exists
+      const existing = await db
+        .select()
+        .from(sshFolders)
+        .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)))
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Update existing
+        await db
+          .update(sshFolders)
+          .set({
+            color,
+            icon,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)));
+      } else {
+        // Create new
+        await db.insert(sshFolders).values({
+          userId,
+          name,
+          color,
+          icon,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      DatabaseSaveTrigger.triggerSave("folder_metadata_update");
+
+      res.json({ message: "Folder metadata updated successfully" });
+    } catch (err) {
+      sshLogger.error("Failed to update folder metadata", err, {
+        operation: "update_folder_metadata",
+        userId,
+        name,
+      });
+      res.status(500).json({ error: "Failed to update folder metadata" });
+    }
+  },
+);
+
+// Route: Delete all hosts in folder (requires JWT)
+// DELETE /ssh/db/folders/:name/hosts
+router.delete(
+  "/folders/:name/hosts",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const folderName = req.params.name;
+
+    if (!isNonEmptyString(userId) || !folderName) {
+      return res.status(400).json({ error: "Invalid folder name" });
+    }
+
+    try {
+      // Get all hosts in the folder
+      const hostsToDelete = await db
+        .select()
+        .from(sshData)
+        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+
+      if (hostsToDelete.length === 0) {
+        return res.json({
+          message: "No hosts found in folder",
+          deletedCount: 0,
+        });
+      }
+
+      // Delete all hosts
+      await db
+        .delete(sshData)
+        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+
+      // Delete folder metadata
+      await db
+        .delete(sshFolders)
+        .where(
+          and(eq(sshFolders.userId, userId), eq(sshFolders.name, folderName)),
+        );
+
+      DatabaseSaveTrigger.triggerSave("folder_hosts_delete");
+
+      sshLogger.info("Deleted all hosts in folder", {
+        operation: "delete_folder_hosts",
+        userId,
+        folderName,
+        deletedCount: hostsToDelete.length,
+      });
+
+      res.json({
+        message: "All hosts in folder deleted successfully",
+        deletedCount: hostsToDelete.length,
+      });
+    } catch (err) {
+      sshLogger.error("Failed to delete hosts in folder", err, {
+        operation: "delete_folder_hosts",
+        userId,
+        folderName,
+      });
+      res.status(500).json({ error: "Failed to delete hosts in folder" });
     }
   },
 );
@@ -1533,10 +1603,8 @@ router.post(
           username: hostData.username,
           password: hostData.authType === "password" ? hostData.password : null,
           authType: hostData.authType,
-          credentialId: hostData.credentialId || null,
-          overrideCredentialUsername: hostData.overrideCredentialUsername
-            ? 1
-            : 0,
+          credentialId:
+            hostData.authType === "credential" ? hostData.credentialId : null,
           key: hostData.authType === "key" ? hostData.key : null,
           keyPassword:
             hostData.authType === "key"

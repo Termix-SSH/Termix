@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
+import { PermissionsDialog } from "./components/PermissionsDialog";
+import { CompressDialog } from "./components/CompressDialog";
 import {
   Upload,
   FolderPlus,
@@ -49,6 +51,9 @@ import {
   addFolderShortcut,
   getPinnedFiles,
   logActivity,
+  changeSSHPermissions,
+  extractSSHArchive,
+  compressSSHFiles,
 } from "@/ui/main-axios.ts";
 import type { SidebarItem } from "./FileManagerSidebar";
 
@@ -146,6 +151,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const [createIntent, setCreateIntent] = useState<CreateIntent | null>(null);
   const [editingFile, setEditingFile] = useState<FileItem | null>(null);
+  const [permissionsDialogFile, setPermissionsDialogFile] =
+    useState<FileItem | null>(null);
+  const [compressDialogFiles, setCompressDialogFiles] = useState<FileItem[]>(
+    [],
+  );
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
@@ -1037,6 +1047,82 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     }
   }
 
+  async function handleExtractArchive(file: FileItem) {
+    if (!sshSessionId) return;
+
+    try {
+      await ensureSSHConnection();
+
+      toast.info(t("fileManager.extractingArchive", { name: file.name }));
+
+      await extractSSHArchive(
+        sshSessionId,
+        file.path,
+        undefined,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(
+        t("fileManager.archiveExtractedSuccessfully", { name: file.name }),
+      );
+
+      // Refresh directory to show extracted files
+      handleRefreshDirectory();
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(
+        `${t("fileManager.extractFailed")}: ${err.message || t("fileManager.unknownError")}`,
+      );
+    }
+  }
+
+  function handleOpenCompressDialog(files: FileItem[]) {
+    setCompressDialogFiles(files);
+  }
+
+  async function handleCompress(archiveName: string, format: string) {
+    if (!sshSessionId || compressDialogFiles.length === 0) return;
+
+    try {
+      await ensureSSHConnection();
+
+      const paths = compressDialogFiles.map((f) => f.path);
+      const fileNames = compressDialogFiles.map((f) => f.name);
+
+      toast.info(
+        t("fileManager.compressingFiles", {
+          count: fileNames.length,
+          name: archiveName,
+        }),
+      );
+
+      await compressSSHFiles(
+        sshSessionId,
+        paths,
+        archiveName,
+        format,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(
+        t("fileManager.filesCompressedSuccessfully", {
+          name: archiveName,
+        }),
+      );
+
+      // Refresh directory to show compressed file
+      handleRefreshDirectory();
+      clearSelection();
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(
+        `${t("fileManager.compressFailed")}: ${err.message || t("fileManager.unknownError")}`,
+      );
+    }
+  }
+
   async function handleUndo() {
     if (undoHistory.length === 0) {
       toast.info(t("fileManager.noUndoableActions"));
@@ -1157,6 +1243,34 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   function handleRenameFile(file: FileItem) {
     setEditingFile(file);
+  }
+
+  function handleOpenPermissionsDialog(file: FileItem) {
+    setPermissionsDialogFile(file);
+  }
+
+  async function handleSavePermissions(file: FileItem, permissions: string) {
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    try {
+      await changeSSHPermissions(
+        sshSessionId,
+        file.path,
+        permissions,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(t("fileManager.permissionsChangedSuccessfully"));
+      await handleRefreshDirectory();
+    } catch (error: unknown) {
+      console.error("Failed to change permissions:", error);
+      toast.error(t("fileManager.failedToChangePermissions"));
+      throw error;
+    }
   }
 
   async function ensureSSHConnection() {
@@ -1947,9 +2061,19 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             onAddShortcut={handleAddShortcut}
             isPinned={isPinnedFile}
             currentPath={currentPath}
+            onProperties={handleOpenPermissionsDialog}
+            onExtractArchive={handleExtractArchive}
+            onCompress={handleOpenCompressDialog}
           />
         </div>
       </div>
+
+      <CompressDialog
+        open={compressDialogFiles.length > 0}
+        onOpenChange={(open) => !open && setCompressDialogFiles([])}
+        fileNames={compressDialogFiles.map((f) => f.name)}
+        onCompress={handleCompress}
+      />
 
       <TOTPDialog
         isOpen={totpRequired}
@@ -1972,6 +2096,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           }}
         />
       )}
+
+      <PermissionsDialog
+        file={permissionsDialogFile}
+        open={permissionsDialogFile !== null}
+        onOpenChange={(open) => {
+          if (!open) setPermissionsDialogFile(null);
+        }}
+        onSave={handleSavePermissions}
+      />
     </div>
   );
 }

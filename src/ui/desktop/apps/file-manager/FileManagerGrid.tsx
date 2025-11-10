@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
+import { LoadingOverlay } from "@/ui/components/LoadingOverlay";
 
 interface CreateIntent {
   id: string;
@@ -96,15 +97,33 @@ interface FileManagerGridProps {
   onNewFolder?: () => void;
 }
 
-const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
-  const iconClass = viewMode === "grid" ? "w-8 h-8" : "w-6 h-6";
+const getFileTypeColor = (file: FileItem): string => {
+  const colorEnabled = localStorage.getItem("fileColorCoding") !== "false";
+  if (!colorEnabled) {
+    return "text-muted-foreground";
+  }
 
   if (file.type === "directory") {
-    return <Folder className={`${iconClass} text-muted-foreground`} />;
+    return "text-red-400";
   }
 
   if (file.type === "link") {
-    return <FileSymlink className={`${iconClass} text-muted-foreground`} />;
+    return "text-green-400";
+  }
+
+  return "text-blue-400";
+};
+
+const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
+  const iconClass = viewMode === "grid" ? "w-8 h-8" : "w-6 h-6";
+  const colorClass = getFileTypeColor(file);
+
+  if (file.type === "directory") {
+    return <Folder className={`${iconClass} ${colorClass}`} />;
+  }
+
+  if (file.type === "link") {
+    return <FileSymlink className={`${iconClass} ${colorClass}`} />;
   }
 
   const ext = file.name.split(".").pop()?.toLowerCase();
@@ -113,30 +132,30 @@ const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
     case "txt":
     case "md":
     case "readme":
-      return <FileText className={`${iconClass} text-muted-foreground`} />;
+      return <FileText className={`${iconClass} ${colorClass}`} />;
     case "png":
     case "jpg":
     case "jpeg":
     case "gif":
     case "bmp":
     case "svg":
-      return <FileImage className={`${iconClass} text-muted-foreground`} />;
+      return <FileImage className={`${iconClass} ${colorClass}`} />;
     case "mp4":
     case "avi":
     case "mkv":
     case "mov":
-      return <FileVideo className={`${iconClass} text-muted-foreground`} />;
+      return <FileVideo className={`${iconClass} ${colorClass}`} />;
     case "mp3":
     case "wav":
     case "flac":
     case "ogg":
-      return <FileAudio className={`${iconClass} text-muted-foreground`} />;
+      return <FileAudio className={`${iconClass} ${colorClass}`} />;
     case "zip":
     case "tar":
     case "gz":
     case "rar":
     case "7z":
-      return <Archive className={`${iconClass} text-muted-foreground`} />;
+      return <Archive className={`${iconClass} ${colorClass}`} />;
     case "js":
     case "ts":
     case "jsx":
@@ -150,7 +169,7 @@ const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
     case "rb":
     case "go":
     case "rs":
-      return <Code className={`${iconClass} text-muted-foreground`} />;
+      return <Code className={`${iconClass} ${colorClass}`} />;
     case "json":
     case "xml":
     case "yaml":
@@ -159,9 +178,9 @@ const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
     case "ini":
     case "conf":
     case "config":
-      return <Settings className={`${iconClass} text-muted-foreground`} />;
+      return <Settings className={`${iconClass} ${colorClass}`} />;
     default:
-      return <File className={`${iconClass} text-muted-foreground`} />;
+      return <File className={`${iconClass} ${colorClass}`} />;
   }
 };
 
@@ -853,19 +872,8 @@ export function FileManagerGrid({
     onUndo,
   ]);
 
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-full flex flex-col bg-dark-bg overflow-hidden">
+    <div className="h-full flex flex-col bg-dark-bg overflow-hidden relative">
       <div className="flex-shrink-0 border-b border-dark-border">
         <div className="flex items-center gap-1 p-2 border-b border-dark-border">
           <button
@@ -1051,7 +1059,8 @@ export function FileManagerGrid({
                       "group p-3 rounded-lg cursor-pointer",
                       "transition-all duration-150 ease-out",
                       "hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] border-2 border-transparent",
-                      isSelected && "bg-primary/20 border-primary ring-2 ring-primary/20",
+                      isSelected &&
+                        "bg-primary/20 border-primary ring-2 ring-primary/20",
                       dragState.target?.path === file.path &&
                         "bg-muted border-primary border-dashed relative z-10",
                       dragState.files.some((f) => f.path === file.path) &&
@@ -1312,6 +1321,13 @@ export function FileManagerGrid({
           </div>,
           document.body,
         )}
+
+      <LoadingOverlay
+        visible={isLoading}
+        minDuration={600}
+        message={t("common.loading")}
+        showLogo={true}
+      />
     </div>
   );
 }

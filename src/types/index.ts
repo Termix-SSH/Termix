@@ -64,6 +64,16 @@ export interface SSHHostData {
   terminalConfig?: TerminalConfig;
 }
 
+export interface SSHFolder {
+  id: number;
+  userId: string;
+  name: string;
+  color?: string;
+  icon?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ============================================================================
 // CREDENTIAL TYPES
 // ============================================================================

@@ -10,6 +10,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
+import { Switch } from "@/components/ui/switch.tsx";
 import { User, Shield, AlertCircle } from "lucide-react";
 import { TOTPSetup } from "@/ui/desktop/user/TOTPSetup.tsx";
 import {
@@ -93,6 +94,9 @@ export function UserProfile({
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [fileColorCoding, setFileColorCoding] = useState<boolean>(
+    localStorage.getItem("fileColorCoding") !== "false",
+  );
 
   useEffect(() => {
     fetchUserInfo();
@@ -132,6 +136,13 @@ export function UserProfile({
     if (userInfo) {
       setUserInfo({ ...userInfo, totp_enabled: enabled });
     }
+  };
+
+  const handleFileColorCodingToggle = (enabled: boolean) => {
+    setFileColorCoding(enabled);
+    localStorage.setItem("fileColorCoding", enabled.toString());
+    // Trigger a re-render by dispatching a custom event
+    window.dispatchEvent(new Event("fileColorCodingChanged"));
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -328,6 +339,23 @@ export function UserProfile({
                         </p>
                       </div>
                       <LanguageSwitcher />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-dark-border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("profile.fileColorCoding")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.fileColorCodingDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={fileColorCoding}
+                        onCheckedChange={handleFileColorCodingToggle}
+                      />
                     </div>
                   </div>
 

@@ -4,6 +4,7 @@ import {
   useState,
   useImperativeHandle,
   forwardRef,
+  useCallback,
 } from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
@@ -26,6 +27,11 @@ import {
   TERMINAL_FONTS,
 } from "@/constants/terminal-themes";
 import type { TerminalConfig } from "@/types";
+import { useCommandTracker } from "@/ui/hooks/useCommandTracker";
+import { useCommandHistory } from "@/ui/hooks/useCommandHistory";
+import { CommandHistoryDialog } from "./CommandHistoryDialog";
+import { CommandAutocomplete } from "./CommandAutocomplete";
+import { LoadingOverlay } from "@/ui/components/LoadingOverlay";
 
 interface HostConfig {
   id?: number;
@@ -112,7 +118,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
       useState(false);
     const isVisibleRef = useRef<boolean>(false);
-    const isReadyRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
@@ -123,6 +128,104 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isConnectingRef = useRef(false);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
+    const keyHandlerAttachedRef = useRef(false);
+
+    // Command history tracking (Stage 1)
+    const { trackInput, getCurrentCommand, updateCurrentCommand } =
+      useCommandTracker({
+        hostId: hostConfig.id,
+        enabled: true,
+        onCommandExecuted: (command) => {
+          // Add to autocomplete history (Stage 3)
+          if (!autocompleteHistory.current.includes(command)) {
+            autocompleteHistory.current = [
+              command,
+              ...autocompleteHistory.current,
+            ];
+          }
+        },
+      });
+
+    // Create refs for callbacks to avoid triggering useEffect re-runs
+    const getCurrentCommandRef = useRef(getCurrentCommand);
+    const updateCurrentCommandRef = useRef(updateCurrentCommand);
+
+    useEffect(() => {
+      getCurrentCommandRef.current = getCurrentCommand;
+      updateCurrentCommandRef.current = updateCurrentCommand;
+    }, [getCurrentCommand, updateCurrentCommand]);
+
+    // Real-time autocomplete (Stage 3)
+    const [showAutocomplete, setShowAutocomplete] = useState(false);
+    const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<
+      string[]
+    >([]);
+    const [autocompleteSelectedIndex, setAutocompleteSelectedIndex] =
+      useState(0);
+    const [autocompletePosition, setAutocompletePosition] = useState({
+      top: 0,
+      left: 0,
+    });
+    const autocompleteHistory = useRef<string[]>([]);
+    const currentAutocompleteCommand = useRef<string>("");
+
+    // Refs for accessing current state in event handlers
+    const showAutocompleteRef = useRef(false);
+    const autocompleteSuggestionsRef = useRef<string[]>([]);
+    const autocompleteSelectedIndexRef = useRef(0);
+
+    // Command history dialog (Stage 2)
+    const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+    const [commandHistory, setCommandHistory] = useState<string[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+    // Load command history when dialog opens
+    useEffect(() => {
+      if (showHistoryDialog && hostConfig.id) {
+        setIsLoadingHistory(true);
+        import("@/ui/main-axios.ts")
+          .then((module) => module.getCommandHistory(hostConfig.id!))
+          .then((history) => {
+            setCommandHistory(history);
+          })
+          .catch((error) => {
+            console.error("Failed to load command history:", error);
+            setCommandHistory([]);
+          })
+          .finally(() => {
+            setIsLoadingHistory(false);
+          });
+      }
+    }, [showHistoryDialog, hostConfig.id]);
+
+    // Load command history for autocomplete on mount (Stage 3)
+    useEffect(() => {
+      if (hostConfig.id) {
+        import("@/ui/main-axios.ts")
+          .then((module) => module.getCommandHistory(hostConfig.id!))
+          .then((history) => {
+            autocompleteHistory.current = history;
+          })
+          .catch((error) => {
+            console.error("Failed to load autocomplete history:", error);
+            autocompleteHistory.current = [];
+          });
+      }
+    }, [hostConfig.id]);
+
+    // Sync autocomplete state to refs for event handlers
+    useEffect(() => {
+      showAutocompleteRef.current = showAutocomplete;
+    }, [showAutocomplete]);
+
+    useEffect(() => {
+      autocompleteSuggestionsRef.current = autocompleteSuggestions;
+    }, [autocompleteSuggestions]);
+
+    useEffect(() => {
+      autocompleteSelectedIndexRef.current = autocompleteSelectedIndex;
+    }, [autocompleteSelectedIndex]);
+
     const activityLoggingRef = useRef(false);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -157,10 +260,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       isVisibleRef.current = isVisible;
     }, [isVisible]);
-
-    useEffect(() => {
-      isReadyRef.current = isReady;
-    }, [isReady]);
 
     useEffect(() => {
       const checkAuth = () => {
@@ -516,9 +615,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           }),
         );
         terminal.onData((data) => {
-          if (data === "\x00" || data === "\u0000") {
-            return;
-          }
+          // Track command input for history (Stage 1)
+          trackInput(data);
+          // Send input to server
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
@@ -778,6 +877,88 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       return "";
     }
 
+    // Handle command selection from history dialog (Stage 2)
+    const handleSelectCommand = useCallback(
+      (command: string) => {
+        if (!terminal || !webSocketRef.current) return;
+
+        // Send the command to the terminal
+        // Simulate typing the command character by character
+        for (const char of command) {
+          webSocketRef.current.send(
+            JSON.stringify({ type: "input", data: char }),
+          );
+        }
+
+        // Return focus to terminal after selecting command
+        setTimeout(() => {
+          terminal.focus();
+        }, 100);
+      },
+      [terminal],
+    );
+
+    // Handle autocomplete selection (mouse click)
+    const handleAutocompleteSelect = useCallback(
+      (selectedCommand: string) => {
+        if (!webSocketRef.current) return;
+
+        const currentCmd = currentAutocompleteCommand.current;
+        const completion = selectedCommand.substring(currentCmd.length);
+
+        // Send completion characters to server
+        for (const char of completion) {
+          webSocketRef.current.send(
+            JSON.stringify({ type: "input", data: char }),
+          );
+        }
+
+        // Update current command tracker
+        updateCurrentCommand(selectedCommand);
+
+        // Close autocomplete
+        setShowAutocomplete(false);
+        setAutocompleteSuggestions([]);
+        currentAutocompleteCommand.current = "";
+
+        // Return focus to terminal
+        setTimeout(() => {
+          terminal?.focus();
+        }, 50);
+
+        console.log(`[Autocomplete] ${currentCmd} → ${selectedCommand}`);
+      },
+      [terminal, updateCurrentCommand],
+    );
+
+    // Handle command deletion from history dialog
+    const handleDeleteCommand = useCallback(
+      async (command: string) => {
+        if (!hostConfig.id) return;
+
+        try {
+          // Call API to delete command
+          const { deleteCommandFromHistory } = await import(
+            "@/ui/main-axios.ts"
+          );
+          await deleteCommandFromHistory(hostConfig.id, command);
+
+          // Update local state
+          setCommandHistory((prev) => prev.filter((cmd) => cmd !== command));
+
+          // Update autocomplete history
+          autocompleteHistory.current = autocompleteHistory.current.filter(
+            (cmd) => cmd !== command,
+          );
+
+          console.log(`[Terminal] Command deleted from history: ${command}`);
+        } catch (error) {
+          console.error("Failed to delete command from history:", error);
+        }
+      },
+      [hostConfig.id],
+    );
+
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
 
@@ -882,6 +1063,20 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           navigator.platform.toUpperCase().indexOf("MAC") >= 0 ||
           navigator.userAgent.toUpperCase().indexOf("MAC") >= 0;
 
+        // Handle Ctrl+R for command history (Stage 2)
+        if (
+          e.ctrlKey &&
+          e.key === "r" &&
+          !e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowHistoryDialog(true);
+          return false;
+        }
+
         if (
           config.backspaceMode === "control-h" &&
           e.key === "Backspace" &&
@@ -933,21 +1128,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       element?.addEventListener("keydown", handleMacKeyboard, true);
 
-      const handleResize = () => {
+      const resizeObserver = new ResizeObserver(() => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
-          if (!isVisibleRef.current || !isReadyRef.current) return;
+          if (!isVisibleRef.current || !isReady) return;
           performFit();
-        }, 100);
-      };
+        }, 50);
+      });
 
-      const resizeObserver = new ResizeObserver(handleResize);
-
-      if (xtermRef.current) {
-        resizeObserver.observe(xtermRef.current);
-      }
-
-      window.addEventListener("resize", handleResize);
+      resizeObserver.observe(xtermRef.current);
 
       setVisible(true);
 
@@ -960,7 +1149,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         setIsReady(false);
         isFittingRef.current = false;
         resizeObserver.disconnect();
-        window.removeEventListener("resize", handleResize);
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("keydown", handleMacKeyboard, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
@@ -976,6 +1164,192 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         webSocketRef.current?.close();
       };
     }, [xtermRef, terminal, hostConfig]);
+
+    // Register keyboard handler for autocomplete (Stage 3)
+    // Registered only once when terminal is created
+    useEffect(() => {
+      if (!terminal) return;
+
+      const handleCustomKey = (e: KeyboardEvent): boolean => {
+        // Only handle keydown events, ignore keyup to prevent double triggering
+        if (e.type !== "keydown") {
+          return true;
+        }
+
+        // If autocomplete is showing, handle keys specially
+        if (showAutocompleteRef.current) {
+          // Handle Escape to close autocomplete
+          if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowAutocomplete(false);
+            setAutocompleteSuggestions([]);
+            currentAutocompleteCommand.current = "";
+            return false;
+          }
+
+          // Handle Arrow keys for autocomplete navigation
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const currentIndex = autocompleteSelectedIndexRef.current;
+            const suggestionsLength = autocompleteSuggestionsRef.current.length;
+
+            if (e.key === "ArrowDown") {
+              const newIndex =
+                currentIndex < suggestionsLength - 1 ? currentIndex + 1 : 0;
+              setAutocompleteSelectedIndex(newIndex);
+            } else if (e.key === "ArrowUp") {
+              const newIndex =
+                currentIndex > 0 ? currentIndex - 1 : suggestionsLength - 1;
+              setAutocompleteSelectedIndex(newIndex);
+            }
+            return false;
+          }
+
+          // Handle Enter to confirm autocomplete selection
+          if (
+            e.key === "Enter" &&
+            autocompleteSuggestionsRef.current.length > 0
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const selectedCommand =
+              autocompleteSuggestionsRef.current[
+                autocompleteSelectedIndexRef.current
+              ];
+            const currentCmd = currentAutocompleteCommand.current;
+            const completion = selectedCommand.substring(currentCmd.length);
+
+            // Send completion characters to server
+            if (webSocketRef.current?.readyState === 1) {
+              for (const char of completion) {
+                webSocketRef.current.send(
+                  JSON.stringify({ type: "input", data: char }),
+                );
+              }
+            }
+
+            // Update current command tracker
+            updateCurrentCommandRef.current(selectedCommand);
+
+            // Close autocomplete
+            setShowAutocomplete(false);
+            setAutocompleteSuggestions([]);
+            currentAutocompleteCommand.current = "";
+
+            return false;
+          }
+
+          // Handle Tab to cycle through suggestions
+          if (
+            e.key === "Tab" &&
+            !e.ctrlKey &&
+            !e.altKey &&
+            !e.metaKey &&
+            !e.shiftKey
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            const currentIndex = autocompleteSelectedIndexRef.current;
+            const suggestionsLength = autocompleteSuggestionsRef.current.length;
+            const newIndex =
+              currentIndex < suggestionsLength - 1 ? currentIndex + 1 : 0;
+            setAutocompleteSelectedIndex(newIndex);
+            return false;
+          }
+
+          // For any other key while autocomplete is showing, close it and let key through
+          setShowAutocomplete(false);
+          setAutocompleteSuggestions([]);
+          currentAutocompleteCommand.current = "";
+          return true;
+        }
+
+        // Handle Tab for autocomplete (when autocomplete is not showing)
+        if (
+          e.key === "Tab" &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          !e.shiftKey
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const currentCmd = getCurrentCommandRef.current().trim();
+          if (currentCmd.length > 0 && webSocketRef.current?.readyState === 1) {
+            // Filter commands that start with current input
+            const matches = autocompleteHistory.current
+              .filter(
+                (cmd) =>
+                  cmd.startsWith(currentCmd) &&
+                  cmd !== currentCmd &&
+                  cmd.length > currentCmd.length,
+              )
+              .slice(0, 10); // Show up to 10 matches
+
+            if (matches.length === 1) {
+              // Only one match - auto-complete directly
+              const completedCommand = matches[0];
+              const completion = completedCommand.substring(currentCmd.length);
+
+              for (const char of completion) {
+                webSocketRef.current.send(
+                  JSON.stringify({ type: "input", data: char }),
+                );
+              }
+
+              updateCurrentCommandRef.current(completedCommand);
+            } else if (matches.length > 1) {
+              // Multiple matches - show selection list
+              currentAutocompleteCommand.current = currentCmd;
+              setAutocompleteSuggestions(matches);
+              setAutocompleteSelectedIndex(0);
+
+              // Calculate position (below or above cursor based on available space)
+              const cursorY = terminal.buffer.active.cursorY;
+              const cursorX = terminal.buffer.active.cursorX;
+              const rect = xtermRef.current?.getBoundingClientRect();
+
+              if (rect) {
+                const cellHeight =
+                  terminal.rows > 0 ? rect.height / terminal.rows : 20;
+                const cellWidth =
+                  terminal.cols > 0 ? rect.width / terminal.cols : 10;
+
+                // Estimate autocomplete menu height (max-h-[240px] from component)
+                const menuHeight = 240;
+                const cursorBottomY = rect.top + (cursorY + 1) * cellHeight;
+                const spaceBelow = window.innerHeight - cursorBottomY;
+                const spaceAbove = rect.top + cursorY * cellHeight;
+
+                // Show above cursor if not enough space below
+                const showAbove =
+                  spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+                setAutocompletePosition({
+                  top: showAbove
+                    ? rect.top + cursorY * cellHeight - menuHeight
+                    : cursorBottomY,
+                  left: rect.left + cursorX * cellWidth,
+                });
+              }
+
+              setShowAutocomplete(true);
+            }
+          }
+          return false; // Prevent default Tab behavior
+        }
+
+        // Let terminal handle all other keys
+        return true;
+      };
+
+      terminal.attachCustomKeyEventHandler(handleCustomKey);
+    }, [terminal]);
 
     useEffect(() => {
       if (!terminal || !hostConfig || !visible) return;
@@ -1103,17 +1477,30 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           backgroundColor={backgroundColor}
         />
 
-        {isConnecting && (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ backgroundColor }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-gray-300">{t("terminal.connecting")}</span>
-            </div>
-          </div>
-        )}
+        <CommandHistoryDialog
+          open={showHistoryDialog}
+          onOpenChange={setShowHistoryDialog}
+          commands={commandHistory}
+          onSelectCommand={handleSelectCommand}
+          onDeleteCommand={handleDeleteCommand}
+          isLoading={isLoadingHistory}
+        />
+
+        <CommandAutocomplete
+          visible={showAutocomplete}
+          suggestions={autocompleteSuggestions}
+          selectedIndex={autocompleteSelectedIndex}
+          position={autocompletePosition}
+          onSelect={handleAutocompleteSelect}
+        />
+
+        <LoadingOverlay
+          visible={isConnecting}
+          minDuration={800}
+          message={t("terminal.connecting")}
+          backgroundColor={backgroundColor}
+          showLogo={true}
+        />
       </div>
     );
   },

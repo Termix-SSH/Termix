@@ -212,6 +212,22 @@ export const snippets = sqliteTable("snippets", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const sshFolders = sqliteTable("ssh_folders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  color: text("color"),
+  icon: text("icon"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const recentActivity = sqliteTable("recent_activity", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
@@ -223,6 +239,20 @@ export const recentActivity = sqliteTable("recent_activity", {
     .references(() => sshData.id),
   hostName: text("host_name").notNull(),
   timestamp: text("timestamp")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const commandHistory = sqliteTable("command_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => sshData.id),
+  command: text("command").notNull(),
+  executedAt: text("executed_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });

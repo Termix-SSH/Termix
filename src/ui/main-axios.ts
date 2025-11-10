@@ -2,6 +2,7 @@ import axios, { AxiosError, type AxiosInstance } from "axios";
 import type {
   SSHHost,
   SSHHostData,
+  SSHFolder,
   TunnelConfig,
   TunnelStatus,
   FileManagerFile,
@@ -1520,6 +1521,145 @@ export async function moveSSHItem(
   }
 }
 
+export async function changeSSHPermissions(
+  sessionId: string,
+  path: string,
+  permissions: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    fileLogger.info("Changing SSH file permissions", {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/changePermissions", {
+      sessionId,
+      path,
+      permissions,
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("SSH file permissions changed successfully", {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to change SSH file permissions", error, {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+    });
+    handleApiError(error, "change SSH permissions");
+    throw error;
+  }
+}
+
+export async function extractSSHArchive(
+  sessionId: string,
+  archivePath: string,
+  extractPath?: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string; extractPath: string }> {
+  try {
+    fileLogger.info("Extracting archive", {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/extractArchive", {
+      sessionId,
+      archivePath,
+      extractPath,
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("Archive extracted successfully", {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath: response.data.extractPath,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to extract archive", error, {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath,
+    });
+    handleApiError(error, "extract archive");
+    throw error;
+  }
+}
+
+export async function compressSSHFiles(
+  sessionId: string,
+  paths: string[],
+  archiveName: string,
+  format?: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string; archivePath: string }> {
+  try {
+    fileLogger.info("Compressing files", {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archiveName,
+      format,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/compressFiles", {
+      sessionId,
+      paths,
+      archiveName,
+      format: format || "zip",
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("Files compressed successfully", {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archivePath: response.data.archivePath,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to compress files", error, {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archiveName,
+      format,
+    });
+    handleApiError(error, "compress files");
+    throw error;
+  }
+}
+
 // ============================================================================
 // FILE MANAGER DATA
 // ============================================================================
@@ -2411,6 +2551,92 @@ export async function renameFolder(
   }
 }
 
+export async function getSSHFolders(): Promise<SSHFolder[]> {
+  try {
+    sshLogger.info("Fetching SSH folders", {
+      operation: "fetch_ssh_folders",
+    });
+
+    const response = await authApi.get("/ssh/folders");
+
+    sshLogger.success("SSH folders fetched successfully", {
+      operation: "fetch_ssh_folders",
+      count: response.data.length,
+    });
+
+    return response.data;
+  } catch (error) {
+    sshLogger.error("Failed to fetch SSH folders", error, {
+      operation: "fetch_ssh_folders",
+    });
+    handleApiError(error, "fetch SSH folders");
+    throw error;
+  }
+}
+
+export async function updateFolderMetadata(
+  name: string,
+  color?: string,
+  icon?: string,
+): Promise<void> {
+  try {
+    sshLogger.info("Updating folder metadata", {
+      operation: "update_folder_metadata",
+      name,
+      color,
+      icon,
+    });
+
+    await authApi.put("/ssh/folders/metadata", {
+      name,
+      color,
+      icon,
+    });
+
+    sshLogger.success("Folder metadata updated successfully", {
+      operation: "update_folder_metadata",
+      name,
+    });
+  } catch (error) {
+    sshLogger.error("Failed to update folder metadata", error, {
+      operation: "update_folder_metadata",
+      name,
+    });
+    handleApiError(error, "update folder metadata");
+    throw error;
+  }
+}
+
+export async function deleteAllHostsInFolder(
+  folderName: string,
+): Promise<{ deletedCount: number }> {
+  try {
+    sshLogger.info("Deleting all hosts in folder", {
+      operation: "delete_folder_hosts",
+      folderName,
+    });
+
+    const response = await authApi.delete(
+      `/ssh/folders/${encodeURIComponent(folderName)}/hosts`,
+    );
+
+    sshLogger.success("All hosts in folder deleted successfully", {
+      operation: "delete_folder_hosts",
+      folderName,
+      deletedCount: response.data.deletedCount,
+    });
+
+    return response.data;
+  } catch (error) {
+    sshLogger.error("Failed to delete hosts in folder", error, {
+      operation: "delete_folder_hosts",
+      folderName,
+    });
+    handleApiError(error, "delete hosts in folder");
+    throw error;
+  }
+}
+
 export async function renameCredentialFolder(
   oldName: string,
   newName: string,
@@ -2629,5 +2855,74 @@ export async function resetRecentActivity(): Promise<{ message: string }> {
     return response.data;
   } catch (error) {
     throw handleApiError(error, "reset recent activity");
+  }
+}
+
+// ============================================================================
+// COMMAND HISTORY API
+// ============================================================================
+
+/**
+ * Save a command to history for a specific host
+ */
+export async function saveCommandToHistory(
+  hostId: number,
+  command: string,
+): Promise<{ id: number; command: string; executedAt: string }> {
+  try {
+    const response = await authApi.post("/terminal/command_history", {
+      hostId,
+      command,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "save command to history");
+  }
+}
+
+/**
+ * Get command history for a specific host
+ * Returns array of unique commands ordered by most recent
+ */
+export async function getCommandHistory(hostId: number): Promise<string[]> {
+  try {
+    const response = await authApi.get(`/terminal/command_history/${hostId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch command history");
+  }
+}
+
+/**
+ * Delete a specific command from history
+ */
+export async function deleteCommandFromHistory(
+  hostId: number,
+  command: string,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.post("/terminal/command_history/delete", {
+      hostId,
+      command,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete command from history");
+  }
+}
+
+/**
+ * Clear command history for a specific host (optional feature)
+ */
+export async function clearCommandHistory(
+  hostId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.delete(
+      `/terminal/command_history/${hostId}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "clear command history");
   }
 }

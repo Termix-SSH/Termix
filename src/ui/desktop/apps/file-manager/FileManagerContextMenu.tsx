@@ -17,6 +17,7 @@ import {
   Play,
   Star,
   Bookmark,
+  FileArchive,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -60,6 +61,8 @@ interface ContextMenuProps {
   onAddShortcut?: (path: string) => void;
   isPinned?: (file: FileItem) => boolean;
   currentPath?: string;
+  onExtractArchive?: (file: FileItem) => void;
+  onCompress?: (files: FileItem[]) => void;
 }
 
 interface MenuItem {
@@ -99,6 +102,8 @@ export function FileManagerContextMenu({
   onAddShortcut,
   isPinned,
   currentPath,
+  onExtractArchive,
+  onCompress,
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
@@ -251,6 +256,45 @@ export function FileManagerContextMenu({
           : t("fileManager.downloadFile"),
         action: () => onDownload(files),
         shortcut: "Ctrl+D",
+      });
+    }
+
+    // Add extract option for archive files
+    if (isSingleFile && files[0].type === "file" && onExtractArchive) {
+      const fileName = files[0].name.toLowerCase();
+      const isArchive =
+        fileName.endsWith(".zip") ||
+        fileName.endsWith(".tar") ||
+        fileName.endsWith(".tar.gz") ||
+        fileName.endsWith(".tgz") ||
+        fileName.endsWith(".tar.bz2") ||
+        fileName.endsWith(".tbz2") ||
+        fileName.endsWith(".tar.xz") ||
+        fileName.endsWith(".gz") ||
+        fileName.endsWith(".bz2") ||
+        fileName.endsWith(".xz") ||
+        fileName.endsWith(".7z") ||
+        fileName.endsWith(".rar");
+
+      if (isArchive) {
+        menuItems.push({
+          icon: <FileArchive className="w-4 h-4" />,
+          label: t("fileManager.extractArchive"),
+          action: () => onExtractArchive(files[0]),
+          shortcut: "Ctrl+E",
+        });
+      }
+    }
+
+    // Add compress option for selected files/folders
+    if (isFileContext && onCompress) {
+      menuItems.push({
+        icon: <FileArchive className="w-4 h-4" />,
+        label: isMultipleFiles
+          ? t("fileManager.compressFiles")
+          : t("fileManager.compressFile"),
+        action: () => onCompress(files),
+        shortcut: "Ctrl+Shift+C",
       });
     }
 
@@ -451,7 +495,7 @@ export function FileManagerContextMenu({
       <div
         className={cn(
           "fixed inset-0 z-[99990] transition-opacity duration-150",
-          !isMounted && "opacity-0"
+          !isMounted && "opacity-0",
         )}
       />
 
@@ -460,7 +504,7 @@ export function FileManagerContextMenu({
         className={cn(
           "fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden",
           "transition-all duration-150 ease-out origin-top-left",
-          isMounted ? "opacity-100 scale-100" : "opacity-0 scale-95"
+          isMounted ? "opacity-100 scale-100" : "opacity-0 scale-95",
         )}
         style={{
           left: menuPosition.x,
