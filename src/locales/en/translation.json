@@ -344,6 +344,7 @@
     "cancel": "Cancel",
     "change": "Change",
     "save": "Save",
+    "saving": "Saving...",
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
@@ -1343,7 +1344,7 @@
     "from": "from"
   },
   "auth": {
-    "tagline": "SSH TERMINAL MANAGER",
+    "tagline": "SSH SERVER MANAGER",
     "description": "Secure, powerful, and intuitive SSH connection management",
     "welcomeBack": "Welcome back to TERMIX",
     "createAccount": "Create your TERMIX account",

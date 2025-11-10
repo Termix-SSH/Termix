@@ -1072,109 +1072,113 @@ export function AdminSettings({
                   </div>
                 ) : (
                   <div className="border rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="px-4">Device</TableHead>
-                          <TableHead className="px-4">User</TableHead>
-                          <TableHead className="px-4">Created</TableHead>
-                          <TableHead className="px-4">Last Active</TableHead>
-                          <TableHead className="px-4">Expires</TableHead>
-                          <TableHead className="px-4">
-                            {t("admin.actions")}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sessions.map((session) => {
-                          const DeviceIcon =
-                            session.deviceType === "desktop"
-                              ? Monitor
-                              : session.deviceType === "mobile"
-                                ? Smartphone
-                                : Globe;
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-4">Device</TableHead>
+                            <TableHead className="px-4">User</TableHead>
+                            <TableHead className="px-4">Created</TableHead>
+                            <TableHead className="px-4">Last Active</TableHead>
+                            <TableHead className="px-4">Expires</TableHead>
+                            <TableHead className="px-4">
+                              {t("admin.actions")}
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sessions.map((session) => {
+                            const DeviceIcon =
+                              session.deviceType === "desktop"
+                                ? Monitor
+                                : session.deviceType === "mobile"
+                                  ? Smartphone
+                                  : Globe;
 
-                          const createdDate = new Date(session.createdAt);
-                          const lastActiveDate = new Date(session.lastActiveAt);
-                          const expiresDate = new Date(session.expiresAt);
+                            const createdDate = new Date(session.createdAt);
+                            const lastActiveDate = new Date(
+                              session.lastActiveAt,
+                            );
+                            const expiresDate = new Date(session.expiresAt);
 
-                          const formatDate = (date: Date) =>
-                            date.toLocaleDateString() +
-                            " " +
-                            date.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            });
+                            const formatDate = (date: Date) =>
+                              date.toLocaleDateString() +
+                              " " +
+                              date.toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              });
 
-                          return (
-                            <TableRow
-                              key={session.id}
-                              className={
-                                session.isRevoked ? "opacity-50" : undefined
-                              }
-                            >
-                              <TableCell className="px-4">
-                                <div className="flex items-center gap-2">
-                                  <DeviceIcon className="h-4 w-4" />
-                                  <div className="flex flex-col">
-                                    <span className="font-medium text-sm">
-                                      {session.deviceInfo}
-                                    </span>
-                                    {session.isRevoked && (
-                                      <span className="text-xs text-red-600">
-                                        Revoked
+                            return (
+                              <TableRow
+                                key={session.id}
+                                className={
+                                  session.isRevoked ? "opacity-50" : undefined
+                                }
+                              >
+                                <TableCell className="px-4">
+                                  <div className="flex items-center gap-2">
+                                    <DeviceIcon className="h-4 w-4" />
+                                    <div className="flex flex-col">
+                                      <span className="font-medium text-sm">
+                                        {session.deviceInfo}
                                       </span>
-                                    )}
+                                      {session.isRevoked && (
+                                        <span className="text-xs text-red-600">
+                                          Revoked
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-4">
-                                {session.username || session.userId}
-                              </TableCell>
-                              <TableCell className="px-4 text-sm text-muted-foreground">
-                                {formatDate(createdDate)}
-                              </TableCell>
-                              <TableCell className="px-4 text-sm text-muted-foreground">
-                                {formatDate(lastActiveDate)}
-                              </TableCell>
-                              <TableCell className="px-4 text-sm text-muted-foreground">
-                                {formatDate(expiresDate)}
-                              </TableCell>
-                              <TableCell className="px-4">
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleRevokeSession(session.id)
-                                    }
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    disabled={session.isRevoked}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                  {session.username && (
+                                </TableCell>
+                                <TableCell className="px-4">
+                                  {session.username || session.userId}
+                                </TableCell>
+                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                  {formatDate(createdDate)}
+                                </TableCell>
+                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                  {formatDate(lastActiveDate)}
+                                </TableCell>
+                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                  {formatDate(expiresDate)}
+                                </TableCell>
+                                <TableCell className="px-4">
+                                  <div className="flex gap-2">
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       onClick={() =>
-                                        handleRevokeAllUserSessions(
-                                          session.userId,
-                                        )
+                                        handleRevokeSession(session.id)
                                       }
-                                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
-                                      title="Revoke all sessions for this user"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      disabled={session.isRevoked}
                                     >
-                                      Revoke All
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                                    {session.username && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleRevokeAllUserSessions(
+                                            session.userId,
+                                          )
+                                        }
+                                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
+                                        title="Revoke all sessions for this user"
+                                      >
+                                        Revoke All
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1185,8 +1189,8 @@ export function AdminSettings({
                 <h3 className="text-lg font-semibold">
                   {t("admin.adminManagement")}
                 </h3>
-                <div className="space-y-4 p-6 border rounded-md bg-muted/50">
-                  <h4 className="font-medium">{t("admin.makeUserAdmin")}</h4>
+                <div className="space-y-4 p-4 border rounded-md bg-dark-bg-panel">
+                  <h4 className="font-semibold">{t("admin.makeUserAdmin")}</h4>
                   <form onSubmit={handleMakeUserAdmin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="new-admin-username">
@@ -1279,32 +1283,17 @@ export function AdminSettings({
             <TabsContent value="security" className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Database className="h-5 w-5" />
                   <h3 className="text-lg font-semibold">
                     {t("admin.databaseSecurity")}
                   </h3>
                 </div>
 
-                <div className="p-4 border rounded bg-card">
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-green-500" />
-                    <div>
-                      <div className="text-sm font-medium">
-                        {t("admin.encryptionStatus")}
-                      </div>
-                      <div className="text-xs text-green-500">
-                        {t("admin.encryptionEnabled")}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="p-4 border rounded bg-card">
+                  <div className="p-4 border rounded-lg bg-dark-bg-panel">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Download className="h-4 w-4 text-blue-500" />
-                        <h4 className="font-medium">{t("admin.export")}</h4>
+                        <h4 className="font-semibold">{t("admin.export")}</h4>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {t("admin.exportDescription")}
@@ -1351,11 +1340,11 @@ export function AdminSettings({
                     </div>
                   </div>
 
-                  <div className="p-4 border rounded bg-card">
+                  <div className="p-4 border rounded-lg bg-dark-bg-panel">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Upload className="h-4 w-4 text-green-500" />
-                        <h4 className="font-medium">{t("admin.import")}</h4>
+                        <h4 className="font-semibold">{t("admin.import")}</h4>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {t("admin.importDescription")}

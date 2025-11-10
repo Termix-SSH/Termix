@@ -105,14 +105,18 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       fetchFolderMetadata();
     };
 
+    const handleFoldersRefresh = () => {
+      fetchFolderMetadata();
+    };
+
     window.addEventListener("hosts:refresh", handleHostsRefresh);
     window.addEventListener("ssh-hosts:changed", handleHostsRefresh);
-    window.addEventListener("folders:changed", handleHostsRefresh);
+    window.addEventListener("folders:changed", handleFoldersRefresh);
 
     return () => {
       window.removeEventListener("hosts:refresh", handleHostsRefresh);
       window.removeEventListener("ssh-hosts:changed", handleHostsRefresh);
-      window.removeEventListener("folders:changed", handleHostsRefresh);
+      window.removeEventListener("folders:changed", handleFoldersRefresh);
     };
   }, []);
 

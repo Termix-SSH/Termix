@@ -23,7 +23,17 @@ import {
   SidebarProvider,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar.tsx";
-import { Plus, Play, Edit, Trash2, Copy, X, RotateCcw } from "lucide-react";
+import {
+  Plus,
+  Play,
+  Edit,
+  Trash2,
+  Copy,
+  X,
+  RotateCcw,
+  Search,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -56,6 +66,12 @@ interface SSHUtilitySidebarProps {
   onSnippetExecute: (content: string) => void;
   sidebarWidth: number;
   setSidebarWidth: (width: number) => void;
+  commandHistory?: string[];
+  onSelectCommand?: (command: string) => void;
+  onDeleteCommand?: (command: string) => void;
+  isHistoryLoading?: boolean;
+  initialTab?: string;
+  onTabChange?: () => void;
 }
 
 export function SSHUtilitySidebar({
@@ -64,15 +80,39 @@ export function SSHUtilitySidebar({
   onSnippetExecute,
   sidebarWidth,
   setSidebarWidth,
+  commandHistory = [],
+  onSelectCommand,
+  onDeleteCommand,
+  isHistoryLoading = false,
+  initialTab,
+  onTabChange,
 }: SSHUtilitySidebarProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
   const { tabs } = useTabs() as { tabs: TabData[] };
-  const [activeTab, setActiveTab] = useState("ssh-tools");
+  const [activeTab, setActiveTab] = useState(initialTab || "ssh-tools");
+
+  // Update active tab when initialTab changes
+  useEffect(() => {
+    if (initialTab && isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
+
+  // Call onTabChange when active tab changes
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (onTabChange) {
+      onTabChange();
+    }
+  };
 
   // SSH Tools state
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
+  const [rightClickCopyPaste, setRightClickCopyPaste] = useState<boolean>(
+    () => getCookie("rightClickCopyPaste") === "true",
+  );
 
   // Snippets state
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -92,12 +132,23 @@ export function SSHUtilitySidebar({
     [],
   );
 
+  // Command History state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
+
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
   const startXRef = React.useRef<number | null>(null);
   const startWidthRef = React.useRef<number>(sidebarWidth);
 
   const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
+
+  // Filter command history based on search query
+  const filteredCommands = searchQuery
+    ? commandHistory.filter((cmd) =>
+        cmd.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : commandHistory;
 
   // Initialize CSS variable on mount and when sidebar width changes
   useEffect(() => {
@@ -327,6 +378,7 @@ export function SSHUtilitySidebar({
 
   const updateRightClickCopyPaste = (checked: boolean) => {
     setCookie("rightClickCopyPaste", checked.toString());
+    setRightClickCopyPaste(checked);
   };
 
   // Snippets handlers
@@ -441,6 +493,33 @@ export function SSHUtilitySidebar({
     toast.success(t("snippets.copySuccess", { name: snippet.name }));
   };
 
+  // Command History handlers
+  const handleCommandSelect = (command: string) => {
+    if (onSelectCommand) {
+      onSelectCommand(command);
+    }
+  };
+
+  const handleCommandDelete = (command: string) => {
+    if (onDeleteCommand) {
+      confirmWithToast(
+        t("commandHistory.deleteConfirmDescription", {
+          defaultValue: `Delete "${command}" from history?`,
+          command,
+        }),
+        () => {
+          onDeleteCommand(command);
+          toast.success(
+            t("commandHistory.deleteSuccess", {
+              defaultValue: "Command deleted from history",
+            }),
+          );
+        },
+        "destructive",
+      );
+    }
+  };
+
   return (
     <>
       {isOpen && (
@@ -482,13 +561,16 @@ export function SSHUtilitySidebar({
               </SidebarHeader>
               <Separator className="p-0.25" />
               <SidebarContent className="p-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="w-full grid grid-cols-2 mb-4">
+                <Tabs value={activeTab} onValueChange={handleTabChange}>
+                  <TabsList className="w-full grid grid-cols-3 mb-4">
                     <TabsTrigger value="ssh-tools">
                       {t("sshTools.title")}
                     </TabsTrigger>
                     <TabsTrigger value="snippets">
                       {t("snippets.title")}
+                    </TabsTrigger>
+                    <TabsTrigger value="command-history">
+                      {t("commandHistory.title", { defaultValue: "History" })}
                     </TabsTrigger>
                   </TabsList>
 
@@ -577,9 +659,7 @@ export function SSHUtilitySidebar({
                       <Checkbox
                         id="enable-copy-paste"
                         onCheckedChange={updateRightClickCopyPaste}
-                        defaultChecked={
-                          getCookie("rightClickCopyPaste") === "true"
-                        }
+                        checked={rightClickCopyPaste}
                       />
                       <label
                         htmlFor="enable-copy-paste"
@@ -762,6 +842,129 @@ export function SSHUtilitySidebar({
                         </div>
                       </TooltipProvider>
                     )}
+                  </TabsContent>
+
+                  <TabsContent value="command-history" className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder={t("commandHistory.searchPlaceholder", {
+                            defaultValue: "Search commands...",
+                          })}
+                          value={searchQuery}
+                          onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setSelectedCommandIndex(0);
+                          }}
+                          className="pl-10 pr-10"
+                        />
+                        {searchQuery && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                            onClick={() => setSearchQuery("")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-hidden">
+                      {isHistoryLoading ? (
+                        <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse py-8">
+                          <Loader2 className="animate-spin mr-2" size={16} />
+                          <span>
+                            {t("commandHistory.loading", {
+                              defaultValue: "Loading history...",
+                            })}
+                          </span>
+                        </div>
+                      ) : filteredCommands.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-8">
+                          {searchQuery ? (
+                            <>
+                              <Search className="h-12 w-12 mb-2 opacity-20 mx-auto" />
+                              <p className="mb-2 font-medium">
+                                {t("commandHistory.noResults", {
+                                  defaultValue: "No commands found",
+                                })}
+                              </p>
+                              <p className="text-sm">
+                                {t("commandHistory.noResultsHint", {
+                                  defaultValue: `No commands matching "${searchQuery}"`,
+                                  query: searchQuery,
+                                })}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="mb-2 font-medium">
+                                {t("commandHistory.empty", {
+                                  defaultValue: "No command history yet",
+                                })}
+                              </p>
+                              <p className="text-sm">
+                                {t("commandHistory.emptyHint", {
+                                  defaultValue:
+                                    "Execute commands to build your history",
+                                })}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-300px)]">
+                          {filteredCommands.map((command, index) => (
+                            <div
+                              key={index}
+                              className="bg-dark-bg border-2 border-dark-border rounded-md px-3 py-2.5 hover:bg-dark-hover-alt hover:border-blue-400/50 transition-all duration-200 group"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span
+                                  className="flex-1 font-mono text-sm cursor-pointer text-white"
+                                  onClick={() => handleCommandSelect(command)}
+                                >
+                                  {command}
+                                </span>
+                                {onDeleteCommand && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCommandDelete(command);
+                                    }}
+                                    title={t("commandHistory.deleteTooltip", {
+                                      defaultValue: "Delete command",
+                                    })}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    <div className="text-xs text-muted-foreground">
+                      <span>
+                        {filteredCommands.length}{" "}
+                        {t("commandHistory.commandCount", {
+                          defaultValue:
+                            filteredCommands.length !== 1
+                              ? "commands"
+                              : "command",
+                        })}
+                      </span>
+                    </div>
                   </TabsContent>
                 </Tabs>
               </SidebarContent>

@@ -8,6 +8,7 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
 import { SSHUtilitySidebar } from "@/ui/desktop/apps/tools/SSHUtilitySidebar.tsx";
+import { useCommandHistory } from "@/ui/desktop/contexts/CommandHistoryContext.tsx";
 
 interface TabData {
   id: number;
@@ -55,11 +56,13 @@ export function TopNavbar({
   const leftPosition =
     state === "collapsed" ? "26px" : "calc(var(--sidebar-width) + 8px)";
   const { t } = useTranslation();
+  const commandHistory = useCommandHistory();
 
   const [toolsSidebarOpen, setToolsSidebarOpen] = useState(false);
+  const [commandHistoryTabActive, setCommandHistoryTabActive] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem("rightSidebarWidth");
-    return saved !== null ? parseInt(saved, 10) : 400;
+    return saved !== null ? parseInt(saved, 10) : 350;
   });
 
   React.useEffect(() => {
@@ -71,6 +74,14 @@ export function TopNavbar({
       onRightSidebarStateChange(toolsSidebarOpen, rightSidebarWidth);
     }
   }, [toolsSidebarOpen, rightSidebarWidth, onRightSidebarStateChange]);
+
+  // Register function to open command history sidebar
+  React.useEffect(() => {
+    commandHistory.setOpenCommandHistory(() => {
+      setToolsSidebarOpen(true);
+      setCommandHistoryTabActive(true);
+    });
+  }, [commandHistory]);
 
   const rightPosition = toolsSidebarOpen
     ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
@@ -359,8 +370,7 @@ export function TopNavbar({
                 tab.type === "user_profile") &&
                 isSplitScreenActive);
             const isHome = tab.type === "home";
-            const disableClose =
-              (isSplitScreenActive && isActive) || isHome;
+            const disableClose = (isSplitScreenActive && isActive) || isHome;
 
             const isDraggingThisTab = dragState.draggedIndex === index;
             const isTheDraggedTab = tab.id === dragState.draggedId;
@@ -536,6 +546,12 @@ export function TopNavbar({
         onSnippetExecute={handleSnippetExecute}
         sidebarWidth={rightSidebarWidth}
         setSidebarWidth={setRightSidebarWidth}
+        commandHistory={commandHistory.commandHistory}
+        onSelectCommand={commandHistory.onSelectCommand}
+        onDeleteCommand={commandHistory.onDeleteCommand}
+        isHistoryLoading={commandHistory.isLoading}
+        initialTab={commandHistoryTabActive ? "command-history" : undefined}
+        onTabChange={() => setCommandHistoryTabActive(false)}
       />
     </div>
   );

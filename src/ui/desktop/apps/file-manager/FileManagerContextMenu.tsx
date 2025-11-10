@@ -369,6 +369,18 @@ export function FileManagerContextMenu({
       menuItems.push({ separator: true } as MenuItem);
     }
 
+    if (isSingleFile && onProperties) {
+      menuItems.push({
+        icon: <Info className="w-4 h-4" />,
+        label: t("fileManager.properties"),
+        action: () => onProperties(files[0]),
+      });
+    }
+
+    if ((isSingleFile && onProperties) || onDelete) {
+      menuItems.push({ separator: true } as MenuItem);
+    }
+
     if (onDelete) {
       menuItems.push({
         icon: <Trash2 className="w-4 h-4" />,
@@ -378,18 +390,6 @@ export function FileManagerContextMenu({
         action: () => onDelete(files),
         shortcut: "Delete",
         danger: true,
-      });
-    }
-
-    if (onDelete) {
-      menuItems.push({ separator: true } as MenuItem);
-    }
-
-    if (isSingleFile && onProperties) {
-      menuItems.push({
-        icon: <Info className="w-4 h-4" />,
-        label: t("fileManager.properties"),
-        action: () => onProperties(files[0]),
       });
     }
   } else {

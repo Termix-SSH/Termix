@@ -235,6 +235,7 @@ router.post(
       enableFileManager,
       defaultPath,
       tunnelConnections,
+      jumpHosts,
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
@@ -271,6 +272,7 @@ router.post(
       tunnelConnections: Array.isArray(tunnelConnections)
         ? JSON.stringify(tunnelConnections)
         : null,
+      jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
@@ -329,6 +331,9 @@ router.post(
         tunnelConnections: createdHost.tunnelConnections
           ? JSON.parse(createdHost.tunnelConnections as string)
           : [],
+        jumpHosts: createdHost.jumpHosts
+          ? JSON.parse(createdHost.jumpHosts as string)
+          : [],
         enableFileManager: !!createdHost.enableFileManager,
         statsConfig: createdHost.statsConfig
           ? JSON.parse(createdHost.statsConfig as string)
@@ -370,6 +375,7 @@ router.post(
 router.put(
   "/db/host/:id",
   authenticateJWT,
+  requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
     const hostId = req.params.id;
@@ -425,6 +431,7 @@ router.put(
       enableFileManager,
       defaultPath,
       tunnelConnections,
+      jumpHosts,
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
@@ -462,6 +469,7 @@ router.put(
       tunnelConnections: Array.isArray(tunnelConnections)
         ? JSON.stringify(tunnelConnections)
         : null,
+      jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
@@ -538,6 +546,9 @@ router.put(
         tunnelConnections: updatedHost.tunnelConnections
           ? JSON.parse(updatedHost.tunnelConnections as string)
           : [],
+        jumpHosts: updatedHost.jumpHosts
+          ? JSON.parse(updatedHost.jumpHosts as string)
+          : [],
         enableFileManager: !!updatedHost.enableFileManager,
         statsConfig: updatedHost.statsConfig
           ? JSON.parse(updatedHost.statsConfig as string)
@@ -577,67 +588,74 @@ router.put(
 
 // Route: Get SSH data for the authenticated user (requires JWT)
 // GET /ssh/host
-router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  if (!isNonEmptyString(userId)) {
-    sshLogger.warn("Invalid userId for SSH data fetch", {
-      operation: "host_fetch",
-      userId,
-    });
-    return res.status(400).json({ error: "Invalid userId" });
-  }
-  try {
-    const data = await SimpleDBOps.select(
-      db.select().from(sshData).where(eq(sshData.userId, userId)),
-      "ssh_data",
-      userId,
-    );
+router.get(
+  "/db/host",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    if (!isNonEmptyString(userId)) {
+      sshLogger.warn("Invalid userId for SSH data fetch", {
+        operation: "host_fetch",
+        userId,
+      });
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+    try {
+      const data = await SimpleDBOps.select(
+        db.select().from(sshData).where(eq(sshData.userId, userId)),
+        "ssh_data",
+        userId,
+      );
 
-    const result = await Promise.all(
-      data.map(async (row: Record<string, unknown>) => {
-        const baseHost = {
-          ...row,
-          tags:
-            typeof row.tags === "string"
-              ? row.tags
-                ? row.tags.split(",").filter(Boolean)
-                : []
+      const result = await Promise.all(
+        data.map(async (row: Record<string, unknown>) => {
+          const baseHost = {
+            ...row,
+            tags:
+              typeof row.tags === "string"
+                ? row.tags
+                  ? row.tags.split(",").filter(Boolean)
+                  : []
+                : [],
+            pin: !!row.pin,
+            enableTerminal: !!row.enableTerminal,
+            enableTunnel: !!row.enableTunnel,
+            tunnelConnections: row.tunnelConnections
+              ? JSON.parse(row.tunnelConnections as string)
               : [],
-          pin: !!row.pin,
-          enableTerminal: !!row.enableTerminal,
-          enableTunnel: !!row.enableTunnel,
-          tunnelConnections: row.tunnelConnections
-            ? JSON.parse(row.tunnelConnections as string)
-            : [],
-          enableFileManager: !!row.enableFileManager,
-          statsConfig: row.statsConfig
-            ? JSON.parse(row.statsConfig as string)
-            : undefined,
-          terminalConfig: row.terminalConfig
-            ? JSON.parse(row.terminalConfig as string)
-            : undefined,
-          forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
-        };
+            jumpHosts: row.jumpHosts ? JSON.parse(row.jumpHosts as string) : [],
+            enableFileManager: !!row.enableFileManager,
+            statsConfig: row.statsConfig
+              ? JSON.parse(row.statsConfig as string)
+              : undefined,
+            terminalConfig: row.terminalConfig
+              ? JSON.parse(row.terminalConfig as string)
+              : undefined,
+            forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
+          };
 
-        return (await resolveHostCredentials(baseHost)) || baseHost;
-      }),
-    );
+          return (await resolveHostCredentials(baseHost)) || baseHost;
+        }),
+      );
 
-    res.json(result);
-  } catch (err) {
-    sshLogger.error("Failed to fetch SSH hosts from database", err, {
-      operation: "host_fetch",
-      userId,
-    });
-    res.status(500).json({ error: "Failed to fetch SSH data" });
-  }
-});
+      res.json(result);
+    } catch (err) {
+      sshLogger.error("Failed to fetch SSH hosts from database", err, {
+        operation: "host_fetch",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch SSH data" });
+    }
+  },
+);
 
 // Route: Get SSH host by ID (requires JWT)
 // GET /ssh/host/:id
 router.get(
   "/db/host/:id",
   authenticateJWT,
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = req.params.id;
     const userId = (req as AuthenticatedRequest).userId;
@@ -812,42 +830,6 @@ router.delete(
       }
 
       const numericHostId = Number(hostId);
-
-      await db
-        .delete(fileManagerRecent)
-        .where(
-          and(
-            eq(fileManagerRecent.userId, userId),
-            eq(fileManagerRecent.hostId, numericHostId),
-          ),
-        );
-
-      await db
-        .delete(fileManagerPinned)
-        .where(
-          and(
-            eq(fileManagerPinned.userId, userId),
-            eq(fileManagerPinned.hostId, numericHostId),
-          ),
-        );
-
-      await db
-        .delete(fileManagerShortcuts)
-        .where(
-          and(
-            eq(fileManagerShortcuts.userId, userId),
-            eq(fileManagerShortcuts.hostId, numericHostId),
-          ),
-        );
-
-      await db
-        .delete(sshCredentialUsage)
-        .where(
-          and(
-            eq(sshCredentialUsage.userId, userId),
-            eq(sshCredentialUsage.hostId, numericHostId),
-          ),
-        );
 
       await db
         .delete(sshData)

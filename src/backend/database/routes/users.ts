@@ -747,6 +747,7 @@ router.get("/oidc/callback", async (req, res) => {
       });
     }
 
+    const deviceInfo = parseUserAgent(req);
     let user = await db
       .select()
       .from(users)
@@ -780,7 +781,11 @@ router.get("/oidc/callback", async (req, res) => {
       });
 
       try {
-        await authManager.registerOIDCUser(id);
+        const sessionDurationMs =
+          deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
+            ? 30 * 24 * 60 * 60 * 1000 // 30 days
+            : 7 * 24 * 60 * 60 * 1000; // 7 days
+        await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
         await db.delete(users).where(eq(users.id, id));
         authLogger.error(
@@ -819,7 +824,7 @@ router.get("/oidc/callback", async (req, res) => {
     const userRecord = user[0];
 
     try {
-      await authManager.authenticateOIDCUser(userRecord.id);
+      await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
     } catch (setupError) {
       authLogger.error("Failed to setup OIDC user encryption", setupError, {
         operation: "oidc_user_encryption_setup_failed",
@@ -827,7 +832,6 @@ router.get("/oidc/callback", async (req, res) => {
       });
     }
 
-    const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
@@ -941,7 +945,10 @@ router.post("/login", async (req, res) => {
         operation: "user_login",
         username,
         ip: clientIp,
-        remainingAttempts: loginRateLimiter.getRemainingAttempts(clientIp, username),
+        remainingAttempts: loginRateLimiter.getRemainingAttempts(
+          clientIp,
+          username,
+        ),
       });
       return res.status(401).json({ error: "Invalid username or password" });
     }
@@ -967,7 +974,10 @@ router.post("/login", async (req, res) => {
         username,
         userId: userRecord.id,
         ip: clientIp,
-        remainingAttempts: loginRateLimiter.getRemainingAttempts(clientIp, username),
+        remainingAttempts: loginRateLimiter.getRemainingAttempts(
+          clientIp,
+          username,
+        ),
       });
       return res.status(401).json({ error: "Invalid username or password" });
     }
@@ -985,9 +995,11 @@ router.post("/login", async (req, res) => {
       databaseLogger.debug("Operation failed, continuing", { error });
     }
 
+    const deviceInfo = parseUserAgent(req);
     const dataUnlocked = await authManager.authenticateUser(
       userRecord.id,
       password,
+      deviceInfo.type,
     );
     if (!dataUnlocked) {
       return res.status(401).json({ error: "Incorrect password" });
@@ -1005,7 +1017,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,

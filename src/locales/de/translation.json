@@ -295,6 +295,7 @@
     "submit": "Senden",
     "change": "Ändern",
     "save": "Speichern",
+    "saving": "Speichern...",
     "delete": "Löschen",
     "edit": "Bearbeiten",
     "add": "Hinzufügen",
@@ -1192,7 +1193,7 @@
     "from": "von"
   },
   "auth": {
-    "tagline": "SSH TERMINAL MANAGER",
+    "tagline": "SSH SERVER MANAGER",
     "description": "Sichere, leistungsstarke und intuitive SSH-Verbindungsverwaltung",
     "welcomeBack": "Willkommen zurück bei TERMIX",
     "createAccount": "Erstellen Sie Ihr TERMIX-Konto",

@@ -73,17 +73,22 @@ export function CompressDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
         <DialogHeader>
           <DialogTitle>{t("fileManager.compressFiles")}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-muted-foreground">
             {t("fileManager.compressFilesDesc", { count: fileNames.length })}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="archiveName">{t("fileManager.archiveName")}</Label>
+        <div className="space-y-6 py-4">
+          <div className="space-y-3">
+            <Label
+              className="text-base font-semibold text-foreground"
+              htmlFor="archiveName"
+            >
+              {t("fileManager.archiveName")}
+            </Label>
             <Input
               id="archiveName"
               value={archiveName}
@@ -98,8 +103,13 @@ export function CompressDialog({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="format">{t("fileManager.compressionFormat")}</Label>
+          <div className="space-y-3">
+            <Label
+              className="text-base font-semibold text-foreground"
+              htmlFor="format"
+            >
+              {t("fileManager.compressionFormat")}
+            </Label>
             <Select value={format} onValueChange={setFormat}>
               <SelectTrigger id="format">
                 <SelectValue />
@@ -115,18 +125,18 @@ export function CompressDialog({
             </Select>
           </div>
 
-          <div className="rounded-md bg-muted p-3">
-            <p className="text-sm text-muted-foreground mb-2">
+          <div className="rounded-md bg-dark-hover/50 border border-dark-border p-3">
+            <p className="text-sm text-gray-400 mb-2">
               {t("fileManager.selectedFiles")}:
             </p>
             <ul className="text-sm space-y-1">
               {fileNames.slice(0, 5).map((name, index) => (
-                <li key={index} className="truncate">
+                <li key={index} className="truncate text-foreground">
                   • {name}
                 </li>
               ))}
               {fileNames.length > 5 && (
-                <li className="text-muted-foreground italic">
+                <li className="text-gray-400 italic">
                   {t("fileManager.andMoreFiles", {
                     count: fileNames.length - 5,
                   })}

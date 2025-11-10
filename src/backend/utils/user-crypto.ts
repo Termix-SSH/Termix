@@ -21,7 +21,6 @@ interface EncryptedDEK {
 
 interface UserSession {
   dataKey: Buffer;
-  lastActivity: number;
   expiresAt: number;
 }
 
@@ -33,8 +32,6 @@ class UserCrypto {
   private static readonly PBKDF2_ITERATIONS = 100000;
   private static readonly KEK_LENGTH = 32;
   private static readonly DEK_LENGTH = 32;
-  private static readonly SESSION_DURATION = 24 * 60 * 60 * 1000;
-  private static readonly MAX_INACTIVITY = 6 * 60 * 60 * 1000;
 
   private constructor() {
     setInterval(
@@ -69,7 +66,10 @@ class UserCrypto {
     DEK.fill(0);
   }
 
-  async setupOIDCUserEncryption(userId: string): Promise<void> {
+  async setupOIDCUserEncryption(
+    userId: string,
+    sessionDurationMs: number,
+  ): Promise<void> {
     const existingEncryptedDEK = await this.getEncryptedDEK(userId);
 
     let DEK: Buffer;
@@ -104,14 +104,17 @@ class UserCrypto {
     const now = Date.now();
     this.userSessions.set(userId, {
       dataKey: Buffer.from(DEK),
-      lastActivity: now,
-      expiresAt: now + UserCrypto.SESSION_DURATION,
+      expiresAt: now + sessionDurationMs,
     });
 
     DEK.fill(0);
   }
 
-  async authenticateUser(userId: string, password: string): Promise<boolean> {
+  async authenticateUser(
+    userId: string,
+    password: string,
+    sessionDurationMs: number,
+  ): Promise<boolean> {
     try {
       const kekSalt = await this.getKEKSalt(userId);
       if (!kekSalt) return false;
@@ -144,8 +147,7 @@ class UserCrypto {
 
       this.userSessions.set(userId, {
         dataKey: Buffer.from(DEK),
-        lastActivity: now,
-        expiresAt: now + UserCrypto.SESSION_DURATION,
+        expiresAt: now + sessionDurationMs,
       });
 
       DEK.fill(0);
@@ -161,13 +163,16 @@ class UserCrypto {
     }
   }
 
-  async authenticateOIDCUser(userId: string): Promise<boolean> {
+  async authenticateOIDCUser(
+    userId: string,
+    sessionDurationMs: number,
+  ): Promise<boolean> {
     try {
       const kekSalt = await this.getKEKSalt(userId);
       const encryptedDEK = await this.getEncryptedDEK(userId);
 
       if (!kekSalt || !encryptedDEK) {
-        await this.setupOIDCUserEncryption(userId);
+        await this.setupOIDCUserEncryption(userId, sessionDurationMs);
         return true;
       }
 
@@ -176,7 +181,7 @@ class UserCrypto {
       systemKey.fill(0);
 
       if (!DEK || DEK.length === 0) {
-        await this.setupOIDCUserEncryption(userId);
+        await this.setupOIDCUserEncryption(userId, sessionDurationMs);
         return true;
       }
 
@@ -189,15 +194,14 @@ class UserCrypto {
 
       this.userSessions.set(userId, {
         dataKey: Buffer.from(DEK),
-        lastActivity: now,
-        expiresAt: now + UserCrypto.SESSION_DURATION,
+        expiresAt: now + sessionDurationMs,
       });
 
       DEK.fill(0);
 
       return true;
     } catch {
-      await this.setupOIDCUserEncryption(userId);
+      await this.setupOIDCUserEncryption(userId, sessionDurationMs);
       return true;
     }
   }
@@ -219,16 +223,6 @@ class UserCrypto {
       return null;
     }
 
-    if (now - session.lastActivity > UserCrypto.MAX_INACTIVITY) {
-      this.userSessions.delete(userId);
-      session.dataKey.fill(0);
-      if (this.sessionExpiredCallback) {
-        this.sessionExpiredCallback(userId);
-      }
-      return null;
-    }
-
-    session.lastActivity = now;
     return session.dataKey;
   }
 
@@ -359,10 +353,7 @@ class UserCrypto {
     const expiredUsers: string[] = [];
 
     for (const [userId, session] of this.userSessions.entries()) {
-      if (
-        now > session.expiresAt ||
-        now - session.lastActivity > UserCrypto.MAX_INACTIVITY
-      ) {
+      if (now > session.expiresAt) {
         session.dataKey.fill(0);
         expiredUsers.push(userId);
       }

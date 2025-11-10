@@ -5,6 +5,10 @@ import type { Request } from "express";
 // SSH HOST TYPES
 // ============================================================================
 
+export interface JumpHost {
+  hostId: number;
+}
+
 export interface SSHHost {
   id: number;
   name: string;
@@ -33,10 +37,15 @@ export interface SSHHost {
   enableFileManager: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
+  jumpHosts?: JumpHost[];
   statsConfig?: string;
   terminalConfig?: TerminalConfig;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface JumpHostData {
+  hostId: number;
 }
 
 export interface SSHHostData {
@@ -60,6 +69,7 @@ export interface SSHHostData {
   defaultPath?: string;
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
+  jumpHosts?: JumpHostData[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
 }

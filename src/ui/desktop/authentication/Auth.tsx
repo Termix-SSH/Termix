@@ -847,7 +847,7 @@ export function Auth({
       <div className="w-full h-full flex flex-col md:flex-row">
         {/* Left Side - Brand Showcase */}
         <div
-          className="hidden md:flex md:w-2/5 items-center justify-center relative"
+          className="hidden md:flex md:w-2/5 items-center justify-center relative border-r-2 border-bg-border-dark"
           style={{
             background: "#0e0e10",
             backgroundImage: `repeating-linear-gradient(
@@ -871,21 +871,14 @@ export function Auth({
               TERMIX
             </div>
             <div className="text-lg text-muted-foreground tracking-widest font-light">
-              {t("auth.tagline") || "SSH TERMINAL MANAGER"}
-            </div>
-            <div className="mt-8 text-sm text-muted-foreground/80 max-w-md">
-              {t("auth.description") ||
-                "Secure, powerful, and intuitive SSH connection management"}
+              {t("auth.tagline")}
             </div>
           </div>
         </div>
 
         {/* Right Side - Auth Form */}
-        <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-background overflow-y-auto">
-          <div
-            className="w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border-2 border-dark-border animate-in fade-in slide-in-from-bottom-4 duration-500"
-            style={{ maxHeight: "calc(100vh - 3rem)" }}
-          >
+        <div className="flex-1 flex p-6 md:p-12 bg-background overflow-y-auto">
+          <div className="m-auto w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border-2 border-dark-border animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col">
             {isInElectronWebView() && !webviewAuthSuccess && (
               <Alert className="mb-4 border-blue-500 bg-blue-500/10">
                 <Monitor className="h-4 w-4" />

@@ -8,6 +8,7 @@ import {
   useTabs,
 } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
+import { CommandHistoryProvider } from "@/ui/desktop/contexts/CommandHistoryContext.tsx";
 import { AdminSettings } from "@/ui/desktop/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
@@ -37,11 +38,16 @@ function AppContent() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.code === "ShiftLeft") {
+        if (event.repeat) {
+          return;
+        }
         const now = Date.now();
         if (now - lastShiftPressTime.current < 300) {
           setIsCommandPaletteOpen((isOpen) => !isOpen);
+          lastShiftPressTime.current = 0; // Reset on double press
+        } else {
+          lastShiftPressTime.current = now;
         }
-        lastShiftPressTime.current = now;
       }
       if (event.key === "Escape") {
         setIsCommandPaletteOpen(false);
@@ -314,7 +320,7 @@ function AppContent() {
                         "subtitleFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
                     }}
                   >
-                    SSH TERMINAL MANAGER
+                    SSH SERVER MANAGER
                   </div>
                 </div>
               </div>
@@ -421,7 +427,9 @@ function AppContent() {
 function DesktopApp() {
   return (
     <TabProvider>
-      <AppContent />
+      <CommandHistoryProvider>
+        <AppContent />
+      </CommandHistoryProvider>
     </TabProvider>
   );
 }

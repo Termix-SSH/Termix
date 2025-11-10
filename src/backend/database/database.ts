@@ -22,6 +22,7 @@ import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
 import { eq, and } from "drizzle-orm";
+import { parseUserAgent } from "../utils/user-agent-parser.js";
 import {
   users,
   sshData,
@@ -457,8 +458,12 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         code: "PASSWORD_REQUIRED",
       });
     }
-
-    const unlocked = await authManager.authenticateUser(userId, password);
+    const deviceInfo = parseUserAgent(req);
+    const unlocked = await authManager.authenticateUser(
+      userId,
+      password,
+      deviceInfo.type,
+    );
     if (!unlocked) {
       return res.status(401).json({ error: "Invalid password" });
     }
@@ -905,6 +910,7 @@ app.post(
       const userId = (req as AuthenticatedRequest).userId;
       const { password } = req.body;
       const mainDb = getDb();
+      const deviceInfo = parseUserAgent(req);
 
       const userRecords = await mainDb
         .select()
@@ -925,12 +931,19 @@ app.post(
           });
         }
 
-        const unlocked = await authManager.authenticateUser(userId, password);
+        const unlocked = await authManager.authenticateUser(
+          userId,
+          password,
+          deviceInfo.type,
+        );
         if (!unlocked) {
           return res.status(401).json({ error: "Invalid password" });
         }
       } else if (!DataCrypto.getUserDataKey(userId)) {
-        const oidcUnlocked = await authManager.authenticateOIDCUser(userId);
+        const oidcUnlocked = await authManager.authenticateOIDCUser(
+          userId,
+          deviceInfo.type,
+        );
         if (!oidcUnlocked) {
           return res.status(403).json({
             error: "Failed to unlock user data with SSO credentials",
@@ -948,7 +961,10 @@ app.post(
 
       let userDataKey = DataCrypto.getUserDataKey(userId);
       if (!userDataKey && isOidcUser) {
-        const oidcUnlocked = await authManager.authenticateOIDCUser(userId);
+        const oidcUnlocked = await authManager.authenticateOIDCUser(
+          userId,
+          deviceInfo.type,
+        );
         if (oidcUnlocked) {
           userDataKey = DataCrypto.getUserDataKey(userId);
         }

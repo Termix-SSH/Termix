@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button.tsx";
 import {
@@ -49,6 +50,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command.tsx";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover.tsx";
 import { Slider } from "@/components/ui/slider.tsx";
 import {
   Accordion,
@@ -66,7 +79,7 @@ import {
 } from "@/constants/terminal-themes";
 import { TerminalPreview } from "@/ui/desktop/apps/terminal/TerminalPreview.tsx";
 import type { TerminalConfig } from "@/types";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Check, ChevronsUpDown } from "lucide-react";
 
 interface SSHHost {
   id: number;
@@ -94,6 +107,9 @@ interface SSHHost {
     retryInterval: number;
     autoStart: boolean;
   }>;
+  jumpHosts?: Array<{
+    hostId: number;
+  }>;
   statsConfig?: StatsConfig;
   terminalConfig?: TerminalConfig;
   createdAt: string;
@@ -113,6 +129,7 @@ export function HostManagerEditor({
   const { t } = useTranslation();
   const [folders, setFolders] = useState<string[]>([]);
   const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
+  const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [credentials, setCredentials] = useState<
     Array<{ id: number; username: string; authType: string }>
   >([]);
@@ -146,6 +163,7 @@ export function HostManagerEditor({
           getCredentials(),
           getSnippets(),
         ]);
+        setHosts(hostsData);
         setCredentials(credentialsData);
         setSnippets(Array.isArray(snippetsData) ? snippetsData : []);
 
@@ -327,6 +345,13 @@ export function HostManagerEditor({
         })
         .optional(),
       forceKeyboardInteractive: z.boolean().optional(),
+      jumpHosts: z
+        .array(
+          z.object({
+            hostId: z.number().min(1),
+          }),
+        )
+        .default([]),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -414,6 +439,7 @@ export function HostManagerEditor({
       enableFileManager: true,
       defaultPath: "/",
       tunnelConnections: [],
+      jumpHosts: [],
       statsConfig: DEFAULT_STATS_CONFIG,
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
       forceKeyboardInteractive: false,
@@ -433,7 +459,7 @@ export function HostManagerEditor({
         }
       }
     }
-  }, [authTab, credentials, form]);
+  }, [authTab, credentials, form.getValues, form.setValue]);
 
   useEffect(() => {
     if (editingHost) {
@@ -477,7 +503,7 @@ export function HostManagerEditor({
         port: cleanedHost.port || 22,
         username: cleanedHost.username || "",
         folder: cleanedHost.folder || "",
-        tags: cleanedHost.tags || [],
+        tags: Array.isArray(cleanedHost.tags) ? cleanedHost.tags : [],
         pin: Boolean(cleanedHost.pin),
         authType: defaultAuthType as "password" | "key" | "credential" | "none",
         credentialId: null,
@@ -492,9 +518,22 @@ export function HostManagerEditor({
         enableTunnel: Boolean(cleanedHost.enableTunnel),
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
-        tunnelConnections: cleanedHost.tunnelConnections || [],
+        tunnelConnections: Array.isArray(cleanedHost.tunnelConnections)
+          ? cleanedHost.tunnelConnections
+          : [],
+        jumpHosts: Array.isArray(cleanedHost.jumpHosts)
+          ? cleanedHost.jumpHosts
+          : [],
         statsConfig: parsedStatsConfig,
-        terminalConfig: cleanedHost.terminalConfig || DEFAULT_TERMINAL_CONFIG,
+        terminalConfig: {
+          ...DEFAULT_TERMINAL_CONFIG,
+          ...(cleanedHost.terminalConfig || {}),
+          environmentVariables: Array.isArray(
+            cleanedHost.terminalConfig?.environmentVariables,
+          )
+            ? cleanedHost.terminalConfig.environmentVariables
+            : [],
+        },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
       };
 
@@ -542,6 +581,7 @@ export function HostManagerEditor({
         enableFileManager: true,
         defaultPath: "/",
         tunnelConnections: [],
+        jumpHosts: [],
         statsConfig: DEFAULT_STATS_CONFIG,
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
@@ -601,6 +641,7 @@ export function HostManagerEditor({
         enableFileManager: Boolean(data.enableFileManager),
         defaultPath: data.defaultPath || "/",
         tunnelConnections: data.tunnelConnections || [],
+        jumpHosts: data.jumpHosts || [],
         statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
         terminalConfig: data.terminalConfig || DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: Boolean(data.forceKeyboardInteractive),
@@ -1387,6 +1428,147 @@ export function HostManagerEditor({
                       </FormItem>
                     )}
                   />
+                  <Separator className="my-6" />
+                  <FormLabel className="mb-3 font-bold">
+                    {t("hosts.jumpHosts")}
+                  </FormLabel>
+                  <Alert className="mt-2 mb-4">
+                    <AlertDescription>
+                      {t("hosts.jumpHostsDescription")}
+                    </AlertDescription>
+                  </Alert>
+                  <FormField
+                    control={form.control}
+                    name="jumpHosts"
+                    render={({ field }) => (
+                      <FormItem className="mt-4">
+                        <FormLabel>{t("hosts.jumpHostChain")}</FormLabel>
+                        <FormControl>
+                          <div className="space-y-3">
+                            {field.value.map((jumpHost, index) => {
+                              const selectedHost = hosts.find(
+                                (h) => h.id === jumpHost.hostId,
+                              );
+                              const [open, setOpen] = React.useState(false);
+
+                              return (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30"
+                                >
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                      {index + 1}.
+                                    </span>
+                                    <Popover open={open} onOpenChange={setOpen}>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          role="combobox"
+                                          aria-expanded={open}
+                                          className="flex-1 justify-between"
+                                        >
+                                          {selectedHost
+                                            ? `${selectedHost.name || `${selectedHost.username}@${selectedHost.ip}`}`
+                                            : t("hosts.selectServer")}
+                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-[400px] p-0">
+                                        <Command>
+                                          <CommandInput
+                                            placeholder={t(
+                                              "hosts.searchServers",
+                                            )}
+                                          />
+                                          <CommandEmpty>
+                                            {t("hosts.noServerFound")}
+                                          </CommandEmpty>
+                                          <CommandGroup className="max-h-[300px] overflow-y-auto">
+                                            {hosts
+                                              .filter(
+                                                (h) =>
+                                                  !editingHost ||
+                                                  h.id !== editingHost.id,
+                                              )
+                                              .map((host) => (
+                                                <CommandItem
+                                                  key={host.id}
+                                                  value={`${host.name} ${host.ip} ${host.username}`}
+                                                  onSelect={() => {
+                                                    const newJumpHosts = [
+                                                      ...field.value,
+                                                    ];
+                                                    newJumpHosts[index] = {
+                                                      hostId: host.id,
+                                                    };
+                                                    field.onChange(
+                                                      newJumpHosts,
+                                                    );
+                                                    setOpen(false);
+                                                  }}
+                                                >
+                                                  <Check
+                                                    className={cn(
+                                                      "mr-2 h-4 w-4",
+                                                      jumpHost.hostId ===
+                                                        host.id
+                                                        ? "opacity-100"
+                                                        : "opacity-0",
+                                                    )}
+                                                  />
+                                                  <div className="flex flex-col">
+                                                    <span className="font-medium">
+                                                      {host.name ||
+                                                        `${host.username}@${host.ip}`}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                      {host.username}@{host.ip}:
+                                                      {host.port}
+                                                    </span>
+                                                  </div>
+                                                </CommandItem>
+                                              ))}
+                                          </CommandGroup>
+                                        </Command>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      const newJumpHosts = field.value.filter(
+                                        (_, i) => i !== index,
+                                      );
+                                      field.onChange(newJumpHosts);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                field.onChange([...field.value, { hostId: 0 }]);
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              {t("hosts.addJumpHost")}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          {t("hosts.jumpHostsOrder")}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
                 </TabsContent>
                 <TabsContent value="terminal" className="space-y-1">
                   <FormField
@@ -1417,7 +1599,9 @@ export function HostManagerEditor({
                   </h1>
                   <Accordion type="multiple" className="w-full">
                     <AccordionItem value="appearance">
-                      <AccordionTrigger>{t("hosts.appearance")}</AccordionTrigger>
+                      <AccordionTrigger>
+                        {t("hosts.appearance")}
+                      </AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
@@ -1452,7 +1636,9 @@ export function HostManagerEditor({
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder={t("hosts.selectTheme")} />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectTheme")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -1484,7 +1670,9 @@ export function HostManagerEditor({
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder={t("hosts.selectFont")} />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectFont")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -1510,7 +1698,11 @@ export function HostManagerEditor({
                           name="terminalConfig.fontSize"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{t("hosts.fontSizeValue", { value: field.value })}</FormLabel>
+                              <FormLabel>
+                                {t("hosts.fontSizeValue", {
+                                  value: field.value,
+                                })}
+                              </FormLabel>
                               <FormControl>
                                 <Slider
                                   min={8}
@@ -1535,7 +1727,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                {t("hosts.letterSpacingValue", { value: field.value })}
+                                {t("hosts.letterSpacingValue", {
+                                  value: field.value,
+                                })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1560,7 +1754,11 @@ export function HostManagerEditor({
                           name="terminalConfig.lineHeight"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{t("hosts.lineHeightValue", { value: field.value })}</FormLabel>
+                              <FormLabel>
+                                {t("hosts.lineHeightValue", {
+                                  value: field.value,
+                                })}
+                              </FormLabel>
                               <FormControl>
                                 <Slider
                                   min={1}
@@ -1591,15 +1789,21 @@ export function HostManagerEditor({
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder={t("hosts.selectCursorStyle")} />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectCursorStyle")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="block">{t("hosts.cursorStyleBlock")}</SelectItem>
+                                  <SelectItem value="block">
+                                    {t("hosts.cursorStyleBlock")}
+                                  </SelectItem>
                                   <SelectItem value="underline">
                                     {t("hosts.cursorStyleUnderline")}
                                   </SelectItem>
-                                  <SelectItem value="bar">{t("hosts.cursorStyleBar")}</SelectItem>
+                                  <SelectItem value="bar">
+                                    {t("hosts.cursorStyleBar")}
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
@@ -1641,7 +1845,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                {t("hosts.scrollbackBufferValue", { value: field.value })}
+                                {t("hosts.scrollbackBufferValue", {
+                                  value: field.value,
+                                })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1673,14 +1879,24 @@ export function HostManagerEditor({
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder={t("hosts.selectBellStyle")} />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectBellStyle")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="none">{t("hosts.bellStyleNone")}</SelectItem>
-                                  <SelectItem value="sound">{t("hosts.bellStyleSound")}</SelectItem>
-                                  <SelectItem value="visual">{t("hosts.bellStyleVisual")}</SelectItem>
-                                  <SelectItem value="both">{t("hosts.bellStyleBoth")}</SelectItem>
+                                  <SelectItem value="none">
+                                    {t("hosts.bellStyleNone")}
+                                  </SelectItem>
+                                  <SelectItem value="sound">
+                                    {t("hosts.bellStyleSound")}
+                                  </SelectItem>
+                                  <SelectItem value="visual">
+                                    {t("hosts.bellStyleVisual")}
+                                  </SelectItem>
+                                  <SelectItem value="both">
+                                    {t("hosts.bellStyleBoth")}
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
@@ -1696,7 +1912,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>{t("hosts.rightClickSelectsWord")}</FormLabel>
+                                <FormLabel>
+                                  {t("hosts.rightClickSelectsWord")}
+                                </FormLabel>
                                 <FormDescription>
                                   {t("hosts.rightClickSelectsWordDesc")}
                                 </FormDescription>
@@ -1716,20 +1934,30 @@ export function HostManagerEditor({
                           name="terminalConfig.fastScrollModifier"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{t("hosts.fastScrollModifier")}</FormLabel>
+                              <FormLabel>
+                                {t("hosts.fastScrollModifier")}
+                              </FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder={t("hosts.selectModifier")} />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectModifier")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="alt">{t("hosts.modifierAlt")}</SelectItem>
-                                  <SelectItem value="ctrl">{t("hosts.modifierCtrl")}</SelectItem>
-                                  <SelectItem value="shift">{t("hosts.modifierShift")}</SelectItem>
+                                  <SelectItem value="alt">
+                                    {t("hosts.modifierAlt")}
+                                  </SelectItem>
+                                  <SelectItem value="ctrl">
+                                    {t("hosts.modifierCtrl")}
+                                  </SelectItem>
+                                  <SelectItem value="shift">
+                                    {t("hosts.modifierShift")}
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
@@ -1745,7 +1973,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                {t("hosts.fastScrollSensitivityValue", { value: field.value })}
+                                {t("hosts.fastScrollSensitivityValue", {
+                                  value: field.value,
+                                })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1771,7 +2001,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                {t("hosts.minimumContrastRatioValue", { value: field.value })}
+                                {t("hosts.minimumContrastRatioValue", {
+                                  value: field.value,
+                                })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1802,7 +2034,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>{t("hosts.sshAgentForwarding")}</FormLabel>
+                                <FormLabel>
+                                  {t("hosts.sshAgentForwarding")}
+                                </FormLabel>
                                 <FormDescription>
                                   {t("hosts.sshAgentForwardingDesc")}
                                 </FormDescription>
@@ -1829,7 +2063,11 @@ export function HostManagerEditor({
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder={t("hosts.selectBackspaceMode")} />
+                                    <SelectValue
+                                      placeholder={t(
+                                        "hosts.selectBackspaceMode",
+                                      )}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -1865,7 +2103,9 @@ export function HostManagerEditor({
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder={t("hosts.selectSnippet")} />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectSnippet")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -1882,7 +2122,9 @@ export function HostManagerEditor({
                                     />
                                   </div>
                                   <div className="max-h-[200px] overflow-y-auto">
-                                    <SelectItem value="none">{t("hosts.snippetNone")}</SelectItem>
+                                    <SelectItem value="none">
+                                      {t("hosts.snippetNone")}
+                                    </SelectItem>
                                     {snippets
                                       .filter((snippet) =>
                                         snippet.name

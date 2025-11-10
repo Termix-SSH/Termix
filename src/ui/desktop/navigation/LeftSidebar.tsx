@@ -247,6 +247,9 @@ export function LeftSidebar({
     const handleCredentialsChanged = () => {
       fetchHosts();
     };
+    const handleFoldersChanged = () => {
+      fetchFolderMetadata();
+    };
     window.addEventListener(
       "ssh-hosts:changed",
       handleHostsChanged as EventListener,
@@ -254,6 +257,10 @@ export function LeftSidebar({
     window.addEventListener(
       "credentials:changed",
       handleCredentialsChanged as EventListener,
+    );
+    window.addEventListener(
+      "folders:changed",
+      handleFoldersChanged as EventListener,
     );
     return () => {
       window.removeEventListener(
@@ -263,6 +270,10 @@ export function LeftSidebar({
       window.removeEventListener(
         "credentials:changed",
         handleCredentialsChanged as EventListener,
+      );
+      window.removeEventListener(
+        "folders:changed",
+        handleFoldersChanged as EventListener,
       );
     };
   }, [fetchHosts, fetchFolderMetadata]);

@@ -19,6 +19,173 @@ import { collectProcessesMetrics } from "./widgets/processes-collector.js";
 import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 
+async function resolveJumpHost(
+  hostId: number,
+  userId: string,
+): Promise<any | null> {
+  try {
+    const hosts = await SimpleDBOps.select(
+      getDb()
+        .select()
+        .from(sshData)
+        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+      "ssh_data",
+      userId,
+    );
+
+    if (hosts.length === 0) {
+      return null;
+    }
+
+    const host = hosts[0];
+
+    if (host.credentialId) {
+      const credentials = await SimpleDBOps.select(
+        getDb()
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, host.credentialId as number),
+              eq(sshCredentials.userId, userId),
+            ),
+          ),
+        "ssh_credentials",
+        userId,
+      );
+
+      if (credentials.length > 0) {
+        const credential = credentials[0];
+        return {
+          ...host,
+          password: credential.password,
+          key:
+            credential.private_key || credential.privateKey || credential.key,
+          keyPassword: credential.key_password || credential.keyPassword,
+          keyType: credential.key_type || credential.keyType,
+          authType: credential.auth_type || credential.authType,
+        };
+      }
+    }
+
+    return host;
+  } catch (error) {
+    statsLogger.error("Failed to resolve jump host", error, {
+      operation: "resolve_jump_host",
+      hostId,
+      userId,
+    });
+    return null;
+  }
+}
+
+async function createJumpHostChain(
+  jumpHosts: Array<{ hostId: number }>,
+  userId: string,
+): Promise<Client | null> {
+  if (!jumpHosts || jumpHosts.length === 0) {
+    return null;
+  }
+
+  let currentClient: Client | null = null;
+  const clients: Client[] = [];
+
+  try {
+    for (let i = 0; i < jumpHosts.length; i++) {
+      const jumpHostConfig = await resolveJumpHost(jumpHosts[i].hostId, userId);
+
+      if (!jumpHostConfig) {
+        statsLogger.error(`Jump host ${i + 1} not found`, undefined, {
+          operation: "jump_host_chain",
+          hostId: jumpHosts[i].hostId,
+        });
+        clients.forEach((c) => c.end());
+        return null;
+      }
+
+      const jumpClient = new Client();
+      clients.push(jumpClient);
+
+      const connected = await new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve(false);
+        }, 30000);
+
+        jumpClient.on("ready", () => {
+          clearTimeout(timeout);
+          resolve(true);
+        });
+
+        jumpClient.on("error", (err) => {
+          clearTimeout(timeout);
+          statsLogger.error(`Jump host ${i + 1} connection failed`, err, {
+            operation: "jump_host_connect",
+            hostId: jumpHostConfig.id,
+            ip: jumpHostConfig.ip,
+          });
+          resolve(false);
+        });
+
+        const connectConfig: any = {
+          host: jumpHostConfig.ip,
+          port: jumpHostConfig.port || 22,
+          username: jumpHostConfig.username,
+          tryKeyboard: true,
+          readyTimeout: 30000,
+        };
+
+        if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
+          connectConfig.password = jumpHostConfig.password;
+        } else if (jumpHostConfig.authType === "key" && jumpHostConfig.key) {
+          const cleanKey = jumpHostConfig.key
+            .trim()
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n");
+          connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
+          if (jumpHostConfig.keyPassword) {
+            connectConfig.passphrase = jumpHostConfig.keyPassword;
+          }
+        }
+
+        if (currentClient) {
+          currentClient.forwardOut(
+            "127.0.0.1",
+            0,
+            jumpHostConfig.ip,
+            jumpHostConfig.port || 22,
+            (err, stream) => {
+              if (err) {
+                clearTimeout(timeout);
+                resolve(false);
+                return;
+              }
+              connectConfig.sock = stream;
+              jumpClient.connect(connectConfig);
+            },
+          );
+        } else {
+          jumpClient.connect(connectConfig);
+        }
+      });
+
+      if (!connected) {
+        clients.forEach((c) => c.end());
+        return null;
+      }
+
+      currentClient = jumpClient;
+    }
+
+    return currentClient;
+  } catch (error) {
+    statsLogger.error("Failed to create jump host chain", error, {
+      operation: "jump_host_chain",
+    });
+    clients.forEach((c) => c.end());
+    return null;
+  }
+}
+
 interface PooledConnection {
   client: Client;
   lastUsed: number;
@@ -87,7 +254,7 @@ class SSHConnectionPool {
   private async createConnection(
     host: SSHHostWithCredentials,
   ): Promise<Client> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const client = new Client();
       const timeout = setTimeout(() => {
         client.end();
@@ -137,7 +304,44 @@ class SSHConnectionPool {
       );
 
       try {
-        client.connect(buildSshConfig(host));
+        const config = buildSshConfig(host);
+
+        if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
+          const jumpClient = await createJumpHostChain(
+            host.jumpHosts,
+            host.userId,
+          );
+
+          if (!jumpClient) {
+            clearTimeout(timeout);
+            reject(new Error("Failed to establish jump host chain"));
+            return;
+          }
+
+          jumpClient.forwardOut(
+            "127.0.0.1",
+            0,
+            host.ip,
+            host.port,
+            (err, stream) => {
+              if (err) {
+                clearTimeout(timeout);
+                jumpClient.end();
+                reject(
+                  new Error(
+                    "Failed to forward through jump host: " + err.message,
+                  ),
+                );
+                return;
+              }
+
+              config.sock = stream;
+              client.connect(config);
+            },
+          );
+        } else {
+          client.connect(config);
+        }
       } catch (err) {
         clearTimeout(timeout);
         reject(err);
@@ -396,6 +600,7 @@ interface SSHHostWithCredentials {
   enableFileManager: boolean;
   defaultPath: string;
   tunnelConnections: unknown[];
+  jumpHosts?: Array<{ hostId: number }>;
   statsConfig?: string;
   createdAt: string;
   updatedAt: string;

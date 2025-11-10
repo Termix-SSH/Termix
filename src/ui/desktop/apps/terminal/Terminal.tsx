@@ -28,8 +28,8 @@ import {
 } from "@/constants/terminal-themes";
 import type { TerminalConfig } from "@/types";
 import { useCommandTracker } from "@/ui/hooks/useCommandTracker";
-import { useCommandHistory } from "@/ui/hooks/useCommandHistory";
-import { CommandHistoryDialog } from "./CommandHistoryDialog";
+import { useCommandHistory as useCommandHistoryHook } from "@/ui/hooks/useCommandHistory";
+import { useCommandHistory } from "@/ui/desktop/contexts/CommandHistoryContext.tsx";
 import { CommandAutocomplete } from "./CommandAutocomplete";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
@@ -91,6 +91,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const { t } = useTranslation();
     const { instance: terminal, ref: xtermRef } = useXTerm();
+    const commandHistoryContext = useCommandHistory();
 
     const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
     const themeColors =
@@ -183,20 +184,24 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       if (showHistoryDialog && hostConfig.id) {
         setIsLoadingHistory(true);
+        commandHistoryContext.setIsLoading(true);
         import("@/ui/main-axios.ts")
           .then((module) => module.getCommandHistory(hostConfig.id!))
           .then((history) => {
             setCommandHistory(history);
+            commandHistoryContext.setCommandHistory(history);
           })
           .catch((error) => {
             console.error("Failed to load command history:", error);
             setCommandHistory([]);
+            commandHistoryContext.setCommandHistory([]);
           })
           .finally(() => {
             setIsLoadingHistory(false);
+            commandHistoryContext.setIsLoading(false);
           });
       }
-    }, [showHistoryDialog, hostConfig.id]);
+    }, [showHistoryDialog, hostConfig.id, commandHistoryContext]);
 
     // Load command history for autocomplete on mount (Stage 3)
     useEffect(() => {
@@ -898,6 +903,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       [terminal],
     );
 
+    // Register handlers with context
+    useEffect(() => {
+      commandHistoryContext.setOnSelectCommand(handleSelectCommand);
+    }, [handleSelectCommand, commandHistoryContext]);
+
     // Handle autocomplete selection (mouse click)
     const handleAutocompleteSelect = useCallback(
       (selectedCommand: string) => {
@@ -944,7 +954,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           await deleteCommandFromHistory(hostConfig.id, command);
 
           // Update local state
-          setCommandHistory((prev) => prev.filter((cmd) => cmd !== command));
+          setCommandHistory((prev) => {
+            const newHistory = prev.filter((cmd) => cmd !== command);
+            commandHistoryContext.setCommandHistory(newHistory);
+            return newHistory;
+          });
 
           // Update autocomplete history
           autocompleteHistory.current = autocompleteHistory.current.filter(
@@ -956,8 +970,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           console.error("Failed to delete command from history:", error);
         }
       },
-      [hostConfig.id],
+      [hostConfig.id, commandHistoryContext],
     );
+
+    // Register delete handler with context
+    useEffect(() => {
+      commandHistoryContext.setOnDeleteCommand(handleDeleteCommand);
+    }, [handleDeleteCommand, commandHistoryContext]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
@@ -1074,6 +1093,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.preventDefault();
           e.stopPropagation();
           setShowHistoryDialog(true);
+          // Also trigger the sidebar to open
+          if (commandHistoryContext.openCommandHistory) {
+            commandHistoryContext.openCommandHistory();
+          }
           return false;
         }
 
@@ -1474,15 +1497,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             name: hostConfig.name,
           }}
           backgroundColor={backgroundColor}
-        />
-
-        <CommandHistoryDialog
-          open={showHistoryDialog}
-          onOpenChange={setShowHistoryDialog}
-          commands={commandHistory}
-          onSelectCommand={handleSelectCommand}
-          onDeleteCommand={handleDeleteCommand}
-          isLoading={isLoadingHistory}
         />
 
         <CommandAutocomplete

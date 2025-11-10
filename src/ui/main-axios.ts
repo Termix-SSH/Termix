@@ -137,9 +137,64 @@ function getLoggerForService(serviceName: string) {
   }
 }
 
+// Cache for Electron settings
+const electronSettingsCache = new Map<string, string>();
+
+// Load settings from Electron IPC on startup
+if (isElectron()) {
+  (async () => {
+    try {
+      const electronAPI = (
+        window as Window &
+          typeof globalThis & {
+            electronAPI?: any;
+          }
+      ).electronAPI;
+
+      if (electronAPI?.getSetting) {
+        // Preload common settings
+        const settingsToLoad = ["rightClickCopyPaste", "jwt"];
+        for (const key of settingsToLoad) {
+          const value = await electronAPI.getSetting(key);
+          if (value !== null && value !== undefined) {
+            electronSettingsCache.set(key, value);
+            localStorage.setItem(key, value); // Sync to localStorage
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[Electron] Failed to load settings cache:", error);
+    }
+  })();
+}
+
 export function setCookie(name: string, value: string, days = 7): void {
   if (isElectron()) {
-    localStorage.setItem(name, value);
+    try {
+      // Update cache
+      electronSettingsCache.set(name, value);
+
+      // Set in localStorage
+      localStorage.setItem(name, value);
+
+      // Persist to file system via Electron IPC
+      const electronAPI = (
+        window as Window &
+          typeof globalThis & {
+            electronAPI?: any;
+          }
+      ).electronAPI;
+
+      if (electronAPI?.setSetting) {
+        electronAPI.setSetting(name, value).catch((err: Error) => {
+          console.error(`[Electron] Failed to persist setting ${name}:`, err);
+        });
+      }
+
+      console.log(`[Electron] Set setting: ${name} = ${value}`);
+    } catch (error) {
+      console.error(`[Electron] Failed to set setting: ${name}`, error);
+    }
   } else {
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
     document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
@@ -148,8 +203,23 @@ export function setCookie(name: string, value: string, days = 7): void {
 
 export function getCookie(name: string): string | undefined {
   if (isElectron()) {
-    const token = localStorage.getItem(name) || undefined;
-    return token;
+    try {
+      // Try cache first
+      if (electronSettingsCache.has(name)) {
+        return electronSettingsCache.get(name);
+      }
+
+      // Fallback to localStorage
+      const token = localStorage.getItem(name) || undefined;
+      if (token) {
+        electronSettingsCache.set(name, token);
+      }
+      console.log(`[Electron] Get setting: ${name} = ${token}`);
+      return token;
+    } catch (error) {
+      console.error(`[Electron] Failed to get setting: ${name}`, error);
+      return undefined;
+    }
   } else {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -802,6 +872,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       enableFileManager: Boolean(hostData.enableFileManager),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
+      jumpHosts: hostData.jumpHosts || [],
       statsConfig: hostData.statsConfig
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig
@@ -866,6 +937,7 @@ export async function updateSSHHost(
       enableFileManager: Boolean(hostData.enableFileManager),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
+      jumpHosts: hostData.jumpHosts || [],
       statsConfig: hostData.statsConfig
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig

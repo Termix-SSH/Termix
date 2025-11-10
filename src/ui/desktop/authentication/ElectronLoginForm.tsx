@@ -26,6 +26,11 @@ export function ElectronLoginForm({
   const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
+    // Clear any existing token to prevent login loops with expired tokens
+    localStorage.removeItem("jwt");
+  }, []);
+
+  useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       try {
         const serverOrigin = new URL(serverUrl).origin;

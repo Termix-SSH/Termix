@@ -85,12 +85,26 @@ class AuthManager {
     await this.userCrypto.setupUserEncryption(userId, password);
   }
 
-  async registerOIDCUser(userId: string): Promise<void> {
-    await this.userCrypto.setupOIDCUserEncryption(userId);
+  async registerOIDCUser(
+    userId: string,
+    sessionDurationMs: number,
+  ): Promise<void> {
+    await this.userCrypto.setupOIDCUserEncryption(userId, sessionDurationMs);
   }
 
-  async authenticateOIDCUser(userId: string): Promise<boolean> {
-    const authenticated = await this.userCrypto.authenticateOIDCUser(userId);
+  async authenticateOIDCUser(
+    userId: string,
+    deviceType?: DeviceType,
+  ): Promise<boolean> {
+    const sessionDurationMs =
+      deviceType === "desktop" || deviceType === "mobile"
+        ? 30 * 24 * 60 * 60 * 1000 // 30 days
+        : 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    const authenticated = await this.userCrypto.authenticateOIDCUser(
+      userId,
+      sessionDurationMs,
+    );
 
     if (authenticated) {
       await this.performLazyEncryptionMigration(userId);
@@ -99,10 +113,20 @@ class AuthManager {
     return authenticated;
   }
 
-  async authenticateUser(userId: string, password: string): Promise<boolean> {
+  async authenticateUser(
+    userId: string,
+    password: string,
+    deviceType?: DeviceType,
+  ): Promise<boolean> {
+    const sessionDurationMs =
+      deviceType === "desktop" || deviceType === "mobile"
+        ? 30 * 24 * 60 * 60 * 1000 // 30 days
+        : 7 * 24 * 60 * 60 * 1000; // 7 days
+
     const authenticated = await this.userCrypto.authenticateUser(
       userId,
       password,
+      sessionDurationMs,
     );
 
     if (authenticated) {

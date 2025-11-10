@@ -22,6 +22,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   isElectron: true,
   isDev: process.env.NODE_ENV === "development",
 
+  // Settings/preferences storage
+  getSetting: (key) => ipcRenderer.invoke("get-setting", key),
+  setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
+
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 });
 
