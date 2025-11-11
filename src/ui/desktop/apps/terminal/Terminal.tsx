@@ -180,28 +180,44 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [commandHistory, setCommandHistory] = useState<string[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
+    // Create refs for context methods to avoid infinite loops
+    const setIsLoadingRef = useRef(commandHistoryContext.setIsLoading);
+    const setCommandHistoryContextRef = useRef(
+      commandHistoryContext.setCommandHistory,
+    );
+
+    // Keep refs updated with latest context methods
+    useEffect(() => {
+      setIsLoadingRef.current = commandHistoryContext.setIsLoading;
+      setCommandHistoryContextRef.current =
+        commandHistoryContext.setCommandHistory;
+    }, [
+      commandHistoryContext.setIsLoading,
+      commandHistoryContext.setCommandHistory,
+    ]);
+
     // Load command history when dialog opens
     useEffect(() => {
       if (showHistoryDialog && hostConfig.id) {
         setIsLoadingHistory(true);
-        commandHistoryContext.setIsLoading(true);
+        setIsLoadingRef.current(true);
         import("@/ui/main-axios.ts")
           .then((module) => module.getCommandHistory(hostConfig.id!))
           .then((history) => {
             setCommandHistory(history);
-            commandHistoryContext.setCommandHistory(history);
+            setCommandHistoryContextRef.current(history);
           })
           .catch((error) => {
             console.error("Failed to load command history:", error);
             setCommandHistory([]);
-            commandHistoryContext.setCommandHistory([]);
+            setCommandHistoryContextRef.current([]);
           })
           .finally(() => {
             setIsLoadingHistory(false);
-            commandHistoryContext.setIsLoading(false);
+            setIsLoadingRef.current(false);
           });
       }
-    }, [showHistoryDialog, hostConfig.id, commandHistoryContext]);
+    }, [showHistoryDialog, hostConfig.id]);
 
     // Load command history for autocomplete on mount (Stage 3)
     useEffect(() => {
@@ -906,7 +922,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     // Register handlers with context
     useEffect(() => {
       commandHistoryContext.setOnSelectCommand(handleSelectCommand);
-    }, [handleSelectCommand, commandHistoryContext]);
+    }, [handleSelectCommand]);
 
     // Handle autocomplete selection (mouse click)
     const handleAutocompleteSelect = useCallback(
@@ -956,7 +972,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           // Update local state
           setCommandHistory((prev) => {
             const newHistory = prev.filter((cmd) => cmd !== command);
-            commandHistoryContext.setCommandHistory(newHistory);
+            setCommandHistoryContextRef.current(newHistory);
             return newHistory;
           });
 
@@ -970,13 +986,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           console.error("Failed to delete command from history:", error);
         }
       },
-      [hostConfig.id, commandHistoryContext],
+      [hostConfig.id],
     );
 
     // Register delete handler with context
     useEffect(() => {
       commandHistoryContext.setOnDeleteCommand(handleDeleteCommand);
-    }, [handleDeleteCommand, commandHistoryContext]);
+    }, [handleDeleteCommand]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;

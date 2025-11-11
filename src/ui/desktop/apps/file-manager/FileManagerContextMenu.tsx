@@ -503,8 +503,6 @@ export function FileManagerContextMenu({
         data-context-menu
         className={cn(
           "fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden",
-          "transition-all duration-150 ease-out origin-top-left",
-          isMounted ? "opacity-100 scale-100" : "opacity-0 scale-95",
         )}
         style={{
           left: menuPosition.x,

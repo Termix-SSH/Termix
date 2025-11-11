@@ -138,6 +138,8 @@ export function SSHToolsSidebar({
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [historyRefreshCounter, setHistoryRefreshCounter] = useState(0);
+  const commandHistoryScrollRef = React.useRef<HTMLDivElement>(null);
 
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
@@ -150,24 +152,53 @@ export function SSHToolsSidebar({
     activeUiTab?.type === "terminal" ? activeUiTab : undefined;
   const activeTerminalHostId = activeTerminal?.hostConfig?.id;
 
+  // Fetch command history
   useEffect(() => {
     if (isOpen && activeTab === "command-history") {
       if (activeTerminalHostId) {
-        setIsHistoryLoading(true);
+        // Save current scroll position before any state updates
+        const scrollTop = commandHistoryScrollRef.current?.scrollTop || 0;
+
         getCommandHistory(activeTerminalHostId)
           .then((history) => {
-            setCommandHistory(history);
+            setCommandHistory((prevHistory) => {
+              // Only update if history actually changed
+              if (JSON.stringify(prevHistory) !== JSON.stringify(history)) {
+                // Use requestAnimationFrame to restore scroll after React finishes rendering
+                requestAnimationFrame(() => {
+                  if (commandHistoryScrollRef.current) {
+                    commandHistoryScrollRef.current.scrollTop = scrollTop;
+                  }
+                });
+                return history;
+              }
+              return prevHistory;
+            });
           })
           .catch((err) => {
             console.error("Failed to fetch command history", err);
             setCommandHistory([]);
-          })
-          .finally(() => {
-            setIsHistoryLoading(false);
           });
       } else {
         setCommandHistory([]);
       }
+    }
+  }, [
+    isOpen,
+    activeTab,
+    activeTerminalHostId,
+    currentTab,
+    historyRefreshCounter,
+  ]);
+
+  // Auto-refresh command history every 2 seconds when history tab is active
+  useEffect(() => {
+    if (isOpen && activeTab === "command-history" && activeTerminalHostId) {
+      const refreshInterval = setInterval(() => {
+        setHistoryRefreshCounter((prev) => prev + 1);
+      }, 2000);
+
+      return () => clearInterval(refreshInterval);
     }
   }, [isOpen, activeTab, activeTerminalHostId]);
 
@@ -543,32 +574,23 @@ export function SSHToolsSidebar({
     }
   };
 
-  const handleCommandDelete = (command: string) => {
+  const handleCommandDelete = async (command: string) => {
     if (activeTerminalHostId) {
-      confirmWithToast(
-        t("commandHistory.deleteConfirmDescription", {
-          defaultValue: `Delete "${command}" from history?`,
-          command,
-        }),
-        async () => {
-          try {
-            await deleteCommandFromHistory(activeTerminalHostId, command);
-            setCommandHistory((prev) => prev.filter((c) => c !== command));
-            toast.success(
-              t("commandHistory.deleteSuccess", {
-                defaultValue: "Command deleted from history",
-              }),
-            );
-          } catch {
-            toast.error(
-              t("commandHistory.deleteFailed", {
-                defaultValue: "Failed to delete command.",
-              }),
-            );
-          }
-        },
-        "destructive",
-      );
+      try {
+        await deleteCommandFromHistory(activeTerminalHostId, command);
+        setCommandHistory((prev) => prev.filter((c) => c !== command));
+        toast.success(
+          t("commandHistory.deleteSuccess", {
+            defaultValue: "Command deleted from history",
+          }),
+        );
+      } catch {
+        toast.error(
+          t("commandHistory.deleteFailed", {
+            defaultValue: "Failed to delete command.",
+          }),
+        );
+      }
     }
   };
 
@@ -612,9 +634,13 @@ export function SSHToolsSidebar({
                 </SidebarGroupLabel>
               </SidebarHeader>
               <Separator className="p-0.25" />
-              <SidebarContent className="p-4">
-                <Tabs value={activeTab} onValueChange={handleTabChange}>
-                  <TabsList className="w-full grid grid-cols-3 mb-4">
+              <SidebarContent className="p-4 flex flex-col overflow-hidden">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={handleTabChange}
+                  className="flex flex-col h-full overflow-hidden"
+                >
+                  <TabsList className="w-full grid grid-cols-3 mb-4 flex-shrink-0">
                     <TabsTrigger value="ssh-tools">
                       {t("sshTools.title")}
                     </TabsTrigger>
@@ -896,8 +922,11 @@ export function SSHToolsSidebar({
                     )}
                   </TabsContent>
 
-                  <TabsContent value="command-history" className="space-y-4">
-                    <div className="space-y-2">
+                  <TabsContent
+                    value="command-history"
+                    className="flex flex-col flex-1 overflow-hidden"
+                  >
+                    <div className="space-y-2 flex-shrink-0 mb-4">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -923,17 +952,8 @@ export function SSHToolsSidebar({
                       </div>
                     </div>
 
-                    <div className="flex-1 overflow-hidden">
-                      {isHistoryLoading ? (
-                        <div className="flex flex-row items-center justify-center text-muted-foreground text-sm animate-pulse py-8">
-                          <Loader2 className="animate-spin mr-2" size={16} />
-                          <span>
-                            {t("commandHistory.loading", {
-                              defaultValue: "Loading history...",
-                            })}
-                          </span>
-                        </div>
-                      ) : !activeTerminal ? (
+                    <div className="flex-1 overflow-hidden min-h-0">
+                      {!activeTerminal ? (
                         <div className="text-center text-muted-foreground py-8">
                           <Terminal className="h-12 w-12 mb-4 opacity-20 mx-auto" />
                           <p className="mb-2 font-medium">
@@ -982,23 +1002,27 @@ export function SSHToolsSidebar({
                           )}
                         </div>
                       ) : (
-                        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-280px)]">
+                        <div
+                          ref={commandHistoryScrollRef}
+                          className="space-y-2 overflow-y-auto h-full"
+                        >
                           {filteredCommands.map((command, index) => (
                             <div
                               key={index}
-                              className="bg-dark-bg border-2 border-dark-border rounded-md px-3 py-2.5 hover:bg-dark-hover-alt hover:border-blue-400/50 transition-all duration-200 group"
+                              className="bg-dark-bg border-2 border-dark-border rounded-md px-3 py-2.5 hover:bg-dark-hover-alt hover:border-gray-600 transition-all duration-200 group h-12 flex items-center"
                             >
-                              <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center justify-between gap-2 w-full min-w-0">
                                 <span
-                                  className="flex-1 font-mono text-sm cursor-pointer text-white"
+                                  className="flex-1 font-mono text-sm cursor-pointer text-white truncate"
                                   onClick={() => handleCommandSelect(command)}
+                                  title={command}
                                 >
                                   {command}
                                 </span>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 flex-shrink-0"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleCommandDelete(command);
