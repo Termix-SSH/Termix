@@ -42,7 +42,7 @@ interface TerminalViewProps {
 export function AppView({
   isTopbarOpen = true,
   rightSidebarOpen = false,
-  rightSidebarWidth = 400,
+  rightSidebarWidth = 300,
 }: TerminalViewProps): React.ReactElement {
   const { tabs, currentTab, allSplitScreenTab, removeTab } = useTabs() as {
     tabs: TabData[];
@@ -70,16 +70,17 @@ export function AppView({
   );
   const [ready, setReady] = useState<boolean>(true);
   const [resetKey, setResetKey] = useState<number>(0);
+  const previousStylesRef = useRef<Record<number, React.CSSProperties>>({});
 
-  const updatePanelRects = () => {
+  const updatePanelRects = React.useCallback(() => {
     const next: Record<string, DOMRect | null> = {};
     Object.entries(panelRefs.current).forEach(([id, el]) => {
       if (el) next[id] = el.getBoundingClientRect();
     });
     setPanelRects(next);
-  };
+  }, []);
 
-  const fitActiveAndNotify = () => {
+  const fitActiveAndNotify = React.useCallback(() => {
     const visibleIds: number[] = [];
     if (allSplitScreenTab.length === 0) {
       if (currentTab) visibleIds.push(currentTab);
@@ -95,10 +96,10 @@ export function AppView({
         if (ref?.refresh) ref.refresh();
       }
     });
-  };
+  }, [allSplitScreenTab, currentTab, terminalTabs]);
 
   const layoutScheduleRef = useRef<number | null>(null);
-  const scheduleMeasureAndFit = () => {
+  const scheduleMeasureAndFit = React.useCallback(() => {
     if (layoutScheduleRef.current)
       cancelAnimationFrame(layoutScheduleRef.current);
     layoutScheduleRef.current = requestAnimationFrame(() => {
@@ -107,18 +108,17 @@ export function AppView({
         fitActiveAndNotify();
       });
     });
-  };
+  }, [updatePanelRects, fitActiveAndNotify]);
 
-  const hideThenFit = () => {
-    setReady(false);
+  const hideThenFit = React.useCallback(() => {
+    // Don't hide terminals, just fit them immediately
     requestAnimationFrame(() => {
       updatePanelRects();
       requestAnimationFrame(() => {
         fitActiveAndNotify();
-        setReady(true);
       });
     });
-  };
+  }, [updatePanelRects, fitActiveAndNotify]);
 
   const prevStateRef = useRef({
     terminalTabsLength: terminalTabs.length,
@@ -158,11 +158,20 @@ export function AppView({
     terminalTabs.length,
     allSplitScreenTab.join(","),
     terminalTabs,
+    hideThenFit,
   ]);
 
   useEffect(() => {
     scheduleMeasureAndFit();
-  }, [allSplitScreenTab.length, isTopbarOpen, sidebarState, resetKey]);
+  }, [
+    scheduleMeasureAndFit,
+    allSplitScreenTab.length,
+    isTopbarOpen,
+    sidebarState,
+    resetKey,
+    rightSidebarOpen,
+    rightSidebarWidth,
+  ]);
 
   useEffect(() => {
     const roContainer = containerRef.current
@@ -174,7 +183,7 @@ export function AppView({
     if (containerRef.current && roContainer)
       roContainer.observe(containerRef.current);
     return () => roContainer?.disconnect();
-  }, []);
+  }, [updatePanelRects, fitActiveAndNotify]);
 
   useEffect(() => {
     const onWinResize = () => {
@@ -183,7 +192,7 @@ export function AppView({
     };
     window.addEventListener("resize", onWinResize);
     return () => window.removeEventListener("resize", onWinResize);
-  }, []);
+  }, [updatePanelRects, fitActiveAndNotify]);
 
   const HEADER_H = 28;
 
@@ -208,33 +217,39 @@ export function AppView({
 
     if (allSplitScreenTab.length === 0 && mainTab) {
       const isFileManagerTab = mainTab.type === "file_manager";
-      styles[mainTab.id] = {
-        position: "absolute",
+      const newStyle = {
+        position: "absolute" as const,
         top: isFileManagerTab ? 0 : 4,
         left: isFileManagerTab ? 0 : 4,
         right: isFileManagerTab ? 0 : 4,
         bottom: isFileManagerTab ? 0 : 4,
         zIndex: 20,
-        display: "block",
-        pointerEvents: "auto",
-        opacity: ready ? 1 : 0,
+        display: "block" as const,
+        pointerEvents: "auto" as const,
+        opacity: 1,
+        transition: "opacity 150ms ease-in-out",
       };
+      styles[mainTab.id] = newStyle;
+      previousStylesRef.current[mainTab.id] = newStyle;
     } else {
       layoutTabs.forEach((t: TabData) => {
         const rect = panelRects[String(t.id)];
         const parentRect = containerRef.current?.getBoundingClientRect();
         if (rect && parentRect) {
-          styles[t.id] = {
-            position: "absolute",
+          const newStyle = {
+            position: "absolute" as const,
             top: rect.top - parentRect.top + HEADER_H + 4,
             left: rect.left - parentRect.left + 4,
             width: rect.width - 8,
             height: rect.height - HEADER_H - 8,
             zIndex: 20,
-            display: "block",
-            pointerEvents: "auto",
-            opacity: ready ? 1 : 0,
+            display: "block" as const,
+            pointerEvents: "auto" as const,
+            opacity: 1,
+            transition: "opacity 150ms ease-in-out",
           };
+          styles[t.id] = newStyle;
+          previousStylesRef.current[t.id] = newStyle;
         }
       });
     }
@@ -248,17 +263,31 @@ export function AppView({
           const isVisible =
             hasStyle || (allSplitScreenTab.length === 0 && t.id === currentTab);
 
+          // Use previous style if available to maintain position
+          const previousStyle = previousStylesRef.current[t.id];
+
+          // For non-split screen tabs, always use the standard position
+          const isFileManagerTab = t.type === "file_manager";
+          const standardStyle = {
+            position: "absolute" as const,
+            top: isFileManagerTab ? 0 : 4,
+            left: isFileManagerTab ? 0 : 4,
+            right: isFileManagerTab ? 0 : 4,
+            bottom: isFileManagerTab ? 0 : 4,
+          };
+
           const finalStyle: React.CSSProperties = hasStyle
             ? { ...styles[t.id], overflow: "hidden" }
             : ({
-                position: "absolute",
-                inset: 0,
-                visibility: "hidden",
+                ...(previousStyle || standardStyle),
+                opacity: 0,
                 pointerEvents: "none",
                 zIndex: 0,
+                transition: "opacity 150ms ease-in-out",
+                overflow: "hidden",
               } as React.CSSProperties);
 
-          const effectiveVisible = isVisible && ready;
+          const effectiveVisible = isVisible;
 
           const isTerminal = t.type === "terminal";
           const terminalConfig = {

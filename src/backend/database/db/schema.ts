@@ -99,6 +99,9 @@ export const sshData = sqliteTable("ssh_data", {
 
 export const fileManagerRecent = sqliteTable("file_manager_recent", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   hostId: integer("host_id")
     .notNull()
     .references(() => sshData.id, { onDelete: "cascade" }),
@@ -132,6 +135,9 @@ export const fileManagerShortcuts = sqliteTable("file_manager_shortcuts", {
   hostId: integer("host_id")
     .notNull()
     .references(() => sshData.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  path: text("path").notNull(),
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -245,6 +251,7 @@ export const commandHistory = sqliteTable("command_history", {
   hostId: integer("host_id")
     .notNull()
     .references(() => sshData.id, { onDelete: "cascade" }),
+  command: text("command").notNull(),
   executedAt: text("executed_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

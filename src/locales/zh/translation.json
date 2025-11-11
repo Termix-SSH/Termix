@@ -868,7 +868,18 @@
     "noneAuthDescription": "此认证方法在连接到 SSH 服务器时将使用键盘交互式认证。",
     "noneAuthDetails": "键盘交互式认证允许服务器在连接期间提示您输入凭据。这对于需要多因素认证或动态密码输入的服务器很有用。",
     "forceKeyboardInteractive": "强制键盘交互式认证",
-    "forceKeyboardInteractiveDesc": "强制使用键盘交互式认证。这通常是使用双因素认证（TOTP/2FA）的服务器所必需的。"
+    "forceKeyboardInteractiveDesc": "强制使用键盘交互式认证。这通常是使用双因素认证（TOTP/2FA）的服务器所必需的。",
+    "overrideCredentialUsername": "覆盖凭据用户名",
+    "overrideCredentialUsernameDesc": "使用与凭据中存储的用户名不同的用户名。这允许您对不同的用户名使用相同的凭据。",
+    "jumpHosts": "跳板主机",
+    "jumpHostsDescription": "跳板主机（也称为堡垒主机）允许您通过一个或多个中间服务器连接到目标服务器。这对于访问防火墙后或私有网络中的服务器很有用。",
+    "jumpHostChain": "跳板主机链",
+    "addJumpHost": "添加跳板主机",
+    "selectServer": "选择服务器",
+    "searchServers": "搜索服务器...",
+    "noServerFound": "未找到服务器",
+    "jumpHostsOrder": "连接将按顺序进行：跳板主机 1 → 跳板主机 2 → ... → 目标服务器",
+    "advancedAuthSettings": "高级身份验证设置"
   },
   "terminal": {
     "title": "终端",

@@ -820,11 +820,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             port,
           });
           jumpClient.end();
-          return res
-            .status(500)
-            .json({
-              error: "Failed to forward through jump host: " + err.message,
-            });
+          return res.status(500).json({
+            error: "Failed to forward through jump host: " + err.message,
+          });
         }
 
         config.sock = stream;
@@ -2732,9 +2730,12 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
     });
   }
 
+  sshConn.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
   const octalPerms = permissions.slice(-3);
   const escapedPath = path.replace(/'/g, "'\"'\"'");
-  const command = `chmod ${octalPerms} '${escapedPath}'`;
+  const command = `chmod ${octalPerms} '${escapedPath}' && echo "SUCCESS"`;
 
   fileLogger.info("Changing file permissions", {
     operation: "change_permissions",
@@ -2743,24 +2744,66 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
     permissions: octalPerms,
   });
 
+  const commandTimeout = setTimeout(() => {
+    if (!res.headersSent) {
+      fileLogger.error("changePermissions command timeout", {
+        operation: "change_permissions",
+        sessionId,
+        path,
+        permissions: octalPerms,
+      });
+      res.status(408).json({
+        error: "Permission change timed out. SSH connection may be unstable.",
+      });
+    }
+  }, 10000);
+
   sshConn.client.exec(command, (err, stream) => {
     if (err) {
+      clearTimeout(commandTimeout);
       fileLogger.error("SSH changePermissions exec error:", err, {
         operation: "change_permissions",
         sessionId,
         path,
         permissions: octalPerms,
       });
-      return res.status(500).json({ error: "Failed to change permissions" });
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "Failed to change permissions" });
+      }
+      return;
     }
 
+    let outputData = "";
     let errorOutput = "";
 
-    stream.stderr.on("data", (data) => {
+    stream.on("data", (chunk: Buffer) => {
+      outputData += chunk.toString();
+    });
+
+    stream.stderr.on("data", (data: Buffer) => {
       errorOutput += data.toString();
     });
 
     stream.on("close", (code) => {
+      clearTimeout(commandTimeout);
+
+      if (outputData.includes("SUCCESS")) {
+        fileLogger.success("File permissions changed successfully", {
+          operation: "change_permissions",
+          sessionId,
+          path,
+          permissions: octalPerms,
+        });
+
+        if (!res.headersSent) {
+          res.json({
+            success: true,
+            message: "Permissions changed successfully",
+          });
+        }
+        return;
+      }
+
       if (code !== 0) {
         fileLogger.error("chmod command failed", {
           operation: "change_permissions",
@@ -2770,9 +2813,12 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
           exitCode: code,
           error: errorOutput,
         });
-        return res.status(500).json({
-          error: errorOutput || "Failed to change permissions",
-        });
+        if (!res.headersSent) {
+          return res.status(500).json({
+            error: errorOutput || "Failed to change permissions",
+          });
+        }
+        return;
       }
 
       fileLogger.success("File permissions changed successfully", {
@@ -2782,13 +2828,16 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
         permissions: octalPerms,
       });
 
-      res.json({
-        success: true,
-        message: "Permissions changed successfully",
-      });
+      if (!res.headersSent) {
+        res.json({
+          success: true,
+          message: "Permissions changed successfully",
+        });
+      }
     });
 
     stream.on("error", (streamErr) => {
+      clearTimeout(commandTimeout);
       fileLogger.error("SSH changePermissions stream error:", streamErr, {
         operation: "change_permissions",
         sessionId,

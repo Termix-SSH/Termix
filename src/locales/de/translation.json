@@ -774,7 +774,18 @@
     "noneAuthDescription": "Diese Authentifizierungsmethode verwendet beim Herstellen der Verbindung zum SSH-Server die Keyboard-Interactive-Authentifizierung.",
     "noneAuthDetails": "Keyboard-Interactive-Authentifizierung ermöglicht dem Server, Sie während der Verbindung zur Eingabe von Anmeldeinformationen aufzufordern. Dies ist nützlich für Server, die eine Multi-Faktor-Authentifizierung oder eine dynamische Passworteingabe erfordern.",
     "forceKeyboardInteractive": "Tastatur-Interaktiv erzwingen",
-    "forceKeyboardInteractiveDesc": "Erzwingt die Verwendung der tastatur-interaktiven Authentifizierung. Dies ist oft für Server erforderlich, die eine Zwei-Faktor-Authentifizierung (TOTP/2FA) verwenden."
+    "forceKeyboardInteractiveDesc": "Erzwingt die Verwendung der tastatur-interaktiven Authentifizierung. Dies ist oft für Server erforderlich, die eine Zwei-Faktor-Authentifizierung (TOTP/2FA) verwenden.",
+    "overrideCredentialUsername": "Benutzernamen der Anmeldedaten überschreiben",
+    "overrideCredentialUsernameDesc": "Verwenden Sie einen anderen Benutzernamen als den, der in den Anmeldedaten gespeichert ist. Dadurch können Sie dieselben Anmeldedaten mit unterschiedlichen Benutzernamen verwenden.",
+    "jumpHosts": "Jump-Hosts",
+    "jumpHostsDescription": "Jump-Hosts (auch bekannt als Bastion-Hosts) ermöglichen es Ihnen, sich über einen oder mehrere Zwischen-Server mit einem Ziel-Server zu verbinden. Dies ist nützlich für den Zugriff auf Server hinter Firewalls oder in privaten Netzwerken.",
+    "jumpHostChain": "Jump-Host-Kette",
+    "addJumpHost": "Jump-Host hinzufügen",
+    "selectServer": "Server auswählen",
+    "searchServers": "Server durchsuchen...",
+    "noServerFound": "Kein Server gefunden",
+    "jumpHostsOrder": "Verbindungen werden in dieser Reihenfolge hergestellt: Jump-Host 1 → Jump-Host 2 → ... → Ziel-Server",
+    "advancedAuthSettings": "Erweiterte Authentifizierungseinstellungen"
   },
   "terminal": {
     "title": "Terminal",

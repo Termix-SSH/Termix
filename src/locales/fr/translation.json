@@ -765,7 +765,18 @@
     "noneAuthDescription": "Cette méthode utilisera l'authentification clavier-interactif lors de la connexion au serveur SSH.",
     "noneAuthDetails": "L'authentification clavier-interactif permet au serveur de vous demander des informations pendant la connexion. Utile pour le MFA ou si vous ne souhaitez pas stocker d'identifiants localement.",
     "forceKeyboardInteractive": "Forcer le clavier-interactif",
-    "forceKeyboardInteractiveDesc": "Force l'utilisation de l'authentification clavier-interactif. Souvent nécessaire pour les serveurs avec 2FA (TOTP/2FA)."
+    "forceKeyboardInteractiveDesc": "Force l'utilisation de l'authentification clavier-interactif. Souvent nécessaire pour les serveurs avec 2FA (TOTP/2FA).",
+    "overrideCredentialUsername": "Remplacer le nom d'utilisateur des identifiants",
+    "overrideCredentialUsernameDesc": "Utilisez un nom d'utilisateur différent de celui stocké dans les identifiants. Cela vous permet d'utiliser les mêmes identifiants avec différents noms d'utilisateur.",
+    "jumpHosts": "Serveurs de rebond",
+    "jumpHostsDescription": "Les serveurs de rebond (également appelés bastions) vous permettent de vous connecter à un serveur cible via un ou plusieurs serveurs intermédiaires. Utile pour accéder à des serveurs derrière des pare-feu ou dans des réseaux privés.",
+    "jumpHostChain": "Chaîne de serveurs de rebond",
+    "addJumpHost": "Ajouter un serveur de rebond",
+    "selectServer": "Sélectionner un serveur",
+    "searchServers": "Rechercher des serveurs...",
+    "noServerFound": "Aucun serveur trouvé",
+    "jumpHostsOrder": "Les connexions seront établies dans l'ordre : Serveur de rebond 1 → Serveur de rebond 2 → ... → Serveur cible",
+    "advancedAuthSettings": "Paramètres d'authentification avancés"
   },
   "terminal": {
     "title": "Terminal",

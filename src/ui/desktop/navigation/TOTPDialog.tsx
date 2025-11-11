@@ -25,7 +25,7 @@ export function TOTPDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-50 animate-in fade-in duration-200">
+    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
       <div
         className="absolute inset-0 bg-dark-bg rounded-md"
         style={{ backgroundColor: backgroundColor || undefined }}

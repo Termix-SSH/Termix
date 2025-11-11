@@ -74,7 +74,7 @@ async function handleLogout() {
 export function UserProfile({
   isTopbarOpen = true,
   rightSidebarOpen = false,
-  rightSidebarWidth = 400,
+  rightSidebarWidth = 300,
 }: UserProfileProps) {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();

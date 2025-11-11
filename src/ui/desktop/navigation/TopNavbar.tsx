@@ -7,8 +7,8 @@ import { Tab } from "@/ui/desktop/navigation/tabs/Tab.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
-import { SSHUtilitySidebar } from "@/ui/desktop/apps/tools/SSHUtilitySidebar.tsx";
-import { useCommandHistory } from "@/ui/desktop/contexts/CommandHistoryContext.tsx";
+import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
+import { useCommandHistory } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
 
 interface TabData {
   id: number;
@@ -62,11 +62,29 @@ export function TopNavbar({
   const [commandHistoryTabActive, setCommandHistoryTabActive] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem("rightSidebarWidth");
-    return saved !== null ? parseInt(saved, 10) : 350;
+    const defaultWidth = 350;
+    const savedWidth = saved !== null ? parseInt(saved, 10) : defaultWidth;
+    const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
+    const maxWidth = Math.floor(window.innerWidth * 0.3);
+    return Math.min(savedWidth, Math.max(minWidth, maxWidth));
   });
 
   React.useEffect(() => {
     localStorage.setItem("rightSidebarWidth", String(rightSidebarWidth));
+  }, [rightSidebarWidth]);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
+      const maxWidth = Math.floor(window.innerWidth * 0.3);
+      if (rightSidebarWidth > maxWidth) {
+        setRightSidebarWidth(Math.max(minWidth, maxWidth));
+      } else if (rightSidebarWidth < minWidth) {
+        setRightSidebarWidth(minWidth);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [rightSidebarWidth]);
 
   React.useEffect(() => {
@@ -75,13 +93,15 @@ export function TopNavbar({
     }
   }, [toolsSidebarOpen, rightSidebarWidth, onRightSidebarStateChange]);
 
+  const openCommandHistorySidebar = React.useCallback(() => {
+    setToolsSidebarOpen(true);
+    setCommandHistoryTabActive(true);
+  }, []);
+
   // Register function to open command history sidebar
   React.useEffect(() => {
-    commandHistory.setOpenCommandHistory(() => {
-      setToolsSidebarOpen(true);
-      setCommandHistoryTabActive(true);
-    });
-  }, [commandHistory]);
+    commandHistory.setOpenCommandHistory(openCommandHistorySidebar);
+  }, [commandHistory, openCommandHistorySidebar]);
 
   const rightPosition = toolsSidebarOpen
     ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
@@ -540,7 +560,7 @@ export function TopNavbar({
         </div>
       )}
 
-      <SSHUtilitySidebar
+      <SSHToolsSidebar
         isOpen={toolsSidebarOpen}
         onClose={() => setToolsSidebarOpen(false)}
         onSnippetExecute={handleSnippetExecute}

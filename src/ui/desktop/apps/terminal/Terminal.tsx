@@ -29,8 +29,8 @@ import {
 import type { TerminalConfig } from "@/types";
 import { useCommandTracker } from "@/ui/hooks/useCommandTracker";
 import { useCommandHistory as useCommandHistoryHook } from "@/ui/hooks/useCommandHistory";
-import { useCommandHistory } from "@/ui/desktop/contexts/CommandHistoryContext.tsx";
-import { CommandAutocomplete } from "./CommandAutocomplete";
+import { useCommandHistory } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
+import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface HostConfig {
@@ -1421,14 +1421,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     useEffect(() => {
       if (!isVisible || !isReady || !fitAddonRef.current || !terminal) {
-        if (!isVisible && isFitted) {
-          setIsFitted(false);
-        }
         return;
       }
 
-      setIsFitted(false);
-
+      // Don't set isFitted to false - keep terminal visible during resize
       let rafId1: number;
       let rafId2: number;
 
@@ -1467,8 +1463,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           ref={xtermRef}
           className="h-full w-full"
           style={{
-            visibility:
-              isReady && !isConnecting && isFitted ? "visible" : "hidden",
+            opacity: isReady && !isConnecting && isFitted ? 1 : 0,
+            transition: "opacity 100ms ease-in-out",
+            pointerEvents:
+              isReady && !isConnecting && isFitted ? "auto" : "none",
           }}
           onClick={() => {
             if (terminal && !splitScreen) {

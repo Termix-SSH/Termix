@@ -20,6 +20,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   ChartLine,
   Clock,
@@ -61,7 +62,7 @@ export function Dashboard({
   isTopbarOpen,
   onSelectView,
   rightSidebarOpen = false,
-  rightSidebarWidth = 400,
+  rightSidebarWidth = 300,
 }: DashboardProps): React.ReactElement {
   const { t } = useTranslation();
   const [loggedIn, setLoggedIn] = useState(isAuthenticated);
@@ -357,6 +358,11 @@ export function Dashboard({
                 {t("dashboard.title")}
               </div>
               <div className="flex flex-row gap-3">
+                <div className="flex flex-col items-center gap-4 justify-center mr-5">
+                  <p className="text-muted-foreground text-sm">
+                    Press <Kbd>LShift</Kbd> twice to open the command palette
+                  </p>
+                </div>
                 <Button
                   className="font-semibold"
                   variant="outline"

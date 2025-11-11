@@ -19,7 +19,7 @@ export function HostManager({
   initialTab = "host_viewer",
   hostConfig,
   rightSidebarOpen = false,
-  rightSidebarWidth = 400,
+  rightSidebarWidth = 300,
 }: HostManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(initialTab);

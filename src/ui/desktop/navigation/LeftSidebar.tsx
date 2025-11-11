@@ -289,7 +289,11 @@ export function LeftSidebar({
 
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem("leftSidebarWidth");
-    return saved !== null ? parseInt(saved, 10) : 250;
+    const defaultWidth = 250;
+    const savedWidth = saved !== null ? parseInt(saved, 10) : defaultWidth;
+    const minWidth = Math.min(200, Math.floor(window.innerWidth * 0.15));
+    const maxWidth = Math.floor(window.innerWidth * 0.3);
+    return Math.min(savedWidth, Math.max(minWidth, maxWidth));
   });
 
   const [isResizing, setIsResizing] = useState(false);
@@ -298,6 +302,20 @@ export function LeftSidebar({
 
   React.useEffect(() => {
     localStorage.setItem("leftSidebarWidth", String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const minWidth = Math.min(200, Math.floor(window.innerWidth * 0.15));
+      const maxWidth = Math.floor(window.innerWidth * 0.3);
+      if (sidebarWidth > maxWidth) {
+        setSidebarWidth(Math.max(minWidth, maxWidth));
+      } else if (sidebarWidth < minWidth) {
+        setSidebarWidth(minWidth);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [sidebarWidth]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -314,8 +332,8 @@ export function LeftSidebar({
       if (startXRef.current == null) return;
       const dx = e.clientX - startXRef.current;
       const newWidth = Math.round(startWidthRef.current + dx);
-      const minWidth = 200;
-      const maxWidth = Math.round(window.innerWidth * 0.5);
+      const minWidth = Math.min(200, Math.floor(window.innerWidth * 0.15));
+      const maxWidth = Math.round(window.innerWidth * 0.3);
       if (newWidth >= minWidth && newWidth <= maxWidth) {
         setSidebarWidth(newWidth);
       } else if (newWidth < minWidth) {
@@ -394,14 +412,14 @@ export function LeftSidebar({
   }, []);
 
   return (
-    <div className="min-h-svh">
+    <div className="h-screen w-screen overflow-hidden">
       <SidebarProvider
         open={isSidebarOpen}
         style={
           { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties
         }
       >
-        <div className="flex h-screen w-full">
+        <div className="flex h-screen w-screen overflow-hidden">
           <Sidebar variant="floating">
             <SidebarHeader>
               <SidebarGroupLabel className="text-lg font-bold text-white">

@@ -1920,6 +1920,17 @@ export async function refreshServerPolling(): Promise<void> {
   }
 }
 
+export async function notifyHostCreatedOrUpdated(
+  hostId: number,
+): Promise<void> {
+  try {
+    await statsApi.post("/host-updated", { hostId });
+  } catch (error) {
+    // Silently fail - this is a background operation
+    console.warn("Failed to notify stats server of host update:", error);
+  }
+}
+
 // ============================================================================
 // AUTHENTICATION
 // ============================================================================
@@ -2996,5 +3007,29 @@ export async function clearCommandHistory(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "clear command history");
+  }
+}
+
+// ============================================================================
+// OIDC TO PASSWORD CONVERSION
+// ============================================================================
+
+/**
+ * Convert an OIDC user to a password-based user
+ */
+export async function convertOIDCToPassword(
+  targetUserId: string,
+  newPassword: string,
+  totpCode?: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await authApi.post("/users/convert-oidc-to-password", {
+      targetUserId,
+      newPassword,
+      totpCode,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "convert OIDC user to password");
   }
 }

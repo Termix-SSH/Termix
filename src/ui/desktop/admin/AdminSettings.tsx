@@ -14,6 +14,14 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.tsx";
+import {
   Table,
   TableBody,
   TableCell,
@@ -55,6 +63,7 @@ import {
   getSessions,
   revokeSession,
   revokeAllUserSessions,
+  convertOIDCToPassword,
 } from "@/ui/main-axios.ts";
 
 interface AdminSettingsProps {
@@ -66,7 +75,7 @@ interface AdminSettingsProps {
 export function AdminSettings({
   isTopbarOpen = true,
   rightSidebarOpen = false,
-  rightSidebarWidth = 400,
+  rightSidebarWidth = 300,
 }: AdminSettingsProps): React.ReactElement {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
@@ -137,6 +146,16 @@ export function AdminSettings({
     }>
   >([]);
   const [sessionsLoading, setSessionsLoading] = React.useState(false);
+
+  const [convertUserDialogOpen, setConvertUserDialogOpen] =
+    React.useState(false);
+  const [convertTargetUser, setConvertTargetUser] = React.useState<{
+    id: string;
+    username: string;
+  } | null>(null);
+  const [convertPassword, setConvertPassword] = React.useState("");
+  const [convertTotpCode, setConvertTotpCode] = React.useState("");
+  const [convertLoading, setConvertLoading] = React.useState(false);
 
   const requiresImportPassword = React.useMemo(
     () => !currentUser?.is_oidc,
@@ -636,6 +655,57 @@ export function AdminSettings({
     );
   };
 
+  const handleConvertOIDCUser = (user: { id: string; username: string }) => {
+    setConvertTargetUser(user);
+    setConvertPassword("");
+    setConvertTotpCode("");
+    setConvertUserDialogOpen(true);
+  };
+
+  const handleConvertSubmit = async () => {
+    if (!convertTargetUser || !convertPassword) {
+      toast.error("Password is required");
+      return;
+    }
+
+    if (convertPassword.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+
+    setConvertLoading(true);
+    try {
+      const result = await convertOIDCToPassword(
+        convertTargetUser.id,
+        convertPassword,
+        convertTotpCode || undefined,
+      );
+
+      toast.success(
+        result.message ||
+          `User ${convertTargetUser.username} converted to password authentication`,
+      );
+      setConvertUserDialogOpen(false);
+      setConvertPassword("");
+      setConvertTotpCode("");
+      setConvertTargetUser(null);
+      fetchUsers();
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { error?: string; code?: string } };
+      };
+      if (err.response?.data?.code === "TOTP_REQUIRED") {
+        toast.error("TOTP code is required for this user");
+      } else {
+        toast.error(
+          err.response?.data?.error || "Failed to convert user account",
+        );
+      }
+    } finally {
+      setConvertLoading(false);
+    }
+  };
+
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
@@ -1030,15 +1100,35 @@ export function AdminSettings({
                                 : t("admin.local")}
                             </TableCell>
                             <TableCell className="px-4">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteUser(user.username)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                disabled={user.is_admin}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex gap-2">
+                                {user.is_oidc && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleConvertOIDCUser({
+                                        id: user.id,
+                                        username: user.username,
+                                      })
+                                    }
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    title="Convert to password authentication"
+                                  >
+                                    <Lock className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeleteUser(user.username)
+                                  }
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  disabled={user.is_admin}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1414,6 +1504,79 @@ export function AdminSettings({
           </Tabs>
         </div>
       </div>
+
+      {/* Convert OIDC to Password Dialog */}
+      <Dialog
+        open={convertUserDialogOpen}
+        onOpenChange={setConvertUserDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert to Password Authentication</DialogTitle>
+            <DialogDescription>
+              Convert {convertTargetUser?.username} from OIDC/SSO authentication
+              to password-based authentication. This will allow the user to log
+              in with a username and password instead of through an external
+              provider.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <Alert>
+              <AlertTitle>Important</AlertTitle>
+              <AlertDescription>
+                This action will:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Set a new password for this user</li>
+                  <li>Disable OIDC/SSO login for this account</li>
+                  <li>Log out all active sessions</li>
+                  <li>Preserve all user data (SSH hosts, credentials, etc.)</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <Label htmlFor="convert-password">
+                New Password (min 8 chars)
+              </Label>
+              <PasswordInput
+                id="convert-password"
+                value={convertPassword}
+                onChange={(e) => setConvertPassword(e.target.value)}
+                placeholder="Enter new password"
+                disabled={convertLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="convert-totp">
+                TOTP Code (if user has 2FA enabled)
+              </Label>
+              <Input
+                id="convert-totp"
+                value={convertTotpCode}
+                onChange={(e) => setConvertTotpCode(e.target.value)}
+                placeholder="000000"
+                disabled={convertLoading}
+                maxLength={6}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConvertUserDialogOpen(false)}
+              disabled={convertLoading}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConvertSubmit} disabled={convertLoading}>
+              {convertLoading ? "Converting..." : "Convert User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

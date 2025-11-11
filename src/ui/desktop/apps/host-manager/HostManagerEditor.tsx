@@ -81,6 +81,94 @@ import { TerminalPreview } from "@/ui/desktop/apps/terminal/TerminalPreview.tsx"
 import type { TerminalConfig } from "@/types";
 import { Plus, X, Check, ChevronsUpDown } from "lucide-react";
 
+interface JumpHostItemProps {
+  jumpHost: { hostId: number };
+  index: number;
+  hosts: SSHHost[];
+  editingHost?: SSHHost | null;
+  onUpdate: (hostId: number) => void;
+  onRemove: () => void;
+  t: (key: string) => string;
+}
+
+function JumpHostItem({
+  jumpHost,
+  index,
+  hosts,
+  editingHost,
+  onUpdate,
+  onRemove,
+  t,
+}: JumpHostItemProps) {
+  const [open, setOpen] = React.useState(false);
+  const selectedHost = hosts.find((h) => h.id === jumpHost.hostId);
+
+  return (
+    <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+      <div className="flex items-center gap-2 flex-1">
+        <span className="text-sm font-medium text-muted-foreground">
+          {index + 1}.
+        </span>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="flex-1 justify-between"
+            >
+              {selectedHost
+                ? `${selectedHost.name || `${selectedHost.username}@${selectedHost.ip}`}`
+                : t("hosts.selectServer")}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[400px] p-0">
+            <Command>
+              <CommandInput placeholder={t("hosts.searchServers")} />
+              <CommandEmpty>{t("hosts.noServerFound")}</CommandEmpty>
+              <CommandGroup className="max-h-[300px] overflow-y-auto">
+                {hosts
+                  .filter((h) => !editingHost || h.id !== editingHost.id)
+                  .map((host) => (
+                    <CommandItem
+                      key={host.id}
+                      value={`${host.name} ${host.ip} ${host.username}`}
+                      onSelect={() => {
+                        onUpdate(host.id);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          jumpHost.hostId === host.id
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {host.name || `${host.username}@${host.ip}`}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {host.username}@{host.ip}:{host.port}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+      <Button type="button" variant="ghost" size="icon" onClick={onRemove}>
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
 interface SSHHost {
   id: number;
   name: string;
@@ -722,8 +810,13 @@ export function HostManagerEditor({
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
-      const { refreshServerPolling } = await import("@/ui/main-axios.ts");
-      refreshServerPolling();
+      // Notify the stats server to start/update polling for this specific host
+      if (savedHost?.id) {
+        const { notifyHostCreatedOrUpdated } = await import(
+          "@/ui/main-axios.ts"
+        );
+        notifyHostCreatedOrUpdated(savedHost.id);
+      }
     } catch {
       toast.error(t("hosts.failedToSaveHost"));
     } finally {
@@ -1406,169 +1499,102 @@ export function HostManagerEditor({
                       </Alert>
                     </TabsContent>
                   </Tabs>
-                  <FormField
-                    control={form.control}
-                    name="forceKeyboardInteractive"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 mt-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>
-                            {t("hosts.forceKeyboardInteractive")}
-                          </FormLabel>
-                          <FormDescription>
-                            {t("hosts.forceKeyboardInteractiveDesc")}
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
                   <Separator className="my-6" />
-                  <FormLabel className="mb-3 font-bold">
-                    {t("hosts.jumpHosts")}
-                  </FormLabel>
-                  <Alert className="mt-2 mb-4">
-                    <AlertDescription>
-                      {t("hosts.jumpHostsDescription")}
-                    </AlertDescription>
-                  </Alert>
-                  <FormField
-                    control={form.control}
-                    name="jumpHosts"
-                    render={({ field }) => (
-                      <FormItem className="mt-4">
-                        <FormLabel>{t("hosts.jumpHostChain")}</FormLabel>
-                        <FormControl>
-                          <div className="space-y-3">
-                            {field.value.map((jumpHost, index) => {
-                              const selectedHost = hosts.find(
-                                (h) => h.id === jumpHost.hostId,
-                              );
-                              const [open, setOpen] = React.useState(false);
+                  <Accordion type="multiple" className="w-full">
+                    <AccordionItem value="advanced-auth">
+                      <AccordionTrigger>
+                        {t("hosts.advancedAuthSettings")}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-4">
+                        <FormField
+                          control={form.control}
+                          name="forceKeyboardInteractive"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>
+                                  {t("hosts.forceKeyboardInteractive")}
+                                </FormLabel>
+                                <FormDescription>
+                                  {t("hosts.forceKeyboardInteractiveDesc")}
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
 
-                              return (
-                                <div
-                                  key={index}
-                                  className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30"
-                                >
-                                  <div className="flex items-center gap-2 flex-1">
-                                    <span className="text-sm font-medium text-muted-foreground">
-                                      {index + 1}.
-                                    </span>
-                                    <Popover open={open} onOpenChange={setOpen}>
-                                      <PopoverTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          role="combobox"
-                                          aria-expanded={open}
-                                          className="flex-1 justify-between"
-                                        >
-                                          {selectedHost
-                                            ? `${selectedHost.name || `${selectedHost.username}@${selectedHost.ip}`}`
-                                            : t("hosts.selectServer")}
-                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-[400px] p-0">
-                                        <Command>
-                                          <CommandInput
-                                            placeholder={t(
-                                              "hosts.searchServers",
-                                            )}
-                                          />
-                                          <CommandEmpty>
-                                            {t("hosts.noServerFound")}
-                                          </CommandEmpty>
-                                          <CommandGroup className="max-h-[300px] overflow-y-auto">
-                                            {hosts
-                                              .filter(
-                                                (h) =>
-                                                  !editingHost ||
-                                                  h.id !== editingHost.id,
-                                              )
-                                              .map((host) => (
-                                                <CommandItem
-                                                  key={host.id}
-                                                  value={`${host.name} ${host.ip} ${host.username}`}
-                                                  onSelect={() => {
-                                                    const newJumpHosts = [
-                                                      ...field.value,
-                                                    ];
-                                                    newJumpHosts[index] = {
-                                                      hostId: host.id,
-                                                    };
-                                                    field.onChange(
-                                                      newJumpHosts,
-                                                    );
-                                                    setOpen(false);
-                                                  }}
-                                                >
-                                                  <Check
-                                                    className={cn(
-                                                      "mr-2 h-4 w-4",
-                                                      jumpHost.hostId ===
-                                                        host.id
-                                                        ? "opacity-100"
-                                                        : "opacity-0",
-                                                    )}
-                                                  />
-                                                  <div className="flex flex-col">
-                                                    <span className="font-medium">
-                                                      {host.name ||
-                                                        `${host.username}@${host.ip}`}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                      {host.username}@{host.ip}:
-                                                      {host.port}
-                                                    </span>
-                                                  </div>
-                                                </CommandItem>
-                                              ))}
-                                          </CommandGroup>
-                                        </Command>
-                                      </PopoverContent>
-                                    </Popover>
-                                  </div>
+                    <AccordionItem value="jump-hosts">
+                      <AccordionTrigger>
+                        {t("hosts.jumpHosts")}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-4">
+                        <Alert>
+                          <AlertDescription>
+                            {t("hosts.jumpHostsDescription")}
+                          </AlertDescription>
+                        </Alert>
+                        <FormField
+                          control={form.control}
+                          name="jumpHosts"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("hosts.jumpHostChain")}</FormLabel>
+                              <FormControl>
+                                <div className="space-y-3">
+                                  {field.value.map((jumpHost, index) => (
+                                    <JumpHostItem
+                                      key={index}
+                                      jumpHost={jumpHost}
+                                      index={index}
+                                      hosts={hosts}
+                                      editingHost={editingHost}
+                                      onUpdate={(hostId) => {
+                                        const newJumpHosts = [...field.value];
+                                        newJumpHosts[index] = { hostId };
+                                        field.onChange(newJumpHosts);
+                                      }}
+                                      onRemove={() => {
+                                        const newJumpHosts = field.value.filter(
+                                          (_, i) => i !== index,
+                                        );
+                                        field.onChange(newJumpHosts);
+                                      }}
+                                      t={t}
+                                    />
+                                  ))}
                                   <Button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon"
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => {
-                                      const newJumpHosts = field.value.filter(
-                                        (_, i) => i !== index,
-                                      );
-                                      field.onChange(newJumpHosts);
+                                      field.onChange([
+                                        ...field.value,
+                                        { hostId: 0 },
+                                      ]);
                                     }}
                                   >
-                                    <X className="h-4 w-4" />
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    {t("hosts.addJumpHost")}
                                   </Button>
                                 </div>
-                              );
-                            })}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                field.onChange([...field.value, { hostId: 0 }]);
-                              }}
-                            >
-                              <Plus className="h-4 w-4 mr-2" />
-                              {t("hosts.addJumpHost")}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          {t("hosts.jumpHostsOrder")}
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
+                              </FormControl>
+                              <FormDescription>
+                                {t("hosts.jumpHostsOrder")}
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </TabsContent>
                 <TabsContent value="terminal" className="space-y-1">
                   <FormField

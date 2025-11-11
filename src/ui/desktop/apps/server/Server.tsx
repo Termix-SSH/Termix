@@ -103,8 +103,15 @@ export function Server({
   const metricsEnabled = statsConfig.metricsEnabled !== false;
 
   React.useEffect(() => {
+    if (hostConfig?.id !== currentHostConfig?.id) {
+      // Reset state when switching to a different host
+      setServerStatus("offline");
+      setMetrics(null);
+      setMetricsHistory([]);
+      setShowStatsUI(true);
+    }
     setCurrentHostConfig(hostConfig);
-  }, [hostConfig]);
+  }, [hostConfig?.id]);
 
   const renderWidget = (widgetType: WidgetType) => {
     switch (widgetType) {

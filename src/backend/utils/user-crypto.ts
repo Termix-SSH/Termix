@@ -22,6 +22,7 @@ interface EncryptedDEK {
 interface UserSession {
   dataKey: Buffer;
   expiresAt: number;
+  lastActivity?: number;
 }
 
 class UserCrypto {

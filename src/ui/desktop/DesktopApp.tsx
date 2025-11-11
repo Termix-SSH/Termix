@@ -8,7 +8,7 @@ import {
   useTabs,
 } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
-import { CommandHistoryProvider } from "@/ui/desktop/contexts/CommandHistoryContext.tsx";
+import { CommandHistoryProvider } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
 import { AdminSettings } from "@/ui/desktop/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
@@ -31,7 +31,7 @@ function AppContent() {
   const { currentTab, tabs } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
-  const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(300);
 
   const lastShiftPressTime = useRef(0);
 
@@ -159,7 +159,7 @@ function AppContent() {
   const showProfile = currentTabData?.type === "user_profile";
 
   return (
-    <div>
+    <div className="h-screen w-screen overflow-hidden">
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         setIsOpen={setIsCommandPaletteOpen}

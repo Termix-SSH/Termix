@@ -9,6 +9,7 @@ import {
   fileManagerPinned,
   fileManagerShortcuts,
   sshFolders,
+  commandHistory,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -355,6 +356,29 @@ router.post(
         },
       );
 
+      // Notify stats server to start polling this host
+      try {
+        const axios = (await import("axios")).default;
+        const statsPort = process.env.STATS_PORT || 30005;
+        await axios.post(
+          `http://localhost:${statsPort}/host-updated`,
+          { hostId: createdHost.id },
+          {
+            headers: {
+              Authorization: req.headers.authorization || "",
+              Cookie: req.headers.cookie || "",
+            },
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        sshLogger.warn("Failed to notify stats server of new host", {
+          operation: "host_create",
+          hostId: createdHost.id as number,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
       res.json(resolvedHost);
     } catch (err) {
       sshLogger.error("Failed to save SSH host to database", err, {
@@ -569,6 +593,29 @@ router.put(
           authType: effectiveAuthType,
         },
       );
+
+      // Notify stats server to refresh polling for this host
+      try {
+        const axios = (await import("axios")).default;
+        const statsPort = process.env.STATS_PORT || 30005;
+        await axios.post(
+          `http://localhost:${statsPort}/host-updated`,
+          { hostId: parseInt(hostId) },
+          {
+            headers: {
+              Authorization: req.headers.authorization || "",
+              Cookie: req.headers.cookie || "",
+            },
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        sshLogger.warn("Failed to notify stats server of host update", {
+          operation: "host_update",
+          hostId: parseInt(hostId),
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
 
       res.json(resolvedHost);
     } catch (err) {
@@ -1220,6 +1267,94 @@ router.delete(
     } catch (err) {
       sshLogger.error("Failed to remove shortcut", err);
       res.status(500).json({ error: "Failed to remove shortcut" });
+    }
+  },
+);
+
+// Route: Get command history for a host
+// GET /ssh/command-history/:hostId
+router.get(
+  "/command-history/:hostId",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const hostId = parseInt(req.params.hostId, 10);
+
+    if (!isNonEmptyString(userId) || !hostId) {
+      sshLogger.warn("Invalid userId or hostId for command history fetch", {
+        operation: "command_history_fetch",
+        hostId,
+        userId,
+      });
+      return res.status(400).json({ error: "Invalid userId or hostId" });
+    }
+
+    try {
+      const history = await db
+        .select({
+          id: commandHistory.id,
+          command: commandHistory.command,
+        })
+        .from(commandHistory)
+        .where(
+          and(
+            eq(commandHistory.userId, userId),
+            eq(commandHistory.hostId, hostId),
+          ),
+        )
+        .orderBy(desc(commandHistory.executedAt))
+        .limit(200);
+
+      res.json(history.map((h) => h.command));
+    } catch (err) {
+      sshLogger.error("Failed to fetch command history from database", err, {
+        operation: "command_history_fetch",
+        hostId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch command history" });
+    }
+  },
+);
+
+// Route: Delete command from history
+// DELETE /ssh/command-history
+router.delete(
+  "/command-history",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { hostId, command } = req.body;
+
+    if (!isNonEmptyString(userId) || !hostId || !command) {
+      sshLogger.warn("Invalid data for command history deletion", {
+        operation: "command_history_delete",
+        hostId,
+        userId,
+      });
+      return res.status(400).json({ error: "Invalid data" });
+    }
+
+    try {
+      await db
+        .delete(commandHistory)
+        .where(
+          and(
+            eq(commandHistory.userId, userId),
+            eq(commandHistory.hostId, hostId),
+            eq(commandHistory.command, command),
+          ),
+        );
+
+      res.json({ message: "Command deleted from history" });
+    } catch (err) {
+      sshLogger.error("Failed to delete command from history", err, {
+        operation: "command_history_delete",
+        hostId,
+        userId,
+        command,
+      });
+      res.status(500).json({ error: "Failed to delete command" });
     }
   },
 );

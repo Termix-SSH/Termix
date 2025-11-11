@@ -720,7 +720,18 @@
     "noneAuthDescription": "Este método de autenticação usará autenticação interativa por teclado ao conectar ao servidor SSH.",
     "noneAuthDetails": "A autenticação interativa por teclado permite que o servidor solicite credenciais durante a conexão. Isso é útil para servidores que requerem autenticação multifator ou entrada de senha dinâmica.",
     "forceKeyboardInteractive": "Forçar Interativo com Teclado",
-    "forceKeyboardInteractiveDesc": "Força o uso da autenticação interativa com teclado. Isso é frequentemente necessário para servidores que usam Autenticação de Dois Fatores (TOTP/2FA)."
+    "forceKeyboardInteractiveDesc": "Força o uso da autenticação interativa com teclado. Isso é frequentemente necessário para servidores que usam Autenticação de Dois Fatores (TOTP/2FA).",
+    "overrideCredentialUsername": "Substituir Nome de Usuário da Credencial",
+    "overrideCredentialUsernameDesc": "Use um nome de usuário diferente daquele armazenado na credencial. Isso permite que você use a mesma credencial com diferentes nomes de usuário.",
+    "jumpHosts": "Hosts de Salto",
+    "jumpHostsDescription": "Hosts de salto (também conhecidos como bastions) permitem que você se conecte a um servidor de destino através de um ou mais servidores intermediários. Isso é útil para acessar servidores atrás de firewalls ou em redes privadas.",
+    "jumpHostChain": "Cadeia de Hosts de Salto",
+    "addJumpHost": "Adicionar Host de Salto",
+    "selectServer": "Selecionar Servidor",
+    "searchServers": "Pesquisar servidores...",
+    "noServerFound": "Nenhum servidor encontrado",
+    "jumpHostsOrder": "As conexões serão feitas na ordem: Host de Salto 1 → Host de Salto 2 → ... → Servidor de Destino",
+    "advancedAuthSettings": "Configurações Avançadas de Autenticação"
   },
   "terminal": {
     "title": "Terminal",

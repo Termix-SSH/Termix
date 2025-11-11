@@ -33,6 +33,7 @@ import {
   RotateCcw,
   Search,
   Loader2,
+  Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -44,6 +45,8 @@ import {
   deleteSnippet,
   getCookie,
   setCookie,
+  getCommandHistory,
+  deleteCommandFromHistory,
 } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import type { Snippet, SnippetData } from "../../../../types";
@@ -57,6 +60,10 @@ interface TabData {
       sendInput?: (data: string) => void;
     };
   };
+  hostConfig?: {
+    id: number;
+  };
+  isActive?: boolean;
   [key: string]: unknown;
 }
 
@@ -66,30 +73,25 @@ interface SSHUtilitySidebarProps {
   onSnippetExecute: (content: string) => void;
   sidebarWidth: number;
   setSidebarWidth: (width: number) => void;
-  commandHistory?: string[];
-  onSelectCommand?: (command: string) => void;
-  onDeleteCommand?: (command: string) => void;
-  isHistoryLoading?: boolean;
   initialTab?: string;
   onTabChange?: () => void;
 }
 
-export function SSHUtilitySidebar({
+export function SSHToolsSidebar({
   isOpen,
   onClose,
   onSnippetExecute,
   sidebarWidth,
   setSidebarWidth,
-  commandHistory = [],
-  onSelectCommand,
-  onDeleteCommand,
-  isHistoryLoading = false,
   initialTab,
   onTabChange,
 }: SSHUtilitySidebarProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
-  const { tabs } = useTabs() as { tabs: TabData[] };
+  const { tabs, currentTab } = useTabs() as {
+    tabs: TabData[];
+    currentTab: number | null;
+  };
   const [activeTab, setActiveTab] = useState(initialTab || "ssh-tools");
 
   // Update active tab when initialTab changes
@@ -133,8 +135,9 @@ export function SSHUtilitySidebar({
   );
 
   // Command History state
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
 
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
@@ -142,6 +145,31 @@ export function SSHUtilitySidebar({
   const startWidthRef = React.useRef<number>(sidebarWidth);
 
   const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
+  const activeUiTab = tabs.find((tab) => tab.id === currentTab);
+  const activeTerminal =
+    activeUiTab?.type === "terminal" ? activeUiTab : undefined;
+  const activeTerminalHostId = activeTerminal?.hostConfig?.id;
+
+  useEffect(() => {
+    if (isOpen && activeTab === "command-history") {
+      if (activeTerminalHostId) {
+        setIsHistoryLoading(true);
+        getCommandHistory(activeTerminalHostId)
+          .then((history) => {
+            setCommandHistory(history);
+          })
+          .catch((err) => {
+            console.error("Failed to fetch command history", err);
+            setCommandHistory([]);
+          })
+          .finally(() => {
+            setIsHistoryLoading(false);
+          });
+      } else {
+        setCommandHistory([]);
+      }
+    }
+  }, [isOpen, activeTab, activeTerminalHostId]);
 
   // Filter command history based on search query
   const filteredCommands = searchQuery
@@ -157,6 +185,21 @@ export function SSHUtilitySidebar({
       `${sidebarWidth}px`,
     );
   }, [sidebarWidth]);
+
+  // Handle window resize to adjust sidebar width
+  useEffect(() => {
+    const handleResize = () => {
+      const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
+      const maxWidth = Math.floor(window.innerWidth * 0.3);
+      if (sidebarWidth > maxWidth) {
+        setSidebarWidth(Math.max(minWidth, maxWidth));
+      } else if (sidebarWidth < minWidth) {
+        setSidebarWidth(minWidth);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [sidebarWidth, setSidebarWidth]);
 
   useEffect(() => {
     if (isOpen && activeTab === "snippets") {
@@ -179,8 +222,8 @@ export function SSHUtilitySidebar({
       if (startXRef.current == null) return;
       const dx = startXRef.current - e.clientX; // Reversed because we're on the right
       const newWidth = Math.round(startWidthRef.current + dx);
-      const minWidth = 300;
-      const maxWidth = Math.round(window.innerWidth * 0.5);
+      const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
+      const maxWidth = Math.round(window.innerWidth * 0.3);
 
       let finalWidth = newWidth;
       if (newWidth < minWidth) {
@@ -495,25 +538,34 @@ export function SSHUtilitySidebar({
 
   // Command History handlers
   const handleCommandSelect = (command: string) => {
-    if (onSelectCommand) {
-      onSelectCommand(command);
+    if (activeTerminal?.terminalRef?.current?.sendInput) {
+      activeTerminal.terminalRef.current.sendInput(command);
     }
   };
 
   const handleCommandDelete = (command: string) => {
-    if (onDeleteCommand) {
+    if (activeTerminalHostId) {
       confirmWithToast(
         t("commandHistory.deleteConfirmDescription", {
           defaultValue: `Delete "${command}" from history?`,
           command,
         }),
-        () => {
-          onDeleteCommand(command);
-          toast.success(
-            t("commandHistory.deleteSuccess", {
-              defaultValue: "Command deleted from history",
-            }),
-          );
+        async () => {
+          try {
+            await deleteCommandFromHistory(activeTerminalHostId, command);
+            setCommandHistory((prev) => prev.filter((c) => c !== command));
+            toast.success(
+              t("commandHistory.deleteSuccess", {
+                defaultValue: "Command deleted from history",
+              }),
+            );
+          } catch {
+            toast.error(
+              t("commandHistory.deleteFailed", {
+                defaultValue: "Failed to delete command.",
+              }),
+            );
+          }
         },
         "destructive",
       );
@@ -542,7 +594,7 @@ export function SSHUtilitySidebar({
                   <div className="absolute right-5 flex gap-1">
                     <Button
                       variant="outline"
-                      onClick={() => setSidebarWidth(400)}
+                      onClick={() => setSidebarWidth(300)}
                       className="w-[28px] h-[28px]"
                       title="Reset sidebar width"
                     >
@@ -855,7 +907,6 @@ export function SSHUtilitySidebar({
                           value={searchQuery}
                           onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            setSelectedCommandIndex(0);
                           }}
                           className="pl-10 pr-10"
                         />
@@ -874,13 +925,28 @@ export function SSHUtilitySidebar({
 
                     <div className="flex-1 overflow-hidden">
                       {isHistoryLoading ? (
-                        <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse py-8">
+                        <div className="flex flex-row items-center justify-center text-muted-foreground text-sm animate-pulse py-8">
                           <Loader2 className="animate-spin mr-2" size={16} />
                           <span>
                             {t("commandHistory.loading", {
                               defaultValue: "Loading history...",
                             })}
                           </span>
+                        </div>
+                      ) : !activeTerminal ? (
+                        <div className="text-center text-muted-foreground py-8">
+                          <Terminal className="h-12 w-12 mb-4 opacity-20 mx-auto" />
+                          <p className="mb-2 font-medium">
+                            {t("commandHistory.noTerminal", {
+                              defaultValue: "No active terminal",
+                            })}
+                          </p>
+                          <p className="text-sm">
+                            {t("commandHistory.noTerminalHint", {
+                              defaultValue:
+                                "Open a terminal to see its command history.",
+                            })}
+                          </p>
                         </div>
                       ) : filteredCommands.length === 0 ? (
                         <div className="text-center text-muted-foreground py-8">
@@ -909,14 +975,14 @@ export function SSHUtilitySidebar({
                               <p className="text-sm">
                                 {t("commandHistory.emptyHint", {
                                   defaultValue:
-                                    "Execute commands to build your history",
+                                    "Execute commands in the active terminal to build its history.",
                                 })}
                               </p>
                             </>
                           )}
                         </div>
                       ) : (
-                        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-300px)]">
+                        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-280px)]">
                           {filteredCommands.map((command, index) => (
                             <div
                               key={index}
@@ -929,41 +995,25 @@ export function SSHUtilitySidebar({
                                 >
                                   {command}
                                 </span>
-                                {onDeleteCommand && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCommandDelete(command);
-                                    }}
-                                    title={t("commandHistory.deleteTooltip", {
-                                      defaultValue: "Delete command",
-                                    })}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCommandDelete(command);
+                                  }}
+                                  title={t("commandHistory.deleteTooltip", {
+                                    defaultValue: "Delete command",
+                                  })}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
-                    </div>
-
-                    <Separator />
-
-                    <div className="text-xs text-muted-foreground">
-                      <span>
-                        {filteredCommands.length}{" "}
-                        {t("commandHistory.commandCount", {
-                          defaultValue:
-                            filteredCommands.length !== 1
-                              ? "commands"
-                              : "command",
-                        })}
-                      </span>
                     </div>
                   </TabsContent>
                 </Tabs>

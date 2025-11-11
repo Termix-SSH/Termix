@@ -665,6 +665,7 @@ class PollingManager {
     const statsConfig = this.parseStatsConfig(host.statsConfig);
     const existingConfig = this.pollingConfigs.get(host.id);
 
+    // Always clear existing timers first
     if (existingConfig) {
       if (existingConfig.statusTimer) {
         clearInterval(existingConfig.statusTimer);
@@ -674,10 +675,19 @@ class PollingManager {
       }
     }
 
+    // If both checks are disabled, stop all polling and clean up
     if (!statsConfig.statusCheckEnabled && !statsConfig.metricsEnabled) {
       this.pollingConfigs.delete(host.id);
       this.statusStore.delete(host.id);
       this.metricsStore.delete(host.id);
+      statsLogger.info(
+        `Stopped all polling for host ${host.id} (${host.name || host.ip}) - both checks disabled`,
+        {
+          operation: "polling_stopped",
+          hostId: host.id,
+          hostName: host.name || host.ip,
+        },
+      );
       return;
     }
 
@@ -694,8 +704,21 @@ class PollingManager {
       config.statusTimer = setInterval(() => {
         this.pollHostStatus(host);
       }, intervalMs);
+
+      statsLogger.debug(
+        `Started status polling for host ${host.id} (interval: ${statsConfig.statusCheckInterval}s)`,
+        {
+          operation: "status_polling_started",
+          hostId: host.id,
+          interval: statsConfig.statusCheckInterval,
+        },
+      );
     } else {
       this.statusStore.delete(host.id);
+      statsLogger.debug(`Status polling disabled for host ${host.id}`, {
+        operation: "status_polling_disabled",
+        hostId: host.id,
+      });
     }
 
     if (statsConfig.metricsEnabled) {
@@ -706,8 +729,21 @@ class PollingManager {
       config.metricsTimer = setInterval(() => {
         this.pollHostMetrics(host);
       }, intervalMs);
+
+      statsLogger.debug(
+        `Started metrics polling for host ${host.id} (interval: ${statsConfig.metricsInterval}s)`,
+        {
+          operation: "metrics_polling_started",
+          hostId: host.id,
+          interval: statsConfig.metricsInterval,
+        },
+      );
     } else {
       this.metricsStore.delete(host.id);
+      statsLogger.debug(`Metrics polling disabled for host ${host.id}`, {
+        operation: "metrics_polling_disabled",
+        hostId: host.id,
+      });
     }
 
     this.pollingConfigs.set(host.id, config);
@@ -731,6 +767,12 @@ class PollingManager {
   }
 
   private async pollHostMetrics(host: SSHHostWithCredentials): Promise<void> {
+    // Double-check that metrics are still enabled before collecting
+    const config = this.pollingConfigs.get(host.id);
+    if (!config || !config.statsConfig.metricsEnabled) {
+      return;
+    }
+
     try {
       const metrics = await collectMetrics(host);
       this.metricsStore.set(host.id, {
@@ -738,12 +780,19 @@ class PollingManager {
         timestamp: Date.now(),
       });
     } catch (error) {
-      statsLogger.warn("Failed to collect metrics for host", {
-        operation: "metrics_poll_failed",
-        hostId: host.id,
-        hostName: host.name,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      // Only log errors if metrics collection is actually enabled
+      // Don't spam logs with errors for hosts that have metrics disabled
+      if (config.statsConfig.metricsEnabled) {
+        statsLogger.warn("Failed to collect metrics for host", {
+          operation: "metrics_poll_failed",
+          hostId: host.id,
+          hostName: host.name,
+          error: errorMessage,
+        });
+      }
     }
   }
 
@@ -1372,6 +1421,39 @@ app.post("/refresh", async (req, res) => {
 
   await pollingManager.refreshHostPolling(userId);
   res.json({ message: "Polling refreshed" });
+});
+
+app.post("/host-updated", async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { hostId } = req.body;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  if (!hostId || typeof hostId !== "number") {
+    return res.status(400).json({ error: "Invalid hostId" });
+  }
+
+  try {
+    const host = await fetchHostById(hostId, userId);
+    if (host) {
+      await pollingManager.startPollingForHost(host);
+      res.json({ message: "Host polling started" });
+    } else {
+      res.status(404).json({ error: "Host not found" });
+    }
+  } catch (error) {
+    statsLogger.error("Failed to start polling for host", error, {
+      operation: "host_updated",
+      hostId,
+      userId,
+    });
+    res.status(500).json({ error: "Failed to start polling" });
+  }
 });
 
 app.get("/metrics/:id", validateHostId, async (req, res) => {
