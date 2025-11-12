@@ -122,7 +122,10 @@ export function CommandPalette({
     if (adminTab) {
       setCurrentTab(adminTab.id);
     } else {
-      const id = addTab({ type: "admin", title: t("commandPalette.adminSettings") });
+      const id = addTab({
+        type: "admin",
+        title: t("commandPalette.adminSettings"),
+      });
       setCurrentTab(id);
     }
     setIsOpen(false);
@@ -133,7 +136,10 @@ export function CommandPalette({
     if (userProfileTab) {
       setCurrentTab(userProfileTab.id);
     } else {
-      const id = addTab({ type: "user_profile", title: t("commandPalette.userProfile") });
+      const id = addTab({
+        type: "user_profile",
+        title: t("commandPalette.userProfile"),
+      });
       setCurrentTab(id);
     }
     setIsOpen(false);
@@ -288,83 +294,93 @@ export function CommandPalette({
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />
-          <CommandGroup heading={t("commandPalette.hosts")}>
-            {hosts.map((host, index) => {
-              const title = host.name?.trim()
-                ? host.name
-                : `${host.username}@${host.ip}:${host.port}`;
-              return (
-                <CommandItem
-                  key={`host-${index}-${host.id}`}
-                  value={`host-${index}-${title}-${host.id}`}
-                  onSelect={() => {
-                    if (host.enableTerminal) {
-                      handleHostTerminalClick(host);
-                    }
-                  }}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <Server className="h-4 w-4" />
-                    <span>{title}</span>
-                  </div>
-                  <div
-                    className="flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="!px-2 h-7 border-1 border-dark-border"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <EllipsisVertical className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        side="right"
-                        className="w-56 bg-dark-bg border-dark-border text-white"
+          {hosts.length > 0 && (
+            <>
+              <CommandGroup heading={t("commandPalette.hosts")}>
+                {hosts.map((host, index) => {
+                  const title = host.name?.trim()
+                    ? host.name
+                    : `${host.username}@${host.ip}:${host.port}`;
+                  return (
+                    <CommandItem
+                      key={`host-${index}-${host.id}`}
+                      value={`host-${index}-${title}-${host.id}`}
+                      onSelect={() => {
+                        if (host.enableTerminal) {
+                          handleHostTerminalClick(host);
+                        }
+                      }}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Server className="h-4 w-4" />
+                        <span>{title}</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleHostServerDetailsClick(host);
-                          }}
-                          className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-                        >
-                          <Server className="h-4 w-4" />
-                          <span className="flex-1">{t("commandPalette.openServerDetails")}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleHostFileManagerClick(host);
-                          }}
-                          className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-                        >
-                          <FolderOpen className="h-4 w-4" />
-                          <span className="flex-1">{t("commandPalette.openFileManager")}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleHostEditClick(host);
-                          }}
-                          className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="flex-1">{t("commandPalette.edit")}</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
-          <CommandSeparator />
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="!px-2 h-7 border-1 border-dark-border"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <EllipsisVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            side="right"
+                            className="w-56 bg-dark-bg border-dark-border text-white"
+                          >
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHostServerDetailsClick(host);
+                              }}
+                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                            >
+                              <Server className="h-4 w-4" />
+                              <span className="flex-1">
+                                {t("commandPalette.openServerDetails")}
+                              </span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHostFileManagerClick(host);
+                              }}
+                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                              <span className="flex-1">
+                                {t("commandPalette.openFileManager")}
+                              </span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHostEditClick(host);
+                              }}
+                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                            >
+                              <Pencil className="h-4 w-4" />
+                              <span className="flex-1">
+                                {t("commandPalette.edit")}
+                              </span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
           <CommandGroup heading={t("commandPalette.links")}>
             <CommandItem onSelect={handleGitHub}>
               <Github />

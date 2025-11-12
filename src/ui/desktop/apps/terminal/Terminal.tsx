@@ -221,7 +221,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     // Load command history for autocomplete on mount (Stage 3)
     useEffect(() => {
-      if (hostConfig.id) {
+      // Check if command autocomplete is enabled
+      const autocompleteEnabled =
+        localStorage.getItem("commandAutocomplete") !== "false";
+
+      if (hostConfig.id && autocompleteEnabled) {
         import("@/ui/main-axios.ts")
           .then((module) => module.getCommandHistory(hostConfig.id!))
           .then((history) => {
@@ -231,6 +235,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             console.error("Failed to load autocomplete history:", error);
             autocompleteHistory.current = [];
           });
+      } else {
+        autocompleteHistory.current = [];
       }
     }, [hostConfig.id]);
 
@@ -1318,6 +1324,20 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.preventDefault();
           e.stopPropagation();
 
+          // Check if command autocomplete is enabled in settings
+          const autocompleteEnabled =
+            localStorage.getItem("commandAutocomplete") !== "false";
+
+          if (!autocompleteEnabled) {
+            // If disabled, let the terminal handle Tab normally (send to server)
+            if (webSocketRef.current?.readyState === 1) {
+              webSocketRef.current.send(
+                JSON.stringify({ type: "input", data: "\t" }),
+              );
+            }
+            return false;
+          }
+
           const currentCmd = getCurrentCommandRef.current().trim();
           if (currentCmd.length > 0 && webSocketRef.current?.readyState === 1) {
             // Filter commands that start with current input
@@ -1328,7 +1348,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                   cmd !== currentCmd &&
                   cmd.length > currentCmd.length,
               )
-              .slice(0, 10); // Show up to 10 matches
+              .slice(0, 5); // Show up to 5 matches for better UX
 
             if (matches.length === 1) {
               // Only one match - auto-complete directly
@@ -1359,21 +1379,31 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 const cellWidth =
                   terminal.cols > 0 ? rect.width / terminal.cols : 10;
 
-                // Estimate autocomplete menu height (max-h-[240px] from component)
-                const menuHeight = 240;
-                const cursorBottomY = rect.top + (cursorY + 1) * cellHeight;
-                const spaceBelow = window.innerHeight - cursorBottomY;
-                const spaceAbove = rect.top + cursorY * cellHeight;
+                // Calculate actual menu height based on number of items
+                // Each item is ~32px (py-1.5), footer is ~32px, max total 240px
+                const itemHeight = 32;
+                const footerHeight = 32;
+                const maxMenuHeight = 240;
+                const estimatedMenuHeight = Math.min(
+                  matches.length * itemHeight + footerHeight,
+                  maxMenuHeight,
+                );
 
-                // Show above cursor if not enough space below
+                // Get cursor position in viewport coordinates
+                const cursorBottomY = rect.top + (cursorY + 1) * cellHeight;
+                const cursorTopY = rect.top + cursorY * cellHeight;
+                const spaceBelow = window.innerHeight - cursorBottomY;
+                const spaceAbove = cursorTopY;
+
+                // Show above cursor if not enough space below and more space above
                 const showAbove =
-                  spaceBelow < menuHeight && spaceAbove > spaceBelow;
+                  spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow;
 
                 setAutocompletePosition({
                   top: showAbove
-                    ? rect.top + cursorY * cellHeight - menuHeight
+                    ? Math.max(0, cursorTopY - estimatedMenuHeight)
                     : cursorBottomY,
-                  left: rect.left + cursorX * cellWidth,
+                  left: Math.max(0, rect.left + cursorX * cellWidth),
                 });
               }
 

@@ -31,7 +31,7 @@ function AppContent() {
   const { currentTab, tabs } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
-  const [rightSidebarWidth, setRightSidebarWidth] = useState(300);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
 
   const lastShiftPressTime = useRef(0);
 
@@ -69,6 +69,8 @@ function AppContent() {
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
+            // Clear invalid token
+            localStorage.removeItem("jwt");
           } else {
             setIsAuthenticated(true);
             setIsAdmin(!!meRes.is_admin);
@@ -79,6 +81,9 @@ function AppContent() {
           setIsAuthenticated(false);
           setIsAdmin(false);
           setUsername(null);
+
+          // Clear invalid token on any auth error
+          localStorage.removeItem("jwt");
 
           const errorCode = err?.response?.data?.code;
           if (errorCode === "SESSION_EXPIRED") {

@@ -524,6 +524,8 @@ router.delete(
         return res.status(404).json({ error: "Credential not found" });
       }
 
+      // Update hosts using this credential to set credentialId to null
+      // This prevents orphaned references before deletion
       const hostsUsingCredential = await db
         .select()
         .from(sshData)
@@ -552,14 +554,8 @@ router.delete(
           );
       }
 
-      await db
-        .delete(sshCredentialUsage)
-        .where(
-          and(
-            eq(sshCredentialUsage.credentialId, parseInt(id)),
-            eq(sshCredentialUsage.userId, userId),
-          ),
-        );
+      // sshCredentialUsage will be automatically deleted by ON DELETE CASCADE
+      // No need for manual deletion
 
       await db
         .delete(sshCredentials)

@@ -495,7 +495,12 @@ export function Auth({
     const error = urlParams.get("error");
 
     if (error) {
-      const errorMessage = `${t("errors.oidcAuthFailed")}: ${error}`;
+      let errorMessage: string;
+      if (error === "registration_disabled") {
+        errorMessage = t("messages.registrationDisabled");
+      } else {
+        errorMessage = `${t("errors.oidcAuthFailed")}: ${error}`;
+      }
       setError(errorMessage);
       setOidcLoading(false);
       window.history.replaceState({}, document.title, window.location.pathname);

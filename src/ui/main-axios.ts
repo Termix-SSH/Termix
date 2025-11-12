@@ -77,6 +77,7 @@ interface UserInfo {
   is_admin: boolean;
   is_oidc: boolean;
   data_unlocked: boolean;
+  password_hash?: string;
 }
 
 interface UserCount {
@@ -396,10 +397,12 @@ function createApiInstance(
           errorMessage === "Authentication required";
 
         if (isSessionExpired || isSessionNotFound) {
+          // Clear token from localStorage
+          localStorage.removeItem("jwt");
+
+          // Clear Electron settings cache
           if (isElectron()) {
-            localStorage.removeItem("jwt");
-          } else {
-            localStorage.removeItem("jwt");
+            electronSettingsCache.delete("jwt");
           }
 
           if (typeof window !== "undefined") {
@@ -420,6 +423,12 @@ function createApiInstance(
             "Authentication error - token may be invalid",
             errorMessage,
           );
+
+          // Clear invalid token
+          localStorage.removeItem("jwt");
+          if (isElectron()) {
+            electronSettingsCache.delete("jwt");
+          }
         }
       }
 
@@ -873,6 +882,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
+      quickActions: hostData.quickActions || [],
       statsConfig: hostData.statsConfig
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig
@@ -938,6 +948,7 @@ export async function updateSSHHost(
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
+      quickActions: hostData.quickActions || [],
       statsConfig: hostData.statsConfig
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig
@@ -2874,6 +2885,21 @@ export async function deleteSnippet(
   }
 }
 
+export async function executeSnippet(
+  snippetId: number,
+  hostId: number,
+): Promise<{ success: boolean; output: string; error?: string }> {
+  try {
+    const response = await authApi.post("/snippets/execute", {
+      snippetId,
+      hostId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "execute snippet");
+  }
+}
+
 // ============================================================================
 // HOMEPAGE API
 // ============================================================================
@@ -2966,10 +2992,17 @@ export async function saveCommandToHistory(
 /**
  * Get command history for a specific host
  * Returns array of unique commands ordered by most recent
+ * @param hostId - The host ID to fetch history for
+ * @param limit - Maximum number of commands to return (default: 100)
  */
-export async function getCommandHistory(hostId: number): Promise<string[]> {
+export async function getCommandHistory(
+  hostId: number,
+  limit: number = 100,
+): Promise<string[]> {
   try {
-    const response = await authApi.get(`/terminal/command_history/${hostId}`);
+    const response = await authApi.get(`/terminal/command_history/${hostId}`, {
+      params: { limit },
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch command history");
@@ -3011,25 +3044,23 @@ export async function clearCommandHistory(
 }
 
 // ============================================================================
-// OIDC TO PASSWORD CONVERSION
+// OIDC ACCOUNT LINKING
 // ============================================================================
 
 /**
- * Convert an OIDC user to a password-based user
+ * Link an OIDC user to an existing password account (merges OIDC into password account)
  */
-export async function convertOIDCToPassword(
-  targetUserId: string,
-  newPassword: string,
-  totpCode?: string,
+export async function linkOIDCToPasswordAccount(
+  oidcUserId: string,
+  targetUsername: string,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await authApi.post("/users/convert-oidc-to-password", {
-      targetUserId,
-      newPassword,
-      totpCode,
+    const response = await authApi.post("/users/link-oidc-to-password", {
+      oidcUserId,
+      targetUsername,
     });
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "convert OIDC user to password");
+    throw handleApiError(error, "link OIDC account to password account");
   }
 }

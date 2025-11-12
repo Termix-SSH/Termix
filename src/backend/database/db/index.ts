@@ -316,7 +316,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         user_id TEXT NOT NULL,
         type TEXT NOT NULL,
         host_id INTEGER NOT NULL,
-        host_name TEXT NOT NULL,
+        host_name TEXT,
         timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
@@ -489,6 +489,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists("ssh_data", "stats_config", "TEXT");
   addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
+  addColumnIfNotExists("ssh_data", "quick_actions", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");

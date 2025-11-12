@@ -62,7 +62,7 @@ export function Dashboard({
   isTopbarOpen,
   onSelectView,
   rightSidebarOpen = false,
-  rightSidebarWidth = 300,
+  rightSidebarWidth = 400,
 }: DashboardProps): React.ReactElement {
   const { t } = useTranslation();
   const [loggedIn, setLoggedIn] = useState(isAuthenticated);

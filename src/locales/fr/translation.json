@@ -223,6 +223,20 @@
     "editTooltip": "Modifier cet extrait",
     "deleteTooltip": "Supprimer cet extrait"
   },
+  "commandHistory": {
+    "title": "Historique",
+    "searchPlaceholder": "Rechercher des commandes...",
+    "noTerminal": "Aucun terminal actif",
+    "noTerminalHint": "Ouvrez un terminal pour voir son historique de commandes.",
+    "empty": "Aucun historique de commandes",
+    "emptyHint": "Exécutez des commandes dans le terminal actif pour créer un historique.",
+    "noResults": "Aucune commande trouvée",
+    "noResultsHint": "Aucune commande correspondant à \"{{query}}\"",
+    "deleteSuccess": "Commande supprimée de l'historique",
+    "deleteFailed": "Échec de la suppression de la commande.",
+    "deleteTooltip": "Supprimer la commande",
+    "tabHint": "Utilisez Tab dans le terminal pour compléter automatiquement depuis l'historique des commandes"
+  },
   "homepage": {
     "loggedInTitle": "Connexion réussie !",
     "loggedInMessage": "Vous êtes connecté ! Utilisez la barre latérale pour accéder à tous les outils disponibles. Pour commencer, créez un hôte SSH dans l'onglet Gestionnaire SSH. Une fois créé, vous pourrez vous connecter à cet hôte avec les autres applications de la barre latérale.",
@@ -1368,6 +1382,10 @@
     "local": "Local",
     "external": "Externe (OIDC)",
     "selectPreferredLanguage": "Choisissez votre langue préférée pour l'interface",
+    "fileColorCoding": "Codage couleur des fichiers",
+    "fileColorCodingDesc": "Codage couleur des fichiers par type : dossiers (rouge), fichiers (bleu), liens symboliques (vert)",
+    "commandAutocomplete": "Autocomplétion des commandes",
+    "commandAutocompleteDesc": "Activer les suggestions d'autocomplétion avec la touche Tab pour les commandes du terminal basées sur votre historique",
     "currentPassword": "Mot de passe actuel",
     "passwordChangedSuccess": "Mot de passe modifié avec succès ! Veuillez vous reconnecter.",
     "failedToChangePassword": "Échec de la modification du mot de passe. Vérifiez votre mot de passe actuel et réessayez."

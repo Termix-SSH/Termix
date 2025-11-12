@@ -74,7 +74,7 @@ async function handleLogout() {
 export function UserProfile({
   isTopbarOpen = true,
   rightSidebarOpen = false,
-  rightSidebarWidth = 300,
+  rightSidebarWidth = 400,
 }: UserProfileProps) {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
@@ -96,6 +96,9 @@ export function UserProfile({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [fileColorCoding, setFileColorCoding] = useState<boolean>(
     localStorage.getItem("fileColorCoding") !== "false",
+  );
+  const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
+    localStorage.getItem("commandAutocomplete") !== "false",
   );
 
   useEffect(() => {
@@ -143,6 +146,11 @@ export function UserProfile({
     localStorage.setItem("fileColorCoding", enabled.toString());
     // Trigger a re-render by dispatching a custom event
     window.dispatchEvent(new Event("fileColorCodingChanged"));
+  };
+
+  const handleCommandAutocompleteToggle = (enabled: boolean) => {
+    setCommandAutocomplete(enabled);
+    localStorage.setItem("commandAutocomplete", enabled.toString());
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -359,6 +367,23 @@ export function UserProfile({
                       <Switch
                         checked={fileColorCoding}
                         onCheckedChange={handleFileColorCodingToggle}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-dark-border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("profile.commandAutocomplete")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.commandAutocompleteDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={commandAutocomplete}
+                        onCheckedChange={handleCommandAutocompleteToggle}
                       />
                     </div>
                   </div>

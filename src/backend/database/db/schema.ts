@@ -89,6 +89,7 @@ export const sshData = sqliteTable("ssh_data", {
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
   terminalConfig: text("terminal_config"),
+  quickActions: text("quick_actions"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -238,6 +239,7 @@ export const recentActivity = sqliteTable("recent_activity", {
   hostId: integer("host_id")
     .notNull()
     .references(() => sshData.id, { onDelete: "cascade" }),
+  hostName: text("host_name"),
   timestamp: text("timestamp")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

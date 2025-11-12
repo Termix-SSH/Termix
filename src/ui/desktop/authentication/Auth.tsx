@@ -555,7 +555,11 @@ export function Auth({
     const error = urlParams.get("error");
 
     if (error) {
-      toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
+      if (error === "registration_disabled") {
+        toast.error(t("messages.registrationDisabled"));
+      } else {
+        toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
+      }
       setOidcLoading(false);
       window.history.replaceState({}, document.title, window.location.pathname);
       return;

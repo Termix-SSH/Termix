@@ -33,33 +33,44 @@ export function CommandAutocomplete({
     return null;
   }
 
+  // Calculate max height for suggestions list to ensure footer is always visible
+  // Footer height is approximately 32px (text + padding + border)
+  const footerHeight = 32;
+  const maxSuggestionsHeight = 240 - footerHeight;
+
   return (
     <div
       ref={containerRef}
-      className="fixed z-[9999] bg-dark-bg border border-dark-border rounded-md shadow-lg max-h-[240px] overflow-y-auto min-w-[200px] max-w-[600px]"
+      className="fixed z-[9999] bg-dark-bg border border-dark-border rounded-md shadow-lg min-w-[200px] max-w-[600px] flex flex-col"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,
+        maxHeight: "240px",
       }}
     >
-      {suggestions.map((suggestion, index) => (
-        <div
-          key={index}
-          ref={index === selectedIndex ? selectedRef : null}
-          className={cn(
-            "px-3 py-1.5 text-sm font-mono cursor-pointer transition-colors",
-            "hover:bg-dark-hover",
-            index === selectedIndex && "bg-blue-500/20 text-blue-400",
-          )}
-          onClick={() => onSelect(suggestion)}
-          onMouseEnter={() => {
-            // Optional: update selected index on hover
-          }}
-        >
-          {suggestion}
-        </div>
-      ))}
-      <div className="px-3 py-1 text-xs text-muted-foreground border-t border-dark-border bg-dark-bg/50">
+      <div
+        className="overflow-y-auto"
+        style={{ maxHeight: `${maxSuggestionsHeight}px` }}
+      >
+        {suggestions.map((suggestion, index) => (
+          <div
+            key={index}
+            ref={index === selectedIndex ? selectedRef : null}
+            className={cn(
+              "px-3 py-1.5 text-sm font-mono cursor-pointer transition-colors",
+              "hover:bg-dark-hover",
+              index === selectedIndex && "bg-gray-500/20 text-gray-400",
+            )}
+            onClick={() => onSelect(suggestion)}
+            onMouseEnter={() => {
+              // Optional: update selected index on hover
+            }}
+          >
+            {suggestion}
+          </div>
+        ))}
+      </div>
+      <div className="px-3 py-1 text-xs text-muted-foreground border-t border-dark-border bg-dark-bg/50 shrink-0">
         Tab/Enter to complete • ↑↓ to navigate • Esc to close
       </div>
     </div>

@@ -42,7 +42,7 @@ interface TerminalViewProps {
 export function AppView({
   isTopbarOpen = true,
   rightSidebarOpen = false,
-  rightSidebarWidth = 300,
+  rightSidebarWidth = 400,
 }: TerminalViewProps): React.ReactElement {
   const { tabs, currentTab, allSplitScreenTab, removeTab } = useTabs() as {
     tabs: TabData[];
@@ -204,16 +204,12 @@ export function AppView({
 
   const renderTerminalsLayer = () => {
     const styles: Record<number, React.CSSProperties> = {};
-    const splitTabs = terminalTabs.filter((tab: TabData) =>
-      allSplitScreenTab.includes(tab.id),
-    );
+    // Use allSplitScreenTab order directly - it maintains the order tabs were added
+    const layoutTabs = allSplitScreenTab
+      .map((tabId) => terminalTabs.find((tab: TabData) => tab.id === tabId))
+      .filter((t): t is TabData => t !== null && t !== undefined);
+
     const mainTab = terminalTabs.find((tab: TabData) => tab.id === currentTab);
-    const layoutTabs = [
-      mainTab,
-      ...splitTabs.filter(
-        (t: TabData) => t && t.id !== (mainTab && (mainTab as TabData).id),
-      ),
-    ].filter((t): t is TabData => t !== null && t !== undefined);
 
     if (allSplitScreenTab.length === 0 && mainTab) {
       const isFileManagerTab = mainTab.type === "file_manager";
@@ -358,16 +354,10 @@ export function AppView({
   };
 
   const renderSplitOverlays = () => {
-    const splitTabs = terminalTabs.filter((tab: TabData) =>
-      allSplitScreenTab.includes(tab.id),
-    );
-    const mainTab = terminalTabs.find((tab: TabData) => tab.id === currentTab);
-    const layoutTabs = [
-      mainTab,
-      ...splitTabs.filter(
-        (t: TabData) => t && t.id !== (mainTab && (mainTab as TabData).id),
-      ),
-    ].filter((t): t is TabData => t !== null && t !== undefined);
+    // Use allSplitScreenTab order directly - it maintains the order tabs were added
+    const layoutTabs = allSplitScreenTab
+      .map((tabId) => terminalTabs.find((tab: TabData) => tab.id === tabId))
+      .filter((t): t is TabData => t !== null && t !== undefined);
     if (allSplitScreenTab.length === 0) return null;
 
     const handleStyle = {

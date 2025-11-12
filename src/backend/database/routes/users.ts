@@ -762,6 +762,44 @@ router.get("/oidc/callback", async (req, res) => {
         .get();
       isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
 
+      // Check if registration is allowed (unless this is the first user)
+      if (!isFirstUser) {
+        try {
+          const regRow = db.$client
+            .prepare(
+              "SELECT value FROM settings WHERE key = 'allow_registration'",
+            )
+            .get();
+          if (regRow && (regRow as Record<string, unknown>).value !== "true") {
+            authLogger.warn(
+              "OIDC user attempted to register when registration is disabled",
+              {
+                operation: "oidc_registration_disabled",
+                identifier,
+                name,
+              },
+            );
+
+            let frontendUrl = (redirectUri as string).replace(
+              "/users/oidc/callback",
+              "",
+            );
+            if (frontendUrl.includes("localhost")) {
+              frontendUrl = "http://localhost:5173";
+            }
+            const redirectUrl = new URL(frontendUrl);
+            redirectUrl.searchParams.set("error", "registration_disabled");
+
+            return res.redirect(redirectUrl.toString());
+          }
+        } catch (e) {
+          authLogger.warn("Failed to check registration status during OIDC", {
+            operation: "oidc_registration_check",
+            error: e,
+          });
+        }
+      }
+
       const id = nanoid();
       await db.insert(users).values({
         id,
@@ -1681,6 +1719,7 @@ router.get("/list", authenticateJWT, async (req, res) => {
         username: users.username,
         is_admin: users.is_admin,
         is_oidc: users.is_oidc,
+        password_hash: users.password_hash,
       })
       .from(users);
 
@@ -2517,21 +2556,15 @@ router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Convert OIDC user to password user (link accounts)
-// POST /users/convert-oidc-to-password
-router.post("/convert-oidc-to-password", authenticateJWT, async (req, res) => {
+// Route: Link OIDC user to existing password account (merge accounts)
+// POST /users/link-oidc-to-password
+router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
   const adminUserId = (req as AuthenticatedRequest).userId;
-  const { targetUserId, newPassword, totpCode } = req.body;
+  const { oidcUserId, targetUsername } = req.body;
 
-  if (!isNonEmptyString(targetUserId) || !isNonEmptyString(newPassword)) {
+  if (!isNonEmptyString(oidcUserId) || !isNonEmptyString(targetUsername)) {
     return res.status(400).json({
-      error: "Target user ID and new password are required",
-    });
-  }
-
-  if (newPassword.length < 8) {
-    return res.status(400).json({
-      error: "New password must be at least 8 characters long",
+      error: "OIDC user ID and target username are required",
     });
   }
 
@@ -2545,185 +2578,128 @@ router.post("/convert-oidc-to-password", authenticateJWT, async (req, res) => {
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    // Get target user
+    // Get OIDC user
+    const oidcUserRecords = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, oidcUserId));
+    if (!oidcUserRecords || oidcUserRecords.length === 0) {
+      return res.status(404).json({ error: "OIDC user not found" });
+    }
+
+    const oidcUser = oidcUserRecords[0];
+
+    // Verify user is OIDC
+    if (!oidcUser.is_oidc) {
+      return res.status(400).json({
+        error: "Source user is not an OIDC user",
+      });
+    }
+
+    // Get target password user
     const targetUserRecords = await db
       .select()
       .from(users)
-      .where(eq(users.id, targetUserId));
+      .where(eq(users.username, targetUsername));
     if (!targetUserRecords || targetUserRecords.length === 0) {
-      return res.status(404).json({ error: "Target user not found" });
+      return res.status(404).json({ error: "Target password user not found" });
     }
 
     const targetUser = targetUserRecords[0];
 
-    // Verify user is OIDC
-    if (!targetUser.is_oidc) {
+    // Verify target user has password authentication
+    if (targetUser.is_oidc || !targetUser.password_hash) {
       return res.status(400).json({
-        error: "User is already a password-based user",
+        error: "Target user must be a password-based account",
       });
     }
 
-    // Verify TOTP if enabled
-    if (targetUser.totp_enabled && targetUser.totp_secret) {
-      if (!totpCode) {
-        return res.status(400).json({
-          error: "TOTP code required for this user",
-          code: "TOTP_REQUIRED",
-        });
-      }
-
-      const verified = speakeasy.totp.verify({
-        secret: targetUser.totp_secret,
-        encoding: "base32",
-        token: totpCode,
-        window: 2,
+    // Check if target user already has OIDC configured
+    if (targetUser.client_id && targetUser.oidc_identifier) {
+      return res.status(400).json({
+        error: "Target user already has OIDC authentication configured",
       });
-
-      if (!verified) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
-      }
     }
 
-    authLogger.info("Converting OIDC user to password user", {
-      operation: "convert_oidc_to_password",
-      targetUserId,
-      adminUserId,
+    authLogger.info("Linking OIDC user to password account", {
+      operation: "link_oidc_to_password",
+      oidcUserId,
+      oidcUsername: oidcUser.username,
+      targetUserId: targetUser.id,
       targetUsername: targetUser.username,
+      adminUserId,
     });
 
-    // Step 1: Get current DEK from memory (requires user to be logged in)
-    // For admin conversion, we need to authenticate as OIDC user first
-    const deviceType = "web";
-    const unlocked = await authManager.authenticateOIDCUser(
-      targetUserId,
-      deviceType,
-    );
-
-    if (!unlocked) {
-      return res.status(500).json({
-        error: "Failed to unlock user data for conversion",
-      });
-    }
-
-    // Get the DEK from memory
-    const { DataCrypto } = await import("../../utils/data-crypto.js");
-    const currentDEK = DataCrypto.getUserDataKey(targetUserId);
-
-    if (!currentDEK) {
-      return res.status(500).json({
-        error: "User data encryption key not available",
-      });
-    }
-
-    // Step 2: Setup new password-based encryption
-    const { UserCrypto } = await import("../../utils/user-crypto.js");
-
-    // Generate new KEK from password
-    const kekSalt = crypto.randomBytes(32);
-    const kekSaltHex = kekSalt.toString("hex");
-
-    // Derive KEK from new password
-    const kek = await new Promise<Buffer>((resolve, reject) => {
-      crypto.pbkdf2(
-        newPassword,
-        kekSalt,
-        100000,
-        32,
-        "sha256",
-        (err, derivedKey) => {
-          if (err) reject(err);
-          else resolve(derivedKey);
-        },
-      );
-    });
-
-    // Encrypt the existing DEK with new password-derived KEK
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv("aes-256-gcm", kek, iv);
-    let encryptedDEK = cipher.update(currentDEK);
-    encryptedDEK = Buffer.concat([encryptedDEK, cipher.final()]);
-    const authTag = cipher.getAuthTag();
-
-    const encryptedDEKData = JSON.stringify({
-      iv: iv.toString("hex"),
-      encryptedKey: encryptedDEK.toString("hex"),
-      authTag: authTag.toString("hex"),
-    });
-
-    // Step 3: Hash the new password
-    const saltRounds = parseInt(process.env.SALT || "10", 10);
-    const password_hash = await bcrypt.hash(newPassword, saltRounds);
-
-    // Step 4: Update user record atomically
+    // Copy OIDC configuration from OIDC user to target password user
     await db
       .update(users)
       .set({
-        password_hash,
-        is_oidc: false,
-        oidc_identifier: null,
-        client_id: "",
-        client_secret: "",
-        issuer_url: "",
-        authorization_url: "",
-        token_url: "",
-        identifier_path: "",
-        name_path: "",
-        scopes: "openid email profile",
+        is_oidc: true, // Enable OIDC login for this account
+        oidc_identifier: oidcUser.oidc_identifier,
+        client_id: oidcUser.client_id,
+        client_secret: oidcUser.client_secret,
+        issuer_url: oidcUser.issuer_url,
+        authorization_url: oidcUser.authorization_url,
+        token_url: oidcUser.token_url,
+        identifier_path: oidcUser.identifier_path,
+        name_path: oidcUser.name_path,
+        scopes: oidcUser.scopes || "openid email profile",
       })
-      .where(eq(users.id, targetUserId));
+      .where(eq(users.id, targetUser.id));
 
-    // Step 5: Update KEK salt and encrypted DEK in settings
+    // Revoke all sessions for the OIDC user before deletion
+    await authManager.revokeAllUserSessions(oidcUserId);
+    authManager.logoutUser(oidcUserId);
+
+    // Delete OIDC user's recent activity first (to avoid NOT NULL constraint issues)
+    await db
+      .delete(recentActivity)
+      .where(eq(recentActivity.userId, oidcUserId));
+
+    // Delete the OIDC user (CASCADE will delete related data: hosts, credentials, sessions, etc.)
+    await db.delete(users).where(eq(users.id, oidcUserId));
+
+    // Clean up OIDC user's settings
     db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`user_kek_salt_${targetUserId}`, kekSaltHex);
-
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`user_encrypted_dek_${targetUserId}`, encryptedDEKData);
-
-    // Step 6: Remove OIDC session duration setting if exists
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`user_oidc_session_duration_${targetUserId}`);
-
-    // Step 7: Revoke all existing sessions to force re-login
-    await authManager.revokeAllUserSessions(targetUserId);
-
-    // Step 8: Clear the in-memory DEK
-    authManager.logoutUser(targetUserId);
+      .prepare("DELETE FROM settings WHERE key LIKE ?")
+      .run(`user_%_${oidcUserId}`);
 
     try {
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");
       await saveMemoryDatabaseToFile();
     } catch (saveError) {
-      authLogger.error("Failed to persist conversion to disk", saveError, {
-        operation: "convert_oidc_save_failed",
-        targetUserId,
+      authLogger.error("Failed to persist account linking to disk", saveError, {
+        operation: "link_oidc_save_failed",
+        oidcUserId,
+        targetUserId: targetUser.id,
       });
     }
 
     authLogger.success(
-      `OIDC user converted to password user: ${targetUser.username}`,
+      `OIDC user ${oidcUser.username} linked to password account ${targetUser.username}`,
       {
-        operation: "convert_oidc_to_password_success",
-        targetUserId,
-        adminUserId,
+        operation: "link_oidc_to_password_success",
+        oidcUserId,
+        oidcUsername: oidcUser.username,
+        targetUserId: targetUser.id,
         targetUsername: targetUser.username,
+        adminUserId,
       },
     );
 
     res.json({
       success: true,
-      message: `User ${targetUser.username} has been converted to password authentication. All sessions have been revoked.`,
+      message: `OIDC user ${oidcUser.username} has been linked to ${targetUser.username}. The password account can now use both password and OIDC login.`,
     });
   } catch (err) {
-    authLogger.error("Failed to convert OIDC user to password user", err, {
-      operation: "convert_oidc_to_password_failed",
-      targetUserId,
+    authLogger.error("Failed to link OIDC user to password account", err, {
+      operation: "link_oidc_to_password_failed",
+      oidcUserId,
+      targetUsername,
       adminUserId,
     });
     res.status(500).json({
-      error: "Failed to convert user account",
+      error: "Failed to link accounts",
       details: err instanceof Error ? err.message : "Unknown error",
     });
   }

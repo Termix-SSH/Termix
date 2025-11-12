@@ -257,4 +257,244 @@ router.delete(
   },
 );
 
+// Execute a snippet on a host
+// POST /snippets/execute
+router.post(
+  "/execute",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { snippetId, hostId } = req.body;
+
+    if (!isNonEmptyString(userId) || !snippetId || !hostId) {
+      authLogger.warn("Invalid snippet execution request", {
+        userId,
+        snippetId,
+        hostId,
+      });
+      return res
+        .status(400)
+        .json({ error: "Snippet ID and Host ID are required" });
+    }
+
+    try {
+      // Get the snippet
+      const snippetResult = await db
+        .select()
+        .from(snippets)
+        .where(
+          and(
+            eq(snippets.id, parseInt(snippetId)),
+            eq(snippets.userId, userId),
+          ),
+        );
+
+      if (snippetResult.length === 0) {
+        return res.status(404).json({ error: "Snippet not found" });
+      }
+
+      const snippet = snippetResult[0];
+
+      // Import SSH connection utilities
+      const { Client } = await import("ssh2");
+      const { sshData, sshCredentials } = await import("../db/schema.js");
+
+      // Get host configuration
+      const hostResult = await db
+        .select()
+        .from(sshData)
+        .where(
+          and(eq(sshData.id, parseInt(hostId)), eq(sshData.userId, userId)),
+        );
+
+      if (hostResult.length === 0) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      const host = hostResult[0];
+
+      // Resolve credentials if needed
+      let password = host.password;
+      let privateKey = host.key;
+      let passphrase = host.key_password;
+
+      if (host.credentialId) {
+        const credResult = await db
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, host.credentialId),
+              eq(sshCredentials.userId, userId),
+            ),
+          );
+
+        if (credResult.length > 0) {
+          const cred = credResult[0];
+          password = cred.password || undefined;
+          privateKey = cred.private_key || cred.key || undefined;
+          passphrase = cred.key_password || undefined;
+        }
+      }
+
+      // Create SSH connection
+      const conn = new Client();
+      let output = "";
+      let errorOutput = "";
+
+      const executePromise = new Promise<{
+        success: boolean;
+        output: string;
+        error?: string;
+      }>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          conn.end();
+          reject(new Error("Command execution timeout (30s)"));
+        }, 30000);
+
+        conn.on("ready", () => {
+          conn.exec(snippet.content, (err, stream) => {
+            if (err) {
+              clearTimeout(timeout);
+              conn.end();
+              return reject(err);
+            }
+
+            stream.on("close", () => {
+              clearTimeout(timeout);
+              conn.end();
+              if (errorOutput) {
+                resolve({ success: false, output, error: errorOutput });
+              } else {
+                resolve({ success: true, output });
+              }
+            });
+
+            stream.on("data", (data: Buffer) => {
+              output += data.toString();
+            });
+
+            stream.stderr.on("data", (data: Buffer) => {
+              errorOutput += data.toString();
+            });
+          });
+        });
+
+        conn.on("error", (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+
+        // Connect to SSH
+        const config: any = {
+          host: host.ip,
+          port: host.port,
+          username: host.username,
+          tryKeyboard: true,
+          keepaliveInterval: 30000,
+          keepaliveCountMax: 3,
+          readyTimeout: 30000,
+          tcpKeepAlive: true,
+          tcpKeepAliveInitialDelay: 30000,
+          timeout: 30000,
+          env: {
+            TERM: "xterm-256color",
+            LANG: "en_US.UTF-8",
+            LC_ALL: "en_US.UTF-8",
+            LC_CTYPE: "en_US.UTF-8",
+            LC_MESSAGES: "en_US.UTF-8",
+            LC_MONETARY: "en_US.UTF-8",
+            LC_NUMERIC: "en_US.UTF-8",
+            LC_TIME: "en_US.UTF-8",
+            LC_COLLATE: "en_US.UTF-8",
+            COLORTERM: "truecolor",
+          },
+          algorithms: {
+            kex: [
+              "curve25519-sha256",
+              "curve25519-sha256@libssh.org",
+              "ecdh-sha2-nistp521",
+              "ecdh-sha2-nistp384",
+              "ecdh-sha2-nistp256",
+              "diffie-hellman-group-exchange-sha256",
+              "diffie-hellman-group14-sha256",
+              "diffie-hellman-group14-sha1",
+              "diffie-hellman-group-exchange-sha1",
+              "diffie-hellman-group1-sha1",
+            ],
+            serverHostKey: [
+              "ssh-ed25519",
+              "ecdsa-sha2-nistp521",
+              "ecdsa-sha2-nistp384",
+              "ecdsa-sha2-nistp256",
+              "rsa-sha2-512",
+              "rsa-sha2-256",
+              "ssh-rsa",
+              "ssh-dss",
+            ],
+            cipher: [
+              "chacha20-poly1305@openssh.com",
+              "aes256-gcm@openssh.com",
+              "aes128-gcm@openssh.com",
+              "aes256-ctr",
+              "aes192-ctr",
+              "aes128-ctr",
+              "aes256-cbc",
+              "aes192-cbc",
+              "aes128-cbc",
+              "3des-cbc",
+            ],
+            hmac: [
+              "hmac-sha2-512-etm@openssh.com",
+              "hmac-sha2-256-etm@openssh.com",
+              "hmac-sha2-512",
+              "hmac-sha2-256",
+              "hmac-sha1",
+              "hmac-md5",
+            ],
+            compress: ["none", "zlib@openssh.com", "zlib"],
+          },
+        };
+
+        if (password) {
+          config.password = password;
+        }
+
+        if (privateKey) {
+          const cleanKey = privateKey
+            .trim()
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n");
+          config.privateKey = Buffer.from(cleanKey, "utf8");
+          if (passphrase) {
+            config.passphrase = passphrase;
+          }
+        }
+
+        conn.connect(config);
+      });
+
+      const result = await executePromise;
+
+      authLogger.success(
+        `Snippet executed: ${snippet.name} on host ${hostId}`,
+        {
+          operation: "snippet_execute_success",
+          userId,
+          snippetId,
+          hostId,
+        },
+      );
+
+      res.json(result);
+    } catch (err) {
+      authLogger.error("Failed to execute snippet", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Failed to execute snippet",
+      });
+    }
+  },
+);
+
 export default router;

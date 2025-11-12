@@ -110,12 +110,12 @@ function JumpHostItem({
           {index + 1}.
         </span>
         <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
+          <PopoverTrigger asChild className="flex-1">
             <Button
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="flex-1 justify-between"
+              className="w-full justify-between"
             >
               {selectedHost
                 ? `${selectedHost.name || `${selectedHost.username}@${selectedHost.ip}`}`
@@ -123,7 +123,10 @@ function JumpHostItem({
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[400px] p-0">
+          <PopoverContent
+            className="p-0"
+            style={{ width: "var(--radix-popover-trigger-width)" }}
+          >
             <Command>
               <CommandInput placeholder={t("hosts.searchServers")} />
               <CommandEmpty>{t("hosts.noServerFound")}</CommandEmpty>
@@ -133,7 +136,7 @@ function JumpHostItem({
                   .map((host) => (
                     <CommandItem
                       key={host.id}
-                      value={`${host.name} ${host.ip} ${host.username}`}
+                      value={`${host.name} ${host.ip} ${host.username} ${host.id}`}
                       onSelect={() => {
                         onUpdate(host.id);
                         setOpen(false);
@@ -162,7 +165,112 @@ function JumpHostItem({
           </PopoverContent>
         </Popover>
       </div>
-      <Button type="button" variant="ghost" size="icon" onClick={onRemove}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        className="ml-2"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+interface QuickActionItemProps {
+  quickAction: { name: string; snippetId: number };
+  index: number;
+  snippets: Array<{ id: number; name: string; content: string }>;
+  onUpdate: (name: string, snippetId: number) => void;
+  onRemove: () => void;
+  t: (key: string) => string;
+}
+
+function QuickActionItem({
+  quickAction,
+  index,
+  snippets,
+  onUpdate,
+  onRemove,
+  t,
+}: QuickActionItemProps) {
+  const [open, setOpen] = React.useState(false);
+  const selectedSnippet = snippets.find((s) => s.id === quickAction.snippetId);
+
+  return (
+    <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+      <div className="flex flex-col gap-2 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            {index + 1}.
+          </span>
+          <Input
+            placeholder={t("hosts.quickActionName")}
+            value={quickAction.name}
+            onChange={(e) => onUpdate(e.target.value, quickAction.snippetId)}
+            className="flex-1"
+          />
+        </div>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild className="w-full">
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between"
+            >
+              {selectedSnippet
+                ? selectedSnippet.name
+                : t("hosts.selectSnippet")}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="p-0"
+            style={{ width: "var(--radix-popover-trigger-width)" }}
+          >
+            <Command>
+              <CommandInput placeholder={t("hosts.searchSnippets")} />
+              <CommandEmpty>{t("hosts.noSnippetFound")}</CommandEmpty>
+              <CommandGroup className="max-h-[300px] overflow-y-auto">
+                {snippets.map((snippet) => (
+                  <CommandItem
+                    key={snippet.id}
+                    value={`${snippet.name} ${snippet.content} ${snippet.id}`}
+                    onSelect={() => {
+                      onUpdate(quickAction.name, snippet.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        quickAction.snippetId === snippet.id
+                          ? "opacity-100"
+                          : "opacity-0",
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{snippet.name}</span>
+                      <span className="text-xs text-muted-foreground truncate max-w-[350px]">
+                        {snippet.content}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        className="ml-2"
+      >
         <X className="h-4 w-4" />
       </Button>
     </div>
@@ -197,6 +305,10 @@ interface SSHHost {
   }>;
   jumpHosts?: Array<{
     hostId: number;
+  }>;
+  quickActions?: Array<{
+    name: string;
+    snippetId: number;
   }>;
   statsConfig?: StatsConfig;
   terminalConfig?: TerminalConfig;
@@ -440,6 +552,14 @@ export function HostManagerEditor({
           }),
         )
         .default([]),
+      quickActions: z
+        .array(
+          z.object({
+            name: z.string().min(1),
+            snippetId: z.number().min(1),
+          }),
+        )
+        .default([]),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -528,6 +648,7 @@ export function HostManagerEditor({
       defaultPath: "/",
       tunnelConnections: [],
       jumpHosts: [],
+      quickActions: [],
       statsConfig: DEFAULT_STATS_CONFIG,
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
       forceKeyboardInteractive: false,
@@ -612,6 +733,9 @@ export function HostManagerEditor({
         jumpHosts: Array.isArray(cleanedHost.jumpHosts)
           ? cleanedHost.jumpHosts
           : [],
+        quickActions: Array.isArray(cleanedHost.quickActions)
+          ? cleanedHost.quickActions
+          : [],
         statsConfig: parsedStatsConfig,
         terminalConfig: {
           ...DEFAULT_TERMINAL_CONFIG,
@@ -670,6 +794,7 @@ export function HostManagerEditor({
         defaultPath: "/",
         tunnelConnections: [],
         jumpHosts: [],
+        quickActions: [],
         statsConfig: DEFAULT_STATS_CONFIG,
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
@@ -730,6 +855,7 @@ export function HostManagerEditor({
         defaultPath: data.defaultPath || "/",
         tunnelConnections: data.tunnelConnections || [],
         jumpHosts: data.jumpHosts || [],
+        quickActions: data.quickActions || [],
         statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
         terminalConfig: data.terminalConfig || DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: Boolean(data.forceKeyboardInteractive),
@@ -2983,6 +3109,70 @@ export function HostManagerEditor({
                       />
                     </>
                   )}
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">
+                      {t("hosts.quickActions")}
+                    </h3>
+                    <Alert>
+                      <AlertDescription>
+                        {t("hosts.quickActionsDescription")}
+                      </AlertDescription>
+                    </Alert>
+                    <FormField
+                      control={form.control}
+                      name="quickActions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("hosts.quickActionsList")}</FormLabel>
+                          <FormControl>
+                            <div className="space-y-3">
+                              {field.value.map((quickAction, index) => (
+                                <QuickActionItem
+                                  key={index}
+                                  quickAction={quickAction}
+                                  index={index}
+                                  snippets={snippets}
+                                  onUpdate={(name, snippetId) => {
+                                    const newQuickActions = [...field.value];
+                                    newQuickActions[index] = {
+                                      name,
+                                      snippetId,
+                                    };
+                                    field.onChange(newQuickActions);
+                                  }}
+                                  onRemove={() => {
+                                    const newQuickActions = field.value.filter(
+                                      (_, i) => i !== index,
+                                    );
+                                    field.onChange(newQuickActions);
+                                  }}
+                                  t={t}
+                                />
+                              ))}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange([
+                                    ...field.value,
+                                    { name: "", snippetId: 0 },
+                                  ]);
+                                }}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                {t("hosts.addQuickAction")}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            {t("hosts.quickActionsOrder")}
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>

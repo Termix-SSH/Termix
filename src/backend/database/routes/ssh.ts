@@ -237,6 +237,7 @@ router.post(
       defaultPath,
       tunnelConnections,
       jumpHosts,
+      quickActions,
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
@@ -274,6 +275,9 @@ router.post(
         ? JSON.stringify(tunnelConnections)
         : null,
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
+      quickActions: Array.isArray(quickActions)
+        ? JSON.stringify(quickActions)
+        : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
@@ -456,6 +460,7 @@ router.put(
       defaultPath,
       tunnelConnections,
       jumpHosts,
+      quickActions,
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
@@ -494,6 +499,9 @@ router.put(
         ? JSON.stringify(tunnelConnections)
         : null,
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
+      quickActions: Array.isArray(quickActions)
+        ? JSON.stringify(quickActions)
+        : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
@@ -672,6 +680,9 @@ router.get(
               ? JSON.parse(row.tunnelConnections as string)
               : [],
             jumpHosts: row.jumpHosts ? JSON.parse(row.jumpHosts as string) : [],
+            quickActions: row.quickActions
+              ? JSON.parse(row.quickActions as string)
+              : [],
             enableFileManager: !!row.enableFileManager,
             statsConfig: row.statsConfig
               ? JSON.parse(row.statsConfig as string)
@@ -745,6 +756,8 @@ router.get(
         tunnelConnections: host.tunnelConnections
           ? JSON.parse(host.tunnelConnections)
           : [],
+        jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts) : [],
+        quickActions: host.quickActions ? JSON.parse(host.quickActions) : [],
         enableFileManager: !!host.enableFileManager,
         statsConfig: host.statsConfig
           ? JSON.parse(host.statsConfig)

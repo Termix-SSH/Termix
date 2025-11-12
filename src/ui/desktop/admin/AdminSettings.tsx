@@ -34,7 +34,7 @@ import {
   Trash2,
   Users,
   Database,
-  Lock,
+  Link2,
   Download,
   Upload,
   Monitor,
@@ -63,7 +63,7 @@ import {
   getSessions,
   revokeSession,
   revokeAllUserSessions,
-  convertOIDCToPassword,
+  linkOIDCToPasswordAccount,
 } from "@/ui/main-axios.ts";
 
 interface AdminSettingsProps {
@@ -75,7 +75,7 @@ interface AdminSettingsProps {
 export function AdminSettings({
   isTopbarOpen = true,
   rightSidebarOpen = false,
-  rightSidebarWidth = 300,
+  rightSidebarWidth = 400,
 }: AdminSettingsProps): React.ReactElement {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
@@ -107,6 +107,7 @@ export function AdminSettings({
       username: string;
       is_admin: boolean;
       is_oidc: boolean;
+      password_hash?: string;
     }>
   >([]);
   const [usersLoading, setUsersLoading] = React.useState(false);
@@ -147,15 +148,13 @@ export function AdminSettings({
   >([]);
   const [sessionsLoading, setSessionsLoading] = React.useState(false);
 
-  const [convertUserDialogOpen, setConvertUserDialogOpen] =
-    React.useState(false);
-  const [convertTargetUser, setConvertTargetUser] = React.useState<{
+  const [linkAccountAlertOpen, setLinkAccountAlertOpen] = React.useState(false);
+  const [linkOidcUser, setLinkOidcUser] = React.useState<{
     id: string;
     username: string;
   } | null>(null);
-  const [convertPassword, setConvertPassword] = React.useState("");
-  const [convertTotpCode, setConvertTotpCode] = React.useState("");
-  const [convertLoading, setConvertLoading] = React.useState(false);
+  const [linkTargetUsername, setLinkTargetUsername] = React.useState("");
+  const [linkLoading, setLinkLoading] = React.useState(false);
 
   const requiresImportPassword = React.useMemo(
     () => !currentUser?.is_oidc,
@@ -655,54 +654,41 @@ export function AdminSettings({
     );
   };
 
-  const handleConvertOIDCUser = (user: { id: string; username: string }) => {
-    setConvertTargetUser(user);
-    setConvertPassword("");
-    setConvertTotpCode("");
-    setConvertUserDialogOpen(true);
+  const handleLinkOIDCUser = (user: { id: string; username: string }) => {
+    setLinkOidcUser(user);
+    setLinkTargetUsername("");
+    setLinkAccountAlertOpen(true);
   };
 
-  const handleConvertSubmit = async () => {
-    if (!convertTargetUser || !convertPassword) {
-      toast.error("Password is required");
+  const handleLinkSubmit = async () => {
+    if (!linkOidcUser || !linkTargetUsername.trim()) {
+      toast.error("Target username is required");
       return;
     }
 
-    if (convertPassword.length < 8) {
-      toast.error("Password must be at least 8 characters long");
-      return;
-    }
-
-    setConvertLoading(true);
+    setLinkLoading(true);
     try {
-      const result = await convertOIDCToPassword(
-        convertTargetUser.id,
-        convertPassword,
-        convertTotpCode || undefined,
+      const result = await linkOIDCToPasswordAccount(
+        linkOidcUser.id,
+        linkTargetUsername.trim(),
       );
 
       toast.success(
         result.message ||
-          `User ${convertTargetUser.username} converted to password authentication`,
+          `OIDC user ${linkOidcUser.username} linked to ${linkTargetUsername}`,
       );
-      setConvertUserDialogOpen(false);
-      setConvertPassword("");
-      setConvertTotpCode("");
-      setConvertTargetUser(null);
+      setLinkAccountAlertOpen(false);
+      setLinkTargetUsername("");
+      setLinkOidcUser(null);
       fetchUsers();
+      fetchSessions();
     } catch (error: unknown) {
       const err = error as {
         response?: { data?: { error?: string; code?: string } };
       };
-      if (err.response?.data?.code === "TOTP_REQUIRED") {
-        toast.error("TOTP code is required for this user");
-      } else {
-        toast.error(
-          err.response?.data?.error || "Failed to convert user account",
-        );
-      }
+      toast.error(err.response?.data?.error || "Failed to link accounts");
     } finally {
-      setConvertLoading(false);
+      setLinkLoading(false);
     }
   };
 
@@ -1095,26 +1081,28 @@ export function AdminSettings({
                               )}
                             </TableCell>
                             <TableCell className="px-4">
-                              {user.is_oidc
-                                ? t("admin.external")
-                                : t("admin.local")}
+                              {user.is_oidc && user.password_hash
+                                ? "Dual Auth"
+                                : user.is_oidc
+                                  ? t("admin.external")
+                                  : t("admin.local")}
                             </TableCell>
                             <TableCell className="px-4">
                               <div className="flex gap-2">
-                                {user.is_oidc && (
+                                {user.is_oidc && !user.password_hash && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() =>
-                                      handleConvertOIDCUser({
+                                      handleLinkOIDCUser({
                                         id: user.id,
                                         username: user.username,
                                       })
                                     }
                                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    title="Convert to password authentication"
+                                    title="Link to password account"
                                   >
-                                    <Lock className="h-4 w-4" />
+                                    <Link2 className="h-4 w-4" />
                                   </Button>
                                 )}
                                 <Button
@@ -1505,78 +1493,87 @@ export function AdminSettings({
         </div>
       </div>
 
-      {/* Convert OIDC to Password Dialog */}
-      <Dialog
-        open={convertUserDialogOpen}
-        onOpenChange={setConvertUserDialogOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Convert to Password Authentication</DialogTitle>
-            <DialogDescription>
-              Convert {convertTargetUser?.username} from OIDC/SSO authentication
-              to password-based authentication. This will allow the user to log
-              in with a username and password instead of through an external
-              provider.
-            </DialogDescription>
-          </DialogHeader>
+      {/* Link OIDC to Password Account Dialog */}
+      {linkAccountAlertOpen && (
+        <Dialog
+          open={linkAccountAlertOpen}
+          onOpenChange={setLinkAccountAlertOpen}
+        >
+          <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Link2 className="w-5 h-5" />
+                Link OIDC Account to Password Account
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Link{" "}
+                <span className="font-mono text-foreground">
+                  {linkOidcUser?.username}
+                </span>{" "}
+                (OIDC user) to an existing password account. This will enable
+                dual authentication for the password account.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <Alert>
-              <AlertTitle>Important</AlertTitle>
-              <AlertDescription>
-                This action will:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Set a new password for this user</li>
-                  <li>Disable OIDC/SSO login for this account</li>
-                  <li>Log out all active sessions</li>
-                  <li>Preserve all user data (SSH hosts, credentials, etc.)</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-4 py-4">
+              <Alert variant="destructive">
+                <AlertTitle>Warning: OIDC User Data Will Be Deleted</AlertTitle>
+                <AlertDescription>
+                  This action will:
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Delete the OIDC user account and all their data</li>
+                    <li>
+                      Add OIDC login capability to the target password account
+                    </li>
+                    <li>
+                      Allow the password account to login with both password and
+                      OIDC
+                    </li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
 
-            <div className="space-y-2">
-              <Label htmlFor="convert-password">
-                New Password (min 8 chars)
-              </Label>
-              <PasswordInput
-                id="convert-password"
-                value={convertPassword}
-                onChange={(e) => setConvertPassword(e.target.value)}
-                placeholder="Enter new password"
-                disabled={convertLoading}
-              />
+              <div className="space-y-2">
+                <Label
+                  htmlFor="link-target-username"
+                  className="text-base font-semibold text-foreground"
+                >
+                  Target Password Account Username
+                </Label>
+                <Input
+                  id="link-target-username"
+                  value={linkTargetUsername}
+                  onChange={(e) => setLinkTargetUsername(e.target.value)}
+                  placeholder="Enter username of password account"
+                  disabled={linkLoading}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && linkTargetUsername.trim()) {
+                      handleLinkSubmit();
+                    }
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="convert-totp">
-                TOTP Code (if user has 2FA enabled)
-              </Label>
-              <Input
-                id="convert-totp"
-                value={convertTotpCode}
-                onChange={(e) => setConvertTotpCode(e.target.value)}
-                placeholder="000000"
-                disabled={convertLoading}
-                maxLength={6}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConvertUserDialogOpen(false)}
-              disabled={convertLoading}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConvertSubmit} disabled={convertLoading}>
-              {convertLoading ? "Converting..." : "Convert User"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setLinkAccountAlertOpen(false)}
+                disabled={linkLoading}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={handleLinkSubmit}
+                disabled={linkLoading || !linkTargetUsername.trim()}
+                variant="destructive"
+              >
+                {linkLoading ? "Linking..." : "Link Accounts"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

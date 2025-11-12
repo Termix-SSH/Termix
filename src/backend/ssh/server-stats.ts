@@ -704,15 +704,6 @@ class PollingManager {
       config.statusTimer = setInterval(() => {
         this.pollHostStatus(host);
       }, intervalMs);
-
-      statsLogger.debug(
-        `Started status polling for host ${host.id} (interval: ${statsConfig.statusCheckInterval}s)`,
-        {
-          operation: "status_polling_started",
-          hostId: host.id,
-          interval: statsConfig.statusCheckInterval,
-        },
-      );
     } else {
       this.statusStore.delete(host.id);
       statsLogger.debug(`Status polling disabled for host ${host.id}`, {
@@ -729,15 +720,6 @@ class PollingManager {
       config.metricsTimer = setInterval(() => {
         this.pollHostMetrics(host);
       }, intervalMs);
-
-      statsLogger.debug(
-        `Started metrics polling for host ${host.id} (interval: ${statsConfig.metricsInterval}s)`,
-        {
-          operation: "metrics_polling_started",
-          hostId: host.id,
-          interval: statsConfig.metricsInterval,
-        },
-      );
     } else {
       this.metricsStore.delete(host.id);
       statsLogger.debug(`Metrics polling disabled for host ${host.id}`, {

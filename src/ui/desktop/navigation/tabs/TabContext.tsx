@@ -156,11 +156,32 @@ export function TabProvider({ children }: TabProviderProps) {
     }
 
     setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
-    setAllSplitScreenTab((prev) => prev.filter((id) => id !== tabId));
+
+    // Remove from split screen
+    setAllSplitScreenTab((prev) => {
+      const newSplits = prev.filter((id) => id !== tabId);
+      // Auto-clear split mode if only 1 or fewer tabs remain in split
+      if (newSplits.length <= 1) {
+        return [];
+      }
+      return newSplits;
+    });
 
     if (currentTab === tabId) {
       const remainingTabs = tabs.filter((tab) => tab.id !== tabId);
-      setCurrentTab(remainingTabs.length > 0 ? remainingTabs[0].id : 1);
+      if (remainingTabs.length > 0) {
+        // Try to set current tab to another split tab first, if any remain
+        const remainingSplitTabs = allSplitScreenTab.filter(
+          (id) => id !== tabId,
+        );
+        if (remainingSplitTabs.length > 0) {
+          setCurrentTab(remainingSplitTabs[0]);
+        } else {
+          setCurrentTab(remainingTabs[0].id);
+        }
+      } else {
+        setCurrentTab(1); // Home tab
+      }
     }
   };
 
@@ -168,7 +189,7 @@ export function TabProvider({ children }: TabProviderProps) {
     setAllSplitScreenTab((prev) => {
       if (prev.includes(tabId)) {
         return prev.filter((id) => id !== tabId);
-      } else if (prev.length < 3) {
+      } else if (prev.length < 4) {
         return [...prev, tabId];
       }
       return prev;

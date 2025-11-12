@@ -189,9 +189,23 @@
     "enableRightClickCopyPaste": "Rechtsklick-Kopieren\/Einfügen aktivieren",
     "shareIdeas": "Haben Sie Vorschläge welche weiteren SSH-Tools ergänzt werden sollen? Dann teilen Sie diese gerne mit uns auf"
   },
+  "commandHistory": {
+    "title": "Verlauf",
+    "searchPlaceholder": "Befehle suchen...",
+    "noTerminal": "Kein aktives Terminal",
+    "noTerminalHint": "Öffnen Sie ein Terminal, um dessen Befehlsverlauf anzuzeigen.",
+    "empty": "Noch kein Befehlsverlauf",
+    "emptyHint": "Führen Sie Befehle im aktiven Terminal aus, um einen Verlauf zu erstellen.",
+    "noResults": "Keine Befehle gefunden",
+    "noResultsHint": "Keine Befehle mit \"{{query}}\" gefunden",
+    "deleteSuccess": "Befehl aus Verlauf gelöscht",
+    "deleteFailed": "Befehl konnte nicht gelöscht werden.",
+    "deleteTooltip": "Befehl löschen",
+    "tabHint": "Verwenden Sie Tab im Terminal, um aus dem Befehlsverlauf zu vervollständigen"
+  },
   "homepage": {
     "loggedInTitle": "Eingeloggt!",
-    "loggedInMessage": "Sie sind angemeldet! Über die Seitenleiste haben Sie Zugriff auf alle verfügbaren Tools. Erstellen Sie zunächst einen SSH-Host im Tab „SSH-Manager“. Anschließend können Sie sich über die anderen Apps in der Seitenleiste mit diesem Host verbinden.",
+    "loggedInMessage": "Sie sind angemeldet! Über die Seitenleiste haben Sie Zugriff auf alle verfügbaren Tools. Erstellen Sie zunächst einen SSH-Host im Tab SSH-Manager. Anschließend können Sie sich über die anderen Apps in der Seitenleiste mit diesem Host verbinden.",
     "failedToLoadAlerts": "Warnmeldungen konnten nicht geladen werden",
     "failedToDismissAlert": "Benachrichtigung konnte nicht geschlossen werden"
   },
@@ -1374,6 +1388,10 @@
     "local": "Lokal",
     "external": "Extern (OIDC)",
     "selectPreferredLanguage": "Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche",
+    "fileColorCoding": "Dateifarb-Codierung",
+    "fileColorCodingDesc": "Farbcodierung von Dateien nach Typ: Ordner (rot), Dateien (blau), Symlinks (grün)",
+    "commandAutocomplete": "Befehlsautovervollständigung",
+    "commandAutocompleteDesc": "Tab-Taste Autovervollständigung für Terminal-Befehle basierend auf Ihrem Befehlsverlauf aktivieren",
     "currentPassword": "Aktuelles Passwort",
     "passwordChangedSuccess": "Passwort erfolgreich geändert! Bitte melden Sie sich erneut an.",
     "failedToChangePassword": "Passwort konnte nicht geändert werden. Bitte überprüfen Sie Ihr aktuelles Passwort und versuchen Sie es erneut."

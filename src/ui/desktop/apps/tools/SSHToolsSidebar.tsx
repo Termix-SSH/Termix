@@ -34,6 +34,8 @@ import {
   Search,
   Loader2,
   Terminal,
+  LayoutGrid,
+  MonitorCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -67,7 +69,7 @@ interface TabData {
   [key: string]: unknown;
 }
 
-interface SSHUtilitySidebarProps {
+interface SSHToolsSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onSnippetExecute: (content: string) => void;
@@ -85,12 +87,21 @@ export function SSHToolsSidebar({
   setSidebarWidth,
   initialTab,
   onTabChange,
-}: SSHUtilitySidebarProps) {
+}: SSHToolsSidebarProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
-  const { tabs, currentTab } = useTabs() as {
+  const {
+    tabs,
+    currentTab,
+    allSplitScreenTab,
+    setSplitScreenTab,
+    setCurrentTab,
+  } = useTabs() as {
     tabs: TabData[];
     currentTab: number | null;
+    allSplitScreenTab: number[];
+    setSplitScreenTab: (tabId: number) => void;
+    setCurrentTab: (tabId: number) => void;
   };
   const [activeTab, setActiveTab] = useState(initialTab || "ssh-tools");
 
@@ -141,6 +152,17 @@ export function SSHToolsSidebar({
   const [historyRefreshCounter, setHistoryRefreshCounter] = useState(0);
   const commandHistoryScrollRef = React.useRef<HTMLDivElement>(null);
 
+  // Split Screen state
+  const [splitMode, setSplitMode] = useState<"none" | "2" | "3" | "4">("none");
+  const [splitAssignments, setSplitAssignments] = useState<Map<number, number>>(
+    new Map(),
+  );
+  const [previewKey, setPreviewKey] = useState(0);
+  const [draggedTabId, setDraggedTabId] = useState<number | null>(null);
+  const [dragOverCellIndex, setDragOverCellIndex] = useState<number | null>(
+    null,
+  );
+
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
   const startXRef = React.useRef<number | null>(null);
@@ -151,6 +173,15 @@ export function SSHToolsSidebar({
   const activeTerminal =
     activeUiTab?.type === "terminal" ? activeUiTab : undefined;
   const activeTerminalHostId = activeTerminal?.hostConfig?.id;
+
+  // Get splittable tabs (terminal, server, file_manager)
+  const splittableTabs = tabs.filter(
+    (tab: TabData) =>
+      tab.type === "terminal" ||
+      tab.type === "server" ||
+      tab.type === "file_manager" ||
+      tab.type === "user_profile",
+  );
 
   // Fetch command history
   useEffect(() => {
@@ -567,6 +598,148 @@ export function SSHToolsSidebar({
     toast.success(t("snippets.copySuccess", { name: snippet.name }));
   };
 
+  // Split Screen handlers
+  const handleSplitModeChange = (mode: "none" | "2" | "3" | "4") => {
+    setSplitMode(mode);
+
+    if (mode === "none") {
+      // Clear all splits
+      handleClearSplit();
+    } else {
+      // Clear assignments when changing modes
+      setSplitAssignments(new Map());
+      setPreviewKey((prev) => prev + 1);
+    }
+  };
+
+  const handleDragStart = (tabId: number) => {
+    setDraggedTabId(tabId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTabId(null);
+    setDragOverCellIndex(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, cellIndex: number) => {
+    e.preventDefault();
+    setDragOverCellIndex(cellIndex);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverCellIndex(null);
+  };
+
+  const handleDrop = (cellIndex: number) => {
+    if (draggedTabId === null) return;
+
+    setSplitAssignments((prev) => {
+      const newMap = new Map(prev);
+      // Remove this tab from any other cell
+      Array.from(newMap.entries()).forEach(([idx, id]) => {
+        if (id === draggedTabId && idx !== cellIndex) {
+          newMap.delete(idx);
+        }
+      });
+      newMap.set(cellIndex, draggedTabId);
+      return newMap;
+    });
+
+    setDraggedTabId(null);
+    setDragOverCellIndex(null);
+    setPreviewKey((prev) => prev + 1);
+  };
+
+  const handleRemoveFromCell = (cellIndex: number) => {
+    setSplitAssignments((prev) => {
+      const newMap = new Map(prev);
+      newMap.delete(cellIndex);
+      setPreviewKey((prev) => prev + 1);
+      return newMap;
+    });
+  };
+
+  const handleApplySplit = () => {
+    if (splitMode === "none") {
+      handleClearSplit();
+      return;
+    }
+
+    if (splitAssignments.size === 0) {
+      toast.error(
+        t("splitScreen.error.noAssignments", {
+          defaultValue: "Please drag tabs to cells before applying",
+        }),
+      );
+      return;
+    }
+
+    const requiredSlots = parseInt(splitMode);
+
+    // Validate: All layout spots must be filled
+    if (splitAssignments.size < requiredSlots) {
+      toast.error(
+        t("splitScreen.error.fillAllSlots", {
+          defaultValue: `Please fill all ${requiredSlots} layout spots before applying`,
+          count: requiredSlots,
+        }),
+      );
+      return;
+    }
+
+    // Build ordered array of tab IDs based on cell index (0, 1, 2, 3)
+    const orderedTabIds: number[] = [];
+    for (let i = 0; i < requiredSlots; i++) {
+      const tabId = splitAssignments.get(i);
+      if (tabId !== undefined) {
+        orderedTabIds.push(tabId);
+      }
+    }
+
+    // First, clear ALL existing splits
+    const currentSplits = [...allSplitScreenTab];
+    currentSplits.forEach((tabId) => {
+      setSplitScreenTab(tabId); // Toggle off
+    });
+
+    // Then, add only the newly assigned tabs to split IN ORDER
+    orderedTabIds.forEach((tabId) => {
+      setSplitScreenTab(tabId); // Toggle on
+    });
+
+    // Set first assigned tab as active if current tab is not in split
+    if (!orderedTabIds.includes(currentTab ?? 0)) {
+      setCurrentTab(orderedTabIds[0]);
+    }
+
+    toast.success(
+      t("splitScreen.success", {
+        defaultValue: "Split screen applied",
+      }),
+    );
+  };
+
+  const handleClearSplit = () => {
+    // Remove all tabs from split screen
+    allSplitScreenTab.forEach((tabId) => {
+      setSplitScreenTab(tabId);
+    });
+
+    setSplitMode("none");
+    setSplitAssignments(new Map());
+    setPreviewKey((prev) => prev + 1);
+
+    toast.success(
+      t("splitScreen.cleared", {
+        defaultValue: "Split screen cleared",
+      }),
+    );
+  };
+
+  const handleResetToSingle = () => {
+    handleClearSplit();
+  };
+
   // Command History handlers
   const handleCommandSelect = (command: string) => {
     if (activeTerminal?.terminalRef?.current?.sendInput) {
@@ -616,7 +789,7 @@ export function SSHToolsSidebar({
                   <div className="absolute right-5 flex gap-1">
                     <Button
                       variant="outline"
-                      onClick={() => setSidebarWidth(300)}
+                      onClick={() => setSidebarWidth(400)}
                       className="w-[28px] h-[28px]"
                       title="Reset sidebar width"
                     >
@@ -640,7 +813,7 @@ export function SSHToolsSidebar({
                   onValueChange={handleTabChange}
                   className="flex flex-col h-full overflow-hidden"
                 >
-                  <TabsList className="w-full grid grid-cols-3 mb-4 flex-shrink-0">
+                  <TabsList className="w-full grid grid-cols-4 mb-4 flex-shrink-0">
                     <TabsTrigger value="ssh-tools">
                       {t("sshTools.title")}
                     </TabsTrigger>
@@ -649,6 +822,9 @@ export function SSHToolsSidebar({
                     </TabsTrigger>
                     <TabsTrigger value="command-history">
                       {t("commandHistory.title", { defaultValue: "History" })}
+                    </TabsTrigger>
+                    <TabsTrigger value="split-screen">
+                      {t("splitScreen.title", { defaultValue: "Split Screen" })}
                     </TabsTrigger>
                   </TabsList>
 
@@ -755,7 +931,7 @@ export function SSHToolsSidebar({
                         href="https://github.com/Termix-SSH/Termix/issues/new"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline"
+                        className="gray-500 hover:underline"
                       >
                         GitHub
                       </a>
@@ -832,7 +1008,7 @@ export function SSHToolsSidebar({
                           {snippets.map((snippet) => (
                             <div
                               key={snippet.id}
-                              className="bg-dark-bg-input border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-blue-400/50 hover:bg-dark-hover-alt transition-all duration-200 p-3 group"
+                              className="bg-dark-bg-input border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-gray-400/50 hover:bg-dark-hover-alt transition-all duration-200 p-3 group"
                             >
                               <div className="mb-2">
                                 <h3 className="text-sm font-medium text-white mb-1">
@@ -843,6 +1019,9 @@ export function SSHToolsSidebar({
                                     {snippet.description}
                                   </p>
                                 )}
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  ID: {snippet.id}
+                                </p>
                               </div>
 
                               <div className="bg-muted/30 rounded p-2 mb-3">
@@ -950,6 +1129,12 @@ export function SSHToolsSidebar({
                           </Button>
                         )}
                       </div>
+                      <p className="text-xs text-muted-foreground bg-muted/30 px-2 py-1.5 rounded">
+                        {t("commandHistory.tabHint", {
+                          defaultValue:
+                            "Use Tab in Terminal to autocomplete from command history",
+                        })}
+                      </p>
                     </div>
 
                     <div className="flex-1 overflow-hidden min-h-0">
@@ -1036,6 +1221,219 @@ export function SSHToolsSidebar({
                               </div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent
+                    value="split-screen"
+                    className="flex flex-col flex-1 overflow-hidden"
+                  >
+                    <div className="space-y-4 flex-1 overflow-y-auto overflow-x-hidden pb-4">
+                      {/* Split Mode Tabs */}
+                      <Tabs
+                        value={splitMode}
+                        onValueChange={(value) =>
+                          handleSplitModeChange(
+                            value as "none" | "2" | "3" | "4",
+                          )
+                        }
+                        className="w-full"
+                      >
+                        <TabsList className="w-full grid grid-cols-4">
+                          <TabsTrigger value="none">
+                            {t("splitScreen.none", { defaultValue: "None" })}
+                          </TabsTrigger>
+                          <TabsTrigger value="2">
+                            {t("splitScreen.twoSplit", {
+                              defaultValue: "2-Split",
+                            })}
+                          </TabsTrigger>
+                          <TabsTrigger value="3">
+                            {t("splitScreen.threeSplit", {
+                              defaultValue: "3-Split",
+                            })}
+                          </TabsTrigger>
+                          <TabsTrigger value="4">
+                            {t("splitScreen.fourSplit", {
+                              defaultValue: "4-Split",
+                            })}
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+
+                      {/* Drag-and-Drop Interface */}
+                      {splitMode !== "none" && (
+                        <>
+                          <Separator />
+
+                          {/* Available Tabs List */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-white">
+                              {t("splitScreen.availableTabs", {
+                                defaultValue: "Available Tabs",
+                              })}
+                            </label>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              {t("splitScreen.dragTabsHint", {
+                                defaultValue:
+                                  "Drag tabs into the grid below to position them",
+                              })}
+                            </p>
+                            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                              {splittableTabs.map((tab) => {
+                                const isAssigned = Array.from(
+                                  splitAssignments.values(),
+                                ).includes(tab.id);
+                                const isDragging = draggedTabId === tab.id;
+
+                                return (
+                                  <div
+                                    key={tab.id}
+                                    draggable={!isAssigned}
+                                    onDragStart={() => handleDragStart(tab.id)}
+                                    onDragEnd={handleDragEnd}
+                                    className={`
+                                      px-3 py-2 rounded-md text-sm cursor-move transition-all
+                                      ${
+                                        isAssigned
+                                          ? "bg-dark-bg/50 text-muted-foreground cursor-not-allowed opacity-50"
+                                          : "bg-dark-bg border border-dark-border hover:border-gray-400 hover:bg-dark-bg-input"
+                                      }
+                                      ${isDragging ? "opacity-50" : ""}
+                                    `}
+                                  >
+                                    <span className="truncate">
+                                      {tab.title}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <Separator />
+
+                          {/* Drop Grid */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-white">
+                              {t("splitScreen.layout", {
+                                defaultValue: "Layout",
+                              })}
+                            </label>
+                            <div
+                              className={`grid gap-2 ${
+                                splitMode === "2"
+                                  ? "grid-cols-2"
+                                  : splitMode === "3"
+                                    ? "grid-cols-2 grid-rows-2"
+                                    : "grid-cols-2 grid-rows-2"
+                              }`}
+                            >
+                              {Array.from(
+                                { length: parseInt(splitMode) },
+                                (_, idx) => {
+                                  const assignedTabId =
+                                    splitAssignments.get(idx);
+                                  const assignedTab = assignedTabId
+                                    ? tabs.find((t) => t.id === assignedTabId)
+                                    : null;
+                                  const isHovered = dragOverCellIndex === idx;
+                                  const isEmpty = !assignedTabId;
+
+                                  return (
+                                    <div
+                                      key={idx}
+                                      onDragOver={(e) => handleDragOver(e, idx)}
+                                      onDragLeave={handleDragLeave}
+                                      onDrop={() => handleDrop(idx)}
+                                      className={`
+                                        relative bg-dark-bg border-2 rounded-md p-3 min-h-[100px]
+                                        flex flex-col items-center justify-center transition-all
+                                        ${splitMode === "3" && idx === 2 ? "col-span-2" : ""}
+                                        ${
+                                          isEmpty
+                                            ? "border-dashed border-dark-border"
+                                            : "border-solid border-gray-400 bg-gray-500/10"
+                                        }
+                                        ${
+                                          isHovered && draggedTabId
+                                            ? "border-gray-500 bg-gray-500/20 ring-2 ring-gray-500/50"
+                                            : ""
+                                        }
+                                      `}
+                                    >
+                                      {assignedTab ? (
+                                        <>
+                                          <span className="text-sm text-white truncate w-full text-center mb-2">
+                                            {assignedTab.title}
+                                          </span>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              handleRemoveFromCell(idx)
+                                            }
+                                            className="h-6 text-xs hover:bg-red-500/20"
+                                          >
+                                            Remove
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground">
+                                          {t("splitScreen.dropHere", {
+                                            defaultValue: "Drop tab here",
+                                          })}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                },
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              onClick={handleApplySplit}
+                              className="flex-1"
+                              disabled={splitAssignments.size === 0}
+                            >
+                              {t("splitScreen.apply", {
+                                defaultValue: "Apply Split",
+                              })}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={handleClearSplit}
+                              className="flex-1"
+                            >
+                              {t("splitScreen.clear", {
+                                defaultValue: "Clear",
+                              })}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Help Text for None mode */}
+                      {splitMode === "none" && (
+                        <div className="text-center py-8">
+                          <LayoutGrid className="h-12 w-12 mb-4 opacity-20 mx-auto" />
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {t("splitScreen.selectMode", {
+                              defaultValue:
+                                "Select a split mode to get started",
+                            })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("splitScreen.helpText", {
+                              defaultValue:
+                                "Choose how many tabs you want to display at once",
+                            })}
+                          </p>
                         </div>
                       )}
                     </div>

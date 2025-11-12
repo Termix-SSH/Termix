@@ -60,9 +60,10 @@ export function TopNavbar({
 
   const [toolsSidebarOpen, setToolsSidebarOpen] = useState(false);
   const [commandHistoryTabActive, setCommandHistoryTabActive] = useState(false);
+  const [splitScreenTabActive, setSplitScreenTabActive] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem("rightSidebarWidth");
-    const defaultWidth = 350;
+    const defaultWidth = 400;
     const savedWidth = saved !== null ? parseInt(saved, 10) : defaultWidth;
     const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
     const maxWidth = Math.floor(window.innerWidth * 0.3);
@@ -132,7 +133,11 @@ export function TopNavbar({
   };
 
   const handleTabSplit = (tabId: number) => {
-    setSplitScreenTab(tabId);
+    // Open the sidebar to the split-screen tab
+    setToolsSidebarOpen(true);
+    setCommandHistoryTabActive(false);
+    setSplitScreenTabActive(true);
+    // Optional: could pass tabId to pre-select this tab in the sidebar
   };
 
   const handleTabClose = (tabId: number) => {
@@ -371,17 +376,7 @@ export function TopNavbar({
             const isAdmin = tab.type === "admin";
             const isUserProfile = tab.type === "user_profile";
             const isSplittable = isTerminal || isServer || isFileManager;
-            const isSplitButtonDisabled =
-              (isActive && !isSplitScreenActive) ||
-              ((allSplitScreenTab?.length || 0) >= 3 && !isSplit);
-            const disableSplit =
-              !isSplittable ||
-              isSplitButtonDisabled ||
-              isActive ||
-              currentTabIsHome ||
-              currentTabIsSshManager ||
-              currentTabIsAdmin ||
-              currentTabIsUserProfile;
+            const disableSplit = !isSplittable;
             const disableActivate =
               isSplit ||
               ((tab.type === "home" ||
@@ -390,7 +385,7 @@ export function TopNavbar({
                 tab.type === "user_profile") &&
                 isSplitScreenActive);
             const isHome = tab.type === "home";
-            const disableClose = (isSplitScreenActive && isActive) || isHome;
+            const disableClose = isHome;
 
             const isDraggingThisTab = dragState.draggedIndex === index;
             const isTheDraggedTab = tab.id === dragState.draggedId;
@@ -566,12 +561,17 @@ export function TopNavbar({
         onSnippetExecute={handleSnippetExecute}
         sidebarWidth={rightSidebarWidth}
         setSidebarWidth={setRightSidebarWidth}
-        commandHistory={commandHistory.commandHistory}
-        onSelectCommand={commandHistory.onSelectCommand}
-        onDeleteCommand={commandHistory.onDeleteCommand}
-        isHistoryLoading={commandHistory.isLoading}
-        initialTab={commandHistoryTabActive ? "command-history" : undefined}
-        onTabChange={() => setCommandHistoryTabActive(false)}
+        initialTab={
+          commandHistoryTabActive
+            ? "command-history"
+            : splitScreenTabActive
+              ? "split-screen"
+              : undefined
+        }
+        onTabChange={() => {
+          setCommandHistoryTabActive(false);
+          setSplitScreenTabActive(false);
+        }}
       />
     </div>
   );

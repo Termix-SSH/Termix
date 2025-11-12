@@ -1240,6 +1240,9 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                     <p className="text-xs text-muted-foreground truncate">
                                       {host.username}
                                     </p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      ID: {host.id}
+                                    </p>
                                   </div>
                                   <div className="flex gap-1 flex-shrink-0 ml-1">
                                     {host.folder && host.folder !== "" && (

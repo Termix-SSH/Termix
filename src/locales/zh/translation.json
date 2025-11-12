@@ -223,6 +223,20 @@
     "editTooltip": "编辑此片段",
     "deleteTooltip": "删除此片段"
   },
+  "commandHistory": {
+    "title": "历史记录",
+    "searchPlaceholder": "搜索命令...",
+    "noTerminal": "无活动终端",
+    "noTerminalHint": "打开终端以查看其命令历史记录。",
+    "empty": "暂无命令历史记录",
+    "emptyHint": "在活动终端中执行命令以建立历史记录。",
+    "noResults": "未找到命令",
+    "noResultsHint": "没有匹配 \"{{query}}\" 的命令",
+    "deleteSuccess": "命令已从历史记录中删除",
+    "deleteFailed": "删除命令失败。",
+    "deleteTooltip": "删除命令",
+    "tabHint": "在终端中使用 Tab 键从命令历史记录自动完成"
+  },
   "homepage": {
     "loggedInTitle": "登录成功！",
     "loggedInMessage": "您已登录！使用侧边栏访问所有可用工具。要开始使用，请在 SSH 管理器选项卡中创建 SSH 主机。创建后，您可以使用侧边栏中的其他应用程序连接到该主机。",
@@ -1494,6 +1508,8 @@
     "selectPreferredLanguage": "选择您的界面首选语言",
     "fileColorCoding": "文件颜色编码",
     "fileColorCodingDesc": "按类型对文件进行颜色编码：文件夹（红色）、文件（蓝色）、符号链接（绿色）",
+    "commandAutocomplete": "命令自动补全",
+    "commandAutocompleteDesc": "启用基于命令历史记录的 Tab 键终端命令自动补全建议",
     "currentPassword": "当前密码",
     "passwordChangedSuccess": "密码修改成功！请重新登录。",
     "failedToChangePassword": "修改密码失败。请检查您当前的密码并重试。"

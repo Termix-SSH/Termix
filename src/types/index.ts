@@ -9,6 +9,11 @@ export interface JumpHost {
   hostId: number;
 }
 
+export interface QuickAction {
+  name: string;
+  snippetId: number;
+}
+
 export interface SSHHost {
   id: number;
   name: string;
@@ -38,6 +43,7 @@ export interface SSHHost {
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
+  quickActions?: QuickAction[];
   statsConfig?: string;
   terminalConfig?: TerminalConfig;
   createdAt: string;
@@ -46,6 +52,11 @@ export interface SSHHost {
 
 export interface JumpHostData {
   hostId: number;
+}
+
+export interface QuickActionData {
+  name: string;
+  snippetId: number;
 }
 
 export interface SSHHostData {
@@ -70,6 +81,7 @@ export interface SSHHostData {
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
   jumpHosts?: JumpHostData[];
+  quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
 }
@@ -315,6 +327,22 @@ export interface TabContextTab {
   hostConfig?: SSHHost;
   terminalRef?: any;
   initialTab?: string;
+}
+
+// Split Screen Layout Types
+export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";
+
+export interface SplitConfiguration {
+  layout: SplitLayout;
+  positions: Map<number, number>; // position index -> tab ID
+}
+
+export interface SplitLayoutOption {
+  id: SplitLayout;
+  name: string;
+  description: string;
+  cellCount: number;
+  icon: string; // lucide icon name
 }
 
 // ============================================================================
