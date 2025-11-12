@@ -598,6 +598,7 @@ router.get("/oidc/callback", async (req, res) => {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
