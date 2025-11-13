@@ -217,9 +217,7 @@ function cleanupTunnelResources(
     if (verification?.timeout) clearTimeout(verification.timeout);
     try {
       verification?.conn.end();
-    } catch (error) {
-      sshLogger.debug("Operation failed, continuing", { error });
-    }
+    } catch (error) {}
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -284,9 +282,7 @@ function handleDisconnect(
       const verification = tunnelVerifications.get(tunnelName);
       if (verification?.timeout) clearTimeout(verification.timeout);
       verification?.conn.end();
-    } catch (error) {
-      sshLogger.debug("Operation failed, continuing", { error });
-    }
+    } catch (error) {}
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -642,9 +638,7 @@ async function connectSSHTunnel(
 
       try {
         conn.end();
-      } catch (error) {
-        sshLogger.debug("Operation failed, continuing", { error });
-      }
+      } catch (error) {}
 
       activeTunnels.delete(tunnelName);
 
@@ -784,9 +778,7 @@ async function connectSSHTunnel(
             const verification = tunnelVerifications.get(tunnelName);
             if (verification?.timeout) clearTimeout(verification.timeout);
             verification?.conn.end();
-          } catch (error) {
-            sshLogger.debug("Operation failed, continuing", { error });
-          }
+          } catch (error) {}
           tunnelVerifications.delete(tunnelName);
         }
 

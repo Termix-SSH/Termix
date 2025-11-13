@@ -117,6 +117,7 @@ export function Auth({
   const [totpTempToken, setTotpTempToken] = useState("");
   const [totpLoading, setTotpLoading] = useState(false);
   const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
+  const totpInputRef = React.useRef<HTMLInputElement>(null);
 
   const [showServerConfig, setShowServerConfig] = useState<boolean | null>(
     null,
@@ -155,6 +156,12 @@ export function Auth({
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
   }, [loggedIn]);
+
+  useEffect(() => {
+    if (totpRequired && totpInputRef.current) {
+      totpInputRef.current.focus();
+    }
+  }, [totpRequired]);
 
   useEffect(() => {
     getRegistrationAllowed().then((res) => {
@@ -479,20 +486,17 @@ export function Auth({
         }
       }
 
-      setInternalLoggedIn(true);
       setLoggedIn(true);
       setIsAdmin(!!res.is_admin);
       setUsername(res.username || null);
       setUserId(res.userId || null);
       setDbError(null);
 
-      setTimeout(() => {
-        onAuthSuccess({
-          isAdmin: !!res.is_admin,
-          username: res.username || null,
-          userId: res.userId || null,
-        });
-      }, 100);
+      onAuthSuccess({
+        isAdmin: !!res.is_admin,
+        username: res.username || null,
+        userId: res.userId || null,
+      });
 
       setInternalLoggedIn(true);
       setTotpRequired(false);
@@ -916,6 +920,7 @@ export function Auth({
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="totp-code">{t("auth.verifyCode")}</Label>
                   <Input
+                    ref={totpInputRef}
                     id="totp-code"
                     type="text"
                     placeholder="000000"

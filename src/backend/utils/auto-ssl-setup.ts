@@ -233,11 +233,7 @@ IP.3 = 0.0.0.0
     let envContent = "";
     try {
       envContent = await fs.readFile(this.ENV_FILE, "utf8");
-    } catch (error) {
-      systemLogger.debug("Operation failed, continuing", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    } catch (error) {}
 
     let updatedContent = envContent;
     let hasChanges = false;

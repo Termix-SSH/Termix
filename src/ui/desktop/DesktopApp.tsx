@@ -63,6 +63,7 @@ function AppContent() {
   useEffect(() => {
     const checkAuth = () => {
       setAuthLoading(true);
+      // Don't optimistically set isAuthenticated before checking
       getUserInfo()
         .then((meRes) => {
           if (typeof meRes === "string" || !meRes.username) {
@@ -163,13 +164,34 @@ function AppContent() {
   const showAdmin = currentTabData?.type === "admin";
   const showProfile = currentTabData?.type === "user_profile";
 
+  if (authLoading) {
+    return (
+      <div
+        className="h-screen w-screen flex items-center justify-center bg-dark-bg-darkest"
+        style={{
+          backgroundImage: `repeating-linear-gradient(
+            225deg,
+            transparent,
+            transparent 35px,
+            rgba(255, 255, 255, 0.03) 35px,
+            rgba(255, 255, 255, 0.03) 37px
+          )`,
+        }}
+      >
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-screen overflow-hidden">
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         setIsOpen={setIsCommandPaletteOpen}
       />
-      {!isAuthenticated && !authLoading && (
+      {!isAuthenticated && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000]">
           <Dashboard
             onSelectView={handleSelectView}

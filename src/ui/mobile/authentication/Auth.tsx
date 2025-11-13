@@ -118,10 +118,17 @@ export function Auth({
   const [totpTempToken, setTotpTempToken] = useState("");
   const [totpLoading, setTotpLoading] = useState(false);
   const [mobileAuthSuccess, setMobileAuthSuccess] = useState(false);
+  const totpInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
   }, [loggedIn]);
+
+  useEffect(() => {
+    if (totpRequired && totpInputRef.current) {
+      totpInputRef.current.focus();
+    }
+  }, [totpRequired]);
 
   useEffect(() => {
     getRegistrationAllowed().then((res) => {
@@ -648,6 +655,7 @@ export function Auth({
           <div className="flex flex-col gap-2">
             <Label htmlFor="totp-code">{t("auth.verifyCode")}</Label>
             <Input
+              ref={totpInputRef}
               id="totp-code"
               type="text"
               placeholder="000000"

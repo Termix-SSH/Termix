@@ -396,7 +396,7 @@ function createApiInstance(
           errorMessage === "Invalid token" ||
           errorMessage === "Authentication required";
 
-        if (isSessionExpired || isSessionNotFound) {
+        if (isSessionExpired || isSessionNotFound || isInvalidToken) {
           // Clear token from localStorage
           localStorage.removeItem("jwt");
 
@@ -405,29 +405,19 @@ function createApiInstance(
             electronSettingsCache.delete("jwt");
           }
 
+          // Clear cookie
           if (typeof window !== "undefined") {
-            console.warn("Session expired or not found - please log in again");
-
             document.cookie =
               "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          }
 
+          // Only show toast and reload for explicit session expiration
+          // Let the auth check in DesktopApp.tsx handle the redirect silently
+          if (isSessionExpired && typeof window !== "undefined") {
+            console.warn("Session expired - please log in again");
             import("sonner").then(({ toast }) => {
               toast.warning("Session expired. Please log in again.");
-              window.location.reload();
             });
-
-            setTimeout(() => window.location.reload(), 1000);
-          }
-        } else if (isInvalidToken && typeof window !== "undefined") {
-          console.warn(
-            "Authentication error - token may be invalid",
-            errorMessage,
-          );
-
-          // Clear invalid token
-          localStorage.removeItem("jwt");
-          if (isElectron()) {
-            electronSettingsCache.delete("jwt");
           }
         }
       }

@@ -368,9 +368,7 @@ class SSHConnectionPool {
         if (!conn.inUse && now - conn.lastUsed > maxAge) {
           try {
             conn.client.end();
-          } catch (error) {
-            sshLogger.debug("Operation failed, continuing", { error });
-          }
+          } catch (error) {}
           return false;
         }
         return true;
@@ -390,9 +388,7 @@ class SSHConnectionPool {
       for (const conn of connections) {
         try {
           conn.client.end();
-        } catch (error) {
-          sshLogger.debug("Operation failed, continuing", { error });
-        }
+        } catch (error) {}
       }
     }
     this.connections.clear();
@@ -430,9 +426,7 @@ class RequestQueue {
       if (request) {
         try {
           await request();
-        } catch (error) {
-          sshLogger.debug("Operation failed, continuing", { error });
-        }
+        } catch (error) {}
       }
     }
 
@@ -663,6 +657,7 @@ class PollingManager {
 
   async startPollingForHost(host: SSHHostWithCredentials): Promise<void> {
     const statsConfig = this.parseStatsConfig(host.statsConfig);
+
     const existingConfig = this.pollingConfigs.get(host.id);
 
     // Always clear existing timers first
@@ -696,6 +691,9 @@ class PollingManager {
       statsConfig,
     };
 
+    // Set the config FIRST to prevent race conditions with old timers
+    this.pollingConfigs.set(host.id, config);
+
     if (statsConfig.statusCheckEnabled) {
       const intervalMs = statsConfig.statusCheckInterval * 1000;
 
@@ -715,6 +713,7 @@ class PollingManager {
     if (statsConfig.metricsEnabled) {
       const intervalMs = statsConfig.metricsInterval * 1000;
 
+      // Poll immediately, but only if metrics are actually enabled
       this.pollHostMetrics(host);
 
       config.metricsTimer = setInterval(() => {
@@ -728,6 +727,7 @@ class PollingManager {
       });
     }
 
+    // Update with the new timers
     this.pollingConfigs.set(host.id, config);
   }
 
@@ -750,14 +750,18 @@ class PollingManager {
 
   private async pollHostMetrics(host: SSHHostWithCredentials): Promise<void> {
     // Double-check that metrics are still enabled before collecting
+    // Always get the LATEST config from the Map, not from the closure
     const config = this.pollingConfigs.get(host.id);
     if (!config || !config.statsConfig.metricsEnabled) {
       return;
     }
 
+    // Use the host from the config to ensure we have the latest version
+    const currentHost = config.host;
+
     try {
-      const metrics = await collectMetrics(host);
-      this.metricsStore.set(host.id, {
+      const metrics = await collectMetrics(currentHost);
+      this.metricsStore.set(currentHost.id, {
         data: metrics,
         timestamp: Date.now(),
       });
@@ -765,13 +769,13 @@ class PollingManager {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      // Only log errors if metrics collection is actually enabled
-      // Don't spam logs with errors for hosts that have metrics disabled
-      if (config.statsConfig.metricsEnabled) {
+      // Re-check config after the async operation in case it was disabled during collection
+      const latestConfig = this.pollingConfigs.get(currentHost.id);
+      if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
         statsLogger.warn("Failed to collect metrics for host", {
           operation: "metrics_poll_failed",
-          hostId: host.id,
-          hostName: host.name,
+          hostId: currentHost.id,
+          hostName: currentHost.name,
           error: errorMessage,
         });
       }
@@ -1330,9 +1334,7 @@ function tcpPing(
       settled = true;
       try {
         socket.destroy();
-      } catch (error) {
-        sshLogger.debug("Operation failed, continuing", { error });
-      }
+      } catch (error) {}
       resolve(result);
     };
 
@@ -1435,6 +1437,34 @@ app.post("/host-updated", async (req, res) => {
       userId,
     });
     res.status(500).json({ error: "Failed to start polling" });
+  }
+});
+
+app.post("/host-deleted", async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { hostId } = req.body;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  if (!hostId || typeof hostId !== "number") {
+    return res.status(400).json({ error: "Invalid hostId" });
+  }
+
+  try {
+    pollingManager.stopPollingForHost(hostId, true);
+    res.json({ message: "Host polling stopped" });
+  } catch (error) {
+    statsLogger.error("Failed to stop polling for host", error, {
+      operation: "host_deleted",
+      hostId,
+      userId,
+    });
+    res.status(500).json({ error: "Failed to stop polling" });
   }
 });
 

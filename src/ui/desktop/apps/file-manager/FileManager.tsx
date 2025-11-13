@@ -900,6 +900,26 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     );
   }
 
+  function handleCopyPath(files: FileItem[]) {
+    if (files.length === 0) return;
+
+    const paths = files.map((file) => file.path).join("\n");
+
+    navigator.clipboard.writeText(paths).then(
+      () => {
+        toast.success(
+          files.length === 1
+            ? t("fileManager.pathCopiedToClipboard")
+            : t("fileManager.pathsCopiedToClipboard", { count: files.length }),
+        );
+      },
+      (err) => {
+        console.error("Failed to copy path to clipboard:", err);
+        toast.error(t("fileManager.failedToCopyPath"));
+      },
+    );
+  }
+
   async function handlePasteFiles() {
     if (!clipboard || !sshSessionId) return;
 
@@ -2064,6 +2084,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             onProperties={handleOpenPermissionsDialog}
             onExtractArchive={handleExtractArchive}
             onCompress={handleOpenCompressDialog}
+            onCopyPath={handleCopyPath}
           />
         </div>
       </div>

@@ -1030,9 +1030,7 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch (error) {
-      databaseLogger.debug("Operation failed, continuing", { error });
-    }
+    } catch (error) {}
 
     const deviceInfo = parseUserAgent(req);
     const dataUnlocked = await authManager.authenticateUser(

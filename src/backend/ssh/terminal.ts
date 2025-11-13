@@ -323,6 +323,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isConnecting = false;
   let isConnected = false;
   let isCleaningUp = false;
+  let isShellInitializing = false; // Track shell initialization to prevent cleanup mid-setup
 
   ws.on("close", () => {
     const userWs = userConnections.get(userId);
@@ -680,9 +681,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
 
+      // Capture the connection reference immediately and verify it's still valid
       const conn = sshConn;
 
-      if (!conn || isCleaningUp) {
+      // Additional check: verify the connection is still active before proceeding
+      if (!conn || isCleaningUp || !sshConn) {
         sshLogger.warn(
           "SSH connection was cleaned up before shell could be created",
           {
@@ -692,6 +695,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
             port,
             username,
             isCleaningUp,
+            connNull: !conn,
+            sshConnNull: !sshConn,
           },
         );
         ws.send(
@@ -704,8 +709,29 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
+      // Mark that we're initializing the shell to prevent cleanup
+      isShellInitializing = true;
       isConnecting = false;
       isConnected = true;
+
+      // Verify connection is still valid right before shell() call
+      if (!sshConn) {
+        sshLogger.error(
+          "SSH connection became null right before shell creation",
+          {
+            operation: "ssh_shell",
+            hostId: id,
+          },
+        );
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message: "SSH connection lost during setup",
+          }),
+        );
+        isShellInitializing = false;
+        return;
+      }
 
       conn.shell(
         {
@@ -714,6 +740,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
           term: "xterm-256color",
         } as PseudoTtyOptions,
         (err, stream) => {
+          // Shell initialization complete, clear the flag
+          isShellInitializing = false;
+
           if (err) {
             sshLogger.error("Shell error", err, {
               operation: "ssh_shell",
@@ -1235,6 +1264,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (isCleaningUp) {
       return;
     }
+
+    // Don't cleanup if we're in the middle of shell initialization
+    if (isShellInitializing) {
+      sshLogger.warn(
+        "Cleanup attempted during shell initialization, deferring",
+        {
+          operation: "cleanup_deferred",
+          userId,
+        },
+      );
+      // Retry cleanup after a short delay
+      setTimeout(() => cleanupSSH(timeoutId), 100);
+      return;
+    }
+
     isCleaningUp = true;
 
     if (timeoutId) {
@@ -1283,9 +1327,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   function setupPingInterval() {
+    // More frequent keepalive to prevent idle disconnections
     pingInterval = setInterval(() => {
       if (sshConn && sshStream) {
         try {
+          // Send null byte as keepalive
           sshStream.write("\x00");
         } catch (e: unknown) {
           sshLogger.error(
@@ -1294,7 +1340,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
           cleanupSSH();
         }
+      } else if (!sshConn || !sshStream) {
+        // If connection or stream is lost, clear the interval
+        if (pingInterval) {
+          clearInterval(pingInterval);
+          pingInterval = null;
+        }
       }
-    }, 60000);
+    }, 30000); // Reduced from 60s to 30s for more reliable keepalive
   }
 });

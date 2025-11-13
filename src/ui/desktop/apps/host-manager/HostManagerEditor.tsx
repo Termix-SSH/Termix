@@ -345,6 +345,13 @@ export function HostManagerEditor({
     "upload",
   );
   const isSubmittingRef = useRef(false);
+  const [activeTab, setActiveTab] = useState("general");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Clear error when tab changes
+  useEffect(() => {
+    setFormError(null);
+  }, [activeTab]);
 
   const [statusIntervalUnit, setStatusIntervalUnit] = useState<
     "seconds" | "minutes"
@@ -817,6 +824,7 @@ export function HostManagerEditor({
   const onSubmit = async (data: FormData) => {
     try {
       isSubmittingRef.current = true;
+      setFormError(null);
 
       if (!data.name || data.name.trim() === "") {
         data.name = `${data.username}@${data.ip}`;
@@ -828,12 +836,16 @@ export function HostManagerEditor({
 
         if (statusInterval < 5 || statusInterval > 3600) {
           toast.error(t("hosts.intervalValidation"));
+          setActiveTab("statistics");
+          setFormError(t("hosts.intervalValidation"));
           isSubmittingRef.current = false;
           return;
         }
 
         if (metricsInterval < 5 || metricsInterval > 3600) {
           toast.error(t("hosts.intervalValidation"));
+          setActiveTab("statistics");
+          setFormError(t("hosts.intervalValidation"));
           isSubmittingRef.current = false;
           return;
         }
@@ -943,10 +955,44 @@ export function HostManagerEditor({
         );
         notifyHostCreatedOrUpdated(savedHost.id);
       }
-    } catch {
+    } catch (error) {
       toast.error(t("hosts.failedToSaveHost"));
+      console.error("Failed to save host:", error);
     } finally {
       isSubmittingRef.current = false;
+    }
+  };
+
+  // Handle form validation errors
+  const handleFormError = () => {
+    const errors = form.formState.errors;
+
+    // Determine which tab contains the error
+    if (
+      errors.ip ||
+      errors.port ||
+      errors.username ||
+      errors.name ||
+      errors.folder ||
+      errors.tags ||
+      errors.pin ||
+      errors.password ||
+      errors.key ||
+      errors.keyPassword ||
+      errors.keyType ||
+      errors.credentialId ||
+      errors.forceKeyboardInteractive ||
+      errors.jumpHosts
+    ) {
+      setActiveTab("general");
+    } else if (errors.enableTerminal || errors.terminalConfig) {
+      setActiveTab("terminal");
+    } else if (errors.enableTunnel || errors.tunnelConnections) {
+      setActiveTab("tunnel");
+    } else if (errors.enableFileManager || errors.defaultPath) {
+      setActiveTab("file_manager");
+    } else if (errors.statsConfig) {
+      setActiveTab("statistics");
     }
   };
 
@@ -1038,12 +1084,26 @@ export function HostManagerEditor({
   const getFilteredSshConfigs = (index: number) => {
     const value = form.watch(`tunnelConnections.${index}.endpointHost`);
 
-    const currentHostName =
-      form.watch("name") || `${form.watch("username")}@${form.watch("ip")}`;
+    const currentHostId = editingHost?.id;
 
-    let filtered = sshConfigurations.filter(
-      (config) => config !== currentHostName,
-    );
+    let filtered = sshConfigurations;
+
+    // Filter out the current host being edited (by ID, not by name)
+    if (currentHostId) {
+      const currentHostName = hosts.find((h) => h.id === currentHostId)?.name;
+      if (currentHostName) {
+        filtered = sshConfigurations.filter(
+          (config) => config !== currentHostName,
+        );
+      }
+    } else {
+      // If creating a new host, filter by the name being entered
+      const currentHostName =
+        form.watch("name") || `${form.watch("username")}@${form.watch("ip")}`;
+      filtered = sshConfigurations.filter(
+        (config) => config !== currentHostName,
+      );
+    }
 
     if (value) {
       filtered = filtered.filter((config) =>
@@ -1099,12 +1159,21 @@ export function HostManagerEditor({
     <div className="flex-1 flex flex-col h-full min-h-0 w-full">
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={form.handleSubmit(onSubmit, handleFormError)}
           className="flex flex-col flex-1 min-h-0 h-full"
         >
           <ScrollArea className="flex-1 min-h-0 w-full my-1 pb-2">
             <div className="pr-4">
-              <Tabs defaultValue="general" className="w-full">
+              {formError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{formError}</AlertDescription>
+                </Alert>
+              )}
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
                 <TabsList>
                   <TabsTrigger value="general">
                     {t("hosts.general")}

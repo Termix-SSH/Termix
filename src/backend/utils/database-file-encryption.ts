@@ -632,11 +632,7 @@ class DatabaseFileEncryption {
         try {
           fs.accessSync(envPath, fs.constants.R_OK);
           result.environment.envFileReadable = true;
-        } catch (error) {
-          databaseLogger.debug("Operation failed, continuing", {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
+        } catch (error) {}
       }
 
       if (

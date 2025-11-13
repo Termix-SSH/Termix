@@ -49,12 +49,23 @@ interface TabProviderProps {
 
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
-  const [tabs, setTabs] = useState<Tab[]>([
-    { id: 1, type: "home", title: t("nav.home") },
+  const [tabs, setTabs] = useState<Tab[]>(() => [
+    { id: 1, type: "home", title: "Home" },
   ]);
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
   const nextTabId = useRef(2);
+
+  // Update home tab title when translation changes
+  React.useEffect(() => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === 1 && tab.type === "home"
+          ? { ...tab, title: t("nav.home") }
+          : tab,
+      ),
+    );
+  }, [t]);
 
   function computeUniqueTitle(
     tabType: Tab["type"],

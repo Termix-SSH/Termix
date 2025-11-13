@@ -199,9 +199,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           await fetchHosts();
           await fetchFolderMetadata();
           window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
-
-          const { refreshServerPolling } = await import("@/ui/main-axios.ts");
-          refreshServerPolling();
         } catch (error) {
           console.error("Failed to delete hosts in folder:", error);
           toast.error(t("hosts.failedToDeleteHostsInFolder"));

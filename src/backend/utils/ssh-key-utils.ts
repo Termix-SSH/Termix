@@ -85,11 +85,7 @@ function detectKeyTypeFromContent(keyContent: string): string {
       } else if (decodedString.includes("1.3.101.112")) {
         return "ssh-ed25519";
       }
-    } catch (error) {
-      sshLogger.debug("Operation failed, continuing", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    } catch (error) {}
 
     if (content.length < 800) {
       return "ssh-ed25519";
@@ -145,11 +141,7 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
       } else if (decodedString.includes("1.3.101.112")) {
         return "ssh-ed25519";
       }
-    } catch (error) {
-      sshLogger.debug("Operation failed, continuing", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    } catch (error) {}
 
     if (content.length < 400) {
       return "ssh-ed25519";
@@ -251,11 +243,7 @@ export function parseSSHKey(
 
           useSSH2 = true;
         }
-      } catch (error) {
-        sshLogger.debug("Operation failed, continuing", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+      } catch (error) {}
     }
 
     if (!useSSH2) {
@@ -281,11 +269,7 @@ export function parseSSHKey(
           success: true,
         };
       }
-    } catch (error) {
-      sshLogger.debug("Operation failed, continuing", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    } catch (error) {}
 
     return {
       privateKey: privateKeyData,

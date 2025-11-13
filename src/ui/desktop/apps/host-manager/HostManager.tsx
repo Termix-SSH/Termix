@@ -72,13 +72,14 @@ export function HostManager({
   };
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (value !== "add_host") {
+    // Only clear editing state when leaving the respective tabs, not when entering them
+    if (activeTab === "add_host" && value !== "add_host") {
       setEditingHost(null);
     }
-    if (value !== "add_credential") {
+    if (activeTab === "add_credential" && value !== "add_credential") {
       setEditingCredential(null);
     }
+    setActiveTab(value);
   };
 
   const topMarginPx = isTopbarOpen ? 74 : 26;

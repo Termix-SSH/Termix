@@ -63,6 +63,7 @@ interface ContextMenuProps {
   currentPath?: string;
   onExtractArchive?: (file: FileItem) => void;
   onCompress?: (files: FileItem[]) => void;
+  onCopyPath?: (files: FileItem[]) => void;
 }
 
 interface MenuItem {
@@ -104,6 +105,7 @@ export function FileManagerContextMenu({
   currentPath,
   onExtractArchive,
   onCompress,
+  onCopyPath,
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
@@ -365,7 +367,18 @@ export function FileManagerContextMenu({
       });
     }
 
-    if ((isSingleFile && onRename) || onCopy || onCut) {
+    if (onCopyPath) {
+      menuItems.push({
+        icon: <Clipboard className="w-4 h-4" />,
+        label: isMultipleFiles
+          ? t("fileManager.copyPaths")
+          : t("fileManager.copyPath"),
+        action: () => onCopyPath(files),
+        shortcut: "Ctrl+Shift+P",
+      });
+    }
+
+    if ((isSingleFile && onRename) || onCopy || onCut || onCopyPath) {
       menuItems.push({ separator: true } as MenuItem);
     }
 

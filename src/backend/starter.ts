@@ -21,11 +21,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       if (persistentConfig.parsed) {
         Object.assign(process.env, persistentConfig.parsed);
       }
-    } catch (error) {
-      systemLogger.debug("Operation failed, continuing", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    } catch (error) {}
 
     let version = "unknown";
 

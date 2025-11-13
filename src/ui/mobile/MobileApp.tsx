@@ -30,16 +30,28 @@ const AppContent: FC = () => {
   useEffect(() => {
     const checkAuth = () => {
       setAuthLoading(true);
+      // Don't optimistically set isAuthenticated before checking
       getUserInfo()
         .then((meRes) => {
-          setIsAuthenticated(true);
-          setIsAdmin(!!meRes.is_admin);
-          setUsername(meRes.username || null);
+          if (typeof meRes === "string" || !meRes.username) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
+            // Clear invalid token
+            localStorage.removeItem("jwt");
+          } else {
+            setIsAuthenticated(true);
+            setIsAdmin(!!meRes.is_admin);
+            setUsername(meRes.username || null);
+          }
         })
         .catch((err) => {
           setIsAuthenticated(false);
           setIsAdmin(false);
           setUsername(null);
+
+          // Clear invalid token on any auth error
+          localStorage.removeItem("jwt");
 
           const errorCode = err?.response?.data?.code;
           if (errorCode === "SESSION_EXPIRED") {
@@ -113,7 +125,10 @@ const AppContent: FC = () => {
   if (authLoading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-dark-bg-darkest">
-        <p className="text-white">{t("common.loading")}</p>
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">{t("common.loading")}</p>
+        </div>
       </div>
     );
   }

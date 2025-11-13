@@ -1498,17 +1498,13 @@ app.get(
       if (status.hasUnencryptedDb) {
         try {
           unencryptedSize = fs.statSync(dbPath).size;
-        } catch (error) {
-          databaseLogger.debug("Operation failed, continuing", { error });
-        }
+        } catch (error) {}
       }
 
       if (status.hasEncryptedDb) {
         try {
           encryptedSize = fs.statSync(encryptedDbPath).size;
-        } catch (error) {
-          databaseLogger.debug("Operation failed, continuing", { error });
-        }
+        } catch (error) {}
       }
 
       res.json({

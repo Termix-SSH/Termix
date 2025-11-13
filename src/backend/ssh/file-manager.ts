@@ -261,6 +261,7 @@ interface SSHSession {
   isConnected: boolean;
   lastActive: number;
   timeout?: NodeJS.Timeout;
+  activeOperations: number; // Track number of active operations to prevent cleanup mid-operation
 }
 
 interface PendingTOTPSession {
@@ -285,11 +286,24 @@ const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
+    // Don't cleanup if there are active operations
+    if (session.activeOperations > 0) {
+      fileLogger.warn(
+        `Deferring session cleanup for ${sessionId} - ${session.activeOperations} active operations`,
+        {
+          operation: "cleanup_deferred",
+          sessionId,
+          activeOperations: session.activeOperations,
+        },
+      );
+      // Reschedule cleanup
+      scheduleSessionCleanup(sessionId);
+      return;
+    }
+
     try {
       session.client.end();
-    } catch (error) {
-      sshLogger.debug("Operation failed, continuing", { error });
-    }
+    } catch (error) {}
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -563,6 +577,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       client,
       isConnected: true,
       lastActive: Date.now(),
+      activeOperations: 0, // Initialize active operations counter
     };
     scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
@@ -917,6 +932,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         client: session.client,
         isConnected: true,
         lastActive: Date.now(),
+        activeOperations: 0, // Initialize active operations counter
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1060,10 +1076,12 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   }
 
   sshConn.lastActive = Date.now();
+  sshConn.activeOperations++; // Track operation start
 
   const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
   sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
     if (err) {
+      sshConn.activeOperations--; // Decrement on error
       fileLogger.error("SSH listFiles error:", err);
       return res.status(500).json({ error: err.message });
     }
@@ -1080,6 +1098,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
     });
 
     stream.on("close", (code) => {
+      sshConn.activeOperations--; // Decrement when operation completes
       if (code !== 0) {
         fileLogger.error(
           `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,

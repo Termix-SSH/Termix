@@ -908,6 +908,29 @@ router.delete(
         },
       );
 
+      // Notify stats server to stop polling this host
+      try {
+        const axios = (await import("axios")).default;
+        const statsPort = process.env.STATS_PORT || 30005;
+        await axios.post(
+          `http://localhost:${statsPort}/host-deleted`,
+          { hostId: numericHostId },
+          {
+            headers: {
+              Authorization: req.headers.authorization || "",
+              Cookie: req.headers.cookie || "",
+            },
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        sshLogger.warn("Failed to notify stats server of host deletion", {
+          operation: "host_delete",
+          hostId: numericHostId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
       res.json({ message: "SSH host deleted" });
     } catch (err) {
       sshLogger.error("Failed to delete SSH host from database", err, {
@@ -1629,6 +1652,39 @@ router.delete(
         folderName,
         deletedCount: hostsToDelete.length,
       });
+
+      // Notify stats server to stop polling these hosts
+      try {
+        const axios = (await import("axios")).default;
+        const statsPort = process.env.STATS_PORT || 30005;
+        for (const host of hostsToDelete) {
+          try {
+            await axios.post(
+              `http://localhost:${statsPort}/host-deleted`,
+              { hostId: host.id },
+              {
+                headers: {
+                  Authorization: req.headers.authorization || "",
+                  Cookie: req.headers.cookie || "",
+                },
+                timeout: 5000,
+              },
+            );
+          } catch (err) {
+            sshLogger.warn("Failed to notify stats server of host deletion", {
+              operation: "folder_hosts_delete",
+              hostId: host.id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+      } catch (err) {
+        sshLogger.warn("Failed to notify stats server of folder deletion", {
+          operation: "folder_hosts_delete",
+          folderName,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
 
       res.json({
         message: "All hosts in folder deleted successfully",
