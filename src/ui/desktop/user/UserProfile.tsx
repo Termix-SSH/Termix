@@ -463,7 +463,7 @@ export function UserProfile({
               <div className="space-y-4">
                 <div className="text-sm text-gray-300">
                   {t("leftSidebar.deleteAccountWarning")}
-                  <Alert variant="destructive">
+                  <Alert variant="destructive" className="mb-5 mt-5">
                     <AlertTitle>{t("common.warning")}</AlertTitle>
                     <AlertDescription>
                       {t("leftSidebar.deleteAccountWarningDetails")}
