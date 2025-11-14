@@ -124,7 +124,7 @@ const AppContent: FC = () => {
 
   if (authLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-dark-bg-darkest">
+      <div className="h-screen w-screen flex items-center justify-center bg-dark-bg">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">{t("common.loading")}</p>

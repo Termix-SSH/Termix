@@ -1255,6 +1255,10 @@ async function deploySSHKeyToHost(
                 return rejectAdd(err);
               }
 
+              stream.on("data", () => {
+                // Consume output
+              });
+
               stream.on("close", (code) => {
                 clearTimeout(addTimeout);
                 if (code === 0) {
@@ -1515,7 +1519,8 @@ router.post(
         });
       }
 
-      if (!credData.publicKey) {
+      const publicKey = credData.public_key || credData.publicKey;
+      if (!publicKey) {
         return res.status(400).json({
           success: false,
           error: "Public key is required for deployment",
@@ -1596,7 +1601,7 @@ router.post(
 
       const deployResult = await deploySSHKeyToHost(
         hostConfig,
-        credData.publicKey as string,
+        publicKey as string,
         credData,
       );
 

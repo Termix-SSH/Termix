@@ -193,15 +193,16 @@ export function SSHToolsSidebar({
         getCommandHistory(activeTerminalHostId)
           .then((history) => {
             setCommandHistory((prevHistory) => {
+              const newHistory = Array.isArray(history) ? history : [];
               // Only update if history actually changed
-              if (JSON.stringify(prevHistory) !== JSON.stringify(history)) {
+              if (JSON.stringify(prevHistory) !== JSON.stringify(newHistory)) {
                 // Use requestAnimationFrame to restore scroll after React finishes rendering
                 requestAnimationFrame(() => {
                   if (commandHistoryScrollRef.current) {
                     commandHistoryScrollRef.current.scrollTop = scrollTop;
                   }
                 });
-                return history;
+                return newHistory;
               }
               return prevHistory;
             });

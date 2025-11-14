@@ -300,13 +300,19 @@ router.post(
       const { Client } = await import("ssh2");
       const { sshData, sshCredentials } = await import("../db/schema.js");
 
-      // Get host configuration
-      const hostResult = await db
-        .select()
-        .from(sshData)
-        .where(
-          and(eq(sshData.id, parseInt(hostId)), eq(sshData.userId, userId)),
-        );
+      // Get host configuration using SimpleDBOps to decrypt credentials
+      const { SimpleDBOps } = await import("../../utils/simple-db-ops.js");
+
+      const hostResult = await SimpleDBOps.select(
+        db
+          .select()
+          .from(sshData)
+          .where(
+            and(eq(sshData.id, parseInt(hostId)), eq(sshData.userId, userId)),
+          ),
+        "ssh_data",
+        userId,
+      );
 
       if (hostResult.length === 0) {
         return res.status(404).json({ error: "Host not found" });
@@ -318,23 +324,31 @@ router.post(
       let password = host.password;
       let privateKey = host.key;
       let passphrase = host.key_password;
+      let authType = host.authType;
 
       if (host.credentialId) {
-        const credResult = await db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId),
-              eq(sshCredentials.userId, userId),
+        const credResult = await SimpleDBOps.select(
+          db
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, host.credentialId as number),
+                eq(sshCredentials.userId, userId),
+              ),
             ),
-          );
+          "ssh_credentials",
+          userId,
+        );
 
         if (credResult.length > 0) {
           const cred = credResult[0];
-          password = cred.password || undefined;
-          privateKey = cred.private_key || cred.key || undefined;
-          passphrase = cred.key_password || undefined;
+          authType = (cred.auth_type || cred.authType || authType) as string;
+          password = (cred.password || undefined) as string | undefined;
+          privateKey = (cred.private_key || cred.key || undefined) as
+            | string
+            | undefined;
+          passphrase = (cred.key_password || undefined) as string | undefined;
         }
       }
 
@@ -457,12 +471,24 @@ router.post(
           },
         };
 
-        if (password) {
+        // Set auth based on authType (like terminal.ts does)
+        if (authType === "password" && password) {
           config.password = password;
-        }
-
-        if (privateKey) {
-          const cleanKey = privateKey
+        } else if (authType === "key" && privateKey) {
+          const cleanKey = (privateKey as string)
+            .trim()
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n");
+          config.privateKey = Buffer.from(cleanKey, "utf8");
+          if (passphrase) {
+            config.passphrase = passphrase;
+          }
+        } else if (password) {
+          // Fallback: if authType not set but password exists
+          config.password = password;
+        } else if (privateKey) {
+          // Fallback: if authType not set but key exists
+          const cleanKey = (privateKey as string)
             .trim()
             .replace(/\r\n/g, "\n")
             .replace(/\r/g, "\n");

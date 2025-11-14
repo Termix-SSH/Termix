@@ -827,13 +827,10 @@ export function CredentialsManager({
       )}
 
       <Sheet open={showDeployDialog} onOpenChange={setShowDeployDialog}>
-        <SheetContent className="w-[500px] max-w-[50vw] overflow-y-auto">
+        <SheetContent className="w-[500px] max-w-[50vw] overflow-y-auto bg-dark-bg">
           <div className="px-4 py-4">
             <div className="space-y-3 pb-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                  <Upload className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </div>
                 <div className="flex-1">
                   <div className="text-lg font-semibold">
                     {t("credentials.deploySSHKey")}
@@ -1009,7 +1006,7 @@ export function CredentialsManager({
                   <Button
                     onClick={performDeploy}
                     disabled={!selectedHostId || deployLoading}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    className="flex-1"
                   >
                     {deployLoading ? (
                       <div className="flex items-center">

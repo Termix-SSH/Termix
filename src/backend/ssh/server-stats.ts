@@ -295,7 +295,12 @@ class SSHConnectionPool {
               ),
             );
           } else if (host.password) {
-            const responses = prompts.map(() => host.password || "");
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt)) {
+                return host.password || "";
+              }
+              return "";
+            });
             finish(responses);
           } else {
             finish(prompts.map(() => ""));
@@ -595,7 +600,7 @@ interface SSHHostWithCredentials {
   defaultPath: string;
   tunnelConnections: unknown[];
   jumpHosts?: Array<{ hostId: number }>;
-  statsConfig?: string;
+  statsConfig?: string | StatsConfig;
   createdAt: string;
   updatedAt: string;
   userId: string;
@@ -640,19 +645,43 @@ class PollingManager {
     }
   >();
 
-  parseStatsConfig(statsConfigStr?: string): StatsConfig {
+  parseStatsConfig(statsConfigStr?: string | StatsConfig): StatsConfig {
     if (!statsConfigStr) {
       return DEFAULT_STATS_CONFIG;
     }
-    try {
-      const parsed = JSON.parse(statsConfigStr);
-      return { ...DEFAULT_STATS_CONFIG, ...parsed };
-    } catch (error) {
-      statsLogger.warn(
-        `Failed to parse statsConfig: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-      return DEFAULT_STATS_CONFIG;
+
+    let parsed: StatsConfig;
+
+    // If it's already an object, use it directly
+    if (typeof statsConfigStr === "object") {
+      parsed = statsConfigStr;
+    } else {
+      // Otherwise, parse as JSON string (may be double-encoded)
+      try {
+        let temp: any = JSON.parse(statsConfigStr);
+
+        // Check if we got a string back (double-encoded JSON)
+        if (typeof temp === "string") {
+          temp = JSON.parse(temp);
+        }
+
+        parsed = temp;
+      } catch (error) {
+        statsLogger.warn(
+          `Failed to parse statsConfig: ${error instanceof Error ? error.message : "Unknown error"}`,
+          {
+            operation: "parse_stats_config_error",
+            statsConfigStr,
+          },
+        );
+        return DEFAULT_STATS_CONFIG;
+      }
     }
+
+    // Merge with defaults, but prioritize the provided values
+    const result = { ...DEFAULT_STATS_CONFIG, ...parsed };
+
+    return result;
   }
 
   async startPollingForHost(host: SSHHostWithCredentials): Promise<void> {
@@ -664,9 +693,11 @@ class PollingManager {
     if (existingConfig) {
       if (existingConfig.statusTimer) {
         clearInterval(existingConfig.statusTimer);
+        existingConfig.statusTimer = undefined;
       }
       if (existingConfig.metricsTimer) {
         clearInterval(existingConfig.metricsTimer);
+        existingConfig.metricsTimer = undefined;
       }
     }
 
@@ -675,14 +706,6 @@ class PollingManager {
       this.pollingConfigs.delete(host.id);
       this.statusStore.delete(host.id);
       this.metricsStore.delete(host.id);
-      statsLogger.info(
-        `Stopped all polling for host ${host.id} (${host.name || host.ip}) - both checks disabled`,
-        {
-          operation: "polling_stopped",
-          hostId: host.id,
-          hostName: host.name || host.ip,
-        },
-      );
       return;
     }
 
@@ -691,23 +714,20 @@ class PollingManager {
       statsConfig,
     };
 
-    // Set the config FIRST to prevent race conditions with old timers
-    this.pollingConfigs.set(host.id, config);
-
     if (statsConfig.statusCheckEnabled) {
       const intervalMs = statsConfig.statusCheckInterval * 1000;
 
       this.pollHostStatus(host);
 
       config.statusTimer = setInterval(() => {
-        this.pollHostStatus(host);
+        // Always get the latest config to check if polling is still enabled
+        const latestConfig = this.pollingConfigs.get(host.id);
+        if (latestConfig && latestConfig.statsConfig.statusCheckEnabled) {
+          this.pollHostStatus(latestConfig.host);
+        }
       }, intervalMs);
     } else {
       this.statusStore.delete(host.id);
-      statsLogger.debug(`Status polling disabled for host ${host.id}`, {
-        operation: "status_polling_disabled",
-        hostId: host.id,
-      });
     }
 
     if (statsConfig.metricsEnabled) {
@@ -717,17 +737,17 @@ class PollingManager {
       this.pollHostMetrics(host);
 
       config.metricsTimer = setInterval(() => {
-        this.pollHostMetrics(host);
+        // Always get the latest config to check if polling is still enabled
+        const latestConfig = this.pollingConfigs.get(host.id);
+        if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
+          this.pollHostMetrics(latestConfig.host);
+        }
       }, intervalMs);
     } else {
       this.metricsStore.delete(host.id);
-      statsLogger.debug(`Metrics polling disabled for host ${host.id}`, {
-        operation: "metrics_polling_disabled",
-        hostId: host.id,
-      });
     }
 
-    // Update with the new timers
+    // Set the config with the new timers
     this.pollingConfigs.set(host.id, config);
   }
 
@@ -787,9 +807,11 @@ class PollingManager {
     if (config) {
       if (config.statusTimer) {
         clearInterval(config.statusTimer);
+        config.statusTimer = undefined;
       }
       if (config.metricsTimer) {
         clearInterval(config.metricsTimer);
+        config.metricsTimer = undefined;
       }
       this.pollingConfigs.delete(hostId);
       if (clearData) {
@@ -994,6 +1016,7 @@ async function resolveHostCredentials(
       tunnelConnections: host.tunnelConnections
         ? JSON.parse(host.tunnelConnections as string)
         : [],
+      jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
       statsConfig: host.statsConfig || undefined,
       createdAt: host.createdAt,
       updatedAt: host.updatedAt,
