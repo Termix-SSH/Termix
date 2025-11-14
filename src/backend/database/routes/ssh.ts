@@ -862,6 +862,7 @@ router.get(
 router.delete(
   "/db/host/:id",
   authenticateJWT,
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const hostId = req.params.id;
