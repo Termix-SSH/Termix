@@ -892,6 +892,44 @@ router.delete(
 
       const numericHostId = Number(hostId);
 
+      // Delete related records first to avoid foreign key constraint errors
+      await db
+        .delete(fileManagerRecent)
+        .where(
+          and(
+            eq(fileManagerRecent.hostId, numericHostId),
+            eq(fileManagerRecent.userId, userId),
+          ),
+        );
+
+      await db
+        .delete(fileManagerPinned)
+        .where(
+          and(
+            eq(fileManagerPinned.hostId, numericHostId),
+            eq(fileManagerPinned.userId, userId),
+          ),
+        );
+
+      await db
+        .delete(fileManagerShortcuts)
+        .where(
+          and(
+            eq(fileManagerShortcuts.hostId, numericHostId),
+            eq(fileManagerShortcuts.userId, userId),
+          ),
+        );
+
+      await db
+        .delete(commandHistory)
+        .where(
+          and(
+            eq(commandHistory.hostId, numericHostId),
+            eq(commandHistory.userId, userId),
+          ),
+        );
+
+      // Now delete the host itself
       await db
         .delete(sshData)
         .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
