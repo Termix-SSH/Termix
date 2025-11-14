@@ -146,6 +146,8 @@ async function initializeCompleteDatabase(): Promise<void> {
 
   sqlite = memoryDatabase;
 
+  sqlite.exec("PRAGMA foreign_keys = ON");
+
   db = drizzle(sqlite, { schema });
 
   sqlite.exec(`
