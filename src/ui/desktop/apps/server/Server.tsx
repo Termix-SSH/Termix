@@ -616,19 +616,6 @@ export function Server({
               </div>
             )}
         </div>
-
-        <p className="px-4 pt-2 pb-2 text-sm text-gray-500">
-          {t("serverStats.feedbackMessage")}{" "}
-          <a
-            href="https://github.com/Termix-SSH/Termix/issues/new"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
-          >
-            GitHub
-          </a>
-          !
-        </p>
       </div>
     </div>
   );

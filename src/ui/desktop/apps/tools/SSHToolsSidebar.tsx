@@ -923,21 +923,6 @@ export function SSHToolsSidebar({
                         {t("sshTools.enableRightClickCopyPaste")}
                       </label>
                     </div>
-
-                    <Separator />
-
-                    <p className="text-sm text-gray-500">
-                      {t("sshTools.shareIdeas")}{" "}
-                      <a
-                        href="https://github.com/Termix-SSH/Termix/issues/new"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="gray-500 hover:underline"
-                      >
-                        GitHub
-                      </a>
-                      !
-                    </p>
                   </TabsContent>
 
                   <TabsContent value="snippets" className="space-y-4">
