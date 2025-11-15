@@ -10,6 +10,7 @@ import {
   fileManagerShortcuts,
   sshFolders,
   commandHistory,
+  recentActivity,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -926,6 +927,24 @@ router.delete(
           and(
             eq(commandHistory.hostId, numericHostId),
             eq(commandHistory.userId, userId),
+          ),
+        );
+
+      await db
+        .delete(sshCredentialUsage)
+        .where(
+          and(
+            eq(sshCredentialUsage.hostId, numericHostId),
+            eq(sshCredentialUsage.userId, userId),
+          ),
+        );
+
+      await db
+        .delete(recentActivity)
+        .where(
+          and(
+            eq(recentActivity.hostId, numericHostId),
+            eq(recentActivity.userId, userId),
           ),
         );
 
