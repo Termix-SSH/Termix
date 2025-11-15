@@ -26,7 +26,6 @@ export function ElectronLoginForm({
   const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
-    // Clear any existing token to prevent login loops with expired tokens
     localStorage.removeItem("jwt");
   }, []);
 

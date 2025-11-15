@@ -102,7 +102,7 @@ export function Dashboard({
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
-  const rightMarginPx = 17; // Base margin when closed
+  const rightMarginPx = 17;
   const bottomMarginPx = 8;
 
   useEffect(() => {
@@ -213,7 +213,6 @@ export function Dashboard({
                 statsConfig?: string | { metricsEnabled?: boolean };
               }) => {
                 try {
-                  // Parse statsConfig if it's a string
                   let statsConfig: { metricsEnabled?: boolean } = {
                     metricsEnabled: true,
                   };
@@ -225,7 +224,6 @@ export function Dashboard({
                     }
                   }
 
-                  // Skip if metrics are disabled
                   if (statsConfig.metricsEnabled === false) {
                     return null;
                   }

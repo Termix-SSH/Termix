@@ -1533,7 +1533,6 @@ export function AdminSettings({
         </div>
       </div>
 
-      {/* Link OIDC to Password Account Dialog */}
       {linkAccountAlertOpen && (
         <Dialog
           open={linkAccountAlertOpen}

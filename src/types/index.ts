@@ -329,12 +329,11 @@ export interface TabContextTab {
   initialTab?: string;
 }
 
-// Split Screen Layout Types
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";
 
 export interface SplitConfiguration {
   layout: SplitLayout;
-  positions: Map<number, number>; // position index -> tab ID
+  positions: Map<number, number>;
 }
 
 export interface SplitLayoutOption {

@@ -1087,7 +1087,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         t("fileManager.archiveExtractedSuccessfully", { name: file.name }),
       );
 
-      // Refresh directory to show extracted files
       handleRefreshDirectory();
     } catch (error: unknown) {
       const err = error as { message?: string };
@@ -1132,7 +1131,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         }),
       );
 
-      // Refresh directory to show compressed file
       handleRefreshDirectory();
       clearSelection();
     } catch (error: unknown) {

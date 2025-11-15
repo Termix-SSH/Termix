@@ -14,9 +14,6 @@ interface CommandHistoryResult {
   isLoading: boolean;
 }
 
-/**
- * Custom hook for managing command history and autocomplete suggestions
- */
 export function useCommandHistory({
   hostId,
   enabled = true,
@@ -25,8 +22,7 @@ export function useCommandHistory({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const historyCache = useRef<Map<number, string[]>>(new Map());
-
-  // Fetch command history when hostId changes
+  s;
   useEffect(() => {
     if (!enabled || !hostId) {
       setCommandHistory([]);
@@ -34,14 +30,12 @@ export function useCommandHistory({
       return;
     }
 
-    // Check cache first
     const cached = historyCache.current.get(hostId);
     if (cached) {
       setCommandHistory(cached);
       return;
     }
 
-    // Fetch from server
     const fetchHistory = async () => {
       setIsLoading(true);
       try {
@@ -59,9 +53,6 @@ export function useCommandHistory({
     fetchHistory();
   }, [hostId, enabled]);
 
-  /**
-   * Get command suggestions based on current input
-   */
   const getSuggestions = useCallback(
     (input: string): string[] => {
       if (!input || input.trim().length === 0) {
@@ -73,7 +64,6 @@ export function useCommandHistory({
         cmd.startsWith(trimmedInput),
       );
 
-      // Return up to 10 suggestions, excluding exact matches
       const filtered = matches
         .filter((cmd) => cmd !== trimmedInput)
         .slice(0, 10);
@@ -84,9 +74,6 @@ export function useCommandHistory({
     [commandHistory],
   );
 
-  /**
-   * Save a command to history
-   */
   const saveCommand = useCallback(
     async (command: string) => {
       if (!enabled || !hostId || !command || command.trim().length === 0) {
@@ -95,29 +82,24 @@ export function useCommandHistory({
 
       const trimmedCommand = command.trim();
 
-      // Skip if it's the same as the last command
       if (commandHistory.length > 0 && commandHistory[0] === trimmedCommand) {
         return;
       }
 
       try {
-        // Save to server
         await saveCommandToHistory(hostId, trimmedCommand);
 
-        // Update local state - add to beginning
         setCommandHistory((prev) => {
           const newHistory = [
             trimmedCommand,
             ...prev.filter((c) => c !== trimmedCommand),
           ];
-          // Keep max 500 commands in memory
           const limited = newHistory.slice(0, 500);
           historyCache.current.set(hostId, limited);
           return limited;
         });
       } catch (error) {
         console.error("Failed to save command to history:", error);
-        // Still update local state even if server save fails
         setCommandHistory((prev) => {
           const newHistory = [
             trimmedCommand,
@@ -130,9 +112,6 @@ export function useCommandHistory({
     [enabled, hostId, commandHistory],
   );
 
-  /**
-   * Clear current suggestions
-   */
   const clearSuggestions = useCallback(() => {
     setSuggestions([]);
   }, []);

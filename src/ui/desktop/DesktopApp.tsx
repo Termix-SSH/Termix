@@ -44,7 +44,7 @@ function AppContent() {
         const now = Date.now();
         if (now - lastShiftPressTime.current < 300) {
           setIsCommandPaletteOpen((isOpen) => !isOpen);
-          lastShiftPressTime.current = 0; // Reset on double press
+          lastShiftPressTime.current = 0;
         } else {
           lastShiftPressTime.current = now;
         }
@@ -63,14 +63,12 @@ function AppContent() {
   useEffect(() => {
     const checkAuth = () => {
       setAuthLoading(true);
-      // Don't optimistically set isAuthenticated before checking
       getUserInfo()
         .then((meRes) => {
           if (typeof meRes === "string" || !meRes.username) {
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
-            // Clear invalid token
             localStorage.removeItem("jwt");
           } else {
             setIsAuthenticated(true);
@@ -83,7 +81,6 @@ function AppContent() {
           setIsAdmin(false);
           setUsername(null);
 
-          // Clear invalid token on any auth error
           localStorage.removeItem("jwt");
 
           const errorCode = err?.response?.data?.code;

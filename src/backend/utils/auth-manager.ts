@@ -98,8 +98,8 @@ class AuthManager {
   ): Promise<boolean> {
     const sessionDurationMs =
       deviceType === "desktop" || deviceType === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000 // 30 days
-        : 7 * 24 * 60 * 60 * 1000; // 7 days
+        ? 30 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
 
     const authenticated = await this.userCrypto.authenticateOIDCUser(
       userId,
@@ -120,8 +120,8 @@ class AuthManager {
   ): Promise<boolean> {
     const sessionDurationMs =
       deviceType === "desktop" || deviceType === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000 // 30 days
-        : 7 * 24 * 60 * 60 * 1000; // 7 days
+        ? 30 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
 
     const authenticated = await this.userCrypto.authenticateUser(
       userId,
@@ -134,6 +134,10 @@ class AuthManager {
     }
 
     return authenticated;
+  }
+
+  async convertToOIDCEncryption(userId: string): Promise<void> {
+    await this.userCrypto.convertToOIDCEncryption(userId);
   }
 
   private async performLazyEncryptionMigration(userId: string): Promise<void> {

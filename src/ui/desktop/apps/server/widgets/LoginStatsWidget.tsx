@@ -25,9 +25,7 @@ interface LoginStatsWidgetProps {
   metricsHistory: ServerMetrics[];
 }
 
-export function LoginStatsWidget({
-  metrics,
-}: LoginStatsWidgetProps) {
+export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
   const { t } = useTranslation();
 
   const loginStats = metrics?.login_stats;
@@ -52,7 +50,9 @@ export function LoginStatsWidget({
               <Activity className="h-3 w-3" />
               <span>{t("serverStats.totalLogins")}</span>
             </div>
-            <div className="text-xl font-bold text-green-400">{totalLogins}</div>
+            <div className="text-xl font-bold text-green-400">
+              {totalLogins}
+            </div>
           </div>
           <div className="bg-dark-bg-darker p-2 rounded border border-dark-border/30">
             <div className="flex items-center gap-1 text-xs text-gray-400 mb-1">
@@ -86,7 +86,9 @@ export function LoginStatsWidget({
                       <span className="text-green-400 font-mono truncate">
                         {login.user}
                       </span>
-                      <span className="text-gray-500">{t("serverStats.from")}</span>
+                      <span className="text-gray-500">
+                        {t("serverStats.from")}
+                      </span>
                       <span className="text-blue-400 font-mono truncate">
                         {login.ip}
                       </span>
@@ -118,7 +120,9 @@ export function LoginStatsWidget({
                       <span className="text-red-400 font-mono truncate">
                         {login.user}
                       </span>
-                      <span className="text-gray-500">{t("serverStats.from")}</span>
+                      <span className="text-gray-500">
+                        {t("serverStats.from")}
+                      </span>
                       <span className="text-blue-400 font-mono truncate">
                         {login.ip}
                       </span>

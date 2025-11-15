@@ -85,8 +85,6 @@ router.get(
     }
 
     try {
-      // Get unique commands for this host, ordered by most recent
-      // Use DISTINCT to avoid duplicates, but keep the most recent occurrence
       const result = await db
         .selectDistinct({ command: commandHistory.command })
         .from(commandHistory)
@@ -97,9 +95,8 @@ router.get(
           ),
         )
         .orderBy(desc(commandHistory.executedAt))
-        .limit(500); // Limit to last 500 unique commands
+        .limit(500);
 
-      // Further deduplicate in case DISTINCT didn't work perfectly
       const uniqueCommands = Array.from(new Set(result.map((r) => r.command)));
 
       authLogger.info(`Fetched command history for host ${hostId}`, {
@@ -142,7 +139,6 @@ router.post(
     try {
       const hostIdNum = parseInt(hostId, 10);
 
-      // Delete all instances of this command for this user and host
       await db
         .delete(commandHistory)
         .where(

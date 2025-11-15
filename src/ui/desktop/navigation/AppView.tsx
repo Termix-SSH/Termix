@@ -111,7 +111,6 @@ export function AppView({
   }, [updatePanelRects, fitActiveAndNotify]);
 
   const hideThenFit = React.useCallback(() => {
-    // Don't hide terminals, just fit them immediately
     requestAnimationFrame(() => {
       updatePanelRects();
       requestAnimationFrame(() => {
@@ -204,7 +203,6 @@ export function AppView({
 
   const renderTerminalsLayer = () => {
     const styles: Record<number, React.CSSProperties> = {};
-    // Use allSplitScreenTab order directly - it maintains the order tabs were added
     const layoutTabs = allSplitScreenTab
       .map((tabId) => terminalTabs.find((tab: TabData) => tab.id === tabId))
       .filter((t): t is TabData => t !== null && t !== undefined);
@@ -259,10 +257,8 @@ export function AppView({
           const isVisible =
             hasStyle || (allSplitScreenTab.length === 0 && t.id === currentTab);
 
-          // Use previous style if available to maintain position
           const previousStyle = previousStylesRef.current[t.id];
 
-          // For non-split screen tabs, always use the standard position
           const isFileManagerTab = t.type === "file_manager";
           const standardStyle = {
             position: "absolute" as const,
@@ -354,7 +350,6 @@ export function AppView({
   };
 
   const renderSplitOverlays = () => {
-    // Use allSplitScreenTab order directly - it maintains the order tabs were added
     const layoutTabs = allSplitScreenTab
       .map((tabId) => terminalTabs.find((tab: TabData) => tab.id === tabId))
       .filter((t): t is TabData => t !== null && t !== undefined);

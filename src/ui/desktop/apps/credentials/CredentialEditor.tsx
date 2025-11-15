@@ -63,7 +63,6 @@ export function CredentialEditor({
     useState(false);
   const publicKeyDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Clear error when tab changes
   useEffect(() => {
     setFormError(null);
   }, [activeTab]);

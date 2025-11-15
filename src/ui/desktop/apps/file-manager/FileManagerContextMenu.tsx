@@ -261,7 +261,6 @@ export function FileManagerContextMenu({
       });
     }
 
-    // Add extract option for archive files
     if (isSingleFile && files[0].type === "file" && onExtractArchive) {
       const fileName = files[0].name.toLowerCase();
       const isArchive =
@@ -288,7 +287,6 @@ export function FileManagerContextMenu({
       }
     }
 
-    // Add compress option for selected files/folders
     if (isFileContext && onCompress) {
       menuItems.push({
         icon: <FileArchive className="w-4 h-4" />,

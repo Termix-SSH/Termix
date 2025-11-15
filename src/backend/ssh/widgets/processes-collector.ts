@@ -24,10 +24,7 @@ export async function collectProcessesMetrics(client: Client): Promise<{
   }> = [];
 
   try {
-    const psOut = await execCommand(
-      client,
-      "ps aux --sort=-%cpu | head -n 11",
-    );
+    const psOut = await execCommand(client, "ps aux --sort=-%cpu | head -n 11");
     const psLines = psOut.stdout
       .split("\n")
       .map((l) => l.trim())
@@ -48,10 +45,7 @@ export async function collectProcessesMetrics(client: Client): Promise<{
     }
 
     const procCount = await execCommand(client, "ps aux | wc -l");
-    const runningCount = await execCommand(
-      client,
-      "ps aux | grep -c ' R '",
-    );
+    const runningCount = await execCommand(client, "ps aux | grep -c ' R '");
     totalProcesses = Number(procCount.stdout.trim()) - 1;
     runningProcesses = Number(runningCount.stdout.trim());
   } catch (e) {

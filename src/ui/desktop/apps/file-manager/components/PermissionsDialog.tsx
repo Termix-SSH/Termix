@@ -30,7 +30,6 @@ interface PermissionsDialogProps {
   onSave: (file: FileItem, permissions: string) => Promise<void>;
 }
 
-// Parse permissions like "rwxr-xr-x" or "755" to individual bits
 const parsePermissions = (
   perms: string,
 ): { owner: number; group: number; other: number } => {
@@ -38,7 +37,6 @@ const parsePermissions = (
     return { owner: 0, group: 0, other: 0 };
   }
 
-  // If numeric format like "755"
   if (/^\d{3,4}$/.test(perms)) {
     const numStr = perms.slice(-3);
     return {
@@ -47,8 +45,6 @@ const parsePermissions = (
       other: parseInt(numStr[2] || "0", 10),
     };
   }
-
-  // If symbolic format like "rwxr-xr-x" or "-rwxr-xr-x"
   const cleanPerms = perms.replace(/^-/, "").substring(0, 9);
 
   const calcBits = (str: string): number => {
@@ -66,7 +62,6 @@ const parsePermissions = (
   };
 };
 
-// Convert individual bits to numeric format
 const toNumeric = (owner: number, group: number, other: number): string => {
   return `${owner}${group}${other}`;
 };
@@ -99,7 +94,6 @@ export function PermissionsDialog({
     (initialPerms.other & 1) !== 0,
   );
 
-  // Reset when file changes
   useEffect(() => {
     if (file) {
       const perms = parsePermissions(file.permissions || "644");

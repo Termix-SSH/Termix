@@ -279,7 +279,6 @@ router.post(
     }
 
     try {
-      // Get the snippet
       const snippetResult = await db
         .select()
         .from(snippets)
@@ -296,11 +295,9 @@ router.post(
 
       const snippet = snippetResult[0];
 
-      // Import SSH connection utilities
       const { Client } = await import("ssh2");
       const { sshData, sshCredentials } = await import("../db/schema.js");
 
-      // Get host configuration using SimpleDBOps to decrypt credentials
       const { SimpleDBOps } = await import("../../utils/simple-db-ops.js");
 
       const hostResult = await SimpleDBOps.select(
@@ -320,7 +317,6 @@ router.post(
 
       const host = hostResult[0];
 
-      // Resolve credentials if needed
       let password = host.password;
       let privateKey = host.key;
       let passphrase = host.key_password;
@@ -352,7 +348,6 @@ router.post(
         }
       }
 
-      // Create SSH connection
       const conn = new Client();
       let output = "";
       let errorOutput = "";
@@ -400,7 +395,6 @@ router.post(
           reject(err);
         });
 
-        // Connect to SSH
         const config: any = {
           host: host.ip,
           port: host.port,
@@ -471,7 +465,6 @@ router.post(
           },
         };
 
-        // Set auth based on authType (like terminal.ts does)
         if (authType === "password" && password) {
           config.password = password;
         } else if (authType === "key" && privateKey) {
@@ -484,10 +477,8 @@ router.post(
             config.passphrase = passphrase;
           }
         } else if (password) {
-          // Fallback: if authType not set but password exists
           config.password = password;
         } else if (privateKey) {
-          // Fallback: if authType not set but key exists
           const cleanKey = (privateKey as string)
             .trim()
             .replace(/\r\n/g, "\n")

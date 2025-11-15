@@ -131,13 +131,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const activityLoggedRef = useRef(false);
     const keyHandlerAttachedRef = useRef(false);
 
-    // Command history tracking (Stage 1)
     const { trackInput, getCurrentCommand, updateCurrentCommand } =
       useCommandTracker({
         hostId: hostConfig.id,
         enabled: true,
         onCommandExecuted: (command) => {
-          // Add to autocomplete history (Stage 3)
           if (!autocompleteHistory.current.includes(command)) {
             autocompleteHistory.current = [
               command,
@@ -147,7 +145,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         },
       });
 
-    // Create refs for callbacks to avoid triggering useEffect re-runs
     const getCurrentCommandRef = useRef(getCurrentCommand);
     const updateCurrentCommandRef = useRef(updateCurrentCommand);
 
@@ -156,7 +153,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       updateCurrentCommandRef.current = updateCurrentCommand;
     }, [getCurrentCommand, updateCurrentCommand]);
 
-    // Real-time autocomplete (Stage 3)
     const [showAutocomplete, setShowAutocomplete] = useState(false);
     const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<
       string[]
@@ -170,23 +166,19 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const autocompleteHistory = useRef<string[]>([]);
     const currentAutocompleteCommand = useRef<string>("");
 
-    // Refs for accessing current state in event handlers
     const showAutocompleteRef = useRef(false);
     const autocompleteSuggestionsRef = useRef<string[]>([]);
     const autocompleteSelectedIndexRef = useRef(0);
 
-    // Command history dialog (Stage 2)
     const [showHistoryDialog, setShowHistoryDialog] = useState(false);
     const [commandHistory, setCommandHistory] = useState<string[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-    // Create refs for context methods to avoid infinite loops
     const setIsLoadingRef = useRef(commandHistoryContext.setIsLoading);
     const setCommandHistoryContextRef = useRef(
       commandHistoryContext.setCommandHistory,
     );
 
-    // Keep refs updated with latest context methods
     useEffect(() => {
       setIsLoadingRef.current = commandHistoryContext.setIsLoading;
       setCommandHistoryContextRef.current =
@@ -196,7 +188,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       commandHistoryContext.setCommandHistory,
     ]);
 
-    // Load command history when dialog opens
     useEffect(() => {
       if (showHistoryDialog && hostConfig.id) {
         setIsLoadingHistory(true);
@@ -219,9 +210,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }, [showHistoryDialog, hostConfig.id]);
 
-    // Load command history for autocomplete on mount (Stage 3)
     useEffect(() => {
-      // Check if command autocomplete is enabled
       const autocompleteEnabled =
         localStorage.getItem("commandAutocomplete") !== "false";
 
@@ -240,7 +229,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }, [hostConfig.id]);
 
-    // Sync autocomplete state to refs for event handlers
     useEffect(() => {
       showAutocompleteRef.current = showAutocomplete;
     }, [showAutocomplete]);
@@ -642,9 +630,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           }),
         );
         terminal.onData((data) => {
-          // Track command input for history (Stage 1)
           trackInput(data);
-          // Send input to server
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
@@ -904,20 +890,16 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       return "";
     }
 
-    // Handle command selection from history dialog (Stage 2)
     const handleSelectCommand = useCallback(
       (command: string) => {
         if (!terminal || !webSocketRef.current) return;
 
-        // Send the command to the terminal
-        // Simulate typing the command character by character
         for (const char of command) {
           webSocketRef.current.send(
             JSON.stringify({ type: "input", data: char }),
           );
         }
 
-        // Return focus to terminal after selecting command
         setTimeout(() => {
           terminal.focus();
         }, 100);
@@ -925,12 +907,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       [terminal],
     );
 
-    // Register handlers with context
     useEffect(() => {
       commandHistoryContext.setOnSelectCommand(handleSelectCommand);
     }, [handleSelectCommand]);
 
-    // Handle autocomplete selection (mouse click)
     const handleAutocompleteSelect = useCallback(
       (selectedCommand: string) => {
         if (!webSocketRef.current) return;
@@ -938,22 +918,18 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         const currentCmd = currentAutocompleteCommand.current;
         const completion = selectedCommand.substring(currentCmd.length);
 
-        // Send completion characters to server
         for (const char of completion) {
           webSocketRef.current.send(
             JSON.stringify({ type: "input", data: char }),
           );
         }
 
-        // Update current command tracker
         updateCurrentCommand(selectedCommand);
 
-        // Close autocomplete
         setShowAutocomplete(false);
         setAutocompleteSuggestions([]);
         currentAutocompleteCommand.current = "";
 
-        // Return focus to terminal
         setTimeout(() => {
           terminal?.focus();
         }, 50);
@@ -963,26 +939,22 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       [terminal, updateCurrentCommand],
     );
 
-    // Handle command deletion from history dialog
     const handleDeleteCommand = useCallback(
       async (command: string) => {
         if (!hostConfig.id) return;
 
         try {
-          // Call API to delete command
           const { deleteCommandFromHistory } = await import(
             "@/ui/main-axios.ts"
           );
           await deleteCommandFromHistory(hostConfig.id, command);
 
-          // Update local state
           setCommandHistory((prev) => {
             const newHistory = prev.filter((cmd) => cmd !== command);
             setCommandHistoryContextRef.current(newHistory);
             return newHistory;
           });
 
-          // Update autocomplete history
           autocompleteHistory.current = autocompleteHistory.current.filter(
             (cmd) => cmd !== command,
           );
@@ -995,7 +967,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       [hostConfig.id],
     );
 
-    // Register delete handler with context
     useEffect(() => {
       commandHistoryContext.setOnDeleteCommand(handleDeleteCommand);
     }, [handleDeleteCommand]);
@@ -1104,7 +1075,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           navigator.platform.toUpperCase().indexOf("MAC") >= 0 ||
           navigator.userAgent.toUpperCase().indexOf("MAC") >= 0;
 
-        // Handle Ctrl+R for command history (Stage 2)
         if (
           e.ctrlKey &&
           e.key === "r" &&
@@ -1115,7 +1085,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.preventDefault();
           e.stopPropagation();
           setShowHistoryDialog(true);
-          // Also trigger the sidebar to open
           if (commandHistoryContext.openCommandHistory) {
             commandHistoryContext.openCommandHistory();
           }
@@ -1210,20 +1179,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
     }, [xtermRef, terminal, hostConfig]);
 
-    // Register keyboard handler for autocomplete (Stage 3)
-    // Registered only once when terminal is created
     useEffect(() => {
       if (!terminal) return;
 
       const handleCustomKey = (e: KeyboardEvent): boolean => {
-        // Only handle keydown events, ignore keyup to prevent double triggering
         if (e.type !== "keydown") {
           return true;
         }
 
-        // If autocomplete is showing, handle keys specially
         if (showAutocompleteRef.current) {
-          // Handle Escape to close autocomplete
           if (e.key === "Escape") {
             e.preventDefault();
             e.stopPropagation();
@@ -1233,7 +1197,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             return false;
           }
 
-          // Handle Arrow keys for autocomplete navigation
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
             e.stopPropagation();
@@ -1253,7 +1216,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             return false;
           }
 
-          // Handle Enter to confirm autocomplete selection
           if (
             e.key === "Enter" &&
             autocompleteSuggestionsRef.current.length > 0
@@ -1268,7 +1230,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             const currentCmd = currentAutocompleteCommand.current;
             const completion = selectedCommand.substring(currentCmd.length);
 
-            // Send completion characters to server
             if (webSocketRef.current?.readyState === 1) {
               for (const char of completion) {
                 webSocketRef.current.send(
@@ -1277,10 +1238,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }
 
-            // Update current command tracker
             updateCurrentCommandRef.current(selectedCommand);
 
-            // Close autocomplete
             setShowAutocomplete(false);
             setAutocompleteSuggestions([]);
             currentAutocompleteCommand.current = "";
@@ -1288,7 +1247,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             return false;
           }
 
-          // Handle Tab to cycle through suggestions
           if (
             e.key === "Tab" &&
             !e.ctrlKey &&
@@ -1306,14 +1264,12 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             return false;
           }
 
-          // For any other key while autocomplete is showing, close it and let key through
           setShowAutocomplete(false);
           setAutocompleteSuggestions([]);
           currentAutocompleteCommand.current = "";
           return true;
         }
 
-        // Handle Tab for autocomplete (when autocomplete is not showing)
         if (
           e.key === "Tab" &&
           !e.ctrlKey &&
@@ -1324,12 +1280,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.preventDefault();
           e.stopPropagation();
 
-          // Check if command autocomplete is enabled in settings
           const autocompleteEnabled =
             localStorage.getItem("commandAutocomplete") !== "false";
 
           if (!autocompleteEnabled) {
-            // If disabled, let the terminal handle Tab normally (send to server)
             if (webSocketRef.current?.readyState === 1) {
               webSocketRef.current.send(
                 JSON.stringify({ type: "input", data: "\t" }),
@@ -1340,7 +1294,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
           const currentCmd = getCurrentCommandRef.current().trim();
           if (currentCmd.length > 0 && webSocketRef.current?.readyState === 1) {
-            // Filter commands that start with current input
             const matches = autocompleteHistory.current
               .filter(
                 (cmd) =>
@@ -1348,10 +1301,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                   cmd !== currentCmd &&
                   cmd.length > currentCmd.length,
               )
-              .slice(0, 5); // Show up to 5 matches for better UX
+              .slice(0, 5);
 
             if (matches.length === 1) {
-              // Only one match - auto-complete directly
               const completedCommand = matches[0];
               const completion = completedCommand.substring(currentCmd.length);
 
@@ -1363,12 +1315,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               updateCurrentCommandRef.current(completedCommand);
             } else if (matches.length > 1) {
-              // Multiple matches - show selection list
               currentAutocompleteCommand.current = currentCmd;
               setAutocompleteSuggestions(matches);
               setAutocompleteSelectedIndex(0);
 
-              // Calculate position (below or above cursor based on available space)
               const cursorY = terminal.buffer.active.cursorY;
               const cursorX = terminal.buffer.active.cursorX;
               const rect = xtermRef.current?.getBoundingClientRect();
@@ -1379,8 +1329,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 const cellWidth =
                   terminal.cols > 0 ? rect.width / terminal.cols : 10;
 
-                // Calculate actual menu height based on number of items
-                // Each item is ~32px (py-1.5), footer is ~32px, max total 240px
                 const itemHeight = 32;
                 const footerHeight = 32;
                 const maxMenuHeight = 240;
@@ -1388,14 +1336,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                   matches.length * itemHeight + footerHeight,
                   maxMenuHeight,
                 );
-
-                // Get cursor position in viewport coordinates
                 const cursorBottomY = rect.top + (cursorY + 1) * cellHeight;
                 const cursorTopY = rect.top + cursorY * cellHeight;
                 const spaceBelow = window.innerHeight - cursorBottomY;
                 const spaceAbove = cursorTopY;
 
-                // Show above cursor if not enough space below and more space above
                 const showAbove =
                   spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow;
 
@@ -1410,10 +1355,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               setShowAutocomplete(true);
             }
           }
-          return false; // Prevent default Tab behavior
+          return false;
         }
 
-        // Let terminal handle all other keys
         return true;
       };
 
@@ -1470,7 +1414,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
-      // Don't set isFitted to false - keep terminal visible during resize
       let rafId1: number;
       let rafId2: number;
 

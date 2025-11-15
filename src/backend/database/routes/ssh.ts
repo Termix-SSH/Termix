@@ -361,7 +361,6 @@ router.post(
         },
       );
 
-      // Notify stats server to start polling this host
       try {
         const axios = (await import("axios")).default;
         const statsPort = process.env.STATS_PORT || 30005;
@@ -603,7 +602,6 @@ router.put(
         },
       );
 
-      // Notify stats server to refresh polling for this host
       try {
         const axios = (await import("axios")).default;
         const statsPort = process.env.STATS_PORT || 30005;
@@ -893,7 +891,6 @@ router.delete(
 
       const numericHostId = Number(hostId);
 
-      // Delete related records first to avoid foreign key constraint errors
       await db
         .delete(fileManagerRecent)
         .where(
@@ -948,7 +945,6 @@ router.delete(
           ),
         );
 
-      // Now delete the host itself
       await db
         .delete(sshData)
         .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
@@ -966,7 +962,6 @@ router.delete(
         },
       );
 
-      // Notify stats server to stop polling this host
       try {
         const axios = (await import("axios")).default;
         const statsPort = process.env.STATS_PORT || 30005;
@@ -1553,7 +1548,6 @@ router.put(
 
       DatabaseSaveTrigger.triggerSave("folder_rename");
 
-      // Also update folder metadata if exists
       await db
         .update(sshFolders)
         .set({
@@ -1620,7 +1614,6 @@ router.put(
     }
 
     try {
-      // Check if folder metadata exists
       const existing = await db
         .select()
         .from(sshFolders)
@@ -1628,7 +1621,6 @@ router.put(
         .limit(1);
 
       if (existing.length > 0) {
-        // Update existing
         await db
           .update(sshFolders)
           .set({
@@ -1638,7 +1630,6 @@ router.put(
           })
           .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)));
       } else {
-        // Create new
         await db.insert(sshFolders).values({
           userId,
           name,
@@ -1677,7 +1668,6 @@ router.delete(
     }
 
     try {
-      // Get all hosts in the folder
       const hostsToDelete = await db
         .select()
         .from(sshData)
@@ -1690,12 +1680,10 @@ router.delete(
         });
       }
 
-      // Delete all hosts
       await db
         .delete(sshData)
         .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
 
-      // Delete folder metadata
       await db
         .delete(sshFolders)
         .where(
@@ -1704,14 +1692,6 @@ router.delete(
 
       DatabaseSaveTrigger.triggerSave("folder_hosts_delete");
 
-      sshLogger.info("Deleted all hosts in folder", {
-        operation: "delete_folder_hosts",
-        userId,
-        folderName,
-        deletedCount: hostsToDelete.length,
-      });
-
-      // Notify stats server to stop polling these hosts
       try {
         const axios = (await import("axios")).default;
         const statsPort = process.env.STATS_PORT || 30005;

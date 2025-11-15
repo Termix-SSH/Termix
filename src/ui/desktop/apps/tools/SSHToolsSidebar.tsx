@@ -105,14 +105,12 @@ export function SSHToolsSidebar({
   };
   const [activeTab, setActiveTab] = useState(initialTab || "ssh-tools");
 
-  // Update active tab when initialTab changes
   useEffect(() => {
     if (initialTab && isOpen) {
       setActiveTab(initialTab);
     }
   }, [initialTab, isOpen]);
 
-  // Call onTabChange when active tab changes
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     if (onTabChange) {
@@ -120,14 +118,12 @@ export function SSHToolsSidebar({
     }
   };
 
-  // SSH Tools state
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [rightClickCopyPaste, setRightClickCopyPaste] = useState<boolean>(
     () => getCookie("rightClickCopyPaste") === "true",
   );
 
-  // Snippets state
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -145,14 +141,12 @@ export function SSHToolsSidebar({
     [],
   );
 
-  // Command History state
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [historyRefreshCounter, setHistoryRefreshCounter] = useState(0);
   const commandHistoryScrollRef = React.useRef<HTMLDivElement>(null);
 
-  // Split Screen state
   const [splitMode, setSplitMode] = useState<"none" | "2" | "3" | "4">("none");
   const [splitAssignments, setSplitAssignments] = useState<Map<number, number>>(
     new Map(),
@@ -163,7 +157,6 @@ export function SSHToolsSidebar({
     null,
   );
 
-  // Resize state
   const [isResizing, setIsResizing] = useState(false);
   const startXRef = React.useRef<number | null>(null);
   const startWidthRef = React.useRef<number>(sidebarWidth);
@@ -174,7 +167,6 @@ export function SSHToolsSidebar({
     activeUiTab?.type === "terminal" ? activeUiTab : undefined;
   const activeTerminalHostId = activeTerminal?.hostConfig?.id;
 
-  // Get splittable tabs (terminal, server, file_manager)
   const splittableTabs = tabs.filter(
     (tab: TabData) =>
       tab.type === "terminal" ||
@@ -183,20 +175,16 @@ export function SSHToolsSidebar({
       tab.type === "user_profile",
   );
 
-  // Fetch command history
   useEffect(() => {
     if (isOpen && activeTab === "command-history") {
       if (activeTerminalHostId) {
-        // Save current scroll position before any state updates
         const scrollTop = commandHistoryScrollRef.current?.scrollTop || 0;
 
         getCommandHistory(activeTerminalHostId)
           .then((history) => {
             setCommandHistory((prevHistory) => {
               const newHistory = Array.isArray(history) ? history : [];
-              // Only update if history actually changed
               if (JSON.stringify(prevHistory) !== JSON.stringify(newHistory)) {
-                // Use requestAnimationFrame to restore scroll after React finishes rendering
                 requestAnimationFrame(() => {
                   if (commandHistoryScrollRef.current) {
                     commandHistoryScrollRef.current.scrollTop = scrollTop;
@@ -223,7 +211,6 @@ export function SSHToolsSidebar({
     historyRefreshCounter,
   ]);
 
-  // Auto-refresh command history every 2 seconds when history tab is active
   useEffect(() => {
     if (isOpen && activeTab === "command-history" && activeTerminalHostId) {
       const refreshInterval = setInterval(() => {
@@ -234,14 +221,12 @@ export function SSHToolsSidebar({
     }
   }, [isOpen, activeTab, activeTerminalHostId]);
 
-  // Filter command history based on search query
   const filteredCommands = searchQuery
     ? commandHistory.filter((cmd) =>
         cmd.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : commandHistory;
 
-  // Initialize CSS variable on mount and when sidebar width changes
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--right-sidebar-width",
@@ -249,7 +234,6 @@ export function SSHToolsSidebar({
     );
   }, [sidebarWidth]);
 
-  // Handle window resize to adjust sidebar width
   useEffect(() => {
     const handleResize = () => {
       const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
@@ -270,7 +254,6 @@ export function SSHToolsSidebar({
     }
   }, [isOpen, activeTab]);
 
-  // Resize handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
@@ -283,7 +266,7 @@ export function SSHToolsSidebar({
 
     const handleMouseMove = (e: MouseEvent) => {
       if (startXRef.current == null) return;
-      const dx = startXRef.current - e.clientX; // Reversed because we're on the right
+      const dx = startXRef.current - e.clientX;
       const newWidth = Math.round(startWidthRef.current + dx);
       const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
       const maxWidth = Math.round(window.innerWidth * 0.3);
@@ -295,13 +278,11 @@ export function SSHToolsSidebar({
         finalWidth = maxWidth;
       }
 
-      // Update CSS variable immediately for smooth animation
       document.documentElement.style.setProperty(
         "--right-sidebar-width",
         `${finalWidth}px`,
       );
 
-      // Update React state (this will be batched/debounced naturally)
       setSidebarWidth(finalWidth);
     };
 
@@ -323,7 +304,6 @@ export function SSHToolsSidebar({
     };
   }, [isResizing]);
 
-  // SSH Tools handlers
   const handleTabToggle = (tabId: number) => {
     setSelectedTabIds((prev) =>
       prev.includes(tabId)
@@ -487,7 +467,6 @@ export function SSHToolsSidebar({
     setRightClickCopyPaste(checked);
   };
 
-  // Snippets handlers
   const fetchSnippets = async () => {
     try {
       setLoading(true);
@@ -599,15 +578,12 @@ export function SSHToolsSidebar({
     toast.success(t("snippets.copySuccess", { name: snippet.name }));
   };
 
-  // Split Screen handlers
   const handleSplitModeChange = (mode: "none" | "2" | "3" | "4") => {
     setSplitMode(mode);
 
     if (mode === "none") {
-      // Clear all splits
       handleClearSplit();
     } else {
-      // Clear assignments when changing modes
       setSplitAssignments(new Map());
       setPreviewKey((prev) => prev + 1);
     }
@@ -636,7 +612,6 @@ export function SSHToolsSidebar({
 
     setSplitAssignments((prev) => {
       const newMap = new Map(prev);
-      // Remove this tab from any other cell
       Array.from(newMap.entries()).forEach(([idx, id]) => {
         if (id === draggedTabId && idx !== cellIndex) {
           newMap.delete(idx);
@@ -677,7 +652,6 @@ export function SSHToolsSidebar({
 
     const requiredSlots = parseInt(splitMode);
 
-    // Validate: All layout spots must be filled
     if (splitAssignments.size < requiredSlots) {
       toast.error(
         t("splitScreen.error.fillAllSlots", {
@@ -688,7 +662,6 @@ export function SSHToolsSidebar({
       return;
     }
 
-    // Build ordered array of tab IDs based on cell index (0, 1, 2, 3)
     const orderedTabIds: number[] = [];
     for (let i = 0; i < requiredSlots; i++) {
       const tabId = splitAssignments.get(i);
@@ -697,18 +670,15 @@ export function SSHToolsSidebar({
       }
     }
 
-    // First, clear ALL existing splits
     const currentSplits = [...allSplitScreenTab];
     currentSplits.forEach((tabId) => {
-      setSplitScreenTab(tabId); // Toggle off
+      setSplitScreenTab(tabId);
     });
 
-    // Then, add only the newly assigned tabs to split IN ORDER
     orderedTabIds.forEach((tabId) => {
-      setSplitScreenTab(tabId); // Toggle on
+      setSplitScreenTab(tabId);
     });
 
-    // Set first assigned tab as active if current tab is not in split
     if (!orderedTabIds.includes(currentTab ?? 0)) {
       setCurrentTab(orderedTabIds[0]);
     }
@@ -721,7 +691,6 @@ export function SSHToolsSidebar({
   };
 
   const handleClearSplit = () => {
-    // Remove all tabs from split screen
     allSplitScreenTab.forEach((tabId) => {
       setSplitScreenTab(tabId);
     });
@@ -741,7 +710,6 @@ export function SSHToolsSidebar({
     handleClearSplit();
   };
 
-  // Command History handlers
   const handleCommandSelect = (command: string) => {
     if (activeTerminal?.terminalRef?.current?.sendInput) {
       activeTerminal.terminalRef.current.sendInput(command);

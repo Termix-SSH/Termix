@@ -9,31 +9,34 @@ class LoginRateLimiter {
   private usernameAttempts = new Map<string, LoginAttempt>();
 
   private readonly MAX_ATTEMPTS = 5;
-  private readonly WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-  private readonly LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+  private readonly WINDOW_MS = 10 * 60 * 1000;
+  private readonly LOCKOUT_MS = 10 * 60 * 1000;
 
-  // Clean up old entries periodically
   constructor() {
-    setInterval(() => this.cleanup(), 5 * 60 * 1000); // Clean every 5 minutes
+    setInterval(() => this.cleanup(), 5 * 60 * 1000);
   }
 
   private cleanup(): void {
     const now = Date.now();
 
-    // Clean IP attempts
     for (const [ip, attempt] of this.ipAttempts.entries()) {
       if (attempt.lockedUntil && attempt.lockedUntil < now) {
         this.ipAttempts.delete(ip);
-      } else if (!attempt.lockedUntil && (now - attempt.firstAttempt) > this.WINDOW_MS) {
+      } else if (
+        !attempt.lockedUntil &&
+        now - attempt.firstAttempt > this.WINDOW_MS
+      ) {
         this.ipAttempts.delete(ip);
       }
     }
 
-    // Clean username attempts
     for (const [username, attempt] of this.usernameAttempts.entries()) {
       if (attempt.lockedUntil && attempt.lockedUntil < now) {
         this.usernameAttempts.delete(username);
-      } else if (!attempt.lockedUntil && (now - attempt.firstAttempt) > this.WINDOW_MS) {
+      } else if (
+        !attempt.lockedUntil &&
+        now - attempt.firstAttempt > this.WINDOW_MS
+      ) {
         this.usernameAttempts.delete(username);
       }
     }
@@ -42,15 +45,13 @@ class LoginRateLimiter {
   recordFailedAttempt(ip: string, username?: string): void {
     const now = Date.now();
 
-    // Record IP attempt
     const ipAttempt = this.ipAttempts.get(ip);
     if (!ipAttempt) {
       this.ipAttempts.set(ip, {
         count: 1,
         firstAttempt: now,
       });
-    } else if ((now - ipAttempt.firstAttempt) > this.WINDOW_MS) {
-      // Reset if outside window
+    } else if (now - ipAttempt.firstAttempt > this.WINDOW_MS) {
       this.ipAttempts.set(ip, {
         count: 1,
         firstAttempt: now,
@@ -62,7 +63,6 @@ class LoginRateLimiter {
       }
     }
 
-    // Record username attempt if provided
     if (username) {
       const userAttempt = this.usernameAttempts.get(username);
       if (!userAttempt) {
@@ -70,8 +70,7 @@ class LoginRateLimiter {
           count: 1,
           firstAttempt: now,
         });
-      } else if ((now - userAttempt.firstAttempt) > this.WINDOW_MS) {
-        // Reset if outside window
+      } else if (now - userAttempt.firstAttempt > this.WINDOW_MS) {
         this.usernameAttempts.set(username, {
           count: 1,
           firstAttempt: now,
@@ -92,10 +91,12 @@ class LoginRateLimiter {
     }
   }
 
-  isLocked(ip: string, username?: string): { locked: boolean; remainingTime?: number } {
+  isLocked(
+    ip: string,
+    username?: string,
+  ): { locked: boolean; remainingTime?: number } {
     const now = Date.now();
 
-    // Check IP lockout
     const ipAttempt = this.ipAttempts.get(ip);
     if (ipAttempt?.lockedUntil && ipAttempt.lockedUntil > now) {
       return {
@@ -104,7 +105,6 @@ class LoginRateLimiter {
       };
     }
 
-    // Check username lockout
     if (username) {
       const userAttempt = this.usernameAttempts.get(username);
       if (userAttempt?.lockedUntil && userAttempt.lockedUntil > now) {
@@ -122,18 +122,19 @@ class LoginRateLimiter {
     const now = Date.now();
     let minRemaining = this.MAX_ATTEMPTS;
 
-    // Check IP attempts
     const ipAttempt = this.ipAttempts.get(ip);
-    if (ipAttempt && (now - ipAttempt.firstAttempt) <= this.WINDOW_MS) {
+    if (ipAttempt && now - ipAttempt.firstAttempt <= this.WINDOW_MS) {
       const ipRemaining = Math.max(0, this.MAX_ATTEMPTS - ipAttempt.count);
       minRemaining = Math.min(minRemaining, ipRemaining);
     }
 
-    // Check username attempts
     if (username) {
       const userAttempt = this.usernameAttempts.get(username);
-      if (userAttempt && (now - userAttempt.firstAttempt) <= this.WINDOW_MS) {
-        const userRemaining = Math.max(0, this.MAX_ATTEMPTS - userAttempt.count);
+      if (userAttempt && now - userAttempt.firstAttempt <= this.WINDOW_MS) {
+        const userRemaining = Math.max(
+          0,
+          this.MAX_ATTEMPTS - userAttempt.count,
+        );
         minRemaining = Math.min(minRemaining, userRemaining);
       }
     }
@@ -142,5 +143,4 @@ class LoginRateLimiter {
   }
 }
 
-// Export singleton instance
 export const loginRateLimiter = new LoginRateLimiter();

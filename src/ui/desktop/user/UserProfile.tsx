@@ -144,7 +144,6 @@ export function UserProfile({
   const handleFileColorCodingToggle = (enabled: boolean) => {
     setFileColorCoding(enabled);
     localStorage.setItem("fileColorCoding", enabled.toString());
-    // Trigger a re-render by dispatching a custom event
     window.dispatchEvent(new Event("fileColorCodingChanged"));
   };
 

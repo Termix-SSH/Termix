@@ -19,7 +19,6 @@ export function CommandAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLDivElement>(null);
 
-  // Scroll selected item into view
   useEffect(() => {
     if (selectedRef.current && containerRef.current) {
       selectedRef.current.scrollIntoView({
@@ -33,8 +32,6 @@ export function CommandAutocomplete({
     return null;
   }
 
-  // Calculate max height for suggestions list to ensure footer is always visible
-  // Footer height is approximately 32px (text + padding + border)
   const footerHeight = 32;
   const maxSuggestionsHeight = 240 - footerHeight;
 
@@ -62,9 +59,7 @@ export function CommandAutocomplete({
               index === selectedIndex && "bg-gray-500/20 text-gray-400",
             )}
             onClick={() => onSelect(suggestion)}
-            onMouseEnter={() => {
-              // Optional: update selected index on hover
-            }}
+            onMouseEnter={() => {}}
           >
             {suggestion}
           </div>

@@ -36,9 +36,12 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
       if (parts.length >= 10) {
         const user = parts[0];
         const tty = parts[1];
-        const ip = parts[2] === ":" || parts[2].startsWith(":") ? "local" : parts[2];
+        const ip =
+          parts[2] === ":" || parts[2].startsWith(":") ? "local" : parts[2];
 
-        const timeStart = parts.indexOf(parts.find(p => /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/.test(p)) || "");
+        const timeStart = parts.indexOf(
+          parts.find((p) => /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/.test(p)) || "",
+        );
         if (timeStart > 0 && parts.length > timeStart + 4) {
           const timeStr = parts.slice(timeStart, timeStart + 5).join(" ");
 
@@ -96,7 +99,9 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
         failedLogins.push({
           user,
           ip,
-          time: timeStr ? new Date(timeStr).toISOString() : new Date().toISOString(),
+          time: timeStr
+            ? new Date(timeStr).toISOString()
+            : new Date().toISOString(),
           status: "failed",
         });
         if (ip !== "unknown") {

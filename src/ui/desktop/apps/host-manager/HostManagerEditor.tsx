@@ -348,7 +348,6 @@ export function HostManagerEditor({
   const [activeTab, setActiveTab] = useState("general");
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Clear error when tab changes
   useEffect(() => {
     setFormError(null);
   }, [activeTab]);
@@ -948,7 +947,6 @@ export function HostManagerEditor({
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
-      // Notify the stats server to start/update polling for this specific host
       if (savedHost?.id) {
         const { notifyHostCreatedOrUpdated } = await import(
           "@/ui/main-axios.ts"
@@ -963,11 +961,9 @@ export function HostManagerEditor({
     }
   };
 
-  // Handle form validation errors
   const handleFormError = () => {
     const errors = form.formState.errors;
 
-    // Determine which tab contains the error
     if (
       errors.ip ||
       errors.port ||
@@ -1088,7 +1084,6 @@ export function HostManagerEditor({
 
     let filtered = sshConfigurations;
 
-    // Filter out the current host being edited (by ID, not by name)
     if (currentHostId) {
       const currentHostName = hosts.find((h) => h.id === currentHostId)?.name;
       if (currentHostName) {
@@ -1097,7 +1092,6 @@ export function HostManagerEditor({
         );
       }
     } else {
-      // If creating a new host, filter by the name being entered
       const currentHostName =
         form.watch("name") || `${form.watch("username")}@${form.watch("ip")}`;
       filtered = sshConfigurations.filter(

@@ -114,7 +114,6 @@ export function Server({
 
   React.useEffect(() => {
     if (hostConfig?.id !== currentHostConfig?.id) {
-      // Reset state when switching to a different host
       setServerStatus("offline");
       setMetrics(null);
       setMetricsHistory([]);

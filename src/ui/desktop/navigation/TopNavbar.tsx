@@ -99,7 +99,6 @@ export function TopNavbar({
     setCommandHistoryTabActive(true);
   }, []);
 
-  // Register function to open command history sidebar
   React.useEffect(() => {
     commandHistory.setOpenCommandHistory(openCommandHistorySidebar);
   }, [commandHistory, openCommandHistorySidebar]);
@@ -133,11 +132,9 @@ export function TopNavbar({
   };
 
   const handleTabSplit = (tabId: number) => {
-    // Open the sidebar to the split-screen tab
     setToolsSidebarOpen(true);
     setCommandHistoryTabActive(false);
     setSplitScreenTabActive(true);
-    // Optional: could pass tabId to pre-select this tab in the sidebar
   };
 
   const handleTabClose = (tabId: number) => {

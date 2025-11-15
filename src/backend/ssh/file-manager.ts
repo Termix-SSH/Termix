@@ -261,7 +261,7 @@ interface SSHSession {
   isConnected: boolean;
   lastActive: number;
   timeout?: NodeJS.Timeout;
-  activeOperations: number; // Track number of active operations to prevent cleanup mid-operation
+  activeOperations: number;
 }
 
 interface PendingTOTPSession {
@@ -286,7 +286,6 @@ const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
-    // Don't cleanup if there are active operations
     if (session.activeOperations > 0) {
       fileLogger.warn(
         `Deferring session cleanup for ${sessionId} - ${session.activeOperations} active operations`,
@@ -296,7 +295,6 @@ function cleanupSession(sessionId: string) {
           activeOperations: session.activeOperations,
         },
       );
-      // Reschedule cleanup
       scheduleSessionCleanup(sessionId);
       return;
     }
@@ -577,7 +575,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       client,
       isConnected: true,
       lastActive: Date.now(),
-      activeOperations: 0, // Initialize active operations counter
+      activeOperations: 0,
     };
     scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
@@ -932,7 +930,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         client: session.client,
         isConnected: true,
         lastActive: Date.now(),
-        activeOperations: 0, // Initialize active operations counter
+        activeOperations: 0,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1076,12 +1074,12 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   }
 
   sshConn.lastActive = Date.now();
-  sshConn.activeOperations++; // Track operation start
+  sshConn.activeOperations++;
 
   const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
   sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
     if (err) {
-      sshConn.activeOperations--; // Decrement on error
+      sshConn.activeOperations--;
       fileLogger.error("SSH listFiles error:", err);
       return res.status(500).json({ error: err.message });
     }
@@ -1098,7 +1096,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
     });
 
     stream.on("close", (code) => {
-      sshConn.activeOperations--; // Decrement when operation completes
+      sshConn.activeOperations--;
       if (code !== 0) {
         fileLogger.error(
           `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
@@ -2892,7 +2890,6 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   const fileName = archivePath.split("/").pop() || "";
   const fileExt = fileName.toLowerCase();
 
-  // Determine extraction command based on file extension
   let extractCommand = "";
   const targetPath =
     extractPath || archivePath.substring(0, archivePath.lastIndexOf("/"));
@@ -2970,13 +2967,11 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
           error: errorOutput,
         });
 
-        // Check if command not found
         let friendlyError = errorOutput || "Failed to extract archive";
         if (
           errorOutput.includes("command not found") ||
           errorOutput.includes("not found")
         ) {
-          // Detect which command is missing based on file extension
           let missingCmd = "";
           let installHint = "";
 
@@ -3076,15 +3071,12 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   session.lastActive = Date.now();
   scheduleSessionCleanup(sessionId);
 
-  // Determine compression format
-  const compressionFormat = format || "zip"; // Default to zip
+  const compressionFormat = format || "zip";
   let compressCommand = "";
 
-  // Get the directory where the first file is located
   const firstPath = paths[0];
   const workingDir = firstPath.substring(0, firstPath.lastIndexOf("/")) || "/";
 
-  // Extract just the file/folder names for the command
   const fileNames = paths
     .map((p) => {
       const name = p.split("/").pop();
@@ -3092,7 +3084,6 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
     })
     .join(" ");
 
-  // Construct archive path
   let archivePath = "";
   if (archiveName.includes("/")) {
     archivePath = archiveName;
@@ -3103,7 +3094,6 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   }
 
   if (compressionFormat === "zip") {
-    // Use zip command - need to cd to directory first
     compressCommand = `cd "${workingDir}" && zip -r "${archivePath}" ${fileNames}`;
   } else if (compressionFormat === "tar.gz" || compressionFormat === "tgz") {
     compressCommand = `cd "${workingDir}" && tar -czf "${archivePath}" ${fileNames}`;
@@ -3170,7 +3160,6 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
           error: errorOutput,
         });
 
-        // Check if command not found
         let friendlyError = errorOutput || "Failed to compress files";
         if (
           errorOutput.includes("command not found") ||

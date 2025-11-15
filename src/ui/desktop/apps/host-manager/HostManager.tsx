@@ -72,7 +72,6 @@ export function HostManager({
   };
 
   const handleTabChange = (value: string) => {
-    // Only clear editing state when leaving the respective tabs, not when entering them
     if (activeTab === "add_host" && value !== "add_host") {
       setEditingHost(null);
     }

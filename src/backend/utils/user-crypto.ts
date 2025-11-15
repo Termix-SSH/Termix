@@ -344,7 +344,6 @@ class UserCrypto {
       const existingEncryptedDEK = await this.getEncryptedDEK(userId);
       const existingKEKSalt = await this.getKEKSalt(userId);
 
-      // If no existing encryption, nothing to convert
       if (!existingEncryptedDEK && !existingKEKSalt) {
         databaseLogger.info("No existing encryption to convert for user", {
           operation: "convert_to_oidc_encryption_skip",
@@ -353,11 +352,9 @@ class UserCrypto {
         return;
       }
 
-      // Try to get the DEK from active session
       const existingDEK = this.getUserDataKey(userId);
 
       if (existingDEK) {
-        // User has active session - preserve their data by re-encrypting DEK
         const systemKey = this.deriveOIDCSystemKey(userId);
         const oidcEncryptedDEK = this.encryptDEK(existingDEK, systemKey);
         systemKey.fill(0);
@@ -372,8 +369,6 @@ class UserCrypto {
           },
         );
       } else {
-        // No active session - delete old encryption keys
-        // OIDC will create new keys on next login, but old encrypted data will be inaccessible
         if (existingEncryptedDEK) {
           await getDb()
             .delete(settings)
@@ -389,7 +384,6 @@ class UserCrypto {
         );
       }
 
-      // Always remove password-based KEK salt
       if (existingKEKSalt) {
         await getDb()
           .delete(settings)

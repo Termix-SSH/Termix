@@ -138,10 +138,8 @@ function getLoggerForService(serviceName: string) {
   }
 }
 
-// Cache for Electron settings
 const electronSettingsCache = new Map<string, string>();
 
-// Load settings from Electron IPC on startup
 if (isElectron()) {
   (async () => {
     try {
@@ -153,13 +151,12 @@ if (isElectron()) {
       ).electronAPI;
 
       if (electronAPI?.getSetting) {
-        // Preload common settings
         const settingsToLoad = ["rightClickCopyPaste", "jwt"];
         for (const key of settingsToLoad) {
           const value = await electronAPI.getSetting(key);
           if (value !== null && value !== undefined) {
             electronSettingsCache.set(key, value);
-            localStorage.setItem(key, value); // Sync to localStorage
+            localStorage.setItem(key, value);
           }
         }
       }
@@ -172,13 +169,10 @@ if (isElectron()) {
 export function setCookie(name: string, value: string, days = 7): void {
   if (isElectron()) {
     try {
-      // Update cache
       electronSettingsCache.set(name, value);
 
-      // Set in localStorage
       localStorage.setItem(name, value);
 
-      // Persist to file system via Electron IPC
       const electronAPI = (
         window as Window &
           typeof globalThis & {
@@ -205,12 +199,10 @@ export function setCookie(name: string, value: string, days = 7): void {
 export function getCookie(name: string): string | undefined {
   if (isElectron()) {
     try {
-      // Try cache first
       if (electronSettingsCache.has(name)) {
         return electronSettingsCache.get(name);
       }
 
-      // Fallback to localStorage
       const token = localStorage.getItem(name) || undefined;
       if (token) {
         electronSettingsCache.set(name, token);
@@ -397,22 +389,17 @@ function createApiInstance(
           errorMessage === "Authentication required";
 
         if (isSessionExpired || isSessionNotFound || isInvalidToken) {
-          // Clear token from localStorage
           localStorage.removeItem("jwt");
 
-          // Clear Electron settings cache
           if (isElectron()) {
             electronSettingsCache.delete("jwt");
           }
 
-          // Clear cookie
           if (typeof window !== "undefined") {
             document.cookie =
               "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
           }
 
-          // Only show toast and reload for explicit session expiration
-          // Let the auth check in DesktopApp.tsx handle the redirect silently
           if (isSessionExpired && typeof window !== "undefined") {
             console.warn("Session expired - please log in again");
             import("sonner").then(({ toast }) => {
@@ -1737,7 +1724,6 @@ export async function compressSSHFiles(
 // FILE MANAGER DATA
 // ============================================================================
 
-// Recent Files
 export async function getRecentFiles(
   hostId: number,
 ): Promise<Record<string, unknown>> {
@@ -1916,7 +1902,6 @@ export async function refreshServerPolling(): Promise<void> {
   try {
     await statsApi.post("/refresh");
   } catch (error) {
-    // Silently fail - this is a background operation
     console.warn("Failed to refresh server polling:", error);
   }
 }
@@ -1927,7 +1912,6 @@ export async function notifyHostCreatedOrUpdated(
   try {
     await statsApi.post("/host-updated", { hostId });
   } catch (error) {
-    // Silently fail - this is a background operation
     console.warn("Failed to notify stats server of host update:", error);
   }
 }
@@ -2961,9 +2945,6 @@ export async function resetRecentActivity(): Promise<{ message: string }> {
 // COMMAND HISTORY API
 // ============================================================================
 
-/**
- * Save a command to history for a specific host
- */
 export async function saveCommandToHistory(
   hostId: number,
   command: string,
@@ -2979,12 +2960,6 @@ export async function saveCommandToHistory(
   }
 }
 
-/**
- * Get command history for a specific host
- * Returns array of unique commands ordered by most recent
- * @param hostId - The host ID to fetch history for
- * @param limit - Maximum number of commands to return (default: 100)
- */
 export async function getCommandHistory(
   hostId: number,
   limit: number = 100,
@@ -2999,9 +2974,6 @@ export async function getCommandHistory(
   }
 }
 
-/**
- * Delete a specific command from history
- */
 export async function deleteCommandFromHistory(
   hostId: number,
   command: string,
@@ -3017,9 +2989,6 @@ export async function deleteCommandFromHistory(
   }
 }
 
-/**
- * Clear command history for a specific host (optional feature)
- */
 export async function clearCommandHistory(
   hostId: number,
 ): Promise<{ success: boolean }> {
@@ -3037,9 +3006,6 @@ export async function clearCommandHistory(
 // OIDC ACCOUNT LINKING
 // ============================================================================
 
-/**
- * Link an OIDC user to an existing password account (merges OIDC into password account)
- */
 export async function linkOIDCToPasswordAccount(
   oidcUserId: string,
   targetUsername: string,

@@ -29,7 +29,10 @@ export function execCommand(
   });
 }
 
-export function toFixedNum(n: number | null | undefined, digits = 2): number | null {
+export function toFixedNum(
+  n: number | null | undefined,
+  digits = 2,
+): number | null {
   if (typeof n !== "number" || !Number.isFinite(n)) return null;
   return Number(n.toFixed(digits));
 }

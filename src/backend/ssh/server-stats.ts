@@ -652,15 +652,12 @@ class PollingManager {
 
     let parsed: StatsConfig;
 
-    // If it's already an object, use it directly
     if (typeof statsConfigStr === "object") {
       parsed = statsConfigStr;
     } else {
-      // Otherwise, parse as JSON string (may be double-encoded)
       try {
         let temp: any = JSON.parse(statsConfigStr);
 
-        // Check if we got a string back (double-encoded JSON)
         if (typeof temp === "string") {
           temp = JSON.parse(temp);
         }
@@ -678,7 +675,6 @@ class PollingManager {
       }
     }
 
-    // Merge with defaults, but prioritize the provided values
     const result = { ...DEFAULT_STATS_CONFIG, ...parsed };
 
     return result;
@@ -689,7 +685,6 @@ class PollingManager {
 
     const existingConfig = this.pollingConfigs.get(host.id);
 
-    // Always clear existing timers first
     if (existingConfig) {
       if (existingConfig.statusTimer) {
         clearInterval(existingConfig.statusTimer);
@@ -701,7 +696,6 @@ class PollingManager {
       }
     }
 
-    // If both checks are disabled, stop all polling and clean up
     if (!statsConfig.statusCheckEnabled && !statsConfig.metricsEnabled) {
       this.pollingConfigs.delete(host.id);
       this.statusStore.delete(host.id);
@@ -720,7 +714,6 @@ class PollingManager {
       this.pollHostStatus(host);
 
       config.statusTimer = setInterval(() => {
-        // Always get the latest config to check if polling is still enabled
         const latestConfig = this.pollingConfigs.get(host.id);
         if (latestConfig && latestConfig.statsConfig.statusCheckEnabled) {
           this.pollHostStatus(latestConfig.host);
@@ -733,11 +726,9 @@ class PollingManager {
     if (statsConfig.metricsEnabled) {
       const intervalMs = statsConfig.metricsInterval * 1000;
 
-      // Poll immediately, but only if metrics are actually enabled
       this.pollHostMetrics(host);
 
       config.metricsTimer = setInterval(() => {
-        // Always get the latest config to check if polling is still enabled
         const latestConfig = this.pollingConfigs.get(host.id);
         if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
           this.pollHostMetrics(latestConfig.host);
@@ -747,7 +738,6 @@ class PollingManager {
       this.metricsStore.delete(host.id);
     }
 
-    // Set the config with the new timers
     this.pollingConfigs.set(host.id, config);
   }
 
@@ -769,14 +759,11 @@ class PollingManager {
   }
 
   private async pollHostMetrics(host: SSHHostWithCredentials): Promise<void> {
-    // Double-check that metrics are still enabled before collecting
-    // Always get the LATEST config from the Map, not from the closure
     const config = this.pollingConfigs.get(host.id);
     if (!config || !config.statsConfig.metricsEnabled) {
       return;
     }
 
-    // Use the host from the config to ensure we have the latest version
     const currentHost = config.host;
 
     try {
@@ -789,7 +776,6 @@ class PollingManager {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      // Re-check config after the async operation in case it was disabled during collection
       const latestConfig = this.pollingConfigs.get(currentHost.id);
       if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
         statsLogger.warn("Failed to collect metrics for host", {

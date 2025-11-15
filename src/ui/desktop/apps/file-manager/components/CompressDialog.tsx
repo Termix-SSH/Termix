@@ -38,7 +38,6 @@ export function CompressDialog({
 
   useEffect(() => {
     if (open && fileNames.length > 0) {
-      // Generate default archive name
       if (fileNames.length === 1) {
         const baseName = fileNames[0].replace(/\.[^/.]+$/, "");
         setArchiveName(baseName);
@@ -51,7 +50,6 @@ export function CompressDialog({
   const handleCompress = () => {
     if (!archiveName.trim()) return;
 
-    // Append extension if not already present
     let finalName = archiveName.trim();
     const extensions: Record<string, string> = {
       zip: ".zip",

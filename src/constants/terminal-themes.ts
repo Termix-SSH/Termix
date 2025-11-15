@@ -617,7 +617,6 @@ export const TERMINAL_THEMES: Record<string, TerminalTheme> = {
   },
 };
 
-// Font families available for terminal
 export const TERMINAL_FONTS = [
   {
     value: "Caskaydia Cove Nerd Font Mono",

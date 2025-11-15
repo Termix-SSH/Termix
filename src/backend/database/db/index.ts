@@ -96,12 +96,6 @@ async function initializeDatabaseAsync(): Promise<void> {
       });
 
       try {
-        databaseLogger.info(
-          "Generating diagnostic information for database encryption failure",
-          {
-            operation: "db_encryption_diagnostic",
-          },
-        );
         const diagnosticInfo =
           DatabaseFileEncryption.getDiagnosticInfo(encryptedDbPath);
         databaseLogger.error(

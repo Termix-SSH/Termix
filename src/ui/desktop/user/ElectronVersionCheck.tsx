@@ -35,20 +35,17 @@ export function ElectronVersionCheck({
       const updateInfo = await checkElectronUpdate();
       setVersionInfo(updateInfo);
 
-      // Get current app version
       const currentVersion = await (window as any).electronAPI?.getAppVersion();
       const dismissedVersion = localStorage.getItem(
         "electron-version-check-dismissed",
       );
 
-      // If this version was already dismissed, skip the modal
       if (dismissedVersion === currentVersion) {
         onContinue();
         return;
       }
 
       if (updateInfo?.status === "up_to_date") {
-        // Store this version as checked (but don't show modal since up to date)
         if (currentVersion) {
           localStorage.setItem(
             "electron-version-check-dismissed",
@@ -73,7 +70,6 @@ export function ElectronVersionCheck({
   };
 
   const handleContinue = async () => {
-    // Store the current version as dismissed
     const currentVersion = await (window as any).electronAPI?.getAppVersion();
     if (currentVersion) {
       localStorage.setItem("electron-version-check-dismissed", currentVersion);

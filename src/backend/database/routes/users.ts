@@ -763,7 +763,6 @@ router.get("/oidc/callback", async (req, res) => {
         .get();
       isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
 
-      // Check if registration is allowed (unless this is the first user)
       if (!isFirstUser) {
         try {
           const regRow = db.$client
@@ -822,8 +821,8 @@ router.get("/oidc/callback", async (req, res) => {
       try {
         const sessionDurationMs =
           deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
-            ? 30 * 24 * 60 * 60 * 1000 // 30 days
-            : 7 * 24 * 60 * 60 * 1000; // 7 days
+            ? 30 * 24 * 60 * 60 * 1000
+            : 7 * 24 * 60 * 60 * 1000;
         await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
         await db.delete(users).where(eq(users.id, id));
@@ -862,7 +861,6 @@ router.get("/oidc/callback", async (req, res) => {
 
     const userRecord = user[0];
 
-    // For all OIDC logins (including dual-auth), use OIDC encryption
     try {
       await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
     } catch (setupError) {
@@ -901,7 +899,6 @@ router.get("/oidc/callback", async (req, res) => {
         ? 30 * 24 * 60 * 60 * 1000
         : 7 * 24 * 60 * 60 * 1000;
 
-    // Clear any existing JWT cookie first to prevent conflicts
     res.clearCookie("jwt", authManager.getSecureCookieOptions(req));
 
     return res
@@ -941,7 +938,6 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Invalid username or password" });
   }
 
-  // Check rate limiting
   const lockStatus = loginRateLimiter.isLocked(clientIp, username);
   if (lockStatus.locked) {
     authLogger.warn("Login attempt blocked due to rate limiting", {
@@ -995,8 +991,6 @@ router.post("/login", async (req, res) => {
 
     const userRecord = user[0];
 
-    // Only reject if user is OIDC-only (has no password set)
-    // Empty string "" is treated as no password
     if (
       userRecord.is_oidc &&
       (!userRecord.password_hash || userRecord.password_hash.trim() === "")
@@ -1040,17 +1034,13 @@ router.post("/login", async (req, res) => {
 
     const deviceInfo = parseUserAgent(req);
 
-    // For dual-auth users (has both password and OIDC), use OIDC encryption
-    // For password-only users, use password-based encryption
     let dataUnlocked = false;
     if (userRecord.is_oidc) {
-      // Dual-auth user: verify password then use OIDC encryption
       dataUnlocked = await authManager.authenticateOIDCUser(
         userRecord.id,
         deviceInfo.type,
       );
     } else {
-      // Password-only user: use password-based encryption
       dataUnlocked = await authManager.authenticateUser(
         userRecord.id,
         password,
@@ -1079,7 +1069,6 @@ router.post("/login", async (req, res) => {
       deviceInfo: deviceInfo.deviceInfo,
     });
 
-    // Reset rate limiter on successful login
     loginRateLimiter.resetAttempts(clientIp, username);
 
     authLogger.success(`User logged in successfully: ${username}`, {
@@ -2255,7 +2244,6 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     const targetUserId = targetUser[0].id;
 
     try {
-      // Delete all user-related data to avoid foreign key constraints
       await db
         .delete(sshCredentialUsage)
         .where(eq(sshCredentialUsage.userId, targetUserId));
@@ -2588,7 +2576,6 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
   }
 
   try {
-    // Verify admin permissions
     const adminUser = await db
       .select()
       .from(users)
@@ -2597,7 +2584,6 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    // Get OIDC user
     const oidcUserRecords = await db
       .select()
       .from(users)
@@ -2608,14 +2594,12 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
 
     const oidcUser = oidcUserRecords[0];
 
-    // Verify user is OIDC
     if (!oidcUser.is_oidc) {
       return res.status(400).json({
         error: "Source user is not an OIDC user",
       });
     }
 
-    // Get target password user
     const targetUserRecords = await db
       .select()
       .from(users)
@@ -2626,14 +2610,12 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
 
     const targetUser = targetUserRecords[0];
 
-    // Verify target user has password authentication
     if (targetUser.is_oidc || !targetUser.password_hash) {
       return res.status(400).json({
         error: "Target user must be a password-based account",
       });
     }
 
-    // Check if target user already has OIDC configured
     if (targetUser.client_id && targetUser.oidc_identifier) {
       return res.status(400).json({
         error: "Target user already has OIDC authentication configured",
@@ -2649,11 +2631,10 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
       adminUserId,
     });
 
-    // Copy OIDC configuration from OIDC user to target password user
     await db
       .update(users)
       .set({
-        is_oidc: true, // Enable OIDC login for this account
+        is_oidc: true,
         oidc_identifier: oidcUser.oidc_identifier,
         client_id: oidcUser.client_id,
         client_secret: oidcUser.client_secret,
@@ -2666,14 +2647,8 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
       })
       .where(eq(users.id, targetUser.id));
 
-    // Re-encrypt the user's DEK with OIDC system key for dual-auth support
-    // This allows OIDC login to decrypt user data without requiring password
     try {
       await authManager.convertToOIDCEncryption(targetUser.id);
-      authLogger.info("Converted user encryption to OIDC for dual-auth", {
-        operation: "link_convert_encryption",
-        userId: targetUser.id,
-      });
     } catch (encryptionError) {
       authLogger.error(
         "Failed to convert encryption to OIDC during linking",
@@ -2683,7 +2658,6 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
           userId: targetUser.id,
         },
       );
-      // Rollback the OIDC configuration
       await db
         .update(users)
         .set({
@@ -2710,19 +2684,15 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
       });
     }
 
-    // Revoke all sessions for the OIDC user before deletion
     await authManager.revokeAllUserSessions(oidcUserId);
     authManager.logoutUser(oidcUserId);
 
-    // Delete OIDC user's recent activity first (to avoid NOT NULL constraint issues)
     await db
       .delete(recentActivity)
       .where(eq(recentActivity.userId, oidcUserId));
 
-    // Delete the OIDC user (CASCADE will delete related data: hosts, credentials, sessions, etc.)
     await db.delete(users).where(eq(users.id, oidcUserId));
 
-    // Clean up OIDC user's settings
     db.$client
       .prepare("DELETE FROM settings WHERE key LIKE ?")
       .run(`user_%_${oidcUserId}`);
