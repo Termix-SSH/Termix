@@ -862,6 +862,7 @@ router.get("/oidc/callback", async (req, res) => {
 
     const userRecord = user[0];
 
+    // For all OIDC logins (including dual-auth), use OIDC encryption
     try {
       await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
     } catch (setupError) {
@@ -994,8 +995,13 @@ router.post("/login", async (req, res) => {
 
     const userRecord = user[0];
 
-    if (userRecord.is_oidc) {
-      authLogger.warn("OIDC user attempted traditional login", {
+    // Only reject if user is OIDC-only (has no password set)
+    // Empty string "" is treated as no password
+    if (
+      userRecord.is_oidc &&
+      (!userRecord.password_hash || userRecord.password_hash.trim() === "")
+    ) {
+      authLogger.warn("OIDC-only user attempted traditional login", {
         operation: "user_login",
         username,
         userId: userRecord.id,
@@ -1033,11 +1039,25 @@ router.post("/login", async (req, res) => {
     } catch (error) {}
 
     const deviceInfo = parseUserAgent(req);
-    const dataUnlocked = await authManager.authenticateUser(
-      userRecord.id,
-      password,
-      deviceInfo.type,
-    );
+
+    // For dual-auth users (has both password and OIDC), use OIDC encryption
+    // For password-only users, use password-based encryption
+    let dataUnlocked = false;
+    if (userRecord.is_oidc) {
+      // Dual-auth user: verify password then use OIDC encryption
+      dataUnlocked = await authManager.authenticateOIDCUser(
+        userRecord.id,
+        deviceInfo.type,
+      );
+    } else {
+      // Password-only user: use password-based encryption
+      dataUnlocked = await authManager.authenticateUser(
+        userRecord.id,
+        password,
+        deviceInfo.type,
+      );
+    }
+
     if (!dataUnlocked) {
       return res.status(401).json({ error: "Incorrect password" });
     }
@@ -2646,6 +2666,50 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
       })
       .where(eq(users.id, targetUser.id));
 
+    // Re-encrypt the user's DEK with OIDC system key for dual-auth support
+    // This allows OIDC login to decrypt user data without requiring password
+    try {
+      await authManager.convertToOIDCEncryption(targetUser.id);
+      authLogger.info("Converted user encryption to OIDC for dual-auth", {
+        operation: "link_convert_encryption",
+        userId: targetUser.id,
+      });
+    } catch (encryptionError) {
+      authLogger.error(
+        "Failed to convert encryption to OIDC during linking",
+        encryptionError,
+        {
+          operation: "link_convert_encryption_failed",
+          userId: targetUser.id,
+        },
+      );
+      // Rollback the OIDC configuration
+      await db
+        .update(users)
+        .set({
+          is_oidc: false,
+          oidc_identifier: null,
+          client_id: "",
+          client_secret: "",
+          issuer_url: "",
+          authorization_url: "",
+          token_url: "",
+          identifier_path: "",
+          name_path: "",
+          scopes: "openid email profile",
+        })
+        .where(eq(users.id, targetUser.id));
+
+      return res.status(500).json({
+        error:
+          "Failed to convert encryption for dual-auth. Please ensure the password account has encryption setup.",
+        details:
+          encryptionError instanceof Error
+            ? encryptionError.message
+            : "Unknown error",
+      });
+    }
+
     // Revoke all sessions for the OIDC user before deletion
     await authManager.revokeAllUserSessions(oidcUserId);
     authManager.logoutUser(oidcUserId);
@@ -2699,6 +2763,122 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to link accounts",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+});
+
+// Route: Unlink OIDC from password account (admin only)
+// POST /users/unlink-oidc-from-password
+router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
+  const adminUserId = (req as AuthenticatedRequest).userId;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({
+      error: "User ID is required",
+    });
+  }
+
+  try {
+    const adminUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, adminUserId));
+
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+      authLogger.warn("Non-admin attempted to unlink OIDC from password", {
+        operation: "unlink_oidc_unauthorized",
+        adminUserId,
+        targetUserId: userId,
+      });
+      return res.status(403).json({
+        error: "Admin privileges required",
+      });
+    }
+
+    const targetUserRecords = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!targetUserRecords || targetUserRecords.length === 0) {
+      return res.status(404).json({
+        error: "User not found",
+      });
+    }
+
+    const targetUser = targetUserRecords[0];
+
+    if (!targetUser.is_oidc) {
+      return res.status(400).json({
+        error: "User does not have OIDC authentication enabled",
+      });
+    }
+
+    if (!targetUser.password_hash || targetUser.password_hash === "") {
+      return res.status(400).json({
+        error:
+          "Cannot unlink OIDC from a user without password authentication. This would leave the user unable to login.",
+      });
+    }
+
+    authLogger.info("Unlinking OIDC from password account", {
+      operation: "unlink_oidc_from_password_start",
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      adminUserId,
+    });
+
+    await db
+      .update(users)
+      .set({
+        is_oidc: false,
+        oidc_identifier: null,
+        client_id: "",
+        client_secret: "",
+        issuer_url: "",
+        authorization_url: "",
+        token_url: "",
+        identifier_path: "",
+        name_path: "",
+        scopes: "openid email profile",
+      })
+      .where(eq(users.id, targetUser.id));
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error(
+        "Failed to save database after unlinking OIDC",
+        saveError,
+        {
+          operation: "unlink_oidc_save_failed",
+          targetUserId: targetUser.id,
+        },
+      );
+    }
+
+    authLogger.success("OIDC unlinked from password account successfully", {
+      operation: "unlink_oidc_from_password_success",
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      adminUserId,
+    });
+
+    res.json({
+      success: true,
+      message: `OIDC authentication has been removed from ${targetUser.username}. User can now only login with password.`,
+    });
+  } catch (err) {
+    authLogger.error("Failed to unlink OIDC from password account", err, {
+      operation: "unlink_oidc_from_password_failed",
+      targetUserId: userId,
+      adminUserId,
+    });
+    res.status(500).json({
+      error: "Failed to unlink OIDC",
       details: err instanceof Error ? err.message : "Unknown error",
     });
   }

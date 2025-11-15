@@ -326,6 +326,90 @@ class UserCrypto {
     }
   }
 
+  /**
+   * Convert a password-based user's encryption to OIDC encryption.
+   * This is used when linking an OIDC account to a password account for dual-auth.
+   *
+   * If user has no existing encryption setup, this does nothing.
+   * If user has encryption but no active session, we delete the old keys
+   * and let OIDC create new ones on next login (data will be lost).
+   * If user has an active session, we re-encrypt their DEK with OIDC system key (data preserved).
+   */
+  async convertToOIDCEncryption(userId: string): Promise<void> {
+    try {
+      const { getDb } = await import("../database/db/index.js");
+      const { settings } = await import("../database/db/schema.js");
+      const { eq } = await import("drizzle-orm");
+
+      const existingEncryptedDEK = await this.getEncryptedDEK(userId);
+      const existingKEKSalt = await this.getKEKSalt(userId);
+
+      // If no existing encryption, nothing to convert
+      if (!existingEncryptedDEK && !existingKEKSalt) {
+        databaseLogger.info("No existing encryption to convert for user", {
+          operation: "convert_to_oidc_encryption_skip",
+          userId,
+        });
+        return;
+      }
+
+      // Try to get the DEK from active session
+      const existingDEK = this.getUserDataKey(userId);
+
+      if (existingDEK) {
+        // User has active session - preserve their data by re-encrypting DEK
+        const systemKey = this.deriveOIDCSystemKey(userId);
+        const oidcEncryptedDEK = this.encryptDEK(existingDEK, systemKey);
+        systemKey.fill(0);
+
+        await this.storeEncryptedDEK(userId, oidcEncryptedDEK);
+
+        databaseLogger.info(
+          "Converted user encryption from password to OIDC (data preserved)",
+          {
+            operation: "convert_to_oidc_encryption_preserved",
+            userId,
+          },
+        );
+      } else {
+        // No active session - delete old encryption keys
+        // OIDC will create new keys on next login, but old encrypted data will be inaccessible
+        if (existingEncryptedDEK) {
+          await getDb()
+            .delete(settings)
+            .where(eq(settings.key, `user_encrypted_dek_${userId}`));
+        }
+
+        databaseLogger.warn(
+          "Deleted old encryption keys during OIDC conversion - user data may be lost",
+          {
+            operation: "convert_to_oidc_encryption_data_loss",
+            userId,
+          },
+        );
+      }
+
+      // Always remove password-based KEK salt
+      if (existingKEKSalt) {
+        await getDb()
+          .delete(settings)
+          .where(eq(settings.key, `user_kek_salt_${userId}`));
+      }
+
+      const { saveMemoryDatabaseToFile } = await import(
+        "../database/db/index.js"
+      );
+      await saveMemoryDatabaseToFile();
+    } catch (error) {
+      databaseLogger.error("Failed to convert to OIDC encryption", error, {
+        operation: "convert_to_oidc_encryption_error",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
+  }
+
   private async validatePassword(
     userId: string,
     password: string,
