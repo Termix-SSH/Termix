@@ -49,12 +49,6 @@ router.post(
         .values(insertData)
         .returning();
 
-      authLogger.info(`Command saved to history for host ${hostId}`, {
-        operation: "command_history_save_success",
-        userId,
-        hostId: parseInt(hostId, 10),
-      });
-
       res.status(201).json(result[0]);
     } catch (err) {
       authLogger.error("Failed to save command to history", err);
@@ -99,13 +93,6 @@ router.get(
 
       const uniqueCommands = Array.from(new Set(result.map((r) => r.command)));
 
-      authLogger.info(`Fetched command history for host ${hostId}`, {
-        operation: "command_history_fetch_success",
-        userId,
-        hostId: hostIdNum,
-        count: uniqueCommands.length,
-      });
-
       res.json(uniqueCommands);
     } catch (err) {
       authLogger.error("Failed to fetch command history", err);
@@ -148,12 +135,6 @@ router.post(
             eq(commandHistory.command, command.trim()),
           ),
         );
-
-      authLogger.info(`Command deleted from history for host ${hostId}`, {
-        operation: "command_history_delete_success",
-        userId,
-        hostId: hostIdNum,
-      });
 
       res.json({ success: true });
     } catch (err) {

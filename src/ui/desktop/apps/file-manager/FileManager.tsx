@@ -102,7 +102,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    const saved = localStorage.getItem("fileManagerViewMode");
+    return saved === "grid" || saved === "list" ? saved : "grid";
+  });
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpSessionId, setTotpSessionId] = useState<string | null>(null);
   const [totpPrompt, setTotpPrompt] = useState<string>("");
@@ -1885,6 +1888,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       loadPinnedFiles();
     }
   }, [currentHost?.id]);
+
+  useEffect(() => {
+    console.log("Saving viewMode to localStorage:", viewMode);
+    localStorage.setItem("fileManagerViewMode", viewMode);
+    console.log("Saved value:", localStorage.getItem("fileManagerViewMode"));
+  }, [viewMode]);
 
   const filteredFiles = files.filter((file) =>
     file.name.toLowerCase().includes(searchQuery.toLowerCase()),

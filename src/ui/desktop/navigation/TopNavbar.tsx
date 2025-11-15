@@ -470,6 +470,7 @@ export function TopNavbar({
                   WebkitUserSelect: "none",
                   flex: tab.type === "home" ? "0 0 auto" : "1 1 150px",
                   minWidth: tab.type === "home" ? "auto" : "150px",
+                  maxWidth: tab.type === "home" ? "auto" : "450px",
                   display: "flex",
                 }}
               >
