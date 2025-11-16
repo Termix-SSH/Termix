@@ -506,6 +506,8 @@ export interface Snippet {
   name: string;
   content: string;
   description?: string;
+  folder?: string;
+  order?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -514,6 +516,18 @@ export interface SnippetData {
   name: string;
   content: string;
   description?: string;
+  folder?: string;
+  order?: number;
+}
+
+export interface SnippetFolder {
+  id: number;
+  userId: string;
+  name: string;
+  color?: string;
+  icon?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================================================

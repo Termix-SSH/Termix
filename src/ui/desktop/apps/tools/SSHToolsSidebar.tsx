@@ -5,6 +5,14 @@ import { Textarea } from "@/components/ui/textarea.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import {
   Tabs,
   TabsList,
   TabsTrigger,
@@ -36,6 +44,22 @@ import {
   Terminal,
   LayoutGrid,
   MonitorCheck,
+  Folder,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
+  FolderPlus,
+  Settings,
+  MoreVertical,
+  Server,
+  Cloud,
+  Database,
+  Box,
+  Package,
+  Layers,
+  Archive,
+  HardDrive,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -49,9 +73,15 @@ import {
   setCookie,
   getCommandHistory,
   deleteCommandFromHistory,
+  getSnippetFolders,
+  createSnippetFolder,
+  updateSnippetFolderMetadata,
+  renameSnippetFolder,
+  deleteSnippetFolder,
+  reorderSnippets,
 } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
-import type { Snippet, SnippetData } from "../../../../types";
+import type { Snippet, SnippetData, SnippetFolder } from "../../../../types";
 
 interface TabData {
   id: number;
@@ -78,6 +108,30 @@ interface SSHToolsSidebarProps {
   initialTab?: string;
   onTabChange?: () => void;
 }
+
+const AVAILABLE_COLORS = [
+  { value: "#ef4444", label: "Red" },
+  { value: "#f97316", label: "Orange" },
+  { value: "#eab308", label: "Yellow" },
+  { value: "#22c55e", label: "Green" },
+  { value: "#3b82f6", label: "Blue" },
+  { value: "#a855f7", label: "Purple" },
+  { value: "#ec4899", label: "Pink" },
+  { value: "#6b7280", label: "Gray" },
+];
+
+const AVAILABLE_ICONS = [
+  { value: "Folder", label: "Folder", Icon: Folder },
+  { value: "Server", label: "Server", Icon: Server },
+  { value: "Cloud", label: "Cloud", Icon: Cloud },
+  { value: "Database", label: "Database", Icon: Database },
+  { value: "Box", label: "Box", Icon: Box },
+  { value: "Package", label: "Package", Icon: Package },
+  { value: "Layers", label: "Layers", Icon: Layers },
+  { value: "Archive", label: "Archive", Icon: Archive },
+  { value: "HardDrive", label: "HardDrive", Icon: HardDrive },
+  { value: "Globe", label: "Globe", Icon: Globe },
+];
 
 export function SSHToolsSidebar({
   isOpen,
@@ -125,6 +179,7 @@ export function SSHToolsSidebar({
   );
 
   const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [snippetFolders, setSnippetFolders] = useState<SnippetFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
@@ -140,6 +195,23 @@ export function SSHToolsSidebar({
   const [selectedSnippetTabIds, setSelectedSnippetTabIds] = useState<number[]>(
     [],
   );
+  const [draggedSnippet, setDraggedSnippet] = useState<Snippet | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
+    new Set(),
+  );
+  const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<SnippetFolder | null>(
+    null,
+  );
+  const [folderFormData, setFolderFormData] = useState({
+    name: "",
+    color: "",
+    icon: "",
+  });
+  const [folderFormErrors, setFolderFormErrors] = useState({
+    name: false,
+  });
 
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
@@ -470,11 +542,16 @@ export function SSHToolsSidebar({
   const fetchSnippets = async () => {
     try {
       setLoading(true);
-      const data = await getSnippets();
-      setSnippets(Array.isArray(data) ? data : []);
+      const [snippetsData, foldersData] = await Promise.all([
+        getSnippets(),
+        getSnippetFolders(),
+      ]);
+      setSnippets(Array.isArray(snippetsData) ? snippetsData : []);
+      setSnippetFolders(Array.isArray(foldersData) ? foldersData : []);
     } catch {
       toast.error(t("snippets.failedToFetch"));
       setSnippets([]);
+      setSnippetFolders([]);
     } finally {
       setLoading(false);
     }
@@ -493,6 +570,7 @@ export function SSHToolsSidebar({
       name: snippet.name,
       content: snippet.content,
       description: snippet.description || "",
+      folder: snippet.folder,
     });
     setFormErrors({ name: false, content: false });
     setShowDialog(true);
@@ -578,6 +656,246 @@ export function SSHToolsSidebar({
     toast.success(t("snippets.copySuccess", { name: snippet.name }));
   };
 
+  const toggleFolder = (folderName: string) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderName)) {
+        next.delete(folderName);
+      } else {
+        next.add(folderName);
+      }
+      return next;
+    });
+  };
+
+  const getFolderIcon = (folderName: string) => {
+    const metadata = snippetFolders.find((f) => f.name === folderName);
+    if (!metadata?.icon) return Folder;
+
+    const iconData = AVAILABLE_ICONS.find((i) => i.value === metadata.icon);
+    return iconData?.Icon || Folder;
+  };
+
+  const getFolderColor = (folderName: string) => {
+    const metadata = snippetFolders.find((f) => f.name === folderName);
+    return metadata?.color;
+  };
+
+  const groupSnippetsByFolder = () => {
+    const grouped = new Map<string, Snippet[]>();
+
+    snippetFolders.forEach((folder) => {
+      if (!grouped.has(folder.name)) {
+        grouped.set(folder.name, []);
+      }
+    });
+
+    snippets.forEach((snippet) => {
+      const folderName = snippet.folder || "";
+      if (!grouped.has(folderName)) {
+        grouped.set(folderName, []);
+      }
+      grouped.get(folderName)!.push(snippet);
+    });
+
+    return grouped;
+  };
+
+  const handleDragStart = (e: React.DragEvent, snippet: Snippet) => {
+    setDraggedSnippet(snippet);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetSnippet: Snippet) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragEnterFolder = (folderName: string) => {
+    setDragOverFolder(folderName);
+  };
+
+  const handleDragLeaveFolder = () => {
+    setDragOverFolder(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetSnippet: Snippet) => {
+    e.preventDefault();
+
+    if (!draggedSnippet || draggedSnippet.id === targetSnippet.id) {
+      setDraggedSnippet(null);
+      setDragOverFolder(null);
+      return;
+    }
+
+    const sourceFolder = draggedSnippet.folder || "";
+    const targetFolder = targetSnippet.folder || "";
+
+    if (sourceFolder !== targetFolder) {
+      toast.error(
+        t("snippets.reorderSameFolder", {
+          defaultValue: "Can only reorder snippets within the same folder",
+        }),
+      );
+      setDraggedSnippet(null);
+      setDragOverFolder(null);
+      return;
+    }
+
+    const folderSnippets = snippets.filter(
+      (s) => (s.folder || "") === targetFolder,
+    );
+
+    const draggedIndex = folderSnippets.findIndex(
+      (s) => s.id === draggedSnippet.id,
+    );
+    const targetIndex = folderSnippets.findIndex(
+      (s) => s.id === targetSnippet.id,
+    );
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedSnippet(null);
+      setDragOverFolder(null);
+      return;
+    }
+
+    const reorderedSnippets = [...folderSnippets];
+    reorderedSnippets.splice(draggedIndex, 1);
+    reorderedSnippets.splice(targetIndex, 0, draggedSnippet);
+
+    const updates = reorderedSnippets.map((snippet, index) => ({
+      id: snippet.id,
+      order: index,
+      folder: targetFolder || undefined,
+    }));
+
+    try {
+      await reorderSnippets(updates);
+      toast.success(
+        t("snippets.reorderSuccess", {
+          defaultValue: "Snippets reordered successfully",
+        }),
+      );
+      fetchSnippets();
+    } catch {
+      toast.error(
+        t("snippets.reorderFailed", {
+          defaultValue: "Failed to reorder snippets",
+        }),
+      );
+    }
+
+    setDraggedSnippet(null);
+    setDragOverFolder(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSnippet(null);
+    setDragOverFolder(null);
+  };
+
+  const handleCreateFolder = () => {
+    setEditingFolder(null);
+    setFolderFormData({
+      name: "",
+      color: AVAILABLE_COLORS[0].value,
+      icon: AVAILABLE_ICONS[0].value,
+    });
+    setFolderFormErrors({ name: false });
+    setShowFolderDialog(true);
+  };
+
+  const handleEditFolder = (folder: SnippetFolder) => {
+    setEditingFolder(folder);
+    setFolderFormData({
+      name: folder.name,
+      color: folder.color || AVAILABLE_COLORS[0].value,
+      icon: folder.icon || AVAILABLE_ICONS[0].value,
+    });
+    setFolderFormErrors({ name: false });
+    setShowFolderDialog(true);
+  };
+
+  const handleDeleteFolder = (folderName: string) => {
+    confirmWithToast(
+      t("snippets.deleteFolderConfirm", {
+        name: folderName,
+        defaultValue: `Delete folder "${folderName}"? All snippets will be moved to Uncategorized.`,
+      }),
+      async () => {
+        try {
+          await deleteSnippetFolder(folderName);
+          toast.success(
+            t("snippets.deleteFolderSuccess", {
+              defaultValue: "Folder deleted successfully",
+            }),
+          );
+          fetchSnippets();
+        } catch {
+          toast.error(
+            t("snippets.deleteFolderFailed", {
+              defaultValue: "Failed to delete folder",
+            }),
+          );
+        }
+      },
+      "destructive",
+    );
+  };
+
+  const handleFolderSubmit = async () => {
+    const errors = {
+      name: !folderFormData.name.trim(),
+    };
+
+    setFolderFormErrors(errors);
+
+    if (errors.name) {
+      return;
+    }
+
+    try {
+      if (editingFolder) {
+        if (editingFolder.name !== folderFormData.name) {
+          await renameSnippetFolder(editingFolder.name, folderFormData.name);
+        }
+        await updateSnippetFolderMetadata(folderFormData.name, {
+          color: folderFormData.color || undefined,
+          icon: folderFormData.icon || undefined,
+        });
+        toast.success(
+          t("snippets.updateFolderSuccess", {
+            defaultValue: "Folder updated successfully",
+          }),
+        );
+      } else {
+        await createSnippetFolder({
+          name: folderFormData.name,
+          color: folderFormData.color || undefined,
+          icon: folderFormData.icon || undefined,
+        });
+        toast.success(
+          t("snippets.createFolderSuccess", {
+            defaultValue: "Folder created successfully",
+          }),
+        );
+      }
+
+      setShowFolderDialog(false);
+      fetchSnippets();
+    } catch {
+      toast.error(
+        editingFolder
+          ? t("snippets.updateFolderFailed", {
+              defaultValue: "Failed to update folder",
+            })
+          : t("snippets.createFolderFailed", {
+              defaultValue: "Failed to create folder",
+            }),
+      );
+    }
+  };
+
   const handleSplitModeChange = (mode: "none" | "2" | "3" | "4") => {
     setSplitMode(mode);
 
@@ -589,25 +907,25 @@ export function SSHToolsSidebar({
     }
   };
 
-  const handleDragStart = (tabId: number) => {
+  const handleTabDragStart = (tabId: number) => {
     setDraggedTabId(tabId);
   };
 
-  const handleDragEnd = () => {
+  const handleTabDragEnd = () => {
     setDraggedTabId(null);
     setDragOverCellIndex(null);
   };
 
-  const handleDragOver = (e: React.DragEvent, cellIndex: number) => {
+  const handleTabDragOver = (e: React.DragEvent, cellIndex: number) => {
     e.preventDefault();
     setDragOverCellIndex(cellIndex);
   };
 
-  const handleDragLeave = () => {
+  const handleTabDragLeave = () => {
     setDragOverCellIndex(null);
   };
 
-  const handleDrop = (cellIndex: number) => {
+  const handleTabDrop = (cellIndex: number) => {
     if (draggedTabId === null) return;
 
     setSplitAssignments((prev) => {
@@ -893,64 +1211,81 @@ export function SSHToolsSidebar({
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="snippets" className="space-y-4">
-                    {terminalTabs.length > 0 && (
-                      <>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-white">
-                            {t("snippets.selectTerminals", {
-                              defaultValue: "Select Terminals (optional)",
-                            })}
-                          </label>
-                          <p className="text-xs text-muted-foreground">
-                            {selectedSnippetTabIds.length > 0
-                              ? t("snippets.executeOnSelected", {
-                                  defaultValue: `Execute on ${selectedSnippetTabIds.length} selected terminal(s)`,
-                                  count: selectedSnippetTabIds.length,
-                                })
-                              : t("snippets.executeOnCurrent", {
-                                  defaultValue:
-                                    "Execute on current terminal (click to select multiple)",
-                                })}
-                          </p>
-                          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                            {terminalTabs.map((tab) => (
-                              <Button
-                                key={tab.id}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className={`rounded-full px-3 py-1 text-xs flex items-center gap-1 ${
-                                  selectedSnippetTabIds.includes(tab.id)
-                                    ? "text-white bg-gray-700"
-                                    : "text-gray-500"
-                                }`}
-                                onClick={() => handleSnippetTabToggle(tab.id)}
-                              >
-                                {tab.title}
-                              </Button>
-                            ))}
+                  <TabsContent
+                    value="snippets"
+                    className="space-y-4 flex flex-col flex-1 overflow-hidden"
+                  >
+                    <div className="flex-shrink-0 space-y-4">
+                      {terminalTabs.length > 0 && (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-white">
+                              {t("snippets.selectTerminals", {
+                                defaultValue: "Select Terminals (optional)",
+                              })}
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                              {selectedSnippetTabIds.length > 0
+                                ? t("snippets.executeOnSelected", {
+                                    defaultValue: `Execute on ${selectedSnippetTabIds.length} selected terminal(s)`,
+                                    count: selectedSnippetTabIds.length,
+                                  })
+                                : t("snippets.executeOnCurrent", {
+                                    defaultValue:
+                                      "Execute on current terminal (click to select multiple)",
+                                  })}
+                            </p>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {terminalTabs.map((tab) => (
+                                <Button
+                                  key={tab.id}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className={`rounded-full px-3 py-1 text-xs flex items-center gap-1 ${
+                                    selectedSnippetTabIds.includes(tab.id)
+                                      ? "text-white bg-gray-700"
+                                      : "text-gray-500"
+                                  }`}
+                                  onClick={() => handleSnippetTabToggle(tab.id)}
+                                >
+                                  {tab.title}
+                                </Button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                        <Separator />
-                      </>
-                    )}
+                          <Separator />
+                        </>
+                      )}
 
-                    <Button
-                      onClick={handleCreate}
-                      className="w-full"
-                      variant="outline"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t("snippets.new")}
-                    </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleCreate}
+                          className="flex-1"
+                          variant="outline"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          {t("snippets.new")}
+                        </Button>
+                        <Button
+                          onClick={handleCreateFolder}
+                          className="flex-1"
+                          variant="outline"
+                        >
+                          <FolderPlus className="w-4 h-4 mr-2" />
+                          {t("snippets.newFolder", {
+                            defaultValue: "New Folder",
+                          })}
+                        </Button>
+                      </div>
+                    </div>
 
                     {loading ? (
-                      <div className="text-center text-muted-foreground py-8">
+                      <div className="text-center text-muted-foreground py-8 flex-1">
                         <p>{t("common.loading")}</p>
                       </div>
-                    ) : snippets.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8">
+                    ) : snippets.length === 0 && snippetFolders.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8 flex-1">
                         <p className="mb-2 font-medium">
                           {t("snippets.empty")}
                         </p>
@@ -958,98 +1293,227 @@ export function SSHToolsSidebar({
                       </div>
                     ) : (
                       <TooltipProvider>
-                        <div className="space-y-3">
-                          {snippets.map((snippet) => (
-                            <div
-                              key={snippet.id}
-                              className="bg-dark-bg-input border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-gray-400/50 hover:bg-dark-hover-alt transition-all duration-200 p-3 group"
-                            >
-                              <div className="mb-2">
-                                <h3 className="text-sm font-medium text-white mb-1">
-                                  {snippet.name}
-                                </h3>
-                                {snippet.description && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {snippet.description}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  ID: {snippet.id}
-                                </p>
-                              </div>
+                        <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+                          {Array.from(groupSnippetsByFolder()).map(
+                            ([folderName, folderSnippets]) => {
+                              const folderMetadata = snippetFolders.find(
+                                (f) => f.name === folderName,
+                              );
+                              const isCollapsed =
+                                collapsedFolders.has(folderName);
 
-                              <div className="bg-muted/30 rounded p-2 mb-3">
-                                <code className="text-xs font-mono break-all line-clamp-2 text-muted-foreground">
-                                  {snippet.content}
-                                </code>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      className="flex-1"
-                                      onClick={() => handleExecute(snippet)}
+                              return (
+                                <div key={folderName || "uncategorized"}>
+                                  {/* Folder Header */}
+                                  <div className="flex items-center gap-2 mb-2 hover:bg-dark-hover-alt p-2 rounded-lg transition-colors group/folder">
+                                    <div
+                                      className="flex items-center gap-2 flex-1 cursor-pointer"
+                                      onClick={() => toggleFolder(folderName)}
                                     >
-                                      <Play className="w-3 h-3 mr-1" />
-                                      {t("snippets.run")}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("snippets.runTooltip")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                      {isCollapsed ? (
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                      ) : (
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                      )}
+                                      {(() => {
+                                        const FolderIcon =
+                                          getFolderIcon(folderName);
+                                        const folderColor =
+                                          getFolderColor(folderName);
+                                        return (
+                                          <FolderIcon
+                                            className="h-4 w-4"
+                                            style={{
+                                              color: folderColor || undefined,
+                                            }}
+                                          />
+                                        );
+                                      })()}
+                                      <span
+                                        className="text-sm font-semibold"
+                                        style={{
+                                          color:
+                                            getFolderColor(folderName) ||
+                                            undefined,
+                                        }}
+                                      >
+                                        {folderName ||
+                                          t("snippets.uncategorized", {
+                                            defaultValue: "Uncategorized",
+                                          })}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground ml-auto">
+                                        {folderSnippets.length}
+                                      </span>
+                                    </div>
+                                    {folderName && (
+                                      <div className="flex items-center gap-1 opacity-0 group-hover/folder:opacity-100 transition-opacity">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 w-6 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditFolder(
+                                              folderMetadata || {
+                                                id: 0,
+                                                userId: "",
+                                                name: folderName,
+                                                createdAt: "",
+                                                updatedAt: "",
+                                              },
+                                            );
+                                          }}
+                                        >
+                                          <Settings className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteFolder(folderName);
+                                          }}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
 
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleCopy(snippet)}
-                                    >
-                                      <Copy className="w-3 h-3" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("snippets.copyTooltip")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                  {/* Folder Content */}
+                                  {!isCollapsed && (
+                                    <div className="space-y-2 ml-6">
+                                      {folderSnippets.map((snippet) => (
+                                        <div
+                                          key={snippet.id}
+                                          draggable
+                                          onDragStart={(e) =>
+                                            handleDragStart(e, snippet)
+                                          }
+                                          onDragOver={(e) =>
+                                            handleDragOver(e, snippet)
+                                          }
+                                          onDrop={(e) => handleDrop(e, snippet)}
+                                          onDragEnd={handleDragEnd}
+                                          className={`bg-dark-bg-input border border-input rounded-lg cursor-move hover:shadow-lg hover:border-gray-400/50 hover:bg-dark-hover-alt transition-all duration-200 p-3 group ${
+                                            draggedSnippet?.id === snippet.id
+                                              ? "opacity-50"
+                                              : ""
+                                          }`}
+                                        >
+                                          <div className="mb-2 flex items-center gap-2">
+                                            <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
+                                            <div className="flex-1 min-w-0">
+                                              <h3 className="text-sm font-medium text-white mb-1">
+                                                {snippet.name}
+                                              </h3>
+                                              {snippet.description && (
+                                                <p className="text-xs text-muted-foreground">
+                                                  {snippet.description}
+                                                </p>
+                                              )}
+                                              <p className="text-xs text-muted-foreground mt-1">
+                                                ID: {snippet.id}
+                                              </p>
+                                            </div>
+                                          </div>
 
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleEdit(snippet)}
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("snippets.editTooltip")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                          <div className="bg-muted/30 rounded p-2 mb-3">
+                                            <code className="text-xs font-mono break-all line-clamp-2 text-muted-foreground">
+                                              {snippet.content}
+                                            </code>
+                                          </div>
 
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleDelete(snippet)}
-                                      className="hover:bg-destructive hover:text-destructive-foreground"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t("snippets.deleteTooltip")}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            </div>
-                          ))}
+                                          <div className="flex items-center gap-2">
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="default"
+                                                  className="flex-1"
+                                                  onClick={() =>
+                                                    handleExecute(snippet)
+                                                  }
+                                                >
+                                                  <Play className="w-3 h-3 mr-1" />
+                                                  {t("snippets.run")}
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  {t("snippets.runTooltip")}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() =>
+                                                    handleCopy(snippet)
+                                                  }
+                                                >
+                                                  <Copy className="w-3 h-3" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  {t("snippets.copyTooltip")}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() =>
+                                                    handleEdit(snippet)
+                                                  }
+                                                >
+                                                  <Edit className="w-3 h-3" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  {t("snippets.editTooltip")}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() =>
+                                                    handleDelete(snippet)
+                                                  }
+                                                  className="hover:bg-destructive hover:text-destructive-foreground"
+                                                >
+                                                  <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  {t("snippets.deleteTooltip")}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            },
+                          )}
                         </div>
                       </TooltipProvider>
                     )}
@@ -1246,8 +1710,10 @@ export function SSHToolsSidebar({
                                   <div
                                     key={tab.id}
                                     draggable={!isAssigned}
-                                    onDragStart={() => handleDragStart(tab.id)}
-                                    onDragEnd={handleDragEnd}
+                                    onDragStart={() =>
+                                      handleTabDragStart(tab.id)
+                                    }
+                                    onDragEnd={handleTabDragEnd}
                                     className={`
                                       px-3 py-2 rounded-md text-sm cursor-move transition-all
                                       ${
@@ -1299,9 +1765,11 @@ export function SSHToolsSidebar({
                                   return (
                                     <div
                                       key={idx}
-                                      onDragOver={(e) => handleDragOver(e, idx)}
-                                      onDragLeave={handleDragLeave}
-                                      onDrop={() => handleDrop(idx)}
+                                      onDragOver={(e) =>
+                                        handleTabDragOver(e, idx)
+                                      }
+                                      onDragLeave={handleTabDragLeave}
+                                      onDrop={() => handleTabDrop(idx)}
                                       className={`
                                         relative bg-dark-bg border-2 rounded-md p-3 min-h-[100px]
                                         flex flex-col items-center justify-center transition-all
@@ -1483,6 +1951,56 @@ export function SSHToolsSidebar({
               </div>
 
               <div className="space-y-2">
+                <label className="text-sm font-medium text-white flex items-center gap-2">
+                  <Folder className="h-4 w-4" />
+                  {t("snippets.folder", { defaultValue: "Folder" })}
+                  <span className="text-muted-foreground">
+                    ({t("common.optional")})
+                  </span>
+                </label>
+                <Select
+                  value={formData.folder || "__no_folder__"}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      folder: value === "__no_folder__" ? undefined : value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={t("snippets.selectFolder", {
+                        defaultValue: "Select a folder or leave empty",
+                      })}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__no_folder__">
+                      {t("snippets.noFolder", {
+                        defaultValue: "No folder (Uncategorized)",
+                      })}
+                    </SelectItem>
+                    {snippetFolders.map((folder) => {
+                      const FolderIcon = getFolderIcon(folder.name);
+                      return (
+                        <SelectItem key={folder.id} value={folder.name}>
+                          <div className="flex items-center gap-2">
+                            <FolderIcon
+                              className="h-4 w-4"
+                              style={{
+                                color: folder.color || undefined,
+                              }}
+                            />
+                            <span>{folder.name}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-white flex items-center gap-1">
                   {t("snippets.content")}
                   <span className="text-destructive">*</span>
@@ -1516,6 +2034,167 @@ export function SSHToolsSidebar({
               </Button>
               <Button onClick={handleSubmit} className="flex-1">
                 {editingSnippet ? t("snippets.edit") : t("snippets.create")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFolderDialog && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-[9999999] bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowFolderDialog(false)}
+        >
+          <div
+            className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-lg w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-white">
+                {editingFolder
+                  ? t("snippets.editFolder", { defaultValue: "Edit Folder" })
+                  : t("snippets.createFolder", {
+                      defaultValue: "Create Folder",
+                    })}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {editingFolder
+                  ? t("snippets.editFolderDescription", {
+                      defaultValue: "Customize your snippet folder",
+                    })
+                  : t("snippets.createFolderDescription", {
+                      defaultValue: "Organize your snippets into folders",
+                    })}
+              </p>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white flex items-center gap-1">
+                  {t("snippets.folderName", { defaultValue: "Folder Name" })}
+                  <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={folderFormData.name}
+                  onChange={(e) =>
+                    setFolderFormData({
+                      ...folderFormData,
+                      name: e.target.value,
+                    })
+                  }
+                  placeholder={t("snippets.folderNamePlaceholder", {
+                    defaultValue: "e.g., System Commands, Docker Scripts",
+                  })}
+                  className={`${folderFormErrors.name ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                  autoFocus
+                />
+                {folderFormErrors.name && (
+                  <p className="text-xs text-destructive mt-1">
+                    {t("snippets.folderNameRequired", {
+                      defaultValue: "Folder name is required",
+                    })}
+                  </p>
+                )}
+              </div>
+
+              {/* Color Selection */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold text-white">
+                  {t("snippets.folderColor", { defaultValue: "Folder Color" })}
+                </Label>
+                <div className="grid grid-cols-4 gap-3">
+                  {AVAILABLE_COLORS.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      className={`h-12 rounded-md border-2 transition-all hover:scale-105 ${
+                        folderFormData.color === color.value
+                          ? "border-white shadow-lg scale-105"
+                          : "border-dark-border"
+                      }`}
+                      style={{ backgroundColor: color.value }}
+                      onClick={() =>
+                        setFolderFormData({
+                          ...folderFormData,
+                          color: color.value,
+                        })
+                      }
+                      title={color.label}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Icon Selection */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold text-white">
+                  {t("snippets.folderIcon", { defaultValue: "Folder Icon" })}
+                </Label>
+                <div className="grid grid-cols-5 gap-3">
+                  {AVAILABLE_ICONS.map(({ value, label, Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`h-14 rounded-md border-2 transition-all hover:scale-105 flex items-center justify-center ${
+                        folderFormData.icon === value
+                          ? "border-primary bg-primary/10"
+                          : "border-dark-border bg-dark-bg-darker"
+                      }`}
+                      onClick={() =>
+                        setFolderFormData({ ...folderFormData, icon: value })
+                      }
+                      title={label}
+                    >
+                      <Icon className="w-6 h-6" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold text-white">
+                  {t("snippets.preview", { defaultValue: "Preview" })}
+                </Label>
+                <div className="flex items-center gap-3 p-4 rounded-md bg-dark-bg-darker border border-dark-border">
+                  {(() => {
+                    const IconComponent =
+                      AVAILABLE_ICONS.find(
+                        (i) => i.value === folderFormData.icon,
+                      )?.Icon || Folder;
+                    return (
+                      <IconComponent
+                        className="w-5 h-5"
+                        style={{ color: folderFormData.color }}
+                      />
+                    );
+                  })()}
+                  <span className="font-medium">
+                    {folderFormData.name ||
+                      t("snippets.folderName", { defaultValue: "Folder Name" })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <Separator className="my-6" />
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowFolderDialog(false)}
+                className="flex-1"
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={handleFolderSubmit} className="flex-1">
+                {editingFolder
+                  ? t("snippets.updateFolder", {
+                      defaultValue: "Update Folder",
+                    })
+                  : t("snippets.createFolder", {
+                      defaultValue: "Create Folder",
+                    })}
               </Button>
             </div>
           </div>

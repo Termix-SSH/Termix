@@ -2874,6 +2874,82 @@ export async function executeSnippet(
   }
 }
 
+export async function reorderSnippets(
+  snippets: Array<{ id: number; order: number; folder?: string }>,
+): Promise<{ success: boolean; updated: number }> {
+  try {
+    const response = await authApi.put("/snippets/reorder", { snippets });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "reorder snippets");
+  }
+}
+
+export async function getSnippetFolders(): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.get("/snippets/folders");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch snippet folders");
+  }
+}
+
+export async function createSnippetFolder(folderData: {
+  name: string;
+  color?: string;
+  icon?: string;
+}): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.post("/snippets/folders", folderData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "create snippet folder");
+  }
+}
+
+export async function updateSnippetFolderMetadata(
+  folderName: string,
+  metadata: { color?: string; icon?: string },
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.put(
+      `/snippets/folders/${encodeURIComponent(folderName)}/metadata`,
+      metadata,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update snippet folder metadata");
+  }
+}
+
+export async function renameSnippetFolder(
+  oldName: string,
+  newName: string,
+): Promise<{ success: boolean; oldName: string; newName: string }> {
+  try {
+    const response = await authApi.put("/snippets/folders/rename", {
+      oldName,
+      newName,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "rename snippet folder");
+  }
+}
+
+export async function deleteSnippetFolder(
+  folderName: string,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.delete(
+      `/snippets/folders/${encodeURIComponent(folderName)}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete snippet folder");
+  }
+}
+
 // ============================================================================
 // HOMEPAGE API
 // ============================================================================

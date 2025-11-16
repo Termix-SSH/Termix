@@ -206,6 +206,24 @@ export const snippets = sqliteTable("snippets", {
   name: text("name").notNull(),
   content: text("content").notNull(),
   description: text("description"),
+  folder: text("folder"),
+  order: integer("order").notNull().default(0),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const snippetFolders = sqliteTable("snippet_folders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color"),
+  icon: text("icon"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

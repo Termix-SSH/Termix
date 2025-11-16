@@ -386,14 +386,14 @@ const addColumnIfNotExists = (
   try {
     sqlite
       .prepare(
-        `SELECT ${column}
+        `SELECT "${column}"
                         FROM ${table} LIMIT 1`,
       )
       .get();
   } catch {
     try {
       sqlite.exec(`ALTER TABLE ${table}
-                ADD COLUMN ${column} ${definition};`);
+                ADD COLUMN "${column}" ${definition};`);
     } catch (alterError) {
       databaseLogger.warn(`Failed to add column ${column} to ${table}`, {
         operation: "schema_migration",
@@ -494,6 +494,35 @@ const migrateSchema = () => {
   addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_shortcuts", "host_id", "INTEGER NOT NULL");
+
+  addColumnIfNotExists("snippets", "folder", "TEXT");
+  addColumnIfNotExists("snippets", "order", "INTEGER NOT NULL DEFAULT 0");
+
+  try {
+    sqlite
+      .prepare("SELECT id FROM snippet_folders LIMIT 1")
+      .get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS snippet_folders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          color TEXT,
+          icon TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create snippet_folders table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
 
   try {
     sqlite

@@ -1,8 +1,8 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { snippets } from "../db/schema.js";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { snippets, snippetFolders } from "../db/schema.js";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -17,241 +17,389 @@ const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
-// Get all snippets for the authenticated user
-// GET /snippets
+// Get all snippet folders
+// GET /snippets/folders
 router.get(
-  "/",
+  "/folders",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId)) {
-      authLogger.warn("Invalid userId for snippets fetch");
+      authLogger.warn("Invalid userId for snippet folders fetch");
       return res.status(400).json({ error: "Invalid userId" });
     }
 
     try {
       const result = await db
         .select()
-        .from(snippets)
-        .where(eq(snippets.userId, userId))
-        .orderBy(desc(snippets.updatedAt));
+        .from(snippetFolders)
+        .where(eq(snippetFolders.userId, userId))
+        .orderBy(asc(snippetFolders.name));
 
       res.json(result);
     } catch (err) {
-      authLogger.error("Failed to fetch snippets", err);
-      res.status(500).json({ error: "Failed to fetch snippets" });
+      authLogger.error("Failed to fetch snippet folders", err);
+      res.status(500).json({ error: "Failed to fetch snippet folders" });
     }
   },
 );
 
-// Get a specific snippet by ID
-// GET /snippets/:id
-router.get(
-  "/:id",
-  authenticateJWT,
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
-    const snippetId = parseInt(id, 10);
-
-    if (!isNonEmptyString(userId) || isNaN(snippetId)) {
-      authLogger.warn("Invalid request for snippet fetch: invalid ID", {
-        userId,
-        id,
-      });
-      return res.status(400).json({ error: "Invalid request parameters" });
-    }
-
-    try {
-      const result = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
-
-      if (result.length === 0) {
-        return res.status(404).json({ error: "Snippet not found" });
-      }
-
-      res.json(result[0]);
-    } catch (err) {
-      authLogger.error("Failed to fetch snippet", err);
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to fetch snippet",
-      });
-    }
-  },
-);
-
-// Create a new snippet
-// POST /snippets
+// Create a new snippet folder
+// POST /snippets/folders
 router.post(
-  "/",
+  "/folders",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { name, content, description } = req.body;
+    const { name, color, icon } = req.body;
 
-    if (
-      !isNonEmptyString(userId) ||
-      !isNonEmptyString(name) ||
-      !isNonEmptyString(content)
-    ) {
-      authLogger.warn("Invalid snippet creation data validation failed", {
-        operation: "snippet_create",
+    if (!isNonEmptyString(userId) || !isNonEmptyString(name)) {
+      authLogger.warn("Invalid snippet folder creation data", {
+        operation: "snippet_folder_create",
         userId,
         hasName: !!name,
-        hasContent: !!content,
       });
-      return res.status(400).json({ error: "Name and content are required" });
+      return res.status(400).json({ error: "Folder name is required" });
     }
 
     try {
+      const existing = await db
+        .select()
+        .from(snippetFolders)
+        .where(
+          and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
+        );
+
+      if (existing.length > 0) {
+        return res
+          .status(409)
+          .json({ error: "Folder with this name already exists" });
+      }
+
       const insertData = {
         userId,
         name: name.trim(),
-        content: content.trim(),
-        description: description?.trim() || null,
+        color: color?.trim() || null,
+        icon: icon?.trim() || null,
       };
 
-      const result = await db.insert(snippets).values(insertData).returning();
+      const result = await db
+        .insert(snippetFolders)
+        .values(insertData)
+        .returning();
 
-      authLogger.success(`Snippet created: ${name} by user ${userId}`, {
-        operation: "snippet_create_success",
+      authLogger.success(`Snippet folder created: ${name} by user ${userId}`, {
+        operation: "snippet_folder_create_success",
         userId,
-        snippetId: result[0].id,
         name,
       });
 
       res.status(201).json(result[0]);
     } catch (err) {
-      authLogger.error("Failed to create snippet", err);
+      authLogger.error("Failed to create snippet folder", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to create snippet",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to create snippet folder",
       });
     }
   },
 );
 
-// Update a snippet
-// PUT /snippets/:id
+// Update snippet folder metadata (color, icon)
+// PUT /snippets/folders/:name/metadata
 router.put(
-  "/:id",
+  "/folders/:name/metadata",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
-    const updateData = req.body;
+    const { name } = req.params;
+    const { color, icon } = req.body;
 
-    if (!isNonEmptyString(userId) || !id) {
-      authLogger.warn("Invalid request for snippet update");
+    if (!isNonEmptyString(userId) || !name) {
+      authLogger.warn("Invalid request for snippet folder metadata update");
       return res.status(400).json({ error: "Invalid request" });
     }
 
     try {
       const existing = await db
         .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+        .from(snippetFolders)
+        .where(
+          and(
+            eq(snippetFolders.userId, userId),
+            eq(snippetFolders.name, decodeURIComponent(name)),
+          ),
+        );
 
       if (existing.length === 0) {
-        return res.status(404).json({ error: "Snippet not found" });
+        return res.status(404).json({ error: "Folder not found" });
       }
 
       const updateFields: Partial<{
+        color: string | null;
+        icon: string | null;
         updatedAt: ReturnType<typeof sql.raw>;
-        name: string;
-        content: string;
-        description: string | null;
       }> = {
         updatedAt: sql`CURRENT_TIMESTAMP`,
       };
 
-      if (updateData.name !== undefined)
-        updateFields.name = updateData.name.trim();
-      if (updateData.content !== undefined)
-        updateFields.content = updateData.content.trim();
-      if (updateData.description !== undefined)
-        updateFields.description = updateData.description?.trim() || null;
+      if (color !== undefined) updateFields.color = color?.trim() || null;
+      if (icon !== undefined) updateFields.icon = icon?.trim() || null;
 
       await db
-        .update(snippets)
+        .update(snippetFolders)
         .set(updateFields)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+        .where(
+          and(
+            eq(snippetFolders.userId, userId),
+            eq(snippetFolders.name, decodeURIComponent(name)),
+          ),
+        );
 
       const updated = await db
         .select()
-        .from(snippets)
-        .where(eq(snippets.id, parseInt(id)));
+        .from(snippetFolders)
+        .where(
+          and(
+            eq(snippetFolders.userId, userId),
+            eq(snippetFolders.name, decodeURIComponent(name)),
+          ),
+        );
 
       authLogger.success(
-        `Snippet updated: ${updated[0].name} by user ${userId}`,
+        `Snippet folder metadata updated: ${name} by user ${userId}`,
         {
-          operation: "snippet_update_success",
+          operation: "snippet_folder_metadata_update_success",
           userId,
-          snippetId: parseInt(id),
-          name: updated[0].name,
+          name,
         },
       );
 
       res.json(updated[0]);
     } catch (err) {
-      authLogger.error("Failed to update snippet", err);
+      authLogger.error("Failed to update snippet folder metadata", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to update snippet",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to update snippet folder metadata",
       });
     }
   },
 );
 
-// Delete a snippet
-// DELETE /snippets/:id
-router.delete(
-  "/:id",
+// Rename snippet folder
+// PUT /snippets/folders/rename
+router.put(
+  "/folders/rename",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const { oldName, newName } = req.body;
 
-    if (!isNonEmptyString(userId) || !id) {
-      authLogger.warn("Invalid request for snippet delete");
+    if (
+      !isNonEmptyString(userId) ||
+      !isNonEmptyString(oldName) ||
+      !isNonEmptyString(newName)
+    ) {
+      authLogger.warn("Invalid request for snippet folder rename");
       return res.status(400).json({ error: "Invalid request" });
     }
 
     try {
       const existing = await db
         .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+        .from(snippetFolders)
+        .where(
+          and(
+            eq(snippetFolders.userId, userId),
+            eq(snippetFolders.name, oldName),
+          ),
+        );
 
       if (existing.length === 0) {
-        return res.status(404).json({ error: "Snippet not found" });
+        return res.status(404).json({ error: "Folder not found" });
+      }
+
+      const nameExists = await db
+        .select()
+        .from(snippetFolders)
+        .where(
+          and(
+            eq(snippetFolders.userId, userId),
+            eq(snippetFolders.name, newName),
+          ),
+        );
+
+      if (nameExists.length > 0) {
+        return res
+          .status(409)
+          .json({ error: "Folder with new name already exists" });
       }
 
       await db
-        .delete(snippets)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+        .update(snippetFolders)
+        .set({ name: newName, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(
+          and(
+            eq(snippetFolders.userId, userId),
+            eq(snippetFolders.name, oldName),
+          ),
+        );
+
+      await db
+        .update(snippets)
+        .set({ folder: newName })
+        .where(and(eq(snippets.userId, userId), eq(snippets.folder, oldName)));
 
       authLogger.success(
-        `Snippet deleted: ${existing[0].name} by user ${userId}`,
+        `Snippet folder renamed: ${oldName} -> ${newName} by user ${userId}`,
         {
-          operation: "snippet_delete_success",
+          operation: "snippet_folder_rename_success",
           userId,
-          snippetId: parseInt(id),
-          name: existing[0].name,
+          oldName,
+          newName,
+        },
+      );
+
+      res.json({ success: true, oldName, newName });
+    } catch (err) {
+      authLogger.error("Failed to rename snippet folder", err);
+      res.status(500).json({
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to rename snippet folder",
+      });
+    }
+  },
+);
+
+// Delete snippet folder
+// DELETE /snippets/folders/:name
+router.delete(
+  "/folders/:name",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { name } = req.params;
+
+    if (!isNonEmptyString(userId) || !name) {
+      authLogger.warn("Invalid request for snippet folder delete");
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    try {
+      const folderName = decodeURIComponent(name);
+
+      await db
+        .update(snippets)
+        .set({ folder: null })
+        .where(
+          and(eq(snippets.userId, userId), eq(snippets.folder, folderName)),
+        );
+
+      await db
+        .delete(snippetFolders)
+        .where(
+          and(
+            eq(snippetFolders.userId, userId),
+            eq(snippetFolders.name, folderName),
+          ),
+        );
+
+      authLogger.success(
+        `Snippet folder deleted: ${folderName} by user ${userId}`,
+        {
+          operation: "snippet_folder_delete_success",
+          userId,
+          name: folderName,
         },
       );
 
       res.json({ success: true });
     } catch (err) {
-      authLogger.error("Failed to delete snippet", err);
+      authLogger.error("Failed to delete snippet folder", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to delete snippet",
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete snippet folder",
+      });
+    }
+  },
+);
+
+// Reorder snippets (bulk update)
+// PUT /snippets/reorder
+router.put(
+  "/reorder",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { snippets: snippetUpdates } = req.body;
+
+    if (!isNonEmptyString(userId)) {
+      authLogger.warn("Invalid userId for snippet reorder");
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    if (!Array.isArray(snippetUpdates) || snippetUpdates.length === 0) {
+      authLogger.warn("Invalid snippet reorder data", {
+        operation: "snippet_reorder",
+        userId,
+      });
+      return res
+        .status(400)
+        .json({ error: "snippets array is required and must not be empty" });
+    }
+
+    try {
+      for (const update of snippetUpdates) {
+        const { id, order, folder } = update;
+
+        if (!id || order === undefined) {
+          continue;
+        }
+
+        const updateFields: Partial<{
+          order: number;
+          folder: string | null;
+        }> = {
+          order,
+        };
+
+        if (folder !== undefined) {
+          updateFields.folder = folder?.trim() || null;
+        }
+
+        await db
+          .update(snippets)
+          .set(updateFields)
+          .where(and(eq(snippets.id, id), eq(snippets.userId, userId)));
+      }
+
+      authLogger.success(`Snippets reordered by user ${userId}`, {
+        operation: "snippet_reorder_success",
+        userId,
+        count: snippetUpdates.length,
+      });
+
+      res.json({ success: true, updated: snippetUpdates.length });
+    } catch (err) {
+      authLogger.error("Failed to reorder snippets", err);
+      res.status(500).json({
+        error:
+          err instanceof Error ? err.message : "Failed to reorder snippets",
       });
     }
   },
@@ -509,6 +657,276 @@ router.post(
       authLogger.error("Failed to execute snippet", err);
       res.status(500).json({
         error: err instanceof Error ? err.message : "Failed to execute snippet",
+      });
+    }
+  },
+);
+
+// Get all snippets for the authenticated user
+// GET /snippets
+router.get(
+  "/",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId)) {
+      authLogger.warn("Invalid userId for snippets fetch");
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    try {
+      const result = await db
+        .select()
+        .from(snippets)
+        .where(eq(snippets.userId, userId))
+        .orderBy(
+          sql`CASE WHEN ${snippets.folder} IS NULL OR ${snippets.folder} = '' THEN 0 ELSE 1 END`,
+          asc(snippets.folder),
+          asc(snippets.order),
+          desc(snippets.updatedAt),
+        );
+
+      res.json(result);
+    } catch (err) {
+      authLogger.error("Failed to fetch snippets", err);
+      res.status(500).json({ error: "Failed to fetch snippets" });
+    }
+  },
+);
+
+// Get a specific snippet by ID
+// GET /snippets/:id
+router.get(
+  "/:id",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { id } = req.params;
+    const snippetId = parseInt(id, 10);
+
+    if (!isNonEmptyString(userId) || isNaN(snippetId)) {
+      authLogger.warn("Invalid request for snippet fetch: invalid ID", {
+        userId,
+        id,
+      });
+      return res.status(400).json({ error: "Invalid request parameters" });
+    }
+
+    try {
+      const result = await db
+        .select()
+        .from(snippets)
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: "Snippet not found" });
+      }
+
+      res.json(result[0]);
+    } catch (err) {
+      authLogger.error("Failed to fetch snippet", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Failed to fetch snippet",
+      });
+    }
+  },
+);
+
+// Create a new snippet
+// POST /snippets
+router.post(
+  "/",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { name, content, description, folder, order } = req.body;
+
+    if (
+      !isNonEmptyString(userId) ||
+      !isNonEmptyString(name) ||
+      !isNonEmptyString(content)
+    ) {
+      authLogger.warn("Invalid snippet creation data validation failed", {
+        operation: "snippet_create",
+        userId,
+        hasName: !!name,
+        hasContent: !!content,
+      });
+      return res.status(400).json({ error: "Name and content are required" });
+    }
+
+    try {
+      let snippetOrder = order;
+      if (snippetOrder === undefined || snippetOrder === null) {
+        const folderValue = folder?.trim() || "";
+        const maxOrderResult = await db
+          .select({ maxOrder: sql<number>`MAX(${snippets.order})` })
+          .from(snippets)
+          .where(
+            and(
+              eq(snippets.userId, userId),
+              folderValue
+                ? eq(snippets.folder, folderValue)
+                : sql`(${snippets.folder} IS NULL OR ${snippets.folder} = '')`,
+            ),
+          );
+        const maxOrder = maxOrderResult[0]?.maxOrder ?? -1;
+        snippetOrder = maxOrder + 1;
+      }
+
+      const insertData = {
+        userId,
+        name: name.trim(),
+        content: content.trim(),
+        description: description?.trim() || null,
+        folder: folder?.trim() || null,
+        order: snippetOrder,
+      };
+
+      const result = await db.insert(snippets).values(insertData).returning();
+
+      authLogger.success(`Snippet created: ${name} by user ${userId}`, {
+        operation: "snippet_create_success",
+        userId,
+        snippetId: result[0].id,
+        name,
+      });
+
+      res.status(201).json(result[0]);
+    } catch (err) {
+      authLogger.error("Failed to create snippet", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Failed to create snippet",
+      });
+    }
+  },
+);
+
+// Update a snippet
+// PUT /snippets/:id
+router.put(
+  "/:id",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (!isNonEmptyString(userId) || !id) {
+      authLogger.warn("Invalid request for snippet update");
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    try {
+      const existing = await db
+        .select()
+        .from(snippets)
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Snippet not found" });
+      }
+
+      const updateFields: Partial<{
+        updatedAt: ReturnType<typeof sql.raw>;
+        name: string;
+        content: string;
+        description: string | null;
+        folder: string | null;
+        order: number;
+      }> = {
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      };
+
+      if (updateData.name !== undefined)
+        updateFields.name = updateData.name.trim();
+      if (updateData.content !== undefined)
+        updateFields.content = updateData.content.trim();
+      if (updateData.description !== undefined)
+        updateFields.description = updateData.description?.trim() || null;
+      if (updateData.folder !== undefined)
+        updateFields.folder = updateData.folder?.trim() || null;
+      if (updateData.order !== undefined) updateFields.order = updateData.order;
+
+      await db
+        .update(snippets)
+        .set(updateFields)
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+
+      const updated = await db
+        .select()
+        .from(snippets)
+        .where(eq(snippets.id, parseInt(id)));
+
+      authLogger.success(
+        `Snippet updated: ${updated[0].name} by user ${userId}`,
+        {
+          operation: "snippet_update_success",
+          userId,
+          snippetId: parseInt(id),
+          name: updated[0].name,
+        },
+      );
+
+      res.json(updated[0]);
+    } catch (err) {
+      authLogger.error("Failed to update snippet", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Failed to update snippet",
+      });
+    }
+  },
+);
+
+// Delete a snippet
+// DELETE /snippets/:id
+router.delete(
+  "/:id",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { id } = req.params;
+
+    if (!isNonEmptyString(userId) || !id) {
+      authLogger.warn("Invalid request for snippet delete");
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    try {
+      const existing = await db
+        .select()
+        .from(snippets)
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Snippet not found" });
+      }
+
+      await db
+        .delete(snippets)
+        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+
+      authLogger.success(
+        `Snippet deleted: ${existing[0].name} by user ${userId}`,
+        {
+          operation: "snippet_delete_success",
+          userId,
+          snippetId: parseInt(id),
+          name: existing[0].name,
+        },
+      );
+
+      res.json({ success: true });
+    } catch (err) {
+      authLogger.error("Failed to delete snippet", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Failed to delete snippet",
       });
     }
   },
