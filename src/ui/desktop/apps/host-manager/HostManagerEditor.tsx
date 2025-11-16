@@ -336,7 +336,6 @@ export function HostManagerEditor({
   const [snippets, setSnippets] = useState<
     Array<{ id: number; name: string; content: string }>
   >([]);
-  const [snippetSearch, setSnippetSearch] = useState("");
 
   const [authTab, setAuthTab] = useState<
     "password" | "key" | "credential" | "none"
@@ -2304,76 +2303,102 @@ export function HostManagerEditor({
                         <FormField
                           control={form.control}
                           name="terminalConfig.startupSnippetId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("hosts.startupSnippet")}</FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(
-                                    value === "none" ? null : parseInt(value),
-                                  );
-                                  setSnippetSearch("");
-                                }}
-                                value={field.value?.toString() || "none"}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue
-                                      placeholder={t("hosts.selectSnippet")}
-                                    />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <div className="px-2 pb-2 sticky top-0 bg-popover z-10">
-                                    <Input
-                                      placeholder={t("hosts.searchSnippets")}
-                                      value={snippetSearch}
-                                      onChange={(e) =>
-                                        setSnippetSearch(e.target.value)
-                                      }
-                                      className="h-8"
-                                      onClick={(e) => e.stopPropagation()}
-                                      onKeyDown={(e) => e.stopPropagation()}
-                                    />
-                                  </div>
-                                  <div className="max-h-[200px] overflow-y-auto">
-                                    <SelectItem value="none">
-                                      {t("hosts.snippetNone")}
-                                    </SelectItem>
-                                    {snippets
-                                      .filter((snippet) =>
-                                        snippet.name
-                                          .toLowerCase()
-                                          .includes(
-                                            snippetSearch.toLowerCase(),
-                                          ),
-                                      )
-                                      .map((snippet) => (
-                                        <SelectItem
-                                          key={snippet.id}
-                                          value={snippet.id.toString()}
+                          render={({ field }) => {
+                            const [open, setOpen] = React.useState(false);
+                            const selectedSnippet = snippets.find(
+                              (s) => s.id === field.value,
+                            );
+
+                            return (
+                              <FormItem>
+                                <FormLabel>
+                                  {t("hosts.startupSnippet")}
+                                </FormLabel>
+                                <Popover open={open} onOpenChange={setOpen}>
+                                  <PopoverTrigger asChild>
+                                    <FormControl>
+                                      <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={open}
+                                        className="w-full justify-between"
+                                      >
+                                        {selectedSnippet
+                                          ? selectedSnippet.name
+                                          : t("hosts.selectSnippet")}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                      </Button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="p-0"
+                                    style={{
+                                      width:
+                                        "var(--radix-popover-trigger-width)",
+                                    }}
+                                  >
+                                    <Command>
+                                      <CommandInput
+                                        placeholder={t("hosts.searchSnippets")}
+                                      />
+                                      <CommandEmpty>
+                                        {t("hosts.noSnippetFound")}
+                                      </CommandEmpty>
+                                      <CommandGroup className="max-h-[300px] overflow-y-auto">
+                                        <CommandItem
+                                          value="none"
+                                          onSelect={() => {
+                                            field.onChange(null);
+                                            setOpen(false);
+                                          }}
                                         >
-                                          {snippet.name}
-                                        </SelectItem>
-                                      ))}
-                                    {snippets.filter((snippet) =>
-                                      snippet.name
-                                        .toLowerCase()
-                                        .includes(snippetSearch.toLowerCase()),
-                                    ).length === 0 &&
-                                      snippetSearch && (
-                                        <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                                          No snippets found
-                                        </div>
-                                      )}
-                                  </div>
-                                </SelectContent>
-                              </Select>
-                              <FormDescription>
-                                Execute a snippet when the terminal connects
-                              </FormDescription>
-                            </FormItem>
-                          )}
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              !field.value
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          {t("hosts.snippetNone")}
+                                        </CommandItem>
+                                        {snippets.map((snippet) => (
+                                          <CommandItem
+                                            key={snippet.id}
+                                            value={`${snippet.name} ${snippet.content} ${snippet.id}`}
+                                            onSelect={() => {
+                                              field.onChange(snippet.id);
+                                              setOpen(false);
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                field.value === snippet.id
+                                                  ? "opacity-100"
+                                                  : "opacity-0",
+                                              )}
+                                            />
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">
+                                                {snippet.name}
+                                              </span>
+                                              <span className="text-xs text-muted-foreground truncate max-w-[350px]">
+                                                {snippet.content}
+                                              </span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </Command>
+                                  </PopoverContent>
+                                </Popover>
+                                <FormDescription>
+                                  Execute a snippet when the terminal connects
+                                </FormDescription>
+                              </FormItem>
+                            );
+                          }}
                         />
 
                         <FormField

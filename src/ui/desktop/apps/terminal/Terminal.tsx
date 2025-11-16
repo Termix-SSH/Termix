@@ -106,7 +106,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [isReady, setIsReady] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
-    const [isFitted, setIsFitted] = useState(false);
+    const [isFitted, setIsFitted] = useState(true);
     const [, setConnectionError] = useState<string | null>(null);
     const [, setIsAuthenticated] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
@@ -246,6 +246,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const lastFittedSizeRef = useRef<{ cols: number; rows: number } | null>(
+      null,
+    );
     const DEBOUNCE_MS = 140;
 
     const logTerminalActivity = async () => {
@@ -323,20 +326,30 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
+      const lastSize = lastFittedSizeRef.current;
+      if (
+        lastSize &&
+        lastSize.cols === terminal.cols &&
+        lastSize.rows === terminal.rows
+      ) {
+        return;
+      }
+
       isFittingRef.current = true;
 
-      requestAnimationFrame(() => {
-        try {
-          fitAddonRef.current?.fit();
-          if (terminal && terminal.cols > 0 && terminal.rows > 0) {
-            scheduleNotify(terminal.cols, terminal.rows);
-          }
-          hardRefresh();
-          setIsFitted(true);
-        } finally {
-          isFittingRef.current = false;
+      try {
+        fitAddonRef.current?.fit();
+        if (terminal && terminal.cols > 0 && terminal.rows > 0) {
+          scheduleNotify(terminal.cols, terminal.rows);
+          lastFittedSizeRef.current = {
+            cols: terminal.cols,
+            rows: terminal.rows,
+          };
         }
-      });
+        setIsFitted(true);
+      } finally {
+        isFittingRef.current = false;
+      }
     }
 
     function handleTotpSubmit(code: string) {
@@ -1414,19 +1427,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
-      let rafId1: number;
-      let rafId2: number;
+      let rafId: number;
 
-      rafId1 = requestAnimationFrame(() => {
-        rafId2 = requestAnimationFrame(() => {
-          hardRefresh();
-          performFit();
-        });
+      rafId = requestAnimationFrame(() => {
+        performFit();
       });
 
       return () => {
-        if (rafId1) cancelAnimationFrame(rafId1);
-        if (rafId2) cancelAnimationFrame(rafId2);
+        if (rafId) cancelAnimationFrame(rafId);
       };
     }, [isVisible, isReady, splitScreen, terminal]);
 
@@ -1452,10 +1460,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           ref={xtermRef}
           className="h-full w-full"
           style={{
-            opacity: isReady && !isConnecting && isFitted ? 1 : 0,
-            transition: "opacity 100ms ease-in-out",
-            pointerEvents:
-              isReady && !isConnecting && isFitted ? "auto" : "none",
+            visibility: isReady ? "visible" : "hidden",
+            pointerEvents: isReady ? "auto" : "none",
           }}
           onClick={() => {
             if (terminal && !splitScreen) {

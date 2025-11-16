@@ -17,6 +17,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
   Search,
   Key,
   Folder,
@@ -32,7 +44,9 @@ import {
   Upload,
   Server,
   User,
+  ChevronsUpDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   getCredentials,
   deleteCredential,
@@ -82,9 +96,7 @@ export function CredentialsManager({
   >([]);
   const [selectedHostId, setSelectedHostId] = useState<string>("");
   const [deployLoading, setDeployLoading] = useState(false);
-  const [hostSearchQuery, setHostSearchQuery] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [hostComboboxOpen, setHostComboboxOpen] = useState(false);
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -94,40 +106,10 @@ export function CredentialsManager({
 
   useEffect(() => {
     if (showDeployDialog) {
-      setDropdownOpen(false);
-      setHostSearchQuery("");
+      setHostComboboxOpen(false);
       setSelectedHostId("");
-      setTimeout(() => {
-        if (
-          document.activeElement &&
-          (document.activeElement as HTMLElement).blur
-        ) {
-          (document.activeElement as HTMLElement).blur();
-        }
-      }, 50);
     }
   }, [showDeployDialog]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setDropdownOpen(false);
-      }
-    }
-
-    if (dropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [dropdownOpen]);
 
   const fetchHosts = async () => {
     try {
@@ -168,8 +150,7 @@ export function CredentialsManager({
     }
     setDeployingCredential(credential);
     setSelectedHostId("");
-    setHostSearchQuery("");
-    setDropdownOpen(false);
+    setHostComboboxOpen(false);
     setShowDeployDialog(true);
   };
 
@@ -899,67 +880,62 @@ export function CredentialsManager({
                   <Server className="h-4 w-4 mr-2 text-muted-foreground" />
                   {t("credentials.targetHost")}
                 </label>
-                <div className="relative" ref={dropdownRef}>
-                  <Input
-                    placeholder={t("credentials.chooseHostToDeploy")}
-                    value={hostSearchQuery}
-                    onChange={(e) => {
-                      setHostSearchQuery(e.target.value);
-                    }}
-                    onClick={() => {
-                      setDropdownOpen(true);
-                    }}
-                    className="w-full"
-                    autoFocus={false}
-                    tabIndex={0}
-                  />
-                  {dropdownOpen && (
-                    <div className="absolute top-full left-0 z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {availableHosts.length === 0 ? (
-                        <div className="p-3 text-sm text-muted-foreground text-center">
-                          {t("credentials.noHostsAvailable")}
-                        </div>
-                      ) : availableHosts.filter(
-                          (host) =>
-                            !hostSearchQuery ||
-                            host.name
-                              ?.toLowerCase()
-                              .includes(hostSearchQuery.toLowerCase()) ||
-                            host.ip
-                              ?.toLowerCase()
-                              .includes(hostSearchQuery.toLowerCase()) ||
-                            host.username
-                              ?.toLowerCase()
-                              .includes(hostSearchQuery.toLowerCase()),
-                        ).length === 0 ? (
-                        <div className="p-3 text-sm text-muted-foreground text-center">
-                          {t("credentials.noHostsMatchSearch")}
-                        </div>
-                      ) : (
-                        availableHosts
-                          .filter(
-                            (host) =>
-                              !hostSearchQuery ||
-                              host.name
-                                ?.toLowerCase()
-                                .includes(hostSearchQuery.toLowerCase()) ||
-                              host.ip
-                                ?.toLowerCase()
-                                .includes(hostSearchQuery.toLowerCase()) ||
-                              host.username
-                                ?.toLowerCase()
-                                .includes(hostSearchQuery.toLowerCase()),
-                          )
-                          .map((host) => (
-                            <div
-                              key={host.id}
-                              className="flex items-center gap-3 py-2 px-3 hover:bg-muted cursor-pointer"
-                              onClick={() => {
-                                setSelectedHostId(host.id.toString());
-                                setHostSearchQuery(host.name || host.ip);
-                                setDropdownOpen(false);
-                              }}
-                            >
+                <Popover
+                  open={hostComboboxOpen}
+                  onOpenChange={setHostComboboxOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={hostComboboxOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedHostId
+                        ? (() => {
+                            const host = availableHosts.find(
+                              (h) => h.id.toString() === selectedHostId,
+                            );
+                            return host
+                              ? `${host.name || host.ip}`
+                              : t("credentials.chooseHostToDeploy");
+                          })()
+                        : t("credentials.chooseHostToDeploy")}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="p-0"
+                    style={{ width: "var(--radix-popover-trigger-width)" }}
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder={t("credentials.chooseHostToDeploy")}
+                      />
+                      <CommandEmpty>
+                        {availableHosts.length === 0
+                          ? t("credentials.noHostsAvailable")
+                          : t("credentials.noHostsMatchSearch")}
+                      </CommandEmpty>
+                      <CommandGroup className="max-h-[300px] overflow-y-auto">
+                        {availableHosts.map((host) => (
+                          <CommandItem
+                            key={host.id}
+                            value={`${host.name} ${host.ip} ${host.username} ${host.id}`}
+                            onSelect={() => {
+                              setSelectedHostId(host.id.toString());
+                              setHostComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedHostId === host.id.toString()
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            <div className="flex items-center gap-3">
                               <div className="p-1.5 rounded bg-muted">
                                 <Server className="h-3 w-3 text-muted-foreground" />
                               </div>
@@ -972,11 +948,12 @@ export function CredentialsManager({
                                 </div>
                               </div>
                             </div>
-                          ))
-                      )}
-                    </div>
-                  )}
-                </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
