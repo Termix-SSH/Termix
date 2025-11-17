@@ -2,14 +2,13 @@ import React, { useState } from "react";
 import { flushSync } from "react-dom";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronDown, ChevronUpIcon } from "lucide-react";
+import { ChevronDown, ChevronUpIcon, Hammer } from "lucide-react";
 import { Tab } from "@/ui/desktop/navigation/tabs/Tab.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
-import { SnippetsSidebar } from "@/ui/desktop/apps/terminal/SnippetsSidebar.tsx";
 import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
-import { ToolsMenu } from "@/ui/desktop/apps/tools/ToolsMenu.tsx";
+import { useCommandHistory } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
 
 interface TabData {
   id: number;
@@ -26,11 +25,15 @@ interface TabData {
 interface TopNavbarProps {
   isTopbarOpen: boolean;
   setIsTopbarOpen: (open: boolean) => void;
+  onOpenCommandPalette: () => void;
+  onRightSidebarStateChange?: (isOpen: boolean, width: number) => void;
 }
 
 export function TopNavbar({
   isTopbarOpen,
   setIsTopbarOpen,
+  onOpenCommandPalette,
+  onRightSidebarStateChange,
 }: TopNavbarProps): React.ReactElement {
   const { state } = useSidebar();
   const {
@@ -53,9 +56,56 @@ export function TopNavbar({
   const leftPosition =
     state === "collapsed" ? "26px" : "calc(var(--sidebar-width) + 8px)";
   const { t } = useTranslation();
+  const commandHistory = useCommandHistory();
 
-  const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
-  const [snippetsSidebarOpen, setSnippetsSidebarOpen] = useState(false);
+  const [toolsSidebarOpen, setToolsSidebarOpen] = useState(false);
+  const [commandHistoryTabActive, setCommandHistoryTabActive] = useState(false);
+  const [splitScreenTabActive, setSplitScreenTabActive] = useState(false);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(() => {
+    const saved = localStorage.getItem("rightSidebarWidth");
+    const defaultWidth = 400;
+    const savedWidth = saved !== null ? parseInt(saved, 10) : defaultWidth;
+    const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
+    const maxWidth = Math.floor(window.innerWidth * 0.3);
+    return Math.min(savedWidth, Math.max(minWidth, maxWidth));
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("rightSidebarWidth", String(rightSidebarWidth));
+  }, [rightSidebarWidth]);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const minWidth = Math.min(300, Math.floor(window.innerWidth * 0.2));
+      const maxWidth = Math.floor(window.innerWidth * 0.3);
+      if (rightSidebarWidth > maxWidth) {
+        setRightSidebarWidth(Math.max(minWidth, maxWidth));
+      } else if (rightSidebarWidth < minWidth) {
+        setRightSidebarWidth(minWidth);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [rightSidebarWidth]);
+
+  React.useEffect(() => {
+    if (onRightSidebarStateChange) {
+      onRightSidebarStateChange(toolsSidebarOpen, rightSidebarWidth);
+    }
+  }, [toolsSidebarOpen, rightSidebarWidth, onRightSidebarStateChange]);
+
+  const openCommandHistorySidebar = React.useCallback(() => {
+    setToolsSidebarOpen(true);
+    setCommandHistoryTabActive(true);
+  }, []);
+
+  React.useEffect(() => {
+    commandHistory.setOpenCommandHistory(openCommandHistorySidebar);
+  }, [commandHistory, openCommandHistorySidebar]);
+
+  const rightPosition = toolsSidebarOpen
+    ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
+    : "17px";
   const [justDroppedTabId, setJustDroppedTabId] = useState<number | null>(null);
   const [isInDropAnimation, setIsInDropAnimation] = useState(false);
   const [dragState, setDragState] = useState<{
@@ -82,7 +132,9 @@ export function TopNavbar({
   };
 
   const handleTabSplit = (tabId: number) => {
-    setSplitScreenTab(tabId);
+    setToolsSidebarOpen(true);
+    setCommandHistoryTabActive(false);
+    setSplitScreenTabActive(true);
   };
 
   const handleTabClose = (tabId: number) => {
@@ -296,12 +348,13 @@ export function TopNavbar({
   return (
     <div>
       <div
-        className="fixed z-10 h-[50px] border-2 border-dark-border rounded-lg transition-all duration-200 ease-linear flex flex-row transform-none m-0 p-0"
+        className="fixed z-10 h-[50px] border-2 border-dark-border rounded-lg flex flex-row transform-none m-0 p-0"
         style={{
           top: isTopbarOpen ? "0.5rem" : "-3rem",
           left: leftPosition,
-          right: "17px",
+          right: rightPosition,
           backgroundColor: "#18181b",
+          transition: "top 200ms linear, left 200ms linear, right 200ms linear",
         }}
       >
         <div
@@ -320,17 +373,7 @@ export function TopNavbar({
             const isAdmin = tab.type === "admin";
             const isUserProfile = tab.type === "user_profile";
             const isSplittable = isTerminal || isServer || isFileManager;
-            const isSplitButtonDisabled =
-              (isActive && !isSplitScreenActive) ||
-              ((allSplitScreenTab?.length || 0) >= 3 && !isSplit);
-            const disableSplit =
-              !isSplittable ||
-              isSplitButtonDisabled ||
-              isActive ||
-              currentTabIsHome ||
-              currentTabIsSshManager ||
-              currentTabIsAdmin ||
-              currentTabIsUserProfile;
+            const disableSplit = !isSplittable;
             const disableActivate =
               isSplit ||
               ((tab.type === "home" ||
@@ -339,8 +382,7 @@ export function TopNavbar({
                 tab.type === "user_profile") &&
                 isSplitScreenActive);
             const isHome = tab.type === "home";
-            const disableClose =
-              (isSplitScreenActive && isActive) || isSplit || isHome;
+            const disableClose = isHome;
 
             const isDraggingThisTab = dragState.draggedIndex === index;
             const isTheDraggedTab = tab.id === dragState.draggedId;
@@ -428,6 +470,7 @@ export function TopNavbar({
                   WebkitUserSelect: "none",
                   flex: tab.type === "home" ? "0 0 auto" : "1 1 150px",
                   minWidth: tab.type === "home" ? "auto" : "150px",
+                  maxWidth: tab.type === "home" ? "auto" : "450px",
                   display: "flex",
                 }}
               >
@@ -473,10 +516,14 @@ export function TopNavbar({
         <div className="flex items-center justify-center gap-2 flex-1 px-2">
           <TabDropdown />
 
-          <ToolsMenu
-            onOpenSshTools={() => setToolsSheetOpen(true)}
-            onOpenSnippets={() => setSnippetsSidebarOpen(true)}
-          />
+          <Button
+            variant="outline"
+            onClick={() => setToolsSidebarOpen(!toolsSidebarOpen)}
+            className="w-[30px] h-[30px] border-dark-border"
+            title={t("nav.tools")}
+          >
+            <Hammer className="h-4 w-4" />
+          </Button>
 
           <Button
             variant="outline"
@@ -494,7 +541,7 @@ export function TopNavbar({
           className="fixed top-0 cursor-pointer flex items-center justify-center rounded-bl-md rounded-br-md"
           style={{
             left: leftPosition,
-            right: "17px",
+            right: rightPosition,
             height: "10px",
             zIndex: 9999,
             backgroundColor: "#18181b",
@@ -507,14 +554,22 @@ export function TopNavbar({
       )}
 
       <SSHToolsSidebar
-        isOpen={toolsSheetOpen}
-        onClose={() => setToolsSheetOpen(false)}
-      />
-
-      <SnippetsSidebar
-        isOpen={snippetsSidebarOpen}
-        onClose={() => setSnippetsSidebarOpen(false)}
-        onExecute={handleSnippetExecute}
+        isOpen={toolsSidebarOpen}
+        onClose={() => setToolsSidebarOpen(false)}
+        onSnippetExecute={handleSnippetExecute}
+        sidebarWidth={rightSidebarWidth}
+        setSidebarWidth={setRightSidebarWidth}
+        initialTab={
+          commandHistoryTabActive
+            ? "command-history"
+            : splitScreenTabActive
+              ? "split-screen"
+              : undefined
+        }
+        onTabChange={() => {
+          setCommandHistoryTabActive(false);
+          setSplitScreenTabActive(false);
+        }}
       />
     </div>
   );

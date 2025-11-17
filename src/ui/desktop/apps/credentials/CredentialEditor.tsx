@@ -15,6 +15,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -52,6 +53,8 @@ export function CredentialEditor({
   const [detectedKeyType, setDetectedKeyType] = useState<string | null>(null);
   const [keyDetectionLoading, setKeyDetectionLoading] = useState(false);
   const keyDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [activeTab, setActiveTab] = useState("general");
+  const [formError, setFormError] = useState<string | null>(null);
 
   const [detectedPublicKeyType, setDetectedPublicKeyType] = useState<
     string | null
@@ -59,6 +62,10 @@ export function CredentialEditor({
   const [publicKeyDetectionLoading, setPublicKeyDetectionLoading] =
     useState(false);
   const publicKeyDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setFormError(null);
+  }, [activeTab]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -320,6 +327,8 @@ export function CredentialEditor({
 
   const onSubmit = async (data: FormData) => {
     try {
+      setFormError(null);
+
       if (!data.name || data.name.trim() === "") {
         data.name = data.username;
       }
@@ -378,6 +387,28 @@ export function CredentialEditor({
     }
   };
 
+  const handleFormError = () => {
+    const errors = form.formState.errors;
+
+    if (
+      errors.name ||
+      errors.username ||
+      errors.description ||
+      errors.folder ||
+      errors.tags
+    ) {
+      setActiveTab("general");
+    } else if (
+      errors.password ||
+      errors.key ||
+      errors.publicKey ||
+      errors.keyPassword ||
+      errors.keyType
+    ) {
+      setActiveTab("authentication");
+    }
+  };
+
   const [tagInput, setTagInput] = useState("");
 
   const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
@@ -427,11 +458,20 @@ export function CredentialEditor({
     >
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={form.handleSubmit(onSubmit, handleFormError)}
           className="flex flex-col flex-1 min-h-0 h-full"
         >
           <ScrollArea className="flex-1 min-h-0 w-full my-1 pb-2">
-            <Tabs defaultValue="general" className="w-full">
+            {formError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               <TabsList>
                 <TabsTrigger value="general">
                   {t("credentials.general")}

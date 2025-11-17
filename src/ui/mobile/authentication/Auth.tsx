@@ -52,7 +52,9 @@ function postJWTToWebView() {
         timestamp: Date.now(),
       }),
     );
-  } catch (error) {}
+  } catch (error) {
+    console.error("Auth operation failed:", error);
+  }
 }
 
 interface AuthProps extends React.ComponentProps<"div"> {
@@ -116,10 +118,17 @@ export function Auth({
   const [totpTempToken, setTotpTempToken] = useState("");
   const [totpLoading, setTotpLoading] = useState(false);
   const [mobileAuthSuccess, setMobileAuthSuccess] = useState(false);
+  const totpInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
   }, [loggedIn]);
+
+  useEffect(() => {
+    if (totpRequired && totpInputRef.current) {
+      totpInputRef.current.focus();
+    }
+  }, [totpRequired]);
 
   useEffect(() => {
     getRegistrationAllowed().then((res) => {
@@ -493,7 +502,12 @@ export function Auth({
     const error = urlParams.get("error");
 
     if (error) {
-      const errorMessage = `${t("errors.oidcAuthFailed")}: ${error}`;
+      let errorMessage: string;
+      if (error === "registration_disabled") {
+        errorMessage = t("messages.registrationDisabled");
+      } else {
+        errorMessage = `${t("errors.oidcAuthFailed")}: ${error}`;
+      }
       setError(errorMessage);
       setOidcLoading(false);
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -504,55 +518,45 @@ export function Auth({
       setOidcLoading(true);
       setError(null);
 
-      getUserInfo()
-        .then((meRes) => {
-          setIsAdmin(!!meRes.is_admin);
-          setUsername(meRes.username || null);
-          setUserId(meRes.userId || null);
-          setDbError(null);
-          postJWTToWebView();
+      window.history.replaceState({}, document.title, window.location.pathname);
 
-          if (isReactNativeWebView()) {
-            setMobileAuthSuccess(true);
+      setTimeout(() => {
+        getUserInfo()
+          .then((meRes) => {
+            setIsAdmin(!!meRes.is_admin);
+            setUsername(meRes.username || null);
+            setUserId(meRes.userId || null);
+            setDbError(null);
+            postJWTToWebView();
+
+            if (isReactNativeWebView()) {
+              setMobileAuthSuccess(true);
+              setOidcLoading(false);
+              return;
+            }
+
+            setLoggedIn(true);
+            onAuthSuccess({
+              isAdmin: !!meRes.is_admin,
+              username: meRes.username || null,
+              userId: meRes.userId || null,
+            });
+
+            setInternalLoggedIn(true);
+          })
+          .catch((err) => {
+            console.error("Failed to get user info after OIDC callback:", err);
+            setError(t("errors.failedUserInfo"));
+            setInternalLoggedIn(false);
+            setLoggedIn(false);
+            setIsAdmin(false);
+            setUsername(null);
+            setUserId(null);
+          })
+          .finally(() => {
             setOidcLoading(false);
-            window.history.replaceState(
-              {},
-              document.title,
-              window.location.pathname,
-            );
-            return;
-          }
-
-          setLoggedIn(true);
-          onAuthSuccess({
-            isAdmin: !!meRes.is_admin,
-            username: meRes.username || null,
-            userId: meRes.userId || null,
           });
-
-          setInternalLoggedIn(true);
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-          );
-        })
-        .catch(() => {
-          setError(t("errors.failedUserInfo"));
-          setInternalLoggedIn(false);
-          setLoggedIn(false);
-          setIsAdmin(false);
-          setUsername(null);
-          setUserId(null);
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-          );
-        })
-        .finally(() => {
-          setOidcLoading(false);
-        });
+      }, 200);
     }
   }, []);
 
@@ -651,6 +655,7 @@ export function Auth({
           <div className="flex flex-col gap-2">
             <Label htmlFor="totp-code">{t("auth.verifyCode")}</Label>
             <Input
+              ref={totpInputRef}
               id="totp-code"
               type="text"
               placeholder="000000"

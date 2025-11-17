@@ -17,8 +17,10 @@ import {
   Play,
   Star,
   Bookmark,
+  FileArchive,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 
 interface FileItem {
   name: string;
@@ -59,6 +61,9 @@ interface ContextMenuProps {
   onAddShortcut?: (path: string) => void;
   isPinned?: (file: FileItem) => boolean;
   currentPath?: string;
+  onExtractArchive?: (file: FileItem) => void;
+  onCompress?: (files: FileItem[]) => void;
+  onCopyPath?: (files: FileItem[]) => void;
 }
 
 interface MenuItem {
@@ -98,12 +103,21 @@ export function FileManagerContextMenu({
   onAddShortcut,
   isPinned,
   currentPath,
+  onExtractArchive,
+  onCompress,
+  onCopyPath,
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const [menuPosition, setMenuPosition] = useState({ x, y });
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      setIsMounted(false);
+      return;
+    }
+
+    setIsMounted(true);
 
     const adjustPosition = () => {
       const menuWidth = 200;
@@ -182,8 +196,6 @@ export function FileManagerContextMenu({
     };
   }, [isVisible, x, y, onClose]);
 
-  if (!isVisible) return null;
-
   const isFileContext = files.length > 0;
   const isSingleFile = files.length === 1;
   const isMultipleFiles = files.length > 1;
@@ -246,6 +258,43 @@ export function FileManagerContextMenu({
           : t("fileManager.downloadFile"),
         action: () => onDownload(files),
         shortcut: "Ctrl+D",
+      });
+    }
+
+    if (isSingleFile && files[0].type === "file" && onExtractArchive) {
+      const fileName = files[0].name.toLowerCase();
+      const isArchive =
+        fileName.endsWith(".zip") ||
+        fileName.endsWith(".tar") ||
+        fileName.endsWith(".tar.gz") ||
+        fileName.endsWith(".tgz") ||
+        fileName.endsWith(".tar.bz2") ||
+        fileName.endsWith(".tbz2") ||
+        fileName.endsWith(".tar.xz") ||
+        fileName.endsWith(".gz") ||
+        fileName.endsWith(".bz2") ||
+        fileName.endsWith(".xz") ||
+        fileName.endsWith(".7z") ||
+        fileName.endsWith(".rar");
+
+      if (isArchive) {
+        menuItems.push({
+          icon: <FileArchive className="w-4 h-4" />,
+          label: t("fileManager.extractArchive"),
+          action: () => onExtractArchive(files[0]),
+          shortcut: "Ctrl+E",
+        });
+      }
+    }
+
+    if (isFileContext && onCompress) {
+      menuItems.push({
+        icon: <FileArchive className="w-4 h-4" />,
+        label: isMultipleFiles
+          ? t("fileManager.compressFiles")
+          : t("fileManager.compressFile"),
+        action: () => onCompress(files),
+        shortcut: "Ctrl+Shift+C",
       });
     }
 
@@ -316,7 +365,30 @@ export function FileManagerContextMenu({
       });
     }
 
-    if ((isSingleFile && onRename) || onCopy || onCut) {
+    if (onCopyPath) {
+      menuItems.push({
+        icon: <Clipboard className="w-4 h-4" />,
+        label: isMultipleFiles
+          ? t("fileManager.copyPaths")
+          : t("fileManager.copyPath"),
+        action: () => onCopyPath(files),
+        shortcut: "Ctrl+Shift+P",
+      });
+    }
+
+    if ((isSingleFile && onRename) || onCopy || onCut || onCopyPath) {
+      menuItems.push({ separator: true } as MenuItem);
+    }
+
+    if (isSingleFile && onProperties) {
+      menuItems.push({
+        icon: <Info className="w-4 h-4" />,
+        label: t("fileManager.properties"),
+        action: () => onProperties(files[0]),
+      });
+    }
+
+    if ((isSingleFile && onProperties) || onDelete) {
       menuItems.push({ separator: true } as MenuItem);
     }
 
@@ -329,18 +401,6 @@ export function FileManagerContextMenu({
         action: () => onDelete(files),
         shortcut: "Delete",
         danger: true,
-      });
-    }
-
-    if (onDelete) {
-      menuItems.push({ separator: true } as MenuItem);
-    }
-
-    if (isSingleFile && onProperties) {
-      menuItems.push({
-        icon: <Info className="w-4 h-4" />,
-        label: t("fileManager.properties"),
-        action: () => onProperties(files[0]),
       });
     }
   } else {
@@ -425,13 +485,36 @@ export function FileManagerContextMenu({
     return index > 0 && index < filteredMenuItems.length - 1;
   });
 
+  const renderShortcut = (shortcut: string) => {
+    const keys = shortcut.split("+");
+    if (keys.length === 1) {
+      return <Kbd>{keys[0]}</Kbd>;
+    }
+    return (
+      <KbdGroup>
+        {keys.map((key, index) => (
+          <Kbd key={index}>{key}</Kbd>
+        ))}
+      </KbdGroup>
+    );
+  };
+
+  if (!isVisible && !isMounted) return null;
+
   return (
     <>
-      <div className="fixed inset-0 z-[99990]" />
+      <div
+        className={cn(
+          "fixed inset-0 z-[99990] transition-opacity duration-150",
+          !isMounted && "opacity-0",
+        )}
+      />
 
       <div
         data-context-menu
-        className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden"
+        className={cn(
+          "fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden",
+        )}
         style={{
           left: menuPosition.x,
           top: menuPosition.y,
@@ -470,9 +553,9 @@ export function FileManagerContextMenu({
                 <span className="flex-1">{item.label}</span>
               </div>
               {item.shortcut && (
-                <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                  {item.shortcut}
-                </span>
+                <div className="ml-2 flex-shrink-0">
+                  {renderShortcut(item.shortcut)}
+                </div>
               )}
             </button>
           );

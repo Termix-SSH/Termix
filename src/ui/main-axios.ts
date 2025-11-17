@@ -2,6 +2,7 @@ import axios, { AxiosError, type AxiosInstance } from "axios";
 import type {
   SSHHost,
   SSHHostData,
+  SSHFolder,
   TunnelConfig,
   TunnelStatus,
   FileManagerFile,
@@ -76,6 +77,7 @@ interface UserInfo {
   is_admin: boolean;
   is_oidc: boolean;
   data_unlocked: boolean;
+  password_hash?: string;
 }
 
 interface UserCount {
@@ -136,9 +138,58 @@ function getLoggerForService(serviceName: string) {
   }
 }
 
+const electronSettingsCache = new Map<string, string>();
+
+if (isElectron()) {
+  (async () => {
+    try {
+      const electronAPI = (
+        window as Window &
+          typeof globalThis & {
+            electronAPI?: any;
+          }
+      ).electronAPI;
+
+      if (electronAPI?.getSetting) {
+        const settingsToLoad = ["rightClickCopyPaste", "jwt"];
+        for (const key of settingsToLoad) {
+          const value = await electronAPI.getSetting(key);
+          if (value !== null && value !== undefined) {
+            electronSettingsCache.set(key, value);
+            localStorage.setItem(key, value);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[Electron] Failed to load settings cache:", error);
+    }
+  })();
+}
+
 export function setCookie(name: string, value: string, days = 7): void {
   if (isElectron()) {
-    localStorage.setItem(name, value);
+    try {
+      electronSettingsCache.set(name, value);
+
+      localStorage.setItem(name, value);
+
+      const electronAPI = (
+        window as Window &
+          typeof globalThis & {
+            electronAPI?: any;
+          }
+      ).electronAPI;
+
+      if (electronAPI?.setSetting) {
+        electronAPI.setSetting(name, value).catch((err: Error) => {
+          console.error(`[Electron] Failed to persist setting ${name}:`, err);
+        });
+      }
+
+      console.log(`[Electron] Set setting: ${name} = ${value}`);
+    } catch (error) {
+      console.error(`[Electron] Failed to set setting: ${name}`, error);
+    }
   } else {
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
     document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
@@ -147,8 +198,21 @@ export function setCookie(name: string, value: string, days = 7): void {
 
 export function getCookie(name: string): string | undefined {
   if (isElectron()) {
-    const token = localStorage.getItem(name) || undefined;
-    return token;
+    try {
+      if (electronSettingsCache.has(name)) {
+        return electronSettingsCache.get(name);
+      }
+
+      const token = localStorage.getItem(name) || undefined;
+      if (token) {
+        electronSettingsCache.set(name, token);
+      }
+      console.log(`[Electron] Get setting: ${name} = ${token}`);
+      return token;
+    } catch (error) {
+      console.error(`[Electron] Failed to get setting: ${name}`, error);
+      return undefined;
+    }
   } else {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -318,34 +382,30 @@ function createApiInstance(
         const errorMessage = (error.response?.data as Record<string, unknown>)
           ?.error;
         const isSessionExpired = errorCode === "SESSION_EXPIRED";
+        const isSessionNotFound = errorCode === "SESSION_NOT_FOUND";
         const isInvalidToken =
           errorCode === "AUTH_REQUIRED" ||
           errorMessage === "Invalid token" ||
           errorMessage === "Authentication required";
 
-        if (isElectron()) {
+        if (isSessionExpired || isSessionNotFound || isInvalidToken) {
           localStorage.removeItem("jwt");
-        } else {
-          localStorage.removeItem("jwt");
-        }
 
-        if (
-          (isSessionExpired || isInvalidToken) &&
-          typeof window !== "undefined"
-        ) {
-          console.warn(
-            "Session expired or invalid token - please log in again",
-          );
+          if (isElectron()) {
+            electronSettingsCache.delete("jwt");
+          }
 
-          document.cookie =
-            "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          if (typeof window !== "undefined") {
+            document.cookie =
+              "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          }
 
-          import("sonner").then(({ toast }) => {
-            toast.warning("Session expired. Please log in again.");
-            window.location.reload();
-          });
-
-          setTimeout(() => window.location.reload(), 1000);
+          if (isSessionExpired && typeof window !== "undefined") {
+            console.warn("Session expired - please log in again");
+            import("sonner").then(({ toast }) => {
+              toast.warning("Session expired. Please log in again.");
+            });
+          }
         }
       }
 
@@ -792,11 +852,14 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       keyType: hostData.authType === "key" ? hostData.keyType : null,
       credentialId:
         hostData.authType === "credential" ? hostData.credentialId : null,
+      overrideCredentialUsername: Boolean(hostData.overrideCredentialUsername),
       enableTerminal: Boolean(hostData.enableTerminal),
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
+      jumpHosts: hostData.jumpHosts || [],
+      quickActions: hostData.quickActions || [],
       statsConfig: hostData.statsConfig
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig
@@ -855,11 +918,14 @@ export async function updateSSHHost(
       keyType: hostData.authType === "key" ? hostData.keyType : null,
       credentialId:
         hostData.authType === "credential" ? hostData.credentialId : null,
+      overrideCredentialUsername: Boolean(hostData.overrideCredentialUsername),
       enableTerminal: Boolean(hostData.enableTerminal),
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
+      jumpHosts: hostData.jumpHosts || [],
+      quickActions: hostData.quickActions || [],
       statsConfig: hostData.statsConfig
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig
@@ -1515,11 +1581,149 @@ export async function moveSSHItem(
   }
 }
 
+export async function changeSSHPermissions(
+  sessionId: string,
+  path: string,
+  permissions: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    fileLogger.info("Changing SSH file permissions", {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/changePermissions", {
+      sessionId,
+      path,
+      permissions,
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("SSH file permissions changed successfully", {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to change SSH file permissions", error, {
+      operation: "change_permissions",
+      sessionId,
+      path,
+      permissions,
+    });
+    handleApiError(error, "change SSH permissions");
+    throw error;
+  }
+}
+
+export async function extractSSHArchive(
+  sessionId: string,
+  archivePath: string,
+  extractPath?: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string; extractPath: string }> {
+  try {
+    fileLogger.info("Extracting archive", {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/extractArchive", {
+      sessionId,
+      archivePath,
+      extractPath,
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("Archive extracted successfully", {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath: response.data.extractPath,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to extract archive", error, {
+      operation: "extract_archive",
+      sessionId,
+      archivePath,
+      extractPath,
+    });
+    handleApiError(error, "extract archive");
+    throw error;
+  }
+}
+
+export async function compressSSHFiles(
+  sessionId: string,
+  paths: string[],
+  archiveName: string,
+  format?: string,
+  hostId?: number,
+  userId?: string,
+): Promise<{ success: boolean; message: string; archivePath: string }> {
+  try {
+    fileLogger.info("Compressing files", {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archiveName,
+      format,
+      hostId,
+      userId,
+    });
+
+    const response = await fileManagerApi.post("/ssh/compressFiles", {
+      sessionId,
+      paths,
+      archiveName,
+      format: format || "zip",
+      hostId,
+      userId,
+    });
+
+    fileLogger.success("Files compressed successfully", {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archivePath: response.data.archivePath,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to compress files", error, {
+      operation: "compress_files",
+      sessionId,
+      paths,
+      archiveName,
+      format,
+    });
+    handleApiError(error, "compress files");
+    throw error;
+  }
+}
+
 // ============================================================================
 // FILE MANAGER DATA
 // ============================================================================
 
-// Recent Files
 export async function getRecentFiles(
   hostId: number,
 ): Promise<Record<string, unknown>> {
@@ -1698,8 +1902,17 @@ export async function refreshServerPolling(): Promise<void> {
   try {
     await statsApi.post("/refresh");
   } catch (error) {
-    // Silently fail - this is a background operation
     console.warn("Failed to refresh server polling:", error);
+  }
+}
+
+export async function notifyHostCreatedOrUpdated(
+  hostId: number,
+): Promise<void> {
+  try {
+    await statsApi.post("/host-updated", { hostId });
+  } catch (error) {
+    console.warn("Failed to notify stats server of host update:", error);
   }
 }
 
@@ -2406,6 +2619,92 @@ export async function renameFolder(
   }
 }
 
+export async function getSSHFolders(): Promise<SSHFolder[]> {
+  try {
+    sshLogger.info("Fetching SSH folders", {
+      operation: "fetch_ssh_folders",
+    });
+
+    const response = await authApi.get("/ssh/folders");
+
+    sshLogger.success("SSH folders fetched successfully", {
+      operation: "fetch_ssh_folders",
+      count: response.data.length,
+    });
+
+    return response.data;
+  } catch (error) {
+    sshLogger.error("Failed to fetch SSH folders", error, {
+      operation: "fetch_ssh_folders",
+    });
+    handleApiError(error, "fetch SSH folders");
+    throw error;
+  }
+}
+
+export async function updateFolderMetadata(
+  name: string,
+  color?: string,
+  icon?: string,
+): Promise<void> {
+  try {
+    sshLogger.info("Updating folder metadata", {
+      operation: "update_folder_metadata",
+      name,
+      color,
+      icon,
+    });
+
+    await authApi.put("/ssh/folders/metadata", {
+      name,
+      color,
+      icon,
+    });
+
+    sshLogger.success("Folder metadata updated successfully", {
+      operation: "update_folder_metadata",
+      name,
+    });
+  } catch (error) {
+    sshLogger.error("Failed to update folder metadata", error, {
+      operation: "update_folder_metadata",
+      name,
+    });
+    handleApiError(error, "update folder metadata");
+    throw error;
+  }
+}
+
+export async function deleteAllHostsInFolder(
+  folderName: string,
+): Promise<{ deletedCount: number }> {
+  try {
+    sshLogger.info("Deleting all hosts in folder", {
+      operation: "delete_folder_hosts",
+      folderName,
+    });
+
+    const response = await authApi.delete(
+      `/ssh/folders/${encodeURIComponent(folderName)}/hosts`,
+    );
+
+    sshLogger.success("All hosts in folder deleted successfully", {
+      operation: "delete_folder_hosts",
+      folderName,
+      deletedCount: response.data.deletedCount,
+    });
+
+    return response.data;
+  } catch (error) {
+    sshLogger.error("Failed to delete hosts in folder", error, {
+      operation: "delete_folder_hosts",
+      folderName,
+    });
+    handleApiError(error, "delete hosts in folder");
+    throw error;
+  }
+}
+
 export async function renameCredentialFolder(
   oldName: string,
   newName: string,
@@ -2560,6 +2859,97 @@ export async function deleteSnippet(
   }
 }
 
+export async function executeSnippet(
+  snippetId: number,
+  hostId: number,
+): Promise<{ success: boolean; output: string; error?: string }> {
+  try {
+    const response = await authApi.post("/snippets/execute", {
+      snippetId,
+      hostId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "execute snippet");
+  }
+}
+
+export async function reorderSnippets(
+  snippets: Array<{ id: number; order: number; folder?: string }>,
+): Promise<{ success: boolean; updated: number }> {
+  try {
+    const response = await authApi.put("/snippets/reorder", { snippets });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "reorder snippets");
+  }
+}
+
+export async function getSnippetFolders(): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.get("/snippets/folders");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch snippet folders");
+  }
+}
+
+export async function createSnippetFolder(folderData: {
+  name: string;
+  color?: string;
+  icon?: string;
+}): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.post("/snippets/folders", folderData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "create snippet folder");
+  }
+}
+
+export async function updateSnippetFolderMetadata(
+  folderName: string,
+  metadata: { color?: string; icon?: string },
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.put(
+      `/snippets/folders/${encodeURIComponent(folderName)}/metadata`,
+      metadata,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update snippet folder metadata");
+  }
+}
+
+export async function renameSnippetFolder(
+  oldName: string,
+  newName: string,
+): Promise<{ success: boolean; oldName: string; newName: string }> {
+  try {
+    const response = await authApi.put("/snippets/folders/rename", {
+      oldName,
+      newName,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "rename snippet folder");
+  }
+}
+
+export async function deleteSnippetFolder(
+  folderName: string,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.delete(
+      `/snippets/folders/${encodeURIComponent(folderName)}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete snippet folder");
+  }
+}
+
 // ============================================================================
 // HOMEPAGE API
 // ============================================================================
@@ -2624,5 +3014,98 @@ export async function resetRecentActivity(): Promise<{ message: string }> {
     return response.data;
   } catch (error) {
     throw handleApiError(error, "reset recent activity");
+  }
+}
+
+// ============================================================================
+// COMMAND HISTORY API
+// ============================================================================
+
+export async function saveCommandToHistory(
+  hostId: number,
+  command: string,
+): Promise<{ id: number; command: string; executedAt: string }> {
+  try {
+    const response = await authApi.post("/terminal/command_history", {
+      hostId,
+      command,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "save command to history");
+  }
+}
+
+export async function getCommandHistory(
+  hostId: number,
+  limit: number = 100,
+): Promise<string[]> {
+  try {
+    const response = await authApi.get(`/terminal/command_history/${hostId}`, {
+      params: { limit },
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch command history");
+  }
+}
+
+export async function deleteCommandFromHistory(
+  hostId: number,
+  command: string,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.post("/terminal/command_history/delete", {
+      hostId,
+      command,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete command from history");
+  }
+}
+
+export async function clearCommandHistory(
+  hostId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.delete(
+      `/terminal/command_history/${hostId}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "clear command history");
+  }
+}
+
+// ============================================================================
+// OIDC ACCOUNT LINKING
+// ============================================================================
+
+export async function linkOIDCToPasswordAccount(
+  oidcUserId: string,
+  targetUsername: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await authApi.post("/users/link-oidc-to-password", {
+      oidcUserId,
+      targetUsername,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "link OIDC account to password account");
+  }
+}
+
+export async function unlinkOIDCFromPasswordAccount(
+  userId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await authApi.post("/users/unlink-oidc-from-password", {
+      userId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "unlink OIDC from password account");
   }
 }

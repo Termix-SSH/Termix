@@ -14,6 +14,14 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.tsx";
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,7 +34,8 @@ import {
   Trash2,
   Users,
   Database,
-  Lock,
+  Link2,
+  Unlink,
   Download,
   Upload,
   Monitor,
@@ -55,14 +64,20 @@ import {
   getSessions,
   revokeSession,
   revokeAllUserSessions,
+  linkOIDCToPasswordAccount,
+  unlinkOIDCFromPasswordAccount,
 } from "@/ui/main-axios.ts";
 
 interface AdminSettingsProps {
   isTopbarOpen?: boolean;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
 }
 
 export function AdminSettings({
   isTopbarOpen = true,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
 }: AdminSettingsProps): React.ReactElement {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
@@ -94,6 +109,7 @@ export function AdminSettings({
       username: string;
       is_admin: boolean;
       is_oidc: boolean;
+      password_hash?: string;
     }>
   >([]);
   const [usersLoading, setUsersLoading] = React.useState(false);
@@ -133,6 +149,14 @@ export function AdminSettings({
     }>
   >([]);
   const [sessionsLoading, setSessionsLoading] = React.useState(false);
+
+  const [linkAccountAlertOpen, setLinkAccountAlertOpen] = React.useState(false);
+  const [linkOidcUser, setLinkOidcUser] = React.useState<{
+    id: string;
+    username: string;
+  } | null>(null);
+  const [linkTargetUsername, setLinkTargetUsername] = React.useState("");
+  const [linkLoading, setLinkLoading] = React.useState(false);
 
   const requiresImportPassword = React.useMemo(
     () => !currentUser?.is_oidc,
@@ -632,15 +656,82 @@ export function AdminSettings({
     );
   };
 
+  const handleLinkOIDCUser = (user: { id: string; username: string }) => {
+    setLinkOidcUser(user);
+    setLinkTargetUsername("");
+    setLinkAccountAlertOpen(true);
+  };
+
+  const handleLinkSubmit = async () => {
+    if (!linkOidcUser || !linkTargetUsername.trim()) {
+      toast.error("Target username is required");
+      return;
+    }
+
+    setLinkLoading(true);
+    try {
+      const result = await linkOIDCToPasswordAccount(
+        linkOidcUser.id,
+        linkTargetUsername.trim(),
+      );
+
+      toast.success(
+        result.message ||
+          `OIDC user ${linkOidcUser.username} linked to ${linkTargetUsername}`,
+      );
+      setLinkAccountAlertOpen(false);
+      setLinkTargetUsername("");
+      setLinkOidcUser(null);
+      fetchUsers();
+      fetchSessions();
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { error?: string; code?: string } };
+      };
+      toast.error(err.response?.data?.error || "Failed to link accounts");
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleUnlinkOIDC = async (userId: string, username: string) => {
+    confirmWithToast(
+      t("admin.unlinkOIDCDescription", { username }),
+      async () => {
+        try {
+          const result = await unlinkOIDCFromPasswordAccount(userId);
+
+          toast.success(
+            result.message || t("admin.unlinkOIDCSuccess", { username }),
+          );
+          fetchUsers();
+          fetchSessions();
+        } catch (error: unknown) {
+          const err = error as {
+            response?: { data?: { error?: string; code?: string } };
+          };
+          toast.error(
+            err.response?.data?.error || t("admin.failedToUnlinkOIDC"),
+          );
+        }
+      },
+      "destructive",
+    );
+  };
+
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
   const wrapperStyle: React.CSSProperties = {
     marginLeft: leftMarginPx,
-    marginRight: 17,
+    marginRight: rightSidebarOpen
+      ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
+      : 17,
     marginTop: topMarginPx,
     marginBottom: bottomMarginPx,
     height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
+    transition:
+      "margin-left 200ms linear, margin-right 200ms linear, margin-top 200ms linear",
   };
 
   return (
@@ -1017,20 +1108,55 @@ export function AdminSettings({
                               )}
                             </TableCell>
                             <TableCell className="px-4">
-                              {user.is_oidc
-                                ? t("admin.external")
-                                : t("admin.local")}
+                              {user.is_oidc && user.password_hash
+                                ? "Dual Auth"
+                                : user.is_oidc
+                                  ? t("admin.external")
+                                  : t("admin.local")}
                             </TableCell>
                             <TableCell className="px-4">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteUser(user.username)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                disabled={user.is_admin}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex gap-2">
+                                {user.is_oidc && !user.password_hash && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleLinkOIDCUser({
+                                        id: user.id,
+                                        username: user.username,
+                                      })
+                                    }
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    title="Link to password account"
+                                  >
+                                    <Link2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {user.is_oidc && user.password_hash && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleUnlinkOIDC(user.id, user.username)
+                                    }
+                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                    title="Unlink OIDC (keep password only)"
+                                  >
+                                    <Unlink className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeleteUser(user.username)
+                                  }
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  disabled={user.is_admin}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1064,109 +1190,113 @@ export function AdminSettings({
                   </div>
                 ) : (
                   <div className="border rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="px-4">Device</TableHead>
-                          <TableHead className="px-4">User</TableHead>
-                          <TableHead className="px-4">Created</TableHead>
-                          <TableHead className="px-4">Last Active</TableHead>
-                          <TableHead className="px-4">Expires</TableHead>
-                          <TableHead className="px-4">
-                            {t("admin.actions")}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sessions.map((session) => {
-                          const DeviceIcon =
-                            session.deviceType === "desktop"
-                              ? Monitor
-                              : session.deviceType === "mobile"
-                                ? Smartphone
-                                : Globe;
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-4">Device</TableHead>
+                            <TableHead className="px-4">User</TableHead>
+                            <TableHead className="px-4">Created</TableHead>
+                            <TableHead className="px-4">Last Active</TableHead>
+                            <TableHead className="px-4">Expires</TableHead>
+                            <TableHead className="px-4">
+                              {t("admin.actions")}
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sessions.map((session) => {
+                            const DeviceIcon =
+                              session.deviceType === "desktop"
+                                ? Monitor
+                                : session.deviceType === "mobile"
+                                  ? Smartphone
+                                  : Globe;
 
-                          const createdDate = new Date(session.createdAt);
-                          const lastActiveDate = new Date(session.lastActiveAt);
-                          const expiresDate = new Date(session.expiresAt);
+                            const createdDate = new Date(session.createdAt);
+                            const lastActiveDate = new Date(
+                              session.lastActiveAt,
+                            );
+                            const expiresDate = new Date(session.expiresAt);
 
-                          const formatDate = (date: Date) =>
-                            date.toLocaleDateString() +
-                            " " +
-                            date.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            });
+                            const formatDate = (date: Date) =>
+                              date.toLocaleDateString() +
+                              " " +
+                              date.toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              });
 
-                          return (
-                            <TableRow
-                              key={session.id}
-                              className={
-                                session.isRevoked ? "opacity-50" : undefined
-                              }
-                            >
-                              <TableCell className="px-4">
-                                <div className="flex items-center gap-2">
-                                  <DeviceIcon className="h-4 w-4" />
-                                  <div className="flex flex-col">
-                                    <span className="font-medium text-sm">
-                                      {session.deviceInfo}
-                                    </span>
-                                    {session.isRevoked && (
-                                      <span className="text-xs text-red-600">
-                                        Revoked
+                            return (
+                              <TableRow
+                                key={session.id}
+                                className={
+                                  session.isRevoked ? "opacity-50" : undefined
+                                }
+                              >
+                                <TableCell className="px-4">
+                                  <div className="flex items-center gap-2">
+                                    <DeviceIcon className="h-4 w-4" />
+                                    <div className="flex flex-col">
+                                      <span className="font-medium text-sm">
+                                        {session.deviceInfo}
                                       </span>
-                                    )}
+                                      {session.isRevoked && (
+                                        <span className="text-xs text-red-600">
+                                          Revoked
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-4">
-                                {session.username || session.userId}
-                              </TableCell>
-                              <TableCell className="px-4 text-sm text-muted-foreground">
-                                {formatDate(createdDate)}
-                              </TableCell>
-                              <TableCell className="px-4 text-sm text-muted-foreground">
-                                {formatDate(lastActiveDate)}
-                              </TableCell>
-                              <TableCell className="px-4 text-sm text-muted-foreground">
-                                {formatDate(expiresDate)}
-                              </TableCell>
-                              <TableCell className="px-4">
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleRevokeSession(session.id)
-                                    }
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    disabled={session.isRevoked}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                  {session.username && (
+                                </TableCell>
+                                <TableCell className="px-4">
+                                  {session.username || session.userId}
+                                </TableCell>
+                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                  {formatDate(createdDate)}
+                                </TableCell>
+                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                  {formatDate(lastActiveDate)}
+                                </TableCell>
+                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                  {formatDate(expiresDate)}
+                                </TableCell>
+                                <TableCell className="px-4">
+                                  <div className="flex gap-2">
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       onClick={() =>
-                                        handleRevokeAllUserSessions(
-                                          session.userId,
-                                        )
+                                        handleRevokeSession(session.id)
                                       }
-                                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
-                                      title="Revoke all sessions for this user"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      disabled={session.isRevoked}
                                     >
-                                      Revoke All
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                                    {session.username && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleRevokeAllUserSessions(
+                                            session.userId,
+                                          )
+                                        }
+                                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
+                                        title="Revoke all sessions for this user"
+                                      >
+                                        Revoke All
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1177,8 +1307,8 @@ export function AdminSettings({
                 <h3 className="text-lg font-semibold">
                   {t("admin.adminManagement")}
                 </h3>
-                <div className="space-y-4 p-6 border rounded-md bg-muted/50">
-                  <h4 className="font-medium">{t("admin.makeUserAdmin")}</h4>
+                <div className="space-y-4 p-4 border rounded-md bg-dark-bg-panel">
+                  <h4 className="font-semibold">{t("admin.makeUserAdmin")}</h4>
                   <form onSubmit={handleMakeUserAdmin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="new-admin-username">
@@ -1271,32 +1401,17 @@ export function AdminSettings({
             <TabsContent value="security" className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Database className="h-5 w-5" />
                   <h3 className="text-lg font-semibold">
                     {t("admin.databaseSecurity")}
                   </h3>
                 </div>
 
-                <div className="p-4 border rounded bg-card">
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-green-500" />
-                    <div>
-                      <div className="text-sm font-medium">
-                        {t("admin.encryptionStatus")}
-                      </div>
-                      <div className="text-xs text-green-500">
-                        {t("admin.encryptionEnabled")}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="p-4 border rounded bg-card">
+                  <div className="p-4 border rounded-lg bg-dark-bg-panel">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Download className="h-4 w-4 text-blue-500" />
-                        <h4 className="font-medium">{t("admin.export")}</h4>
+                        <h4 className="font-semibold">{t("admin.export")}</h4>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {t("admin.exportDescription")}
@@ -1343,11 +1458,11 @@ export function AdminSettings({
                     </div>
                   </div>
 
-                  <div className="p-4 border rounded bg-card">
+                  <div className="p-4 border rounded-lg bg-dark-bg-panel">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Upload className="h-4 w-4 text-green-500" />
-                        <h4 className="font-medium">{t("admin.import")}</h4>
+                        <h4 className="font-semibold">{t("admin.import")}</h4>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {t("admin.importDescription")}
@@ -1417,6 +1532,87 @@ export function AdminSettings({
           </Tabs>
         </div>
       </div>
+
+      {linkAccountAlertOpen && (
+        <Dialog
+          open={linkAccountAlertOpen}
+          onOpenChange={setLinkAccountAlertOpen}
+        >
+          <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Link2 className="w-5 h-5" />
+                Link OIDC Account to Password Account
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Link{" "}
+                <span className="font-mono text-foreground">
+                  {linkOidcUser?.username}
+                </span>{" "}
+                (OIDC user) to an existing password account. This will enable
+                dual authentication for the password account.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <Alert variant="destructive">
+                <AlertTitle>Warning: OIDC User Data Will Be Deleted</AlertTitle>
+                <AlertDescription>
+                  This action will:
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Delete the OIDC user account and all their data</li>
+                    <li>
+                      Add OIDC login capability to the target password account
+                    </li>
+                    <li>
+                      Allow the password account to login with both password and
+                      OIDC
+                    </li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="link-target-username"
+                  className="text-base font-semibold text-foreground"
+                >
+                  Target Password Account Username
+                </Label>
+                <Input
+                  id="link-target-username"
+                  value={linkTargetUsername}
+                  onChange={(e) => setLinkTargetUsername(e.target.value)}
+                  placeholder="Enter username of password account"
+                  disabled={linkLoading}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && linkTargetUsername.trim()) {
+                      handleLinkSubmit();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setLinkAccountAlertOpen(false)}
+                disabled={linkLoading}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={handleLinkSubmit}
+                disabled={linkLoading || !linkTargetUsername.trim()}
+                variant="destructive"
+              >
+                {linkLoading ? "Linking..." : "Link Accounts"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

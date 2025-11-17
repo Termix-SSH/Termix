@@ -524,6 +524,8 @@ router.delete(
         return res.status(404).json({ error: "Credential not found" });
       }
 
+      // Update hosts using this credential to set credentialId to null
+      // This prevents orphaned references before deletion
       const hostsUsingCredential = await db
         .select()
         .from(sshData)
@@ -552,14 +554,8 @@ router.delete(
           );
       }
 
-      await db
-        .delete(sshCredentialUsage)
-        .where(
-          and(
-            eq(sshCredentialUsage.credentialId, parseInt(id)),
-            eq(sshCredentialUsage.userId, userId),
-          ),
-        );
+      // sshCredentialUsage will be automatically deleted by ON DELETE CASCADE
+      // No need for manual deletion
 
       await db
         .delete(sshCredentials)
@@ -1259,6 +1255,10 @@ async function deploySSHKeyToHost(
                 return rejectAdd(err);
               }
 
+              stream.on("data", () => {
+                // Consume output
+              });
+
               stream.on("close", (code) => {
                 clearTimeout(addTimeout);
                 if (code === 0) {
@@ -1519,7 +1519,8 @@ router.post(
         });
       }
 
-      if (!credData.publicKey) {
+      const publicKey = credData.public_key || credData.publicKey;
+      if (!publicKey) {
         return res.status(400).json({
           success: false,
           error: "Public key is required for deployment",
@@ -1600,7 +1601,7 @@ router.post(
 
       const deployResult = await deploySSHKeyToHost(
         hostConfig,
-        credData.publicKey as string,
+        publicKey as string,
         credData,
       );
 

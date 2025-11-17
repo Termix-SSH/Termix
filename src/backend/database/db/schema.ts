@@ -34,7 +34,7 @@ export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   jwtToken: text("jwt_token").notNull(),
   deviceType: text("device_type").notNull(),
   deviceInfo: text("device_info").notNull(),
@@ -51,7 +51,7 @@ export const sshData = sqliteTable("ssh_data", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   name: text("name"),
   ip: text("ip").notNull(),
   port: integer("port").notNull(),
@@ -71,7 +71,10 @@ export const sshData = sqliteTable("ssh_data", {
   autostartKey: text("autostart_key", { length: 8192 }),
   autostartKeyPassword: text("autostart_key_password"),
 
-  credentialId: integer("credential_id").references(() => sshCredentials.id),
+  credentialId: integer("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+  overrideCredentialUsername: integer("override_credential_username", {
+    mode: "boolean",
+  }),
   enableTerminal: integer("enable_terminal", { mode: "boolean" })
     .notNull()
     .default(true),
@@ -79,12 +82,14 @@ export const sshData = sqliteTable("ssh_data", {
     .notNull()
     .default(true),
   tunnelConnections: text("tunnel_connections"),
+  jumpHosts: text("jump_hosts"),
   enableFileManager: integer("enable_file_manager", { mode: "boolean" })
     .notNull()
     .default(true),
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
   terminalConfig: text("terminal_config"),
+  quickActions: text("quick_actions"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -97,10 +102,10 @@ export const fileManagerRecent = sqliteTable("file_manager_recent", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   hostId: integer("host_id")
     .notNull()
-    .references(() => sshData.id),
+    .references(() => sshData.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   path: text("path").notNull(),
   lastOpened: text("last_opened")
@@ -112,10 +117,10 @@ export const fileManagerPinned = sqliteTable("file_manager_pinned", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   hostId: integer("host_id")
     .notNull()
-    .references(() => sshData.id),
+    .references(() => sshData.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   path: text("path").notNull(),
   pinnedAt: text("pinned_at")
@@ -127,10 +132,10 @@ export const fileManagerShortcuts = sqliteTable("file_manager_shortcuts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   hostId: integer("host_id")
     .notNull()
-    .references(() => sshData.id),
+    .references(() => sshData.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   path: text("path").notNull(),
   createdAt: text("created_at")
@@ -142,7 +147,7 @@ export const dismissedAlerts = sqliteTable("dismissed_alerts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   alertId: text("alert_id").notNull(),
   dismissedAt: text("dismissed_at")
     .notNull()
@@ -153,7 +158,7 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
   folder: text("folder"),
@@ -181,13 +186,13 @@ export const sshCredentialUsage = sqliteTable("ssh_credential_usage", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   credentialId: integer("credential_id")
     .notNull()
-    .references(() => sshCredentials.id),
+    .references(() => sshCredentials.id, { onDelete: "cascade" }),
   hostId: integer("host_id")
     .notNull()
-    .references(() => sshData.id),
+    .references(() => sshData.id, { onDelete: "cascade" }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   usedAt: text("used_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -197,10 +202,44 @@ export const snippets = sqliteTable("snippets", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   content: text("content").notNull(),
   description: text("description"),
+  folder: text("folder"),
+  order: integer("order").notNull().default(0),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const snippetFolders = sqliteTable("snippet_folders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color"),
+  icon: text("icon"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const sshFolders = sqliteTable("ssh_folders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color"),
+  icon: text("icon"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -213,13 +252,27 @@ export const recentActivity = sqliteTable("recent_activity", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   type: text("type").notNull(),
   hostId: integer("host_id")
     .notNull()
-    .references(() => sshData.id),
-  hostName: text("host_name").notNull(),
+    .references(() => sshData.id, { onDelete: "cascade" }),
+  hostName: text("host_name"),
   timestamp: text("timestamp")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const commandHistory = sqliteTable("command_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => sshData.id, { onDelete: "cascade" }),
+  command: text("command").notNull(),
+  executedAt: text("executed_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });

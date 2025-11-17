@@ -56,14 +56,17 @@ free and self-hosted alternative to Termius available for all platforms.
 - **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys
 - **Server Stats** - View CPU, memory, and disk usage along with network, uptime, and system information on any SSH server
 - **Dashboard** - View server information at a glance on your dashboard
-- **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions.
-- **Database Encryption** - Backend stored as encrypted SQLite database files
+- **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
+- **Database Encryption** - Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 - **Data Export/Import** - Export and import SSH hosts, credentials, and file manager data
 - **Automatic SSL Setup** - Built-in SSL certificate generation and management with HTTPS redirects
 - **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn
 - **Languages** - Built-in support for English, Chinese, German, and Portuguese
 - **Platform Support** - Available as a web app, desktop application (Windows, Linux, and macOS), and dedicated mobile/tablet app for iOS and Android.
 - **SSH Tools** - Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
+- **Command History** - Auto-complete and view previously ran SSH commands
+- **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
+- **SSH Feature Rich** - Supports jump hosts, warpgate, TOTP based connections, etc.
 
 # Planned Features
 
@@ -77,16 +80,16 @@ Supported Devices:
 - Windows (x64/ia32)
   - Portable
   - MSI Installer
-  - Chocolatey Package Manager
+  - Chocolatey Package Manager (coming soon)
 - Linux (x64/ia32)
   - Portable
   - AppImage
   - Deb
-  - Flatpak
+  - Flatpak (coming soon)
 - macOS (x64/ia32 on v12.0+)
-  - Apple App Store
+  - Apple App Store (coming soon)
   - DMG
-  - Homebrew
+  - Homebrew (coming soon)
 - iOS/iPadOS (v15.1+)
   - Apple App Store
   - ISO

@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button.tsx";
 import {
@@ -49,6 +50,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command.tsx";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover.tsx";
 import { Slider } from "@/components/ui/slider.tsx";
 import {
   Accordion,
@@ -66,7 +79,203 @@ import {
 } from "@/constants/terminal-themes";
 import { TerminalPreview } from "@/ui/desktop/apps/terminal/TerminalPreview.tsx";
 import type { TerminalConfig } from "@/types";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Check, ChevronsUpDown } from "lucide-react";
+
+interface JumpHostItemProps {
+  jumpHost: { hostId: number };
+  index: number;
+  hosts: SSHHost[];
+  editingHost?: SSHHost | null;
+  onUpdate: (hostId: number) => void;
+  onRemove: () => void;
+  t: (key: string) => string;
+}
+
+function JumpHostItem({
+  jumpHost,
+  index,
+  hosts,
+  editingHost,
+  onUpdate,
+  onRemove,
+  t,
+}: JumpHostItemProps) {
+  const [open, setOpen] = React.useState(false);
+  const selectedHost = hosts.find((h) => h.id === jumpHost.hostId);
+
+  return (
+    <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+      <div className="flex items-center gap-2 flex-1">
+        <span className="text-sm font-medium text-muted-foreground">
+          {index + 1}.
+        </span>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild className="flex-1">
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between"
+            >
+              {selectedHost
+                ? `${selectedHost.name || `${selectedHost.username}@${selectedHost.ip}`}`
+                : t("hosts.selectServer")}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="p-0"
+            style={{ width: "var(--radix-popover-trigger-width)" }}
+          >
+            <Command>
+              <CommandInput placeholder={t("hosts.searchServers")} />
+              <CommandEmpty>{t("hosts.noServerFound")}</CommandEmpty>
+              <CommandGroup className="max-h-[300px] overflow-y-auto">
+                {hosts
+                  .filter((h) => !editingHost || h.id !== editingHost.id)
+                  .map((host) => (
+                    <CommandItem
+                      key={host.id}
+                      value={`${host.name} ${host.ip} ${host.username} ${host.id}`}
+                      onSelect={() => {
+                        onUpdate(host.id);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          jumpHost.hostId === host.id
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {host.name || `${host.username}@${host.ip}`}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {host.username}@{host.ip}:{host.port}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        className="ml-2"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+interface QuickActionItemProps {
+  quickAction: { name: string; snippetId: number };
+  index: number;
+  snippets: Array<{ id: number; name: string; content: string }>;
+  onUpdate: (name: string, snippetId: number) => void;
+  onRemove: () => void;
+  t: (key: string) => string;
+}
+
+function QuickActionItem({
+  quickAction,
+  index,
+  snippets,
+  onUpdate,
+  onRemove,
+  t,
+}: QuickActionItemProps) {
+  const [open, setOpen] = React.useState(false);
+  const selectedSnippet = snippets.find((s) => s.id === quickAction.snippetId);
+
+  return (
+    <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+      <div className="flex flex-col gap-2 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            {index + 1}.
+          </span>
+          <Input
+            placeholder={t("hosts.quickActionName")}
+            value={quickAction.name}
+            onChange={(e) => onUpdate(e.target.value, quickAction.snippetId)}
+            className="flex-1"
+          />
+        </div>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild className="w-full">
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between"
+            >
+              {selectedSnippet
+                ? selectedSnippet.name
+                : t("hosts.selectSnippet")}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="p-0"
+            style={{ width: "var(--radix-popover-trigger-width)" }}
+          >
+            <Command>
+              <CommandInput placeholder={t("hosts.searchSnippets")} />
+              <CommandEmpty>{t("hosts.noSnippetFound")}</CommandEmpty>
+              <CommandGroup className="max-h-[300px] overflow-y-auto">
+                {snippets.map((snippet) => (
+                  <CommandItem
+                    key={snippet.id}
+                    value={`${snippet.name} ${snippet.content} ${snippet.id}`}
+                    onSelect={() => {
+                      onUpdate(quickAction.name, snippet.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        quickAction.snippetId === snippet.id
+                          ? "opacity-100"
+                          : "opacity-0",
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{snippet.name}</span>
+                      <span className="text-xs text-muted-foreground truncate max-w-[350px]">
+                        {snippet.content}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        className="ml-2"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
 
 interface SSHHost {
   id: number;
@@ -94,6 +303,13 @@ interface SSHHost {
     retryInterval: number;
     autoStart: boolean;
   }>;
+  jumpHosts?: Array<{
+    hostId: number;
+  }>;
+  quickActions?: Array<{
+    name: string;
+    snippetId: number;
+  }>;
   statsConfig?: StatsConfig;
   terminalConfig?: TerminalConfig;
   createdAt: string;
@@ -113,13 +329,13 @@ export function HostManagerEditor({
   const { t } = useTranslation();
   const [folders, setFolders] = useState<string[]>([]);
   const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
+  const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [credentials, setCredentials] = useState<
     Array<{ id: number; username: string; authType: string }>
   >([]);
   const [snippets, setSnippets] = useState<
     Array<{ id: number; name: string; content: string }>
   >([]);
-  const [snippetSearch, setSnippetSearch] = useState("");
 
   const [authTab, setAuthTab] = useState<
     "password" | "key" | "credential" | "none"
@@ -128,6 +344,12 @@ export function HostManagerEditor({
     "upload",
   );
   const isSubmittingRef = useRef(false);
+  const [activeTab, setActiveTab] = useState("general");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFormError(null);
+  }, [activeTab]);
 
   const [statusIntervalUnit, setStatusIntervalUnit] = useState<
     "seconds" | "minutes"
@@ -146,6 +368,7 @@ export function HostManagerEditor({
           getCredentials(),
           getSnippets(),
         ]);
+        setHosts(hostsData);
         setCredentials(credentialsData);
         setSnippets(Array.isArray(snippetsData) ? snippetsData : []);
 
@@ -167,7 +390,9 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch {}
+      } catch (error) {
+        console.error("Host manager operation failed:", error);
+      }
     };
 
     fetchData();
@@ -196,7 +421,9 @@ export function HostManagerEditor({
 
         setFolders(uniqueFolders);
         setSshConfigurations(uniqueConfigurations);
-      } catch {}
+      } catch (error) {
+        console.error("Host manager operation failed:", error);
+      }
     };
 
     window.addEventListener("credentials:changed", handleCredentialChange);
@@ -217,6 +444,7 @@ export function HostManagerEditor({
       pin: z.boolean().default(false),
       authType: z.enum(["password", "key", "credential", "none"]),
       credentialId: z.number().optional().nullable(),
+      overrideCredentialUsername: z.boolean().optional(),
       password: z.string().optional(),
       key: z.any().optional().nullable(),
       keyPassword: z.string().optional(),
@@ -261,9 +489,18 @@ export function HostManagerEditor({
                 "uptime",
                 "processes",
                 "system",
+                "login_stats",
               ]),
             )
-            .default(["cpu", "memory", "disk", "network", "uptime", "system"]),
+            .default([
+              "cpu",
+              "memory",
+              "disk",
+              "network",
+              "uptime",
+              "system",
+              "login_stats",
+            ]),
           statusCheckEnabled: z.boolean().default(true),
           statusCheckInterval: z.number().min(5).max(3600).default(30),
           metricsEnabled: z.boolean().default(true),
@@ -277,6 +514,7 @@ export function HostManagerEditor({
             "network",
             "uptime",
             "system",
+            "login_stats",
           ],
           statusCheckEnabled: true,
           statusCheckInterval: 30,
@@ -312,6 +550,21 @@ export function HostManagerEditor({
         })
         .optional(),
       forceKeyboardInteractive: z.boolean().optional(),
+      jumpHosts: z
+        .array(
+          z.object({
+            hostId: z.number().min(1),
+          }),
+        )
+        .default([]),
+      quickActions: z
+        .array(
+          z.object({
+            name: z.string().min(1),
+            snippetId: z.number().min(1),
+          }),
+        )
+        .default([]),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -389,6 +642,7 @@ export function HostManagerEditor({
       pin: false,
       authType: "password" as const,
       credentialId: null,
+      overrideCredentialUsername: false,
       password: "",
       key: null,
       keyPassword: "",
@@ -398,6 +652,8 @@ export function HostManagerEditor({
       enableFileManager: true,
       defaultPath: "/",
       tunnelConnections: [],
+      jumpHosts: [],
+      quickActions: [],
       statsConfig: DEFAULT_STATS_CONFIG,
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
       forceKeyboardInteractive: false,
@@ -407,7 +663,8 @@ export function HostManagerEditor({
   useEffect(() => {
     if (authTab === "credential") {
       const currentCredentialId = form.getValues("credentialId");
-      if (currentCredentialId) {
+      const overrideUsername = form.getValues("overrideCredentialUsername");
+      if (currentCredentialId && !overrideUsername) {
         const selectedCredential = credentials.find(
           (c) => c.id === currentCredentialId,
         );
@@ -416,7 +673,7 @@ export function HostManagerEditor({
         }
       }
     }
-  }, [authTab, credentials, form]);
+  }, [authTab, credentials, form.getValues, form.setValue]);
 
   useEffect(() => {
     if (editingHost) {
@@ -460,10 +717,13 @@ export function HostManagerEditor({
         port: cleanedHost.port || 22,
         username: cleanedHost.username || "",
         folder: cleanedHost.folder || "",
-        tags: cleanedHost.tags || [],
+        tags: Array.isArray(cleanedHost.tags) ? cleanedHost.tags : [],
         pin: Boolean(cleanedHost.pin),
         authType: defaultAuthType as "password" | "key" | "credential" | "none",
         credentialId: null,
+        overrideCredentialUsername: Boolean(
+          cleanedHost.overrideCredentialUsername,
+        ),
         password: "",
         key: null,
         keyPassword: "",
@@ -472,9 +732,25 @@ export function HostManagerEditor({
         enableTunnel: Boolean(cleanedHost.enableTunnel),
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
-        tunnelConnections: cleanedHost.tunnelConnections || [],
+        tunnelConnections: Array.isArray(cleanedHost.tunnelConnections)
+          ? cleanedHost.tunnelConnections
+          : [],
+        jumpHosts: Array.isArray(cleanedHost.jumpHosts)
+          ? cleanedHost.jumpHosts
+          : [],
+        quickActions: Array.isArray(cleanedHost.quickActions)
+          ? cleanedHost.quickActions
+          : [],
         statsConfig: parsedStatsConfig,
-        terminalConfig: cleanedHost.terminalConfig || DEFAULT_TERMINAL_CONFIG,
+        terminalConfig: {
+          ...DEFAULT_TERMINAL_CONFIG,
+          ...(cleanedHost.terminalConfig || {}),
+          environmentVariables: Array.isArray(
+            cleanedHost.terminalConfig?.environmentVariables,
+          )
+            ? cleanedHost.terminalConfig.environmentVariables
+            : [],
+        },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
       };
 
@@ -512,6 +788,7 @@ export function HostManagerEditor({
         pin: false,
         authType: "password" as const,
         credentialId: null,
+        overrideCredentialUsername: false,
         password: "",
         key: null,
         keyPassword: "",
@@ -521,6 +798,8 @@ export function HostManagerEditor({
         enableFileManager: true,
         defaultPath: "/",
         tunnelConnections: [],
+        jumpHosts: [],
+        quickActions: [],
         statsConfig: DEFAULT_STATS_CONFIG,
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
@@ -543,6 +822,7 @@ export function HostManagerEditor({
   const onSubmit = async (data: FormData) => {
     try {
       isSubmittingRef.current = true;
+      setFormError(null);
 
       if (!data.name || data.name.trim() === "") {
         data.name = `${data.username}@${data.ip}`;
@@ -554,12 +834,16 @@ export function HostManagerEditor({
 
         if (statusInterval < 5 || statusInterval > 3600) {
           toast.error(t("hosts.intervalValidation"));
+          setActiveTab("statistics");
+          setFormError(t("hosts.intervalValidation"));
           isSubmittingRef.current = false;
           return;
         }
 
         if (metricsInterval < 5 || metricsInterval > 3600) {
           toast.error(t("hosts.intervalValidation"));
+          setActiveTab("statistics");
+          setFormError(t("hosts.intervalValidation"));
           isSubmittingRef.current = false;
           return;
         }
@@ -574,11 +858,14 @@ export function HostManagerEditor({
         tags: data.tags || [],
         pin: Boolean(data.pin),
         authType: data.authType,
+        overrideCredentialUsername: Boolean(data.overrideCredentialUsername),
         enableTerminal: Boolean(data.enableTerminal),
         enableTunnel: Boolean(data.enableTunnel),
         enableFileManager: Boolean(data.enableFileManager),
         defaultPath: data.defaultPath || "/",
         tunnelConnections: data.tunnelConnections || [],
+        jumpHosts: data.jumpHosts || [],
+        quickActions: data.quickActions || [],
         statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
         terminalConfig: data.terminalConfig || DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: Boolean(data.forceKeyboardInteractive),
@@ -659,12 +946,48 @@ export function HostManagerEditor({
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
-      const { refreshServerPolling } = await import("@/ui/main-axios.ts");
-      refreshServerPolling();
-    } catch {
+      if (savedHost?.id) {
+        const { notifyHostCreatedOrUpdated } = await import(
+          "@/ui/main-axios.ts"
+        );
+        notifyHostCreatedOrUpdated(savedHost.id);
+      }
+    } catch (error) {
       toast.error(t("hosts.failedToSaveHost"));
+      console.error("Failed to save host:", error);
     } finally {
       isSubmittingRef.current = false;
+    }
+  };
+
+  const handleFormError = () => {
+    const errors = form.formState.errors;
+
+    if (
+      errors.ip ||
+      errors.port ||
+      errors.username ||
+      errors.name ||
+      errors.folder ||
+      errors.tags ||
+      errors.pin ||
+      errors.password ||
+      errors.key ||
+      errors.keyPassword ||
+      errors.keyType ||
+      errors.credentialId ||
+      errors.forceKeyboardInteractive ||
+      errors.jumpHosts
+    ) {
+      setActiveTab("general");
+    } else if (errors.enableTerminal || errors.terminalConfig) {
+      setActiveTab("terminal");
+    } else if (errors.enableTunnel || errors.tunnelConnections) {
+      setActiveTab("tunnel");
+    } else if (errors.enableFileManager || errors.defaultPath) {
+      setActiveTab("file_manager");
+    } else if (errors.statsConfig) {
+      setActiveTab("statistics");
     }
   };
 
@@ -756,12 +1079,24 @@ export function HostManagerEditor({
   const getFilteredSshConfigs = (index: number) => {
     const value = form.watch(`tunnelConnections.${index}.endpointHost`);
 
-    const currentHostName =
-      form.watch("name") || `${form.watch("username")}@${form.watch("ip")}`;
+    const currentHostId = editingHost?.id;
 
-    let filtered = sshConfigurations.filter(
-      (config) => config !== currentHostName,
-    );
+    let filtered = sshConfigurations;
+
+    if (currentHostId) {
+      const currentHostName = hosts.find((h) => h.id === currentHostId)?.name;
+      if (currentHostName) {
+        filtered = sshConfigurations.filter(
+          (config) => config !== currentHostName,
+        );
+      }
+    } else {
+      const currentHostName =
+        form.watch("name") || `${form.watch("username")}@${form.watch("ip")}`;
+      filtered = sshConfigurations.filter(
+        (config) => config !== currentHostName,
+      );
+    }
 
     if (value) {
       filtered = filtered.filter((config) =>
@@ -817,12 +1152,21 @@ export function HostManagerEditor({
     <div className="flex-1 flex flex-col h-full min-h-0 w-full">
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={form.handleSubmit(onSubmit, handleFormError)}
           className="flex flex-col flex-1 min-h-0 h-full"
         >
           <ScrollArea className="flex-1 min-h-0 w-full my-1 pb-2">
             <div className="pr-4">
-              <Tabs defaultValue="general" className="w-full">
+              {formError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{formError}</AlertDescription>
+                </Alert>
+              )}
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
                 <TabsList>
                   <TabsTrigger value="general">
                     {t("hosts.general")}
@@ -882,17 +1226,28 @@ export function HostManagerEditor({
                     <FormField
                       control={form.control}
                       name="username"
-                      render={({ field }) => (
-                        <FormItem className="col-span-6">
-                          <FormLabel>{t("hosts.username")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("placeholders.username")}
-                              {...field}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const isCredentialAuth = authTab === "credential";
+                        const hasCredential = !!form.watch("credentialId");
+                        const overrideEnabled = !!form.watch(
+                          "overrideCredentialUsername",
+                        );
+                        const shouldDisable =
+                          isCredentialAuth && hasCredential && !overrideEnabled;
+
+                        return (
+                          <FormItem className="col-span-6">
+                            <FormLabel>{t("hosts.username")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={t("placeholders.username")}
+                                disabled={shouldDisable}
+                                {...field}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        );
+                      }}
                     />
                   </div>
                   <FormLabel className="mb-3 mt-3 font-bold">
@@ -1263,29 +1618,60 @@ export function HostManagerEditor({
                       </div>
                     </TabsContent>
                     <TabsContent value="credential">
-                      <FormField
-                        control={form.control}
-                        name="credentialId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <CredentialSelector
-                              value={field.value}
-                              onValueChange={field.onChange}
-                              onCredentialSelect={(credential) => {
-                                if (credential) {
-                                  form.setValue(
-                                    "username",
-                                    credential.username,
-                                  );
-                                }
-                              }}
-                            />
-                            <FormDescription>
-                              {t("hosts.credentialDescription")}
-                            </FormDescription>
-                          </FormItem>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="credentialId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <CredentialSelector
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                onCredentialSelect={(credential) => {
+                                  if (
+                                    credential &&
+                                    !form.getValues(
+                                      "overrideCredentialUsername",
+                                    )
+                                  ) {
+                                    form.setValue(
+                                      "username",
+                                      credential.username,
+                                    );
+                                  }
+                                }}
+                              />
+                              <FormDescription>
+                                {t("hosts.credentialDescription")}
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                        {form.watch("credentialId") && (
+                          <FormField
+                            control={form.control}
+                            name="overrideCredentialUsername"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                <div className="space-y-0.5">
+                                  <FormLabel>
+                                    {t("hosts.overrideCredentialUsername")}
+                                  </FormLabel>
+                                  <FormDescription>
+                                    {t("hosts.overrideCredentialUsernameDesc")}
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                         )}
-                      />
+                      </div>
                     </TabsContent>
                     <TabsContent value="none">
                       <Alert className="mt-2">
@@ -1301,28 +1687,102 @@ export function HostManagerEditor({
                       </Alert>
                     </TabsContent>
                   </Tabs>
-                  <FormField
-                    control={form.control}
-                    name="forceKeyboardInteractive"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 mt-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>
-                            {t("hosts.forceKeyboardInteractive")}
-                          </FormLabel>
-                          <FormDescription>
-                            {t("hosts.forceKeyboardInteractiveDesc")}
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  <Separator className="my-6" />
+                  <Accordion type="multiple" className="w-full">
+                    <AccordionItem value="advanced-auth">
+                      <AccordionTrigger>
+                        {t("hosts.advancedAuthSettings")}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-4">
+                        <FormField
+                          control={form.control}
+                          name="forceKeyboardInteractive"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>
+                                  {t("hosts.forceKeyboardInteractive")}
+                                </FormLabel>
+                                <FormDescription>
+                                  {t("hosts.forceKeyboardInteractiveDesc")}
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="jump-hosts">
+                      <AccordionTrigger>
+                        {t("hosts.jumpHosts")}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-4">
+                        <Alert>
+                          <AlertDescription>
+                            {t("hosts.jumpHostsDescription")}
+                          </AlertDescription>
+                        </Alert>
+                        <FormField
+                          control={form.control}
+                          name="jumpHosts"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("hosts.jumpHostChain")}</FormLabel>
+                              <FormControl>
+                                <div className="space-y-3">
+                                  {field.value.map((jumpHost, index) => (
+                                    <JumpHostItem
+                                      key={index}
+                                      jumpHost={jumpHost}
+                                      index={index}
+                                      hosts={hosts}
+                                      editingHost={editingHost}
+                                      onUpdate={(hostId) => {
+                                        const newJumpHosts = [...field.value];
+                                        newJumpHosts[index] = { hostId };
+                                        field.onChange(newJumpHosts);
+                                      }}
+                                      onRemove={() => {
+                                        const newJumpHosts = field.value.filter(
+                                          (_, i) => i !== index,
+                                        );
+                                        field.onChange(newJumpHosts);
+                                      }}
+                                      t={t}
+                                    />
+                                  ))}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      field.onChange([
+                                        ...field.value,
+                                        { hostId: 0 },
+                                      ]);
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    {t("hosts.addJumpHost")}
+                                  </Button>
+                                </div>
+                              </FormControl>
+                              <FormDescription>
+                                {t("hosts.jumpHostsOrder")}
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </TabsContent>
                 <TabsContent value="terminal" className="space-y-1">
                   <FormField
@@ -1349,15 +1809,17 @@ export function HostManagerEditor({
                     </AlertDescription>
                   </Alert>
                   <h1 className="text-xl font-semibold mt-7">
-                    Terminal Customization
+                    {t("hosts.terminalCustomization")}
                   </h1>
                   <Accordion type="multiple" className="w-full">
                     <AccordionItem value="appearance">
-                      <AccordionTrigger>Appearance</AccordionTrigger>
+                      <AccordionTrigger>
+                        {t("hosts.appearance")}
+                      </AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
-                            Theme Preview
+                            {t("hosts.themePreview")}
                           </label>
                           <TerminalPreview
                             theme={form.watch("terminalConfig.theme")}
@@ -1381,14 +1843,16 @@ export function HostManagerEditor({
                           name="terminalConfig.theme"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Theme</FormLabel>
+                              <FormLabel>{t("hosts.theme")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select theme" />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectTheme")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -1402,7 +1866,7 @@ export function HostManagerEditor({
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Choose a color theme for the terminal
+                                {t("hosts.chooseColorTheme")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1413,14 +1877,16 @@ export function HostManagerEditor({
                           name="terminalConfig.fontFamily"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Font Family</FormLabel>
+                              <FormLabel>{t("hosts.fontFamily")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select font" />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectFont")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -1435,7 +1901,7 @@ export function HostManagerEditor({
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Select the font to use in the terminal
+                                {t("hosts.selectFontDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1446,7 +1912,11 @@ export function HostManagerEditor({
                           name="terminalConfig.fontSize"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Font Size: {field.value}px</FormLabel>
+                              <FormLabel>
+                                {t("hosts.fontSizeValue", {
+                                  value: field.value,
+                                })}
+                              </FormLabel>
                               <FormControl>
                                 <Slider
                                   min={8}
@@ -1459,7 +1929,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Adjust the terminal font size
+                                {t("hosts.adjustFontSize")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1471,7 +1941,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Letter Spacing: {field.value}px
+                                {t("hosts.letterSpacingValue", {
+                                  value: field.value,
+                                })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1485,7 +1957,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Adjust spacing between characters
+                                {t("hosts.adjustLetterSpacing")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1496,7 +1968,11 @@ export function HostManagerEditor({
                           name="terminalConfig.lineHeight"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Line Height: {field.value}</FormLabel>
+                              <FormLabel>
+                                {t("hosts.lineHeightValue", {
+                                  value: field.value,
+                                })}
+                              </FormLabel>
                               <FormControl>
                                 <Slider
                                   min={1}
@@ -1509,7 +1985,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Adjust spacing between lines
+                                {t("hosts.adjustLineHeight")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1520,26 +1996,32 @@ export function HostManagerEditor({
                           name="terminalConfig.cursorStyle"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Cursor Style</FormLabel>
+                              <FormLabel>{t("hosts.cursorStyle")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select cursor style" />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectCursorStyle")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="block">Block</SelectItem>
-                                  <SelectItem value="underline">
-                                    Underline
+                                  <SelectItem value="block">
+                                    {t("hosts.cursorStyleBlock")}
                                   </SelectItem>
-                                  <SelectItem value="bar">Bar</SelectItem>
+                                  <SelectItem value="underline">
+                                    {t("hosts.cursorStyleUnderline")}
+                                  </SelectItem>
+                                  <SelectItem value="bar">
+                                    {t("hosts.cursorStyleBar")}
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Choose the cursor appearance
+                                {t("hosts.chooseCursorAppearance")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1551,9 +2033,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>Cursor Blink</FormLabel>
+                                <FormLabel>{t("hosts.cursorBlink")}</FormLabel>
                                 <FormDescription>
-                                  Enable cursor blinking animation
+                                  {t("hosts.enableCursorBlink")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -1569,7 +2051,7 @@ export function HostManagerEditor({
                     </AccordionItem>
 
                     <AccordionItem value="behavior">
-                      <AccordionTrigger>Behavior</AccordionTrigger>
+                      <AccordionTrigger>{t("hosts.behavior")}</AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
                         <FormField
                           control={form.control}
@@ -1577,7 +2059,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Scrollback Buffer: {field.value} lines
+                                {t("hosts.scrollbackBufferValue", {
+                                  value: field.value,
+                                })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1591,7 +2075,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Number of lines to keep in scrollback history
+                                {t("hosts.scrollbackBufferDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1602,30 +2086,35 @@ export function HostManagerEditor({
                           name="terminalConfig.bellStyle"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Bell Style</FormLabel>
+                              <FormLabel>{t("hosts.bellStyle")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select bell style" />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectBellStyle")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  <SelectItem value="sound">Sound</SelectItem>
-                                  <SelectItem value="visual">Visual</SelectItem>
-                                  <SelectItem value="both">Both</SelectItem>
+                                  <SelectItem value="none">
+                                    {t("hosts.bellStyleNone")}
+                                  </SelectItem>
+                                  <SelectItem value="sound">
+                                    {t("hosts.bellStyleSound")}
+                                  </SelectItem>
+                                  <SelectItem value="visual">
+                                    {t("hosts.bellStyleVisual")}
+                                  </SelectItem>
+                                  <SelectItem value="both">
+                                    {t("hosts.bellStyleBoth")}
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                How to handle terminal bell (BEL character,
-                                \x07). Programs trigger this when completing
-                                tasks, encountering errors, or for
-                                notifications. "Sound" plays an audio beep,
-                                "Visual" flashes the screen briefly, "Both" does
-                                both, "None" disables bell alerts.
+                                {t("hosts.bellStyleDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1637,9 +2126,11 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>Right Click Selects Word</FormLabel>
+                                <FormLabel>
+                                  {t("hosts.rightClickSelectsWord")}
+                                </FormLabel>
                                 <FormDescription>
-                                  Right-clicking selects the word under cursor
+                                  {t("hosts.rightClickSelectsWordDesc")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -1657,24 +2148,34 @@ export function HostManagerEditor({
                           name="terminalConfig.fastScrollModifier"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Fast Scroll Modifier</FormLabel>
+                              <FormLabel>
+                                {t("hosts.fastScrollModifier")}
+                              </FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select modifier" />
+                                    <SelectValue
+                                      placeholder={t("hosts.selectModifier")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="alt">Alt</SelectItem>
-                                  <SelectItem value="ctrl">Ctrl</SelectItem>
-                                  <SelectItem value="shift">Shift</SelectItem>
+                                  <SelectItem value="alt">
+                                    {t("hosts.modifierAlt")}
+                                  </SelectItem>
+                                  <SelectItem value="ctrl">
+                                    {t("hosts.modifierCtrl")}
+                                  </SelectItem>
+                                  <SelectItem value="shift">
+                                    {t("hosts.modifierShift")}
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Modifier key for fast scrolling
+                                {t("hosts.fastScrollModifierDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1686,7 +2187,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Fast Scroll Sensitivity: {field.value}
+                                {t("hosts.fastScrollSensitivityValue", {
+                                  value: field.value,
+                                })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1700,7 +2203,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Scroll speed multiplier when modifier is held
+                                {t("hosts.fastScrollSensitivityDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1712,7 +2215,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Minimum Contrast Ratio: {field.value}
+                                {t("hosts.minimumContrastRatioValue", {
+                                  value: field.value,
+                                })}
                               </FormLabel>
                               <FormControl>
                                 <Slider
@@ -1726,8 +2231,7 @@ export function HostManagerEditor({
                                 />
                               </FormControl>
                               <FormDescription>
-                                Automatically adjust colors for better
-                                readability
+                                {t("hosts.minimumContrastRatioDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1736,7 +2240,7 @@ export function HostManagerEditor({
                     </AccordionItem>
 
                     <AccordionItem value="advanced">
-                      <AccordionTrigger>Advanced</AccordionTrigger>
+                      <AccordionTrigger>{t("hosts.advanced")}</AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
                         <FormField
                           control={form.control}
@@ -1744,10 +2248,11 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>SSH Agent Forwarding</FormLabel>
+                                <FormLabel>
+                                  {t("hosts.sshAgentForwarding")}
+                                </FormLabel>
                                 <FormDescription>
-                                  Forward SSH authentication agent to remote
-                                  host
+                                  {t("hosts.sshAgentForwardingDesc")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -1765,27 +2270,31 @@ export function HostManagerEditor({
                           name="terminalConfig.backspaceMode"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Backspace Mode</FormLabel>
+                              <FormLabel>{t("hosts.backspaceMode")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select backspace mode" />
+                                    <SelectValue
+                                      placeholder={t(
+                                        "hosts.selectBackspaceMode",
+                                      )}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="normal">
-                                    Normal (DEL)
+                                    {t("hosts.backspaceModeNormal")}
                                   </SelectItem>
                                   <SelectItem value="control-h">
-                                    Control-H (^H)
+                                    {t("hosts.backspaceModeControlH")}
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Backspace key behavior for compatibility
+                                {t("hosts.backspaceModeDesc")}
                               </FormDescription>
                             </FormItem>
                           )}
@@ -1794,72 +2303,102 @@ export function HostManagerEditor({
                         <FormField
                           control={form.control}
                           name="terminalConfig.startupSnippetId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Startup Snippet</FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(
-                                    value === "none" ? null : parseInt(value),
-                                  );
-                                  setSnippetSearch("");
-                                }}
-                                value={field.value?.toString() || "none"}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select snippet" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <div className="px-2 pb-2 sticky top-0 bg-popover z-10">
-                                    <Input
-                                      placeholder="Search snippets..."
-                                      value={snippetSearch}
-                                      onChange={(e) =>
-                                        setSnippetSearch(e.target.value)
-                                      }
-                                      className="h-8"
-                                      onClick={(e) => e.stopPropagation()}
-                                      onKeyDown={(e) => e.stopPropagation()}
-                                    />
-                                  </div>
-                                  <div className="max-h-[200px] overflow-y-auto">
-                                    <SelectItem value="none">None</SelectItem>
-                                    {snippets
-                                      .filter((snippet) =>
-                                        snippet.name
-                                          .toLowerCase()
-                                          .includes(
-                                            snippetSearch.toLowerCase(),
-                                          ),
-                                      )
-                                      .map((snippet) => (
-                                        <SelectItem
-                                          key={snippet.id}
-                                          value={snippet.id.toString()}
+                          render={({ field }) => {
+                            const [open, setOpen] = React.useState(false);
+                            const selectedSnippet = snippets.find(
+                              (s) => s.id === field.value,
+                            );
+
+                            return (
+                              <FormItem>
+                                <FormLabel>
+                                  {t("hosts.startupSnippet")}
+                                </FormLabel>
+                                <Popover open={open} onOpenChange={setOpen}>
+                                  <PopoverTrigger asChild>
+                                    <FormControl>
+                                      <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={open}
+                                        className="w-full justify-between"
+                                      >
+                                        {selectedSnippet
+                                          ? selectedSnippet.name
+                                          : t("hosts.selectSnippet")}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                      </Button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="p-0"
+                                    style={{
+                                      width:
+                                        "var(--radix-popover-trigger-width)",
+                                    }}
+                                  >
+                                    <Command>
+                                      <CommandInput
+                                        placeholder={t("hosts.searchSnippets")}
+                                      />
+                                      <CommandEmpty>
+                                        {t("hosts.noSnippetFound")}
+                                      </CommandEmpty>
+                                      <CommandGroup className="max-h-[300px] overflow-y-auto">
+                                        <CommandItem
+                                          value="none"
+                                          onSelect={() => {
+                                            field.onChange(null);
+                                            setOpen(false);
+                                          }}
                                         >
-                                          {snippet.name}
-                                        </SelectItem>
-                                      ))}
-                                    {snippets.filter((snippet) =>
-                                      snippet.name
-                                        .toLowerCase()
-                                        .includes(snippetSearch.toLowerCase()),
-                                    ).length === 0 &&
-                                      snippetSearch && (
-                                        <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                                          No snippets found
-                                        </div>
-                                      )}
-                                  </div>
-                                </SelectContent>
-                              </Select>
-                              <FormDescription>
-                                Execute a snippet when the terminal connects
-                              </FormDescription>
-                            </FormItem>
-                          )}
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              !field.value
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          {t("hosts.snippetNone")}
+                                        </CommandItem>
+                                        {snippets.map((snippet) => (
+                                          <CommandItem
+                                            key={snippet.id}
+                                            value={`${snippet.name} ${snippet.content} ${snippet.id}`}
+                                            onSelect={() => {
+                                              field.onChange(snippet.id);
+                                              setOpen(false);
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                field.value === snippet.id
+                                                  ? "opacity-100"
+                                                  : "opacity-0",
+                                              )}
+                                            />
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">
+                                                {snippet.name}
+                                              </span>
+                                              <span className="text-xs text-muted-foreground truncate max-w-[350px]">
+                                                {snippet.content}
+                                              </span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </Command>
+                                  </PopoverContent>
+                                </Popover>
+                                <FormDescription>
+                                  Execute a snippet when the terminal connects
+                                </FormDescription>
+                              </FormItem>
+                            );
+                          }}
                         />
 
                         <FormField
@@ -2394,6 +2933,20 @@ export function HostManagerEditor({
                 <TabsContent value="statistics" className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                        onClick={() =>
+                          window.open(
+                            "https://docs.termix.site/server-stats",
+                            "_blank",
+                          )
+                        }
+                      >
+                        {t("common.documentation")}
+                      </Button>
+
                       <FormField
                         control={form.control}
                         name="statsConfig.statusCheckEnabled"
@@ -2607,6 +3160,7 @@ export function HostManagerEditor({
                                   "uptime",
                                   "processes",
                                   "system",
+                                  "login_stats",
                                 ] as const
                               ).map((widget) => (
                                 <div
@@ -2646,6 +3200,8 @@ export function HostManagerEditor({
                                       t("serverStats.processes")}
                                     {widget === "system" &&
                                       t("serverStats.systemInfo")}
+                                    {widget === "login_stats" &&
+                                      t("serverStats.loginStats")}
                                   </label>
                                 </div>
                               ))}
@@ -2655,6 +3211,70 @@ export function HostManagerEditor({
                       />
                     </>
                   )}
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">
+                      {t("hosts.quickActions")}
+                    </h3>
+                    <Alert>
+                      <AlertDescription>
+                        {t("hosts.quickActionsDescription")}
+                      </AlertDescription>
+                    </Alert>
+                    <FormField
+                      control={form.control}
+                      name="quickActions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("hosts.quickActionsList")}</FormLabel>
+                          <FormControl>
+                            <div className="space-y-3">
+                              {field.value.map((quickAction, index) => (
+                                <QuickActionItem
+                                  key={index}
+                                  quickAction={quickAction}
+                                  index={index}
+                                  snippets={snippets}
+                                  onUpdate={(name, snippetId) => {
+                                    const newQuickActions = [...field.value];
+                                    newQuickActions[index] = {
+                                      name,
+                                      snippetId,
+                                    };
+                                    field.onChange(newQuickActions);
+                                  }}
+                                  onRemove={() => {
+                                    const newQuickActions = field.value.filter(
+                                      (_, i) => i !== index,
+                                    );
+                                    field.onChange(newQuickActions);
+                                  }}
+                                  t={t}
+                                />
+                              ))}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange([
+                                    ...field.value,
+                                    { name: "", snippetId: 0 },
+                                  ]);
+                                }}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                {t("hosts.addQuickAction")}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            {t("hosts.quickActionsOrder")}
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>

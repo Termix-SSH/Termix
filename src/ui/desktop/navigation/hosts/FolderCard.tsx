@@ -1,6 +1,18 @@
 import React, { useState } from "react";
 import { CardTitle } from "@/components/ui/card.tsx";
-import { ChevronDown, Folder } from "lucide-react";
+import {
+  ChevronDown,
+  Folder,
+  Server,
+  Cloud,
+  Database,
+  Box,
+  Package,
+  Layers,
+  Archive,
+  HardDrive,
+  Globe,
+} from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Host } from "@/ui/desktop/navigation/hosts/Host.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
@@ -40,17 +52,45 @@ interface FolderCardProps {
   hosts: SSHHost[];
   isFirst: boolean;
   isLast: boolean;
+  folderColor?: string;
+  folderIcon?: string;
 }
 
 export function FolderCard({
   folderName,
   hosts,
+  folderColor,
+  folderIcon,
 }: FolderCardProps): React.ReactElement {
   const [isExpanded, setIsExpanded] = useState(true);
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
+
+  const iconMap: Record<
+    string,
+    React.ComponentType<{
+      size?: number;
+      strokeWidth?: number;
+      className?: string;
+      style?: React.CSSProperties;
+    }>
+  > = {
+    Folder,
+    Server,
+    Cloud,
+    Database,
+    Box,
+    Package,
+    Layers,
+    Archive,
+    HardDrive,
+    Globe,
+  };
+
+  const FolderIcon =
+    folderIcon && iconMap[folderIcon] ? iconMap[folderIcon] : Folder;
 
   return (
     <div className="bg-dark-bg-darker border-2 border-dark-border rounded-lg overflow-hidden p-0 m-0">
@@ -59,7 +99,11 @@ export function FolderCard({
       >
         <div className="flex gap-2 pr-10">
           <div className="flex-shrink-0 flex items-center">
-            <Folder size={16} strokeWidth={3} />
+            <FolderIcon
+              size={16}
+              strokeWidth={3}
+              style={folderColor ? { color: folderColor } : undefined}
+            />
           </div>
           <div className="flex-1 min-w-0">
             <CardTitle className="mb-0 leading-tight break-words text-md">

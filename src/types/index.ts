@@ -5,6 +5,15 @@ import type { Request } from "express";
 // SSH HOST TYPES
 // ============================================================================
 
+export interface JumpHost {
+  hostId: number;
+}
+
+export interface QuickAction {
+  name: string;
+  snippetId: number;
+}
+
 export interface SSHHost {
   id: number;
   name: string;
@@ -26,16 +35,28 @@ export interface SSHHost {
   autostartKeyPassword?: string;
 
   credentialId?: number;
+  overrideCredentialUsername?: boolean;
   userId?: string;
   enableTerminal: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
+  jumpHosts?: JumpHost[];
+  quickActions?: QuickAction[];
   statsConfig?: string;
   terminalConfig?: TerminalConfig;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface JumpHostData {
+  hostId: number;
+}
+
+export interface QuickActionData {
+  name: string;
+  snippetId: number;
 }
 
 export interface SSHHostData {
@@ -52,14 +73,27 @@ export interface SSHHostData {
   keyPassword?: string;
   keyType?: string;
   credentialId?: number | null;
+  overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   defaultPath?: string;
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
+  jumpHosts?: JumpHostData[];
+  quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
+}
+
+export interface SSHFolder {
+  id: number;
+  userId: string;
+  name: string;
+  color?: string;
+  icon?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================================================
@@ -295,6 +329,21 @@ export interface TabContextTab {
   initialTab?: string;
 }
 
+export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";
+
+export interface SplitConfiguration {
+  layout: SplitLayout;
+  positions: Map<number, number>;
+}
+
+export interface SplitLayoutOption {
+  id: SplitLayout;
+  name: string;
+  description: string;
+  cellCount: number;
+  icon: string; // lucide icon name
+}
+
 // ============================================================================
 // CONNECTION STATES
 // ============================================================================
@@ -369,6 +418,8 @@ export interface HostManagerProps {
   isTopbarOpen?: boolean;
   initialTab?: string;
   hostConfig?: SSHHost;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
 }
 
 export interface SSHManagerHostEditorProps {
@@ -455,6 +506,8 @@ export interface Snippet {
   name: string;
   content: string;
   description?: string;
+  folder?: string;
+  order?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -463,6 +516,18 @@ export interface SnippetData {
   name: string;
   content: string;
   description?: string;
+  folder?: string;
+  order?: number;
+}
+
+export interface SnippetFolder {
+  id: number;
+  userId: string;
+  name: string;
+  color?: string;
+  icon?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================================================

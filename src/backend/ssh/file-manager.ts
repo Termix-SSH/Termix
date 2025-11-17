@@ -6,7 +6,7 @@ import { Client as SSHClient } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { fileLogger } from "../utils/logger.js";
+import { fileLogger, sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
@@ -89,11 +89,179 @@ app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
 
+async function resolveJumpHost(
+  hostId: number,
+  userId: string,
+): Promise<any | null> {
+  try {
+    const hosts = await SimpleDBOps.select(
+      getDb()
+        .select()
+        .from(sshData)
+        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+      "ssh_data",
+      userId,
+    );
+
+    if (hosts.length === 0) {
+      return null;
+    }
+
+    const host = hosts[0];
+
+    if (host.credentialId) {
+      const credentials = await SimpleDBOps.select(
+        getDb()
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, host.credentialId as number),
+              eq(sshCredentials.userId, userId),
+            ),
+          ),
+        "ssh_credentials",
+        userId,
+      );
+
+      if (credentials.length > 0) {
+        const credential = credentials[0];
+        return {
+          ...host,
+          password: credential.password,
+          key:
+            credential.private_key || credential.privateKey || credential.key,
+          keyPassword: credential.key_password || credential.keyPassword,
+          keyType: credential.key_type || credential.keyType,
+          authType: credential.auth_type || credential.authType,
+        };
+      }
+    }
+
+    return host;
+  } catch (error) {
+    fileLogger.error("Failed to resolve jump host", error, {
+      operation: "resolve_jump_host",
+      hostId,
+      userId,
+    });
+    return null;
+  }
+}
+
+async function createJumpHostChain(
+  jumpHosts: Array<{ hostId: number }>,
+  userId: string,
+): Promise<SSHClient | null> {
+  if (!jumpHosts || jumpHosts.length === 0) {
+    return null;
+  }
+
+  let currentClient: SSHClient | null = null;
+  const clients: SSHClient[] = [];
+
+  try {
+    for (let i = 0; i < jumpHosts.length; i++) {
+      const jumpHostConfig = await resolveJumpHost(jumpHosts[i].hostId, userId);
+
+      if (!jumpHostConfig) {
+        fileLogger.error(`Jump host ${i + 1} not found`, undefined, {
+          operation: "jump_host_chain",
+          hostId: jumpHosts[i].hostId,
+        });
+        clients.forEach((c) => c.end());
+        return null;
+      }
+
+      const jumpClient = new SSHClient();
+      clients.push(jumpClient);
+
+      const connected = await new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve(false);
+        }, 30000);
+
+        jumpClient.on("ready", () => {
+          clearTimeout(timeout);
+          resolve(true);
+        });
+
+        jumpClient.on("error", (err) => {
+          clearTimeout(timeout);
+          fileLogger.error(`Jump host ${i + 1} connection failed`, err, {
+            operation: "jump_host_connect",
+            hostId: jumpHostConfig.id,
+            ip: jumpHostConfig.ip,
+          });
+          resolve(false);
+        });
+
+        const connectConfig: any = {
+          host: jumpHostConfig.ip,
+          port: jumpHostConfig.port || 22,
+          username: jumpHostConfig.username,
+          tryKeyboard: true,
+          readyTimeout: 30000,
+        };
+
+        if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
+          connectConfig.password = jumpHostConfig.password;
+        } else if (jumpHostConfig.authType === "key" && jumpHostConfig.key) {
+          const cleanKey = jumpHostConfig.key
+            .trim()
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n");
+          connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
+          if (jumpHostConfig.keyPassword) {
+            connectConfig.passphrase = jumpHostConfig.keyPassword;
+          }
+        }
+
+        if (currentClient) {
+          currentClient.forwardOut(
+            "127.0.0.1",
+            0,
+            jumpHostConfig.ip,
+            jumpHostConfig.port || 22,
+            (err, stream) => {
+              if (err) {
+                clearTimeout(timeout);
+                resolve(false);
+                return;
+              }
+              connectConfig.sock = stream;
+              jumpClient.connect(connectConfig);
+            },
+          );
+        } else {
+          jumpClient.connect(connectConfig);
+        }
+      });
+
+      if (!connected) {
+        clients.forEach((c) => c.end());
+        return null;
+      }
+
+      currentClient = jumpClient;
+    }
+
+    return currentClient;
+  } catch (error) {
+    fileLogger.error("Failed to create jump host chain", error, {
+      operation: "jump_host_chain",
+    });
+    clients.forEach((c) => c.end());
+    return null;
+  }
+}
+
 interface SSHSession {
   client: SSHClient;
   isConnected: boolean;
   lastActive: number;
   timeout?: NodeJS.Timeout;
+  activeOperations: number;
 }
 
 interface PendingTOTPSession {
@@ -118,9 +286,22 @@ const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
+    if (session.activeOperations > 0) {
+      fileLogger.warn(
+        `Deferring session cleanup for ${sessionId} - ${session.activeOperations} active operations`,
+        {
+          operation: "cleanup_deferred",
+          sessionId,
+          activeOperations: session.activeOperations,
+        },
+      );
+      scheduleSessionCleanup(sessionId);
+      return;
+    }
+
     try {
       session.client.end();
-    } catch {}
+    } catch (error) {}
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -174,6 +355,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     credentialId,
     userProvidedPassword,
     forceKeyboardInteractive,
+    jumpHosts,
   } = req.body;
 
   const userId = (req as AuthenticatedRequest).userId;
@@ -393,6 +575,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       client,
       isConnected: true,
       lastActive: Date.now(),
+      activeOperations: 0,
     };
     scheduleSessionCleanup(sessionId);
     res.json({ status: "success", message: "SSH connection established" });
@@ -625,7 +808,52 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     },
   );
 
-  client.connect(config);
+  if (jumpHosts && jumpHosts.length > 0 && userId) {
+    try {
+      const jumpClient = await createJumpHostChain(jumpHosts, userId);
+
+      if (!jumpClient) {
+        fileLogger.error("Failed to establish jump host chain", {
+          operation: "file_jump_chain",
+          sessionId,
+          hostId,
+        });
+        return res
+          .status(500)
+          .json({ error: "Failed to connect through jump hosts" });
+      }
+
+      jumpClient.forwardOut("127.0.0.1", 0, ip, port, (err, stream) => {
+        if (err) {
+          fileLogger.error("Failed to forward through jump host", err, {
+            operation: "file_jump_forward",
+            sessionId,
+            hostId,
+            ip,
+            port,
+          });
+          jumpClient.end();
+          return res.status(500).json({
+            error: "Failed to forward through jump host: " + err.message,
+          });
+        }
+
+        config.sock = stream;
+        client.connect(config);
+      });
+    } catch (error) {
+      fileLogger.error("Jump host error", error, {
+        operation: "file_jump_host",
+        sessionId,
+        hostId,
+      });
+      return res
+        .status(500)
+        .json({ error: "Failed to connect through jump hosts" });
+    }
+  } else {
+    client.connect(config);
+  }
 });
 
 app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
@@ -663,7 +891,9 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch (error) {
+      sshLogger.debug("Operation failed, continuing", { error });
+    }
     fileLogger.warn("TOTP session timeout before code submission", {
       operation: "file_totp_verify",
       sessionId,
@@ -700,6 +930,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         client: session.client,
         isConnected: true,
         lastActive: Date.now(),
+        activeOperations: 0,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -843,10 +1074,12 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   }
 
   sshConn.lastActive = Date.now();
+  sshConn.activeOperations++;
 
   const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
-  sshConn.client.exec(`ls -la '${escapedPath}'`, (err, stream) => {
+  sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
     if (err) {
+      sshConn.activeOperations--;
       fileLogger.error("SSH listFiles error:", err);
       return res.status(500).json({ error: err.message });
     }
@@ -863,6 +1096,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
     });
 
     stream.on("close", (code) => {
+      sshConn.activeOperations--;
       if (code !== 0) {
         fileLogger.error(
           `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
@@ -2482,6 +2716,516 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
           }
         });
       });
+    });
+  });
+});
+
+app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
+  const { sessionId, path, permissions } = req.body;
+  const sshConn = sshSessions[sessionId];
+
+  if (!sshConn || !sshConn.isConnected) {
+    fileLogger.error(
+      "SSH connection not found or not connected for changePermissions",
+      {
+        operation: "change_permissions",
+        sessionId,
+        hasConnection: !!sshConn,
+        isConnected: sshConn?.isConnected,
+      },
+    );
+    return res.status(400).json({ error: "SSH connection not available" });
+  }
+
+  if (!path) {
+    return res.status(400).json({ error: "File path is required" });
+  }
+
+  if (!permissions || !/^\d{3,4}$/.test(permissions)) {
+    return res.status(400).json({
+      error: "Valid permissions required (e.g., 755, 644)",
+    });
+  }
+
+  sshConn.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  const octalPerms = permissions.slice(-3);
+  const escapedPath = path.replace(/'/g, "'\"'\"'");
+  const command = `chmod ${octalPerms} '${escapedPath}' && echo "SUCCESS"`;
+
+  fileLogger.info("Changing file permissions", {
+    operation: "change_permissions",
+    sessionId,
+    path,
+    permissions: octalPerms,
+  });
+
+  const commandTimeout = setTimeout(() => {
+    if (!res.headersSent) {
+      fileLogger.error("changePermissions command timeout", {
+        operation: "change_permissions",
+        sessionId,
+        path,
+        permissions: octalPerms,
+      });
+      res.status(408).json({
+        error: "Permission change timed out. SSH connection may be unstable.",
+      });
+    }
+  }, 10000);
+
+  sshConn.client.exec(command, (err, stream) => {
+    if (err) {
+      clearTimeout(commandTimeout);
+      fileLogger.error("SSH changePermissions exec error:", err, {
+        operation: "change_permissions",
+        sessionId,
+        path,
+        permissions: octalPerms,
+      });
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "Failed to change permissions" });
+      }
+      return;
+    }
+
+    let outputData = "";
+    let errorOutput = "";
+
+    stream.on("data", (chunk: Buffer) => {
+      outputData += chunk.toString();
+    });
+
+    stream.stderr.on("data", (data: Buffer) => {
+      errorOutput += data.toString();
+    });
+
+    stream.on("close", (code) => {
+      clearTimeout(commandTimeout);
+
+      if (outputData.includes("SUCCESS")) {
+        fileLogger.success("File permissions changed successfully", {
+          operation: "change_permissions",
+          sessionId,
+          path,
+          permissions: octalPerms,
+        });
+
+        if (!res.headersSent) {
+          res.json({
+            success: true,
+            message: "Permissions changed successfully",
+          });
+        }
+        return;
+      }
+
+      if (code !== 0) {
+        fileLogger.error("chmod command failed", {
+          operation: "change_permissions",
+          sessionId,
+          path,
+          permissions: octalPerms,
+          exitCode: code,
+          error: errorOutput,
+        });
+        if (!res.headersSent) {
+          return res.status(500).json({
+            error: errorOutput || "Failed to change permissions",
+          });
+        }
+        return;
+      }
+
+      fileLogger.success("File permissions changed successfully", {
+        operation: "change_permissions",
+        sessionId,
+        path,
+        permissions: octalPerms,
+      });
+
+      if (!res.headersSent) {
+        res.json({
+          success: true,
+          message: "Permissions changed successfully",
+        });
+      }
+    });
+
+    stream.on("error", (streamErr) => {
+      clearTimeout(commandTimeout);
+      fileLogger.error("SSH changePermissions stream error:", streamErr, {
+        operation: "change_permissions",
+        sessionId,
+        path,
+        permissions: octalPerms,
+      });
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json({ error: "Stream error while changing permissions" });
+      }
+    });
+  });
+});
+
+// Route: Extract archive file (requires JWT)
+// POST /ssh/file_manager/ssh/extractArchive
+app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
+  const { sessionId, archivePath, extractPath } = req.body;
+
+  if (!sessionId || !archivePath) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const session = sshSessions[sessionId];
+  if (!session || !session.isConnected) {
+    return res.status(400).json({ error: "SSH session not connected" });
+  }
+
+  session.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  const fileName = archivePath.split("/").pop() || "";
+  const fileExt = fileName.toLowerCase();
+
+  let extractCommand = "";
+  const targetPath =
+    extractPath || archivePath.substring(0, archivePath.lastIndexOf("/"));
+
+  if (fileExt.endsWith(".tar.gz") || fileExt.endsWith(".tgz")) {
+    extractCommand = `tar -xzf "${archivePath}" -C "${targetPath}"`;
+  } else if (fileExt.endsWith(".tar.bz2") || fileExt.endsWith(".tbz2")) {
+    extractCommand = `tar -xjf "${archivePath}" -C "${targetPath}"`;
+  } else if (fileExt.endsWith(".tar.xz")) {
+    extractCommand = `tar -xJf "${archivePath}" -C "${targetPath}"`;
+  } else if (fileExt.endsWith(".tar")) {
+    extractCommand = `tar -xf "${archivePath}" -C "${targetPath}"`;
+  } else if (fileExt.endsWith(".zip")) {
+    extractCommand = `unzip -o "${archivePath}" -d "${targetPath}"`;
+  } else if (fileExt.endsWith(".gz") && !fileExt.endsWith(".tar.gz")) {
+    extractCommand = `gunzip -c "${archivePath}" > "${archivePath.replace(/\.gz$/, "")}"`;
+  } else if (fileExt.endsWith(".bz2") && !fileExt.endsWith(".tar.bz2")) {
+    extractCommand = `bunzip2 -k "${archivePath}"`;
+  } else if (fileExt.endsWith(".xz") && !fileExt.endsWith(".tar.xz")) {
+    extractCommand = `unxz -k "${archivePath}"`;
+  } else if (fileExt.endsWith(".7z")) {
+    extractCommand = `7z x "${archivePath}" -o"${targetPath}"`;
+  } else if (fileExt.endsWith(".rar")) {
+    extractCommand = `unrar x "${archivePath}" "${targetPath}/"`;
+  } else {
+    return res.status(400).json({ error: "Unsupported archive format" });
+  }
+
+  fileLogger.info("Extracting archive", {
+    operation: "extract_archive",
+    sessionId,
+    archivePath,
+    extractPath: targetPath,
+    command: extractCommand,
+  });
+
+  session.client.exec(extractCommand, (err, stream) => {
+    if (err) {
+      fileLogger.error("SSH exec error during extract:", err, {
+        operation: "extract_archive",
+        sessionId,
+        archivePath,
+      });
+      return res
+        .status(500)
+        .json({ error: "Failed to execute extract command" });
+    }
+
+    let errorOutput = "";
+
+    stream.on("data", (data: Buffer) => {
+      fileLogger.debug("Extract stdout", {
+        operation: "extract_archive",
+        sessionId,
+        output: data.toString(),
+      });
+    });
+
+    stream.stderr.on("data", (data: Buffer) => {
+      errorOutput += data.toString();
+      fileLogger.debug("Extract stderr", {
+        operation: "extract_archive",
+        sessionId,
+        error: data.toString(),
+      });
+    });
+
+    stream.on("close", (code: number) => {
+      if (code !== 0) {
+        fileLogger.error("Extract command failed", {
+          operation: "extract_archive",
+          sessionId,
+          archivePath,
+          exitCode: code,
+          error: errorOutput,
+        });
+
+        let friendlyError = errorOutput || "Failed to extract archive";
+        if (
+          errorOutput.includes("command not found") ||
+          errorOutput.includes("not found")
+        ) {
+          let missingCmd = "";
+          let installHint = "";
+
+          if (fileExt.endsWith(".zip")) {
+            missingCmd = "unzip";
+            installHint =
+              "apt install unzip / yum install unzip / brew install unzip";
+          } else if (
+            fileExt.endsWith(".tar.gz") ||
+            fileExt.endsWith(".tgz") ||
+            fileExt.endsWith(".tar.bz2") ||
+            fileExt.endsWith(".tbz2") ||
+            fileExt.endsWith(".tar.xz") ||
+            fileExt.endsWith(".tar")
+          ) {
+            missingCmd = "tar";
+            installHint = "Usually pre-installed on Linux/Unix systems";
+          } else if (fileExt.endsWith(".gz")) {
+            missingCmd = "gunzip";
+            installHint =
+              "apt install gzip / yum install gzip / Usually pre-installed";
+          } else if (fileExt.endsWith(".bz2")) {
+            missingCmd = "bunzip2";
+            installHint =
+              "apt install bzip2 / yum install bzip2 / brew install bzip2";
+          } else if (fileExt.endsWith(".xz")) {
+            missingCmd = "unxz";
+            installHint =
+              "apt install xz-utils / yum install xz / brew install xz";
+          } else if (fileExt.endsWith(".7z")) {
+            missingCmd = "7z";
+            installHint =
+              "apt install p7zip-full / yum install p7zip / brew install p7zip";
+          } else if (fileExt.endsWith(".rar")) {
+            missingCmd = "unrar";
+            installHint =
+              "apt install unrar / yum install unrar / brew install unrar";
+          }
+
+          if (missingCmd) {
+            friendlyError = `Command '${missingCmd}' not found on remote server. Please install it first: ${installHint}`;
+          }
+        }
+
+        return res.status(500).json({ error: friendlyError });
+      }
+
+      fileLogger.success("Archive extracted successfully", {
+        operation: "extract_archive",
+        sessionId,
+        archivePath,
+        extractPath: targetPath,
+      });
+
+      res.json({
+        success: true,
+        message: "Archive extracted successfully",
+        extractPath: targetPath,
+      });
+    });
+
+    stream.on("error", (streamErr) => {
+      fileLogger.error("SSH extractArchive stream error:", streamErr, {
+        operation: "extract_archive",
+        sessionId,
+        archivePath,
+      });
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json({ error: "Stream error while extracting archive" });
+      }
+    });
+  });
+});
+
+// Route: Compress files/folders (requires JWT)
+// POST /ssh/file_manager/ssh/compressFiles
+app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
+  const { sessionId, paths, archiveName, format } = req.body;
+
+  if (
+    !sessionId ||
+    !paths ||
+    !Array.isArray(paths) ||
+    paths.length === 0 ||
+    !archiveName
+  ) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const session = sshSessions[sessionId];
+  if (!session || !session.isConnected) {
+    return res.status(400).json({ error: "SSH session not connected" });
+  }
+
+  session.lastActive = Date.now();
+  scheduleSessionCleanup(sessionId);
+
+  const compressionFormat = format || "zip";
+  let compressCommand = "";
+
+  const firstPath = paths[0];
+  const workingDir = firstPath.substring(0, firstPath.lastIndexOf("/")) || "/";
+
+  const fileNames = paths
+    .map((p) => {
+      const name = p.split("/").pop();
+      return `"${name}"`;
+    })
+    .join(" ");
+
+  let archivePath = "";
+  if (archiveName.includes("/")) {
+    archivePath = archiveName;
+  } else {
+    archivePath = workingDir.endsWith("/")
+      ? `${workingDir}${archiveName}`
+      : `${workingDir}/${archiveName}`;
+  }
+
+  if (compressionFormat === "zip") {
+    compressCommand = `cd "${workingDir}" && zip -r "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "tar.gz" || compressionFormat === "tgz") {
+    compressCommand = `cd "${workingDir}" && tar -czf "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "tar.bz2" || compressionFormat === "tbz2") {
+    compressCommand = `cd "${workingDir}" && tar -cjf "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "tar.xz") {
+    compressCommand = `cd "${workingDir}" && tar -cJf "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "tar") {
+    compressCommand = `cd "${workingDir}" && tar -cf "${archivePath}" ${fileNames}`;
+  } else if (compressionFormat === "7z") {
+    compressCommand = `cd "${workingDir}" && 7z a "${archivePath}" ${fileNames}`;
+  } else {
+    return res.status(400).json({ error: "Unsupported compression format" });
+  }
+
+  fileLogger.info("Compressing files", {
+    operation: "compress_files",
+    sessionId,
+    paths,
+    archivePath,
+    format: compressionFormat,
+    command: compressCommand,
+  });
+
+  session.client.exec(compressCommand, (err, stream) => {
+    if (err) {
+      fileLogger.error("SSH exec error during compress:", err, {
+        operation: "compress_files",
+        sessionId,
+        paths,
+      });
+      return res
+        .status(500)
+        .json({ error: "Failed to execute compress command" });
+    }
+
+    let errorOutput = "";
+
+    stream.on("data", (data: Buffer) => {
+      fileLogger.debug("Compress stdout", {
+        operation: "compress_files",
+        sessionId,
+        output: data.toString(),
+      });
+    });
+
+    stream.stderr.on("data", (data: Buffer) => {
+      errorOutput += data.toString();
+      fileLogger.debug("Compress stderr", {
+        operation: "compress_files",
+        sessionId,
+        error: data.toString(),
+      });
+    });
+
+    stream.on("close", (code: number) => {
+      if (code !== 0) {
+        fileLogger.error("Compress command failed", {
+          operation: "compress_files",
+          sessionId,
+          paths,
+          archivePath,
+          exitCode: code,
+          error: errorOutput,
+        });
+
+        let friendlyError = errorOutput || "Failed to compress files";
+        if (
+          errorOutput.includes("command not found") ||
+          errorOutput.includes("not found")
+        ) {
+          const commandMap: Record<string, { cmd: string; install: string }> = {
+            zip: {
+              cmd: "zip",
+              install: "apt install zip / yum install zip / brew install zip",
+            },
+            "tar.gz": {
+              cmd: "tar",
+              install: "Usually pre-installed on Linux/Unix systems",
+            },
+            "tar.bz2": {
+              cmd: "tar",
+              install: "Usually pre-installed on Linux/Unix systems",
+            },
+            "tar.xz": {
+              cmd: "tar",
+              install: "Usually pre-installed on Linux/Unix systems",
+            },
+            tar: {
+              cmd: "tar",
+              install: "Usually pre-installed on Linux/Unix systems",
+            },
+            "7z": {
+              cmd: "7z",
+              install:
+                "apt install p7zip-full / yum install p7zip / brew install p7zip",
+            },
+          };
+
+          const info = commandMap[compressionFormat];
+          if (info) {
+            friendlyError = `Command '${info.cmd}' not found on remote server. Please install it first: ${info.install}`;
+          }
+        }
+
+        return res.status(500).json({ error: friendlyError });
+      }
+
+      fileLogger.success("Files compressed successfully", {
+        operation: "compress_files",
+        sessionId,
+        paths,
+        archivePath,
+        format: compressionFormat,
+      });
+
+      res.json({
+        success: true,
+        message: "Files compressed successfully",
+        archivePath: archivePath,
+      });
+    });
+
+    stream.on("error", (streamErr) => {
+      fileLogger.error("SSH compressFiles stream error:", streamErr, {
+        operation: "compress_files",
+        sessionId,
+        paths,
+      });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Stream error while compressing files" });
+      }
     });
   });
 });

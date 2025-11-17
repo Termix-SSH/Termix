@@ -95,6 +95,26 @@ async function initializeDatabaseAsync(): Promise<void> {
         databaseKeyLength: process.env.DATABASE_KEY?.length || 0,
       });
 
+      try {
+        const diagnosticInfo =
+          DatabaseFileEncryption.getDiagnosticInfo(encryptedDbPath);
+        databaseLogger.error(
+          "Database encryption diagnostic completed - check logs above for details",
+          null,
+          {
+            operation: "db_encryption_diagnostic_completed",
+            filesConsistent: diagnosticInfo.validation.filesConsistent,
+            sizeMismatch: diagnosticInfo.validation.sizeMismatch,
+          },
+        );
+      } catch (diagError) {
+        databaseLogger.warn("Failed to generate diagnostic information", {
+          operation: "db_diagnostic_failed",
+          error:
+            diagError instanceof Error ? diagError.message : "Unknown error",
+        });
+      }
+
       throw new Error(
         `Database decryption failed: ${error instanceof Error ? error.message : "Unknown error"}. This prevents data loss.`,
       );
@@ -119,6 +139,8 @@ async function initializeCompleteDatabase(): Promise<void> {
   });
 
   sqlite = memoryDatabase;
+
+  sqlite.exec("PRAGMA foreign_keys = ON");
 
   db = drizzle(sqlite, { schema });
 
@@ -157,7 +179,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         expires_at TEXT NOT NULL,
         last_active_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS ssh_data (
@@ -188,7 +210,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         terminal_config TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS file_manager_recent (
@@ -198,8 +220,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         name TEXT NOT NULL,
         path TEXT NOT NULL,
         last_opened TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS file_manager_pinned (
@@ -209,8 +231,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         name TEXT NOT NULL,
         path TEXT NOT NULL,
         pinned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS file_manager_shortcuts (
@@ -220,8 +242,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         name TEXT NOT NULL,
         path TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS dismissed_alerts (
@@ -229,7 +251,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         user_id TEXT NOT NULL,
         alert_id TEXT NOT NULL,
         dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS ssh_credentials (
@@ -249,7 +271,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         last_used TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS ssh_credential_usage (
@@ -258,9 +280,9 @@ async function initializeCompleteDatabase(): Promise<void> {
         host_id INTEGER NOT NULL,
         user_id TEXT NOT NULL,
         used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id),
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id),
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS snippets (
@@ -271,7 +293,18 @@ async function initializeCompleteDatabase(): Promise<void> {
         description TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS ssh_folders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        color TEXT,
+        icon TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS recent_activity (
@@ -279,10 +312,20 @@ async function initializeCompleteDatabase(): Promise<void> {
         user_id TEXT NOT NULL,
         type TEXT NOT NULL,
         host_id INTEGER NOT NULL,
-        host_name TEXT NOT NULL,
+        host_name TEXT,
         timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id)
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS command_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        command TEXT NOT NULL,
+        executed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
     );
 
 `);
@@ -343,14 +386,14 @@ const addColumnIfNotExists = (
   try {
     sqlite
       .prepare(
-        `SELECT ${column}
+        `SELECT "${column}"
                         FROM ${table} LIMIT 1`,
       )
       .get();
   } catch {
     try {
       sqlite.exec(`ALTER TABLE ${table}
-                ADD COLUMN ${column} ${definition};`);
+                ADD COLUMN "${column}" ${definition};`);
     } catch (alterError) {
       databaseLogger.warn(`Failed to add column ${column} to ${table}`, {
         operation: "schema_migration",
@@ -405,6 +448,7 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 1",
   );
   addColumnIfNotExists("ssh_data", "tunnel_connections", "TEXT");
+  addColumnIfNotExists("ssh_data", "jump_hosts", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "enable_file_manager",
@@ -428,7 +472,12 @@ const migrateSchema = () => {
   addColumnIfNotExists(
     "ssh_data",
     "credential_id",
-    "INTEGER REFERENCES ssh_credentials(id)",
+    "INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "override_credential_username",
+    "INTEGER",
   );
 
   addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
@@ -436,6 +485,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists("ssh_data", "stats_config", "TEXT");
   addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
+  addColumnIfNotExists("ssh_data", "quick_actions", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
@@ -444,6 +494,35 @@ const migrateSchema = () => {
   addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_shortcuts", "host_id", "INTEGER NOT NULL");
+
+  addColumnIfNotExists("snippets", "folder", "TEXT");
+  addColumnIfNotExists("snippets", "order", "INTEGER NOT NULL DEFAULT 0");
+
+  try {
+    sqlite
+      .prepare("SELECT id FROM snippet_folders LIMIT 1")
+      .get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS snippet_folders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          color TEXT,
+          icon TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create snippet_folders table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
 
   try {
     sqlite

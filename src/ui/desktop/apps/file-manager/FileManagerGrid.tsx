@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../../../types/index.js";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface CreateIntent {
   id: string;
@@ -92,17 +93,37 @@ interface FileManagerGridProps {
   createIntent?: CreateIntent | null;
   onConfirmCreate?: (name: string) => void;
   onCancelCreate?: () => void;
+  onNewFile?: () => void;
+  onNewFolder?: () => void;
 }
 
-const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
-  const iconClass = viewMode === "grid" ? "w-8 h-8" : "w-6 h-6";
+const getFileTypeColor = (file: FileItem): string => {
+  const colorEnabled = localStorage.getItem("fileColorCoding") !== "false";
+  if (!colorEnabled) {
+    return "text-muted-foreground";
+  }
 
   if (file.type === "directory") {
-    return <Folder className={`${iconClass} text-muted-foreground`} />;
+    return "text-red-400";
   }
 
   if (file.type === "link") {
-    return <FileSymlink className={`${iconClass} text-muted-foreground`} />;
+    return "text-green-400";
+  }
+
+  return "text-blue-400";
+};
+
+const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
+  const iconClass = viewMode === "grid" ? "w-8 h-8" : "w-6 h-6";
+  const colorClass = getFileTypeColor(file);
+
+  if (file.type === "directory") {
+    return <Folder className={`${iconClass} ${colorClass}`} />;
+  }
+
+  if (file.type === "link") {
+    return <FileSymlink className={`${iconClass} ${colorClass}`} />;
   }
 
   const ext = file.name.split(".").pop()?.toLowerCase();
@@ -111,30 +132,30 @@ const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
     case "txt":
     case "md":
     case "readme":
-      return <FileText className={`${iconClass} text-muted-foreground`} />;
+      return <FileText className={`${iconClass} ${colorClass}`} />;
     case "png":
     case "jpg":
     case "jpeg":
     case "gif":
     case "bmp":
     case "svg":
-      return <FileImage className={`${iconClass} text-muted-foreground`} />;
+      return <FileImage className={`${iconClass} ${colorClass}`} />;
     case "mp4":
     case "avi":
     case "mkv":
     case "mov":
-      return <FileVideo className={`${iconClass} text-muted-foreground`} />;
+      return <FileVideo className={`${iconClass} ${colorClass}`} />;
     case "mp3":
     case "wav":
     case "flac":
     case "ogg":
-      return <FileAudio className={`${iconClass} text-muted-foreground`} />;
+      return <FileAudio className={`${iconClass} ${colorClass}`} />;
     case "zip":
     case "tar":
     case "gz":
     case "rar":
     case "7z":
-      return <Archive className={`${iconClass} text-muted-foreground`} />;
+      return <Archive className={`${iconClass} ${colorClass}`} />;
     case "js":
     case "ts":
     case "jsx":
@@ -148,7 +169,7 @@ const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
     case "rb":
     case "go":
     case "rs":
-      return <Code className={`${iconClass} text-muted-foreground`} />;
+      return <Code className={`${iconClass} ${colorClass}`} />;
     case "json":
     case "xml":
     case "yaml":
@@ -157,9 +178,9 @@ const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
     case "ini":
     case "conf":
     case "config":
-      return <Settings className={`${iconClass} text-muted-foreground`} />;
+      return <Settings className={`${iconClass} ${colorClass}`} />;
     default:
-      return <File className={`${iconClass} text-muted-foreground`} />;
+      return <File className={`${iconClass} ${colorClass}`} />;
   }
 };
 
@@ -192,6 +213,8 @@ export function FileManagerGrid({
   createIntent,
   onConfirmCreate,
   onCancelCreate,
+  onNewFile,
+  onNewFolder,
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -772,6 +795,42 @@ export function FileManagerGrid({
             onUndo();
           }
           break;
+        case "d":
+        case "D":
+          if (
+            (event.ctrlKey || event.metaKey) &&
+            selectedFiles.length > 0 &&
+            onDownload
+          ) {
+            event.preventDefault();
+            onDownload(selectedFiles);
+          }
+          break;
+        case "n":
+        case "N":
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            if (event.shiftKey && onNewFolder) {
+              onNewFolder();
+            } else if (!event.shiftKey && onNewFile) {
+              onNewFile();
+            }
+          }
+          break;
+        case "u":
+        case "U":
+          if ((event.ctrlKey || event.metaKey) && onUpload) {
+            event.preventDefault();
+            const input = document.createElement("input");
+            input.type = "file";
+            input.multiple = true;
+            input.onchange = (e) => {
+              const files = (e.target as HTMLInputElement).files;
+              if (files) onUpload(files);
+            };
+            input.click();
+          }
+          break;
         case "Delete":
           if (selectedFiles.length > 0 && onDelete) {
             onDelete(selectedFiles);
@@ -781,6 +840,12 @@ export function FileManagerGrid({
           if (selectedFiles.length === 1 && onStartEdit) {
             event.preventDefault();
             onStartEdit(selectedFiles[0]);
+          }
+          break;
+        case "Enter":
+          if (selectedFiles.length === 1) {
+            event.preventDefault();
+            onFileOpen(selectedFiles[0]);
           }
           break;
         case "y":
@@ -807,19 +872,8 @@ export function FileManagerGrid({
     onUndo,
   ]);
 
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-full flex flex-col bg-dark-bg overflow-hidden">
+    <div className="h-full flex flex-col bg-dark-bg overflow-hidden relative">
       <div className="flex-shrink-0 border-b border-dark-border">
         <div className="flex items-center gap-1 p-2 border-b border-dark-border">
           <button
@@ -950,7 +1004,7 @@ export function FileManagerGrid({
           tabIndex={0}
         >
           {dragState.type === "external" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 pointer-events-none animate-in fade-in-0">
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 pointer-events-none">
               <div className="text-center p-8 bg-background/95 border-2 border-dashed border-primary rounded-lg shadow-lg">
                 <Upload className="w-16 h-16 mx-auto mb-4 text-primary" />
                 <p className="text-xl font-semibold text-foreground mb-2">
@@ -1003,8 +1057,9 @@ export function FileManagerGrid({
                     draggable={true}
                     className={cn(
                       "group p-3 rounded-lg cursor-pointer",
-                      "hover:bg-accent hover:text-accent-foreground border-2 border-transparent",
-                      isSelected && "bg-primary/20 border-primary",
+                      "hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] border-2 border-transparent",
+                      isSelected &&
+                        "bg-primary/20 border-primary ring-2 ring-primary/20",
                       dragState.target?.path === file.path &&
                         "bg-muted border-primary border-dashed relative z-10",
                       dragState.files.some((f) => f.path === file.path) &&
@@ -1093,7 +1148,7 @@ export function FileManagerGrid({
                     className={cn(
                       "flex items-center gap-3 p-2 rounded cursor-pointer",
                       "hover:bg-accent hover:text-accent-foreground",
-                      isSelected && "bg-primary/20",
+                      isSelected && "bg-primary/20 ring-2 ring-primary/20",
                       dragState.target?.path === file.path &&
                         "bg-muted border-primary border-dashed relative z-10",
                       dragState.files.some((f) => f.path === file.path) &&
@@ -1264,6 +1319,8 @@ export function FileManagerGrid({
           </div>,
           document.body,
         )}
+
+      <SimpleLoader visible={isLoading} message={t("common.loading")} />
     </div>
   );
 }

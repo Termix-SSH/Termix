@@ -34,8 +34,9 @@ import {
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { FolderCard } from "@/ui/desktop/navigation/hosts/FolderCard.tsx";
-import { getSSHHosts } from "@/ui/main-axios.ts";
+import { getSSHHosts, getSSHFolders } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
+import type { SSHFolder } from "@/types/index.ts";
 
 interface SSHHost {
   id: number;
@@ -65,6 +66,7 @@ interface SidebarProps {
   isAdmin?: boolean;
   username?: string | null;
   children?: React.ReactNode;
+  onLogout?: () => void;
 }
 
 async function handleLogout() {
@@ -87,6 +89,7 @@ export function LeftSidebar({
   isAdmin,
   username,
   children,
+  onLogout,
 }: SidebarProps): React.ReactElement {
   const { t } = useTranslation();
 
@@ -112,7 +115,11 @@ export function LeftSidebar({
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
   const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
   const openSshManagerTab = () => {
-    if (sshManagerTab || isSplitScreenActive) return;
+    if (isSplitScreenActive) return;
+    if (sshManagerTab) {
+      setCurrentTab(sshManagerTab.id);
+      return;
+    }
     const id = addTab({ type: "ssh_manager", title: "Host Manager" });
     setCurrentTab(id);
   };
@@ -143,6 +150,22 @@ export function LeftSidebar({
   const prevHostsRef = React.useRef<SSHHost[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [folderMetadata, setFolderMetadata] = useState<Map<string, SSHFolder>>(
+    new Map(),
+  );
+
+  const fetchFolderMetadata = React.useCallback(async () => {
+    try {
+      const folders = await getSSHFolders();
+      const metadataMap = new Map<string, SSHFolder>();
+      folders.forEach((folder) => {
+        metadataMap.set(folder.name, folder);
+      });
+      setFolderMetadata(metadataMap);
+    } catch (error) {
+      console.error("Failed to fetch folder metadata:", error);
+    }
+  }, []);
 
   const fetchHosts = React.useCallback(async () => {
     try {
@@ -208,16 +231,24 @@ export function LeftSidebar({
 
   React.useEffect(() => {
     fetchHosts();
-    const interval = setInterval(fetchHosts, 300000);
+    fetchFolderMetadata();
+    const interval = setInterval(() => {
+      fetchHosts();
+      fetchFolderMetadata();
+    }, 300000);
     return () => clearInterval(interval);
-  }, [fetchHosts]);
+  }, [fetchHosts, fetchFolderMetadata]);
 
   React.useEffect(() => {
     const handleHostsChanged = () => {
       fetchHosts();
+      fetchFolderMetadata();
     };
     const handleCredentialsChanged = () => {
       fetchHosts();
+    };
+    const handleFoldersChanged = () => {
+      fetchFolderMetadata();
     };
     window.addEventListener(
       "ssh-hosts:changed",
@@ -226,6 +257,10 @@ export function LeftSidebar({
     window.addEventListener(
       "credentials:changed",
       handleCredentialsChanged as EventListener,
+    );
+    window.addEventListener(
+      "folders:changed",
+      handleFoldersChanged as EventListener,
     );
     return () => {
       window.removeEventListener(
@@ -236,8 +271,12 @@ export function LeftSidebar({
         "credentials:changed",
         handleCredentialsChanged as EventListener,
       );
+      window.removeEventListener(
+        "folders:changed",
+        handleFoldersChanged as EventListener,
+      );
     };
-  }, [fetchHosts]);
+  }, [fetchHosts, fetchFolderMetadata]);
 
   React.useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(search), 200);
@@ -250,7 +289,11 @@ export function LeftSidebar({
 
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem("leftSidebarWidth");
-    return saved !== null ? parseInt(saved, 10) : 250;
+    const defaultWidth = 250;
+    const savedWidth = saved !== null ? parseInt(saved, 10) : defaultWidth;
+    const minWidth = Math.min(200, Math.floor(window.innerWidth * 0.15));
+    const maxWidth = Math.floor(window.innerWidth * 0.3);
+    return Math.min(savedWidth, Math.max(minWidth, maxWidth));
   });
 
   const [isResizing, setIsResizing] = useState(false);
@@ -259,6 +302,20 @@ export function LeftSidebar({
 
   React.useEffect(() => {
     localStorage.setItem("leftSidebarWidth", String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const minWidth = Math.min(200, Math.floor(window.innerWidth * 0.15));
+      const maxWidth = Math.floor(window.innerWidth * 0.3);
+      if (sidebarWidth > maxWidth) {
+        setSidebarWidth(Math.max(minWidth, maxWidth));
+      } else if (sidebarWidth < minWidth) {
+        setSidebarWidth(minWidth);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [sidebarWidth]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -275,8 +332,8 @@ export function LeftSidebar({
       if (startXRef.current == null) return;
       const dx = e.clientX - startXRef.current;
       const newWidth = Math.round(startWidthRef.current + dx);
-      const minWidth = 200;
-      const maxWidth = Math.round(window.innerWidth * 0.5);
+      const minWidth = Math.min(200, Math.floor(window.innerWidth * 0.15));
+      const maxWidth = Math.round(window.innerWidth * 0.3);
       if (newWidth >= minWidth && newWidth <= maxWidth) {
         setSidebarWidth(newWidth);
       } else if (newWidth < minWidth) {
@@ -355,14 +412,14 @@ export function LeftSidebar({
   }, []);
 
   return (
-    <div className="min-h-svh">
+    <div className="h-screen w-screen overflow-hidden">
       <SidebarProvider
         open={isSidebarOpen}
         style={
           { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties
         }
       >
-        <div className="flex h-screen w-full">
+        <div className="flex h-screen w-screen overflow-hidden">
           <Sidebar variant="floating">
             <SidebarHeader>
               <SidebarGroupLabel className="text-lg font-bold text-white">
@@ -394,13 +451,11 @@ export function LeftSidebar({
                   className="m-2 flex flex-row font-semibold border-2 !border-dark-border"
                   variant="outline"
                   onClick={openSshManagerTab}
-                  disabled={!!sshManagerTab || isSplitScreenActive}
+                  disabled={isSplitScreenActive}
                   title={
-                    sshManagerTab
-                      ? t("interface.sshManagerAlreadyOpen")
-                      : isSplitScreenActive
-                        ? t("interface.disabledDuringSplitScreen")
-                        : undefined
+                    isSplitScreenActive
+                      ? t("interface.disabledDuringSplitScreen")
+                      : undefined
                   }
                 >
                   <HardDrive strokeWidth="2.5" />
@@ -435,15 +490,20 @@ export function LeftSidebar({
                   </div>
                 )}
 
-                {sortedFolders.map((folder, idx) => (
-                  <FolderCard
-                    key={`folder-${folder}-${hostsByFolder[folder]?.length || 0}`}
-                    folderName={folder}
-                    hosts={getSortedHosts(hostsByFolder[folder])}
-                    isFirst={idx === 0}
-                    isLast={idx === sortedFolders.length - 1}
-                  />
-                ))}
+                {sortedFolders.map((folder, idx) => {
+                  const metadata = folderMetadata.get(folder);
+                  return (
+                    <FolderCard
+                      key={`folder-${folder}-${hostsByFolder[folder]?.length || 0}`}
+                      folderName={folder}
+                      hosts={getSortedHosts(hostsByFolder[folder])}
+                      isFirst={idx === 0}
+                      isLast={idx === sortedFolders.length - 1}
+                      folderColor={metadata?.color}
+                      folderIcon={metadata?.icon}
+                    />
+                  );
+                })}
               </SidebarGroup>
             </SidebarContent>
             <Separator className="p-0.25 mt-1 mb-1" />
@@ -486,7 +546,7 @@ export function LeftSidebar({
                       )}
                       <DropdownMenuItem
                         className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
-                        onClick={handleLogout}
+                        onClick={onLogout || handleLogout}
                       >
                         <span>{t("common.logout")}</span>
                       </DropdownMenuItem>

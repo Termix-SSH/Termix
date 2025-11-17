@@ -22,11 +22,12 @@ import { nanoid } from "nanoid";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import type { Request, Response } from "express";
-import { authLogger } from "../../utils/logger.js";
+import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
+import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -223,6 +224,16 @@ router.post("/create", async (req, res) => {
       );
       return res.status(500).json({
         error: "Failed to setup user security - user creation cancelled",
+      });
+    }
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist user to disk", saveError, {
+        operation: "user_create_save_failed",
+        userId: id,
       });
     }
 
@@ -587,6 +598,7 @@ router.get("/oidc/callback", async (req, res) => {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
@@ -736,12 +748,11 @@ router.get("/oidc/callback", async (req, res) => {
       });
     }
 
+    const deviceInfo = parseUserAgent(req);
     let user = await db
       .select()
       .from(users)
-      .where(
-        and(eq(users.is_oidc, true), eq(users.oidc_identifier, identifier)),
-      );
+      .where(eq(users.oidc_identifier, identifier));
 
     let isFirstUser = false;
     if (!user || user.length === 0) {
@@ -749,6 +760,43 @@ router.get("/oidc/callback", async (req, res) => {
         .prepare("SELECT COUNT(*) as count FROM users")
         .get();
       isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
+
+      if (!isFirstUser) {
+        try {
+          const regRow = db.$client
+            .prepare(
+              "SELECT value FROM settings WHERE key = 'allow_registration'",
+            )
+            .get();
+          if (regRow && (regRow as Record<string, unknown>).value !== "true") {
+            authLogger.warn(
+              "OIDC user attempted to register when registration is disabled",
+              {
+                operation: "oidc_registration_disabled",
+                identifier,
+                name,
+              },
+            );
+
+            let frontendUrl = (redirectUri as string).replace(
+              "/users/oidc/callback",
+              "",
+            );
+            if (frontendUrl.includes("localhost")) {
+              frontendUrl = "http://localhost:5173";
+            }
+            const redirectUrl = new URL(frontendUrl);
+            redirectUrl.searchParams.set("error", "registration_disabled");
+
+            return res.redirect(redirectUrl.toString());
+          }
+        } catch (e) {
+          authLogger.warn("Failed to check registration status during OIDC", {
+            operation: "oidc_registration_check",
+            error: e,
+          });
+        }
+      }
 
       const id = nanoid();
       await db.insert(users).values({
@@ -769,7 +817,11 @@ router.get("/oidc/callback", async (req, res) => {
       });
 
       try {
-        await authManager.registerOIDCUser(id);
+        const sessionDurationMs =
+          deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
+            ? 30 * 24 * 60 * 60 * 1000
+            : 7 * 24 * 60 * 60 * 1000;
+        await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
         await db.delete(users).where(eq(users.id, id));
         authLogger.error(
@@ -785,12 +837,27 @@ router.get("/oidc/callback", async (req, res) => {
         });
       }
 
+      try {
+        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+        await saveMemoryDatabaseToFile();
+      } catch (saveError) {
+        authLogger.error("Failed to persist OIDC user to disk", saveError, {
+          operation: "oidc_user_create_save_failed",
+          userId: id,
+        });
+      }
+
       user = await db.select().from(users).where(eq(users.id, id));
     } else {
-      await db
-        .update(users)
-        .set({ username: name })
-        .where(eq(users.id, user[0].id));
+      const isDualAuth =
+        user[0].password_hash && user[0].password_hash.trim() !== "";
+
+      if (!isDualAuth) {
+        await db
+          .update(users)
+          .set({ username: name })
+          .where(eq(users.id, user[0].id));
+      }
 
       user = await db.select().from(users).where(eq(users.id, user[0].id));
     }
@@ -798,7 +865,7 @@ router.get("/oidc/callback", async (req, res) => {
     const userRecord = user[0];
 
     try {
-      await authManager.authenticateOIDCUser(userRecord.id);
+      await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
     } catch (setupError) {
       authLogger.error("Failed to setup OIDC user encryption", setupError, {
         operation: "oidc_user_encryption_setup_failed",
@@ -806,7 +873,6 @@ router.get("/oidc/callback", async (req, res) => {
       });
     }
 
-    const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
@@ -836,6 +902,8 @@ router.get("/oidc/callback", async (req, res) => {
         ? 30 * 24 * 60 * 60 * 1000
         : 7 * 24 * 60 * 60 * 1000;
 
+    res.clearCookie("jwt", authManager.getSecureCookieOptions(req));
+
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
       .redirect(redirectUrl.toString());
@@ -862,6 +930,7 @@ router.get("/oidc/callback", async (req, res) => {
 // POST /users/login
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
+  const clientIp = req.ip || req.socket.remoteAddress || "unknown";
 
   if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
     authLogger.warn("Invalid traditional login attempt", {
@@ -870,6 +939,20 @@ router.post("/login", async (req, res) => {
       hasPassword: !!password,
     });
     return res.status(400).json({ error: "Invalid username or password" });
+  }
+
+  const lockStatus = loginRateLimiter.isLocked(clientIp, username);
+  if (lockStatus.locked) {
+    authLogger.warn("Login attempt blocked due to rate limiting", {
+      operation: "user_login_blocked",
+      username,
+      ip: clientIp,
+      remainingTime: lockStatus.remainingTime,
+    });
+    return res.status(429).json({
+      error: "Too many login attempts. Please try again later.",
+      remainingTime: lockStatus.remainingTime,
+    });
   }
 
   try {
@@ -896,17 +979,26 @@ router.post("/login", async (req, res) => {
       .where(eq(users.username, username));
 
     if (!user || user.length === 0) {
-      authLogger.warn(`User not found: ${username}`, {
+      loginRateLimiter.recordFailedAttempt(clientIp, username);
+      authLogger.warn(`Login failed: user not found`, {
         operation: "user_login",
         username,
+        ip: clientIp,
+        remainingAttempts: loginRateLimiter.getRemainingAttempts(
+          clientIp,
+          username,
+        ),
       });
-      return res.status(404).json({ error: "User not found" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
 
     const userRecord = user[0];
 
-    if (userRecord.is_oidc) {
-      authLogger.warn("OIDC user attempted traditional login", {
+    if (
+      userRecord.is_oidc &&
+      (!userRecord.password_hash || userRecord.password_hash.trim() === "")
+    ) {
+      authLogger.warn("OIDC-only user attempted traditional login", {
         operation: "user_login",
         username,
         userId: userRecord.id,
@@ -918,12 +1010,18 @@ router.post("/login", async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, userRecord.password_hash);
     if (!isMatch) {
-      authLogger.warn(`Incorrect password for user: ${username}`, {
+      loginRateLimiter.recordFailedAttempt(clientIp, username);
+      authLogger.warn(`Login failed: incorrect password`, {
         operation: "user_login",
         username,
         userId: userRecord.id,
+        ip: clientIp,
+        remainingAttempts: loginRateLimiter.getRemainingAttempts(
+          clientIp,
+          username,
+        ),
       });
-      return res.status(401).json({ error: "Incorrect password" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
 
     try {
@@ -935,12 +1033,24 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch {}
+    } catch (error) {}
 
-    const dataUnlocked = await authManager.authenticateUser(
-      userRecord.id,
-      password,
-    );
+    const deviceInfo = parseUserAgent(req);
+
+    let dataUnlocked = false;
+    if (userRecord.is_oidc) {
+      dataUnlocked = await authManager.authenticateOIDCUser(
+        userRecord.id,
+        deviceInfo.type,
+      );
+    } else {
+      dataUnlocked = await authManager.authenticateUser(
+        userRecord.id,
+        password,
+        deviceInfo.type,
+      );
+    }
+
     if (!dataUnlocked) {
       return res.status(401).json({ error: "Incorrect password" });
     }
@@ -957,11 +1067,12 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
     });
+
+    loginRateLimiter.resetAttempts(clientIp, username);
 
     authLogger.success(`User logged in successfully: ${username}`, {
       operation: "user_login_success",
@@ -970,6 +1081,7 @@ router.post("/login", async (req, res) => {
       dataUnlocked: true,
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
+      ip: clientIp,
     });
 
     const response: Record<string, unknown> = {
@@ -1016,7 +1128,15 @@ router.post("/logout", authenticateJWT, async (req, res) => {
         try {
           const payload = await authManager.verifyJWTToken(token);
           sessionId = payload?.sessionId;
-        } catch (error) {}
+        } catch (error) {
+          authLogger.debug(
+            "Token verification failed during logout (expected if token expired)",
+            {
+              operation: "logout_token_verify_failed",
+              userId,
+            },
+          );
+        }
       }
 
       await authManager.logoutUser(userId, sessionId);
@@ -1052,11 +1172,17 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       return res.status(401).json({ error: "User not found" });
     }
 
+    const hasPassword =
+      user[0].password_hash && user[0].password_hash.trim() !== "";
+    const hasOidc = user[0].is_oidc && user[0].oidc_identifier;
+    const isDualAuth = hasPassword && hasOidc;
+
     res.json({
       userId: user[0].id,
       username: user[0].username,
       is_admin: !!user[0].is_admin,
       is_oidc: !!user[0].is_oidc,
+      is_dual_auth: isDualAuth,
       totp_enabled: !!user[0].totp_enabled,
     });
   } catch (err) {
@@ -1610,6 +1736,7 @@ router.get("/list", authenticateJWT, async (req, res) => {
         username: users.username,
         is_admin: users.is_admin,
         is_oidc: users.is_oidc,
+        password_hash: users.password_hash,
       })
       .from(users);
 
@@ -1652,6 +1779,16 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
       .update(users)
       .set({ is_admin: true })
       .where(eq(users.username, username));
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist admin promotion to disk", saveError, {
+        operation: "make_admin_save_failed",
+        username,
+      });
+    }
 
     authLogger.success(
       `User ${username} made admin by ${adminUser[0].username}`,
@@ -1701,6 +1838,16 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
       .update(users)
       .set({ is_admin: false })
       .where(eq(users.username, username));
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist admin removal to disk", saveError, {
+        operation: "remove_admin_save_failed",
+        username,
+      });
+    }
 
     authLogger.success(
       `Admin status removed from ${username} by ${adminUser[0].username}`,
@@ -2106,7 +2253,6 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     const targetUserId = targetUser[0].id;
 
     try {
-      // Delete all user-related data to avoid foreign key constraints
       await db
         .delete(sshCredentialUsage)
         .where(eq(sshCredentialUsage.userId, targetUserId));
@@ -2423,6 +2569,297 @@ router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to revoke user sessions", err);
     res.status(500).json({ error: "Failed to revoke sessions" });
+  }
+});
+
+// Route: Link OIDC user to existing password account (merge accounts)
+// POST /users/link-oidc-to-password
+router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
+  const adminUserId = (req as AuthenticatedRequest).userId;
+  const { oidcUserId, targetUsername } = req.body;
+
+  if (!isNonEmptyString(oidcUserId) || !isNonEmptyString(targetUsername)) {
+    return res.status(400).json({
+      error: "OIDC user ID and target username are required",
+    });
+  }
+
+  try {
+    const adminUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, adminUserId));
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const oidcUserRecords = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, oidcUserId));
+    if (!oidcUserRecords || oidcUserRecords.length === 0) {
+      return res.status(404).json({ error: "OIDC user not found" });
+    }
+
+    const oidcUser = oidcUserRecords[0];
+
+    if (!oidcUser.is_oidc) {
+      return res.status(400).json({
+        error: "Source user is not an OIDC user",
+      });
+    }
+
+    const targetUserRecords = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, targetUsername));
+    if (!targetUserRecords || targetUserRecords.length === 0) {
+      return res.status(404).json({ error: "Target password user not found" });
+    }
+
+    const targetUser = targetUserRecords[0];
+
+    if (targetUser.is_oidc || !targetUser.password_hash) {
+      return res.status(400).json({
+        error: "Target user must be a password-based account",
+      });
+    }
+
+    if (targetUser.client_id && targetUser.oidc_identifier) {
+      return res.status(400).json({
+        error: "Target user already has OIDC authentication configured",
+      });
+    }
+
+    authLogger.info("Linking OIDC user to password account", {
+      operation: "link_oidc_to_password",
+      oidcUserId,
+      oidcUsername: oidcUser.username,
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      adminUserId,
+    });
+
+    await db
+      .update(users)
+      .set({
+        is_oidc: true,
+        oidc_identifier: oidcUser.oidc_identifier,
+        client_id: oidcUser.client_id,
+        client_secret: oidcUser.client_secret,
+        issuer_url: oidcUser.issuer_url,
+        authorization_url: oidcUser.authorization_url,
+        token_url: oidcUser.token_url,
+        identifier_path: oidcUser.identifier_path,
+        name_path: oidcUser.name_path,
+        scopes: oidcUser.scopes || "openid email profile",
+      })
+      .where(eq(users.id, targetUser.id));
+
+    try {
+      await authManager.convertToOIDCEncryption(targetUser.id);
+    } catch (encryptionError) {
+      authLogger.error(
+        "Failed to convert encryption to OIDC during linking",
+        encryptionError,
+        {
+          operation: "link_convert_encryption_failed",
+          userId: targetUser.id,
+        },
+      );
+      await db
+        .update(users)
+        .set({
+          is_oidc: false,
+          oidc_identifier: null,
+          client_id: "",
+          client_secret: "",
+          issuer_url: "",
+          authorization_url: "",
+          token_url: "",
+          identifier_path: "",
+          name_path: "",
+          scopes: "openid email profile",
+        })
+        .where(eq(users.id, targetUser.id));
+
+      return res.status(500).json({
+        error:
+          "Failed to convert encryption for dual-auth. Please ensure the password account has encryption setup.",
+        details:
+          encryptionError instanceof Error
+            ? encryptionError.message
+            : "Unknown error",
+      });
+    }
+
+    await authManager.revokeAllUserSessions(oidcUserId);
+    authManager.logoutUser(oidcUserId);
+
+    await db
+      .delete(recentActivity)
+      .where(eq(recentActivity.userId, oidcUserId));
+
+    await db.delete(users).where(eq(users.id, oidcUserId));
+
+    db.$client
+      .prepare("DELETE FROM settings WHERE key LIKE ?")
+      .run(`user_%_${oidcUserId}`);
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist account linking to disk", saveError, {
+        operation: "link_oidc_save_failed",
+        oidcUserId,
+        targetUserId: targetUser.id,
+      });
+    }
+
+    authLogger.success(
+      `OIDC user ${oidcUser.username} linked to password account ${targetUser.username}`,
+      {
+        operation: "link_oidc_to_password_success",
+        oidcUserId,
+        oidcUsername: oidcUser.username,
+        targetUserId: targetUser.id,
+        targetUsername: targetUser.username,
+        adminUserId,
+      },
+    );
+
+    res.json({
+      success: true,
+      message: `OIDC user ${oidcUser.username} has been linked to ${targetUser.username}. The password account can now use both password and OIDC login.`,
+    });
+  } catch (err) {
+    authLogger.error("Failed to link OIDC user to password account", err, {
+      operation: "link_oidc_to_password_failed",
+      oidcUserId,
+      targetUsername,
+      adminUserId,
+    });
+    res.status(500).json({
+      error: "Failed to link accounts",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+});
+
+// Route: Unlink OIDC from password account (admin only)
+// POST /users/unlink-oidc-from-password
+router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
+  const adminUserId = (req as AuthenticatedRequest).userId;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({
+      error: "User ID is required",
+    });
+  }
+
+  try {
+    const adminUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, adminUserId));
+
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+      authLogger.warn("Non-admin attempted to unlink OIDC from password", {
+        operation: "unlink_oidc_unauthorized",
+        adminUserId,
+        targetUserId: userId,
+      });
+      return res.status(403).json({
+        error: "Admin privileges required",
+      });
+    }
+
+    const targetUserRecords = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!targetUserRecords || targetUserRecords.length === 0) {
+      return res.status(404).json({
+        error: "User not found",
+      });
+    }
+
+    const targetUser = targetUserRecords[0];
+
+    if (!targetUser.is_oidc) {
+      return res.status(400).json({
+        error: "User does not have OIDC authentication enabled",
+      });
+    }
+
+    if (!targetUser.password_hash || targetUser.password_hash === "") {
+      return res.status(400).json({
+        error:
+          "Cannot unlink OIDC from a user without password authentication. This would leave the user unable to login.",
+      });
+    }
+
+    authLogger.info("Unlinking OIDC from password account", {
+      operation: "unlink_oidc_from_password_start",
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      adminUserId,
+    });
+
+    await db
+      .update(users)
+      .set({
+        is_oidc: false,
+        oidc_identifier: null,
+        client_id: "",
+        client_secret: "",
+        issuer_url: "",
+        authorization_url: "",
+        token_url: "",
+        identifier_path: "",
+        name_path: "",
+        scopes: "openid email profile",
+      })
+      .where(eq(users.id, targetUser.id));
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error(
+        "Failed to save database after unlinking OIDC",
+        saveError,
+        {
+          operation: "unlink_oidc_save_failed",
+          targetUserId: targetUser.id,
+        },
+      );
+    }
+
+    authLogger.success("OIDC unlinked from password account successfully", {
+      operation: "unlink_oidc_from_password_success",
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      adminUserId,
+    });
+
+    res.json({
+      success: true,
+      message: `OIDC authentication has been removed from ${targetUser.username}. User can now only login with password.`,
+    });
+  } catch (err) {
+    authLogger.error("Failed to unlink OIDC from password account", err, {
+      operation: "unlink_oidc_from_password_failed",
+      targetUserId: userId,
+      adminUserId,
+    });
+    res.status(500).json({
+      error: "Failed to unlink OIDC",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
   }
 });
 

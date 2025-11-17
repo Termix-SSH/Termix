@@ -8,6 +8,9 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
+  sshFolders,
+  commandHistory,
+  recentActivity,
 } from "../db/schema.js";
 import { eq, and, desc, isNotNull, or } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -234,6 +237,8 @@ router.post(
       enableFileManager,
       defaultPath,
       tunnelConnections,
+      jumpHosts,
+      quickActions,
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
@@ -269,6 +274,10 @@ router.post(
       enableTunnel: enableTunnel ? 1 : 0,
       tunnelConnections: Array.isArray(tunnelConnections)
         ? JSON.stringify(tunnelConnections)
+        : null,
+      jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
+      quickActions: Array.isArray(quickActions)
+        ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
@@ -328,6 +337,9 @@ router.post(
         tunnelConnections: createdHost.tunnelConnections
           ? JSON.parse(createdHost.tunnelConnections as string)
           : [],
+        jumpHosts: createdHost.jumpHosts
+          ? JSON.parse(createdHost.jumpHosts as string)
+          : [],
         enableFileManager: !!createdHost.enableFileManager,
         statsConfig: createdHost.statsConfig
           ? JSON.parse(createdHost.statsConfig as string)
@@ -349,6 +361,28 @@ router.post(
         },
       );
 
+      try {
+        const axios = (await import("axios")).default;
+        const statsPort = process.env.STATS_PORT || 30005;
+        await axios.post(
+          `http://localhost:${statsPort}/host-updated`,
+          { hostId: createdHost.id },
+          {
+            headers: {
+              Authorization: req.headers.authorization || "",
+              Cookie: req.headers.cookie || "",
+            },
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        sshLogger.warn("Failed to notify stats server of new host", {
+          operation: "host_create",
+          hostId: createdHost.id as number,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
       res.json(resolvedHost);
     } catch (err) {
       sshLogger.error("Failed to save SSH host to database", err, {
@@ -369,6 +403,7 @@ router.post(
 router.put(
   "/db/host/:id",
   authenticateJWT,
+  requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
     const hostId = req.params.id;
@@ -424,6 +459,8 @@ router.put(
       enableFileManager,
       defaultPath,
       tunnelConnections,
+      jumpHosts,
+      quickActions,
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
@@ -460,6 +497,10 @@ router.put(
       enableTunnel: enableTunnel ? 1 : 0,
       tunnelConnections: Array.isArray(tunnelConnections)
         ? JSON.stringify(tunnelConnections)
+        : null,
+      jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
+      quickActions: Array.isArray(quickActions)
+        ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       defaultPath: defaultPath || null,
@@ -537,6 +578,9 @@ router.put(
         tunnelConnections: updatedHost.tunnelConnections
           ? JSON.parse(updatedHost.tunnelConnections as string)
           : [],
+        jumpHosts: updatedHost.jumpHosts
+          ? JSON.parse(updatedHost.jumpHosts as string)
+          : [],
         enableFileManager: !!updatedHost.enableFileManager,
         statsConfig: updatedHost.statsConfig
           ? JSON.parse(updatedHost.statsConfig as string)
@@ -558,6 +602,28 @@ router.put(
         },
       );
 
+      try {
+        const axios = (await import("axios")).default;
+        const statsPort = process.env.STATS_PORT || 30005;
+        await axios.post(
+          `http://localhost:${statsPort}/host-updated`,
+          { hostId: parseInt(hostId) },
+          {
+            headers: {
+              Authorization: req.headers.authorization || "",
+              Cookie: req.headers.cookie || "",
+            },
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        sshLogger.warn("Failed to notify stats server of host update", {
+          operation: "host_update",
+          hostId: parseInt(hostId),
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
       res.json(resolvedHost);
     } catch (err) {
       sshLogger.error("Failed to update SSH host in database", err, {
@@ -576,67 +642,77 @@ router.put(
 
 // Route: Get SSH data for the authenticated user (requires JWT)
 // GET /ssh/host
-router.get("/db/host", authenticateJWT, async (req: Request, res: Response) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  if (!isNonEmptyString(userId)) {
-    sshLogger.warn("Invalid userId for SSH data fetch", {
-      operation: "host_fetch",
-      userId,
-    });
-    return res.status(400).json({ error: "Invalid userId" });
-  }
-  try {
-    const data = await SimpleDBOps.select(
-      db.select().from(sshData).where(eq(sshData.userId, userId)),
-      "ssh_data",
-      userId,
-    );
+router.get(
+  "/db/host",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    if (!isNonEmptyString(userId)) {
+      sshLogger.warn("Invalid userId for SSH data fetch", {
+        operation: "host_fetch",
+        userId,
+      });
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+    try {
+      const data = await SimpleDBOps.select(
+        db.select().from(sshData).where(eq(sshData.userId, userId)),
+        "ssh_data",
+        userId,
+      );
 
-    const result = await Promise.all(
-      data.map(async (row: Record<string, unknown>) => {
-        const baseHost = {
-          ...row,
-          tags:
-            typeof row.tags === "string"
-              ? row.tags
-                ? row.tags.split(",").filter(Boolean)
-                : []
+      const result = await Promise.all(
+        data.map(async (row: Record<string, unknown>) => {
+          const baseHost = {
+            ...row,
+            tags:
+              typeof row.tags === "string"
+                ? row.tags
+                  ? row.tags.split(",").filter(Boolean)
+                  : []
+                : [],
+            pin: !!row.pin,
+            enableTerminal: !!row.enableTerminal,
+            enableTunnel: !!row.enableTunnel,
+            tunnelConnections: row.tunnelConnections
+              ? JSON.parse(row.tunnelConnections as string)
               : [],
-          pin: !!row.pin,
-          enableTerminal: !!row.enableTerminal,
-          enableTunnel: !!row.enableTunnel,
-          tunnelConnections: row.tunnelConnections
-            ? JSON.parse(row.tunnelConnections as string)
-            : [],
-          enableFileManager: !!row.enableFileManager,
-          statsConfig: row.statsConfig
-            ? JSON.parse(row.statsConfig as string)
-            : undefined,
-          terminalConfig: row.terminalConfig
-            ? JSON.parse(row.terminalConfig as string)
-            : undefined,
-          forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
-        };
+            jumpHosts: row.jumpHosts ? JSON.parse(row.jumpHosts as string) : [],
+            quickActions: row.quickActions
+              ? JSON.parse(row.quickActions as string)
+              : [],
+            enableFileManager: !!row.enableFileManager,
+            statsConfig: row.statsConfig
+              ? JSON.parse(row.statsConfig as string)
+              : undefined,
+            terminalConfig: row.terminalConfig
+              ? JSON.parse(row.terminalConfig as string)
+              : undefined,
+            forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
+          };
 
-        return (await resolveHostCredentials(baseHost)) || baseHost;
-      }),
-    );
+          return (await resolveHostCredentials(baseHost)) || baseHost;
+        }),
+      );
 
-    res.json(result);
-  } catch (err) {
-    sshLogger.error("Failed to fetch SSH hosts from database", err, {
-      operation: "host_fetch",
-      userId,
-    });
-    res.status(500).json({ error: "Failed to fetch SSH data" });
-  }
-});
+      res.json(result);
+    } catch (err) {
+      sshLogger.error("Failed to fetch SSH hosts from database", err, {
+        operation: "host_fetch",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch SSH data" });
+    }
+  },
+);
 
 // Route: Get SSH host by ID (requires JWT)
 // GET /ssh/host/:id
 router.get(
   "/db/host/:id",
   authenticateJWT,
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = req.params.id;
     const userId = (req as AuthenticatedRequest).userId;
@@ -679,6 +755,8 @@ router.get(
         tunnelConnections: host.tunnelConnections
           ? JSON.parse(host.tunnelConnections)
           : [],
+        jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts) : [],
+        quickActions: host.quickActions ? JSON.parse(host.quickActions) : [],
         enableFileManager: !!host.enableFileManager,
         statsConfig: host.statsConfig
           ? JSON.parse(host.statsConfig)
@@ -783,6 +861,7 @@ router.get(
 router.delete(
   "/db/host/:id",
   authenticateJWT,
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const hostId = req.params.id;
@@ -816,8 +895,8 @@ router.delete(
         .delete(fileManagerRecent)
         .where(
           and(
-            eq(fileManagerRecent.userId, userId),
             eq(fileManagerRecent.hostId, numericHostId),
+            eq(fileManagerRecent.userId, userId),
           ),
         );
 
@@ -825,8 +904,8 @@ router.delete(
         .delete(fileManagerPinned)
         .where(
           and(
-            eq(fileManagerPinned.userId, userId),
             eq(fileManagerPinned.hostId, numericHostId),
+            eq(fileManagerPinned.userId, userId),
           ),
         );
 
@@ -834,8 +913,17 @@ router.delete(
         .delete(fileManagerShortcuts)
         .where(
           and(
-            eq(fileManagerShortcuts.userId, userId),
             eq(fileManagerShortcuts.hostId, numericHostId),
+            eq(fileManagerShortcuts.userId, userId),
+          ),
+        );
+
+      await db
+        .delete(commandHistory)
+        .where(
+          and(
+            eq(commandHistory.hostId, numericHostId),
+            eq(commandHistory.userId, userId),
           ),
         );
 
@@ -843,8 +931,17 @@ router.delete(
         .delete(sshCredentialUsage)
         .where(
           and(
-            eq(sshCredentialUsage.userId, userId),
             eq(sshCredentialUsage.hostId, numericHostId),
+            eq(sshCredentialUsage.userId, userId),
+          ),
+        );
+
+      await db
+        .delete(recentActivity)
+        .where(
+          and(
+            eq(recentActivity.hostId, numericHostId),
+            eq(recentActivity.userId, userId),
           ),
         );
 
@@ -864,6 +961,28 @@ router.delete(
           port: host.port,
         },
       );
+
+      try {
+        const axios = (await import("axios")).default;
+        const statsPort = process.env.STATS_PORT || 30005;
+        await axios.post(
+          `http://localhost:${statsPort}/host-deleted`,
+          { hostId: numericHostId },
+          {
+            headers: {
+              Authorization: req.headers.authorization || "",
+              Cookie: req.headers.cookie || "",
+            },
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        sshLogger.warn("Failed to notify stats server of host deletion", {
+          operation: "host_delete",
+          hostId: numericHostId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
 
       res.json({ message: "SSH host deleted" });
     } catch (err) {
@@ -1241,6 +1360,94 @@ router.delete(
   },
 );
 
+// Route: Get command history for a host
+// GET /ssh/command-history/:hostId
+router.get(
+  "/command-history/:hostId",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const hostId = parseInt(req.params.hostId, 10);
+
+    if (!isNonEmptyString(userId) || !hostId) {
+      sshLogger.warn("Invalid userId or hostId for command history fetch", {
+        operation: "command_history_fetch",
+        hostId,
+        userId,
+      });
+      return res.status(400).json({ error: "Invalid userId or hostId" });
+    }
+
+    try {
+      const history = await db
+        .select({
+          id: commandHistory.id,
+          command: commandHistory.command,
+        })
+        .from(commandHistory)
+        .where(
+          and(
+            eq(commandHistory.userId, userId),
+            eq(commandHistory.hostId, hostId),
+          ),
+        )
+        .orderBy(desc(commandHistory.executedAt))
+        .limit(200);
+
+      res.json(history.map((h) => h.command));
+    } catch (err) {
+      sshLogger.error("Failed to fetch command history from database", err, {
+        operation: "command_history_fetch",
+        hostId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch command history" });
+    }
+  },
+);
+
+// Route: Delete command from history
+// DELETE /ssh/command-history
+router.delete(
+  "/command-history",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { hostId, command } = req.body;
+
+    if (!isNonEmptyString(userId) || !hostId || !command) {
+      sshLogger.warn("Invalid data for command history deletion", {
+        operation: "command_history_delete",
+        hostId,
+        userId,
+      });
+      return res.status(400).json({ error: "Invalid data" });
+    }
+
+    try {
+      await db
+        .delete(commandHistory)
+        .where(
+          and(
+            eq(commandHistory.userId, userId),
+            eq(commandHistory.hostId, hostId),
+            eq(commandHistory.command, command),
+          ),
+        );
+
+      res.json({ message: "Command deleted from history" });
+    } catch (err) {
+      sshLogger.error("Failed to delete command from history", err, {
+        operation: "command_history_delete",
+        hostId,
+        userId,
+        command,
+      });
+      res.status(500).json({ error: "Failed to delete command" });
+    }
+  },
+);
+
 async function resolveHostCredentials(
   host: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
@@ -1341,6 +1548,16 @@ router.put(
 
       DatabaseSaveTrigger.triggerSave("folder_rename");
 
+      await db
+        .update(sshFolders)
+        .set({
+          name: newName,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(
+          and(eq(sshFolders.userId, userId), eq(sshFolders.name, oldName)),
+        );
+
       res.json({
         message: "Folder renamed successfully",
         updatedHosts: updatedHosts.length,
@@ -1354,6 +1571,170 @@ router.put(
         newName,
       });
       res.status(500).json({ error: "Failed to rename folder" });
+    }
+  },
+);
+
+// Route: Get all folders with metadata (requires JWT)
+// GET /ssh/db/folders
+router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!isNonEmptyString(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+
+  try {
+    const folders = await db
+      .select()
+      .from(sshFolders)
+      .where(eq(sshFolders.userId, userId));
+
+    res.json(folders);
+  } catch (err) {
+    sshLogger.error("Failed to fetch folders", err, {
+      operation: "fetch_folders",
+      userId,
+    });
+    res.status(500).json({ error: "Failed to fetch folders" });
+  }
+});
+
+// Route: Update folder metadata (requires JWT)
+// PUT /ssh/db/folders/metadata
+router.put(
+  "/folders/metadata",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { name, color, icon } = req.body;
+
+    if (!isNonEmptyString(userId) || !name) {
+      return res.status(400).json({ error: "Folder name is required" });
+    }
+
+    try {
+      const existing = await db
+        .select()
+        .from(sshFolders)
+        .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)))
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db
+          .update(sshFolders)
+          .set({
+            color,
+            icon,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)));
+      } else {
+        await db.insert(sshFolders).values({
+          userId,
+          name,
+          color,
+          icon,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      DatabaseSaveTrigger.triggerSave("folder_metadata_update");
+
+      res.json({ message: "Folder metadata updated successfully" });
+    } catch (err) {
+      sshLogger.error("Failed to update folder metadata", err, {
+        operation: "update_folder_metadata",
+        userId,
+        name,
+      });
+      res.status(500).json({ error: "Failed to update folder metadata" });
+    }
+  },
+);
+
+// Route: Delete all hosts in folder (requires JWT)
+// DELETE /ssh/db/folders/:name/hosts
+router.delete(
+  "/folders/:name/hosts",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const folderName = req.params.name;
+
+    if (!isNonEmptyString(userId) || !folderName) {
+      return res.status(400).json({ error: "Invalid folder name" });
+    }
+
+    try {
+      const hostsToDelete = await db
+        .select()
+        .from(sshData)
+        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+
+      if (hostsToDelete.length === 0) {
+        return res.json({
+          message: "No hosts found in folder",
+          deletedCount: 0,
+        });
+      }
+
+      await db
+        .delete(sshData)
+        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+
+      await db
+        .delete(sshFolders)
+        .where(
+          and(eq(sshFolders.userId, userId), eq(sshFolders.name, folderName)),
+        );
+
+      DatabaseSaveTrigger.triggerSave("folder_hosts_delete");
+
+      try {
+        const axios = (await import("axios")).default;
+        const statsPort = process.env.STATS_PORT || 30005;
+        for (const host of hostsToDelete) {
+          try {
+            await axios.post(
+              `http://localhost:${statsPort}/host-deleted`,
+              { hostId: host.id },
+              {
+                headers: {
+                  Authorization: req.headers.authorization || "",
+                  Cookie: req.headers.cookie || "",
+                },
+                timeout: 5000,
+              },
+            );
+          } catch (err) {
+            sshLogger.warn("Failed to notify stats server of host deletion", {
+              operation: "folder_hosts_delete",
+              hostId: host.id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+      } catch (err) {
+        sshLogger.warn("Failed to notify stats server of folder deletion", {
+          operation: "folder_hosts_delete",
+          folderName,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
+      res.json({
+        message: "All hosts in folder deleted successfully",
+        deletedCount: hostsToDelete.length,
+      });
+    } catch (err) {
+      sshLogger.error("Failed to delete hosts in folder", err, {
+        operation: "delete_folder_hosts",
+        userId,
+        folderName,
+      });
+      res.status(500).json({ error: "Failed to delete hosts in folder" });
     }
   },
 );

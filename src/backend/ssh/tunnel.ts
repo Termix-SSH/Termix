@@ -15,7 +15,7 @@ import type {
   ErrorType,
 } from "../../types/index.js";
 import { CONNECTION_STATES } from "../../types/index.js";
-import { tunnelLogger } from "../utils/logger.js";
+import { tunnelLogger, sshLogger } from "../utils/logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { DataCrypto } from "../utils/data-crypto.js";
@@ -217,7 +217,7 @@ function cleanupTunnelResources(
     if (verification?.timeout) clearTimeout(verification.timeout);
     try {
       verification?.conn.end();
-    } catch {}
+    } catch (error) {}
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -282,7 +282,7 @@ function handleDisconnect(
       const verification = tunnelVerifications.get(tunnelName);
       if (verification?.timeout) clearTimeout(verification.timeout);
       verification?.conn.end();
-    } catch {}
+    } catch (error) {}
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -638,7 +638,7 @@ async function connectSSHTunnel(
 
       try {
         conn.end();
-      } catch {}
+      } catch (error) {}
 
       activeTunnels.delete(tunnelName);
 
@@ -778,7 +778,7 @@ async function connectSSHTunnel(
             const verification = tunnelVerifications.get(tunnelName);
             if (verification?.timeout) clearTimeout(verification.timeout);
             verification?.conn.end();
-          } catch {}
+          } catch (error) {}
           tunnelVerifications.delete(tunnelName);
         }
 

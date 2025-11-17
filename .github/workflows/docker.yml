@@ -84,7 +84,8 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-          outputs: type=registry,compression=zstd,compression-level=19
+            org.opencontainers.image.created=${{ github.run_id }}
+          outputs: type=registry,compression=gzip,compression-level=9
 
       - name: Cleanup Docker
         if: always()

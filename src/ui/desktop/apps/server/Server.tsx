@@ -7,6 +7,7 @@ import { Tunnel } from "@/ui/desktop/apps/tunnel/Tunnel.tsx";
 import {
   getServerStatusById,
   getServerMetricsById,
+  executeSnippet,
   type ServerMetrics,
 } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
@@ -25,7 +26,14 @@ import {
   UptimeWidget,
   ProcessesWidget,
   SystemWidget,
+  LoginStatsWidget,
 } from "./widgets";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
+
+interface QuickAction {
+  name: string;
+  snippetId: number;
+}
 
 interface HostConfig {
   id: number;
@@ -35,6 +43,7 @@ interface HostConfig {
   folder?: string;
   enableFileManager?: boolean;
   tunnelConnections?: unknown[];
+  quickActions?: QuickAction[];
   statsConfig?: string | StatsConfig;
   [key: string]: unknown;
 }
@@ -79,6 +88,9 @@ export function Server({
   const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [showStatsUI, setShowStatsUI] = React.useState(true);
+  const [executingActions, setExecutingActions] = React.useState<Set<number>>(
+    new Set(),
+  );
 
   const statsConfig = React.useMemo((): StatsConfig => {
     if (!currentHostConfig?.statsConfig) {
@@ -101,8 +113,14 @@ export function Server({
   const metricsEnabled = statsConfig.metricsEnabled !== false;
 
   React.useEffect(() => {
+    if (hostConfig?.id !== currentHostConfig?.id) {
+      setServerStatus("offline");
+      setMetrics(null);
+      setMetricsHistory([]);
+      setShowStatsUI(true);
+    }
     setCurrentHostConfig(hostConfig);
-  }, [hostConfig]);
+  }, [hostConfig?.id]);
 
   const renderWidget = (widgetType: WidgetType) => {
     switch (widgetType) {
@@ -135,6 +153,11 @@ export function Server({
       case "system":
         return (
           <SystemWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
+
+      case "login_stats":
+        return (
+          <LoginStatsWidget metrics={metrics} metricsHistory={metricsHistory} />
         );
 
       default:
@@ -436,42 +459,147 @@ export function Server({
         <Separator className="p-0.25 w-full" />
 
         <div className="flex-1 overflow-y-auto min-h-0">
-          {metricsEnabled && showStatsUI && (
-            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4 max-h-[50vh] overflow-y-auto">
-              {isLoadingMetrics && !metrics ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-gray-300">
-                      {t("serverStats.loadingMetrics")}
-                    </span>
-                  </div>
-                </div>
-              ) : !metrics && serverStatus === "offline" ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-center">
-                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
-                      <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
+          {(metricsEnabled && showStatsUI) ||
+          (currentHostConfig?.quickActions &&
+            currentHostConfig.quickActions.length > 0) ? (
+            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4 overflow-y-auto relative flex-1 flex flex-col">
+              {currentHostConfig?.quickActions &&
+                currentHostConfig.quickActions.length > 0 && (
+                  <div className={metricsEnabled && showStatsUI ? "mb-4" : ""}>
+                    <h3 className="text-sm font-semibold text-gray-400 mb-2">
+                      {t("serverStats.quickActions")}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {currentHostConfig.quickActions.map((action, index) => {
+                        const isExecuting = executingActions.has(
+                          action.snippetId,
+                        );
+                        return (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            size="sm"
+                            className="font-semibold"
+                            disabled={isExecuting}
+                            onClick={async () => {
+                              if (!currentHostConfig) return;
+
+                              setExecutingActions((prev) =>
+                                new Set(prev).add(action.snippetId),
+                              );
+                              toast.loading(
+                                t("serverStats.executingQuickAction", {
+                                  name: action.name,
+                                }),
+                                { id: `quick-action-${action.snippetId}` },
+                              );
+
+                              try {
+                                const result = await executeSnippet(
+                                  action.snippetId,
+                                  currentHostConfig.id,
+                                );
+
+                                if (result.success) {
+                                  toast.success(
+                                    t("serverStats.quickActionSuccess", {
+                                      name: action.name,
+                                    }),
+                                    {
+                                      id: `quick-action-${action.snippetId}`,
+                                      description: result.output
+                                        ? result.output.substring(0, 200)
+                                        : undefined,
+                                      duration: 5000,
+                                    },
+                                  );
+                                } else {
+                                  toast.error(
+                                    t("serverStats.quickActionFailed", {
+                                      name: action.name,
+                                    }),
+                                    {
+                                      id: `quick-action-${action.snippetId}`,
+                                      description:
+                                        result.error ||
+                                        result.output ||
+                                        undefined,
+                                      duration: 5000,
+                                    },
+                                  );
+                                }
+                              } catch (error: any) {
+                                toast.error(
+                                  t("serverStats.quickActionError", {
+                                    name: action.name,
+                                  }),
+                                  {
+                                    id: `quick-action-${action.snippetId}`,
+                                    description:
+                                      error?.message || "Unknown error",
+                                    duration: 5000,
+                                  },
+                                );
+                              } finally {
+                                setExecutingActions((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(action.snippetId);
+                                  return next;
+                                });
+                              }
+                            }}
+                            title={t("serverStats.executeQuickAction", {
+                              name: action.name,
+                            })}
+                          >
+                            {isExecuting ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+                                {action.name}
+                              </div>
+                            ) : (
+                              action.name
+                            )}
+                          </Button>
+                        );
+                      })}
                     </div>
-                    <p className="text-gray-300 mb-1">
-                      {t("serverStats.serverOffline")}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {t("serverStats.cannotFetchMetrics")}
-                    </p>
                   </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {enabledWidgets.map((widgetType) => (
-                    <div key={widgetType} className="h-[280px]">
-                      {renderWidget(widgetType)}
+                )}
+              {metricsEnabled &&
+                showStatsUI &&
+                (!metrics && serverStatus === "offline" ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-red-400 rounded-full"></div>
+                      </div>
+                      <p className="text-gray-300 mb-1">
+                        {t("serverStats.serverOffline")}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {t("serverStats.cannotFetchMetrics")}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {enabledWidgets.map((widgetType) => (
+                      <div key={widgetType} className="h-[280px]">
+                        {renderWidget(widgetType)}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+
+              {metricsEnabled && showStatsUI && (
+                <SimpleLoader
+                  visible={isLoadingMetrics && !metrics}
+                  message={t("serverStats.loadingMetrics")}
+                />
               )}
             </div>
-          )}
+          ) : null}
 
           {currentHostConfig?.tunnelConnections &&
             currentHostConfig.tunnelConnections.length > 0 && (
@@ -487,19 +615,6 @@ export function Server({
               </div>
             )}
         </div>
-
-        <p className="px-4 pt-2 pb-2 text-sm text-gray-500">
-          {t("serverStats.feedbackMessage")}{" "}
-          <a
-            href="https://github.com/Termix-SSH/Termix/issues/new"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
-          >
-            GitHub
-          </a>
-          !
-        </p>
       </div>
     </div>
   );

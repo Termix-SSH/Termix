@@ -18,6 +18,8 @@ export function HostManager({
   isTopbarOpen,
   initialTab = "host_viewer",
   hostConfig,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
 }: HostManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -35,28 +37,10 @@ export function HostManager({
   const lastProcessedHostIdRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (ignoreNextHostConfigChangeRef.current) {
-      ignoreNextHostConfigChangeRef.current = false;
-      return;
+    if (initialTab) {
+      setActiveTab(initialTab);
     }
-
-    if (hostConfig && initialTab === "add_host") {
-      const currentHostId = hostConfig.id;
-
-      if (currentHostId !== lastProcessedHostIdRef.current) {
-        setEditingHost(hostConfig);
-        setActiveTab("add_host");
-        lastProcessedHostIdRef.current = currentHostId;
-      } else if (
-        activeTab === "host_viewer" ||
-        activeTab === "credentials" ||
-        activeTab === "add_credential"
-      ) {
-        setEditingHost(hostConfig);
-        setActiveTab("add_host");
-      }
-    }
-  }, [hostConfig, initialTab]);
+  }, [initialTab]);
 
   const handleEditHost = (host: SSHHost) => {
     setEditingHost(host);
@@ -88,13 +72,13 @@ export function HostManager({
   };
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (value !== "add_host") {
+    if (activeTab === "add_host" && value !== "add_host") {
       setEditingHost(null);
     }
-    if (value !== "add_credential") {
+    if (activeTab === "add_credential" && value !== "add_credential") {
       setEditingCredential(null);
     }
+    setActiveTab(value);
   };
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
@@ -108,10 +92,14 @@ export function HostManager({
           className="bg-dark-bg text-white p-4 pt-0 rounded-lg border-2 border-dark-border flex flex-col min-h-0 overflow-hidden"
           style={{
             marginLeft: leftMarginPx,
-            marginRight: 17,
+            marginRight: rightSidebarOpen
+              ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
+              : 17,
             marginTop: topMarginPx,
             marginBottom: bottomMarginPx,
             height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
+            transition:
+              "margin-left 200ms linear, margin-right 200ms linear, margin-top 200ms linear",
           }}
         >
           <Tabs

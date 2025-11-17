@@ -395,6 +395,48 @@ ipcMain.handle("save-server-config", (event, config) => {
   }
 });
 
+ipcMain.handle("get-setting", (event, key) => {
+  try {
+    const userDataPath = app.getPath("userData");
+    const settingsPath = path.join(userDataPath, "settings.json");
+
+    if (!fs.existsSync(settingsPath)) {
+      return null;
+    }
+
+    const settingsData = fs.readFileSync(settingsPath, "utf8");
+    const settings = JSON.parse(settingsData);
+    return settings[key] !== undefined ? settings[key] : null;
+  } catch (error) {
+    console.error("Error reading setting:", error);
+    return null;
+  }
+});
+
+ipcMain.handle("set-setting", (event, key, value) => {
+  try {
+    const userDataPath = app.getPath("userData");
+    const settingsPath = path.join(userDataPath, "settings.json");
+
+    if (!fs.existsSync(userDataPath)) {
+      fs.mkdirSync(userDataPath, { recursive: true });
+    }
+
+    let settings = {};
+    if (fs.existsSync(settingsPath)) {
+      const settingsData = fs.readFileSync(settingsPath, "utf8");
+      settings = JSON.parse(settingsData);
+    }
+
+    settings[key] = value;
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    return { success: true };
+  } catch (error) {
+    console.error("Error saving setting:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   try {
     const https = require("https");

@@ -27,6 +27,8 @@ interface TabProps {
   disableClose?: boolean;
   isDragging?: boolean;
   isDragOver?: boolean;
+  isValidDropTarget?: boolean;
+  isHoveredDropTarget?: boolean;
 }
 
 export function Tab({
@@ -44,6 +46,8 @@ export function Tab({
   disableClose = false,
   isDragging = false,
   isDragOver = false,
+  isValidDropTarget = false,
+  isHoveredDropTarget = false,
 }: TabProps): React.ReactElement {
   const { t } = useTranslation();
 
@@ -54,12 +58,21 @@ export function Tab({
     isDragOver &&
       "bg-background/40 text-muted-foreground border-border opacity-60",
     isDragging && "opacity-70",
+    isHoveredDropTarget &&
+      "bg-blue-500/20 border-blue-500 ring-2 ring-blue-500/50",
+    !isHoveredDropTarget &&
+      isValidDropTarget &&
+      "border-blue-400/50 bg-background/90",
     !isDragOver &&
       !isDragging &&
+      !isValidDropTarget &&
+      !isHoveredDropTarget &&
       isActive &&
       "bg-background text-foreground border-border z-10",
     !isDragOver &&
       !isDragging &&
+      !isValidDropTarget &&
+      !isHoveredDropTarget &&
       !isActive &&
       "bg-background/80 text-muted-foreground border-border hover:bg-background/90",
   );
@@ -130,7 +143,7 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid white" : "none",
+          borderBottom: isActive || isSplit ? "2px solid white" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -162,7 +175,10 @@ export function Tab({
             }
           >
             <SeparatorVertical
-              className={cn("h-4 w-4", isSplit && "text-white")}
+              className={cn(
+                "h-4 w-4",
+                isSplit ? "text-white" : "text-muted-foreground",
+              )}
             />
           </Button>
         )}

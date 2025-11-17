@@ -101,7 +101,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             terminal as { refresh?: (start: number, end: number) => void }
           ).refresh(0, terminal.rows - 1);
         }
-      } catch {}
+      } catch (error) {
+        console.error("Terminal operation failed:", error);
+      }
     }
 
     function performFit() {
@@ -175,7 +177,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               scheduleNotify(cols, rows);
               hardRefresh();
             }
-          } catch {}
+          } catch (error) {
+            console.error("Terminal operation failed:", error);
+          }
         },
         refresh: () => hardRefresh(),
       }),
@@ -225,7 +229,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               `\r\n[${msg.message || t("terminal.disconnected")}]`,
             );
           }
-        } catch {}
+        } catch (error) {
+          console.error("Terminal operation failed:", error);
+        }
       });
 
       ws.addEventListener("close", (event) => {
@@ -430,7 +436,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     return (
       <div
         ref={xtermRef}
-        className={`h-full w-full m-1 ${isReady && isVisible ? "opacity-100" : "opacity-0"} transition-opacity duration-150 overflow-hidden`}
+        className="h-full w-full m-1 overflow-hidden"
         style={{ visibility: isReady ? "visible" : "hidden" }}
       />
     );

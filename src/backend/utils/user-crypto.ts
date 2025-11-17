@@ -21,8 +21,8 @@ interface EncryptedDEK {
 
 interface UserSession {
   dataKey: Buffer;
-  lastActivity: number;
   expiresAt: number;
+  lastActivity?: number;
 }
 
 class UserCrypto {
@@ -33,8 +33,6 @@ class UserCrypto {
   private static readonly PBKDF2_ITERATIONS = 100000;
   private static readonly KEK_LENGTH = 32;
   private static readonly DEK_LENGTH = 32;
-  private static readonly SESSION_DURATION = 24 * 60 * 60 * 1000;
-  private static readonly MAX_INACTIVITY = 6 * 60 * 60 * 1000;
 
   private constructor() {
     setInterval(
@@ -69,7 +67,10 @@ class UserCrypto {
     DEK.fill(0);
   }
 
-  async setupOIDCUserEncryption(userId: string): Promise<void> {
+  async setupOIDCUserEncryption(
+    userId: string,
+    sessionDurationMs: number,
+  ): Promise<void> {
     const existingEncryptedDEK = await this.getEncryptedDEK(userId);
 
     let DEK: Buffer;
@@ -104,14 +105,17 @@ class UserCrypto {
     const now = Date.now();
     this.userSessions.set(userId, {
       dataKey: Buffer.from(DEK),
-      lastActivity: now,
-      expiresAt: now + UserCrypto.SESSION_DURATION,
+      expiresAt: now + sessionDurationMs,
     });
 
     DEK.fill(0);
   }
 
-  async authenticateUser(userId: string, password: string): Promise<boolean> {
+  async authenticateUser(
+    userId: string,
+    password: string,
+    sessionDurationMs: number,
+  ): Promise<boolean> {
     try {
       const kekSalt = await this.getKEKSalt(userId);
       if (!kekSalt) return false;
@@ -144,8 +148,7 @@ class UserCrypto {
 
       this.userSessions.set(userId, {
         dataKey: Buffer.from(DEK),
-        lastActivity: now,
-        expiresAt: now + UserCrypto.SESSION_DURATION,
+        expiresAt: now + sessionDurationMs,
       });
 
       DEK.fill(0);
@@ -161,13 +164,49 @@ class UserCrypto {
     }
   }
 
-  async authenticateOIDCUser(userId: string): Promise<boolean> {
+  async authenticateOIDCUser(
+    userId: string,
+    sessionDurationMs: number,
+  ): Promise<boolean> {
     try {
+      const oidcEncryptedDEK = await this.getOIDCEncryptedDEK(userId);
+
+      if (oidcEncryptedDEK) {
+        const systemKey = this.deriveOIDCSystemKey(userId);
+        const DEK = this.decryptDEK(oidcEncryptedDEK, systemKey);
+        systemKey.fill(0);
+
+        if (!DEK || DEK.length === 0) {
+          databaseLogger.error(
+            "Failed to decrypt OIDC DEK for dual-auth user",
+            {
+              operation: "oidc_auth_dual_decrypt_failed",
+              userId,
+            },
+          );
+          return false;
+        }
+
+        const now = Date.now();
+        const oldSession = this.userSessions.get(userId);
+        if (oldSession) {
+          oldSession.dataKey.fill(0);
+        }
+
+        this.userSessions.set(userId, {
+          dataKey: Buffer.from(DEK),
+          expiresAt: now + sessionDurationMs,
+        });
+
+        DEK.fill(0);
+        return true;
+      }
+
       const kekSalt = await this.getKEKSalt(userId);
       const encryptedDEK = await this.getEncryptedDEK(userId);
 
       if (!kekSalt || !encryptedDEK) {
-        await this.setupOIDCUserEncryption(userId);
+        await this.setupOIDCUserEncryption(userId, sessionDurationMs);
         return true;
       }
 
@@ -176,7 +215,7 @@ class UserCrypto {
       systemKey.fill(0);
 
       if (!DEK || DEK.length === 0) {
-        await this.setupOIDCUserEncryption(userId);
+        await this.setupOIDCUserEncryption(userId, sessionDurationMs);
         return true;
       }
 
@@ -189,15 +228,19 @@ class UserCrypto {
 
       this.userSessions.set(userId, {
         dataKey: Buffer.from(DEK),
-        lastActivity: now,
-        expiresAt: now + UserCrypto.SESSION_DURATION,
+        expiresAt: now + sessionDurationMs,
       });
 
       DEK.fill(0);
 
       return true;
-    } catch {
-      await this.setupOIDCUserEncryption(userId);
+    } catch (error) {
+      databaseLogger.error("OIDC authentication failed", error, {
+        operation: "oidc_auth_error",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown",
+      });
+      await this.setupOIDCUserEncryption(userId, sessionDurationMs);
       return true;
     }
   }
@@ -219,16 +262,6 @@ class UserCrypto {
       return null;
     }
 
-    if (now - session.lastActivity > UserCrypto.MAX_INACTIVITY) {
-      this.userSessions.delete(userId);
-      session.dataKey.fill(0);
-      if (this.sessionExpiredCallback) {
-        this.sessionExpiredCallback(userId);
-      }
-      return null;
-    }
-
-    session.lastActivity = now;
     return session.dataKey;
   }
 
@@ -331,6 +364,83 @@ class UserCrypto {
     }
   }
 
+  /**
+   * Convert a password-based user's encryption to DUAL-AUTH encryption.
+   * This is used when linking an OIDC account to a password account for dual-auth.
+   *
+   * IMPORTANT: This does NOT delete the password-based KEK salt!
+   * The user needs to maintain BOTH password and OIDC authentication methods.
+   * We keep the password KEK salt so password login still works.
+   * We also store the DEK encrypted with OIDC system key for OIDC login.
+   */
+  async convertToOIDCEncryption(userId: string): Promise<void> {
+    try {
+      const existingEncryptedDEK = await this.getEncryptedDEK(userId);
+      const existingKEKSalt = await this.getKEKSalt(userId);
+
+      if (!existingEncryptedDEK && !existingKEKSalt) {
+        databaseLogger.warn("No existing encryption to convert for user", {
+          operation: "convert_to_oidc_encryption_skip",
+          userId,
+        });
+        return;
+      }
+
+      const existingDEK = this.getUserDataKey(userId);
+
+      if (!existingDEK) {
+        throw new Error(
+          "Cannot convert to OIDC encryption - user session not active. Please log in with password first.",
+        );
+      }
+
+      const systemKey = this.deriveOIDCSystemKey(userId);
+      const oidcEncryptedDEK = this.encryptDEK(existingDEK, systemKey);
+      systemKey.fill(0);
+
+      const key = `user_encrypted_dek_oidc_${userId}`;
+      const value = JSON.stringify(oidcEncryptedDEK);
+
+      const { getDb } = await import("../database/db/index.js");
+      const { settings } = await import("../database/db/schema.js");
+      const { eq } = await import("drizzle-orm");
+
+      const existing = await getDb()
+        .select()
+        .from(settings)
+        .where(eq(settings.key, key));
+
+      if (existing.length > 0) {
+        await getDb()
+          .update(settings)
+          .set({ value })
+          .where(eq(settings.key, key));
+      } else {
+        await getDb().insert(settings).values({ key, value });
+      }
+
+      databaseLogger.info(
+        "Converted user encryption to dual-auth (password + OIDC)",
+        {
+          operation: "convert_to_oidc_encryption_preserved",
+          userId,
+        },
+      );
+
+      const { saveMemoryDatabaseToFile } = await import(
+        "../database/db/index.js"
+      );
+      await saveMemoryDatabaseToFile();
+    } catch (error) {
+      databaseLogger.error("Failed to convert to OIDC encryption", error, {
+        operation: "convert_to_oidc_encryption_error",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
+  }
+
   private async validatePassword(
     userId: string,
     password: string,
@@ -359,10 +469,7 @@ class UserCrypto {
     const expiredUsers: string[] = [];
 
     for (const [userId, session] of this.userSessions.entries()) {
-      if (
-        now > session.expiresAt ||
-        now - session.lastActivity > UserCrypto.MAX_INACTIVITY
-      ) {
+      if (now > session.expiresAt) {
         session.dataKey.fill(0);
         expiredUsers.push(userId);
       }
@@ -498,6 +605,26 @@ class UserCrypto {
   private async getEncryptedDEK(userId: string): Promise<EncryptedDEK | null> {
     try {
       const key = `user_encrypted_dek_${userId}`;
+      const result = await getDb()
+        .select()
+        .from(settings)
+        .where(eq(settings.key, key));
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      return JSON.parse(result[0].value);
+    } catch {
+      return null;
+    }
+  }
+
+  private async getOIDCEncryptedDEK(
+    userId: string,
+  ): Promise<EncryptedDEK | null> {
+    try {
+      const key = `user_encrypted_dek_oidc_${userId}`;
       const result = await getDb()
         .select()
         .from(settings)

@@ -21,7 +21,7 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       if (persistentConfig.parsed) {
         Object.assign(process.env, persistentConfig.parsed);
       }
-    } catch {}
+    } catch (error) {}
 
     let version = "unknown";
 

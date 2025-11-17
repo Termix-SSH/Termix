@@ -191,6 +191,20 @@
     "enableRightClickCopyPaste": "Habilitar copiar/colar com botão direito",
     "shareIdeas": "Tem ideias sobre o que deve vir a seguir nas ferramentas SSH? Compartilhe em"
   },
+  "commandHistory": {
+    "title": "Histórico",
+    "searchPlaceholder": "Pesquisar comandos...",
+    "noTerminal": "Nenhum terminal ativo",
+    "noTerminalHint": "Abra um terminal para ver seu histórico de comandos.",
+    "empty": "Ainda não há histórico de comandos",
+    "emptyHint": "Execute comandos no terminal ativo para criar um histórico.",
+    "noResults": "Nenhum comando encontrado",
+    "noResultsHint": "Nenhum comando correspondente a \"{{query}}\"",
+    "deleteSuccess": "Comando removido do histórico",
+    "deleteFailed": "Falha ao excluir comando.",
+    "deleteTooltip": "Excluir comando",
+    "tabHint": "Use Tab no Terminal para autocompletar do histórico de comandos"
+  },
   "homepage": {
     "loggedInTitle": "Conectado!",
     "loggedInMessage": "Você está conectado! Use a barra lateral para acessar todas as ferramentas disponíveis. Para começar, crie um Host SSH na aba Gerenciador SSH. Depois de criado, você pode se conectar a esse host usando os outros apps na barra lateral.",
@@ -720,7 +734,18 @@
     "noneAuthDescription": "Este método de autenticação usará autenticação interativa por teclado ao conectar ao servidor SSH.",
     "noneAuthDetails": "A autenticação interativa por teclado permite que o servidor solicite credenciais durante a conexão. Isso é útil para servidores que requerem autenticação multifator ou entrada de senha dinâmica.",
     "forceKeyboardInteractive": "Forçar Interativo com Teclado",
-    "forceKeyboardInteractiveDesc": "Força o uso da autenticação interativa com teclado. Isso é frequentemente necessário para servidores que usam Autenticação de Dois Fatores (TOTP/2FA)."
+    "forceKeyboardInteractiveDesc": "Força o uso da autenticação interativa com teclado. Isso é frequentemente necessário para servidores que usam Autenticação de Dois Fatores (TOTP/2FA).",
+    "overrideCredentialUsername": "Substituir Nome de Usuário da Credencial",
+    "overrideCredentialUsernameDesc": "Use um nome de usuário diferente daquele armazenado na credencial. Isso permite que você use a mesma credencial com diferentes nomes de usuário.",
+    "jumpHosts": "Hosts de Salto",
+    "jumpHostsDescription": "Hosts de salto (também conhecidos como bastions) permitem que você se conecte a um servidor de destino através de um ou mais servidores intermediários. Isso é útil para acessar servidores atrás de firewalls ou em redes privadas.",
+    "jumpHostChain": "Cadeia de Hosts de Salto",
+    "addJumpHost": "Adicionar Host de Salto",
+    "selectServer": "Selecionar Servidor",
+    "searchServers": "Pesquisar servidores...",
+    "noServerFound": "Nenhum servidor encontrado",
+    "jumpHostsOrder": "As conexões serão feitas na ordem: Host de Salto 1 → Host de Salto 2 → ... → Servidor de Destino",
+    "advancedAuthSettings": "Configurações Avançadas de Autenticação"
   },
   "terminal": {
     "title": "Terminal",
@@ -836,6 +861,8 @@
     "copy": "Copiar",
     "cut": "Recortar",
     "paste": "Colar",
+    "copyPath": "Copiar caminho",
+    "copyPaths": "Copiar caminhos",
     "delete": "Excluir",
     "properties": "Propriedades",
     "preview": "Visualizar",
@@ -846,6 +873,9 @@
     "deleteFiles": "Excluir {{count}} itens",
     "filesCopiedToClipboard": "{{count}} itens copiados para a área de transferência",
     "filesCutToClipboard": "{{count}} itens recortados para a área de transferência",
+    "pathCopiedToClipboard": "Caminho copiado para a área de transferência",
+    "pathsCopiedToClipboard": "{{count}} caminhos copiados para a área de transferência",
+    "failedToCopyPath": "Falha ao copiar caminho para a área de transferência",
     "movedItems": "{{count}} itens movidos",
     "failedToDeleteItem": "Falha ao excluir item",
     "itemRenamedSuccessfully": "{{type}} renomeado com sucesso",
@@ -1143,6 +1173,11 @@
     "available": "Disponível"
   },
   "auth": {
+    "tagline": "GERENCIADOR DE TERMINAL SSH",
+    "description": "Gerenciamento de conexão SSH seguro, poderoso e intuitivo",
+    "welcomeBack": "Bem-vindo de volta ao TERMIX",
+    "createAccount": "Crie sua conta TERMIX",
+    "continueExternal": "Continuar com provedor externo",
     "loginTitle": "Entrar no Termix",
     "registerTitle": "Criar Conta",
     "loginButton": "Entrar",
@@ -1306,6 +1341,10 @@
     "local": "Local",
     "external": "Externo (OIDC)",
     "selectPreferredLanguage": "Selecione seu idioma preferido para a interface",
+    "fileColorCoding": "Codificação de Cores de Arquivos",
+    "fileColorCodingDesc": "Codificar arquivos por cores por tipo: pastas (vermelho), arquivos (azul), links simbólicos (verde)",
+    "commandAutocomplete": "Autocompletar Comandos",
+    "commandAutocompleteDesc": "Ativar sugestões de autocompletar com a tecla Tab para comandos do terminal baseado no seu histórico",
     "currentPassword": "Senha Atual",
     "passwordChangedSuccess": "Senha alterada com sucesso! Por favor, faça login novamente.",
     "failedToChangePassword": "Falha ao alterar a senha. Por favor, verifique sua senha atual e tente novamente."

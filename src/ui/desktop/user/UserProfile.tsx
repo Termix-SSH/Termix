@@ -10,6 +10,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
+import { Switch } from "@/components/ui/switch.tsx";
 import { User, Shield, AlertCircle } from "lucide-react";
 import { TOTPSetup } from "@/ui/desktop/user/TOTPSetup.tsx";
 import {
@@ -26,6 +27,8 @@ import { useSidebar } from "@/components/ui/sidebar.tsx";
 
 interface UserProfileProps {
   isTopbarOpen?: boolean;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
 }
 
 async function handleLogout() {
@@ -54,7 +57,9 @@ async function handleLogout() {
               },
               serverOrigin,
             );
-          } catch (err) {}
+          } catch (err) {
+            console.error("User profile operation failed:", err);
+          }
         }
       }
     }
@@ -66,13 +71,18 @@ async function handleLogout() {
   }
 }
 
-export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
+export function UserProfile({
+  isTopbarOpen = true,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
+}: UserProfileProps) {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
   const [userInfo, setUserInfo] = useState<{
     username: string;
     is_admin: boolean;
     is_oidc: boolean;
+    is_dual_auth: boolean;
     totp_enabled: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +95,12 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [fileColorCoding, setFileColorCoding] = useState<boolean>(
+    localStorage.getItem("fileColorCoding") !== "false",
+  );
+  const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
+    localStorage.getItem("commandAutocomplete") !== "false",
+  );
 
   useEffect(() => {
     fetchUserInfo();
@@ -110,6 +126,7 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
         username: info.username,
         is_admin: info.is_admin,
         is_oidc: info.is_oidc,
+        is_dual_auth: info.is_dual_auth || false,
         totp_enabled: info.totp_enabled || false,
       });
     } catch (err: unknown) {
@@ -124,6 +141,17 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
     if (userInfo) {
       setUserInfo({ ...userInfo, totp_enabled: enabled });
     }
+  };
+
+  const handleFileColorCodingToggle = (enabled: boolean) => {
+    setFileColorCoding(enabled);
+    localStorage.setItem("fileColorCoding", enabled.toString());
+    window.dispatchEvent(new Event("fileColorCodingChanged"));
+  };
+
+  const handleCommandAutocompleteToggle = (enabled: boolean) => {
+    setCommandAutocomplete(enabled);
+    localStorage.setItem("commandAutocomplete", enabled.toString());
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -154,10 +182,14 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
   const bottomMarginPx = 8;
   const wrapperStyle: React.CSSProperties = {
     marginLeft: leftMarginPx,
-    marginRight: 17,
+    marginRight: rightSidebarOpen
+      ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
+      : 17,
     marginTop: topMarginPx,
     marginBottom: bottomMarginPx,
     height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
+    transition:
+      "margin-left 200ms linear, margin-right 200ms linear, margin-top 200ms linear",
   };
 
   if (loading) {
@@ -233,7 +265,7 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
                   <User className="w-4 h-4" />
                   {t("nav.userProfile")}
                 </TabsTrigger>
-                {!userInfo.is_oidc && (
+                {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
                   <TabsTrigger
                     value="security"
                     className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button"
@@ -273,9 +305,11 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
                         {t("profile.authMethod")}
                       </Label>
                       <p className="text-lg font-medium mt-1 text-white">
-                        {userInfo.is_oidc
-                          ? t("profile.external")
-                          : t("profile.local")}
+                        {userInfo.is_dual_auth
+                          ? t("profile.externalAndLocal")
+                          : userInfo.is_oidc
+                            ? t("profile.external")
+                            : t("profile.local")}
                       </p>
                     </div>
                     <div>
@@ -283,7 +317,7 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
                         {t("profile.twoFactorAuth")}
                       </Label>
                       <p className="text-lg font-medium mt-1">
-                        {userInfo.is_oidc ? (
+                        {userInfo.is_oidc && !userInfo.is_dual_auth ? (
                           <span className="text-gray-400">
                             {t("auth.lockedOidcAuth")}
                           </span>
@@ -326,6 +360,40 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
                   <div className="mt-6 pt-6 border-t border-dark-border">
                     <div className="flex items-center justify-between">
                       <div>
+                        <Label className="text-gray-300">
+                          {t("profile.fileColorCoding")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.fileColorCodingDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={fileColorCoding}
+                        onCheckedChange={handleFileColorCodingToggle}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-dark-border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("profile.commandAutocomplete")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.commandAutocompleteDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={commandAutocomplete}
+                        onCheckedChange={handleCommandAutocompleteToggle}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-dark-border">
+                    <div className="flex items-center justify-between">
+                      <div>
                         <Label className="text-red-400">
                           {t("leftSidebar.deleteAccount")}
                         </Label>
@@ -353,7 +421,9 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
                   onStatusChange={handleTOTPStatusChange}
                 />
 
-                {!userInfo.is_oidc && <PasswordReset userInfo={userInfo} />}
+                {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
+                  <PasswordReset userInfo={userInfo} />
+                )}
               </TabsContent>
             </Tabs>
           </div>
@@ -398,7 +468,7 @@ export function UserProfile({ isTopbarOpen = true }: UserProfileProps) {
               <div className="space-y-4">
                 <div className="text-sm text-gray-300">
                   {t("leftSidebar.deleteAccountWarning")}
-                  <Alert variant="destructive">
+                  <Alert variant="destructive" className="mb-5 mt-5">
                     <AlertTitle>{t("common.warning")}</AlertTitle>
                     <AlertDescription>
                       {t("leftSidebar.deleteAccountWarningDetails")}
