@@ -107,7 +107,6 @@ export function FolderEditDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Color Selection */}
           <div className="space-y-3">
             <Label className="text-base font-semibold text-foreground">
               {t("hosts.folderColor")}
@@ -130,7 +129,6 @@ export function FolderEditDialog({
             </div>
           </div>
 
-          {/* Icon Selection */}
           <div className="space-y-3">
             <Label className="text-base font-semibold text-foreground">
               {t("hosts.folderIcon")}
@@ -154,7 +152,6 @@ export function FolderEditDialog({
             </div>
           </div>
 
-          {/* Preview */}
           <div className="space-y-3">
             <Label className="text-base font-semibold text-foreground">
               {t("hosts.preview")}

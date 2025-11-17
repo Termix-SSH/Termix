@@ -695,28 +695,28 @@ export function AdminSettings({
   };
 
   const handleUnlinkOIDC = async (userId: string, username: string) => {
-    const confirmed = await confirm(
-      {
-        title: "Unlink OIDC Authentication",
-        description: `Remove OIDC authentication from ${username}? The user will only be able to login with username/password after this.`,
+    confirmWithToast(
+      t("admin.unlinkOIDCDescription", { username }),
+      async () => {
+        try {
+          const result = await unlinkOIDCFromPasswordAccount(userId);
+
+          toast.success(
+            result.message || t("admin.unlinkOIDCSuccess", { username }),
+          );
+          fetchUsers();
+          fetchSessions();
+        } catch (error: unknown) {
+          const err = error as {
+            response?: { data?: { error?: string; code?: string } };
+          };
+          toast.error(
+            err.response?.data?.error || t("admin.failedToUnlinkOIDC"),
+          );
+        }
       },
-      "default",
+      "destructive",
     );
-
-    if (!confirmed) return;
-
-    try {
-      const result = await unlinkOIDCFromPasswordAccount(userId);
-
-      toast.success(result.message || `OIDC unlinked from ${username}`);
-      fetchUsers();
-      fetchSessions();
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { error?: string; code?: string } };
-      };
-      toast.error(err.response?.data?.error || "Failed to unlink OIDC");
-    }
   };
 
   const topMarginPx = isTopbarOpen ? 74 : 26;

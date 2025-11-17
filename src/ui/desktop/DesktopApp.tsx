@@ -183,13 +183,13 @@ function AppContent() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden">
+    <div className="h-screen w-screen overflow-hidden bg-background">
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         setIsOpen={setIsCommandPaletteOpen}
       />
       {!isAuthenticated && (
-        <div className="fixed inset-0 flex items-center justify-center z-[10000]">
+        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
           <Dashboard
             onSelectView={handleSelectView}
             isAuthenticated={isAuthenticated}
@@ -293,6 +293,8 @@ function AppContent() {
                     animation:
                       "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
                     animationDelay: "0ms",
+                    willChange: "width, height, opacity",
+                    transform: "translateZ(0)",
                   }}
                 />
                 <div
@@ -301,6 +303,8 @@ function AppContent() {
                     animation:
                       "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
                     animationDelay: "200ms",
+                    willChange: "width, height, opacity",
+                    transform: "translateZ(0)",
                   }}
                 />
                 <div
@@ -309,6 +313,8 @@ function AppContent() {
                     animation:
                       "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
                     animationDelay: "400ms",
+                    willChange: "width, height, opacity",
+                    transform: "translateZ(0)",
                   }}
                 />
                 <div
@@ -317,6 +323,8 @@ function AppContent() {
                     animation:
                       "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
                     animationDelay: "600ms",
+                    willChange: "width, height, opacity",
+                    transform: "translateZ(0)",
                   }}
                 />
                 <div
@@ -324,6 +332,7 @@ function AppContent() {
                   style={{
                     animation:
                       "logoFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                    willChange: "opacity, transform",
                   }}
                 >
                   <div
@@ -333,6 +342,7 @@ function AppContent() {
                         "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                       animation:
                         "logoGlow 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                      willChange: "color, text-shadow",
                     }}
                   >
                     TERMIX
@@ -342,6 +352,7 @@ function AppContent() {
                     style={{
                       animation:
                         "subtitleFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                      willChange: "opacity, transform",
                     }}
                   >
                     SSH SERVER MANAGER
@@ -370,23 +381,19 @@ function AppContent() {
                 @keyframes logoFade {
                   0% {
                     opacity: 0;
-                    transform: scale(0.85);
-                    filter: blur(8px);
+                    transform: scale(0.85) translateZ(0);
                   }
                   25% {
                     opacity: 1;
-                    transform: scale(1);
-                    filter: blur(0px);
+                    transform: scale(1) translateZ(0);
                   }
                   75% {
                     opacity: 1;
-                    transform: scale(1);
-                    filter: blur(0px);
+                    transform: scale(1) translateZ(0);
                   }
                   100% {
                     opacity: 0;
-                    transform: scale(1.05);
-                    filter: blur(4px);
+                    transform: scale(1.05) translateZ(0);
                   }
                 }
                 @keyframes logoGlow {
@@ -416,19 +423,19 @@ function AppContent() {
                 @keyframes subtitleFade {
                   0%, 30% {
                     opacity: 0;
-                    transform: translateY(10px);
+                    transform: translateY(10px) translateZ(0);
                   }
                   50% {
                     opacity: 1;
-                    transform: translateY(0);
+                    transform: translateY(0) translateZ(0);
                   }
                   75% {
                     opacity: 1;
-                    transform: translateY(0);
+                    transform: translateY(0) translateZ(0);
                   }
                   100% {
                     opacity: 0;
-                    transform: translateY(-5px);
+                    transform: translateY(-5px) translateZ(0);
                   }
                 }
               `}</style>

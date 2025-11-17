@@ -851,9 +851,7 @@ export function Auth({
       className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
       {...props}
     >
-      {/* Split Screen Layout */}
       <div className="w-full h-full flex flex-col md:flex-row">
-        {/* Left Side - Brand Showcase */}
         <div
           className="hidden md:flex md:w-2/5 items-center justify-center relative border-r-2 border-bg-border-dark"
           style={{
@@ -867,7 +865,6 @@ export function Auth({
             )`,
           }}
         >
-          {/* Logo and Branding */}
           <div className="relative text-center px-8">
             <div
               className="text-7xl font-bold tracking-wider mb-4 text-foreground"
@@ -884,7 +881,6 @@ export function Auth({
           </div>
         </div>
 
-        {/* Right Side - Auth Form */}
         <div className="flex-1 flex p-6 md:p-12 bg-background overflow-y-auto">
           <div className="m-auto w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border-2 border-dark-border animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col">
             {isInElectronWebView() && !webviewAuthSuccess && (
@@ -991,7 +987,6 @@ export function Auth({
 
                     return (
                       <>
-                        {/* Tab Navigation */}
                         <Tabs
                           value={tab}
                           onValueChange={(value) => {
@@ -1043,7 +1038,6 @@ export function Auth({
                           </TabsList>
                         </Tabs>
 
-                        {/* Page Title */}
                         <div className="mb-8 text-center">
                           <h2 className="text-2xl font-bold">
                             {tab === "login"

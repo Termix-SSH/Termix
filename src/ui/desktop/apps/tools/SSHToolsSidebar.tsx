@@ -215,6 +215,7 @@ export function SSHToolsSidebar({
 
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [historyRefreshCounter, setHistoryRefreshCounter] = useState(0);
   const commandHistoryScrollRef = React.useRef<HTMLDivElement>(null);
@@ -248,12 +249,18 @@ export function SSHToolsSidebar({
   );
 
   useEffect(() => {
+    let cancelled = false;
+
     if (isOpen && activeTab === "command-history") {
       if (activeTerminalHostId) {
         const scrollTop = commandHistoryScrollRef.current?.scrollTop || 0;
+        setIsHistoryLoading(true);
+        setHistoryError(null);
 
         getCommandHistory(activeTerminalHostId)
           .then((history) => {
+            if (cancelled) return;
+
             setCommandHistory((prevHistory) => {
               const newHistory = Array.isArray(history) ? history : [];
               if (JSON.stringify(prevHistory) !== JSON.stringify(newHistory)) {
@@ -266,15 +273,33 @@ export function SSHToolsSidebar({
               }
               return prevHistory;
             });
+            setIsHistoryLoading(false);
           })
           .catch((err) => {
+            if (cancelled) return;
+
             console.error("Failed to fetch command history", err);
+            const errorMessage =
+              err?.response?.status === 401
+                ? "Authentication required. Please refresh the page."
+                : err?.response?.status === 403
+                  ? "Data access locked. Please re-authenticate."
+                  : err?.message || "Failed to load command history";
+
+            setHistoryError(errorMessage);
             setCommandHistory([]);
+            setIsHistoryLoading(false);
           });
       } else {
         setCommandHistory([]);
+        setHistoryError(null);
+        setIsHistoryLoading(false);
       }
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     isOpen,
     activeTab,
@@ -1304,7 +1329,6 @@ export function SSHToolsSidebar({
 
                               return (
                                 <div key={folderName || "uncategorized"}>
-                                  {/* Folder Header */}
                                   <div className="flex items-center gap-2 mb-2 hover:bg-dark-hover-alt p-2 rounded-lg transition-colors group/folder">
                                     <div
                                       className="flex items-center gap-2 flex-1 cursor-pointer"
@@ -1382,7 +1406,6 @@ export function SSHToolsSidebar({
                                     )}
                                   </div>
 
-                                  {/* Folder Content */}
                                   {!isCollapsed && (
                                     <div className="space-y-2 ml-6">
                                       {folderSnippets.map((snippet) => (
@@ -1556,7 +1579,28 @@ export function SSHToolsSidebar({
                     </div>
 
                     <div className="flex-1 overflow-hidden min-h-0">
-                      {!activeTerminal ? (
+                      {historyError ? (
+                        <div className="text-center py-8">
+                          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
+                            <p className="text-destructive font-medium mb-2">
+                              {t("commandHistory.error", {
+                                defaultValue: "Error loading history",
+                              })}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {historyError}
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() =>
+                              setHistoryRefreshCounter((prev) => prev + 1)
+                            }
+                            variant="outline"
+                          >
+                            {t("common.retry", { defaultValue: "Retry" })}
+                          </Button>
+                        </div>
+                      ) : !activeTerminal ? (
                         <div className="text-center text-muted-foreground py-8">
                           <Terminal className="h-12 w-12 mb-4 opacity-20 mx-auto" />
                           <p className="mb-2 font-medium">
@@ -1568,6 +1612,15 @@ export function SSHToolsSidebar({
                             {t("commandHistory.noTerminalHint", {
                               defaultValue:
                                 "Open a terminal to see its command history.",
+                            })}
+                          </p>
+                        </div>
+                      ) : isHistoryLoading && commandHistory.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-8">
+                          <Loader2 className="h-12 w-12 mb-4 opacity-20 mx-auto animate-spin" />
+                          <p className="mb-2 font-medium">
+                            {t("commandHistory.loading", {
+                              defaultValue: "Loading command history...",
                             })}
                           </p>
                         </div>
@@ -1649,7 +1702,6 @@ export function SSHToolsSidebar({
                     className="flex flex-col flex-1 overflow-hidden"
                   >
                     <div className="space-y-4 flex-1 overflow-y-auto overflow-x-hidden pb-4">
-                      {/* Split Mode Tabs */}
                       <Tabs
                         value={splitMode}
                         onValueChange={(value) =>
@@ -1681,12 +1733,10 @@ export function SSHToolsSidebar({
                         </TabsList>
                       </Tabs>
 
-                      {/* Drag-and-Drop Interface */}
                       {splitMode !== "none" && (
                         <>
                           <Separator />
 
-                          {/* Available Tabs List */}
                           <div className="space-y-2">
                             <label className="text-sm font-medium text-white">
                               {t("splitScreen.availableTabs", {
@@ -1735,7 +1785,6 @@ export function SSHToolsSidebar({
 
                           <Separator />
 
-                          {/* Drop Grid */}
                           <div className="space-y-2">
                             <label className="text-sm font-medium text-white">
                               {t("splitScreen.layout", {
@@ -1816,7 +1865,6 @@ export function SSHToolsSidebar({
                             </div>
                           </div>
 
-                          {/* Action Buttons */}
                           <div className="flex gap-2 pt-2">
                             <Button
                               onClick={handleApplySplit}
@@ -1840,7 +1888,6 @@ export function SSHToolsSidebar({
                         </>
                       )}
 
-                      {/* Help Text for None mode */}
                       {splitMode === "none" && (
                         <div className="text-center py-8">
                           <LayoutGrid className="h-12 w-12 mb-4 opacity-20 mx-auto" />
@@ -2097,7 +2144,6 @@ export function SSHToolsSidebar({
                 )}
               </div>
 
-              {/* Color Selection */}
               <div className="space-y-3">
                 <Label className="text-base font-semibold text-white">
                   {t("snippets.folderColor", { defaultValue: "Folder Color" })}
@@ -2125,7 +2171,6 @@ export function SSHToolsSidebar({
                 </div>
               </div>
 
-              {/* Icon Selection */}
               <div className="space-y-3">
                 <Label className="text-base font-semibold text-white">
                   {t("snippets.folderIcon", { defaultValue: "Folder Icon" })}
@@ -2151,7 +2196,6 @@ export function SSHToolsSidebar({
                 </div>
               </div>
 
-              {/* Preview */}
               <div className="space-y-3">
                 <Label className="text-base font-semibold text-white">
                   {t("snippets.preview", { defaultValue: "Preview" })}

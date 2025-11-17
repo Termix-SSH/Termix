@@ -80,7 +80,10 @@ router.get(
 
     try {
       const result = await db
-        .selectDistinct({ command: commandHistory.command })
+        .select({
+          command: commandHistory.command,
+          maxExecutedAt: sql<number>`MAX(${commandHistory.executedAt})`,
+        })
         .from(commandHistory)
         .where(
           and(
@@ -88,10 +91,11 @@ router.get(
             eq(commandHistory.hostId, hostIdNum),
           ),
         )
-        .orderBy(desc(commandHistory.executedAt))
+        .groupBy(commandHistory.command)
+        .orderBy(desc(sql`MAX(${commandHistory.executedAt})`))
         .limit(500);
 
-      const uniqueCommands = Array.from(new Set(result.map((r) => r.command)));
+      const uniqueCommands = result.map((r) => r.command);
 
       res.json(uniqueCommands);
     } catch (err) {

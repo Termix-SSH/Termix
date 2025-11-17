@@ -2933,6 +2933,20 @@ export function HostManagerEditor({
                 <TabsContent value="statistics" className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                        onClick={() =>
+                          window.open(
+                            "https://docs.termix.site/server-stats",
+                            "_blank",
+                          )
+                        }
+                      >
+                        {t("common.documentation")}
+                      </Button>
+
                       <FormField
                         control={form.control}
                         name="statsConfig.statusCheckEnabled"

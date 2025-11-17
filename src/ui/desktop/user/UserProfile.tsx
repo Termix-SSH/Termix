@@ -82,6 +82,7 @@ export function UserProfile({
     username: string;
     is_admin: boolean;
     is_oidc: boolean;
+    is_dual_auth: boolean;
     totp_enabled: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,6 +126,7 @@ export function UserProfile({
         username: info.username,
         is_admin: info.is_admin,
         is_oidc: info.is_oidc,
+        is_dual_auth: info.is_dual_auth || false,
         totp_enabled: info.totp_enabled || false,
       });
     } catch (err: unknown) {
@@ -263,7 +265,7 @@ export function UserProfile({
                   <User className="w-4 h-4" />
                   {t("nav.userProfile")}
                 </TabsTrigger>
-                {!userInfo.is_oidc && (
+                {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
                   <TabsTrigger
                     value="security"
                     className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button"
@@ -303,9 +305,11 @@ export function UserProfile({
                         {t("profile.authMethod")}
                       </Label>
                       <p className="text-lg font-medium mt-1 text-white">
-                        {userInfo.is_oidc
-                          ? t("profile.external")
-                          : t("profile.local")}
+                        {userInfo.is_dual_auth
+                          ? t("profile.externalAndLocal")
+                          : userInfo.is_oidc
+                            ? t("profile.external")
+                            : t("profile.local")}
                       </p>
                     </div>
                     <div>
@@ -313,7 +317,7 @@ export function UserProfile({
                         {t("profile.twoFactorAuth")}
                       </Label>
                       <p className="text-lg font-medium mt-1">
-                        {userInfo.is_oidc ? (
+                        {userInfo.is_oidc && !userInfo.is_dual_auth ? (
                           <span className="text-gray-400">
                             {t("auth.lockedOidcAuth")}
                           </span>
@@ -417,7 +421,9 @@ export function UserProfile({
                   onStatusChange={handleTOTPStatusChange}
                 />
 
-                {!userInfo.is_oidc && <PasswordReset userInfo={userInfo} />}
+                {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
+                  <PasswordReset userInfo={userInfo} />
+                )}
               </TabsContent>
             </Tabs>
           </div>

@@ -153,7 +153,6 @@ export function PermissionsDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Current info */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <Label className="text-gray-400">
@@ -171,7 +170,6 @@ export function PermissionsDialog({
             </div>
           </div>
 
-          {/* Owner permissions */}
           <div className="space-y-3">
             <Label className="text-base font-semibold text-foreground">
               {t("fileManager.owner")} {file.owner && `(${file.owner})`}
@@ -215,7 +213,6 @@ export function PermissionsDialog({
             </div>
           </div>
 
-          {/* Group permissions */}
           <div className="space-y-3">
             <Label className="text-base font-semibold text-foreground">
               {t("fileManager.group")} {file.group && `(${file.group})`}
@@ -259,7 +256,6 @@ export function PermissionsDialog({
             </div>
           </div>
 
-          {/* Others permissions */}
           <div className="space-y-3">
             <Label className="text-base font-semibold text-foreground">
               {t("fileManager.others")}

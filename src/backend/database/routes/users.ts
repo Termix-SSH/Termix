@@ -752,9 +752,7 @@ router.get("/oidc/callback", async (req, res) => {
     let user = await db
       .select()
       .from(users)
-      .where(
-        and(eq(users.is_oidc, true), eq(users.oidc_identifier, identifier)),
-      );
+      .where(eq(users.oidc_identifier, identifier));
 
     let isFirstUser = false;
     if (!user || user.length === 0) {
@@ -851,10 +849,15 @@ router.get("/oidc/callback", async (req, res) => {
 
       user = await db.select().from(users).where(eq(users.id, id));
     } else {
-      await db
-        .update(users)
-        .set({ username: name })
-        .where(eq(users.id, user[0].id));
+      const isDualAuth =
+        user[0].password_hash && user[0].password_hash.trim() !== "";
+
+      if (!isDualAuth) {
+        await db
+          .update(users)
+          .set({ username: name })
+          .where(eq(users.id, user[0].id));
+      }
 
       user = await db.select().from(users).where(eq(users.id, user[0].id));
     }
@@ -1169,11 +1172,17 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       return res.status(401).json({ error: "User not found" });
     }
 
+    const hasPassword =
+      user[0].password_hash && user[0].password_hash.trim() !== "";
+    const hasOidc = user[0].is_oidc && user[0].oidc_identifier;
+    const isDualAuth = hasPassword && hasOidc;
+
     res.json({
       userId: user[0].id,
       username: user[0].username,
       is_admin: !!user[0].is_admin,
       is_oidc: !!user[0].is_oidc,
+      is_dual_auth: isDualAuth,
       totp_enabled: !!user[0].totp_enabled,
     });
   } catch (err) {
