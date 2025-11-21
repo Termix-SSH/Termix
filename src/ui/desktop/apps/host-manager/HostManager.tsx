@@ -42,6 +42,15 @@ export function HostManager({
     }
   }, [initialTab]);
 
+  // Update editingHost when hostConfig changes
+  useEffect(() => {
+    if (hostConfig) {
+      setEditingHost(hostConfig);
+      setActiveTab("add_host");
+      lastProcessedHostIdRef.current = hostConfig.id;
+    }
+  }, [hostConfig?.id]);
+
   const handleEditHost = (host: SSHHost) => {
     setEditingHost(host);
     setActiveTab("add_host");
