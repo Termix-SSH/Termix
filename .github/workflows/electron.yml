@@ -509,7 +509,6 @@ jobs:
   submit-to-chocolatey:
     runs-on: windows-latest
     if: github.event.inputs.artifact_destination == 'submit'
-    needs: [build-windows]
     permissions:
       contents: read
 
@@ -525,20 +524,25 @@ jobs:
           $VERSION = (Get-Content package.json | ConvertFrom-Json).version
           echo "version=$VERSION" >> $env:GITHUB_OUTPUT
 
-      - name: Download Windows x64 MSI artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: termix_windows_x64_msi
-          path: artifact
-
-      - name: Get MSI file info
+      - name: Download and prepare MSI info from public release
         id: msi-info
         run: |
           $VERSION = "${{ steps.package-version.outputs.version }}"
-          $MSI_FILE = Get-ChildItem -Path artifact -Filter "*.msi" | Select-Object -First 1
-          $MSI_NAME = $MSI_FILE.Name
-          $CHECKSUM = (Get-FileHash -Path $MSI_FILE.FullName -Algorithm SHA256).Hash
+          $MSI_NAME = "termix_windows_x64_msi.msi"
+          $DOWNLOAD_URL = "https://github.com/Termix-SSH/Termix/releases/download/release-$($VERSION)-tag/$($MSI_NAME)"
 
+          Write-Host "Downloading from $DOWNLOAD_URL"
+          New-Item -ItemType Directory -Force -Path "release_asset"
+          $DOWNLOAD_PATH = "release_asset\$MSI_NAME"
+
+          try {
+            Invoke-WebRequest -Uri $DOWNLOAD_URL -OutFile $DOWNLOAD_PATH -UseBasicParsing
+          } catch {
+            Write-Error "Failed to download MSI from $DOWNLOAD_URL. Please ensure the release and asset exist."
+            exit 1
+          }
+
+          $CHECKSUM = (Get-FileHash -Path $DOWNLOAD_PATH -Algorithm SHA256).Hash
           echo "msi_name=$MSI_NAME" >> $env:GITHUB_OUTPUT
           echo "checksum=$CHECKSUM" >> $env:GITHUB_OUTPUT
 
