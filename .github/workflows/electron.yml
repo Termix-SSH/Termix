@@ -318,7 +318,19 @@ jobs:
         run: |
           cd flatpak-build
           flatpak-builder --repo=repo --force-clean --disable-rofiles-fuse build-dir com.karmaa.termix.yml
-          flatpak build-bundle repo ../release/termix_linux_flatpak.flatpak com.karmaa.termix stable
+
+          # Determine the architecture
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "x86_64" ]; then
+            FLATPAK_ARCH="x86_64"
+          elif [ "$ARCH" = "aarch64" ]; then
+            FLATPAK_ARCH="aarch64"
+          else
+            FLATPAK_ARCH="$ARCH"
+          fi
+
+          # Build bundle for the current architecture
+          flatpak build-bundle repo ../release/termix_linux_flatpak.flatpak com.karmaa.termix --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Create flatpakref file
         run: |
