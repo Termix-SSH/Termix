@@ -267,6 +267,81 @@ jobs:
           path: release/termix_linux_armv7l_portable.tar.gz
           retention-days: 30
 
+      - name: Install Flatpak builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+
+      - name: Add Flathub repository
+        run: |
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Install Flatpak runtime and SDK
+        run: |
+          sudo flatpak install -y flathub org.freedesktop.Platform//23.08
+          sudo flatpak install -y flathub org.freedesktop.Sdk//23.08
+          sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp//23.08
+
+      - name: Get version for Flatpak
+        id: flatpak-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
+
+      - name: Prepare Flatpak files
+        run: |
+          VERSION="${{ steps.flatpak-version.outputs.version }}"
+          RELEASE_DATE="${{ steps.flatpak-version.outputs.release_date }}"
+
+          CHECKSUM_X64=$(sha256sum "release/termix_linux_x64_appimage.AppImage" | awk '{print $1}')
+          CHECKSUM_ARM64=$(sha256sum "release/termix_linux_arm64_appimage.AppImage" | awk '{print $1}')
+
+          mkdir -p flatpak-build
+          cp flatpak/com.karmaa.termix.yml flatpak-build/
+          cp flatpak/com.karmaa.termix.desktop flatpak-build/
+          cp flatpak/com.karmaa.termix.metainfo.xml flatpak-build/
+          cp public/icon.svg flatpak-build/com.karmaa.termix.svg
+          convert public/icon.png -resize 256x256 flatpak-build/icon-256.png
+          convert public/icon.png -resize 128x128 flatpak-build/icon-128.png
+
+          cd flatpak-build
+          sed -i "s|https://github.com/Termix-SSH/Termix/releases/download/release-VERSION_PLACEHOLDER-tag/termix_linux_x64_appimage.AppImage|file://$(realpath ../release/termix_linux_x64_appimage.AppImage)|g" com.karmaa.termix.yml
+          sed -i "s|https://github.com/Termix-SSH/Termix/releases/download/release-VERSION_PLACEHOLDER-tag/termix_linux_arm64_appimage.AppImage|file://$(realpath ../release/termix_linux_arm64_appimage.AppImage)|g" com.karmaa.termix.yml
+          sed -i "s/CHECKSUM_X64_PLACEHOLDER/$CHECKSUM_X64/g" com.karmaa.termix.yml
+          sed -i "s/CHECKSUM_ARM64_PLACEHOLDER/$CHECKSUM_ARM64/g" com.karmaa.termix.yml
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" com.karmaa.termix.metainfo.xml
+          sed -i "s/DATE_PLACEHOLDER/$RELEASE_DATE/g" com.karmaa.termix.metainfo.xml
+
+      - name: Build Flatpak bundle
+        run: |
+          cd flatpak-build
+          flatpak-builder --repo=repo --force-clean --disable-rofiles-fuse build-dir com.karmaa.termix.yml
+          flatpak build-bundle repo ../release/termix_linux_flatpak.flatpak com.karmaa.termix stable
+
+      - name: Create flatpakref file
+        run: |
+          VERSION="${{ steps.flatpak-version.outputs.version }}"
+          cp flatpak/com.karmaa.termix.flatpakref release/
+          sed -i "s|VERSION_PLACEHOLDER|release-${VERSION}-tag|g" release/com.karmaa.termix.flatpakref
+
+      - name: Upload Flatpak bundle
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/termix_linux_flatpak.flatpak') != '' && github.event.inputs.artifact_destination != 'none'
+        with:
+          name: termix_linux_flatpak
+          path: release/termix_linux_flatpak.flatpak
+          retention-days: 30
+
+      - name: Upload Flatpakref
+        uses: actions/upload-artifact@v4
+        if: hashFiles('release/com.karmaa.termix.flatpakref') != '' && github.event.inputs.artifact_destination != 'none'
+        with:
+          name: termix_linux_flatpakref
+          path: release/com.karmaa.termix.flatpakref
+          retention-days: 30
+
   build-macos:
     runs-on: macos-latest
     if: github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all'
