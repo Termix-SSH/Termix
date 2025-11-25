@@ -267,10 +267,10 @@ jobs:
           path: release/termix_linux_armv7l_portable.tar.gz
           retention-days: 30
 
-      - name: Install Flatpak builder
+      - name: Install Flatpak builder and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
+          sudo apt-get install -y flatpak flatpak-builder imagemagick
 
       - name: Add Flathub repository
         run: |
