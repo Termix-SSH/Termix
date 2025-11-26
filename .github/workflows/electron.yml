@@ -557,7 +557,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: hashFiles('homebrew-generated/termix.rb') != '' && github.event.inputs.artifact_destination == 'file'
         with:
-          name: homebrew-cask
+          name: termix_macos_homebrew_cask
           path: homebrew-generated/termix.rb
           retention-days: 30
 
@@ -713,7 +713,7 @@ jobs:
         run: |
           VERSION="${{ steps.package-version.outputs.version }}"
           mkdir -p release_assets
-          
+
           APPIMAGE_X64_NAME="termix_linux_x64_appimage.AppImage"
           URL_X64="https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$APPIMAGE_X64_NAME"
           PATH_X64="release_assets/$APPIMAGE_X64_NAME"
@@ -721,7 +721,7 @@ jobs:
           curl -L -o "$PATH_X64" "$URL_X64"
           chmod +x "$PATH_X64"
           CHECKSUM_X64=$(sha256sum "$PATH_X64" | awk '{print $1}')
-          
+
           APPIMAGE_ARM64_NAME="termix_linux_arm64_appimage.AppImage"
           URL_ARM64="https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$APPIMAGE_ARM64_NAME"
           PATH_ARM64="release_assets/$APPIMAGE_ARM64_NAME"
@@ -729,7 +729,7 @@ jobs:
           curl -L -o "$PATH_ARM64" "$URL_ARM64"
           chmod +x "$PATH_ARM64"
           CHECKSUM_ARM64=$(sha256sum "$PATH_ARM64" | awk '{print $1}')
-          
+
           echo "appimage_x64_name=$APPIMAGE_X64_NAME" >> $GITHUB_OUTPUT
           echo "checksum_x64=$CHECKSUM_X64" >> $GITHUB_OUTPUT
           echo "appimage_arm64_name=$APPIMAGE_ARM64_NAME" >> $GITHUB_OUTPUT
@@ -799,14 +799,14 @@ jobs:
           VERSION="${{ steps.package-version.outputs.version }}"
           DMG_NAME="termix_macos_universal_dmg.dmg"
           URL="https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$DMG_NAME"
-          
+
           mkdir -p release_asset
           PATH="release_asset/$DMG_NAME"
           echo "Downloading DMG from $URL"
           curl -L -o "$PATH" "$URL"
-          
+
           CHECKSUM=$(shasum -a 256 "$PATH" | awk '{print $1}')
-          
+
           echo "dmg_name=$DMG_NAME" >> $GITHUB_OUTPUT
           echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
 
