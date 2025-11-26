@@ -530,6 +530,51 @@ jobs:
           path: release/termix_macos_arm64_dmg.dmg
           retention-days: 30
 
+      - name: Get version for Homebrew
+        id: homebrew-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate Homebrew Cask
+        if: hashFiles('release/termix_macos_universal_dmg.dmg') != '' && (github.event.inputs.artifact_destination == 'file' || github.event.inputs.artifact_destination == 'release')
+        run: |
+          VERSION="${{ steps.homebrew-version.outputs.version }}"
+          DMG_PATH="release/termix_macos_universal_dmg.dmg"
+
+          CHECKSUM=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
+
+          mkdir -p homebrew-generated
+          cp homebrew/termix.rb homebrew-generated/termix.rb
+
+          sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-generated/termix.rb
+          sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-generated/termix.rb
+          sed -i '' "s|version \".*\"|version \"$VERSION\"|g" homebrew-generated/termix.rb
+          sed -i '' "s|sha256 \".*\"|sha256 \"$CHECKSUM\"|g" homebrew-generated/termix.rb
+          sed -i '' "s|release-[0-9.]*-tag|release-$VERSION-tag|g" homebrew-generated/termix.rb
+
+      - name: Upload Homebrew Cask as artifact
+        uses: actions/upload-artifact@v4
+        if: hashFiles('homebrew-generated/termix.rb') != '' && github.event.inputs.artifact_destination == 'file'
+        with:
+          name: homebrew-cask
+          path: homebrew-generated/termix.rb
+          retention-days: 30
+
+      - name: Upload Homebrew Cask to release
+        if: hashFiles('homebrew-generated/termix.rb') != '' && github.event.inputs.artifact_destination == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.homebrew-version.outputs.version }}"
+          RELEASE_TAG="release-$VERSION-tag"
+
+          gh release list --repo ${{ github.repository }} --limit 100 | grep -q "$RELEASE_TAG" || {
+            echo "Release $RELEASE_TAG not found"
+            exit 1
+          }
+
+          gh release upload "$RELEASE_TAG" homebrew-generated/termix.rb --repo ${{ github.repository }} --clobber
 
       - name: Clean up keychains
         if: always()
