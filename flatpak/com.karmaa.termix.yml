@@ -1,9 +1,9 @@
 app-id: com.karmaa.termix
 runtime: org.freedesktop.Platform
-runtime-version: "23.08"
+runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
 base: org.electronjs.Electron2.BaseApp
-base-version: "23.08"
+base-version: "24.08"
 command: termix
 separate-locales: false
 
@@ -29,6 +29,12 @@ modules:
       - install -Dm755 squashfs-root/termix /app/bin/termix
       - cp -r squashfs-root/resources /app/bin/
       - cp -r squashfs-root/locales /app/bin/ || true
+
+      - cp squashfs-root/*.so /app/bin/ || true
+      - cp squashfs-root/*.pak /app/bin/ || true
+      - cp squashfs-root/*.bin /app/bin/ || true
+      - cp squashfs-root/*.dat /app/bin/ || true
+      - cp squashfs-root/*.json /app/bin/ || true
 
       - install -Dm644 com.karmaa.termix.desktop /app/share/applications/com.karmaa.termix.desktop
 
