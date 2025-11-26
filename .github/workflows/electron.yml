@@ -278,9 +278,9 @@ jobs:
 
       - name: Install Flatpak runtime and SDK
         run: |
-          sudo flatpak install -y flathub org.freedesktop.Platform//23.08
-          sudo flatpak install -y flathub org.freedesktop.Sdk//23.08
-          sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp//23.08
+          sudo flatpak install -y flathub org.freedesktop.Platform//24.08
+          sudo flatpak install -y flathub org.freedesktop.Sdk//24.08
+          sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp//24.08
 
       - name: Get version for Flatpak
         id: flatpak-version
