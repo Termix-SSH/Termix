@@ -80,16 +80,16 @@ Supported Devices:
 - Windows (x64/ia32)
   - Portable
   - MSI Installer
-  - Chocolatey Package Manager (coming soon)
+  - Chocolatey Package Manager
 - Linux (x64/ia32)
   - Portable
   - AppImage
   - Deb
-  - Flatpak (coming soon)
+  - Flatpak
 - macOS (x64/ia32 on v12.0+)
-  - Apple App Store (coming soon)
+  - Apple App Store
   - DMG
-  - Homebrew (coming soon)
+  - Homebrew
 - iOS/iPadOS (v15.1+)
   - Apple App Store
   - ISO
