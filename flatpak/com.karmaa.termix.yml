@@ -4,7 +4,7 @@ runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
 base: org.electronjs.Electron2.BaseApp
 base-version: "24.08"
-command: termix
+command: run.sh
 separate-locales: false
 
 finish-args:
@@ -16,8 +16,11 @@ finish-args:
   - --device=dri
   - --filesystem=home
   - --socket=ssh-auth
-  - --talk-name=org.freedesktop.Notifications
+  - --socket=session-bus
   - --talk-name=org.freedesktop.secrets
+  - --env=ELECTRON_TRASH=gio
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+  - --env=ELECTRON_OZONE_PLATFORM_HINT=auto
 
 modules:
   - name: termix
@@ -35,6 +38,15 @@ modules:
       - cp squashfs-root/*.bin /app/bin/ || true
       - cp squashfs-root/*.dat /app/bin/ || true
       - cp squashfs-root/*.json /app/bin/ || true
+
+      - |
+        cat > run.sh << 'EOF'
+        #!/bin/bash
+        export TMPDIR="$XDG_RUNTIME_DIR/app/$FLATPAK_ID"
+        exec zypak-wrapper /app/bin/termix "$@"
+        EOF
+      - chmod +x run.sh
+      - install -Dm755 run.sh /app/bin/run.sh
 
       - install -Dm644 com.karmaa.termix.desktop /app/share/applications/com.karmaa.termix.desktop
 
