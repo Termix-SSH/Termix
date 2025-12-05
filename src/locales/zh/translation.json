@@ -893,7 +893,9 @@
     "searchServers": "搜索服务器...",
     "noServerFound": "未找到服务器",
     "jumpHostsOrder": "连接将按顺序进行：跳板主机 1 → 跳板主机 2 → ... → 目标服务器",
-    "advancedAuthSettings": "高级身份验证设置"
+    "advancedAuthSettings": "高级身份验证设置",
+    "sudoPasswordAutoFill": "Sudo 密码自动填充",
+    "sudoPasswordAutoFillDesc": "在 sudo 命令时显示弹窗以自动输入密码"
   },
   "terminal": {
     "title": "终端",
@@ -931,7 +933,11 @@
     "reconnecting": "重新连接中... ({{attempt}}/{{max}})",
     "reconnected": "重新连接成功",
     "maxReconnectAttemptsReached": "已达到最大重连尝试次数",
-    "connectionTimeout": "连接超时"
+    "connectionTimeout": "连接超时",
+    "sudoPasswordPopupTitle": "插入密码？",
+    "sudoPasswordPopupHint": "按 Enter 插入，Esc 取消",
+    "sudoPasswordPopupConfirm": "插入",
+    "sudoPasswordPopupDismiss": "取消"
   },
   "fileManager": {
     "title": "文件管理器",

@@ -858,7 +858,9 @@
     "searchServers": "Поиск серверов...",
     "noServerFound": "Сервер не найден",
     "jumpHostsOrder": "Подключения будут выполнены в порядке: Промежуточный хост 1 → Промежуточный хост 2 → ... → Целевой сервер",
-    "advancedAuthSettings": "Расширенные настройки аутентификации"
+    "advancedAuthSettings": "Расширенные настройки аутентификации",
+    "sudoPasswordAutoFill": "Автозаполнение пароля sudo",
+    "sudoPasswordAutoFillDesc": "Показывать всплывающее окно для автоматического ввода пароля при выполнении команд sudo",
   },
   "terminal": {
     "title": "Терминал",
@@ -896,7 +898,11 @@
     "totpRequired": "Требуется двухфакторная аутентификация",
     "totpCodeLabel": "Код проверки",
     "totpPlaceholder": "000000",
-    "totpVerify": "Проверить"
+    "totpVerify": "Проверить",
+    "sudoPasswordPopupTitle": "Вставить пароль?",
+    "sudoPasswordPopupHint": "Нажмите Enter для вставки, Esc для отмены",
+    "sudoPasswordPopupConfirm": "Вставить",
+    "sudoPasswordPopupDismiss": "Отмена"
   },
   "fileManager": {
     "title": "Файловый менеджер",

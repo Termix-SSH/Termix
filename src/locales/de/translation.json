@@ -799,7 +799,9 @@
     "searchServers": "Server durchsuchen...",
     "noServerFound": "Kein Server gefunden",
     "jumpHostsOrder": "Verbindungen werden in dieser Reihenfolge hergestellt: Jump-Host 1 → Jump-Host 2 → ... → Ziel-Server",
-    "advancedAuthSettings": "Erweiterte Authentifizierungseinstellungen"
+    "advancedAuthSettings": "Erweiterte Authentifizierungseinstellungen",
+    "sudoPasswordAutoFill": "Sudo-Passwort automatisch ausfüllen",
+    "sudoPasswordAutoFillDesc": "Popup anzeigen, um das Passwort bei sudo-Befehlen automatisch einzufügen"
   },
   "terminal": {
     "title": "Terminal",
@@ -833,7 +835,11 @@
     "connectionTimeout": "Zeitüberschreitung der Verbindung",
     "terminalTitle": "Terminal - {{host}}",
     "terminalWithPath": "Terminal - {{host}} : {{path}}",
-    "runTitle": "Ausführen von {{command}} – {{host}}"
+    "runTitle": "Ausführen von {{command}} – {{host}}",
+    "sudoPasswordPopupTitle": "Passwort einfügen?",
+    "sudoPasswordPopupHint": "Drücken Sie Enter zum Einfügen, Esc zum Abbrechen",
+    "sudoPasswordPopupConfirm": "Einfügen",
+    "sudoPasswordPopupDismiss": "Abbrechen"
   },
   "fileManager": {
     "title": "Dateimanager",

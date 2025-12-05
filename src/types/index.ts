@@ -307,6 +307,7 @@ export interface TerminalConfig {
   startupSnippetId: number | null;
   autoMosh: boolean;
   moshCommand: string;
+  sudoPasswordAutoFill: boolean;
 }
 
 // ============================================================================
@@ -316,13 +317,13 @@ export interface TerminalConfig {
 export interface TabContextTab {
   id: number;
   type:
-    | "home"
-    | "terminal"
-    | "ssh_manager"
-    | "server"
-    | "admin"
-    | "file_manager"
-    | "user_profile";
+  | "home"
+  | "terminal"
+  | "ssh_manager"
+  | "server"
+  | "admin"
+  | "file_manager"
+  | "user_profile";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;

@@ -705,6 +705,7 @@ export const DEFAULT_TERMINAL_CONFIG = {
   startupSnippetId: null as number | null,
   autoMosh: false,
   moshCommand: "mosh-server new -s -l LANG=en_US.UTF-8",
+  sudoPasswordAutoFill: false,
 };
 
 export type TerminalConfigType = typeof DEFAULT_TERMINAL_CONFIG;

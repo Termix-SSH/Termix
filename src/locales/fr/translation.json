@@ -790,7 +790,9 @@
     "searchServers": "Rechercher des serveurs...",
     "noServerFound": "Aucun serveur trouvé",
     "jumpHostsOrder": "Les connexions seront établies dans l'ordre : Serveur de rebond 1 → Serveur de rebond 2 → ... → Serveur cible",
-    "advancedAuthSettings": "Paramètres d'authentification avancés"
+    "advancedAuthSettings": "Paramètres d'authentification avancés",
+    "sudoPasswordAutoFill": "Remplissage automatique du mot de passe sudo",
+    "sudoPasswordAutoFillDesc": "Proposer automatiquement d’insérer le mot de passe SSH lorsque sudo demande un mot de passe"
   },
   "terminal": {
     "title": "Terminal",
@@ -828,7 +830,11 @@
     "totpRequired": "Authentification à deux facteurs requise",
     "totpCodeLabel": "Code de vérification",
     "totpPlaceholder": "000000",
-    "totpVerify": "Vérifier"
+    "totpVerify": "Vérifier",
+    "sudoPasswordPopupTitle": "Insérer le mot de passe ?",
+    "sudoPasswordPopupHint": "Appuyez sur Entrée pour insérer, Échap pour annuler",
+    "sudoPasswordPopupConfirm": "Insérer",
+    "sudoPasswordPopupDismiss": "Annuler"
   },
   "fileManager": {
     "title": "Gestionnaire de fichiers",
