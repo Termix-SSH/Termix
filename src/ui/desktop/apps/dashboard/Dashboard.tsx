@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { NetworkGraphView } from "@/ui/desktop/dashboard/network-graph";
 import { Auth } from "@/ui/desktop/authentication/Auth.tsx";
 import { UpdateLog } from "@/ui/desktop/apps/dashboard/apps/UpdateLog.tsx";
 import { AlertManager } from "@/ui/desktop/apps/dashboard/apps/alerts/AlertManager.tsx";
@@ -60,7 +61,6 @@ export function Dashboard({
   authLoading,
   onAuthSuccess,
   isTopbarOpen,
-  onSelectView,
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
 }: DashboardProps): React.ReactElement {
@@ -89,6 +89,7 @@ export function Dashboard({
     Array<{ id: number; name: string; cpu: number | null; ram: number | null }>
   >([]);
   const [serverStatsLoading, setServerStatsLoading] = useState<boolean>(true);
+  const [showNetworkGraph, setShowNetworkGraph] = useState<boolean>(true);
 
   const { addTab, setCurrentTab, tabs: tabList, updateTab } = useTabs();
 
@@ -158,7 +159,12 @@ export function Dashboard({
 
         const versionInfo = await getVersionInfo();
         setVersionText(`v${versionInfo.localVersion}`);
-        setVersionStatus(versionInfo.status || "up_to_date");
+        if (
+          versionInfo.status === "up_to_date" ||
+          versionInfo.status === "requires_update"
+        ) {
+          setVersionStatus(versionInfo.status);
+        }
 
         try {
           await getDatabaseHealth();
@@ -578,50 +584,76 @@ export function Dashboard({
                   <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
                     <div className="flex flex-row items-center justify-between mb-3 mt-1">
                       <p className="text-xl font-semibold flex flex-row items-center">
-                        <Clock className="mr-3" />
-                        {t("dashboard.recentActivity")}
+                        {showNetworkGraph ? (
+                          <>
+                            <Network className="mr-3" />
+                            {t("dashboard.networkGraph", { defaultValue: "Network Graph" })}
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="mr-3" />
+                            {t("dashboard.recentActivity")}
+                          </>
+                        )}
                       </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-2 !border-dark-border h-7"
-                        onClick={handleResetActivity}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-2 !border-dark-border h-7"
+                          onClick={() => setShowNetworkGraph(!showNetworkGraph)}
+                        >
+                          {showNetworkGraph ? "Show Activity" : "Show Graph"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-2 !border-dark-border h-7"
+                          onClick={handleResetActivity}
+                        >
+                          {t("dashboard.reset")}
+                        </Button>
+                      </div>
+                    </div>
+                    {showNetworkGraph ? (
+                      <NetworkGraphView />
+                    ) : (
+                      <div
+                        className={`grid gap-4 grid-cols-3 auto-rows-min overflow-x-hidden ${recentActivityLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
                       >
-                        {t("dashboard.reset")}
-                      </Button>
-                    </div>
-                    <div
-                      className={`grid gap-4 grid-cols-3 auto-rows-min overflow-x-hidden ${recentActivityLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
-                    >
-                      {recentActivityLoading ? (
-                        <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse">
-                          <Loader2 className="animate-spin mr-2" size={16} />
-                          <span>{t("dashboard.loadingRecentActivity")}</span>
-                        </div>
-                      ) : recentActivity.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">
-                          {t("dashboard.noRecentActivity")}
-                        </p>
-                      ) : (
-                        recentActivity.map((item) => (
-                          <Button
-                            key={item.id}
-                            variant="outline"
-                            className="border-2 !border-dark-border bg-dark-bg min-w-0"
-                            onClick={() => handleActivityClick(item)}
-                          >
-                            {item.type === "terminal" ? (
-                              <Terminal size={20} className="shrink-0" />
-                            ) : (
-                              <FolderOpen size={20} className="shrink-0" />
-                            )}
-                            <p className="truncate ml-2 font-semibold">
-                              {item.hostName}
-                            </p>
-                          </Button>
-                        ))
-                      )}
-                    </div>
+                        {recentActivityLoading ? (
+                          <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse">
+                            <Loader2
+                              className="animate-spin mr-2"
+                              size={16}
+                            />
+                            <span>{t("dashboard.loadingRecentActivity")}</span>
+                          </div>
+                        ) : recentActivity.length === 0 ? (
+                          <p className="text-muted-foreground text-sm">
+                            {t("dashboard.noRecentActivity")}
+                          </p>
+                        ) : (
+                          recentActivity.map((item) => (
+                            <Button
+                              key={item.id}
+                              variant="outline"
+                              className="border-2 !border-dark-border bg-dark-bg min-w-0"
+                              onClick={() => handleActivityClick(item)}
+                            >
+                              {item.type === "terminal" ? (
+                                <Terminal size={20} className="shrink-0" />
+                              ) : (
+                                <FolderOpen size={20} className="shrink-0" />
+                              )}
+                              <p className="truncate ml-2 font-semibold">
+                                {item.hostName}
+                              </p>
+                            </Button>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

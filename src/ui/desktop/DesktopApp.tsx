@@ -11,6 +11,7 @@ import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
 import { CommandHistoryProvider } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
 import { AdminSettings } from "@/ui/desktop/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
+import { NetworkGraphView } from "@/ui/desktop/dashboard/network-graph";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
 import { getUserInfo } from "@/ui/main-axios.ts";
@@ -28,7 +29,7 @@ function AppContent() {
   const [transitionPhase, setTransitionPhase] = useState<
     "idle" | "fadeOut" | "fadeIn"
   >("idle");
-  const { currentTab, tabs } = useTabs();
+  const { currentTab, tabs, addTab } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
@@ -59,6 +60,35 @@ function AppContent() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/hosts\/([a-zA-Z0-9_-]+)\/terminal$/);
+    if (match) {
+      const hostId = match[1];
+      
+      const openTerminalForHost = async () => {
+        try {
+          const { getSSHHostById } = await import("@/ui/main-axios.ts");
+          const host = await getSSHHostById(parseInt(hostId, 10));
+          if (host) {
+            addTab({
+              type: "terminal",
+              title: host.name || host.ip,
+              data: {
+                host,
+                initialCommand: "",
+              },
+            });
+          }
+        } catch (error) {
+          console.error("Failed to open terminal for host:", error);
+        }
+      };
+
+      openTerminalForHost();
+    }
+  }, [addTab]);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -104,8 +134,6 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem("topNavbarOpen", JSON.stringify(isTopbarOpen));
   }, [isTopbarOpen]);
-
-  const handleSelectView = () => {};
 
   const handleAuthSuccess = useCallback(
     (authData: {
@@ -160,6 +188,7 @@ function AppContent() {
   const showSshManager = currentTabData?.type === "ssh_manager";
   const showAdmin = currentTabData?.type === "admin";
   const showProfile = currentTabData?.type === "user_profile";
+  const showNetworkGraph = currentTabData?.type === "network_graph";
 
   if (authLoading) {
     return (
@@ -191,7 +220,6 @@ function AppContent() {
       {!isAuthenticated && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
           <Dashboard
-            onSelectView={handleSelectView}
             isAuthenticated={isAuthenticated}
             authLoading={authLoading}
             onAuthSuccess={handleAuthSuccess}
@@ -202,7 +230,6 @@ function AppContent() {
 
       {isAuthenticated && (
         <LeftSidebar
-          onSelectView={handleSelectView}
           disabled={!isAuthenticated || authLoading}
           isAdmin={isAdmin}
           username={username}
@@ -222,7 +249,6 @@ function AppContent() {
           {showHome && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
               <Dashboard
-                onSelectView={handleSelectView}
                 isAuthenticated={isAuthenticated}
                 authLoading={authLoading}
                 onAuthSuccess={handleAuthSuccess}
@@ -236,7 +262,6 @@ function AppContent() {
           {showSshManager && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
               <HostManager
-                onSelectView={handleSelectView}
                 isTopbarOpen={isTopbarOpen}
                 initialTab={currentTabData?.initialTab}
                 hostConfig={currentTabData?.hostConfig}
@@ -263,6 +288,12 @@ function AppContent() {
                 rightSidebarOpen={rightSidebarOpen}
                 rightSidebarWidth={rightSidebarWidth}
               />
+            </div>
+          )}
+
+          {showNetworkGraph && (
+            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden flex flex-col pt-16">
+              <NetworkGraphView />
             </div>
           )}
 
