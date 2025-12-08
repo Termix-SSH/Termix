@@ -908,7 +908,9 @@
     "quickActionName": "Action name",
     "noSnippetFound": "No snippet found",
     "quickActionsOrder": "Quick action buttons will appear in the order listed above on the Server Stats page",
-    "advancedAuthSettings": "Advanced Authentication Settings"
+    "advancedAuthSettings": "Advanced Authentication Settings",
+    "sudoPasswordAutoFill": "Sudo Password Auto-Fill",
+    "sudoPasswordAutoFillDesc": "Automatically offer to insert SSH password when sudo prompts for password"
   },
   "terminal": {
     "title": "Terminal",
@@ -946,7 +948,11 @@
     "totpRequired": "Two-Factor Authentication Required",
     "totpCodeLabel": "Verification Code",
     "totpPlaceholder": "000000",
-    "totpVerify": "Verify"
+    "totpVerify": "Verify",
+    "sudoPasswordPopupTitle": "Insert Password?",
+    "sudoPasswordPopupHint": "Press Enter to insert, Esc to dismiss",
+    "sudoPasswordPopupConfirm": "Insert",
+    "sudoPasswordPopupDismiss": "Dismiss"
   },
   "fileManager": {
     "title": "File Manager",

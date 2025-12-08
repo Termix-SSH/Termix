@@ -745,7 +745,9 @@
     "searchServers": "Pesquisar servidores...",
     "noServerFound": "Nenhum servidor encontrado",
     "jumpHostsOrder": "As conexões serão feitas na ordem: Host de Salto 1 → Host de Salto 2 → ... → Servidor de Destino",
-    "advancedAuthSettings": "Configurações Avançadas de Autenticação"
+    "advancedAuthSettings": "Configurações Avançadas de Autenticação",
+    "sudoPasswordAutoFill": "Preenchimento automático da senha do sudo",
+    "sudoPasswordAutoFillDesc": "Oferecer automaticamente inserir a senha SSH quando o sudo solicitar uma senha"
   },
   "terminal": {
     "title": "Terminal",
@@ -779,7 +781,11 @@
     "connectionTimeout": "Tempo limite de conexão esgotado",
     "terminalTitle": "Terminal - {{host}}",
     "terminalWithPath": "Terminal - {{host}}:{{path}}",
-    "runTitle": "Executando {{command}} - {{host}}"
+    "runTitle": "Executando {{command}} - {{host}}",
+    "sudoPasswordPopupTitle": "Inserir Senha?",
+    "sudoPasswordPopupHint": "Pressione Enter para inserir, Esc para cancelar",
+    "sudoPasswordPopupConfirm": "Inserir",
+    "sudoPasswordPopupDismiss": "Cancelar"
   },
   "fileManager": {
     "title": "Gerenciador de Arquivos",
@@ -1034,7 +1040,6 @@
     "fileSavedSuccessfully": "Arquivo salvo com sucesso",
     "autoSaveFailed": "Falha no salvamento automático",
     "fileAutoSaved": "Arquivo salvo automaticamente",
-
     "moveFileFailed": "Falha ao mover {{name}}",
     "moveOperationFailed": "Falha na operação de mover",
     "canOnlyCompareFiles": "Só é possível comparar dois arquivos",
