@@ -119,6 +119,28 @@ export interface Credential {
   updatedAt: string;
 }
 
+export interface CredentialBackend {
+  id: number;
+  userId: string;
+  name: string;
+  description: string | null;
+  folder: string | null;
+  tags: string;
+  authType: "password" | "key";
+  username: string;
+  password: string | null;
+  key: string;
+  private_key?: string;
+  public_key?: string;
+  key_password: string | null;
+  keyType?: string;
+  detectedKeyType: string;
+  usageCount: number;
+  lastUsed: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CredentialData {
   name: string;
   description?: string;
