@@ -119,6 +119,28 @@ export interface Credential {
   updatedAt: string;
 }
 
+export interface CredentialBackend {
+  id: number;
+  userId: string;
+  name: string;
+  description: string | null;
+  folder: string | null;
+  tags: string;
+  authType: "password" | "key";
+  username: string;
+  password: string | null;
+  key: string;
+  private_key?: string;
+  public_key?: string;
+  key_password: string | null;
+  keyType?: string;
+  detectedKeyType: string;
+  usageCount: number;
+  lastUsed: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CredentialData {
   name: string;
   description?: string;
@@ -307,6 +329,7 @@ export interface TerminalConfig {
   startupSnippetId: number | null;
   autoMosh: boolean;
   moshCommand: string;
+  sudoPasswordAutoFill: boolean;
 }
 
 // ============================================================================
@@ -316,13 +339,13 @@ export interface TerminalConfig {
 export interface TabContextTab {
   id: number;
   type:
-    | "home"
-    | "terminal"
-    | "ssh_manager"
-    | "server"
-    | "admin"
-    | "file_manager"
-    | "user_profile";
+  | "home"
+  | "terminal"
+  | "ssh_manager"
+  | "server"
+  | "admin"
+  | "file_manager"
+  | "user_profile";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;

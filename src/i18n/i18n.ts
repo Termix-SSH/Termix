@@ -8,12 +8,13 @@ import deTranslation from "../locales/de/translation.json";
 import ptbrTranslation from "../locales/pt-BR/translation.json";
 import ruTranslation from "../locales/ru/translation.json";
 import frTranslation from "../locales/fr/translation.json";
+import koTranslation from "../locales/ko/translation.json";
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    supportedLngs: ["en", "zh", "de", "ptbr", "ru", "fr"],
+    supportedLngs: ["en", "zh", "de", "ptbr", "ru", "fr", "ko"],
     fallbackLng: "en",
     debug: false,
 
@@ -43,6 +44,9 @@ i18n
       },
       fr: {
         translation: frTranslation,
+      },
+      ko: {
+        translation: koTranslation,
       },
     },
 

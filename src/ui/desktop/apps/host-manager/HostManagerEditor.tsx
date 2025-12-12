@@ -547,6 +547,7 @@ export function HostManagerEditor({
           startupSnippetId: z.number().nullable(),
           autoMosh: z.boolean(),
           moshCommand: z.string(),
+          sudoPasswordAutoFill: z.boolean(),
         })
         .optional(),
       forceKeyboardInteractive: z.boolean().optional(),
@@ -631,7 +632,7 @@ export function HostManagerEditor({
   type FormData = z.infer<typeof formSchema>;
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: "",
       ip: "",
@@ -2442,6 +2443,29 @@ export function HostManagerEditor({
                             )}
                           />
                         )}
+
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.sudoPasswordAutoFill"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>
+                                  {t("hosts.sudoPasswordAutoFill")}
+                                </FormLabel>
+                                <FormDescription>
+                                  {t("hosts.sudoPasswordAutoFillDesc")}
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
 
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
