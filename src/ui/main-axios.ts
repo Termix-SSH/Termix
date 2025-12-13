@@ -8,6 +8,48 @@ import type {
   FileManagerFile,
   FileManagerShortcut,
 } from "../types/index.js";
+
+// ============================================================================
+// RBAC TYPE DEFINITIONS
+// ============================================================================
+
+export interface Role {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string | null;
+  isSystem: boolean;
+  permissions: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserRole {
+  userId: string;
+  roleId: number;
+  roleName: string;
+  roleDisplayName: string;
+  grantedBy: string;
+  grantedByUsername: string;
+  grantedAt: string;
+}
+
+export interface AccessRecord {
+  id: number;
+  targetType: "user" | "role";
+  userId: string | null;
+  roleId: number | null;
+  username: string | null;
+  roleName: string | null;
+  roleDisplayName: string | null;
+  grantedBy: string;
+  grantedByUsername: string;
+  permissionLevel: string;
+  expiresAt: string | null;
+  createdAt: string;
+  lastAccessedAt: string | null;
+  accessCount: number;
+}
 import {
   apiLogger,
   authLogger,
@@ -594,6 +636,9 @@ function initializeApiInstances() {
 
   // Homepage API (port 30006)
   homepageApi = createApiInstance(getApiUrl("", 30006), "HOMEPAGE");
+
+  // RBAC API (port 30001)
+  rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
 }
 
 // SSH Host Management API (port 30001)
@@ -613,6 +658,9 @@ export let authApi: AxiosInstance;
 
 // Homepage API (port 30006)
 export let homepageApi: AxiosInstance;
+
+// RBAC API (port 30001)
+export let rbacApi: AxiosInstance;
 
 function initializeApp() {
   if (isElectron()) {
@@ -3107,5 +3155,130 @@ export async function unlinkOIDCFromPasswordAccount(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "unlink OIDC from password account");
+  }
+}
+
+// ============================================================================
+// RBAC MANAGEMENT
+// ============================================================================
+
+// Role Management
+export async function getRoles(): Promise<{ roles: Role[] }> {
+  try {
+    const response = await rbacApi.get("/rbac/roles");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch roles");
+  }
+}
+
+export async function createRole(roleData: {
+  name: string;
+  displayName: string;
+  description?: string | null;
+}): Promise<{ role: Role }> {
+  try {
+    const response = await rbacApi.post("/rbac/roles", roleData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "create role");
+  }
+}
+
+export async function updateRole(
+  roleId: number,
+  roleData: {
+    displayName?: string;
+    description?: string | null;
+  },
+): Promise<{ role: Role }> {
+  try {
+    const response = await rbacApi.put(`/rbac/roles/${roleId}`, roleData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update role");
+  }
+}
+
+export async function deleteRole(roleId: number): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.delete(`/rbac/roles/${roleId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete role");
+  }
+}
+
+// User-Role Management
+export async function getUserRoles(userId: string): Promise<{ roles: UserRole[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/users/${userId}/roles`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch user roles");
+  }
+}
+
+export async function assignRoleToUser(
+  userId: string,
+  roleId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.post(`/rbac/users/${userId}/roles`, { roleId });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "assign role to user");
+  }
+}
+
+export async function removeRoleFromUser(
+  userId: string,
+  roleId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.delete(`/rbac/users/${userId}/roles/${roleId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "remove role from user");
+  }
+}
+
+// Host Sharing Management
+export async function shareHost(
+  hostId: number,
+  shareData: {
+    targetType: "user" | "role";
+    targetUserId?: string;
+    targetRoleId?: number;
+    permissionLevel: string;
+    durationHours?: number;
+  },
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.post(`/rbac/host/${hostId}/share`, shareData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share host");
+  }
+}
+
+export async function getHostAccess(hostId: number): Promise<{ accessList: AccessRecord[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/host/${hostId}/access`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch host access");
+  }
+}
+
+export async function revokeHostAccess(
+  hostId: number,
+  accessId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.delete(`/rbac/host/${hostId}/access/${accessId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "revoke host access");
   }
 }

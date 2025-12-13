@@ -67,6 +67,7 @@ import {
   linkOIDCToPasswordAccount,
   unlinkOIDCFromPasswordAccount,
 } from "@/ui/main-axios.ts";
+import { RoleManagement } from "./RoleManagement.tsx";
 
 interface AdminSettingsProps {
   isTopbarOpen?: boolean;
@@ -771,6 +772,10 @@ export function AdminSettings({
                 <Shield className="h-4 w-4" />
                 {t("admin.adminManagement")}
               </TabsTrigger>
+              <TabsTrigger value="roles" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                {t("rbac.roles.label")}
+              </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-2">
                 <Database className="h-4 w-4" />
                 {t("admin.databaseSecurity")}
@@ -1396,6 +1401,10 @@ export function AdminSettings({
                   </div>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="roles" className="space-y-6">
+              <RoleManagement />
             </TabsContent>
 
             <TabsContent value="security" className="space-y-6">

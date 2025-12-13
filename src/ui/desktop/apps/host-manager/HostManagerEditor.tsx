@@ -37,6 +37,7 @@ import {
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/desktop/apps/credentials/CredentialSelector.tsx";
+import { HostSharingTab } from "./HostSharingTab.tsx";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
@@ -1181,6 +1182,9 @@ export function HostManagerEditor({
                   </TabsTrigger>
                   <TabsTrigger value="statistics">
                     {t("hosts.statistics")}
+                  </TabsTrigger>
+                  <TabsTrigger value="sharing">
+                    {t("rbac.sharing")}
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="general" className="pt-2">
@@ -3299,6 +3303,13 @@ export function HostManagerEditor({
                       )}
                     />
                   </div>
+                </TabsContent>
+
+                <TabsContent value="sharing" className="space-y-6">
+                  <HostSharingTab
+                    hostId={editingHost?.id}
+                    isNewHost={!editingHost?.id}
+                  />
                 </TabsContent>
               </Tabs>
             </div>

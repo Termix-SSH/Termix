@@ -11,8 +11,10 @@ import {
   sshFolders,
   commandHistory,
   recentActivity,
+  hostAccess,
+  userRoles,
 } from "../db/schema.js";
-import { eq, and, desc, isNotNull, or } from "drizzle-orm";
+import { eq, and, desc, isNotNull, or, isNull, gte, sql, inArray } from "drizzle-orm";
 import type { Request, Response } from "express";
 import multer from "multer";
 import { sshLogger } from "../../utils/logger.js";
@@ -656,8 +658,98 @@ router.get(
       return res.status(400).json({ error: "Invalid userId" });
     }
     try {
+      const now = new Date().toISOString();
+
+      // Get user's role IDs
+      const userRoleIds = await db
+        .select({ roleId: userRoles.roleId })
+        .from(userRoles)
+        .where(eq(userRoles.userId, userId));
+      const roleIds = userRoleIds.map((r) => r.roleId);
+
+      // Query own hosts + shared hosts with access check
+      const rawData = await db
+        .select({
+          // All ssh_data fields
+          id: sshData.id,
+          userId: sshData.userId,
+          name: sshData.name,
+          ip: sshData.ip,
+          port: sshData.port,
+          username: sshData.username,
+          folder: sshData.folder,
+          tags: sshData.tags,
+          pin: sshData.pin,
+          authType: sshData.authType,
+          password: sshData.password,
+          key: sshData.key,
+          keyPassword: sshData.key_password,
+          keyType: sshData.keyType,
+          enableTerminal: sshData.enableTerminal,
+          enableTunnel: sshData.enableTunnel,
+          tunnelConnections: sshData.tunnelConnections,
+          jumpHosts: sshData.jumpHosts,
+          enableFileManager: sshData.enableFileManager,
+          defaultPath: sshData.defaultPath,
+          autostartPassword: sshData.autostartPassword,
+          autostartKey: sshData.autostartKey,
+          autostartKeyPassword: sshData.autostartKeyPassword,
+          forceKeyboardInteractive: sshData.forceKeyboardInteractive,
+          statsConfig: sshData.statsConfig,
+          terminalConfig: sshData.terminalConfig,
+          createdAt: sshData.createdAt,
+          updatedAt: sshData.updatedAt,
+          credentialId: sshData.credentialId,
+          overrideCredentialUsername: sshData.overrideCredentialUsername,
+          quickActions: sshData.quickActions,
+
+          // Shared access info
+          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL`,
+          permissionLevel: hostAccess.permissionLevel,
+          expiresAt: hostAccess.expiresAt,
+        })
+        .from(sshData)
+        .leftJoin(
+          hostAccess,
+          and(
+            eq(hostAccess.hostId, sshData.id),
+            or(
+              eq(hostAccess.userId, userId),
+              roleIds.length > 0 ? inArray(hostAccess.roleId, roleIds) : sql`false`,
+            ),
+            or(
+              isNull(hostAccess.expiresAt),
+              gte(hostAccess.expiresAt, now),
+            ),
+          ),
+        )
+        .where(
+          or(
+            eq(sshData.userId, userId), // Own hosts
+            and(
+              // Shared to user directly (not expired)
+              eq(hostAccess.userId, userId),
+              or(
+                isNull(hostAccess.expiresAt),
+                gte(hostAccess.expiresAt, now),
+              ),
+            ),
+            roleIds.length > 0
+              ? and(
+                  // Shared to user's role (not expired)
+                  inArray(hostAccess.roleId, roleIds),
+                  or(
+                    isNull(hostAccess.expiresAt),
+                    gte(hostAccess.expiresAt, now),
+                  ),
+                )
+              : sql`false`,
+          ),
+        );
+
+      // Decrypt and format the data
       const data = await SimpleDBOps.select(
-        db.select().from(sshData).where(eq(sshData.userId, userId)),
+        Promise.resolve(rawData),
         "ssh_data",
         userId,
       );
@@ -690,6 +782,11 @@ router.get(
               ? JSON.parse(row.terminalConfig as string)
               : undefined,
             forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
+
+            // Add shared access metadata
+            isShared: !!row.isShared,
+            permissionLevel: row.permissionLevel || undefined,
+            sharedExpiresAt: row.expiresAt || undefined,
           };
 
           return (await resolveHostCredentials(baseHost)) || baseHost;
