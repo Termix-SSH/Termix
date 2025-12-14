@@ -385,7 +385,8 @@
     "checkingDatabase": "正在检查数据库连接...",
     "actions": "操作",
     "remove": "移除",
-    "revoke": "撤销"
+    "revoke": "撤销",
+    "create": "创建"
   },
   "nav": {
     "home": "首页",
@@ -1733,6 +1734,8 @@
     "securityWarningMessage": "分享凭据会让用户完全访问服务器并执行任何操作，包括更改密码和删除文件。仅与受信任的用户共享。",
     "tempUserRecommended": "我们建议启用'创建临时用户'以获得更好的安全性。",
     "roleManagement": "角色管理",
+    "manageRoles": "管理角色",
+    "manageRolesFor": "管理 {{username}} 的角色",
     "assignRole": "分配角色",
     "removeRole": "移除角色",
     "userRoles": "用户角色",
@@ -1744,6 +1747,7 @@
     "roleRemovedSuccessfully": "已成功从{{username}}移除角色",
     "failedToRemoveRole": "移除角色失败",
     "cannotRemoveSystemRole": "无法移除系统角色",
+    "cannotShareWithSelf": "不能与自己共享主机",
     "auditLogs": "审计日志",
     "viewAuditLogs": "查看审计日志",
     "action": "操作",

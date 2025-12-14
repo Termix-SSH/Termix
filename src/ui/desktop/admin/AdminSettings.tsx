@@ -42,6 +42,7 @@ import {
   Smartphone,
   Globe,
   Clock,
+  UserCog,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -66,6 +67,12 @@ import {
   revokeAllUserSessions,
   linkOIDCToPasswordAccount,
   unlinkOIDCFromPasswordAccount,
+  getUserRoles,
+  assignRoleToUser,
+  removeRoleFromUser,
+  getRoles,
+  type UserRole,
+  type Role,
 } from "@/ui/main-axios.ts";
 import { RoleManagement } from "./RoleManagement.tsx";
 
@@ -119,6 +126,16 @@ export function AdminSettings({
   const [makeAdminError, setMakeAdminError] = React.useState<string | null>(
     null,
   );
+
+  // Role management states
+  const [rolesDialogOpen, setRolesDialogOpen] = React.useState(false);
+  const [selectedUser, setSelectedUser] = React.useState<{
+    id: string;
+    username: string;
+  } | null>(null);
+  const [userRoles, setUserRoles] = React.useState<UserRole[]>([]);
+  const [availableRoles, setAvailableRoles] = React.useState<Role[]>([]);
+  const [rolesLoading, setRolesLoading] = React.useState(false);
 
   const [securityInitialized, setSecurityInitialized] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<{
@@ -265,6 +282,65 @@ export function AdminSettings({
       }
     } finally {
       setUsersLoading(false);
+    }
+  };
+
+  // Role management functions
+  const handleOpenRolesDialog = async (user: { id: string; username: string }) => {
+    setSelectedUser(user);
+    setRolesDialogOpen(true);
+    setRolesLoading(true);
+
+    try {
+      // Load user's current roles
+      const rolesResponse = await getUserRoles(user.id);
+      setUserRoles(rolesResponse.roles || []);
+
+      // Load all available roles
+      const allRolesResponse = await getRoles();
+      setAvailableRoles(allRolesResponse.roles || []);
+    } catch (error) {
+      console.error("Failed to load roles:", error);
+      toast.error(t("rbac.failedToLoadRoles"));
+    } finally {
+      setRolesLoading(false);
+    }
+  };
+
+  const handleAssignRole = async (roleId: number) => {
+    if (!selectedUser) return;
+
+    try {
+      await assignRoleToUser(selectedUser.id, roleId);
+      toast.success(t("rbac.roleAssignedSuccessfully", { username: selectedUser.username }));
+
+      // Reload user roles
+      const rolesResponse = await getUserRoles(selectedUser.id);
+      setUserRoles(rolesResponse.roles || []);
+    } catch (error) {
+      toast.error(t("rbac.failedToAssignRole"));
+    }
+  };
+
+  const handleRemoveRole = async (roleId: number) => {
+    if (!selectedUser) return;
+
+    // Prevent removal of system roles
+    const roleToRemove = userRoles.find((r) => r.roleId === roleId);
+    if (roleToRemove && (roleToRemove.roleName === "admin" || roleToRemove.roleName === "user")) {
+      toast.error(t("rbac.cannotRemoveSystemRole"));
+      return;
+    }
+
+    try {
+      await removeRoleFromUser(selectedUser.id, roleId);
+      toast.success(t("rbac.roleRemovedSuccessfully", { username: selectedUser.username }));
+
+      // Reload user roles
+      const rolesResponse = await getUserRoles(selectedUser.id);
+      setUserRoles(rolesResponse.roles || []);
+    } catch (error) {
+      toast.error(t("rbac.failedToRemoveRole"));
     }
   };
 
@@ -1090,13 +1166,13 @@ export function AdminSettings({
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="px-4">
+                          <TableHead>
                             {t("admin.username")}
                           </TableHead>
-                          <TableHead className="px-4">
+                          <TableHead>
                             {t("admin.type")}
                           </TableHead>
-                          <TableHead className="px-4">
+                          <TableHead>
                             {t("admin.actions")}
                           </TableHead>
                         </TableRow>
@@ -1104,7 +1180,7 @@ export function AdminSettings({
                       <TableBody>
                         {users.map((user) => (
                           <TableRow key={user.id}>
-                            <TableCell className="px-4 font-medium">
+                            <TableCell className="font-medium">
                               {user.username}
                               {user.is_admin && (
                                 <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border">
@@ -1112,14 +1188,14 @@ export function AdminSettings({
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell className="px-4">
+                            <TableCell>
                               {user.is_oidc && user.password_hash
                                 ? "Dual Auth"
                                 : user.is_oidc
                                   ? t("admin.external")
                                   : t("admin.local")}
                             </TableCell>
-                            <TableCell className="px-4">
+                            <TableCell>
                               <div className="flex gap-2">
                                 {user.is_oidc && !user.password_hash && (
                                   <Button
@@ -1150,6 +1226,20 @@ export function AdminSettings({
                                     <Unlink className="h-4 w-4" />
                                   </Button>
                                 )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleOpenRolesDialog({
+                                      id: user.id,
+                                      username: user.username,
+                                    })
+                                  }
+                                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                  title={t("rbac.manageRoles")}
+                                >
+                                  <UserCog className="h-4 w-4" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1199,12 +1289,12 @@ export function AdminSettings({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="px-4">Device</TableHead>
-                            <TableHead className="px-4">User</TableHead>
-                            <TableHead className="px-4">Created</TableHead>
-                            <TableHead className="px-4">Last Active</TableHead>
-                            <TableHead className="px-4">Expires</TableHead>
-                            <TableHead className="px-4">
+                            <TableHead>Device</TableHead>
+                            <TableHead>User</TableHead>
+                            <TableHead>Created</TableHead>
+                            <TableHead>Last Active</TableHead>
+                            <TableHead>Expires</TableHead>
+                            <TableHead>
                               {t("admin.actions")}
                             </TableHead>
                           </TableRow>
@@ -1239,7 +1329,7 @@ export function AdminSettings({
                                   session.isRevoked ? "opacity-50" : undefined
                                 }
                               >
-                                <TableCell className="px-4">
+                                <TableCell>
                                   <div className="flex items-center gap-2">
                                     <DeviceIcon className="h-4 w-4" />
                                     <div className="flex flex-col">
@@ -1254,19 +1344,19 @@ export function AdminSettings({
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell className="px-4">
+                                <TableCell>
                                   {session.username || session.userId}
                                 </TableCell>
-                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                <TableCell className="text-sm text-muted-foreground">
                                   {formatDate(createdDate)}
                                 </TableCell>
-                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                <TableCell className="text-sm text-muted-foreground">
                                   {formatDate(lastActiveDate)}
                                 </TableCell>
-                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                <TableCell className="text-sm text-muted-foreground">
                                   {formatDate(expiresDate)}
                                 </TableCell>
-                                <TableCell className="px-4">
+                                <TableCell>
                                   <div className="flex gap-2">
                                     <Button
                                       variant="ghost"
@@ -1354,13 +1444,13 @@ export function AdminSettings({
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="px-4">
+                          <TableHead>
                             {t("admin.username")}
                           </TableHead>
-                          <TableHead className="px-4">
+                          <TableHead>
                             {t("admin.type")}
                           </TableHead>
-                          <TableHead className="px-4">
+                          <TableHead>
                             {t("admin.actions")}
                           </TableHead>
                         </TableRow>
@@ -1370,18 +1460,18 @@ export function AdminSettings({
                           .filter((u) => u.is_admin)
                           .map((admin) => (
                             <TableRow key={admin.id}>
-                              <TableCell className="px-4 font-medium">
+                              <TableCell className="font-medium">
                                 {admin.username}
                                 <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border">
                                   {t("admin.adminBadge")}
                                 </span>
                               </TableCell>
-                              <TableCell className="px-4">
+                              <TableCell>
                                 {admin.is_oidc
                                   ? t("admin.external")
                                   : t("admin.local")}
                               </TableCell>
-                              <TableCell className="px-4">
+                              <TableCell>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1622,6 +1712,97 @@ export function AdminSettings({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Role Management Dialog */}
+      <Dialog open={rolesDialogOpen} onOpenChange={setRolesDialogOpen}>
+        <DialogContent className="max-w-2xl bg-dark-bg border-2 border-dark-border">
+          <DialogHeader>
+            <DialogTitle>{t("rbac.manageRoles")}</DialogTitle>
+            <DialogDescription>
+              {t("rbac.manageRolesFor", { username: selectedUser?.username || "" })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {rolesLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {t("common.loading")}
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              {/* Current Roles */}
+              <div className="space-y-3">
+                <Label>{t("rbac.currentRoles")}</Label>
+                {userRoles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("rbac.noRolesAssigned")}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {userRoles.map((userRole) => (
+                      <div
+                        key={userRole.roleId}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">{t(userRole.roleDisplayName)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {userRole.roleName}
+                          </p>
+                        </div>
+                        {userRole.roleName !== "admin" && userRole.roleName !== "user" && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveRole(userRole.roleId)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Assign New Role */}
+              <div className="space-y-3">
+                <Label>{t("rbac.assignNewRole")}</Label>
+                <div className="flex gap-2">
+                  {availableRoles
+                    .filter(
+                      (role) =>
+                        !role.isSystem &&
+                        !userRoles.some((ur) => ur.roleId === role.id),
+                    )
+                    .map((role) => (
+                      <Button
+                        key={role.id}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAssignRole(role.id)}
+                      >
+                        {t(role.displayName)}
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRolesDialogOpen(false)}
+            >
+              {t("common.close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

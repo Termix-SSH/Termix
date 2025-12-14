@@ -1183,9 +1183,11 @@ export function HostManagerEditor({
                   <TabsTrigger value="statistics">
                     {t("hosts.statistics")}
                   </TabsTrigger>
-                  <TabsTrigger value="sharing">
-                    {t("rbac.sharing")}
-                  </TabsTrigger>
+                  {!editingHost?.isShared && (
+                    <TabsTrigger value="sharing">
+                      {t("rbac.sharing")}
+                    </TabsTrigger>
+                  )}
                 </TabsList>
                 <TabsContent value="general" className="pt-2">
                   <FormLabel className="mb-3 font-bold">
@@ -3316,13 +3318,15 @@ export function HostManagerEditor({
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
-            <Button className="translate-y-2" type="submit" variant="outline">
-              {editingHost
-                ? editingHost.id
-                  ? t("hosts.updateHost")
-                  : t("hosts.cloneHost")
-                : t("hosts.addHost")}
-            </Button>
+            {!(editingHost?.permissionLevel === "view") && (
+              <Button className="translate-y-2" type="submit" variant="outline">
+                {editingHost
+                  ? editingHost.id
+                    ? t("hosts.updateHost")
+                    : t("hosts.cloneHost")
+                  : t("hosts.addHost")}
+              </Button>
+            )}
           </footer>
         </form>
       </Form>

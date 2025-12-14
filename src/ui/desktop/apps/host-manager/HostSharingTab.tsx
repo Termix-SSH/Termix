@@ -35,6 +35,7 @@ import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   getRoles,
   getUserList,
+  getUserInfo,
   shareHost,
   getHostAccess,
   revokeHostAccess,
@@ -55,7 +56,6 @@ interface User {
 
 const PERMISSION_LEVELS = [
   { value: "view", labelKey: "rbac.view" },
-  { value: "use", labelKey: "rbac.use" },
   { value: "manage", labelKey: "rbac.manage" },
 ];
 
@@ -71,13 +71,14 @@ export function HostSharingTab({
   const [selectedRoleId, setSelectedRoleId] = React.useState<number | null>(
     null,
   );
-  const [permissionLevel, setPermissionLevel] = React.useState("use");
+  const [permissionLevel, setPermissionLevel] = React.useState("view");
   const [expiresInHours, setExpiresInHours] = React.useState<string>("");
 
   const [roles, setRoles] = React.useState<Role[]>([]);
   const [users, setUsers] = React.useState<User[]>([]);
   const [accessList, setAccessList] = React.useState<AccessRecord[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [currentUserId, setCurrentUserId] = React.useState<string>("");
 
   // Load roles
   const loadRoles = React.useCallback(async () => {
@@ -131,6 +132,19 @@ export function HostSharingTab({
     }
   }, [loadRoles, loadUsers, loadAccessList, isNewHost]);
 
+  // Load current user ID
+  React.useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const userInfo = await getUserInfo();
+        setCurrentUserId(userInfo.userId);
+      } catch (error) {
+        console.error("Failed to load current user:", error);
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
   // Share host
   const handleShare = async () => {
     if (!hostId) {
@@ -145,6 +159,12 @@ export function HostSharingTab({
 
     if (shareType === "role" && !selectedRoleId) {
       toast.error(t("rbac.selectRole"));
+      return;
+    }
+
+    // Prevent sharing with self
+    if (shareType === "user" && selectedUserId === currentUserId) {
+      toast.error(t("rbac.cannotShareWithSelf"));
       return;
     }
 
@@ -298,13 +318,18 @@ export function HostSharingTab({
         {/* Expiration */}
         <div className="space-y-2">
           <Label htmlFor="expires-in">
-            {t("rbac.expiresIn")} ({t("rbac.hours")})
+            {t("rbac.durationHours")}
           </Label>
           <Input
             id="expires-in"
             type="number"
             value={expiresInHours}
-            onChange={(e) => setExpiresInHours(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === "" || /^\d+$/.test(value)) {
+                setExpiresInHours(value);
+              }
+            }}
             placeholder={t("rbac.neverExpires")}
             min="1"
           />

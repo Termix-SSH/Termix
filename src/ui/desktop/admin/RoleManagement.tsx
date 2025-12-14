@@ -298,21 +298,23 @@ export function RoleManagement(): React.ReactElement {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditRole(role)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
                       {!role.isSystem && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteRole(role)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditRole(role)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteRole(role)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </TableCell>
@@ -339,7 +341,7 @@ export function RoleManagement(): React.ReactElement {
 
       {/* Create/Edit Role Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
           <DialogHeader>
             <DialogTitle>
               {editingRole ? t("rbac.editRole") : t("rbac.createRole")}
@@ -351,7 +353,7 @@ export function RoleManagement(): React.ReactElement {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6 py-4">
             {!editingRole && (
               <div className="space-y-2">
                 <Label htmlFor="role-name">{t("rbac.roleName")}</Label>
@@ -403,13 +405,13 @@ export function RoleManagement(): React.ReactElement {
 
       {/* Assign Role Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-dark-bg border-2 border-dark-border">
           <DialogHeader>
             <DialogTitle>{t("rbac.assignRoles")}</DialogTitle>
             <DialogDescription>{t("rbac.assignRolesDescription")}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6 py-4">
             {/* User Selection */}
             <div className="space-y-2">
               <Label htmlFor="user-select">{t("rbac.selectUser")}</Label>

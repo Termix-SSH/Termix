@@ -48,6 +48,11 @@ export interface SSHHost {
   terminalConfig?: TerminalConfig;
   createdAt: string;
   updatedAt: string;
+
+  // Shared access metadata
+  isShared?: boolean;
+  permissionLevel?: "view" | "manage";
+  sharedExpiresAt?: string;
 }
 
 export interface JumpHostData {

@@ -405,7 +405,8 @@
     "checkingDatabase": "Checking database connection...",
     "actions": "Actions",
     "remove": "Remove",
-    "revoke": "Revoke"
+    "revoke": "Revoke",
+    "create": "Create"
   },
   "nav": {
     "home": "Home",
@@ -1872,6 +1873,8 @@
     "securityWarningMessage": "Sharing credentials gives the user full access to perform any operations on the server, including changing passwords and deleting files. Only share with trusted users.",
     "tempUserRecommended": "We recommend enabling 'Create Temporary User' for better security.",
     "roleManagement": "Role Management",
+    "manageRoles": "Manage Roles",
+    "manageRolesFor": "Manage roles for {{username}}",
     "assignRole": "Assign Role",
     "removeRole": "Remove Role",
     "userRoles": "User Roles",
@@ -1883,6 +1886,7 @@
     "roleRemovedSuccessfully": "Role removed from {{username}} successfully",
     "failedToRemoveRole": "Failed to remove role",
     "cannotRemoveSystemRole": "Cannot remove system role",
+    "cannotShareWithSelf": "Cannot share host with yourself",
     "auditLogs": "Audit Logs",
     "viewAuditLogs": "View Audit Logs",
     "action": "Action",
