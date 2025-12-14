@@ -1749,6 +1749,8 @@
     "cannotRemoveSystemRole": "无法移除系统角色",
     "cannotShareWithSelf": "不能与自己共享主机",
     "noCustomRolesToAssign": "没有可用的自定义角色。系统角色已自动分配。",
+    "credentialSharingWarning": "不支持共享使用凭据认证的主机",
+    "credentialSharingWarningDescription": "此主机使用凭据认证。由于凭据是按用户加密的无法共享,共享用户将无法连接。请为计划共享的主机使用密码或密钥认证。",
     "auditLogs": "审计日志",
     "viewAuditLogs": "查看审计日志",
     "action": "操作",

@@ -1888,6 +1888,8 @@
     "cannotRemoveSystemRole": "Cannot remove system role",
     "cannotShareWithSelf": "Cannot share host with yourself",
     "noCustomRolesToAssign": "No custom roles available. System roles are auto-assigned.",
+    "credentialSharingWarning": "Credential Authentication Not Supported for Sharing",
+    "credentialSharingWarningDescription": "This host uses credential-based authentication. Shared users will not be able to connect because credentials are encrypted per-user and cannot be shared. Please use password or key-based authentication for hosts you intend to share.",
     "auditLogs": "Audit Logs",
     "viewAuditLogs": "View Audit Logs",
     "action": "Action",

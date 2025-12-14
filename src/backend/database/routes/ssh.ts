@@ -1549,6 +1549,29 @@ async function resolveHostCredentials(
   host: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   try {
+    // Skip credential resolution for shared hosts
+    // Shared users cannot access the owner's encrypted credentials
+    if (host.isShared && host.credentialId) {
+      sshLogger.info(
+        `Skipping credential resolution for shared host ${host.id} with credentialId ${host.credentialId}`,
+        {
+          operation: "resolve_host_credentials_shared",
+          hostId: host.id as number,
+          isShared: host.isShared,
+        },
+      );
+      // Return host without resolving credentials
+      // The frontend should handle credential auth for shared hosts differently
+      const result = { ...host };
+      if (host.key_password !== undefined) {
+        if (result.keyPassword === undefined) {
+          result.keyPassword = host.key_password;
+        }
+        delete result.key_password;
+      }
+      return result;
+    }
+
     if (host.credentialId && host.userId) {
       const credentialId = host.credentialId as number;
       const userId = host.userId as string;

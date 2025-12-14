@@ -39,8 +39,10 @@ import {
   shareHost,
   getHostAccess,
   revokeHostAccess,
+  getSSHHostById,
   type Role,
   type AccessRecord,
+  type SSHHost,
 } from "@/ui/main-axios.ts";
 
 interface HostSharingTabProps {
@@ -79,6 +81,7 @@ export function HostSharingTab({
   const [accessList, setAccessList] = React.useState<AccessRecord[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [currentUserId, setCurrentUserId] = React.useState<string>("");
+  const [hostData, setHostData] = React.useState<SSHHost | null>(null);
 
   // Load roles
   const loadRoles = React.useCallback(async () => {
@@ -124,13 +127,27 @@ export function HostSharingTab({
     }
   }, [hostId]);
 
+  // Load host data
+  const loadHostData = React.useCallback(async () => {
+    if (!hostId) return;
+
+    try {
+      const host = await getSSHHostById(hostId);
+      setHostData(host);
+    } catch (error) {
+      console.error("Failed to load host data:", error);
+      setHostData(null);
+    }
+  }, [hostId]);
+
   React.useEffect(() => {
     loadRoles();
     loadUsers();
     if (!isNewHost) {
       loadAccessList();
+      loadHostData();
     }
-  }, [loadRoles, loadUsers, loadAccessList, isNewHost]);
+  }, [loadRoles, loadUsers, loadAccessList, loadHostData, isNewHost]);
 
   // Load current user ID
   React.useEffect(() => {
@@ -235,6 +252,17 @@ export function HostSharingTab({
 
   return (
     <div className="space-y-6">
+      {/* Credential Authentication Warning */}
+      {hostData?.authType === "Credential" && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t("rbac.credentialSharingWarning")}</AlertTitle>
+          <AlertDescription>
+            {t("rbac.credentialSharingWarningDescription")}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Share Form */}
       <div className="space-y-4 border rounded-lg p-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
