@@ -1887,6 +1887,7 @@
     "failedToRemoveRole": "Failed to remove role",
     "cannotRemoveSystemRole": "Cannot remove system role",
     "cannotShareWithSelf": "Cannot share host with yourself",
+    "noCustomRolesToAssign": "No custom roles available. System roles are auto-assigned.",
     "auditLogs": "Audit Logs",
     "viewAuditLogs": "View Audit Logs",
     "action": "Action",

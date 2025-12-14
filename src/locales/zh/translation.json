@@ -1748,6 +1748,7 @@
     "failedToRemoveRole": "移除角色失败",
     "cannotRemoveSystemRole": "无法移除系统角色",
     "cannotShareWithSelf": "不能与自己共享主机",
+    "noCustomRolesToAssign": "没有可用的自定义角色。系统角色已自动分配。",
     "auditLogs": "审计日志",
     "viewAuditLogs": "查看审计日志",
     "action": "操作",

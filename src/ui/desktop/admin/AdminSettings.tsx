@@ -1787,6 +1787,15 @@ export function AdminSettings({
                         {t(role.displayName)}
                       </Button>
                     ))}
+                  {availableRoles.filter(
+                    (role) =>
+                      !role.isSystem &&
+                      !userRoles.some((ur) => ur.roleId === role.id),
+                  ).length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {t("rbac.noCustomRolesToAssign")}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
