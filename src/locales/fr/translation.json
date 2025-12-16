@@ -1545,6 +1545,8 @@
     "fileColorCodingDesc": "Codage couleur des fichiers par type : dossiers (rouge), fichiers (bleu), liens symboliques (vert)",
     "commandAutocomplete": "Autocomplétion des commandes",
     "commandAutocompleteDesc": "Activer les suggestions d'autocomplétion avec la touche Tab pour les commandes du terminal basées sur votre historique",
+    "defaultSnippetFoldersCollapsed": "Réduire les dossiers de snippets par défaut",
+    "defaultSnippetFoldersCollapsedDesc": "Lorsque cette option est activée, tous les dossiers de snippets seront réduits à l'ouverture de l'onglet snippets",
     "currentPassword": "Mot de passe actuel",
     "passwordChangedSuccess": "Mot de passe modifié avec succès ! Veuillez vous reconnecter.",
     "failedToChangePassword": "Échec de la modification du mot de passe. Vérifiez votre mot de passe actuel et réessayez.",

@@ -101,6 +101,10 @@ export function UserProfile({
   const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
     localStorage.getItem("commandAutocomplete") !== "false",
   );
+  const [defaultSnippetFoldersCollapsed, setDefaultSnippetFoldersCollapsed] =
+    useState<boolean>(
+      localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
+    );
 
   useEffect(() => {
     fetchUserInfo();
@@ -152,6 +156,12 @@ export function UserProfile({
   const handleCommandAutocompleteToggle = (enabled: boolean) => {
     setCommandAutocomplete(enabled);
     localStorage.setItem("commandAutocomplete", enabled.toString());
+  };
+
+  const handleDefaultSnippetFoldersCollapsedToggle = (enabled: boolean) => {
+    setDefaultSnippetFoldersCollapsed(enabled);
+    localStorage.setItem("defaultSnippetFoldersCollapsed", enabled.toString());
+    window.dispatchEvent(new Event("defaultSnippetFoldersCollapsedChanged"));
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -387,6 +397,25 @@ export function UserProfile({
                       <Switch
                         checked={commandAutocomplete}
                         onCheckedChange={handleCommandAutocompleteToggle}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-dark-border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("profile.defaultSnippetFoldersCollapsed")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.defaultSnippetFoldersCollapsedDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={defaultSnippetFoldersCollapsed}
+                        onCheckedChange={
+                          handleDefaultSnippetFoldersCollapsedToggle
+                        }
                       />
                     </div>
                   </div>
