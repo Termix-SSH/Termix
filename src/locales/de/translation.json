@@ -1397,6 +1397,8 @@
     "fileColorCodingDesc": "Farbcodierung von Dateien nach Typ: Ordner (rot), Dateien (blau), Symlinks (grün)",
     "commandAutocomplete": "Befehlsautovervollständigung",
     "commandAutocompleteDesc": "Tab-Taste Autovervollständigung für Terminal-Befehle basierend auf Ihrem Befehlsverlauf aktivieren",
+    "defaultSnippetFoldersCollapsed": "Snippet-Ordner standardmäßig einklappen",
+    "defaultSnippetFoldersCollapsedDesc": "Wenn aktiviert, werden alle Snippet-Ordner beim Öffnen der Snippet-Registerkarte eingeklappt",
     "currentPassword": "Aktuelles Passwort",
     "passwordChangedSuccess": "Passwort erfolgreich geändert! Bitte melden Sie sich erneut an.",
     "failedToChangePassword": "Passwort konnte nicht geändert werden. Bitte überprüfen Sie Ihr aktuelles Passwort und versuchen Sie es erneut."

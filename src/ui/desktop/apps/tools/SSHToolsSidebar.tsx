@@ -197,9 +197,11 @@ export function SSHToolsSidebar({
   );
   const [draggedSnippet, setDraggedSnippet] = useState<Snippet | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
-    new Set(),
-  );
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => {
+    const shouldCollapse =
+      localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false";
+    return shouldCollapse ? new Set() : new Set();
+  });
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [editingFolder, setEditingFolder] = useState<SnippetFolder | null>(
     null,
@@ -350,6 +352,55 @@ export function SSHToolsSidebar({
       fetchSnippets();
     }
   }, [isOpen, activeTab]);
+
+  useEffect(() => {
+    if (snippetFolders.length > 0) {
+      const shouldCollapse =
+        localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false";
+      if (shouldCollapse) {
+        const allFolderNames = new Set(snippetFolders.map((f) => f.name));
+        const uncategorizedSnippets = snippets.filter(
+          (s) => !s.folder || s.folder === "",
+        );
+        if (uncategorizedSnippets.length > 0) {
+          allFolderNames.add("");
+        }
+        setCollapsedFolders(allFolderNames);
+      } else {
+        setCollapsedFolders(new Set());
+      }
+    }
+  }, [snippetFolders, snippets]);
+
+  useEffect(() => {
+    const handleSettingChange = () => {
+      const shouldCollapse =
+        localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false";
+      if (shouldCollapse) {
+        const allFolderNames = new Set(snippetFolders.map((f) => f.name));
+        const uncategorizedSnippets = snippets.filter(
+          (s) => !s.folder || s.folder === "",
+        );
+        if (uncategorizedSnippets.length > 0) {
+          allFolderNames.add("");
+        }
+        setCollapsedFolders(allFolderNames);
+      } else {
+        setCollapsedFolders(new Set());
+      }
+    };
+
+    window.addEventListener(
+      "defaultSnippetFoldersCollapsedChanged",
+      handleSettingChange,
+    );
+    return () => {
+      window.removeEventListener(
+        "defaultSnippetFoldersCollapsedChanged",
+        handleSettingChange,
+      );
+    };
+  }, [snippetFolders, snippets]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();

@@ -1586,6 +1586,8 @@
     "fileColorCodingDesc": "Color-code files by type: folders (red), files (blue), symlinks (green)",
     "commandAutocomplete": "Command Autocomplete",
     "commandAutocompleteDesc": "Enable Tab key autocomplete suggestions for terminal commands based on your command history",
+    "defaultSnippetFoldersCollapsed": "Collapse Snippet Folders by Default",
+    "defaultSnippetFoldersCollapsedDesc": "When enabled, all snippet folders will be collapsed when you open the snippets tab",
     "currentPassword": "Current Password",
     "passwordChangedSuccess": "Password changed successfully! Please log in again.",
     "failedToChangePassword": "Failed to change password. Please check your current password and try again."

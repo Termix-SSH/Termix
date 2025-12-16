@@ -1517,6 +1517,8 @@
     "fileColorCodingDesc": "按类型对文件进行颜色编码：文件夹（红色）、文件（蓝色）、符号链接（绿色）",
     "commandAutocomplete": "命令自动补全",
     "commandAutocompleteDesc": "启用基于命令历史记录的 Tab 键终端命令自动补全建议",
+    "defaultSnippetFoldersCollapsed": "默认折叠代码片段文件夹",
+    "defaultSnippetFoldersCollapsedDesc": "启用后，打开代码片段标签时所有文件夹将默认折叠",
     "currentPassword": "当前密码",
     "passwordChangedSuccess": "密码修改成功！请重新登录。",
     "failedToChangePassword": "修改密码失败。请检查您当前的密码并重试。"
