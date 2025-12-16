@@ -1350,6 +1350,8 @@
     "fileColorCodingDesc": "Codificar arquivos por cores por tipo: pastas (vermelho), arquivos (azul), links simbólicos (verde)",
     "commandAutocomplete": "Autocompletar Comandos",
     "commandAutocompleteDesc": "Ativar sugestões de autocompletar com a tecla Tab para comandos do terminal baseado no seu histórico",
+    "defaultSnippetFoldersCollapsed": "Recolher Pastas de Snippets por Padrão",
+    "defaultSnippetFoldersCollapsedDesc": "Quando ativado, todas as pastas de snippets serão recolhidas ao abrir a aba de snippets",
     "currentPassword": "Senha Atual",
     "passwordChangedSuccess": "Senha alterada com sucesso! Por favor, faça login novamente.",
     "failedToChangePassword": "Falha ao alterar a senha. Por favor, verifique sua senha atual e tente novamente."
