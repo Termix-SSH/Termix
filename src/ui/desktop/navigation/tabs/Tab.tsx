@@ -10,6 +10,7 @@ import {
   Server as ServerIcon,
   Folder as FolderIcon,
   User as UserIcon,
+  Network,
 } from "lucide-react";
 
 interface TabProps {
@@ -251,6 +252,43 @@ export function Tab({
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span className="truncate text-sm flex-1 min-w-0">{base}</span>
+          {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
+        </div>
+
+        {canClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("h-6 w-6", disableClose && "opacity-50")}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disableClose && onClose) onClose();
+            }}
+            disabled={disableClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (tabType === "network_graph") {
+    const displayTitle = title || "Network Graph";
+    const { base, suffix } = splitTitle(displayTitle);
+
+    return (
+      <div
+        className={cn(tabBaseClasses, "cursor-pointer")}
+        onClick={!disableActivate ? onActivate : undefined}
+        style={{
+          marginBottom: "-2px",
+          borderBottom: isActive ? "2px solid white" : "none",
+        }}
+      >
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <Network className="h-4 w-4 flex-shrink-0" />
           <span className="truncate text-sm flex-1 min-w-0">{base}</span>
           {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
         </div>
