@@ -254,5 +254,6 @@ export const authLogger = new Logger("AUTH", "🔐", "#ef4444");
 export const systemLogger = new Logger("SYSTEM", "🚀", "#14b8a6");
 export const versionLogger = new Logger("VERSION", "📦", "#8b5cf6");
 export const dashboardLogger = new Logger("DASHBOARD", "📊", "#ec4899");
+export const guacLogger = new Logger("GUACAMOLE", "🖼️", "#ff6b6b");
 
 export const logger = systemLogger;
