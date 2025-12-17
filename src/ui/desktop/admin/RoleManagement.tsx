@@ -27,7 +27,15 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-import { Shield, Plus, Edit, Trash2, Users } from "lucide-react";
+import {
+  Shield,
+  Plus,
+  Edit,
+  Trash2,
+  Users,
+  Check,
+  ChevronsUpDown,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -43,6 +51,19 @@ import {
   type Role,
   type UserRole,
 } from "@/ui/main-axios.ts";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command.tsx";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover.tsx";
+import { cn } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -72,6 +93,10 @@ export function RoleManagement(): React.ReactElement {
     null,
   );
   const [userRoles, setUserRoles] = React.useState<UserRole[]>([]);
+
+  // Combobox states
+  const [userComboOpen, setUserComboOpen] = React.useState(false);
+  const [roleComboOpen, setRoleComboOpen] = React.useState(false);
 
   // Load roles
   const loadRoles = React.useCallback(async () => {
@@ -221,7 +246,11 @@ export function RoleManagement(): React.ReactElement {
     try {
       await assignRoleToUser(selectedUserId, selectedRoleId);
       const selectedUser = users.find((u) => u.id === selectedUserId);
-      toast.success(t("rbac.roleAssignedSuccessfully", { username: selectedUser?.username || selectedUserId }));
+      toast.success(
+        t("rbac.roleAssignedSuccessfully", {
+          username: selectedUser?.username || selectedUserId,
+        }),
+      );
       setSelectedRoleId(null);
       handleUserSelect(selectedUserId);
     } catch (error) {
@@ -236,7 +265,11 @@ export function RoleManagement(): React.ReactElement {
     try {
       await removeRoleFromUser(selectedUserId, roleId);
       const selectedUser = users.find((u) => u.id === selectedUserId);
-      toast.success(t("rbac.roleRemovedSuccessfully", { username: selectedUser?.username || selectedUserId }));
+      toast.success(
+        t("rbac.roleRemovedSuccessfully", {
+          username: selectedUser?.username || selectedUserId,
+        }),
+      );
       handleUserSelect(selectedUserId);
     } catch (error) {
       toast.error(t("rbac.failedToRemoveRole"));
@@ -265,19 +298,27 @@ export function RoleManagement(): React.ReactElement {
               <TableHead>{t("rbac.displayName")}</TableHead>
               <TableHead>{t("rbac.description")}</TableHead>
               <TableHead>{t("rbac.type")}</TableHead>
-              <TableHead className="text-right">{t("common.actions")}</TableHead>
+              <TableHead className="text-right">
+                {t("common.actions")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="text-center text-muted-foreground"
+                >
                   {t("common.loading")}
                 </TableCell>
               </TableRow>
             ) : roles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="text-center text-muted-foreground"
+                >
                   {t("rbac.noRoles")}
                 </TableCell>
               </TableRow>
@@ -408,25 +449,65 @@ export function RoleManagement(): React.ReactElement {
         <DialogContent className="max-w-2xl bg-dark-bg border-2 border-dark-border">
           <DialogHeader>
             <DialogTitle>{t("rbac.assignRoles")}</DialogTitle>
-            <DialogDescription>{t("rbac.assignRolesDescription")}</DialogDescription>
+            <DialogDescription>
+              {t("rbac.assignRolesDescription")}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
             {/* User Selection */}
             <div className="space-y-2">
               <Label htmlFor="user-select">{t("rbac.selectUser")}</Label>
-              <Select value={selectedUserId || ""} onValueChange={handleUserSelect}>
-                <SelectTrigger id="user-select">
-                  <SelectValue placeholder={t("rbac.selectUserPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.username}{user.is_admin ? " (Admin)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={userComboOpen} onOpenChange={setUserComboOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={userComboOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedUserId
+                      ? users.find((u) => u.id === selectedUserId)?.username +
+                        (users.find((u) => u.id === selectedUserId)?.is_admin
+                          ? " (Admin)"
+                          : "")
+                      : t("rbac.selectUserPlaceholder")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0"
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
+                  <Command>
+                    <CommandInput placeholder={t("rbac.searchUsers")} />
+                    <CommandEmpty>{t("rbac.noUserFound")}</CommandEmpty>
+                    <CommandGroup className="max-h-[300px] overflow-y-auto">
+                      {users.map((user) => (
+                        <CommandItem
+                          key={user.id}
+                          value={`${user.username} ${user.id}`}
+                          onSelect={() => {
+                            handleUserSelect(user.id);
+                            setUserComboOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedUserId === user.id
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {user.username}
+                          {user.is_admin ? " (Admin)" : ""}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Current User Roles */}
@@ -438,14 +519,16 @@ export function RoleManagement(): React.ReactElement {
                     {t("rbac.noRolesAssigned")}
                   </p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
                     {userRoles.map((userRole, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between p-2 border rounded"
                       >
                         <div>
-                          <p className="font-medium">{t(userRole.roleDisplayName)}</p>
+                          <p className="font-medium">
+                            {t(userRole.roleDisplayName)}
+                          </p>
                           {userRole.roleDisplayName && (
                             <p className="text-xs text-muted-foreground">
                               {userRole.roleName}
@@ -453,13 +536,21 @@ export function RoleManagement(): React.ReactElement {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveUserRole(userRole.roleId)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {userRole.isSystem ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {t("rbac.systemRole")}
+                            </Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                handleRemoveUserRole(userRole.roleId)
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -473,29 +564,68 @@ export function RoleManagement(): React.ReactElement {
               <div className="space-y-2">
                 <Label htmlFor="role-select">{t("rbac.assignNewRole")}</Label>
                 <div className="flex gap-2">
-                  <Select
-                    value={selectedRoleId !== null ? selectedRoleId.toString() : ""}
-                    onValueChange={(value) => {
-                      const parsed = parseInt(value, 10);
-                      setSelectedRoleId(isNaN(parsed) ? null : parsed);
-                    }}
-                  >
-                    <SelectTrigger id="role-select">
-                      <SelectValue placeholder={t("rbac.selectRolePlaceholder")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles
-                        .filter(
-                          (role) =>
-                            !userRoles.some((ur) => ur.roleId === role.id),
-                        )
-                        .map((role) => (
-                          <SelectItem key={role.id} value={role.id.toString()}>
-                            {t(role.displayName)}{role.isSystem ? ` (${t("rbac.systemRole")})` : ""}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={roleComboOpen} onOpenChange={setRoleComboOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={roleComboOpen}
+                        className="flex-1 justify-between"
+                      >
+                        {selectedRoleId !== null
+                          ? (() => {
+                              const role = roles.find(
+                                (r) => r.id === selectedRoleId,
+                              );
+                              return role
+                                ? `${t(role.displayName)}${role.isSystem ? ` (${t("rbac.systemRole")})` : ""}`
+                                : t("rbac.selectRolePlaceholder");
+                            })()
+                          : t("rbac.selectRolePlaceholder")}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="p-0"
+                      style={{ width: "var(--radix-popover-trigger-width)" }}
+                    >
+                      <Command>
+                        <CommandInput placeholder={t("rbac.searchRoles")} />
+                        <CommandEmpty>{t("rbac.noRoleFound")}</CommandEmpty>
+                        <CommandGroup className="max-h-[300px] overflow-y-auto">
+                          {roles
+                            .filter(
+                              (role) =>
+                                !role.isSystem &&
+                                !userRoles.some((ur) => ur.roleId === role.id),
+                            )
+                            .map((role) => (
+                              <CommandItem
+                                key={role.id}
+                                value={`${role.displayName} ${role.name} ${role.id}`}
+                                onSelect={() => {
+                                  setSelectedRoleId(role.id);
+                                  setRoleComboOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedRoleId === role.id
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                {t(role.displayName)}
+                                {role.isSystem
+                                  ? ` (${t("rbac.systemRole")})`
+                                  : ""}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <Button onClick={handleAssignRole} disabled={!selectedRoleId}>
                     <Plus className="h-4 w-4 mr-2" />
                     {t("rbac.assign")}
@@ -506,7 +636,10 @@ export function RoleManagement(): React.ReactElement {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setAssignDialogOpen(false)}
+            >
               {t("common.close")}
             </Button>
           </DialogFooter>

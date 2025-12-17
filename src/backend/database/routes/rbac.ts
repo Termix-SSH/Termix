@@ -52,15 +52,21 @@ router.post(
 
       // Validate target type
       if (!["user", "role"].includes(targetType)) {
-        return res.status(400).json({ error: "Invalid target type. Must be 'user' or 'role'" });
+        return res
+          .status(400)
+          .json({ error: "Invalid target type. Must be 'user' or 'role'" });
       }
 
       // Validate required fields based on target type
       if (targetType === "user" && !isNonEmptyString(targetUserId)) {
-        return res.status(400).json({ error: "Target user ID is required when sharing with user" });
+        return res
+          .status(400)
+          .json({ error: "Target user ID is required when sharing with user" });
       }
       if (targetType === "role" && !targetRoleId) {
-        return res.status(400).json({ error: "Target role ID is required when sharing with role" });
+        return res
+          .status(400)
+          .json({ error: "Target role ID is required when sharing with role" });
       }
 
       // Verify user owns the host
@@ -104,7 +110,11 @@ router.post(
 
       // Calculate expiry time
       let expiresAt: string | null = null;
-      if (durationHours && typeof durationHours === "number" && durationHours > 0) {
+      if (
+        durationHours &&
+        typeof durationHours === "number" &&
+        durationHours > 0
+      ) {
         const expiryDate = new Date();
         expiryDate.setHours(expiryDate.getHours() + durationHours);
         expiresAt = expiryDate.toISOString();
@@ -299,7 +309,7 @@ router.get(
         .orderBy(desc(hostAccess.createdAt));
 
       // Format access list with type information
-      const accessList = rawAccessList.map(access => ({
+      const accessList = rawAccessList.map((access) => ({
         id: access.id,
         targetType: access.userId ? "user" : "role",
         userId: access.userId,
@@ -361,10 +371,7 @@ router.get(
         .where(
           and(
             eq(hostAccess.userId, userId),
-            or(
-              isNull(hostAccess.expiresAt),
-              gte(hostAccess.expiresAt, now),
-            ),
+            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
           ),
         )
         .orderBy(desc(hostAccess.createdAt));
@@ -729,15 +736,20 @@ router.post(
         return res.status(404).json({ error: "Role not found" });
       }
 
+      // Prevent manual assignment of system roles
+      if (role[0].isSystem) {
+        return res.status(403).json({
+          error:
+            "System roles (admin, user) are automatically assigned and cannot be manually assigned",
+        });
+      }
+
       // Check if already assigned
       const existing = await db
         .select()
         .from(userRoles)
         .where(
-          and(
-            eq(userRoles.userId, targetUserId),
-            eq(userRoles.roleId, roleId),
-          ),
+          and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
         )
         .limit(1);
 
@@ -794,14 +806,34 @@ router.delete(
     }
 
     try {
+      // Verify role exists and get its details
+      const role = await db
+        .select({
+          id: roles.id,
+          name: roles.name,
+          isSystem: roles.isSystem,
+        })
+        .from(roles)
+        .where(eq(roles.id, roleId))
+        .limit(1);
+
+      if (role.length === 0) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+
+      // Prevent removal of system roles
+      if (role[0].isSystem) {
+        return res.status(403).json({
+          error:
+            "System roles (admin, user) are automatically assigned and cannot be removed",
+        });
+      }
+
       // Delete the user-role assignment
       await db
         .delete(userRoles)
         .where(
-          and(
-            eq(userRoles.userId, targetUserId),
-            eq(userRoles.roleId, roleId),
-          ),
+          and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
         );
 
       // Invalidate permission cache

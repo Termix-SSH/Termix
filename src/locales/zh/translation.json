@@ -389,7 +389,7 @@
     "actions": "操作",
     "remove": "移除",
     "revoke": "撤销",
-    "create": "创建"
+    "create": "创建",
     "saving": "保存中...",
     "version": "Version"
   },
@@ -1880,10 +1880,14 @@
     "assignRoles": "分配角色",
     "userRoleAssignment": "用户角色分配",
     "selectUserPlaceholder": "选择用户",
+    "searchUsers": "搜索用户...",
+    "noUserFound": "未找到用户",
     "currentRoles": "当前角色",
     "noRolesAssigned": "未分配角色",
     "assignNewRole": "分配新角色",
     "selectRolePlaceholder": "选择角色",
+    "searchRoles": "搜索角色...",
+    "noRoleFound": "未找到角色",
     "assign": "分配",
     "roleCreatedSuccessfully": "角色创建成功",
     "roleUpdatedSuccessfully": "角色更新成功",

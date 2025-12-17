@@ -26,9 +26,16 @@ import {
   Shield,
   Clock,
   UserCircle,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs.tsx";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -44,6 +51,19 @@ import {
   type AccessRecord,
   type SSHHost,
 } from "@/ui/main-axios.ts";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command.tsx";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover.tsx";
+import { cn } from "@/lib/utils";
 
 interface HostSharingTabProps {
   hostId: number | undefined;
@@ -82,6 +102,9 @@ export function HostSharingTab({
   const [loading, setLoading] = React.useState(false);
   const [currentUserId, setCurrentUserId] = React.useState<string>("");
   const [hostData, setHostData] = React.useState<SSHHost | null>(null);
+
+  const [userComboOpen, setUserComboOpen] = React.useState(false);
+  const [roleComboOpen, setRoleComboOpen] = React.useState(false);
 
   // Load roles
   const loadRoles = React.useCallback(async () => {
@@ -191,7 +214,9 @@ export function HostSharingTab({
         targetUserId: shareType === "user" ? selectedUserId : undefined,
         targetRoleId: shareType === "role" ? selectedRoleId : undefined,
         permissionLevel,
-        durationHours: expiresInHours ? parseInt(expiresInHours, 10) : undefined,
+        durationHours: expiresInHours
+          ? parseInt(expiresInHours, 10)
+          : undefined,
       });
 
       toast.success(t("rbac.sharedSuccessfully"));
@@ -238,6 +263,14 @@ export function HostSharingTab({
     return new Date(expiresAt) < new Date();
   };
 
+  // Filter out current user from the users list
+  const availableUsers = React.useMemo(() => {
+    return users.filter((user) => user.id !== currentUserId);
+  }, [users, currentUserId]);
+
+  const selectedUser = availableUsers.find((u) => u.id === selectedUserId);
+  const selectedRole = roles.find((r) => r.id === selectedRoleId);
+
   if (isNewHost) {
     return (
       <Alert>
@@ -271,7 +304,10 @@ export function HostSharingTab({
         </h3>
 
         {/* Share Type Selection */}
-        <Tabs value={shareType} onValueChange={(v) => setShareType(v as "user" | "role")}>
+        <Tabs
+          value={shareType}
+          onValueChange={(v) => setShareType(v as "user" | "role")}
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="user" className="flex items-center gap-2">
               <UserCircle className="h-4 w-4" />
@@ -286,42 +322,106 @@ export function HostSharingTab({
           <TabsContent value="user" className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="user-select">{t("rbac.selectUser")}</Label>
-              <Select value={selectedUserId || ""} onValueChange={setSelectedUserId}>
-                <SelectTrigger id="user-select">
-                  <SelectValue placeholder={t("rbac.selectUserPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.username}{user.is_admin ? " (Admin)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={userComboOpen} onOpenChange={setUserComboOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={userComboOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedUser
+                      ? `${selectedUser.username}${selectedUser.is_admin ? " (Admin)" : ""}`
+                      : t("rbac.selectUserPlaceholder")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0"
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
+                  <Command>
+                    <CommandInput placeholder={t("rbac.searchUsers")} />
+                    <CommandEmpty>{t("rbac.noUserFound")}</CommandEmpty>
+                    <CommandGroup className="max-h-[300px] overflow-y-auto">
+                      {availableUsers.map((user) => (
+                        <CommandItem
+                          key={user.id}
+                          value={`${user.username} ${user.id}`}
+                          onSelect={() => {
+                            setSelectedUserId(user.id);
+                            setUserComboOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedUserId === user.id
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {user.username}
+                          {user.is_admin ? " (Admin)" : ""}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </TabsContent>
 
           <TabsContent value="role" className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="role-select">{t("rbac.selectRole")}</Label>
-              <Select
-                value={selectedRoleId !== null ? selectedRoleId.toString() : ""}
-                onValueChange={(v) => {
-                  const parsed = parseInt(v, 10);
-                  setSelectedRoleId(isNaN(parsed) ? null : parsed);
-                }}
-              >
-                <SelectTrigger id="role-select">
-                  <SelectValue placeholder={t("rbac.selectRolePlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
-                      {t(role.displayName)}{role.isSystem ? ` (${t("rbac.systemRole")})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={roleComboOpen} onOpenChange={setRoleComboOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={roleComboOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedRole
+                      ? `${t(selectedRole.displayName)}${selectedRole.isSystem ? ` (${t("rbac.systemRole")})` : ""}`
+                      : t("rbac.selectRolePlaceholder")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0"
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
+                  <Command>
+                    <CommandInput placeholder={t("rbac.searchRoles")} />
+                    <CommandEmpty>{t("rbac.noRoleFound")}</CommandEmpty>
+                    <CommandGroup className="max-h-[300px] overflow-y-auto">
+                      {roles.map((role) => (
+                        <CommandItem
+                          key={role.id}
+                          value={`${role.displayName} ${role.name} ${role.id}`}
+                          onSelect={() => {
+                            setSelectedRoleId(role.id);
+                            setRoleComboOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedRoleId === role.id
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {t(role.displayName)}
+                          {role.isSystem ? ` (${t("rbac.systemRole")})` : ""}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </TabsContent>
         </Tabs>
@@ -329,7 +429,10 @@ export function HostSharingTab({
         {/* Permission Level */}
         <div className="space-y-2">
           <Label htmlFor="permission-level">{t("rbac.permissionLevel")}</Label>
-          <Select value={permissionLevel || "use"} onValueChange={(v) => setPermissionLevel(v || "use")}>
+          <Select
+            value={permissionLevel || "use"}
+            onValueChange={(v) => setPermissionLevel(v || "use")}
+          >
             <SelectTrigger id="permission-level">
               <SelectValue />
             </SelectTrigger>
@@ -345,9 +448,7 @@ export function HostSharingTab({
 
         {/* Expiration */}
         <div className="space-y-2">
-          <Label htmlFor="expires-in">
-            {t("rbac.durationHours")}
-          </Label>
+          <Label htmlFor="expires-in">{t("rbac.durationHours")}</Label>
           <Input
             id="expires-in"
             type="number"
@@ -385,19 +486,27 @@ export function HostSharingTab({
               <TableHead>{t("rbac.grantedBy")}</TableHead>
               <TableHead>{t("rbac.expires")}</TableHead>
               <TableHead>{t("rbac.accessCount")}</TableHead>
-              <TableHead className="text-right">{t("common.actions")}</TableHead>
+              <TableHead className="text-right">
+                {t("common.actions")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground"
+                >
                   {t("common.loading")}
                 </TableCell>
               </TableRow>
             ) : accessList.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground"
+                >
                   {t("rbac.noAccessRecords")}
                 </TableCell>
               </TableRow>
@@ -409,12 +518,18 @@ export function HostSharingTab({
                 >
                   <TableCell>
                     {access.targetType === "user" ? (
-                      <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-1 w-fit"
+                      >
                         <UserCircle className="h-3 w-3" />
                         {t("rbac.user")}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-1 w-fit"
+                      >
                         <Shield className="h-3 w-3" />
                         {t("rbac.role")}
                       </Badge>
@@ -433,7 +548,11 @@ export function HostSharingTab({
                     {access.expiresAt ? (
                       <div className="flex items-center gap-2">
                         <Clock className="h-3 w-3" />
-                        <span className={isExpired(access.expiresAt) ? "text-red-500" : ""}>
+                        <span
+                          className={
+                            isExpired(access.expiresAt) ? "text-red-500" : ""
+                          }
+                        >
                           {formatDate(access.expiresAt)}
                           {isExpired(access.expiresAt) && (
                             <span className="ml-2">({t("rbac.expired")})</span>
