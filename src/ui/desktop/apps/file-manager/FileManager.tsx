@@ -336,6 +336,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         credentialId: currentHost.credentialId,
         userId: currentHost.userId,
         forceKeyboardInteractive: currentHost.forceKeyboardInteractive,
+        useSocks5: currentHost.useSocks5,
+        socks5Host: currentHost.socks5Host,
+        socks5Port: currentHost.socks5Port,
+        socks5Username: currentHost.socks5Username,
+        socks5Password: currentHost.socks5Password,
+        socks5ProxyChain: currentHost.socks5ProxyChain,
       });
 
       if (result?.requires_totp) {
@@ -760,14 +766,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       if (!status.connected) {
         const result = await connectSSH(currentSessionId, {
           hostId: currentHost.id,
-          host: currentHost.ip,
+          ip: currentHost.ip,
           port: currentHost.port,
           username: currentHost.username,
           authType: currentHost.authType,
           password: currentHost.password,
-          key: currentHost.key,
+          sshKey: currentHost.key,
           keyPassword: currentHost.keyPassword,
           credentialId: currentHost.credentialId,
+          useSocks5: currentHost.useSocks5,
+          socks5Host: currentHost.socks5Host,
+          socks5Port: currentHost.socks5Port,
+          socks5Username: currentHost.socks5Username,
+          socks5Password: currentHost.socks5Password,
+          socks5ProxyChain: currentHost.socks5ProxyChain,
         });
 
         if (!result.success) {
@@ -1313,6 +1325,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           authType: currentHost.authType,
           credentialId: currentHost.credentialId,
           userId: currentHost.userId,
+          useSocks5: currentHost.useSocks5,
+          socks5Host: currentHost.socks5Host,
+          socks5Port: currentHost.socks5Port,
+          socks5Username: currentHost.socks5Username,
+          socks5Password: currentHost.socks5Password,
+          socks5ProxyChain: currentHost.socks5ProxyChain,
         });
       }
     } catch (error) {
@@ -1464,7 +1482,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         authType: credentials.password ? "password" : "key",
         credentialId: currentHost.credentialId,
         userId: currentHost.userId,
-        userProvidedPassword: true,
+        useSocks5: currentHost.useSocks5,
+        socks5Host: currentHost.socks5Host,
+        socks5Port: currentHost.socks5Port,
+        socks5Username: currentHost.socks5Username,
+        socks5Password: currentHost.socks5Password,
+        socks5ProxyChain: currentHost.socks5ProxyChain,
       });
 
       if (result?.requires_totp) {

@@ -9,7 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { statsLogger, sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
-import type { AuthenticatedRequest } from "../../types/index.js";
+import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
 import { collectCpuMetrics } from "./widgets/cpu-collector.js";
 import { collectMemoryMetrics } from "./widgets/memory-collector.js";
 import { collectDiskMetrics } from "./widgets/disk-collector.js";
@@ -18,6 +18,7 @@ import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
 import { collectProcessesMetrics } from "./widgets/processes-collector.js";
 import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 
 async function resolveJumpHost(
   hostId: number,
@@ -209,21 +210,44 @@ class SSHConnectionPool {
   }
 
   private getHostKey(host: SSHHostWithCredentials): string {
-    return `${host.ip}:${host.port}:${host.username}`;
+    // Include SOCKS5 settings in the key to ensure separate connection pools
+    // for direct connections vs SOCKS5 connections
+    const socks5Key = host.useSocks5
+      ? `:socks5:${host.socks5Host}:${host.socks5Port}:${JSON.stringify(host.socks5ProxyChain || [])}`
+      : "";
+    return `${host.ip}:${host.port}:${host.username}${socks5Key}`;
   }
 
   async getConnection(host: SSHHostWithCredentials): Promise<Client> {
     const hostKey = this.getHostKey(host);
     const connections = this.connections.get(hostKey) || [];
 
+    statsLogger.info("Getting connection from pool", {
+      operation: "get_connection_from_pool",
+      hostKey: hostKey,
+      availableConnections: connections.length,
+      useSocks5: host.useSocks5,
+      socks5Host: host.socks5Host,
+      hasSocks5ProxyChain: !!(host.socks5ProxyChain && host.socks5ProxyChain.length > 0),
+      hostId: host.id,
+    });
+
     const available = connections.find((conn) => !conn.inUse);
     if (available) {
+      statsLogger.info("Reusing existing connection from pool", {
+        operation: "reuse_connection",
+        hostKey,
+      });
       available.inUse = true;
       available.lastUsed = Date.now();
       return available.client;
     }
 
     if (connections.length < this.maxConnectionsPerHost) {
+      statsLogger.info("Creating new connection for pool", {
+        operation: "create_new_connection",
+        hostKey,
+      });
       const client = await this.createConnection(host);
       const pooled: PooledConnection = {
         client,
@@ -311,6 +335,68 @@ class SSHConnectionPool {
       try {
         const config = buildSshConfig(host);
 
+        // Check if SOCKS5 proxy is enabled (either single proxy or chain)
+        if (
+          host.useSocks5 &&
+          (host.socks5Host || (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+        ) {
+          statsLogger.info("Using SOCKS5 proxy for connection", {
+            operation: "socks5_enabled",
+            hostIp: host.ip,
+            hostPort: host.port,
+            socks5Host: host.socks5Host,
+            socks5Port: host.socks5Port,
+            hasChain: !!(host.socks5ProxyChain && host.socks5ProxyChain.length > 0),
+            chainLength: host.socks5ProxyChain?.length || 0,
+          });
+
+          try {
+            const socks5Socket = await createSocks5Connection(
+              host.ip,
+              host.port,
+              {
+                useSocks5: host.useSocks5,
+                socks5Host: host.socks5Host,
+                socks5Port: host.socks5Port,
+                socks5Username: host.socks5Username,
+                socks5Password: host.socks5Password,
+                socks5ProxyChain: host.socks5ProxyChain,
+              },
+            );
+
+            if (socks5Socket) {
+              statsLogger.info("SOCKS5 socket created successfully", {
+                operation: "socks5_socket_ready",
+                hostIp: host.ip,
+              });
+              config.sock = socks5Socket;
+              client.connect(config);
+              return;
+            } else {
+              statsLogger.error("SOCKS5 socket is null", undefined, {
+                operation: "socks5_socket_null",
+                hostIp: host.ip,
+              });
+            }
+          } catch (socks5Error) {
+            clearTimeout(timeout);
+            statsLogger.error("SOCKS5 connection error", socks5Error, {
+              operation: "socks5_connection_error",
+              hostIp: host.ip,
+              errorMessage: socks5Error instanceof Error ? socks5Error.message : "Unknown",
+            });
+            reject(
+              new Error(
+                "SOCKS5 proxy connection failed: " +
+                  (socks5Error instanceof Error
+                    ? socks5Error.message
+                    : "Unknown error"),
+              ),
+            );
+            return;
+          }
+        }
+
         if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
           const jumpClient = await createJumpHostChain(
             host.jumpHosts,
@@ -364,6 +450,29 @@ class SSHConnectionPool {
     }
   }
 
+  clearHostConnections(host: SSHHostWithCredentials): void {
+    const hostKey = this.getHostKey(host);
+    const connections = this.connections.get(hostKey) || [];
+
+    statsLogger.info("Clearing all connections for host", {
+      operation: "clear_host_connections",
+      hostKey,
+      connectionCount: connections.length,
+    });
+
+    for (const conn of connections) {
+      try {
+        conn.client.end();
+      } catch (error) {
+        statsLogger.error("Error closing connection during cleanup", error, {
+          operation: "clear_connection_error",
+        });
+      }
+    }
+
+    this.connections.delete(hostKey);
+  }
+
   private cleanup(): void {
     const now = Date.now();
     const maxAge = 10 * 60 * 1000;
@@ -385,6 +494,27 @@ class SSHConnectionPool {
         this.connections.set(hostKey, activeConnections);
       }
     }
+  }
+
+  clearAllConnections(): void {
+    statsLogger.info("Clearing ALL connections from pool", {
+      operation: "clear_all_connections",
+      totalHosts: this.connections.size,
+    });
+
+    for (const [hostKey, connections] of this.connections.entries()) {
+      for (const conn of connections) {
+        try {
+          conn.client.end();
+        } catch (error) {
+          statsLogger.error("Error closing connection during full cleanup", error, {
+            operation: "clear_all_error",
+            hostKey,
+          });
+        }
+      }
+    }
+    this.connections.clear();
   }
 
   destroy(): void {
@@ -604,6 +734,14 @@ interface SSHHostWithCredentials {
   createdAt: string;
   updatedAt: string;
   userId: string;
+
+  // SOCKS5 Proxy configuration
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
 }
 
 type StatusEntry = {
@@ -742,33 +880,51 @@ class PollingManager {
   }
 
   private async pollHostStatus(host: SSHHostWithCredentials): Promise<void> {
+    // Refresh host data from database to get latest settings
+    const refreshedHost = await fetchHostById(host.id, host.userId);
+    if (!refreshedHost) {
+      statsLogger.warn("Host not found during status polling", {
+        operation: "poll_host_status",
+        hostId: host.id,
+      });
+      return;
+    }
+
     try {
-      const isOnline = await tcpPing(host.ip, host.port, 5000);
+      const isOnline = await tcpPing(refreshedHost.ip, refreshedHost.port, 5000);
       const statusEntry: StatusEntry = {
         status: isOnline ? "online" : "offline",
         lastChecked: new Date().toISOString(),
       };
-      this.statusStore.set(host.id, statusEntry);
+      this.statusStore.set(refreshedHost.id, statusEntry);
     } catch (error) {
       const statusEntry: StatusEntry = {
         status: "offline",
         lastChecked: new Date().toISOString(),
       };
-      this.statusStore.set(host.id, statusEntry);
+      this.statusStore.set(refreshedHost.id, statusEntry);
     }
   }
 
   private async pollHostMetrics(host: SSHHostWithCredentials): Promise<void> {
-    const config = this.pollingConfigs.get(host.id);
+    // Refresh host data from database to get latest SOCKS5 and other settings
+    const refreshedHost = await fetchHostById(host.id, host.userId);
+    if (!refreshedHost) {
+      statsLogger.warn("Host not found during metrics polling", {
+        operation: "poll_host_metrics",
+        hostId: host.id,
+      });
+      return;
+    }
+
+    const config = this.pollingConfigs.get(refreshedHost.id);
     if (!config || !config.statsConfig.metricsEnabled) {
       return;
     }
 
-    const currentHost = config.host;
-
     try {
-      const metrics = await collectMetrics(currentHost);
-      this.metricsStore.set(currentHost.id, {
+      const metrics = await collectMetrics(refreshedHost);
+      this.metricsStore.set(refreshedHost.id, {
         data: metrics,
         timestamp: Date.now(),
       });
@@ -776,12 +932,12 @@ class PollingManager {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      const latestConfig = this.pollingConfigs.get(currentHost.id);
+      const latestConfig = this.pollingConfigs.get(refreshedHost.id);
       if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
         statsLogger.warn("Failed to collect metrics for host", {
           operation: "metrics_poll_failed",
-          hostId: currentHost.id,
-          hostName: currentHost.name,
+          hostId: refreshedHost.id,
+          hostName: refreshedHost.name,
           error: errorMessage,
         });
       }
@@ -1007,6 +1163,15 @@ async function resolveHostCredentials(
       createdAt: host.createdAt,
       updatedAt: host.updatedAt,
       userId: host.userId,
+      // SOCKS5 proxy settings
+      useSocks5: !!host.useSocks5,
+      socks5Host: host.socks5Host || undefined,
+      socks5Port: host.socks5Port || undefined,
+      socks5Username: host.socks5Username || undefined,
+      socks5Password: host.socks5Password || undefined,
+      socks5ProxyChain: host.socks5ProxyChain
+        ? JSON.parse(host.socks5ProxyChain as string)
+        : undefined,
     };
 
     if (host.credentialId) {
@@ -1056,6 +1221,16 @@ async function resolveHostCredentials(
     } else {
       addLegacyCredentials(baseHost, host);
     }
+
+    statsLogger.info("Resolved host credentials with SOCKS5 settings", {
+      operation: "resolve_host",
+      hostId: host.id as number,
+      useSocks5: baseHost.useSocks5,
+      socks5Host: baseHost.socks5Host,
+      socks5Port: baseHost.socks5Port,
+      hasSocks5ProxyChain: !!(baseHost.socks5ProxyChain && (baseHost.socks5ProxyChain as any[]).length > 0),
+      proxyChainLength: baseHost.socks5ProxyChain ? (baseHost.socks5ProxyChain as any[]).length : 0,
+    });
 
     return baseHost as unknown as SSHHostWithCredentials;
   } catch (error) {
@@ -1194,6 +1369,7 @@ async function withSshConnection<T>(
   fn: (client: Client) => Promise<T>,
 ): Promise<T> {
   const client = await connectionPool.getConnection(host);
+
   try {
     const result = await fn(client);
     return result;
@@ -1402,6 +1578,20 @@ app.get("/status/:id", validateHostId, async (req, res) => {
   res.json(statusEntry);
 });
 
+app.post("/clear-connections", async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  connectionPool.clearAllConnections();
+  res.json({ message: "All SSH connections cleared" });
+});
+
 app.post("/refresh", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -1411,6 +1601,9 @@ app.post("/refresh", async (req, res) => {
       code: "SESSION_EXPIRED",
     });
   }
+
+  // Clear all connections to ensure fresh connections with updated settings
+  connectionPool.clearAllConnections();
 
   await pollingManager.refreshHostPolling(userId);
   res.json({ message: "Polling refreshed" });
@@ -1434,6 +1627,9 @@ app.post("/host-updated", async (req, res) => {
   try {
     const host = await fetchHostById(hostId, userId);
     if (host) {
+      // Clear existing connections for this host to ensure new settings (like SOCKS5) are used
+      connectionPool.clearHostConnections(host);
+
       await pollingManager.startPollingForHost(host);
       res.json({ message: "Host polling started" });
     } else {

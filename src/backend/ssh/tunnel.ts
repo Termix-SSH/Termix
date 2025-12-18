@@ -19,6 +19,7 @@ import { tunnelLogger, sshLogger } from "../utils/logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { DataCrypto } from "../utils/data-crypto.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 
 const app = express();
 app.use(
@@ -1016,6 +1017,51 @@ async function connectSSHTunnel(
     });
   }
 
+  // Check if SOCKS5 proxy is enabled (either single proxy or chain)
+  if (
+    tunnelConfig.useSocks5 &&
+    (tunnelConfig.socks5Host ||
+      (tunnelConfig.socks5ProxyChain && tunnelConfig.socks5ProxyChain.length > 0))
+  ) {
+    try {
+      const socks5Socket = await createSocks5Connection(
+        tunnelConfig.sourceIP,
+        tunnelConfig.sourceSSHPort,
+        {
+          useSocks5: tunnelConfig.useSocks5,
+          socks5Host: tunnelConfig.socks5Host,
+          socks5Port: tunnelConfig.socks5Port,
+          socks5Username: tunnelConfig.socks5Username,
+          socks5Password: tunnelConfig.socks5Password,
+          socks5ProxyChain: tunnelConfig.socks5ProxyChain,
+        },
+      );
+
+      if (socks5Socket) {
+        connOptions.sock = socks5Socket;
+        conn.connect(connOptions);
+        return;
+      }
+    } catch (socks5Error) {
+      tunnelLogger.error("SOCKS5 connection failed for tunnel", socks5Error, {
+        operation: "socks5_connect",
+        tunnelName,
+        proxyHost: tunnelConfig.socks5Host,
+        proxyPort: tunnelConfig.socks5Port || 1080,
+      });
+      broadcastTunnelStatus(tunnelName, {
+        connected: false,
+        status: CONNECTION_STATES.FAILED,
+        reason:
+          "SOCKS5 proxy connection failed: " +
+          (socks5Error instanceof Error
+            ? socks5Error.message
+            : "Unknown error"),
+      });
+      return;
+    }
+  }
+
   conn.connect(connOptions);
 }
 
@@ -1248,7 +1294,57 @@ async function killRemoteTunnelByMarker(
     callback(err);
   });
 
-  conn.connect(connOptions);
+  // Check if SOCKS5 proxy is enabled (either single proxy or chain)
+  if (
+    tunnelConfig.useSocks5 &&
+    (tunnelConfig.socks5Host ||
+      (tunnelConfig.socks5ProxyChain && tunnelConfig.socks5ProxyChain.length > 0))
+  ) {
+    (async () => {
+      try {
+        const socks5Socket = await createSocks5Connection(
+          tunnelConfig.sourceIP,
+          tunnelConfig.sourceSSHPort,
+          {
+            useSocks5: tunnelConfig.useSocks5,
+            socks5Host: tunnelConfig.socks5Host,
+            socks5Port: tunnelConfig.socks5Port,
+            socks5Username: tunnelConfig.socks5Username,
+            socks5Password: tunnelConfig.socks5Password,
+            socks5ProxyChain: tunnelConfig.socks5ProxyChain,
+          },
+        );
+
+        if (socks5Socket) {
+          connOptions.sock = socks5Socket;
+          conn.connect(connOptions);
+        } else {
+          callback(new Error("Failed to create SOCKS5 connection"));
+        }
+      } catch (socks5Error) {
+        tunnelLogger.error(
+          "SOCKS5 connection failed for killing tunnel",
+          socks5Error,
+          {
+            operation: "socks5_connect_kill",
+            tunnelName,
+            proxyHost: tunnelConfig.socks5Host,
+            proxyPort: tunnelConfig.socks5Port || 1080,
+          },
+        );
+        callback(
+          new Error(
+            "SOCKS5 proxy connection failed: " +
+              (socks5Error instanceof Error
+                ? socks5Error.message
+                : "Unknown error"),
+          ),
+        );
+      }
+    })();
+  } else {
+    conn.connect(connOptions);
+  }
 }
 
 app.get("/ssh/tunnel/status", (req, res) => {
@@ -1453,6 +1549,11 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 retryInterval: tunnelConnection.retryInterval * 1000,
                 autoStart: tunnelConnection.autoStart,
                 isPinned: host.pin,
+                useSocks5: host.useSocks5,
+                socks5Host: host.socks5Host,
+                socks5Port: host.socks5Port,
+                socks5Username: host.socks5Username,
+                socks5Password: host.socks5Password,
               };
 
               autoStartTunnels.push(tunnelConfig);

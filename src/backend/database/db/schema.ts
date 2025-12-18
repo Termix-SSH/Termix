@@ -90,6 +90,14 @@ export const sshData = sqliteTable("ssh_data", {
   statsConfig: text("stats_config"),
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
+
+  useSocks5: integer("use_socks5", { mode: "boolean" }),
+  socks5Host: text("socks5_host"),
+  socks5Port: integer("socks5_port"),
+  socks5Username: text("socks5_username"),
+  socks5Password: text("socks5_password"),
+  socks5ProxyChain: text("socks5_proxy_chain"), // JSON array for proxy chains
+
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

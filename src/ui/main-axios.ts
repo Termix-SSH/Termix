@@ -867,6 +867,12 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
+      useSocks5: Boolean(hostData.useSocks5),
+      socks5Host: hostData.socks5Host || null,
+      socks5Port: hostData.socks5Port || null,
+      socks5Username: hostData.socks5Username || null,
+      socks5Password: hostData.socks5Password || null,
+      socks5ProxyChain: hostData.socks5ProxyChain || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -933,6 +939,12 @@ export async function updateSSHHost(
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
+      useSocks5: Boolean(hostData.useSocks5),
+      socks5Host: hostData.socks5Host || null,
+      socks5Port: hostData.socks5Port || null,
+      socks5Username: hostData.socks5Username || null,
+      socks5Password: hostData.socks5Password || null,
+      socks5ProxyChain: hostData.socks5ProxyChain || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1244,6 +1256,12 @@ export async function connectSSH(
     credentialId?: number;
     userId?: string;
     forceKeyboardInteractive?: boolean;
+    useSocks5?: boolean;
+    socks5Host?: string;
+    socks5Port?: number;
+    socks5Username?: string;
+    socks5Password?: string;
+    socks5ProxyChain?: unknown;
   },
 ): Promise<Record<string, unknown>> {
   try {
@@ -3109,3 +3127,4 @@ export async function unlinkOIDCFromPasswordAccount(
     throw handleApiError(error, "unlink OIDC from password account");
   }
 }
+

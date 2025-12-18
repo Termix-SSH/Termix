@@ -44,8 +44,16 @@ export interface SSHHost {
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
-  statsConfig?: string;
+  statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
+
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
+
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +65,14 @@ export interface JumpHostData {
 export interface QuickActionData {
   name: string;
   snippetId: number;
+}
+
+export interface ProxyNode {
+  host: string;
+  port: number;
+  type: 4 | 5; // SOCKS4 or SOCKS5
+  username?: string;
+  password?: string;
 }
 
 export interface SSHHostData {
@@ -84,6 +100,14 @@ export interface SSHHostData {
   quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
+
+  // SOCKS5 Proxy configuration
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
 }
 
 export interface SSHFolder {
@@ -182,6 +206,14 @@ export interface TunnelConfig {
   retryInterval: number;
   autoStart: boolean;
   isPinned: boolean;
+
+  // SOCKS5 Proxy configuration
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
 }
 
 export interface TunnelStatus {

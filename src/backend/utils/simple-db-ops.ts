@@ -2,7 +2,7 @@ import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
 import { DataCrypto } from "./data-crypto.js";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
-type TableName = "users" | "ssh_data" | "ssh_credentials" | "recent_activity";
+type TableName = "users" | "ssh_data" | "ssh_credentials" | "recent_activity" | "socks5_proxy_presets";
 
 class SimpleDBOps {
   static async insert<T extends Record<string, unknown>>(
