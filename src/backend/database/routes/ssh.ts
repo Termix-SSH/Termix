@@ -235,11 +235,13 @@ router.post(
       enableTerminal,
       enableTunnel,
       enableFileManager,
+      enableDocker,
       defaultPath,
       tunnelConnections,
       jumpHosts,
       quickActions,
       statsConfig,
+      dockerConfig,
       terminalConfig,
       forceKeyboardInteractive,
     } = hostData;
@@ -280,8 +282,10 @@ router.post(
         ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
+      enableDocker: enableDocker ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
+      dockerConfig: dockerConfig ? JSON.stringify(dockerConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
     };
@@ -341,8 +345,12 @@ router.post(
           ? JSON.parse(createdHost.jumpHosts as string)
           : [],
         enableFileManager: !!createdHost.enableFileManager,
+        enableDocker: !!createdHost.enableDocker,
         statsConfig: createdHost.statsConfig
           ? JSON.parse(createdHost.statsConfig as string)
+          : undefined,
+        dockerConfig: createdHost.dockerConfig
+          ? JSON.parse(createdHost.dockerConfig as string)
           : undefined,
       };
 
@@ -457,11 +465,13 @@ router.put(
       enableTerminal,
       enableTunnel,
       enableFileManager,
+      enableDocker,
       defaultPath,
       tunnelConnections,
       jumpHosts,
       quickActions,
       statsConfig,
+      dockerConfig,
       terminalConfig,
       forceKeyboardInteractive,
     } = hostData;
@@ -503,8 +513,10 @@ router.put(
         ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
+      enableDocker: enableDocker ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
+      dockerConfig: dockerConfig ? JSON.stringify(dockerConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
     };
@@ -582,8 +594,12 @@ router.put(
           ? JSON.parse(updatedHost.jumpHosts as string)
           : [],
         enableFileManager: !!updatedHost.enableFileManager,
+        enableDocker: !!updatedHost.enableDocker,
         statsConfig: updatedHost.statsConfig
           ? JSON.parse(updatedHost.statsConfig as string)
+          : undefined,
+        dockerConfig: updatedHost.dockerConfig
+          ? JSON.parse(updatedHost.dockerConfig as string)
           : undefined,
       };
 
@@ -683,8 +699,12 @@ router.get(
               ? JSON.parse(row.quickActions as string)
               : [],
             enableFileManager: !!row.enableFileManager,
+            enableDocker: !!row.enableDocker,
             statsConfig: row.statsConfig
               ? JSON.parse(row.statsConfig as string)
+              : undefined,
+            dockerConfig: row.dockerConfig
+              ? JSON.parse(row.dockerConfig as string)
               : undefined,
             terminalConfig: row.terminalConfig
               ? JSON.parse(row.terminalConfig as string)

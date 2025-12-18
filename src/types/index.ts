@@ -14,6 +14,17 @@ export interface QuickAction {
   snippetId: number;
 }
 
+export interface DockerConfig {
+  connectionType: "socket" | "tcp" | "tls";
+  socketPath?: string;
+  host?: string;
+  port?: number;
+  tlsVerify?: boolean;
+  tlsCaCert?: string;
+  tlsCert?: string;
+  tlsKey?: string;
+}
+
 export interface SSHHost {
   id: number;
   name: string;
@@ -40,11 +51,13 @@ export interface SSHHost {
   enableTerminal: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
+  enableDocker: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
   statsConfig?: string;
+  dockerConfig?: string;
   terminalConfig?: TerminalConfig;
   createdAt: string;
   updatedAt: string;
@@ -77,12 +90,14 @@ export interface SSHHostData {
   enableTerminal?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
+  enableDocker?: boolean;
   defaultPath?: string;
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
   jumpHosts?: JumpHostData[];
   quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
+  dockerConfig?: DockerConfig | string;
   terminalConfig?: TerminalConfig;
 }
 
@@ -348,6 +363,7 @@ export interface TabContextTab {
   | "user_profile"
   | "rdp"
   | "vnc";
+  | "docker";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;

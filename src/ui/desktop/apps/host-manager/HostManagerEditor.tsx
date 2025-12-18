@@ -566,6 +566,19 @@ export function HostManagerEditor({
           }),
         )
         .default([]),
+      enableDocker: z.boolean().default(false),
+      dockerConfig: z
+        .object({
+          connectionType: z.enum(["socket", "tcp", "tls"]).default("socket"),
+          socketPath: z.string().optional(),
+          host: z.string().optional(),
+          port: z.coerce.number().min(1).max(65535).optional(),
+          tlsVerify: z.boolean().default(true),
+          tlsCaCert: z.string().optional(),
+          tlsCert: z.string().optional(),
+          tlsKey: z.string().optional(),
+        })
+        .optional(),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -658,6 +671,17 @@ export function HostManagerEditor({
       statsConfig: DEFAULT_STATS_CONFIG,
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
       forceKeyboardInteractive: false,
+      enableDocker: false,
+      dockerConfig: {
+        connectionType: "socket" as const,
+        socketPath: "/var/run/docker.sock",
+        host: "",
+        port: 2375,
+        tlsVerify: true,
+        tlsCaCert: "",
+        tlsCert: "",
+        tlsKey: "",
+      },
     },
   });
 
@@ -712,6 +736,28 @@ export function HostManagerEditor({
 
       parsedStatsConfig = { ...DEFAULT_STATS_CONFIG, ...parsedStatsConfig };
 
+      let parsedDockerConfig = {
+        connectionType: "socket" as const,
+        socketPath: "/var/run/docker.sock",
+        host: "",
+        port: 2375,
+        tlsVerify: true,
+        tlsCaCert: "",
+        tlsCert: "",
+        tlsKey: "",
+      };
+      try {
+        if (cleanedHost.dockerConfig) {
+          const parsed =
+            typeof cleanedHost.dockerConfig === "string"
+              ? JSON.parse(cleanedHost.dockerConfig)
+              : cleanedHost.dockerConfig;
+          parsedDockerConfig = { ...parsedDockerConfig, ...parsed };
+        }
+      } catch (error) {
+        console.error("Failed to parse dockerConfig:", error);
+      }
+
       const formData = {
         name: cleanedHost.name || "",
         ip: cleanedHost.ip || "",
@@ -753,6 +799,8 @@ export function HostManagerEditor({
             : [],
         },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
+        enableDocker: Boolean(cleanedHost.enableDocker),
+        dockerConfig: parsedDockerConfig,
       };
 
       if (defaultAuthType === "password") {
@@ -804,6 +852,17 @@ export function HostManagerEditor({
         statsConfig: DEFAULT_STATS_CONFIG,
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
+        enableDocker: false,
+        dockerConfig: {
+          connectionType: "socket" as const,
+          socketPath: "/var/run/docker.sock",
+          host: "",
+          port: 2375,
+          tlsVerify: true,
+          tlsCaCert: "",
+          tlsCert: "",
+          tlsKey: "",
+        },
       };
 
       form.reset(defaultFormData);
@@ -861,6 +920,8 @@ export function HostManagerEditor({
         authType: data.authType,
         overrideCredentialUsername: Boolean(data.overrideCredentialUsername),
         enableTerminal: Boolean(data.enableTerminal),
+        enableDocker: Boolean(data.enableDocker),
+        dockerConfig: data.dockerConfig || null,
         enableTunnel: Boolean(data.enableTunnel),
         enableFileManager: Boolean(data.enableFileManager),
         defaultPath: data.defaultPath || "/",
@@ -948,9 +1009,8 @@ export function HostManagerEditor({
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
       if (savedHost?.id) {
-        const { notifyHostCreatedOrUpdated } = await import(
-          "@/ui/main-axios.ts"
-        );
+        const { notifyHostCreatedOrUpdated } =
+          await import("@/ui/main-axios.ts");
         notifyHostCreatedOrUpdated(savedHost.id);
       }
     } catch (error) {
@@ -983,6 +1043,8 @@ export function HostManagerEditor({
       setActiveTab("general");
     } else if (errors.enableTerminal || errors.terminalConfig) {
       setActiveTab("terminal");
+    } else if (errors.enableDocker || errors.dockerConfig) {
+      setActiveTab("docker");
     } else if (errors.enableTunnel || errors.tunnelConnections) {
       setActiveTab("tunnel");
     } else if (errors.enableFileManager || errors.defaultPath) {
@@ -1175,6 +1237,7 @@ export function HostManagerEditor({
                   <TabsTrigger value="terminal">
                     {t("hosts.terminal")}
                   </TabsTrigger>
+                  <TabsTrigger value="docker">Docker</TabsTrigger>
                   <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
                   <TabsTrigger value="file_manager">
                     {t("hosts.fileManager")}
@@ -2544,6 +2607,287 @@ export function HostManagerEditor({
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
+                </TabsContent>
+                <TabsContent value="docker" className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="enableDocker"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Enable Docker</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Enable Docker integration for this host
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("enableDocker") && (
+                    <>
+                      <Alert className="mt-4">
+                        <AlertDescription>
+                          <strong>Docker Configuration</strong>
+                          <div className="mt-2">
+                            Configure connection to Docker daemon on this host.
+                            You can connect via Unix socket, TCP, or secure TLS
+                            connection.
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+
+                      <FormField
+                        control={form.control}
+                        name="dockerConfig.connectionType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Connection Type</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select connection type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="socket">
+                                  Unix Socket
+                                </SelectItem>
+                                <SelectItem value="tcp">TCP</SelectItem>
+                                <SelectItem value="tls">
+                                  TCP with TLS
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Choose how to connect to the Docker daemon
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      {form.watch("dockerConfig.connectionType") ===
+                        "socket" && (
+                        <FormField
+                          control={form.control}
+                          name="dockerConfig.socketPath"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Socket Path</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="/var/run/docker.sock"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Path to the Docker Unix socket (default:
+                                /var/run/docker.sock)
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {(form.watch("dockerConfig.connectionType") === "tcp" ||
+                        form.watch("dockerConfig.connectionType") ===
+                          "tls") && (
+                        <>
+                          <div className="grid grid-cols-12 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="dockerConfig.host"
+                              render={({ field }) => (
+                                <FormItem className="col-span-8">
+                                  <FormLabel>Docker Host</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="localhost or IP address"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="dockerConfig.port"
+                              render={({ field }) => (
+                                <FormItem className="col-span-4">
+                                  <FormLabel>Port</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      placeholder="2375 or 2376"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {form.watch("dockerConfig.connectionType") === "tls" && (
+                        <Accordion type="multiple" className="w-full mt-4">
+                          <AccordionItem value="tls-config">
+                            <AccordionTrigger>
+                              TLS Configuration
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-4 pt-4">
+                              <FormField
+                                control={form.control}
+                                name="dockerConfig.tlsVerify"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                      <FormLabel>Verify TLS</FormLabel>
+                                      <FormDescription>
+                                        Verify the Docker daemon's certificate
+                                      </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                      <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="dockerConfig.tlsCaCert"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>CA Certificate</FormLabel>
+                                    <FormControl>
+                                      <CodeMirror
+                                        value={field.value || ""}
+                                        onChange={field.onChange}
+                                        placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                                        theme={oneDark}
+                                        className="border border-input rounded-md"
+                                        minHeight="120px"
+                                        basicSetup={{
+                                          lineNumbers: true,
+                                          foldGutter: false,
+                                          dropCursor: false,
+                                          allowMultipleSelections: false,
+                                          highlightSelectionMatches: false,
+                                          searchKeymap: false,
+                                          scrollPastEnd: false,
+                                        }}
+                                        extensions={[
+                                          EditorView.theme({
+                                            ".cm-scroller": {
+                                              overflow: "auto",
+                                            },
+                                          }),
+                                        ]}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Certificate Authority certificate (PEM
+                                      format)
+                                    </FormDescription>
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="dockerConfig.tlsCert"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Client Certificate</FormLabel>
+                                    <FormControl>
+                                      <CodeMirror
+                                        value={field.value || ""}
+                                        onChange={field.onChange}
+                                        placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                                        theme={oneDark}
+                                        className="border border-input rounded-md"
+                                        minHeight="120px"
+                                        basicSetup={{
+                                          lineNumbers: true,
+                                          foldGutter: false,
+                                          dropCursor: false,
+                                          allowMultipleSelections: false,
+                                          highlightSelectionMatches: false,
+                                          searchKeymap: false,
+                                          scrollPastEnd: false,
+                                        }}
+                                        extensions={[
+                                          EditorView.theme({
+                                            ".cm-scroller": {
+                                              overflow: "auto",
+                                            },
+                                          }),
+                                        ]}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Client certificate (PEM format)
+                                    </FormDescription>
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="dockerConfig.tlsKey"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Client Key</FormLabel>
+                                    <FormControl>
+                                      <CodeMirror
+                                        value={field.value || ""}
+                                        onChange={field.onChange}
+                                        placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
+                                        theme={oneDark}
+                                        className="border border-input rounded-md"
+                                        minHeight="120px"
+                                        basicSetup={{
+                                          lineNumbers: true,
+                                          foldGutter: false,
+                                          dropCursor: false,
+                                          allowMultipleSelections: false,
+                                          highlightSelectionMatches: false,
+                                          searchKeymap: false,
+                                          scrollPastEnd: false,
+                                        }}
+                                        extensions={[
+                                          EditorView.theme({
+                                            ".cm-scroller": {
+                                              overflow: "auto",
+                                            },
+                                          }),
+                                        ]}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Client private key (PEM format)
+                                    </FormDescription>
+                                  </FormItem>
+                                )}
+                              />
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      )}
+                    </>
+                  )}
                 </TabsContent>
                 <TabsContent value="tunnel">
                   <FormField

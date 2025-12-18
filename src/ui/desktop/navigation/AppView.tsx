@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Terminal } from "@/ui/desktop/apps/terminal/Terminal.tsx";
-import { Server as ServerView } from "@/ui/desktop/apps/server/Server.tsx";
+import { ServerStats as ServerView } from "@/ui/desktop/apps/server-stats/ServerStats.tsx";
 import { FileManager } from "@/ui/desktop/apps/file-manager/FileManager.tsx";
 import { GuacamoleDisplay, type GuacamoleConnectionConfig } from "@/ui/desktop/apps/guacamole/GuacamoleDisplay.tsx";
+import { TunnelManager } from "@/ui/desktop/apps/tunnel/TunnelManager.tsx";
+import { DockerManager } from "@/ui/desktop/apps/docker/DockerManager.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -61,7 +63,9 @@ export function AppView({
           tab.type === "server" ||
           tab.type === "file_manager" ||
           tab.type === "rdp" ||
-          tab.type === "vnc",
+          tab.type === "vnc", ||
+          tab.type === "tunnel" ||
+          tab.type === "docker",
       ),
     [tabs],
   );
@@ -213,7 +217,10 @@ export function AppView({
     const mainTab = terminalTabs.find((tab: TabData) => tab.id === currentTab);
 
     if (allSplitScreenTab.length === 0 && mainTab) {
-      const isFileManagerTab = mainTab.type === "file_manager";
+      const isFileManagerTab =
+        mainTab.type === "file_manager" ||
+        mainTab.type === "tunnel" ||
+        mainTab.type === "docker";
       const newStyle = {
         position: "absolute" as const,
         top: isFileManagerTab ? 0 : 4,
@@ -260,9 +267,14 @@ export function AppView({
           const isVisible =
             hasStyle || (allSplitScreenTab.length === 0 && t.id === currentTab);
 
+          const effectiveVisible = isVisible;
+
           const previousStyle = previousStylesRef.current[t.id];
 
-          const isFileManagerTab = t.type === "file_manager";
+          const isFileManagerTab =
+            t.type === "file_manager" ||
+            t.type === "tunnel" ||
+            t.type === "docker";
           const standardStyle = {
             position: "absolute" as const,
             top: isFileManagerTab ? 0 : 4,
@@ -273,16 +285,24 @@ export function AppView({
 
           const finalStyle: React.CSSProperties = hasStyle
             ? { ...styles[t.id], overflow: "hidden" }
-            : ({
-                ...(previousStyle || standardStyle),
-                opacity: 0,
-                pointerEvents: "none",
-                zIndex: 0,
-                transition: "opacity 150ms ease-in-out",
-                overflow: "hidden",
-              } as React.CSSProperties);
-
-          const effectiveVisible = isVisible;
+            : effectiveVisible
+              ? {
+                  ...(previousStyle || standardStyle),
+                  opacity: 1,
+                  pointerEvents: "auto",
+                  zIndex: 20,
+                  display: "block",
+                  transition: "opacity 150ms ease-in-out",
+                  overflow: "hidden",
+                }
+              : ({
+                  ...(previousStyle || standardStyle),
+                  opacity: 0,
+                  pointerEvents: "none",
+                  zIndex: 0,
+                  transition: "opacity 150ms ease-in-out",
+                  overflow: "hidden",
+                } as React.CSSProperties);
 
           const isTerminal = t.type === "terminal";
           const terminalConfig = {
@@ -333,6 +353,22 @@ export function AppView({
                       Missing connection configuration
                     </div>
                   )
+                ) : t.type === "tunnel" ? (
+                  <TunnelManager
+                    hostConfig={t.hostConfig}
+                    title={t.title}
+                    isVisible={effectiveVisible}
+                    isTopbarOpen={isTopbarOpen}
+                    embedded
+                  />
+                ) : t.type === "docker" ? (
+                  <DockerManager
+                    hostConfig={t.hostConfig}
+                    title={t.title}
+                    isVisible={effectiveVisible}
+                    isTopbarOpen={isTopbarOpen}
+                    embedded
+                  />
                 ) : (
                   <FileManager
                     embedded
@@ -652,6 +688,8 @@ export function AppView({
 
   const currentTabData = tabs.find((tab: TabData) => tab.id === currentTab);
   const isFileManager = currentTabData?.type === "file_manager";
+  const isTunnel = currentTabData?.type === "tunnel";
+  const isDocker = currentTabData?.type === "docker";
   const isTerminal = currentTabData?.type === "terminal";
   const isSplitScreen = allSplitScreenTab.length > 0;
 
@@ -669,7 +707,7 @@ export function AppView({
   const bottomMarginPx = 8;
 
   let containerBackground = "var(--color-dark-bg)";
-  if (isFileManager && !isSplitScreen) {
+  if ((isFileManager || isTunnel || isDocker) && !isSplitScreen) {
     containerBackground = "var(--color-dark-bg-darkest)";
   } else if (isTerminal) {
     containerBackground = terminalBackgroundColor;

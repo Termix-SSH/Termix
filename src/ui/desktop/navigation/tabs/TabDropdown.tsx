@@ -12,6 +12,8 @@ import {
   Terminal as TerminalIcon,
   Server as ServerIcon,
   Folder as FolderIcon,
+  ArrowDownUp as TunnelIcon,
+  Container as DockerIcon,
   Shield as AdminIcon,
   Network as SshManagerIcon,
   User as UserIcon,
@@ -33,6 +35,10 @@ export function TabDropdown(): React.ReactElement {
         return <ServerIcon className="h-4 w-4" />;
       case "file_manager":
         return <FolderIcon className="h-4 w-4" />;
+      case "tunnel":
+        return <TunnelIcon className="h-4 w-4" />;
+      case "docker":
+        return <DockerIcon className="h-4 w-4" />;
       case "user_profile":
         return <UserIcon className="h-4 w-4" />;
       case "ssh_manager":
@@ -52,6 +58,10 @@ export function TabDropdown(): React.ReactElement {
         return tab.title || t("nav.serverStats");
       case "file_manager":
         return tab.title || t("nav.fileManager");
+      case "tunnel":
+        return tab.title || t("nav.tunnels");
+      case "docker":
+        return tab.title || t("nav.docker");
       case "user_profile":
         return tab.title || t("nav.userProfile");
       case "ssh_manager":

@@ -856,6 +856,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       enableTerminal: Boolean(hostData.enableTerminal),
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
+      enableDocker: Boolean(hostData.enableDocker),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
@@ -864,6 +865,11 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig
           : JSON.stringify(hostData.statsConfig)
+        : null,
+      dockerConfig: hostData.dockerConfig
+        ? typeof hostData.dockerConfig === "string"
+          ? hostData.dockerConfig
+          : JSON.stringify(hostData.dockerConfig)
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
@@ -922,6 +928,7 @@ export async function updateSSHHost(
       enableTerminal: Boolean(hostData.enableTerminal),
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
+      enableDocker: Boolean(hostData.enableDocker),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
@@ -930,6 +937,11 @@ export async function updateSSHHost(
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig
           : JSON.stringify(hostData.statsConfig)
+        : null,
+      dockerConfig: hostData.dockerConfig
+        ? typeof hostData.dockerConfig === "string"
+          ? hostData.dockerConfig
+          : JSON.stringify(hostData.dockerConfig)
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
