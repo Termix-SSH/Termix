@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
+import { Textarea } from "@/components/ui/textarea.tsx";
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import {
@@ -565,6 +566,8 @@ export function HostManagerEditor({
           }),
         )
         .default([]),
+      notes: z.string().optional(),
+      expirationDate: z.string().optional(),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -657,6 +660,8 @@ export function HostManagerEditor({
       statsConfig: DEFAULT_STATS_CONFIG,
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
       forceKeyboardInteractive: false,
+      notes: "",
+      expirationDate: "",
     },
   });
 
@@ -752,6 +757,8 @@ export function HostManagerEditor({
             : [],
         },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
+        notes: cleanedHost.notes || "",
+        expirationDate: cleanedHost.expirationDate || "",
       };
 
       if (defaultAuthType === "password") {
@@ -849,6 +856,9 @@ export function HostManagerEditor({
         }
       }
 
+      // Debug logging
+      console.log("DEBUG - Form data:", { notes: data.notes, expirationDate: data.expirationDate });
+
       const submitData: Record<string, unknown> = {
         name: data.name,
         ip: data.ip,
@@ -869,7 +879,11 @@ export function HostManagerEditor({
         statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
         terminalConfig: data.terminalConfig || DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: Boolean(data.forceKeyboardInteractive),
+        notes: data.notes || "",
+        expirationDate: data.expirationDate || "",
       };
+
+      console.log("DEBUG - submitData:", { notes: submitData.notes, expirationDate: submitData.expirationDate });
 
       submitData.credentialId = null;
       submitData.password = null;
@@ -1386,6 +1400,47 @@ export function HostManagerEditor({
                             <Switch
                               checked={field.value}
                               onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="expirationDate"
+                      render={({ field }) => (
+                        <FormItem className="col-span-10">
+                          <FormLabel>{t("hosts.expirationDate")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              placeholder={t("placeholders.expirationDate")}
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem className="col-span-26">
+                          <FormLabel>{t("hosts.notes")}</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder={t("placeholders.notes")}
+                              className="resize-none"
+                              rows={3}
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
                             />
                           </FormControl>
                         </FormItem>

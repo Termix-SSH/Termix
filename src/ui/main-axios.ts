@@ -867,6 +867,8 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
+      notes: hostData.notes || "",
+      expirationDate: hostData.expirationDate || "",
     };
 
     if (!submitData.enableTunnel) {
@@ -933,6 +935,8 @@ export async function updateSSHHost(
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
+      notes: hostData.notes || "",
+      expirationDate: hostData.expirationDate || "",
     };
 
     if (!submitData.enableTunnel) {

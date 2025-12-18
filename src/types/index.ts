@@ -46,6 +46,8 @@ export interface SSHHost {
   quickActions?: QuickAction[];
   statsConfig?: string;
   terminalConfig?: TerminalConfig;
+  notes?: string;
+  expirationDate?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,6 +86,8 @@ export interface SSHHostData {
   quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
+  notes?: string;
+  expirationDate?: string;
 }
 
 export interface SSHFolder {

@@ -90,6 +90,8 @@ export const sshData = sqliteTable("ssh_data", {
   statsConfig: text("stats_config"),
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
+  notes: text("notes"),
+  expirationDate: text("expiration_date"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

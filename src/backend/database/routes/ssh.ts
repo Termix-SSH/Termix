@@ -242,6 +242,8 @@ router.post(
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      notes,
+      expirationDate,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -284,6 +286,8 @@ router.post(
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      notes: notes || null,
+      expirationDate: expirationDate || null,
     };
 
     if (effectiveAuthType === "password") {
@@ -464,7 +468,13 @@ router.put(
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      notes,
+      expirationDate,
     } = hostData;
+
+    // Temporary logging to debug notes and expirationDate
+    console.log("DEBUG - Update host data:", { notes, expirationDate });
+
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
@@ -507,6 +517,8 @@ router.put(
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      notes: notes || null,
+      expirationDate: expirationDate || null,
     };
 
     if (effectiveAuthType === "password") {

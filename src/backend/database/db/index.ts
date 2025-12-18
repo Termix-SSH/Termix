@@ -208,6 +208,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         force_keyboard_interactive TEXT,
         stats_config TEXT,
         terminal_config TEXT,
+        notes TEXT,
+        expiration_date TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -550,6 +552,10 @@ const migrateSchema = () => {
       });
     }
   }
+
+  // Add new columns for notes and expiration_date
+  addColumnIfNotExists("ssh_data", "notes", "TEXT");
+  addColumnIfNotExists("ssh_data", "expiration_date", "TEXT");
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",
