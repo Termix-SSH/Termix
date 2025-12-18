@@ -3,7 +3,6 @@ import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Status, StatusIndicator } from "@/components/ui/shadcn-io/status";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Tunnel } from "@/ui/desktop/apps/tunnel/Tunnel.tsx";
 import {
   getServerStatusById,
   getServerMetricsById,
@@ -64,7 +63,7 @@ interface ServerProps {
   embedded?: boolean;
 }
 
-export function Server({
+export function ServerStats({
   hostConfig,
   title,
   isVisible = true,
@@ -462,7 +461,7 @@ export function Server({
           {(metricsEnabled && showStatsUI) ||
           (currentHostConfig?.quickActions &&
             currentHostConfig.quickActions.length > 0) ? (
-            <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker p-4 overflow-y-auto relative flex-1 flex flex-col">
+            <div className="rounded-lg border-2 border-dark-border m-3 p-4 overflow-y-auto relative flex-1 flex flex-col">
               {currentHostConfig?.quickActions &&
                 currentHostConfig.quickActions.length > 0 && (
                   <div className={metricsEnabled && showStatsUI ? "mb-4" : ""}>
@@ -600,20 +599,6 @@ export function Server({
               )}
             </div>
           ) : null}
-
-          {currentHostConfig?.tunnelConnections &&
-            currentHostConfig.tunnelConnections.length > 0 && (
-              <div className="rounded-lg border-2 border-dark-border m-3 bg-dark-bg-darker h-[360px] overflow-hidden flex flex-col min-h-0">
-                <Tunnel
-                  filterHostKey={
-                    currentHostConfig?.name &&
-                    currentHostConfig.name.trim() !== ""
-                      ? currentHostConfig.name
-                      : `${currentHostConfig?.username}@${currentHostConfig?.ip}`
-                  }
-                />
-              </div>
-            )}
         </div>
       </div>
     </div>

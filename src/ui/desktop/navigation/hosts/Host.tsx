@@ -8,6 +8,8 @@ import {
   Server,
   FolderOpen,
   Pencil,
+  ArrowDownUp,
+  Container,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -63,6 +65,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   }, [host.statsConfig]);
 
   const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
+  const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
   useEffect(() => {
     if (!shouldShowStatus) {
@@ -151,24 +154,50 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
               side="right"
               className="w-56 bg-dark-bg border-dark-border text-white"
             >
-              <DropdownMenuItem
-                onClick={() =>
-                  addTab({ type: "server", title, hostConfig: host })
-                }
-                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-              >
-                <Server className="h-4 w-4" />
-                <span className="flex-1">Open Server Details</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  addTab({ type: "file_manager", title, hostConfig: host })
-                }
-                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-              >
-                <FolderOpen className="h-4 w-4" />
-                <span className="flex-1">Open File Manager</span>
-              </DropdownMenuItem>
+              {shouldShowMetrics && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    addTab({ type: "server", title, hostConfig: host })
+                  }
+                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                >
+                  <Server className="h-4 w-4" />
+                  <span className="flex-1">Open Server Stats</span>
+                </DropdownMenuItem>
+              )}
+              {host.enableFileManager && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    addTab({ type: "file_manager", title, hostConfig: host })
+                  }
+                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                  <span className="flex-1">Open File Manager</span>
+                </DropdownMenuItem>
+              )}
+              {host.enableTunnel && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    addTab({ type: "tunnel", title, hostConfig: host })
+                  }
+                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                >
+                  <ArrowDownUp className="h-4 w-4" />
+                  <span className="flex-1">Open Tunnels</span>
+                </DropdownMenuItem>
+              )}
+              {host.enableDocker && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    addTab({ type: "docker", title, hostConfig: host })
+                  }
+                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                >
+                  <Container className="h-4 w-4" />
+                  <span className="flex-1">Open Docker</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() =>
                   addTab({

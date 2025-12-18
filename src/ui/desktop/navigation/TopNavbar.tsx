@@ -369,10 +369,13 @@ export function TopNavbar({
             const isTerminal = tab.type === "terminal";
             const isServer = tab.type === "server";
             const isFileManager = tab.type === "file_manager";
+            const isTunnel = tab.type === "tunnel";
+            const isDocker = tab.type === "docker";
             const isSshManager = tab.type === "ssh_manager";
             const isAdmin = tab.type === "admin";
             const isUserProfile = tab.type === "user_profile";
-            const isSplittable = isTerminal || isServer || isFileManager;
+            const isSplittable =
+              isTerminal || isServer || isFileManager || isTunnel || isDocker;
             const disableSplit = !isSplittable;
             const disableActivate =
               isSplit ||
@@ -484,6 +487,8 @@ export function TopNavbar({
                     isTerminal ||
                     isServer ||
                     isFileManager ||
+                    isTunnel ||
+                    isDocker ||
                     isSshManager ||
                     isAdmin ||
                     isUserProfile
@@ -498,6 +503,8 @@ export function TopNavbar({
                     isTerminal ||
                     isServer ||
                     isFileManager ||
+                    isTunnel ||
+                    isDocker ||
                     isSshManager ||
                     isAdmin ||
                     isUserProfile
