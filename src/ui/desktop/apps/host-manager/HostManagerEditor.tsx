@@ -577,7 +577,6 @@ export function HostManagerEditor({
           tlsCaCert: z.string().optional(),
           tlsCert: z.string().optional(),
           tlsKey: z.string().optional(),
-          apiVersion: z.string().optional(),
         })
         .optional(),
     })
@@ -682,7 +681,6 @@ export function HostManagerEditor({
         tlsCaCert: "",
         tlsCert: "",
         tlsKey: "",
-        apiVersion: "",
       },
     },
   });
@@ -738,6 +736,28 @@ export function HostManagerEditor({
 
       parsedStatsConfig = { ...DEFAULT_STATS_CONFIG, ...parsedStatsConfig };
 
+      let parsedDockerConfig = {
+        connectionType: "socket" as const,
+        socketPath: "/var/run/docker.sock",
+        host: "",
+        port: 2375,
+        tlsVerify: true,
+        tlsCaCert: "",
+        tlsCert: "",
+        tlsKey: "",
+      };
+      try {
+        if (cleanedHost.dockerConfig) {
+          const parsed =
+            typeof cleanedHost.dockerConfig === "string"
+              ? JSON.parse(cleanedHost.dockerConfig)
+              : cleanedHost.dockerConfig;
+          parsedDockerConfig = { ...parsedDockerConfig, ...parsed };
+        }
+      } catch (error) {
+        console.error("Failed to parse dockerConfig:", error);
+      }
+
       const formData = {
         name: cleanedHost.name || "",
         ip: cleanedHost.ip || "",
@@ -780,17 +800,7 @@ export function HostManagerEditor({
         },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
         enableDocker: Boolean(cleanedHost.enableDocker),
-        dockerConfig: cleanedHost.dockerConfig || {
-          connectionType: "socket" as const,
-          socketPath: "/var/run/docker.sock",
-          host: "",
-          port: 2375,
-          tlsVerify: true,
-          tlsCaCert: "",
-          tlsCert: "",
-          tlsKey: "",
-          apiVersion: "",
-        },
+        dockerConfig: parsedDockerConfig,
       };
 
       if (defaultAuthType === "password") {
@@ -852,7 +862,6 @@ export function HostManagerEditor({
           tlsCaCert: "",
           tlsCert: "",
           tlsKey: "",
-          apiVersion: "",
         },
       };
 
@@ -2877,26 +2886,6 @@ export function HostManagerEditor({
                           </AccordionItem>
                         </Accordion>
                       )}
-
-                      <FormField
-                        control={form.control}
-                        name="dockerConfig.apiVersion"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>API Version (Optional)</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="1.41 (leave empty for auto)"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Specify Docker API version, or leave empty to use
-                              the default
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
                     </>
                   )}
                 </TabsContent>

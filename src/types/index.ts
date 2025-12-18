@@ -23,7 +23,6 @@ export interface DockerConfig {
   tlsCaCert?: string;
   tlsCert?: string;
   tlsKey?: string;
-  apiVersion?: string;
 }
 
 export interface SSHHost {

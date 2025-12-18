@@ -461,7 +461,7 @@ export function ServerStats({
           {(metricsEnabled && showStatsUI) ||
           (currentHostConfig?.quickActions &&
             currentHostConfig.quickActions.length > 0) ? (
-            <div className="rounded-lg border-2 border-dark-border m-3 p-4 overflow-y-auto relative flex-1 flex flex-col">
+            <div className="rounded-lg border-dark-border m-3 p-1 overflow-y-auto relative flex-1 flex flex-col">
               {currentHostConfig?.quickActions &&
                 currentHostConfig.quickActions.length > 0 && (
                   <div className={metricsEnabled && showStatsUI ? "mb-4" : ""}>
