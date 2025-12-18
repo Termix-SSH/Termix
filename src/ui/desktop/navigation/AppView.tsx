@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Terminal } from "@/ui/desktop/apps/terminal/Terminal.tsx";
 import { Server as ServerView } from "@/ui/desktop/apps/server/Server.tsx";
 import { FileManager } from "@/ui/desktop/apps/file-manager/FileManager.tsx";
+import { GuacamoleDisplay, type GuacamoleConnectionConfig } from "@/ui/desktop/apps/guacamole/GuacamoleDisplay.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -16,7 +17,6 @@ import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
-import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
 
 interface TabData {
   id: number;
@@ -30,6 +30,7 @@ interface TabData {
     };
   };
   hostConfig?: any;
+  connectionConfig?: GuacamoleConnectionConfig;
   [key: string]: unknown;
 }
 
@@ -58,7 +59,9 @@ export function AppView({
         (tab: TabData) =>
           tab.type === "terminal" ||
           tab.type === "server" ||
-          tab.type === "file_manager",
+          tab.type === "file_manager" ||
+          tab.type === "rdp" ||
+          tab.type === "vnc",
       ),
     [tabs],
   );
@@ -317,6 +320,19 @@ export function AppView({
                     isTopbarOpen={isTopbarOpen}
                     embedded
                   />
+                ) : t.type === "rdp" || t.type === "vnc" ? (
+                  t.connectionConfig ? (
+                    <GuacamoleDisplay
+                      connectionConfig={t.connectionConfig}
+                      isVisible={effectiveVisible}
+                      onDisconnect={() => removeTab(t.id)}
+                      onError={(err) => console.error("Guacamole error:", err)}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-red-500">
+                      Missing connection configuration
+                    </div>
+                  )
                 ) : (
                   <FileManager
                     embedded

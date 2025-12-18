@@ -345,11 +345,26 @@ export interface TabContextTab {
   | "server"
   | "admin"
   | "file_manager"
-  | "user_profile";
+  | "user_profile"
+  | "rdp"
+  | "vnc";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;
   initialTab?: string;
+  connectionConfig?: {
+    type: "rdp" | "vnc" | "telnet";
+    hostname: string;
+    port: number;
+    username?: string;
+    password?: string;
+    domain?: string;
+    security?: string;
+    "ignore-cert"?: boolean;
+    width?: number;
+    height?: number;
+    dpi?: number;
+  };
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";

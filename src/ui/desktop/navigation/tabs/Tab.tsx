@@ -10,6 +10,7 @@ import {
   Server as ServerIcon,
   Folder as FolderIcon,
   User as UserIcon,
+  Monitor as MonitorIcon,
 } from "lucide-react";
 
 interface TabProps {
@@ -119,11 +120,14 @@ export function Tab({
     tabType === "terminal" ||
     tabType === "server" ||
     tabType === "file_manager" ||
-    tabType === "user_profile"
+    tabType === "user_profile" ||
+    tabType === "rdp" ||
+    tabType === "vnc"
   ) {
     const isServer = tabType === "server";
     const isFileManager = tabType === "file_manager";
     const isUserProfile = tabType === "user_profile";
+    const isRemoteDesktop = tabType === "rdp" || tabType === "vnc";
 
     const displayTitle =
       title ||
@@ -133,7 +137,9 @@ export function Tab({
           ? t("nav.fileManager")
           : isUserProfile
             ? t("nav.userProfile")
-            : t("nav.terminal"));
+            : isRemoteDesktop
+              ? tabType.toUpperCase()
+              : t("nav.terminal"));
 
     const { base, suffix } = splitTitle(displayTitle);
 
@@ -153,6 +159,8 @@ export function Tab({
             <FolderIcon className="h-4 w-4 flex-shrink-0" />
           ) : isUserProfile ? (
             <UserIcon className="h-4 w-4 flex-shrink-0" />
+          ) : isRemoteDesktop ? (
+            <MonitorIcon className="h-4 w-4 flex-shrink-0" />
           ) : (
             <TerminalIcon className="h-4 w-4 flex-shrink-0" />
           )}

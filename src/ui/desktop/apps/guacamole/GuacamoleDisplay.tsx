@@ -52,7 +52,8 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
     ref
   ) {
     const { t } = useTranslation();
-    const displayRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null); // Outer container for measuring size
+    const displayRef = useRef<HTMLDivElement>(null);   // Inner div for guacamole canvas
     const clientRef = useRef<Guacamole.Client | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
@@ -86,7 +87,7 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
       },
     }));
 
-    const getWebSocketUrl = useCallback(async (): Promise<string | null> => {
+    const getWebSocketUrl = useCallback(async (containerWidth: number, containerHeight: number): Promise<string | null> => {
       const jwtToken = getCookie("jwt");
       if (!jwtToken) {
         setConnectionError("Authentication required");
@@ -118,7 +119,13 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
 
         const { token } = await response.json();
 
-        // Build WebSocket URL
+        // Build WebSocket URL with width/height/dpi as query parameters
+        // These are passed as unencrypted settings to guacamole-lite
+        // Use actual container dimensions, fall back to 720p
+        const width = connectionConfig.width || containerWidth || 1280;
+        const height = connectionConfig.height || containerHeight || 720;
+        const dpi = connectionConfig.dpi || 96;
+
         const wsBase = isDev
           ? `ws://localhost:30007`
           : isElectron()
@@ -128,7 +135,7 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
               })()
             : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/guacamole/websocket/`;
 
-        return `${wsBase}?token=${encodeURIComponent(token)}`;
+        return `${wsBase}?token=${encodeURIComponent(token)}&width=${width}&height=${height}&dpi=${dpi}`;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         setConnectionError(errorMessage);
@@ -142,7 +149,21 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
       setIsConnecting(true);
       setConnectionError(null);
 
-      const wsUrl = await getWebSocketUrl();
+      // Get container dimensions for the WebSocket URL
+      // Use the outer container ref which has h-full w-full
+      let containerWidth = containerRef.current?.clientWidth || 0;
+      let containerHeight = containerRef.current?.clientHeight || 0;
+
+      console.log(`[Guacamole] Container size: ${containerWidth}x${containerHeight}`);
+
+      // If container size is too small or unavailable, use 720p default
+      if (containerWidth < 100 || containerHeight < 100) {
+        console.log(`[Guacamole] Container too small, using 720p default`);
+        containerWidth = 1280;
+        containerHeight = 720;
+      }
+
+      const wsUrl = await getWebSocketUrl(containerWidth, containerHeight);
       if (!wsUrl) {
         setIsConnecting(false);
         return;
@@ -154,26 +175,35 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
 
       // Set up display
       const display = client.getDisplay();
+      const displayElement = display.getElement();
+
       if (displayRef.current) {
         displayRef.current.innerHTML = "";
-        const displayElement = display.getElement();
-        displayElement.style.width = "100%";
-        displayElement.style.height = "100%";
         displayRef.current.appendChild(displayElement);
       }
 
-      // Handle display sync (when frames arrive) - scale to fit container
-      display.onresize = (width: number, height: number) => {
-        if (displayRef.current) {
-          const containerWidth = displayRef.current.clientWidth;
-          const containerHeight = displayRef.current.clientHeight;
-          const scale = Math.min(containerWidth / width, containerHeight / height);
+      // Function to rescale display to fit container
+      const rescaleDisplay = () => {
+        if (!containerRef.current) return;
+
+        const cWidth = containerRef.current.clientWidth;
+        const cHeight = containerRef.current.clientHeight;
+        const displayWidth = display.getWidth();
+        const displayHeight = display.getHeight();
+
+        if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
+          const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
           display.scale(scale);
         }
       };
 
-      // Set up mouse input
-      const mouse = new Guacamole.Mouse(displayRef.current!);
+      // Handle display sync (when frames arrive)
+      display.onresize = () => {
+        rescaleDisplay();
+      };
+
+      // Set up mouse input on the display element (not the container)
+      const mouse = new Guacamole.Mouse(displayElement);
       mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = (state: Guacamole.Mouse.State) => {
         client.sendMouseState(state);
       };
@@ -237,12 +267,8 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
         }
       };
 
-      // Connect with display size
-      const width = connectionConfig.width || displayRef.current?.clientWidth || 1024;
-      const height = connectionConfig.height || displayRef.current?.clientHeight || 768;
-      const dpi = connectionConfig.dpi || 96;
-
-      client.connect(`width=${width}&height=${height}&dpi=${dpi}`);
+      // Connect - the width/height/dpi are already in the WebSocket URL
+      client.connect();
     }, [isConnecting, isConnected, getWebSocketUrl, connectionConfig, onConnect, onDisconnect, onError, t]);
 
     // Track if we've initiated a connection to prevent re-triggering
@@ -264,26 +290,40 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
       };
     }, []);
 
-    // Handle window resize
+    // Handle window resize - rescale display to fit container
     useEffect(() => {
       const handleResize = () => {
-        if (clientRef.current && displayRef.current) {
+        if (clientRef.current && containerRef.current) {
           const display = clientRef.current.getDisplay();
-          const width = displayRef.current.clientWidth;
-          const height = displayRef.current.clientHeight;
-          display.scale(Math.min(width / display.getWidth(), height / display.getHeight()));
+          const cWidth = containerRef.current.clientWidth;
+          const cHeight = containerRef.current.clientHeight;
+          const displayWidth = display.getWidth();
+          const displayHeight = display.getHeight();
+
+          if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
+            const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
+            display.scale(scale);
+          }
         }
       };
 
       window.addEventListener("resize", handleResize);
-      return () => window.removeEventListener("resize", handleResize);
+      // Also trigger on initial render after a short delay
+      const initialTimeout = setTimeout(handleResize, 100);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        clearTimeout(initialTimeout);
+      };
     }, []);
 
     return (
-      <div className="h-full w-full relative bg-black">
+      <div
+        ref={containerRef}
+        className="h-full w-full relative bg-black flex items-center justify-center overflow-hidden"
+      >
         <div
           ref={displayRef}
-          className="h-full w-full"
+          className="relative"
           style={{ cursor: isConnected ? "none" : "default" }}
         />
 

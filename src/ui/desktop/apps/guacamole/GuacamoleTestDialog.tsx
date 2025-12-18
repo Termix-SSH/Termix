@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Monitor, MonitorPlay, Terminal } from "lucide-react";
-import { GuacamoleDisplay, GuacamoleConnectionConfig } from "./GuacamoleDisplay";
+import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
+import type { GuacamoleConnectionConfig } from "./GuacamoleDisplay";
 
 interface GuacamoleTestDialogProps {
   trigger?: React.ReactNode;
@@ -21,8 +22,7 @@ interface GuacamoleTestDialogProps {
 
 export function GuacamoleTestDialog({ trigger }: GuacamoleTestDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionConfig, setConnectionConfig] = useState<GuacamoleConnectionConfig | null>(null);
+  const { addTab } = useTabs();
 
   const [connectionType, setConnectionType] = useState<"rdp" | "vnc" | "telnet">("rdp");
   const [hostname, setHostname] = useState("");
@@ -48,22 +48,22 @@ export function GuacamoleTestDialog({ trigger }: GuacamoleTestDialogProps) {
       "ignore-cert": true,
     };
 
-    setConnectionConfig(config);
-    setIsConnecting(true);
-  };
+    // Add a new tab for the remote desktop connection
+    const tabType = connectionType === "rdp" ? "rdp" : connectionType === "vnc" ? "vnc" : "rdp";
+    const title = `${connectionType.toUpperCase()} - ${hostname}`;
 
-  const handleDisconnect = () => {
-    setConnectionConfig(null);
-    setIsConnecting(false);
-  };
+    addTab({
+      type: tabType,
+      title,
+      connectionConfig: config,
+    });
 
-  const handleClose = () => {
-    handleDisconnect();
+    // Close the dialog
     setIsOpen(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" className="gap-2">
@@ -72,16 +72,15 @@ export function GuacamoleTestDialog({ trigger }: GuacamoleTestDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className={isConnecting ? "sm:max-w-4xl h-[80vh]" : "sm:max-w-md"}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Monitor className="w-5 h-5" />
-            {isConnecting ? `Connected to ${hostname}` : "Test Remote Connection"}
+            Remote Connection
           </DialogTitle>
         </DialogHeader>
 
-        {!isConnecting ? (
-          <div className="space-y-4">
+        <div className="space-y-4">
             <Tabs value={connectionType} onValueChange={(v) => {
               setConnectionType(v as "rdp" | "vnc" | "telnet");
               setPort("");
@@ -177,16 +176,6 @@ export function GuacamoleTestDialog({ trigger }: GuacamoleTestDialogProps) {
               Connect
             </Button>
           </div>
-        ) : (
-          <div className="flex-1 h-full min-h-[500px]">
-            <GuacamoleDisplay
-              connectionConfig={connectionConfig!}
-              isVisible={true}
-              onDisconnect={handleDisconnect}
-              onError={(err) => console.error("Guacamole error:", err)}
-            />
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

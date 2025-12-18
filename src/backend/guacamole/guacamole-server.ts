@@ -36,6 +36,13 @@ const clientOptions = {
       guacLogger.error(args.join(" "), { operation: "guac_error" });
     },
   },
+  // Allow width, height, and dpi to be passed as query parameters
+  // This allows the client to request the appropriate resolution at connection time
+  allowedUnencryptedConnectionSettings: {
+    rdp: ["width", "height", "dpi"],
+    vnc: ["width", "height", "dpi"],
+    telnet: ["width", "height"],
+  },
   connectionDefaultSettings: {
     rdp: {
       security: "any",
@@ -46,10 +53,15 @@ const clientOptions = {
       "disable-audio": false,
       "enable-drive": false,
       "resize-method": "display-update",
+      width: 1280,
+      height: 720,
+      dpi: 96,
     },
     vnc: {
       "swap-red-blue": false,
       "cursor": "remote",
+      width: 1280,
+      height: 720,
     },
     telnet: {
       "terminal-type": "xterm-256color",
