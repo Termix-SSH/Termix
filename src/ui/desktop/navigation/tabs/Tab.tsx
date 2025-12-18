@@ -124,7 +124,7 @@ export function Tab({
     tabType === "file_manager" ||
     tabType === "user_profile" ||
     tabType === "rdp" ||
-    tabType === "vnc"
+    tabType === "vnc" ||
     tabType === "tunnel" ||
     tabType === "docker"
   ) {
@@ -141,18 +141,15 @@ export function Tab({
         ? t("nav.serverStats")
         : isFileManager
           ? t("nav.fileManager")
-          : isUserProfile
-            ? t("nav.userProfile")
-            : isRemoteDesktop
-              ? tabType.toUpperCase()
-              : t("nav.terminal"));
           : isTunnel
             ? t("nav.tunnels")
             : isDocker
               ? t("nav.docker")
               : isUserProfile
                 ? t("nav.userProfile")
-                : t("nav.terminal"));
+                : isRemoteDesktop
+                  ? tabType.toUpperCase()
+                  : t("nav.terminal"));
 
     const { base, suffix } = splitTitle(displayTitle);
 

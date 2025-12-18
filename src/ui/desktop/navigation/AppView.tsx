@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Terminal } from "@/ui/desktop/apps/terminal/Terminal.tsx";
 import { ServerStats as ServerView } from "@/ui/desktop/apps/server-stats/ServerStats.tsx";
 import { FileManager } from "@/ui/desktop/apps/file-manager/FileManager.tsx";
-import { GuacamoleDisplay, type GuacamoleConnectionConfig } from "@/ui/desktop/apps/guacamole/GuacamoleDisplay.tsx";
+import {
+  GuacamoleDisplay,
+  type GuacamoleConnectionConfig,
+} from "@/ui/desktop/apps/guacamole/GuacamoleDisplay.tsx";
 import { TunnelManager } from "@/ui/desktop/apps/tunnel/TunnelManager.tsx";
 import { DockerManager } from "@/ui/desktop/apps/docker/DockerManager.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
@@ -63,7 +66,7 @@ export function AppView({
           tab.type === "server" ||
           tab.type === "file_manager" ||
           tab.type === "rdp" ||
-          tab.type === "vnc", ||
+          tab.type === "vnc" ||
           tab.type === "tunnel" ||
           tab.type === "docker",
       ),
