@@ -55,6 +55,7 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
     const containerRef = useRef<HTMLDivElement>(null); // Outer container for measuring size
     const displayRef = useRef<HTMLDivElement>(null);   // Inner div for guacamole canvas
     const clientRef = useRef<Guacamole.Client | null>(null);
+    const scaleRef = useRef<number>(1);                // Track current scale factor for mouse
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -193,6 +194,7 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
 
         if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
           const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
+          scaleRef.current = scale;
           display.scale(scale);
         }
       };
@@ -203,10 +205,28 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
       };
 
       // Set up mouse input on the display element (not the container)
+      // We need to adjust mouse coordinates based on the current scale factor
       const mouse = new Guacamole.Mouse(displayElement);
-      mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = (state: Guacamole.Mouse.State) => {
-        client.sendMouseState(state);
+      const sendMouseState = (state: Guacamole.Mouse.State) => {
+        // Adjust coordinates based on scale factor and round to integers
+        const scale = scaleRef.current;
+        const adjustedX = Math.round(state.x / scale);
+        const adjustedY = Math.round(state.y / scale);
+
+        // Create adjusted state - guacamole expects integer coordinates
+        const adjustedState = new Guacamole.Mouse.State(
+          adjustedX,
+          adjustedY,
+          state.left,
+          state.middle,
+          state.right,
+          state.up,
+          state.down
+        ) as Guacamole.Mouse.State;
+
+        client.sendMouseState(adjustedState);
       };
+      mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = sendMouseState;
 
       // Set up keyboard input
       const keyboard = new Guacamole.Keyboard(document);
@@ -302,6 +322,7 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
 
           if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
             const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
+            scaleRef.current = scale;
             display.scale(scale);
           }
         }
