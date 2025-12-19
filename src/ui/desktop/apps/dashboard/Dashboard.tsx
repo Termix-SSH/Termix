@@ -36,12 +36,10 @@ import {
   Loader2,
   Terminal,
   FolderOpen,
-  Monitor,
 } from "lucide-react";
 import { Status } from "@/components/ui/shadcn-io/status";
 import { BsLightning } from "react-icons/bs";
 import { useTranslation } from "react-i18next";
-import { GuacamoleTestDialog } from "@/ui/desktop/apps/guacamole/GuacamoleTestDialog";
 
 interface DashboardProps {
   onSelectView: (view: string) => void;
@@ -689,22 +687,6 @@ export function Dashboard({
                           {t("dashboard.userProfile")}
                         </span>
                       </Button>
-                      <GuacamoleTestDialog
-                        trigger={
-                          <Button
-                            variant="outline"
-                            className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3 min-w-0"
-                          >
-                            <Monitor
-                              className="shrink-0"
-                              style={{ width: "40px", height: "40px" }}
-                            />
-                            <span className="font-semibold text-sm mt-2">
-                              Test RDP/VNC
-                            </span>
-                          </Button>
-                        }
-                      />
                     </div>
                   </div>
                 </div>

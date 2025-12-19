@@ -435,6 +435,7 @@ export function HostManagerEditor({
 
   const formSchema = z
     .object({
+      connectionType: z.enum(["ssh", "rdp", "vnc", "telnet"]).default("ssh"),
       name: z.string().optional(),
       ip: z.string().min(1),
       port: z.coerce.number().min(1).max(65535),
@@ -443,6 +444,10 @@ export function HostManagerEditor({
       tags: z.array(z.string().min(1)).default([]),
       pin: z.boolean().default(false),
       authType: z.enum(["password", "key", "credential", "none"]),
+      // RDP/VNC specific fields
+      domain: z.string().optional(),
+      security: z.string().optional(),
+      ignoreCert: z.boolean().default(false),
       credentialId: z.number().optional().nullable(),
       overrideCredentialUsername: z.boolean().optional(),
       password: z.string().optional(),
@@ -648,6 +653,7 @@ export function HostManagerEditor({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: "",
+      connectionType: "ssh" as const,
       ip: "",
       port: 22,
       username: "",
@@ -682,6 +688,10 @@ export function HostManagerEditor({
         tlsCert: "",
         tlsKey: "",
       },
+      // RDP/VNC specific defaults
+      domain: "",
+      security: "",
+      ignoreCert: false,
     },
   });
 
@@ -759,6 +769,7 @@ export function HostManagerEditor({
       }
 
       const formData = {
+        connectionType: (cleanedHost.connectionType || "ssh") as "ssh" | "rdp" | "vnc" | "telnet",
         name: cleanedHost.name || "",
         ip: cleanedHost.ip || "",
         port: cleanedHost.port || 22,
@@ -801,6 +812,10 @@ export function HostManagerEditor({
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
         enableDocker: Boolean(cleanedHost.enableDocker),
         dockerConfig: parsedDockerConfig,
+        // RDP/VNC specific fields
+        domain: cleanedHost.domain || "",
+        security: cleanedHost.security || "",
+        ignoreCert: Boolean(cleanedHost.ignoreCert),
       };
 
       if (defaultAuthType === "password") {
@@ -828,6 +843,7 @@ export function HostManagerEditor({
     } else {
       setAuthTab("password");
       const defaultFormData = {
+        connectionType: "ssh" as const,
         name: "",
         ip: "",
         port: 22,
@@ -863,6 +879,10 @@ export function HostManagerEditor({
           tlsCert: "",
           tlsKey: "",
         },
+        // RDP/VNC specific defaults
+        domain: "",
+        security: "",
+        ignoreCert: false,
       };
 
       form.reset(defaultFormData);
@@ -910,6 +930,7 @@ export function HostManagerEditor({
       }
 
       const submitData: Record<string, unknown> = {
+        connectionType: data.connectionType || "ssh",
         name: data.name,
         ip: data.ip,
         port: data.port,
@@ -931,6 +952,10 @@ export function HostManagerEditor({
         statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
         terminalConfig: data.terminalConfig || DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: Boolean(data.forceKeyboardInteractive),
+        // RDP/VNC specific fields
+        domain: data.domain || null,
+        security: data.security || null,
+        ignoreCert: Boolean(data.ignoreCert),
       };
 
       submitData.credentialId = null;
@@ -1230,23 +1255,69 @@ export function HostManagerEditor({
                 onValueChange={setActiveTab}
                 className="w-full"
               >
-                <TabsList>
-                  <TabsTrigger value="general">
-                    {t("hosts.general")}
-                  </TabsTrigger>
-                  <TabsTrigger value="terminal">
-                    {t("hosts.terminal")}
-                  </TabsTrigger>
-                  <TabsTrigger value="docker">Docker</TabsTrigger>
-                  <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
-                  <TabsTrigger value="file_manager">
-                    {t("hosts.fileManager")}
-                  </TabsTrigger>
-                  <TabsTrigger value="statistics">
-                    {t("hosts.statistics")}
-                  </TabsTrigger>
-                </TabsList>
+                {/* Only show tabs if there's more than just the General tab (SSH has extra tabs) */}
+                {form.watch("connectionType") === "ssh" && (
+                  <TabsList>
+                    <TabsTrigger value="general">
+                      {t("hosts.general")}
+                    </TabsTrigger>
+                    <TabsTrigger value="terminal">
+                      {t("hosts.terminal")}
+                    </TabsTrigger>
+                    <TabsTrigger value="docker">Docker</TabsTrigger>
+                    <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
+                    <TabsTrigger value="file_manager">
+                      {t("hosts.fileManager")}
+                    </TabsTrigger>
+                    <TabsTrigger value="statistics">
+                      {t("hosts.statistics")}
+                    </TabsTrigger>
+                  </TabsList>
+                )}
                 <TabsContent value="general" className="pt-2">
+                  <FormLabel className="mb-3 font-bold">
+                    {t("hosts.connectionType", "Connection Type")}
+                  </FormLabel>
+                  <div className="grid grid-cols-12 gap-4 mb-4">
+                    <FormField
+                      control={form.control}
+                      name="connectionType"
+                      render={({ field }) => (
+                        <FormItem className="col-span-12">
+                          <FormControl>
+                            <div className="flex gap-2">
+                              {[
+                                { value: "ssh", label: "SSH" },
+                                { value: "rdp", label: "RDP" },
+                                { value: "vnc", label: "VNC" },
+                                { value: "telnet", label: "Telnet" },
+                              ].map((option) => (
+                                <Button
+                                  key={option.value}
+                                  type="button"
+                                  variant={field.value === option.value ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange(option.value);
+                                    // Update default port based on connection type
+                                    const defaultPorts: Record<string, number> = {
+                                      ssh: 22,
+                                      rdp: 3389,
+                                      vnc: 5900,
+                                      telnet: 23,
+                                    };
+                                    form.setValue("port", defaultPorts[option.value] || 22);
+                                  }}
+                                >
+                                  {option.label}
+                                </Button>
+                              ))}
+                            </div>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormLabel className="mb-3 font-bold">
                     {t("hosts.connectionDetails")}
                   </FormLabel>
@@ -1314,6 +1385,75 @@ export function HostManagerEditor({
                       }}
                     />
                   </div>
+                  {/* RDP-specific fields */}
+                  {form.watch("connectionType") === "rdp" && (
+                    <>
+                      <FormLabel className="mb-3 mt-3 font-bold">
+                        {t("hosts.rdpSettings", "RDP Settings")}
+                      </FormLabel>
+                      <div className="grid grid-cols-12 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="domain"
+                          render={({ field }) => (
+                            <FormItem className="col-span-4">
+                              <FormLabel>{t("hosts.domain", "Domain")}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder={t("placeholders.domain", "WORKGROUP")}
+                                  {...field}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="security"
+                          render={({ field }) => (
+                            <FormItem className="col-span-4">
+                              <FormLabel>{t("hosts.security", "Security")}</FormLabel>
+                              <Select
+                                value={field.value || "any"}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={t("hosts.selectSecurity", "Select security")} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="any">{t("hosts.securityAny", "Any")}</SelectItem>
+                                  <SelectItem value="nla">{t("hosts.securityNla", "NLA")}</SelectItem>
+                                  <SelectItem value="nla-ext">{t("hosts.securityNlaExt", "NLA Extended")}</SelectItem>
+                                  <SelectItem value="tls">{t("hosts.securityTls", "TLS")}</SelectItem>
+                                  <SelectItem value="vmconnect">{t("hosts.securityVmconnect", "VMConnect")}</SelectItem>
+                                  <SelectItem value="rdp">{t("hosts.securityRdp", "RDP")}</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="ignoreCert"
+                          render={({ field }) => (
+                            <FormItem className="col-span-4 flex flex-row items-center justify-between rounded-lg border p-3 mt-6">
+                              <div className="space-y-0.5">
+                                <FormLabel>{t("hosts.ignoreCert", "Ignore Certificate")}</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </>
+                  )}
                   <FormLabel className="mb-3 mt-3 font-bold">
                     {t("hosts.organization")}
                   </FormLabel>
@@ -1456,49 +1596,54 @@ export function HostManagerEditor({
                       )}
                     />
                   </div>
-                  <FormLabel className="mb-3 mt-3 font-bold">
-                    {t("hosts.authentication")}
-                  </FormLabel>
-                  <Tabs
-                    value={authTab}
-                    onValueChange={(value) => {
-                      const newAuthType = value as
-                        | "password"
-                        | "key"
-                        | "credential"
-                        | "none";
-                      setAuthTab(newAuthType);
-                      form.setValue("authType", newAuthType);
-                    }}
-                    className="flex-1 flex flex-col h-full min-h-0"
-                  >
-                    <TabsList>
-                      <TabsTrigger value="password">
-                        {t("hosts.password")}
-                      </TabsTrigger>
-                      <TabsTrigger value="key">{t("hosts.key")}</TabsTrigger>
-                      <TabsTrigger value="credential">
-                        {t("hosts.credential")}
-                      </TabsTrigger>
-                      <TabsTrigger value="none">{t("hosts.none")}</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="password">
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("hosts.password")}</FormLabel>
-                            <FormControl>
-                              <PasswordInput
-                                placeholder={t("placeholders.password")}
-                                {...field}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </TabsContent>
+                  {/* Authentication section - only for SSH and Telnet */}
+                  {(form.watch("connectionType") === "ssh" || form.watch("connectionType") === "telnet") && (
+                    <>
+                      <FormLabel className="mb-3 mt-3 font-bold">
+                        {t("hosts.authentication")}
+                      </FormLabel>
+                      <Tabs
+                        value={authTab}
+                        onValueChange={(value) => {
+                          const newAuthType = value as
+                            | "password"
+                            | "key"
+                            | "credential"
+                            | "none";
+                          setAuthTab(newAuthType);
+                          form.setValue("authType", newAuthType);
+                        }}
+                        className="flex-1 flex flex-col h-full min-h-0"
+                      >
+                        <TabsList>
+                          <TabsTrigger value="password">
+                            {t("hosts.password")}
+                          </TabsTrigger>
+                          {form.watch("connectionType") === "ssh" && (
+                            <TabsTrigger value="key">{t("hosts.key")}</TabsTrigger>
+                          )}
+                          <TabsTrigger value="credential">
+                            {t("hosts.credential")}
+                          </TabsTrigger>
+                          <TabsTrigger value="none">{t("hosts.none")}</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="password">
+                          <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("hosts.password")}</FormLabel>
+                                <FormControl>
+                                  <PasswordInput
+                                    placeholder={t("placeholders.password")}
+                                    {...field}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </TabsContent>
                     <TabsContent value="key">
                       <Tabs
                         value={keyInputMethod}
@@ -1847,6 +1992,33 @@ export function HostManagerEditor({
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
+                    </>
+                  )}
+                  {/* RDP/VNC password authentication - simpler than SSH */}
+                  {(form.watch("connectionType") === "rdp" || form.watch("connectionType") === "vnc") && (
+                    <>
+                      <FormLabel className="mb-3 mt-3 font-bold">
+                        {t("hosts.authentication")}
+                      </FormLabel>
+                      <div className="grid grid-cols-12 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem className="col-span-12">
+                              <FormLabel>{t("hosts.password")}</FormLabel>
+                              <FormControl>
+                                <PasswordInput
+                                  placeholder={t("placeholders.password")}
+                                  {...field}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </>
+                  )}
                 </TabsContent>
                 <TabsContent value="terminal" className="space-y-1">
                   <FormField

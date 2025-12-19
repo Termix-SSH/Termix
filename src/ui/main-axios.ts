@@ -838,6 +838,7 @@ export async function getSSHHosts(): Promise<SSHHost[]> {
 export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
   try {
     const submitData = {
+      connectionType: hostData.connectionType || "ssh",
       name: hostData.name || "",
       ip: hostData.ip,
       port: parseInt(hostData.port.toString()) || 22,
@@ -873,6 +874,10 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
+      // RDP/VNC specific fields
+      domain: hostData.domain || null,
+      security: hostData.security || null,
+      ignoreCert: Boolean(hostData.ignoreCert),
     };
 
     if (!submitData.enableTunnel) {
@@ -910,6 +915,7 @@ export async function updateSSHHost(
 ): Promise<SSHHost> {
   try {
     const submitData = {
+      connectionType: hostData.connectionType || "ssh",
       name: hostData.name || "",
       ip: hostData.ip,
       port: parseInt(hostData.port.toString()) || 22,
@@ -945,6 +951,10 @@ export async function updateSSHHost(
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
+      // RDP/VNC specific fields
+      domain: hostData.domain || null,
+      security: hostData.security || null,
+      ignoreCert: Boolean(hostData.ignoreCert),
     };
 
     if (!submitData.enableTunnel) {
@@ -3119,5 +3129,42 @@ export async function unlinkOIDCFromPasswordAccount(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "unlink OIDC from password account");
+  }
+}
+
+// Guacamole API functions
+export interface GuacamoleTokenRequest {
+  protocol: "rdp" | "vnc" | "telnet";
+  hostname: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  domain?: string;
+  security?: string;
+  ignoreCert?: boolean;
+}
+
+export interface GuacamoleTokenResponse {
+  token: string;
+}
+
+export async function getGuacamoleToken(
+  request: GuacamoleTokenRequest,
+): Promise<GuacamoleTokenResponse> {
+  try {
+    // Use authApi (port 30001 without /ssh prefix) since guacamole routes are at /guacamole
+    const response = await authApi.post("/guacamole/token", {
+      type: request.protocol,
+      hostname: request.hostname,
+      port: request.port,
+      username: request.username,
+      password: request.password,
+      domain: request.domain,
+      security: request.security,
+      "ignore-cert": request.ignoreCert,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get guacamole token");
   }
 }

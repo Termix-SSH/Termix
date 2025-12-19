@@ -218,6 +218,7 @@ router.post(
     }
 
     const {
+      connectionType,
       name,
       folder,
       tags,
@@ -244,6 +245,10 @@ router.post(
       dockerConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      // RDP/VNC specific fields
+      domain,
+      security,
+      ignoreCert,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -261,8 +266,10 @@ router.post(
     }
 
     const effectiveAuthType = authType || authMethod;
+    const effectiveConnectionType = connectionType || "ssh";
     const sshDataObj: Record<string, unknown> = {
       userId: userId,
+      connectionType: effectiveConnectionType,
       name,
       folder: folder || null,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
@@ -288,6 +295,10 @@ router.post(
       dockerConfig: dockerConfig ? JSON.stringify(dockerConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      // RDP/VNC specific fields
+      domain: domain || null,
+      security: security || null,
+      ignoreCert: ignoreCert ? 1 : 0,
     };
 
     if (effectiveAuthType === "password") {
@@ -448,6 +459,7 @@ router.put(
     }
 
     const {
+      connectionType,
       name,
       folder,
       tags,
@@ -474,6 +486,10 @@ router.put(
       dockerConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      // RDP/VNC specific fields
+      domain,
+      security,
+      ignoreCert,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -494,6 +510,7 @@ router.put(
 
     const effectiveAuthType = authType || authMethod;
     const sshDataObj: Record<string, unknown> = {
+      connectionType: connectionType || "ssh",
       name,
       folder,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
@@ -519,6 +536,10 @@ router.put(
       dockerConfig: dockerConfig ? JSON.stringify(dockerConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      // RDP/VNC specific fields
+      domain: domain || null,
+      security: security || null,
+      ignoreCert: ignoreCert ? 1 : 0,
     };
 
     if (effectiveAuthType === "password") {

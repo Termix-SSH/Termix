@@ -495,6 +495,12 @@ const migrateSchema = () => {
   );
   addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
 
+  // Connection type columns for RDP/VNC/Telnet support
+  addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
+  addColumnIfNotExists("ssh_data", "domain", "TEXT");
+  addColumnIfNotExists("ssh_data", "security", "TEXT");
+  addColumnIfNotExists("ssh_data", "ignore_cert", "INTEGER NOT NULL DEFAULT 0");
+
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");

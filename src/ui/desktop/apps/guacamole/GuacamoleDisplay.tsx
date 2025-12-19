@@ -15,8 +15,12 @@ import { Loader2 } from "lucide-react";
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
 export interface GuacamoleConnectionConfig {
-  type: GuacamoleConnectionType;
-  hostname: string;
+  // Pre-fetched token (preferred) - if provided, skip token fetch
+  token?: string;
+  protocol?: GuacamoleConnectionType;
+  // Legacy fields for backward compatibility (used if token not provided)
+  type?: GuacamoleConnectionType;
+  hostname?: string;
   port?: number;
   username?: string;
   password?: string;
@@ -89,36 +93,44 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
     }));
 
     const getWebSocketUrl = useCallback(async (containerWidth: number, containerHeight: number): Promise<string | null> => {
-      const jwtToken = getCookie("jwt");
-      if (!jwtToken) {
-        setConnectionError("Authentication required");
-        return null;
-      }
-
-      // First, get an encrypted token from the backend
       try {
-        const baseUrl = isDev
-          ? "http://localhost:30001"
-          : isElectron()
-            ? (window as { configuredServerUrl?: string }).configuredServerUrl || "http://127.0.0.1:30001"
-            : `${window.location.origin}`;
+        let token: string;
 
-        const response = await fetch(`${baseUrl}/guacamole/token`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${jwtToken}`,
-          },
-          body: JSON.stringify(connectionConfig),
-          credentials: "include",
-        });
+        // If token is pre-fetched, use it directly
+        if (connectionConfig.token) {
+          token = connectionConfig.token;
+        } else {
+          // Otherwise, fetch token from backend (legacy behavior)
+          const jwtToken = getCookie("jwt");
+          if (!jwtToken) {
+            setConnectionError("Authentication required");
+            return null;
+          }
 
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || "Failed to get connection token");
+          const baseUrl = isDev
+            ? "http://localhost:30001"
+            : isElectron()
+              ? (window as { configuredServerUrl?: string }).configuredServerUrl || "http://127.0.0.1:30001"
+              : `${window.location.origin}`;
+
+          const response = await fetch(`${baseUrl}/guacamole/token`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify(connectionConfig),
+            credentials: "include",
+          });
+
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || "Failed to get connection token");
+          }
+
+          const data = await response.json();
+          token = data.token;
         }
-
-        const { token } = await response.json();
 
         // Build WebSocket URL with width/height/dpi as query parameters
         // These are passed as unencrypted settings to guacamole-lite
@@ -353,7 +365,7 @@ export const GuacamoleDisplay = forwardRef<GuacamoleDisplayHandle, GuacamoleDisp
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <span className="text-muted-foreground">
-                {t("guacamole.connecting", { type: connectionConfig.type.toUpperCase() })}
+                {t("guacamole.connecting", { type: (connectionConfig.protocol || connectionConfig.type || "remote").toUpperCase() })}
               </span>
             </div>
           </div>
