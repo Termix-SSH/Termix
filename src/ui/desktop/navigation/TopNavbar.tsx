@@ -374,6 +374,8 @@ export function TopNavbar({
             const isSshManager = tab.type === "ssh_manager";
             const isAdmin = tab.type === "admin";
             const isUserProfile = tab.type === "user_profile";
+            const isRdp = tab.type === "rdp";
+            const isVnc = tab.type === "vnc";
             const isSplittable =
               isTerminal || isServer || isFileManager || isTunnel || isDocker;
             const disableSplit = !isSplittable;
@@ -491,7 +493,9 @@ export function TopNavbar({
                     isDocker ||
                     isSshManager ||
                     isAdmin ||
-                    isUserProfile
+                    isUserProfile ||
+                    isRdp ||
+                    isVnc
                       ? () => handleTabClose(tab.id)
                       : undefined
                   }
@@ -507,7 +511,9 @@ export function TopNavbar({
                     isDocker ||
                     isSshManager ||
                     isAdmin ||
-                    isUserProfile
+                    isUserProfile ||
+                    isRdp ||
+                    isVnc
                   }
                   disableActivate={disableActivate}
                   disableSplit={disableSplit}

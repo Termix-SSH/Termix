@@ -156,6 +156,8 @@ function AppContent() {
     currentTabData?.type === "terminal" ||
     currentTabData?.type === "server" ||
     currentTabData?.type === "file_manager" ||
+    currentTabData?.type === "rdp" ||
+    currentTabData?.type === "vnc" ||
     currentTabData?.type === "tunnel" ||
     currentTabData?.type === "docker";
   const showHome = currentTabData?.type === "home";

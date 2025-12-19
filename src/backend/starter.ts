@@ -104,6 +104,19 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await import("./ssh/server-stats.js");
     await import("./dashboard.js");
 
+    // Initialize Guacamole server for RDP/VNC/Telnet support
+    if (process.env.ENABLE_GUACAMOLE !== "false") {
+      try {
+        await import("./guacamole/guacamole-server.js");
+        systemLogger.info("Guacamole server initialized", { operation: "guac_init" });
+      } catch (error) {
+        systemLogger.warn("Failed to initialize Guacamole server (guacd may not be available)", {
+          operation: "guac_init_skip",
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
     process.on("SIGINT", () => {
       systemLogger.info(
         "Received SIGINT signal, initiating graceful shutdown...",

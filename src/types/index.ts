@@ -25,8 +25,11 @@ export interface DockerConfig {
   tlsKey?: string;
 }
 
+export type HostConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
+
 export interface SSHHost {
   id: number;
+  connectionType: HostConnectionType;
   name: string;
   ip: string;
   port: number;
@@ -59,6 +62,10 @@ export interface SSHHost {
   statsConfig?: string;
   dockerConfig?: string;
   terminalConfig?: TerminalConfig;
+  // RDP/VNC specific fields
+  domain?: string;
+  security?: string;
+  ignoreCert?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -73,6 +80,7 @@ export interface QuickActionData {
 }
 
 export interface SSHHostData {
+  connectionType?: HostConnectionType;
   name?: string;
   ip: string;
   port: number;
@@ -99,6 +107,10 @@ export interface SSHHostData {
   statsConfig?: string | Record<string, unknown>;
   dockerConfig?: DockerConfig | string;
   terminalConfig?: TerminalConfig;
+  // RDP/VNC specific fields
+  domain?: string;
+  security?: string;
+  ignoreCert?: boolean;
 }
 
 export interface SSHFolder {
@@ -361,11 +373,29 @@ export interface TabContextTab {
     | "admin"
     | "file_manager"
     | "user_profile"
+    | "rdp"
+    | "vnc"
+    | "tunnel"
     | "docker";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;
   initialTab?: string;
+  connectionConfig?: {
+    token: string;
+    protocol: "rdp" | "vnc" | "telnet";
+    type?: "rdp" | "vnc" | "telnet";
+    hostname?: string;
+    port?: number;
+    username?: string;
+    password?: string;
+    domain?: string;
+    security?: string;
+    "ignore-cert"?: boolean;
+    width?: number;
+    height?: number;
+    dpi?: number;
+  };
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";

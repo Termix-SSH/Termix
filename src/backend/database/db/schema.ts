@@ -52,6 +52,8 @@ export const sshData = sqliteTable("ssh_data", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  // Connection type: ssh, rdp, vnc, telnet
+  connectionType: text("connection_type").notNull().default("ssh"),
   name: text("name"),
   ip: text("ip").notNull(),
   port: integer("port").notNull(),
@@ -94,6 +96,10 @@ export const sshData = sqliteTable("ssh_data", {
   dockerConfig: text("docker_config"),
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
+  // RDP/VNC specific fields
+  domain: text("domain"),
+  security: text("security"),
+  ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

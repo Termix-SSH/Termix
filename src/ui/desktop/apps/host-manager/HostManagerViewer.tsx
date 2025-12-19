@@ -61,7 +61,10 @@ import {
   HardDrive,
   Globe,
   FolderOpen,
+  Monitor,
+  ScreenShare,
 } from "lucide-react";
+import { getGuacamoleToken } from "@/ui/main-axios.ts";
 import type {
   SSHHost,
   SSHFolder,
@@ -1371,7 +1374,28 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                   )}
 
                                   <div className="flex flex-wrap gap-1">
-                                    {host.enableTerminal && (
+                                    {/* Show connection type badge */}
+                                    {(host.connectionType === "rdp" || host.connectionType === "vnc") ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs px-1 py-0"
+                                      >
+                                        {host.connectionType === "rdp" ? (
+                                          <Monitor className="h-2 w-2 mr-0.5" />
+                                        ) : (
+                                          <ScreenShare className="h-2 w-2 mr-0.5" />
+                                        )}
+                                        {host.connectionType.toUpperCase()}
+                                      </Badge>
+                                    ) : host.connectionType === "telnet" ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs px-1 py-0"
+                                      >
+                                        <Terminal className="h-2 w-2 mr-0.5" />
+                                        Telnet
+                                      </Badge>
+                                    ) : host.enableTerminal && (
                                       <Badge
                                         variant="outline"
                                         className="text-xs px-1 py-0"
@@ -1450,30 +1474,66 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                 </div>
 
                                 <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-center gap-1">
-                                  {host.enableTerminal && (
+                                  {/* Show connect button for SSH/Telnet if enableTerminal, or always for RDP/VNC */}
+                                  {(host.enableTerminal || host.connectionType === "rdp" || host.connectionType === "vnc") && (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          onClick={(e) => {
+                                          onClick={async (e) => {
                                             e.stopPropagation();
                                             const title = host.name?.trim()
                                               ? host.name
                                               : `${host.username}@${host.ip}:${host.port}`;
-                                            addTab({
-                                              type: "terminal",
-                                              title,
-                                              hostConfig: host,
-                                            });
+                                            const connectionType = host.connectionType || "ssh";
+
+                                            if (connectionType === "ssh" || connectionType === "telnet") {
+                                              addTab({
+                                                type: "terminal",
+                                                title,
+                                                hostConfig: host,
+                                              });
+                                            } else if (connectionType === "rdp" || connectionType === "vnc") {
+                                              try {
+                                                const tokenResponse = await getGuacamoleToken({
+                                                  protocol: connectionType,
+                                                  hostname: host.ip,
+                                                  port: host.port,
+                                                  username: host.username,
+                                                  password: host.password || "",
+                                                  domain: host.domain,
+                                                  security: host.security,
+                                                  ignoreCert: host.ignoreCert,
+                                                });
+                                                addTab({
+                                                  type: connectionType,
+                                                  title,
+                                                  hostConfig: host,
+                                                  connectionConfig: {
+                                                    token: tokenResponse.token,
+                                                    protocol: connectionType,
+                                                  },
+                                                });
+                                              } catch (error) {
+                                                console.error(`Failed to get guacamole token for ${connectionType}:`, error);
+                                                toast.error(`Failed to connect to ${connectionType.toUpperCase()} host`);
+                                              }
+                                            }
                                           }}
                                           className="h-7 px-2 hover:bg-blue-500/10 hover:border-blue-500/50 flex-1"
                                         >
-                                          <Terminal className="h-3.5 w-3.5" />
+                                          {host.connectionType === "rdp" ? (
+                                            <Monitor className="h-3.5 w-3.5" />
+                                          ) : host.connectionType === "vnc" ? (
+                                            <ScreenShare className="h-3.5 w-3.5" />
+                                          ) : (
+                                            <Terminal className="h-3.5 w-3.5" />
+                                          )}
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Open Terminal</p>
+                                        <p>{host.connectionType === "rdp" ? "Open RDP" : host.connectionType === "vnc" ? "Open VNC" : "Open Terminal"}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   )}
