@@ -44,12 +44,21 @@ declare module "guacamole-common-js" {
         constructor(
           x: number,
           y: number,
-          left: boolean,
-          middle: boolean,
-          right: boolean,
-          up: boolean,
-          down: boolean
+          left?: boolean,
+          middle?: boolean,
+          right?: boolean,
+          up?: boolean,
+          down?: boolean
         );
+        constructor(state: {
+          x: number;
+          y: number;
+          left?: boolean;
+          middle?: boolean;
+          right?: boolean;
+          up?: boolean;
+          down?: boolean;
+        });
         x: number;
         y: number;
         left: boolean;
