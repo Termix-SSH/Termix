@@ -917,7 +917,7 @@
     "noProxyNodes": "Узлы прокси не настроены. Нажмите 'Добавить узел прокси' чтобы добавить.",
     "proxyNode": "Узел прокси",
     "proxyType": "Тип прокси",
-    "advancedAuthSettings": "Расширенные настройки аутентификации"
+    "advancedAuthSettings": "Расширенные настройки аутентификации",
     "advancedAuthSettings": "Расширенные настройки аутентификации",
     "addQuickAction": "Добавить Quick Action",
     "allHostsInFolderDeleted": "{{count}} хостов успешно удалены из папки \"{{folder}}\"",

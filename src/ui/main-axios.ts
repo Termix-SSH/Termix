@@ -643,7 +643,7 @@ function initializeApiInstances() {
 
   // RBAC API (port 30001)
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
-  
+
   // Docker Management API (port 30007)
   dockerApi = createApiInstance(getApiUrl("/docker", 30007), "DOCKER");
 }
@@ -3244,7 +3244,9 @@ export async function updateRole(
   }
 }
 
-export async function deleteRole(roleId: number): Promise<{ success: boolean }> {
+export async function deleteRole(
+  roleId: number,
+): Promise<{ success: boolean }> {
   try {
     const response = await rbacApi.delete(`/rbac/roles/${roleId}`);
     return response.data;
@@ -3254,7 +3256,9 @@ export async function deleteRole(roleId: number): Promise<{ success: boolean }> 
 }
 
 // User-Role Management
-export async function getUserRoles(userId: string): Promise<{ roles: UserRole[] }> {
+export async function getUserRoles(
+  userId: string,
+): Promise<{ roles: UserRole[] }> {
   try {
     const response = await rbacApi.get(`/rbac/users/${userId}/roles`);
     return response.data;
@@ -3268,7 +3272,9 @@ export async function assignRoleToUser(
   roleId: number,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await rbacApi.post(`/rbac/users/${userId}/roles`, { roleId });
+    const response = await rbacApi.post(`/rbac/users/${userId}/roles`, {
+      roleId,
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "assign role to user");
@@ -3280,7 +3286,9 @@ export async function removeRoleFromUser(
   roleId: number,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await rbacApi.delete(`/rbac/users/${userId}/roles/${roleId}`);
+    const response = await rbacApi.delete(
+      `/rbac/users/${userId}/roles/${roleId}`,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "remove role from user");
@@ -3299,14 +3307,19 @@ export async function shareHost(
   },
 ): Promise<{ success: boolean }> {
   try {
-    const response = await rbacApi.post(`/rbac/host/${hostId}/share`, shareData);
+    const response = await rbacApi.post(
+      `/rbac/host/${hostId}/share`,
+      shareData,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "share host");
   }
 }
 
-export async function getHostAccess(hostId: number): Promise<{ accessList: AccessRecord[] }> {
+export async function getHostAccess(
+  hostId: number,
+): Promise<{ accessList: AccessRecord[] }> {
   try {
     const response = await rbacApi.get(`/rbac/host/${hostId}/access`);
     return response.data;
@@ -3320,11 +3333,15 @@ export async function revokeHostAccess(
   accessId: number,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await rbacApi.delete(`/rbac/host/${hostId}/access/${accessId}`);
+    const response = await rbacApi.delete(
+      `/rbac/host/${hostId}/access/${accessId}`,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "revoke host access");
-    
+  }
+}
+
 // ============================================================================
 // DOCKER MANAGEMENT API
 // ============================================================================

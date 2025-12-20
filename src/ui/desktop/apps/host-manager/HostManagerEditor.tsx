@@ -869,15 +869,6 @@ export function HostManagerEditor({
       const submitData: Partial<SSHHost> = {
         ...data,
       };
-          
-      if (proxyMode === "single") {
-        submitData.socks5ProxyChain = [];
-      } else if (proxyMode === "chain") {
-        submitData.socks5Host = "";
-        submitData.socks5Port = 1080;
-        submitData.socks5Username = "";
-        submitData.socks5Password = "";
-      }
 
       if (data.authType !== "credential") {
         submitData.credentialId = undefined;
