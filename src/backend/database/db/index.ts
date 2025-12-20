@@ -210,6 +210,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         stats_config TEXT,
         docker_config TEXT,
         terminal_config TEXT,
+        notes TEXT,
+        expiration_date TEXT,
         use_socks5 INTEGER,
         socks5_host TEXT,
         socks5_port INTEGER,
@@ -574,6 +576,9 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 0",
   );
   addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
+
+  addColumnIfNotExists("ssh_data", "notes", "TEXT");
+  addColumnIfNotExists("ssh_data", "expiration_date", "TEXT");
 
   // SOCKS5 Proxy columns
   addColumnIfNotExists("ssh_data", "use_socks5", "INTEGER");

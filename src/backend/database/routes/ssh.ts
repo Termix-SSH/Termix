@@ -14,7 +14,17 @@ import {
   hostAccess,
   userRoles,
 } from "../db/schema.js";
-import { eq, and, desc, isNotNull, or, isNull, gte, sql, inArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  isNotNull,
+  or,
+  isNull,
+  gte,
+  sql,
+  inArray,
+} from "drizzle-orm";
 import type { Request, Response } from "express";
 import multer from "multer";
 import { sshLogger } from "../../utils/logger.js";
@@ -245,12 +255,15 @@ router.post(
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      notes,
+      expirationDate,
       useSocks5,
       socks5Host,
       socks5Port,
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      overrideCredentialUsername,
     } = hostData;
 
     console.log("POST /db/ssh - Received SOCKS5 data:", {
@@ -285,6 +298,7 @@ router.post(
       username,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
+      overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
@@ -301,12 +315,16 @@ router.post(
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      notes: notes || null,
+      expirationDate: expirationDate || null,
       useSocks5: useSocks5 ? 1 : 0,
       socks5Host: socks5Host || null,
       socks5Port: socks5Port || null,
       socks5Username: socks5Username || null,
       socks5Password: socks5Password || null,
-      socks5ProxyChain: socks5ProxyChain ? JSON.stringify(socks5ProxyChain) : null,
+      socks5ProxyChain: socks5ProxyChain
+        ? JSON.stringify(socks5ProxyChain)
+        : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -489,13 +507,20 @@ router.put(
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      notes,
+      expirationDate,
       useSocks5,
       socks5Host,
       socks5Port,
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      overrideCredentialUsername,
     } = hostData;
+
+    // Temporary logging to debug notes and expirationDate
+    console.log("DEBUG - Update host data:", { notes, expirationDate });
+
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
@@ -523,6 +548,7 @@ router.put(
       username,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
+      overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
@@ -539,12 +565,16 @@ router.put(
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      notes: notes || null,
+      expirationDate: expirationDate || null,
       useSocks5: useSocks5 ? 1 : 0,
       socks5Host: socks5Host || null,
       socks5Port: socks5Port || null,
       socks5Username: socks5Username || null,
       socks5Password: socks5Password || null,
-      socks5ProxyChain: socks5ProxyChain ? JSON.stringify(socks5ProxyChain) : null,
+      socks5ProxyChain: socks5ProxyChain
+        ? JSON.stringify(socks5ProxyChain)
+        : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -742,6 +772,8 @@ router.get(
           credentialId: sshData.credentialId,
           overrideCredentialUsername: sshData.overrideCredentialUsername,
           quickActions: sshData.quickActions,
+          notes: sshData.notes,
+          expirationDate: sshData.expirationDate,
 
           // Shared access info
           isShared: sql<boolean>`${hostAccess.id} IS NOT NULL`,
@@ -755,12 +787,11 @@ router.get(
             eq(hostAccess.hostId, sshData.id),
             or(
               eq(hostAccess.userId, userId),
-              roleIds.length > 0 ? inArray(hostAccess.roleId, roleIds) : sql`false`,
+              roleIds.length > 0
+                ? inArray(hostAccess.roleId, roleIds)
+                : sql`false`,
             ),
-            or(
-              isNull(hostAccess.expiresAt),
-              gte(hostAccess.expiresAt, now),
-            ),
+            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
           ),
         )
         .where(
@@ -769,10 +800,7 @@ router.get(
             and(
               // Shared to user directly (not expired)
               eq(hostAccess.userId, userId),
-              or(
-                isNull(hostAccess.expiresAt),
-                gte(hostAccess.expiresAt, now),
-              ),
+              or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
             ),
             roleIds.length > 0
               ? and(

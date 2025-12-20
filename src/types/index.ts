@@ -47,6 +47,8 @@ export interface SSHHost {
   quickActions?: QuickAction[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
+  notes?: string;
+  expirationDate?: string;
 
   useSocks5?: boolean;
   socks5Host?: string;
@@ -107,6 +109,8 @@ export interface SSHHostData {
   quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
+  notes?: string;
+  expirationDate?: string;
 
   // SOCKS5 Proxy configuration
   useSocks5?: boolean;
