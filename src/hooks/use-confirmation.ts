@@ -56,6 +56,8 @@ export function useConfirmation() {
         },
         duration: 10000,
         className: variant === "destructive" ? "border-red-500" : "",
+        actionButtonStyle: { marginLeft: "0.1rem" },
+        cancelButtonStyle: { marginRight: "0.1rem" },
       });
       return Promise.resolve(true);
     }
@@ -65,7 +67,8 @@ export function useConfirmation() {
       const options = opts as ConfirmationOptions;
       const actionText = options.confirmText || "Confirm";
       const cancelText = options.cancelText || "Cancel";
-      const variantClass = options.variant === "destructive" ? "border-red-500" : "";
+      const variantClass =
+        options.variant === "destructive" ? "border-red-500" : "";
 
       toast(options.title, {
         description: options.description,

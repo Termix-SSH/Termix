@@ -94,7 +94,6 @@ export const sshData = sqliteTable("ssh_data", {
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
   notes: text("notes"),
-  expirationDate: text("expiration_date"),
 
   useSocks5: integer("use_socks5", { mode: "boolean" }),
   socks5Host: text("socks5_host"),

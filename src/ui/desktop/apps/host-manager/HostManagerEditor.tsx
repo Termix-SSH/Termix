@@ -536,7 +536,6 @@ export function HostManagerEditor({
         )
         .default([]),
       notes: z.string().optional(),
-      expirationDate: z.string().optional(),
       useSocks5: z.boolean().optional(),
       socks5Host: z.string().optional(),
       socks5Port: z.coerce.number().min(1).max(65535).optional(),
@@ -643,7 +642,6 @@ export function HostManagerEditor({
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
       forceKeyboardInteractive: false,
       notes: "",
-      expirationDate: "",
       useSocks5: false,
       socks5Host: "",
       socks5Port: 1080,
@@ -747,7 +745,6 @@ export function HostManagerEditor({
         },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
         notes: cleanedHost.notes || "",
-        expirationDate: cleanedHost.expirationDate || "",
         useSocks5: Boolean(cleanedHost.useSocks5),
         socks5Host: cleanedHost.socks5Host || "",
         socks5Port: cleanedHost.socks5Port || 1080,
@@ -1383,26 +1380,6 @@ export function HostManagerEditor({
                             <Switch
                               checked={field.value}
                               onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="expirationDate"
-                      render={({ field }) => (
-                        <FormItem className="col-span-10">
-                          <FormLabel>{t("hosts.expirationDate")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              placeholder={t("placeholders.expirationDate")}
-                              value={field.value || ""}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              name={field.name}
                             />
                           </FormControl>
                         </FormItem>

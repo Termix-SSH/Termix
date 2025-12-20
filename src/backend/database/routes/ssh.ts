@@ -256,7 +256,6 @@ router.post(
       terminalConfig,
       forceKeyboardInteractive,
       notes,
-      expirationDate,
       useSocks5,
       socks5Host,
       socks5Port,
@@ -316,7 +315,6 @@ router.post(
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       notes: notes || null,
-      expirationDate: expirationDate || null,
       useSocks5: useSocks5 ? 1 : 0,
       socks5Host: socks5Host || null,
       socks5Port: socks5Port || null,
@@ -508,7 +506,6 @@ router.put(
       terminalConfig,
       forceKeyboardInteractive,
       notes,
-      expirationDate,
       useSocks5,
       socks5Host,
       socks5Port,
@@ -517,9 +514,6 @@ router.put(
       socks5ProxyChain,
       overrideCredentialUsername,
     } = hostData;
-
-    // Temporary logging to debug notes and expirationDate
-    console.log("DEBUG - Update host data:", { notes, expirationDate });
 
     if (
       !isNonEmptyString(userId) ||
@@ -566,7 +560,6 @@ router.put(
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       notes: notes || null,
-      expirationDate: expirationDate || null,
       useSocks5: useSocks5 ? 1 : 0,
       socks5Host: socks5Host || null,
       socks5Port: socks5Port || null,
@@ -773,7 +766,6 @@ router.get(
           overrideCredentialUsername: sshData.overrideCredentialUsername,
           quickActions: sshData.quickActions,
           notes: sshData.notes,
-          expirationDate: sshData.expirationDate,
           enableDocker: sshData.enableDocker,
           useSocks5: sshData.useSocks5,
           socks5Host: sshData.socks5Host,
@@ -1677,15 +1669,21 @@ async function resolveHostCredentials(
 
       if (credentials.length > 0) {
         const credential = credentials[0];
-        return {
+        const resolvedHost: Record<string, unknown> = {
           ...host,
-          username: credential.username,
           authType: credential.auth_type || credential.authType,
           password: credential.password,
           key: credential.key,
           keyPassword: credential.key_password || credential.keyPassword,
           keyType: credential.key_type || credential.keyType,
         };
+
+        // Only override username if overrideCredentialUsername is not enabled
+        if (!host.overrideCredentialUsername) {
+          resolvedHost.username = credential.username;
+        }
+
+        return resolvedHost;
       }
     }
 

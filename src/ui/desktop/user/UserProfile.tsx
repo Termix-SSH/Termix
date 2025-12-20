@@ -101,7 +101,7 @@ export function UserProfile({
     localStorage.getItem("fileColorCoding") !== "false",
   );
   const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
-    localStorage.getItem("commandAutocomplete") !== "false",
+    localStorage.getItem("commandAutocomplete") === "true",
   );
   const [defaultSnippetFoldersCollapsed, setDefaultSnippetFoldersCollapsed] =
     useState<boolean>(

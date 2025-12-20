@@ -1617,7 +1617,7 @@
     "folder": "folder",
     "password": "password",
     "keyPassword": "key password",
-    "notes": "Add notes about this host...",
+    "notes": "add notes about this host...",
     "expirationDate": "Select expiration date",
     "pastePrivateKey": "Paste your private key here...",
     "pastePublicKey": "Paste your public key here...",
