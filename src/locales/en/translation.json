@@ -942,7 +942,9 @@
     "quickActionsOrder": "Quick action buttons will appear in the order listed above on the Server Stats page",
     "advancedAuthSettings": "Advanced Authentication Settings",
     "sudoPasswordAutoFill": "Sudo Password Auto-Fill",
-    "sudoPasswordAutoFillDesc": "Automatically offer to insert SSH password when sudo prompts for password"
+    "sudoPasswordAutoFillDesc": "Automatically offer to insert SSH password when sudo prompts for password",
+    "sudoPassword": "Sudo Password",
+    "sudoPasswordDesc": "Optional password for sudo commands (useful with key authentication)"
   },
   "terminal": {
     "title": "Terminal",
@@ -1617,6 +1619,7 @@
     "folder": "folder",
     "password": "password",
     "keyPassword": "key password",
+    "sudoPassword": "sudo password (optional)",
     "notes": "add notes about this host...",
     "expirationDate": "Select expiration date",
     "pastePrivateKey": "Paste your private key here...",

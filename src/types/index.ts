@@ -28,6 +28,7 @@ export interface SSHHost {
   key?: string;
   keyPassword?: string;
   keyType?: string;
+  sudoPassword?: string;
   forceKeyboardInteractive?: boolean;
 
   autostartPassword?: string;
@@ -95,6 +96,7 @@ export interface SSHHostData {
   key?: File | null;
   keyPassword?: string;
   keyType?: string;
+  sudoPassword?: string;
   credentialId?: number | null;
   overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;

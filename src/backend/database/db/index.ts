@@ -701,6 +701,23 @@ const migrateSchema = () => {
     }
   }
 
+  // Migration: Add sudo_password column to ssh_data table
+  try {
+    sqlite.prepare("SELECT sudo_password FROM ssh_data LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec("ALTER TABLE ssh_data ADD COLUMN sudo_password TEXT");
+      databaseLogger.info("Added sudo_password column to ssh_data table", {
+        operation: "schema_migration",
+      });
+    } catch (alterError) {
+      databaseLogger.warn("Failed to add sudo_password column", {
+        operation: "schema_migration",
+        error: alterError,
+      });
+    }
+  }
+
   // RBAC Phase 2: Roles tables
   try {
     sqlite.prepare("SELECT id FROM roles LIMIT 1").get();

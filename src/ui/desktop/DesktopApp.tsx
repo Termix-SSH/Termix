@@ -285,6 +285,16 @@ function AppContent() {
           className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-700 ${
             transitionPhase === "fadeOut" ? "opacity-100" : "opacity-0"
           }`}
+          style={{
+            background: "#0e0e10",
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 35px,
+              rgba(255, 255, 255, 0.03) 35px,
+              rgba(255, 255, 255, 0.03) 37px
+            )`,
+          }}
         >
           {transitionPhase === "fadeOut" && (
             <>

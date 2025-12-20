@@ -666,10 +666,12 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               // Sudo password prompt detection
               const sudoPasswordPattern =
                 /(?:\[sudo\] password for \S+:|sudo: a password is required)/;
+              const passwordToFill =
+                hostConfig.terminalConfig?.sudoPassword || hostConfig.password;
               if (
                 config.sudoPasswordAutoFill &&
                 sudoPasswordPattern.test(msg.data) &&
-                hostConfig.password &&
+                passwordToFill &&
                 !sudoPromptShownRef.current
               ) {
                 sudoPromptShownRef.current = true;
@@ -683,7 +685,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                       webSocketRef.current.send(
                         JSON.stringify({
                           type: "input",
-                          data: hostConfig.password + "\n",
+                          data: passwordToFill + "\n",
                         }),
                       );
                     }

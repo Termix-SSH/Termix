@@ -66,6 +66,7 @@ export const sshData = sqliteTable("ssh_data", {
   key: text("key", { length: 8192 }),
   key_password: text("key_password"),
   keyType: text("key_type"),
+  sudoPassword: text("sudo_password"),
 
   autostartPassword: text("autostart_password"),
   autostartKey: text("autostart_key", { length: 8192 }),

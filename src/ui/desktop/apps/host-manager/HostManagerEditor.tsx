@@ -517,6 +517,7 @@ export function HostManagerEditor({
           autoMosh: z.boolean(),
           moshCommand: z.string(),
           sudoPasswordAutoFill: z.boolean(),
+          sudoPassword: z.string().optional(),
         })
         .optional(),
       forceKeyboardInteractive: z.boolean().optional(),
@@ -2725,6 +2726,27 @@ export function HostManagerEditor({
                             </FormItem>
                           )}
                         />
+
+                        {form.watch("terminalConfig.sudoPasswordAutoFill") && (
+                          <FormField
+                            control={form.control}
+                            name="terminalConfig.sudoPassword"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("hosts.sudoPassword")}</FormLabel>
+                                <FormControl>
+                                  <PasswordInput
+                                    placeholder={t("placeholders.sudoPassword")}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  {t("hosts.sudoPasswordDesc")}
+                                </FormDescription>
+                              </FormItem>
+                            )}
+                          />
+                        )}
 
                         <div className="space-y-2">
                           <label className="text-sm font-medium">

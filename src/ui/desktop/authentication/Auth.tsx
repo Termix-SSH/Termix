@@ -769,16 +769,27 @@ export function Auth({
   if (dbHealthChecking && !dbConnectionFailed) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
-        style={{ maxHeight: "calc(100vh - 1rem)" }}
+        className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
+        style={{
+          background: "#0e0e10",
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 35px,
+            rgba(255, 255, 255, 0.03) 35px,
+            rgba(255, 255, 255, 0.03) 37px
+          )`,
+        }}
         {...props}
       >
-        <div className="flex items-center justify-center h-32">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              {t("common.checkingDatabase")}
-            </p>
+        <div className="w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                {t("common.checkingDatabase")}
+              </p>
+            </div>
           </div>
         </div>
       </div>
