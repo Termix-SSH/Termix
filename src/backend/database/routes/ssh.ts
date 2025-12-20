@@ -245,7 +245,20 @@ router.post(
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      useSocks5,
+      socks5Host,
+      socks5Port,
+      socks5Username,
+      socks5Password,
+      socks5ProxyChain,
     } = hostData;
+
+    console.log("POST /db/ssh - Received SOCKS5 data:", {
+      useSocks5,
+      socks5Host,
+      socks5ProxyChain,
+    });
+
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
@@ -288,6 +301,12 @@ router.post(
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      useSocks5: useSocks5 ? 1 : 0,
+      socks5Host: socks5Host || null,
+      socks5Port: socks5Port || null,
+      socks5Username: socks5Username || null,
+      socks5Password: socks5Password || null,
+      socks5ProxyChain: socks5ProxyChain ? JSON.stringify(socks5ProxyChain) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -470,6 +489,12 @@ router.put(
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      useSocks5,
+      socks5Host,
+      socks5Port,
+      socks5Username,
+      socks5Password,
+      socks5ProxyChain,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -514,6 +539,12 @@ router.put(
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      useSocks5: useSocks5 ? 1 : 0,
+      socks5Host: socks5Host || null,
+      socks5Port: socks5Port || null,
+      socks5Username: socks5Username || null,
+      socks5Password: socks5Password || null,
+      socks5ProxyChain: socks5ProxyChain ? JSON.stringify(socks5ProxyChain) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -792,6 +823,9 @@ router.get(
               ? JSON.parse(row.terminalConfig as string)
               : undefined,
             forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
+            socks5ProxyChain: row.socks5ProxyChain
+              ? JSON.parse(row.socks5ProxyChain as string)
+              : [],
 
             // Add shared access metadata
             isShared: !!row.isShared,
@@ -872,6 +906,9 @@ router.get(
           ? JSON.parse(host.terminalConfig)
           : undefined,
         forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
+        socks5ProxyChain: host.socks5ProxyChain
+          ? JSON.parse(host.socks5ProxyChain)
+          : [],
       };
 
       res.json((await resolveHostCredentials(result)) || result);
@@ -942,6 +979,9 @@ router.get(
         defaultPath: resolvedHost.defaultPath,
         tunnelConnections: resolvedHost.tunnelConnections
           ? JSON.parse(resolvedHost.tunnelConnections as string)
+          : [],
+        socks5ProxyChain: resolvedHost.socks5ProxyChain
+          ? JSON.parse(resolvedHost.socks5ProxyChain as string)
           : [],
       };
 

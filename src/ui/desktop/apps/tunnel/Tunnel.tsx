@@ -183,6 +183,12 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
           retryInterval: tunnel.retryInterval * 1000,
           autoStart: tunnel.autoStart,
           isPinned: host.pin,
+          useSocks5: host.useSocks5,
+          socks5Host: host.socks5Host,
+          socks5Port: host.socks5Port,
+          socks5Username: host.socks5Username,
+          socks5Password: host.socks5Password,
+          socks5ProxyChain: host.socks5ProxyChain,
         };
 
         await connectTunnel(tunnelConfig);

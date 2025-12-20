@@ -14,6 +14,7 @@ import { sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -32,6 +33,12 @@ interface ConnectToHostData {
     userId?: string;
     forceKeyboardInteractive?: boolean;
     jumpHosts?: Array<{ hostId: number }>;
+    useSocks5?: boolean;
+    socks5Host?: string;
+    socks5Port?: number;
+    socks5Username?: string;
+    socks5Password?: string;
+    socks5ProxyChain?: unknown;
   };
   initialPath?: string;
   executeCommand?: string;
@@ -1178,6 +1185,53 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    }
+
+    // Check if SOCKS5 proxy is enabled (either single proxy or chain)
+    if (
+      hostConfig.useSocks5 &&
+      (hostConfig.socks5Host ||
+        (hostConfig.socks5ProxyChain && (hostConfig.socks5ProxyChain as any).length > 0))
+    ) {
+      try {
+        const socks5Socket = await createSocks5Connection(
+          ip,
+          port,
+          {
+            useSocks5: hostConfig.useSocks5,
+            socks5Host: hostConfig.socks5Host,
+            socks5Port: hostConfig.socks5Port,
+            socks5Username: hostConfig.socks5Username,
+            socks5Password: hostConfig.socks5Password,
+            socks5ProxyChain: hostConfig.socks5ProxyChain as any,
+          },
+        );
+
+        if (socks5Socket) {
+          connectConfig.sock = socks5Socket;
+          sshConn.connect(connectConfig);
+          return;
+        }
+      } catch (socks5Error) {
+        sshLogger.error("SOCKS5 connection failed", socks5Error, {
+          operation: "socks5_connect",
+          hostId: id,
+          proxyHost: hostConfig.socks5Host,
+          proxyPort: hostConfig.socks5Port || 1080,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "SOCKS5 proxy connection failed: " +
+              (socks5Error instanceof Error
+                ? socks5Error.message
+                : "Unknown error"),
+          }),
+        );
+        cleanupSSH(connectionTimeout);
+        return;
+      }
     }
 
     if (

@@ -71,6 +71,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion.tsx";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.tsx";
+import {
   TERMINAL_THEMES,
   TERMINAL_FONTS,
   CURSOR_STYLES,
@@ -79,8 +87,8 @@ import {
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
 import { TerminalPreview } from "@/ui/desktop/apps/terminal/TerminalPreview.tsx";
-import type { TerminalConfig } from "@/types";
-import { Plus, X, Check, ChevronsUpDown } from "lucide-react";
+import type { TerminalConfig, SSHHost, Credential } from "@/types";
+import { Plus, X, Check, ChevronsUpDown, Save } from "lucide-react";
 
 interface JumpHostItemProps {
   jumpHost: { hostId: number };
@@ -278,46 +286,6 @@ function QuickActionItem({
   );
 }
 
-interface SSHHost {
-  id: number;
-  name: string;
-  ip: string;
-  port: number;
-  username: string;
-  folder: string;
-  tags: string[];
-  pin: boolean;
-  authType: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  keyType?: string;
-  enableTerminal: boolean;
-  enableTunnel: boolean;
-  enableFileManager: boolean;
-  defaultPath: string;
-  tunnelConnections: Array<{
-    sourcePort: number;
-    endpointPort: number;
-    endpointHost: string;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-  }>;
-  jumpHosts?: Array<{
-    hostId: number;
-  }>;
-  quickActions?: Array<{
-    name: string;
-    snippetId: number;
-  }>;
-  statsConfig?: StatsConfig;
-  terminalConfig?: TerminalConfig;
-  createdAt: string;
-  updatedAt: string;
-  credentialId?: number;
-}
-
 interface SSHManagerHostEditorProps {
   editingHost?: SSHHost | null;
   onFormSubmit?: (updatedHost?: SSHHost) => void;
@@ -331,12 +299,11 @@ export function HostManagerEditor({
   const [folders, setFolders] = useState<string[]>([]);
   const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
   const [hosts, setHosts] = useState<SSHHost[]>([]);
-  const [credentials, setCredentials] = useState<
-    Array<{ id: number; username: string; authType: string }>
-  >([]);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
   const [snippets, setSnippets] = useState<
     Array<{ id: number; name: string; content: string }>
   >([]);
+  const [proxyMode, setProxyMode] = useState<"single" | "chain">("single");
 
   const [authTab, setAuthTab] = useState<
     "password" | "key" | "credential" | "none"
@@ -370,7 +337,7 @@ export function HostManagerEditor({
           getSnippets(),
         ]);
         setHosts(hostsData);
-        setCredentials(credentialsData);
+        setCredentials(credentialsData as Credential[]);
         setSnippets(Array.isArray(snippetsData) ? snippetsData : []);
 
         const uniqueFolders = [
@@ -567,6 +534,22 @@ export function HostManagerEditor({
           }),
         )
         .default([]),
+      useSocks5: z.boolean().optional(),
+      socks5Host: z.string().optional(),
+      socks5Port: z.coerce.number().min(1).max(65535).optional(),
+      socks5Username: z.string().optional(),
+      socks5Password: z.string().optional(),
+      socks5ProxyChain: z
+        .array(
+          z.object({
+            host: z.string().min(1),
+            port: z.number().min(1).max(65535),
+            type: z.union([z.literal(4), z.literal(5)]),
+            username: z.string().optional(),
+            password: z.string().optional(),
+          }),
+        )
+        .optional(),
       enableDocker: z.boolean().default(false),
     })
     .superRefine((data, ctx) => {
@@ -604,11 +587,7 @@ export function HostManagerEditor({
           });
         }
       } else if (data.authType === "credential") {
-        if (
-          !data.credentialId ||
-          (typeof data.credentialId === "string" &&
-            data.credentialId.trim() === "")
-        ) {
+        if (!data.credentialId) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: t("hosts.credentialRequired"),
@@ -660,6 +639,12 @@ export function HostManagerEditor({
       statsConfig: DEFAULT_STATS_CONFIG,
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
       forceKeyboardInteractive: false,
+      useSocks5: false,
+      socks5Host: "",
+      socks5Port: 1080,
+      socks5Username: "",
+      socks5Password: "",
+      socks5ProxyChain: [],
       enableDocker: false,
     },
   });
@@ -677,7 +662,7 @@ export function HostManagerEditor({
         }
       }
     }
-  }, [authTab, credentials, form.getValues, form.setValue]);
+  }, [authTab, credentials, form]);
 
   useEffect(() => {
     if (editingHost) {
@@ -701,13 +686,13 @@ export function HostManagerEditor({
             : "none";
       setAuthTab(defaultAuthType);
 
-      let parsedStatsConfig = DEFAULT_STATS_CONFIG;
+      let parsedStatsConfig: StatsConfig = DEFAULT_STATS_CONFIG;
       try {
         if (cleanedHost.statsConfig) {
           parsedStatsConfig =
             typeof cleanedHost.statsConfig === "string"
               ? JSON.parse(cleanedHost.statsConfig)
-              : cleanedHost.statsConfig;
+              : (cleanedHost.statsConfig as StatsConfig);
         }
       } catch (error) {
         console.error("Failed to parse statsConfig:", error);
@@ -715,7 +700,7 @@ export function HostManagerEditor({
 
       parsedStatsConfig = { ...DEFAULT_STATS_CONFIG, ...parsedStatsConfig };
 
-      const formData = {
+      const formData: Partial<FormData> = {
         name: cleanedHost.name || "",
         ip: cleanedHost.ip || "",
         port: cleanedHost.port || 22,
@@ -724,7 +709,7 @@ export function HostManagerEditor({
         tags: Array.isArray(cleanedHost.tags) ? cleanedHost.tags : [],
         pin: Boolean(cleanedHost.pin),
         authType: defaultAuthType as "password" | "key" | "credential" | "none",
-        credentialId: null,
+        credentialId: cleanedHost.credentialId,
         overrideCredentialUsername: Boolean(
           cleanedHost.overrideCredentialUsername,
         ),
@@ -756,8 +741,26 @@ export function HostManagerEditor({
             : [],
         },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
+        useSocks5: Boolean(cleanedHost.useSocks5),
+        socks5Host: cleanedHost.socks5Host || "",
+        socks5Port: cleanedHost.socks5Port || 1080,
+        socks5Username: cleanedHost.socks5Username || "",
+        socks5Password: cleanedHost.socks5Password || "",
+        socks5ProxyChain: Array.isArray(cleanedHost.socks5ProxyChain)
+          ? cleanedHost.socks5ProxyChain
+          : [],
         enableDocker: Boolean(cleanedHost.enableDocker),
       };
+
+      // Determine proxy mode based on existing data
+      if (
+        Array.isArray(cleanedHost.socks5ProxyChain) &&
+        cleanedHost.socks5ProxyChain.length > 0
+      ) {
+        setProxyMode("chain");
+      } else {
+        setProxyMode("single");
+      }
 
       if (defaultAuthType === "password") {
         formData.password = cleanedHost.password || "";
@@ -776,14 +779,13 @@ export function HostManagerEditor({
             | "ssh-rsa-sha2-256"
             | "ssh-rsa-sha2-512") || "auto";
       } else if (defaultAuthType === "credential") {
-        formData.credentialId =
-          cleanedHost.credentialId || "existing_credential";
+        formData.credentialId = cleanedHost.credentialId;
       }
 
-      form.reset(formData);
+      form.reset(formData as FormData);
     } else {
       setAuthTab("password");
-      const defaultFormData = {
+      const defaultFormData: Partial<FormData> = {
         name: "",
         ip: "",
         port: 22,
@@ -811,9 +813,9 @@ export function HostManagerEditor({
         enableDocker: false,
       };
 
-      form.reset(defaultFormData);
+      form.reset(defaultFormData as FormData);
     }
-  }, [editingHost?.id]);
+  }, [editingHost, form]);
 
   useEffect(() => {
     const focusTimer = setTimeout(() => {
@@ -826,6 +828,8 @@ export function HostManagerEditor({
   }, [editingHost]);
 
   const onSubmit = async (data: FormData) => {
+    await form.trigger();
+    console.log("onSubmit called with data:", data);
     try {
       isSubmittingRef.current = true;
       setFormError(null);
@@ -855,66 +859,45 @@ export function HostManagerEditor({
         }
       }
 
-      const submitData: Record<string, unknown> = {
-        name: data.name,
-        ip: data.ip,
-        port: data.port,
-        username: data.username,
-        folder: data.folder || "",
-        tags: data.tags || [],
-        pin: Boolean(data.pin),
-        authType: data.authType,
-        overrideCredentialUsername: Boolean(data.overrideCredentialUsername),
-        enableTerminal: Boolean(data.enableTerminal),
-        enableDocker: Boolean(data.enableDocker),
-        enableTunnel: Boolean(data.enableTunnel),
-        enableFileManager: Boolean(data.enableFileManager),
-        defaultPath: data.defaultPath || "/",
-        tunnelConnections: data.tunnelConnections || [],
-        jumpHosts: data.jumpHosts || [],
-        quickActions: data.quickActions || [],
-        statsConfig: data.statsConfig || DEFAULT_STATS_CONFIG,
-        terminalConfig: data.terminalConfig || DEFAULT_TERMINAL_CONFIG,
-        forceKeyboardInteractive: Boolean(data.forceKeyboardInteractive),
+      const submitData: Partial<SSHHost> = {
+        ...data,
       };
+          
+      if (proxyMode === "single") {
+        submitData.socks5ProxyChain = [];
+      } else if (proxyMode === "chain") {
+        submitData.socks5Host = "";
+        submitData.socks5Port = 1080;
+        submitData.socks5Username = "";
+        submitData.socks5Password = "";
+      }
 
-      submitData.credentialId = null;
-      submitData.password = null;
-      submitData.key = null;
-      submitData.keyPassword = null;
-      submitData.keyType = null;
+      if (data.authType !== "credential") {
+        submitData.credentialId = undefined;
+      }
+      if (data.authType !== "password") {
+        submitData.password = undefined;
+      }
+      if (data.authType !== "key") {
+        submitData.key = undefined;
+        submitData.keyPassword = undefined;
+        submitData.keyType = undefined;
+      }
 
-      if (data.authType === "credential") {
-        if (
-          data.credentialId === "existing_credential" &&
-          editingHost &&
-          editingHost.id
-        ) {
-          delete submitData.credentialId;
-        } else {
-          submitData.credentialId = data.credentialId;
-        }
-      } else if (data.authType === "password") {
-        submitData.password = data.password;
-      } else if (data.authType === "key") {
+      if (data.authType === "key") {
         if (data.key instanceof File) {
-          const keyContent = await data.key.text();
-          submitData.key = keyContent;
+          submitData.key = await data.key.text();
         } else if (data.key === "existing_key") {
           delete submitData.key;
-        } else {
-          submitData.key = data.key;
         }
-        submitData.keyPassword = data.keyPassword;
-        submitData.keyType = data.keyType;
       }
 
       let savedHost;
       if (editingHost && editingHost.id) {
-        savedHost = await updateSSHHost(editingHost.id, submitData);
+        savedHost = await updateSSHHost(editingHost.id, submitData as any);
         toast.success(t("hosts.hostUpdatedSuccessfully", { name: data.name }));
       } else {
-        savedHost = await createSSHHost(submitData);
+        savedHost = await createSSHHost(submitData as any);
         toast.success(t("hosts.hostAddedSuccessfully", { name: data.name }));
       }
 
@@ -959,7 +942,9 @@ export function HostManagerEditor({
         notifyHostCreatedOrUpdated(savedHost.id);
       }
     } catch (error) {
-      toast.error(t("hosts.failedToSaveHost"));
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(t("hosts.failedToSaveHost") + ": " + errorMessage);
       console.error("Failed to save host:", error);
     } finally {
       isSubmittingRef.current = false;
@@ -1499,7 +1484,8 @@ export function HostManagerEditor({
                                       <span
                                         className="truncate"
                                         title={
-                                          field.value?.name || t("hosts.upload")
+                                          (field.value as File)?.name ||
+                                          t("hosts.upload")
                                         }
                                       >
                                         {field.value === "existing_key"
@@ -1507,7 +1493,7 @@ export function HostManagerEditor({
                                           : field.value
                                             ? editingHost
                                               ? t("hosts.updateKey")
-                                              : field.value.name
+                                              : (field.value as File).name
                                             : t("hosts.upload")}
                                       </span>
                                     </Button>
@@ -1546,8 +1532,6 @@ export function HostManagerEditor({
                                       dropCursor: false,
                                       allowMultipleSelections: false,
                                       highlightSelectionMatches: false,
-                                      searchKeymap: false,
-                                      scrollPastEnd: false,
                                     }}
                                     extensions={[
                                       EditorView.theme({
@@ -1796,159 +1780,405 @@ export function HostManagerEditor({
                         />
                       </AccordionContent>
                     </AccordionItem>
+
+                    <AccordionItem value="socks5">
+                      <AccordionTrigger>
+                        {t("hosts.socks5Proxy")}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-4">
+                        <Alert>
+                          <AlertDescription>
+                            {t("hosts.socks5Description")}
+                          </AlertDescription>
+                        </Alert>
+
+                        <FormField
+                          control={form.control}
+                          name="useSocks5"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>{t("hosts.enableSocks5")}</FormLabel>
+                                <FormDescription>
+                                  {t("hosts.enableSocks5Description")}
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        {form.watch("useSocks5") && (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <FormLabel>
+                                {t("hosts.socks5ProxyMode")}
+                              </FormLabel>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant={
+                                    proxyMode === "single"
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => setProxyMode("single")}
+                                  className="flex-1"
+                                >
+                                  {t("hosts.socks5UseSingleProxy")}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant={
+                                    proxyMode === "chain"
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => setProxyMode("chain")}
+                                  className="flex-1"
+                                >
+                                  {t("hosts.socks5UseProxyChain")}
+                                </Button>
+                              </div>
+                            </div>
+
+                            {proxyMode === "single" && (
+                              <div className="space-y-4 p-4 border rounded-lg">
+                                <FormField
+                                  control={form.control}
+                                  name="socks5Host"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t("hosts.socks5Host")}
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          placeholder="proxy.example.com"
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        {t("hosts.socks5HostDescription")}
+                                      </FormDescription>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="socks5Port"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t("hosts.socks5Port")}
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          placeholder="1080"
+                                          {...field}
+                                          onChange={(e) =>
+                                            field.onChange(
+                                              parseInt(e.target.value) || 1080,
+                                            )
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        {t("hosts.socks5PortDescription")}
+                                      </FormDescription>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="socks5Username"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t("hosts.socks5Username")} (
+                                        {t("hosts.optional")})
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          placeholder={t("hosts.username")}
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="socks5Password"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t("hosts.socks5Password")} (
+                                        {t("hosts.optional")})
+                                      </FormLabel>
+                                      <FormControl>
+                                        <PasswordInput
+                                          placeholder={t("hosts.password")}
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            )}
+
+                            {proxyMode === "chain" && (
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <FormLabel>
+                                    {t("hosts.socks5ProxyChain")}
+                                  </FormLabel>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const currentChain =
+                                        form.watch("socks5ProxyChain") || [];
+                                      form.setValue("socks5ProxyChain", [
+                                        ...currentChain,
+                                        {
+                                          host: "",
+                                          port: 1080,
+                                          type: 5 as 4 | 5,
+                                          username: "",
+                                          password: "",
+                                        },
+                                      ]);
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    {t("hosts.addProxyNode")}
+                                  </Button>
+                                </div>
+
+                                {(form.watch("socks5ProxyChain") || [])
+                                  .length === 0 && (
+                                  <div className="text-sm text-muted-foreground text-center p-4 border rounded-lg border-dashed">
+                                    {t("hosts.noProxyNodes")}
+                                  </div>
+                                )}
+
+                                {(form.watch("socks5ProxyChain") || []).map(
+                                  (node: any, index: number) => (
+                                    <div
+                                      key={index}
+                                      className="p-4 border rounded-lg space-y-3 relative"
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium">
+                                          {t("hosts.proxyNode")} {index + 1}
+                                        </span>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => {
+                                            const currentChain =
+                                              form.watch("socks5ProxyChain") ||
+                                              [];
+                                            form.setValue(
+                                              "socks5ProxyChain",
+                                              currentChain.filter(
+                                                (_: any, i: number) =>
+                                                  i !== index,
+                                              ),
+                                            );
+                                          }}
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                          <FormLabel>
+                                            {t("hosts.socks5Host")}
+                                          </FormLabel>
+                                          <Input
+                                            placeholder="proxy.example.com"
+                                            value={node.host}
+                                            onChange={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                host: e.target.value,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                          />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                          <FormLabel>
+                                            {t("hosts.socks5Port")}
+                                          </FormLabel>
+                                          <Input
+                                            type="number"
+                                            placeholder="1080"
+                                            value={node.port}
+                                            onChange={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                port:
+                                                  parseInt(e.target.value) ||
+                                                  1080,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <FormLabel>
+                                          {t("hosts.proxyType")}
+                                        </FormLabel>
+                                        <Select
+                                          value={String(node.type)}
+                                          onValueChange={(value) => {
+                                            const currentChain =
+                                              form.watch("socks5ProxyChain") ||
+                                              [];
+                                            const newChain = [...currentChain];
+                                            newChain[index] = {
+                                              ...newChain[index],
+                                              type: parseInt(value) as 4 | 5,
+                                            };
+                                            form.setValue(
+                                              "socks5ProxyChain",
+                                              newChain,
+                                            );
+                                          }}
+                                        >
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="4">
+                                              SOCKS4
+                                            </SelectItem>
+                                            <SelectItem value="5">
+                                              SOCKS5
+                                            </SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                          <FormLabel>
+                                            {t("hosts.socks5Username")} (
+                                            {t("hosts.optional")})
+                                          </FormLabel>
+                                          <Input
+                                            placeholder={t("hosts.username")}
+                                            value={node.username || ""}
+                                            onChange={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                username: e.target.value,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                          />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                          <FormLabel>
+                                            {t("hosts.socks5Password")} (
+                                            {t("hosts.optional")})
+                                          </FormLabel>
+                                          <PasswordInput
+                                            placeholder={t("hosts.password")}
+                                            value={node.password || ""}
+                                            onChange={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                password: e.target.value,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
                   </Accordion>
                 </TabsContent>
-                <TabsContent value="terminal" className="space-y-1">
-                  <FormField
-                    control={form.control}
-                    name="enableTerminal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("hosts.enableTerminal")}</FormLabel>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          {t("hosts.enableTerminalDesc")}
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                  <Alert className="mt-4 mb-4">
-                    <AlertDescription>
-                      {t("hosts.terminalCustomizationNotice")}
-                    </AlertDescription>
-                  </Alert>
-                  <h1 className="text-xl font-semibold mt-7">
-                    {t("hosts.terminalCustomization")}
-                  </h1>
-                  <Accordion type="multiple" className="w-full">
+
+                <TabsContent value="terminal">
+                  <Accordion
+                    type="multiple"
+                    className="w-full"
+                    defaultValue={["appearance", "behavior", "advanced"]}
+                  >
                     <AccordionItem value="appearance">
                       <AccordionTrigger>
                         {t("hosts.appearance")}
                       </AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">
-                            {t("hosts.themePreview")}
-                          </label>
-                          <TerminalPreview
-                            theme={form.watch("terminalConfig.theme")}
-                            fontSize={form.watch("terminalConfig.fontSize")}
-                            fontFamily={form.watch("terminalConfig.fontFamily")}
-                            cursorStyle={form.watch(
-                              "terminalConfig.cursorStyle",
-                            )}
-                            cursorBlink={form.watch(
-                              "terminalConfig.cursorBlink",
-                            )}
-                            letterSpacing={form.watch(
-                              "terminalConfig.letterSpacing",
-                            )}
-                            lineHeight={form.watch("terminalConfig.lineHeight")}
-                          />
-                        </div>
-
-                        <FormField
-                          control={form.control}
-                          name="terminalConfig.theme"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("hosts.theme")}</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue
-                                      placeholder={t("hosts.selectTheme")}
-                                    />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {Object.entries(TERMINAL_THEMES).map(
-                                    ([key, theme]) => (
-                                      <SelectItem key={key} value={key}>
-                                        {theme.name}
-                                      </SelectItem>
-                                    ),
-                                  )}
-                                </SelectContent>
-                              </Select>
-                              <FormDescription>
-                                {t("hosts.chooseColorTheme")}
-                              </FormDescription>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="terminalConfig.fontFamily"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("hosts.fontFamily")}</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue
-                                      placeholder={t("hosts.selectFont")}
-                                    />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {TERMINAL_FONTS.map((font) => (
-                                    <SelectItem
-                                      key={font.value}
-                                      value={font.value}
-                                    >
-                                      {font.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormDescription>
-                                {t("hosts.selectFontDesc")}
-                              </FormDescription>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="terminalConfig.fontSize"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>
-                                {t("hosts.fontSizeValue", {
-                                  value: field.value,
-                                })}
-                              </FormLabel>
-                              <FormControl>
-                                <Slider
-                                  min={8}
-                                  max={24}
-                                  step={1}
-                                  value={[field.value]}
-                                  onValueChange={([value]) =>
-                                    field.onChange(value)
-                                  }
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                {t("hosts.adjustFontSize")}
-                              </FormDescription>
-                            </FormItem>
-                          )}
-                        />
-
                         <FormField
                           control={form.control}
                           name="terminalConfig.letterSpacing"

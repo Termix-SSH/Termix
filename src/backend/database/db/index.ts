@@ -210,6 +210,11 @@ async function initializeCompleteDatabase(): Promise<void> {
         stats_config TEXT,
         docker_config TEXT,
         terminal_config TEXT,
+        use_socks5 INTEGER,
+        socks5_host TEXT,
+        socks5_port INTEGER,
+        socks5_username TEXT,
+        socks5_password TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -569,6 +574,14 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 0",
   );
   addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
+
+  // SOCKS5 Proxy columns
+  addColumnIfNotExists("ssh_data", "use_socks5", "INTEGER");
+  addColumnIfNotExists("ssh_data", "socks5_host", "TEXT");
+  addColumnIfNotExists("ssh_data", "socks5_port", "INTEGER");
+  addColumnIfNotExists("ssh_data", "socks5_username", "TEXT");
+  addColumnIfNotExists("ssh_data", "socks5_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "socks5_proxy_chain", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
