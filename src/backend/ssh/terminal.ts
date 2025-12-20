@@ -14,6 +14,7 @@ import { sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -32,6 +33,12 @@ interface ConnectToHostData {
     userId?: string;
     forceKeyboardInteractive?: boolean;
     jumpHosts?: Array<{ hostId: number }>;
+    useSocks5?: boolean;
+    socks5Host?: string;
+    socks5Port?: number;
+    socks5Username?: string;
+    socks5Password?: string;
+    socks5ProxyChain?: unknown;
   };
   initialPath?: string;
   executeCommand?: string;
@@ -316,7 +323,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
-  let pingInterval: NodeJS.Timeout | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
   let isKeyboardInteractive = false;
@@ -802,8 +808,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
           });
 
-          setupPingInterval();
-
           if (initialPath && initialPath.trim() !== "") {
             const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
             stream.write(cdCommand);
@@ -1183,6 +1187,53 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
+    // Check if SOCKS5 proxy is enabled (either single proxy or chain)
+    if (
+      hostConfig.useSocks5 &&
+      (hostConfig.socks5Host ||
+        (hostConfig.socks5ProxyChain && (hostConfig.socks5ProxyChain as any).length > 0))
+    ) {
+      try {
+        const socks5Socket = await createSocks5Connection(
+          ip,
+          port,
+          {
+            useSocks5: hostConfig.useSocks5,
+            socks5Host: hostConfig.socks5Host,
+            socks5Port: hostConfig.socks5Port,
+            socks5Username: hostConfig.socks5Username,
+            socks5Password: hostConfig.socks5Password,
+            socks5ProxyChain: hostConfig.socks5ProxyChain as any,
+          },
+        );
+
+        if (socks5Socket) {
+          connectConfig.sock = socks5Socket;
+          sshConn.connect(connectConfig);
+          return;
+        }
+      } catch (socks5Error) {
+        sshLogger.error("SOCKS5 connection failed", socks5Error, {
+          operation: "socks5_connect",
+          hostId: id,
+          proxyHost: hostConfig.socks5Host,
+          proxyPort: hostConfig.socks5Port || 1080,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "SOCKS5 proxy connection failed: " +
+              (socks5Error instanceof Error
+                ? socks5Error.message
+                : "Unknown error"),
+          }),
+        );
+        cleanupSSH(connectionTimeout);
+        return;
+      }
+    }
+
     if (
       hostConfig.jumpHosts &&
       hostConfig.jumpHosts.length > 0 &&
@@ -1279,11 +1330,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       clearTimeout(timeoutId);
     }
 
-    if (pingInterval) {
-      clearInterval(pingInterval);
-      pingInterval = null;
-    }
-
     if (sshStream) {
       try {
         sshStream.end();
@@ -1320,24 +1366,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }, 100);
   }
 
-  function setupPingInterval() {
-    pingInterval = setInterval(() => {
-      if (sshConn && sshStream) {
-        try {
-          sshStream.write("\x00");
-        } catch (e: unknown) {
-          sshLogger.error(
-            "SSH keepalive failed: " +
-              (e instanceof Error ? e.message : "Unknown error"),
-          );
-          cleanupSSH();
-        }
-      } else if (!sshConn || !sshStream) {
-        if (pingInterval) {
-          clearInterval(pingInterval);
-          pingInterval = null;
-        }
-      }
-    }, 30000);
-  }
+  // Note: PTY-level keepalive (writing \x00 to the stream) was removed.
+  // It was causing ^@ characters to appear in terminals with echoctl enabled.
+  // SSH-level keepalive is configured via connectConfig (keepaliveInterval,
+  // keepaliveCountMax, tcpKeepAlive), which handles connection health monitoring
+  // without producing visible output on the terminal.
+  //
+  // See: https://github.com/Termix-SSH/Support/issues/232
+  // See: https://github.com/Termix-SSH/Support/issues/309
 });

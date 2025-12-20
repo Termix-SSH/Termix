@@ -7,7 +7,53 @@ import type {
   TunnelStatus,
   FileManagerFile,
   FileManagerShortcut,
+  DockerContainer,
+  DockerStats,
+  DockerLogOptions,
+  DockerValidation,
 } from "../types/index.js";
+
+// ============================================================================
+// RBAC TYPE DEFINITIONS
+// ============================================================================
+
+export interface Role {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string | null;
+  isSystem: boolean;
+  permissions: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserRole {
+  userId: string;
+  roleId: number;
+  roleName: string;
+  roleDisplayName: string;
+  grantedBy: string;
+  grantedByUsername: string;
+  grantedAt: string;
+}
+
+export interface AccessRecord {
+  id: number;
+  targetType: "user" | "role";
+  userId: string | null;
+  roleId: number | null;
+  username: string | null;
+  roleName: string | null;
+  roleDisplayName: string | null;
+  grantedBy: string;
+  grantedByUsername: string;
+  permissionLevel: string;
+  expiresAt: string | null;
+  createdAt: string;
+  lastAccessedAt: string | null;
+  accessCount: number;
+}
 import {
   apiLogger,
   authLogger,
@@ -594,6 +640,12 @@ function initializeApiInstances() {
 
   // Homepage API (port 30006)
   homepageApi = createApiInstance(getApiUrl("", 30006), "HOMEPAGE");
+
+  // RBAC API (port 30001)
+  rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
+  
+  // Docker Management API (port 30007)
+  dockerApi = createApiInstance(getApiUrl("/docker", 30007), "DOCKER");
 }
 
 // SSH Host Management API (port 30001)
@@ -613,6 +665,12 @@ export let authApi: AxiosInstance;
 
 // Homepage API (port 30006)
 export let homepageApi: AxiosInstance;
+
+// RBAC API (port 30001)
+export let rbacApi: AxiosInstance;
+
+// Docker Management API (port 30007)
+export let dockerApi: AxiosInstance;
 
 function initializeApp() {
   if (isElectron()) {
@@ -856,6 +914,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       enableTerminal: Boolean(hostData.enableTerminal),
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
+      enableDocker: Boolean(hostData.enableDocker),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
@@ -865,10 +924,21 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
           ? hostData.statsConfig
           : JSON.stringify(hostData.statsConfig)
         : null,
+      dockerConfig: hostData.dockerConfig
+        ? typeof hostData.dockerConfig === "string"
+          ? hostData.dockerConfig
+          : JSON.stringify(hostData.dockerConfig)
+        : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
       expirationDate: hostData.expirationDate || "",
+      useSocks5: Boolean(hostData.useSocks5),
+      socks5Host: hostData.socks5Host || null,
+      socks5Port: hostData.socks5Port || null,
+      socks5Username: hostData.socks5Username || null,
+      socks5Password: hostData.socks5Password || null,
+      socks5ProxyChain: hostData.socks5ProxyChain || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -924,6 +994,7 @@ export async function updateSSHHost(
       enableTerminal: Boolean(hostData.enableTerminal),
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
+      enableDocker: Boolean(hostData.enableDocker),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
@@ -933,10 +1004,21 @@ export async function updateSSHHost(
           ? hostData.statsConfig
           : JSON.stringify(hostData.statsConfig)
         : null,
+      dockerConfig: hostData.dockerConfig
+        ? typeof hostData.dockerConfig === "string"
+          ? hostData.dockerConfig
+          : JSON.stringify(hostData.dockerConfig)
+        : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
       expirationDate: hostData.expirationDate || "",
+      useSocks5: Boolean(hostData.useSocks5),
+      socks5Host: hostData.socks5Host || null,
+      socks5Port: hostData.socks5Port || null,
+      socks5Username: hostData.socks5Username || null,
+      socks5Password: hostData.socks5Password || null,
+      socks5ProxyChain: hostData.socks5ProxyChain || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1248,6 +1330,12 @@ export async function connectSSH(
     credentialId?: number;
     userId?: string;
     forceKeyboardInteractive?: boolean;
+    useSocks5?: boolean;
+    socks5Host?: string;
+    socks5Port?: number;
+    socks5Username?: string;
+    socks5Password?: string;
+    socks5ProxyChain?: unknown;
   },
 ): Promise<Record<string, unknown>> {
   try {
@@ -3111,5 +3199,364 @@ export async function unlinkOIDCFromPasswordAccount(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "unlink OIDC from password account");
+  }
+}
+
+// ============================================================================
+// RBAC MANAGEMENT
+// ============================================================================
+
+// Role Management
+export async function getRoles(): Promise<{ roles: Role[] }> {
+  try {
+    const response = await rbacApi.get("/rbac/roles");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch roles");
+  }
+}
+
+export async function createRole(roleData: {
+  name: string;
+  displayName: string;
+  description?: string | null;
+}): Promise<{ role: Role }> {
+  try {
+    const response = await rbacApi.post("/rbac/roles", roleData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "create role");
+  }
+}
+
+export async function updateRole(
+  roleId: number,
+  roleData: {
+    displayName?: string;
+    description?: string | null;
+  },
+): Promise<{ role: Role }> {
+  try {
+    const response = await rbacApi.put(`/rbac/roles/${roleId}`, roleData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update role");
+  }
+}
+
+export async function deleteRole(roleId: number): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.delete(`/rbac/roles/${roleId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete role");
+  }
+}
+
+// User-Role Management
+export async function getUserRoles(userId: string): Promise<{ roles: UserRole[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/users/${userId}/roles`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch user roles");
+  }
+}
+
+export async function assignRoleToUser(
+  userId: string,
+  roleId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.post(`/rbac/users/${userId}/roles`, { roleId });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "assign role to user");
+  }
+}
+
+export async function removeRoleFromUser(
+  userId: string,
+  roleId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.delete(`/rbac/users/${userId}/roles/${roleId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "remove role from user");
+  }
+}
+
+// Host Sharing Management
+export async function shareHost(
+  hostId: number,
+  shareData: {
+    targetType: "user" | "role";
+    targetUserId?: string;
+    targetRoleId?: number;
+    permissionLevel: string;
+    durationHours?: number;
+  },
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.post(`/rbac/host/${hostId}/share`, shareData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share host");
+  }
+}
+
+export async function getHostAccess(hostId: number): Promise<{ accessList: AccessRecord[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/host/${hostId}/access`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch host access");
+  }
+}
+
+export async function revokeHostAccess(
+  hostId: number,
+  accessId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.delete(`/rbac/host/${hostId}/access/${accessId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "revoke host access");
+    
+// ============================================================================
+// DOCKER MANAGEMENT API
+// ============================================================================
+
+export async function connectDockerSession(
+  sessionId: string,
+  hostId: number,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await dockerApi.post("/ssh/connect", {
+      sessionId,
+      hostId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "connect to Docker SSH session");
+  }
+}
+
+export async function disconnectDockerSession(
+  sessionId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await dockerApi.post("/ssh/disconnect", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "disconnect from Docker SSH session");
+  }
+}
+
+export async function keepaliveDockerSession(
+  sessionId: string,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await dockerApi.post("/ssh/keepalive", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "keepalive Docker SSH session");
+  }
+}
+
+export async function getDockerSessionStatus(
+  sessionId: string,
+): Promise<{ success: boolean; connected: boolean }> {
+  try {
+    const response = await dockerApi.get("/ssh/status", {
+      params: { sessionId },
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get Docker session status");
+  }
+}
+
+export async function validateDockerAvailability(
+  sessionId: string,
+): Promise<DockerValidation> {
+  try {
+    const response = await dockerApi.get(`/validate/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "validate Docker availability");
+  }
+}
+
+export async function listDockerContainers(
+  sessionId: string,
+  all: boolean = true,
+): Promise<DockerContainer[]> {
+  try {
+    const response = await dockerApi.get(`/containers/${sessionId}`, {
+      params: { all },
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "list Docker containers");
+  }
+}
+
+export async function getDockerContainerDetails(
+  sessionId: string,
+  containerId: string,
+): Promise<DockerContainer> {
+  try {
+    const response = await dockerApi.get(
+      `/containers/${sessionId}/${containerId}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get Docker container details");
+  }
+}
+
+export async function startDockerContainer(
+  sessionId: string,
+  containerId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await dockerApi.post(
+      `/containers/${sessionId}/${containerId}/start`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "start Docker container");
+  }
+}
+
+export async function stopDockerContainer(
+  sessionId: string,
+  containerId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await dockerApi.post(
+      `/containers/${sessionId}/${containerId}/stop`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "stop Docker container");
+  }
+}
+
+export async function restartDockerContainer(
+  sessionId: string,
+  containerId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await dockerApi.post(
+      `/containers/${sessionId}/${containerId}/restart`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "restart Docker container");
+  }
+}
+
+export async function pauseDockerContainer(
+  sessionId: string,
+  containerId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await dockerApi.post(
+      `/containers/${sessionId}/${containerId}/pause`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "pause Docker container");
+  }
+}
+
+export async function unpauseDockerContainer(
+  sessionId: string,
+  containerId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await dockerApi.post(
+      `/containers/${sessionId}/${containerId}/unpause`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "unpause Docker container");
+  }
+}
+
+export async function removeDockerContainer(
+  sessionId: string,
+  containerId: string,
+  force: boolean = false,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await dockerApi.delete(
+      `/containers/${sessionId}/${containerId}/remove`,
+      {
+        params: { force },
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "remove Docker container");
+  }
+}
+
+export async function getContainerLogs(
+  sessionId: string,
+  containerId: string,
+  options?: DockerLogOptions,
+): Promise<{ logs: string }> {
+  try {
+    const response = await dockerApi.get(
+      `/containers/${sessionId}/${containerId}/logs`,
+      {
+        params: options,
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get container logs");
+  }
+}
+
+export async function downloadContainerLogs(
+  sessionId: string,
+  containerId: string,
+  options?: DockerLogOptions,
+): Promise<Blob> {
+  try {
+    const response = await dockerApi.get(
+      `/containers/${sessionId}/${containerId}/logs`,
+      {
+        params: { ...options, download: true },
+        responseType: "blob",
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "download container logs");
+  }
+}
+
+export async function getContainerStats(
+  sessionId: string,
+  containerId: string,
+): Promise<DockerStats> {
+  try {
+    const response = await dockerApi.get(
+      `/containers/${sessionId}/${containerId}/stats`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get container stats");
   }
 }

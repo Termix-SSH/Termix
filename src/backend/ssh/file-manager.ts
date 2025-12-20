@@ -10,6 +10,7 @@ import { fileLogger, sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 
 function isExecutableFile(permissions: string, fileName: string): boolean {
   const hasExecutePermission =
@@ -356,6 +357,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     userProvidedPassword,
     forceKeyboardInteractive,
     jumpHosts,
+    useSocks5,
+    socks5Host,
+    socks5Port,
+    socks5Username,
+    socks5Password,
+    socks5ProxyChain,
   } = req.body;
 
   const userId = (req as AuthenticatedRequest).userId;
@@ -807,6 +814,83 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       }
     },
   );
+
+  fileLogger.info("SFTP connection request received", {
+    operation: "sftp_connect_request",
+    sessionId,
+    hostId,
+    ip,
+    port,
+    useSocks5,
+    socks5Host,
+    socks5Port,
+    hasSocks5ProxyChain: !!(socks5ProxyChain && (socks5ProxyChain as any).length > 0),
+    proxyChainLength: socks5ProxyChain ? (socks5ProxyChain as any).length : 0,
+  });
+
+  // Check if SOCKS5 proxy is enabled (either single proxy or chain)
+  if (useSocks5 && (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))) {
+    fileLogger.info("SOCKS5 enabled for SFTP, creating connection", {
+      operation: "sftp_socks5_enabled",
+      sessionId,
+      socks5Host,
+      socks5Port,
+      hasChain: !!(socks5ProxyChain && (socks5ProxyChain as any).length > 0),
+    });
+
+    try {
+      const socks5Socket = await createSocks5Connection(
+        ip,
+        port,
+        {
+          useSocks5,
+          socks5Host,
+          socks5Port,
+          socks5Username,
+          socks5Password,
+          socks5ProxyChain: socks5ProxyChain as any,
+        },
+      );
+
+      if (socks5Socket) {
+        fileLogger.info("SOCKS5 socket created for SFTP", {
+          operation: "sftp_socks5_socket_ready",
+          sessionId,
+        });
+        config.sock = socks5Socket;
+        client.connect(config);
+        return;
+      } else {
+        fileLogger.error("SOCKS5 socket is null for SFTP", undefined, {
+          operation: "sftp_socks5_socket_null",
+          sessionId,
+        });
+      }
+    } catch (socks5Error) {
+      fileLogger.error("SOCKS5 connection failed", socks5Error, {
+        operation: "socks5_connect",
+        sessionId,
+        hostId,
+        proxyHost: socks5Host,
+        proxyPort: socks5Port || 1080,
+      });
+      return res.status(500).json({
+        error:
+          "SOCKS5 proxy connection failed: " +
+          (socks5Error instanceof Error
+            ? socks5Error.message
+            : "Unknown error"),
+      });
+    }
+  } else {
+    fileLogger.info("SOCKS5 NOT enabled for SFTP connection", {
+      operation: "sftp_no_socks5",
+      sessionId,
+      useSocks5,
+      socks5Host,
+      hasChain: !!(socks5ProxyChain && (socks5ProxyChain as any).length > 0),
+    });
+  }
 
   if (jumpHosts && jumpHosts.length > 0 && userId) {
     try {

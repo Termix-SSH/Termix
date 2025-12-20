@@ -42,6 +42,7 @@ import {
   Smartphone,
   Globe,
   Clock,
+  UserCog,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -66,7 +67,14 @@ import {
   revokeAllUserSessions,
   linkOIDCToPasswordAccount,
   unlinkOIDCFromPasswordAccount,
+  getUserRoles,
+  assignRoleToUser,
+  removeRoleFromUser,
+  getRoles,
+  type UserRole,
+  type Role,
 } from "@/ui/main-axios.ts";
+import { RoleManagement } from "./RoleManagement.tsx";
 
 interface AdminSettingsProps {
   isTopbarOpen?: boolean;
@@ -118,6 +126,16 @@ export function AdminSettings({
   const [makeAdminError, setMakeAdminError] = React.useState<string | null>(
     null,
   );
+
+  // Role management states
+  const [rolesDialogOpen, setRolesDialogOpen] = React.useState(false);
+  const [selectedUser, setSelectedUser] = React.useState<{
+    id: string;
+    username: string;
+  } | null>(null);
+  const [userRoles, setUserRoles] = React.useState<UserRole[]>([]);
+  const [availableRoles, setAvailableRoles] = React.useState<Role[]>([]);
+  const [rolesLoading, setRolesLoading] = React.useState(false);
 
   const [securityInitialized, setSecurityInitialized] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<{
@@ -264,6 +282,65 @@ export function AdminSettings({
       }
     } finally {
       setUsersLoading(false);
+    }
+  };
+
+  // Role management functions
+  const handleOpenRolesDialog = async (user: {
+    id: string;
+    username: string;
+  }) => {
+    setSelectedUser(user);
+    setRolesDialogOpen(true);
+    setRolesLoading(true);
+
+    try {
+      // Load user's current roles
+      const rolesResponse = await getUserRoles(user.id);
+      setUserRoles(rolesResponse.roles || []);
+
+      // Load all available roles
+      const allRolesResponse = await getRoles();
+      setAvailableRoles(allRolesResponse.roles || []);
+    } catch (error) {
+      console.error("Failed to load roles:", error);
+      toast.error(t("rbac.failedToLoadRoles"));
+    } finally {
+      setRolesLoading(false);
+    }
+  };
+
+  const handleAssignRole = async (roleId: number) => {
+    if (!selectedUser) return;
+
+    try {
+      await assignRoleToUser(selectedUser.id, roleId);
+      toast.success(
+        t("rbac.roleAssignedSuccessfully", { username: selectedUser.username }),
+      );
+
+      // Reload user roles
+      const rolesResponse = await getUserRoles(selectedUser.id);
+      setUserRoles(rolesResponse.roles || []);
+    } catch (error) {
+      toast.error(t("rbac.failedToAssignRole"));
+    }
+  };
+
+  const handleRemoveRole = async (roleId: number) => {
+    if (!selectedUser) return;
+
+    try {
+      await removeRoleFromUser(selectedUser.id, roleId);
+      toast.success(
+        t("rbac.roleRemovedSuccessfully", { username: selectedUser.username }),
+      );
+
+      // Reload user roles
+      const rolesResponse = await getUserRoles(selectedUser.id);
+      setUserRoles(rolesResponse.roles || []);
+    } catch (error) {
+      toast.error(t("rbac.failedToRemoveRole"));
     }
   };
 
@@ -771,6 +848,10 @@ export function AdminSettings({
                 <Shield className="h-4 w-4" />
                 {t("admin.adminManagement")}
               </TabsTrigger>
+              <TabsTrigger value="roles" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                {t("rbac.roles.label")}
+              </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-2">
                 <Database className="h-4 w-4" />
                 {t("admin.databaseSecurity")}
@@ -1081,88 +1162,92 @@ export function AdminSettings({
                     {t("admin.loadingUsers")}
                   </div>
                 ) : (
-                  <div className="border rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="px-4">
-                            {t("admin.username")}
-                          </TableHead>
-                          <TableHead className="px-4">
-                            {t("admin.type")}
-                          </TableHead>
-                          <TableHead className="px-4">
-                            {t("admin.actions")}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {users.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell className="px-4 font-medium">
-                              {user.username}
-                              {user.is_admin && (
-                                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border">
-                                  {t("admin.adminBadge")}
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className="px-4">
-                              {user.is_oidc && user.password_hash
-                                ? "Dual Auth"
-                                : user.is_oidc
-                                  ? t("admin.external")
-                                  : t("admin.local")}
-                            </TableCell>
-                            <TableCell className="px-4">
-                              <div className="flex gap-2">
-                                {user.is_oidc && !user.password_hash && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleLinkOIDCUser({
-                                        id: user.id,
-                                        username: user.username,
-                                      })
-                                    }
-                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    title="Link to password account"
-                                  >
-                                    <Link2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                {user.is_oidc && user.password_hash && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleUnlinkOIDC(user.id, user.username)
-                                    }
-                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                    title="Unlink OIDC (keep password only)"
-                                  >
-                                    <Unlink className="h-4 w-4" />
-                                  </Button>
-                                )}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("admin.username")}</TableHead>
+                        <TableHead>{t("admin.type")}</TableHead>
+                        <TableHead>{t("admin.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">
+                            {user.username}
+                            {user.is_admin && (
+                              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border">
+                                {t("admin.adminBadge")}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {user.is_oidc && user.password_hash
+                              ? "Dual Auth"
+                              : user.is_oidc
+                                ? t("admin.external")
+                                : t("admin.local")}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {user.is_oidc && !user.password_hash && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() =>
-                                    handleDeleteUser(user.username)
+                                    handleLinkOIDCUser({
+                                      id: user.id,
+                                      username: user.username,
+                                    })
                                   }
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  disabled={user.is_admin}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Link to password account"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Link2 className="h-4 w-4" />
                                 </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                              )}
+                              {user.is_oidc && user.password_hash && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleUnlinkOIDC(user.id, user.username)
+                                  }
+                                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                  title="Unlink OIDC (keep password only)"
+                                >
+                                  <Unlink className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleOpenRolesDialog({
+                                    id: user.id,
+                                    username: user.username,
+                                  })
+                                }
+                                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                title={t("rbac.manageRoles")}
+                              >
+                                <UserCog className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteUser(user.username)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                disabled={user.is_admin}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </div>
             </TabsContent>
@@ -1189,115 +1274,107 @@ export function AdminSettings({
                     No active sessions found.
                   </div>
                 ) : (
-                  <div className="border rounded-md overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="px-4">Device</TableHead>
-                            <TableHead className="px-4">User</TableHead>
-                            <TableHead className="px-4">Created</TableHead>
-                            <TableHead className="px-4">Last Active</TableHead>
-                            <TableHead className="px-4">Expires</TableHead>
-                            <TableHead className="px-4">
-                              {t("admin.actions")}
-                            </TableHead>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Device</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Last Active</TableHead>
+                        <TableHead>Expires</TableHead>
+                        <TableHead>{t("admin.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessions.map((session) => {
+                        const DeviceIcon =
+                          session.deviceType === "desktop"
+                            ? Monitor
+                            : session.deviceType === "mobile"
+                              ? Smartphone
+                              : Globe;
+
+                        const createdDate = new Date(session.createdAt);
+                        const lastActiveDate = new Date(session.lastActiveAt);
+                        const expiresDate = new Date(session.expiresAt);
+
+                        const formatDate = (date: Date) =>
+                          date.toLocaleDateString() +
+                          " " +
+                          date.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          });
+
+                        return (
+                          <TableRow
+                            key={session.id}
+                            className={
+                              session.isRevoked ? "opacity-50" : undefined
+                            }
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <DeviceIcon className="h-4 w-4" />
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-sm">
+                                    {session.deviceInfo}
+                                  </span>
+                                  {session.isRevoked && (
+                                    <span className="text-xs text-red-600">
+                                      Revoked
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {session.username || session.userId}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(createdDate)}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(lastActiveDate)}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(expiresDate)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleRevokeSession(session.id)
+                                  }
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  disabled={session.isRevoked}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                {session.username && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleRevokeAllUserSessions(
+                                        session.userId,
+                                      )
+                                    }
+                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
+                                    title="Revoke all sessions for this user"
+                                  >
+                                    Revoke All
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {sessions.map((session) => {
-                            const DeviceIcon =
-                              session.deviceType === "desktop"
-                                ? Monitor
-                                : session.deviceType === "mobile"
-                                  ? Smartphone
-                                  : Globe;
-
-                            const createdDate = new Date(session.createdAt);
-                            const lastActiveDate = new Date(
-                              session.lastActiveAt,
-                            );
-                            const expiresDate = new Date(session.expiresAt);
-
-                            const formatDate = (date: Date) =>
-                              date.toLocaleDateString() +
-                              " " +
-                              date.toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              });
-
-                            return (
-                              <TableRow
-                                key={session.id}
-                                className={
-                                  session.isRevoked ? "opacity-50" : undefined
-                                }
-                              >
-                                <TableCell className="px-4">
-                                  <div className="flex items-center gap-2">
-                                    <DeviceIcon className="h-4 w-4" />
-                                    <div className="flex flex-col">
-                                      <span className="font-medium text-sm">
-                                        {session.deviceInfo}
-                                      </span>
-                                      {session.isRevoked && (
-                                        <span className="text-xs text-red-600">
-                                          Revoked
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="px-4">
-                                  {session.username || session.userId}
-                                </TableCell>
-                                <TableCell className="px-4 text-sm text-muted-foreground">
-                                  {formatDate(createdDate)}
-                                </TableCell>
-                                <TableCell className="px-4 text-sm text-muted-foreground">
-                                  {formatDate(lastActiveDate)}
-                                </TableCell>
-                                <TableCell className="px-4 text-sm text-muted-foreground">
-                                  {formatDate(expiresDate)}
-                                </TableCell>
-                                <TableCell className="px-4">
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        handleRevokeSession(session.id)
-                                      }
-                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                      disabled={session.isRevoked}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                    {session.username && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleRevokeAllUserSessions(
-                                            session.userId,
-                                          )
-                                        }
-                                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
-                                        title="Revoke all sessions for this user"
-                                      >
-                                        Revoke All
-                                      </Button>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 )}
               </div>
             </TabsContent>
@@ -1345,57 +1422,53 @@ export function AdminSettings({
 
                 <div className="space-y-4">
                   <h4 className="font-medium">{t("admin.currentAdmins")}</h4>
-                  <div className="border rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="px-4">
-                            {t("admin.username")}
-                          </TableHead>
-                          <TableHead className="px-4">
-                            {t("admin.type")}
-                          </TableHead>
-                          <TableHead className="px-4">
-                            {t("admin.actions")}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {users
-                          .filter((u) => u.is_admin)
-                          .map((admin) => (
-                            <TableRow key={admin.id}>
-                              <TableCell className="px-4 font-medium">
-                                {admin.username}
-                                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border">
-                                  {t("admin.adminBadge")}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-4">
-                                {admin.is_oidc
-                                  ? t("admin.external")
-                                  : t("admin.local")}
-                              </TableCell>
-                              <TableCell className="px-4">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleRemoveAdminStatus(admin.username)
-                                  }
-                                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                >
-                                  <Shield className="h-4 w-4" />
-                                  {t("admin.removeAdminButton")}
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("admin.username")}</TableHead>
+                        <TableHead>{t("admin.type")}</TableHead>
+                        <TableHead>{t("admin.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users
+                        .filter((u) => u.is_admin)
+                        .map((admin) => (
+                          <TableRow key={admin.id}>
+                            <TableCell className="font-medium">
+                              {admin.username}
+                              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border">
+                                {t("admin.adminBadge")}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {admin.is_oidc
+                                ? t("admin.external")
+                                : t("admin.local")}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleRemoveAdminStatus(admin.username)
+                                }
+                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                              >
+                                <Shield className="h-4 w-4" />
+                                {t("admin.removeAdminButton")}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="roles" className="space-y-6">
+              <RoleManagement />
             </TabsContent>
 
             <TabsContent value="security" className="space-y-6">
@@ -1613,6 +1686,114 @@ export function AdminSettings({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Role Management Dialog */}
+      <Dialog open={rolesDialogOpen} onOpenChange={setRolesDialogOpen}>
+        <DialogContent className="max-w-2xl bg-dark-bg border-2 border-dark-border">
+          <DialogHeader>
+            <DialogTitle>{t("rbac.manageRoles")}</DialogTitle>
+            <DialogDescription>
+              {t("rbac.manageRolesFor", {
+                username: selectedUser?.username || "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {rolesLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {t("common.loading")}
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              {/* Current Roles */}
+              <div className="space-y-3">
+                <Label>{t("rbac.currentRoles")}</Label>
+                {userRoles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("rbac.noRolesAssigned")}
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
+                    {userRoles.map((userRole) => (
+                      <div
+                        key={userRole.roleId}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {t(userRole.roleDisplayName)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {userRole.roleName}
+                          </p>
+                        </div>
+                        {userRole.isSystem ? (
+                          <Badge variant="secondary" className="text-xs">
+                            {t("rbac.systemRole")}
+                          </Badge>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveRole(userRole.roleId)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Assign New Role */}
+              <div className="space-y-3">
+                <Label>{t("rbac.assignNewRole")}</Label>
+                <div className="flex gap-2">
+                  {availableRoles
+                    .filter(
+                      (role) =>
+                        !role.isSystem &&
+                        !userRoles.some((ur) => ur.roleId === role.id),
+                    )
+                    .map((role) => (
+                      <Button
+                        key={role.id}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAssignRole(role.id)}
+                      >
+                        {t(role.displayName)}
+                      </Button>
+                    ))}
+                  {availableRoles.filter(
+                    (role) =>
+                      !role.isSystem &&
+                      !userRoles.some((ur) => ur.roleId === role.id),
+                  ).length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {t("rbac.noCustomRolesToAssign")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRolesDialogOpen(false)}
+            >
+              {t("common.close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
