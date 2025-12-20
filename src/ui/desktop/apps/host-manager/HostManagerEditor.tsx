@@ -88,7 +88,6 @@ import {
 import { TerminalPreview } from "@/ui/desktop/apps/terminal/TerminalPreview.tsx";
 import type { TerminalConfig, SSHHost, Credential } from "@/types";
 import { Plus, X, Check, ChevronsUpDown, Save } from "lucide-react";
-import { Socks5ProxyConfig } from "./Socks5ProxyConfig.tsx";
 
 interface JumpHostItemProps {
   jumpHost: { hostId: number };
@@ -303,9 +302,7 @@ export function HostManagerEditor({
   const [snippets, setSnippets] = useState<
     Array<{ id: number; name: string; content: string }>
   >([]);
-  const [proxyMode, setProxyMode] = useState<"single" | "chain">(
-    "single",
-  );
+  const [proxyMode, setProxyMode] = useState<"single" | "chain">("single");
 
   const [authTab, setAuthTab] = useState<
     "password" | "key" | "credential" | "none"
@@ -777,8 +774,7 @@ export function HostManagerEditor({
             | "ssh-rsa-sha2-256"
             | "ssh-rsa-sha2-512") || "auto";
       } else if (defaultAuthType === "credential") {
-        formData.credentialId =
-          cleanedHost.credentialId;
+        formData.credentialId = cleanedHost.credentialId;
       }
 
       form.reset(formData as FormData);
@@ -942,13 +938,13 @@ export function HostManagerEditor({
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
       if (savedHost?.id) {
-        const { notifyHostCreatedOrUpdated } = await import(
-          "@/ui/main-axios.ts"
-        );
+        const { notifyHostCreatedOrUpdated } =
+          await import("@/ui/main-axios.ts");
         notifyHostCreatedOrUpdated(savedHost.id);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       toast.error(t("hosts.failedToSaveHost") + ": " + errorMessage);
       console.error("Failed to save host:", error);
     } finally {
@@ -1481,7 +1477,8 @@ export function HostManagerEditor({
                                       <span
                                         className="truncate"
                                         title={
-                                          (field.value as File)?.name || t("hosts.upload")
+                                          (field.value as File)?.name ||
+                                          t("hosts.upload")
                                         }
                                       >
                                         {field.value === "existing_key"
@@ -1792,11 +1789,9 @@ export function HostManagerEditor({
                           control={form.control}
                           name="useSocks5"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel className="text-base">
-                                  {t("hosts.enableSocks5")}
-                                </FormLabel>
+                                <FormLabel>{t("hosts.enableSocks5")}</FormLabel>
                                 <FormDescription>
                                   {t("hosts.enableSocks5Description")}
                                 </FormDescription>
@@ -1812,13 +1807,354 @@ export function HostManagerEditor({
                         />
 
                         {form.watch("useSocks5") && (
-                          <Socks5ProxyConfig
-                            control={form.control}
-                            watch={form.watch}
-                            setValue={form.setValue}
-                            proxyMode={proxyMode}
-                            onProxyModeChange={setProxyMode}
-                          />
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <FormLabel>
+                                {t("hosts.socks5ProxyMode")}
+                              </FormLabel>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant={
+                                    proxyMode === "single"
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => setProxyMode("single")}
+                                  className="flex-1"
+                                >
+                                  {t("hosts.socks5UseSingleProxy")}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant={
+                                    proxyMode === "chain"
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => setProxyMode("chain")}
+                                  className="flex-1"
+                                >
+                                  {t("hosts.socks5UseProxyChain")}
+                                </Button>
+                              </div>
+                            </div>
+
+                            {proxyMode === "single" && (
+                              <div className="space-y-4 p-4 border rounded-lg">
+                                <FormField
+                                  control={form.control}
+                                  name="socks5Host"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t("hosts.socks5Host")}
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          placeholder="proxy.example.com"
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        {t("hosts.socks5HostDescription")}
+                                      </FormDescription>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="socks5Port"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t("hosts.socks5Port")}
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          placeholder="1080"
+                                          {...field}
+                                          onChange={(e) =>
+                                            field.onChange(
+                                              parseInt(e.target.value) || 1080,
+                                            )
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        {t("hosts.socks5PortDescription")}
+                                      </FormDescription>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="socks5Username"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t("hosts.socks5Username")} (
+                                        {t("hosts.optional")})
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          placeholder={t("hosts.username")}
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="socks5Password"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t("hosts.socks5Password")} (
+                                        {t("hosts.optional")})
+                                      </FormLabel>
+                                      <FormControl>
+                                        <PasswordInput
+                                          placeholder={t("hosts.password")}
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            )}
+
+                            {proxyMode === "chain" && (
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <FormLabel>
+                                    {t("hosts.socks5ProxyChain")}
+                                  </FormLabel>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const currentChain =
+                                        form.watch("socks5ProxyChain") || [];
+                                      form.setValue("socks5ProxyChain", [
+                                        ...currentChain,
+                                        {
+                                          host: "",
+                                          port: 1080,
+                                          type: 5 as 4 | 5,
+                                          username: "",
+                                          password: "",
+                                        },
+                                      ]);
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    {t("hosts.addProxyNode")}
+                                  </Button>
+                                </div>
+
+                                {(form.watch("socks5ProxyChain") || [])
+                                  .length === 0 && (
+                                  <div className="text-sm text-muted-foreground text-center p-4 border rounded-lg border-dashed">
+                                    {t("hosts.noProxyNodes")}
+                                  </div>
+                                )}
+
+                                {(form.watch("socks5ProxyChain") || []).map(
+                                  (node: any, index: number) => (
+                                    <div
+                                      key={index}
+                                      className="p-4 border rounded-lg space-y-3 relative"
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium">
+                                          {t("hosts.proxyNode")} {index + 1}
+                                        </span>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => {
+                                            const currentChain =
+                                              form.watch("socks5ProxyChain") ||
+                                              [];
+                                            form.setValue(
+                                              "socks5ProxyChain",
+                                              currentChain.filter(
+                                                (_: any, i: number) =>
+                                                  i !== index,
+                                              ),
+                                            );
+                                          }}
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                          <FormLabel>
+                                            {t("hosts.socks5Host")}
+                                          </FormLabel>
+                                          <Input
+                                            placeholder="proxy.example.com"
+                                            value={node.host}
+                                            onChange={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                host: e.target.value,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                          />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                          <FormLabel>
+                                            {t("hosts.socks5Port")}
+                                          </FormLabel>
+                                          <Input
+                                            type="number"
+                                            placeholder="1080"
+                                            value={node.port}
+                                            onChange={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                port:
+                                                  parseInt(e.target.value) ||
+                                                  1080,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <FormLabel>
+                                          {t("hosts.proxyType")}
+                                        </FormLabel>
+                                        <Select
+                                          value={String(node.type)}
+                                          onValueChange={(value) => {
+                                            const currentChain =
+                                              form.watch("socks5ProxyChain") ||
+                                              [];
+                                            const newChain = [...currentChain];
+                                            newChain[index] = {
+                                              ...newChain[index],
+                                              type: parseInt(value) as 4 | 5,
+                                            };
+                                            form.setValue(
+                                              "socks5ProxyChain",
+                                              newChain,
+                                            );
+                                          }}
+                                        >
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="4">
+                                              SOCKS4
+                                            </SelectItem>
+                                            <SelectItem value="5">
+                                              SOCKS5
+                                            </SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                          <FormLabel>
+                                            {t("hosts.socks5Username")} (
+                                            {t("hosts.optional")})
+                                          </FormLabel>
+                                          <Input
+                                            placeholder={t("hosts.username")}
+                                            value={node.username || ""}
+                                            onChange={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                username: e.target.value,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                          />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                          <FormLabel>
+                                            {t("hosts.socks5Password")} (
+                                            {t("hosts.optional")})
+                                          </FormLabel>
+                                          <PasswordInput
+                                            placeholder={t("hosts.password")}
+                                            value={node.password || ""}
+                                            onChange={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                password: e.target.value,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </AccordionContent>
                     </AccordionItem>
@@ -1832,7 +2168,9 @@ export function HostManagerEditor({
                     defaultValue={["appearance", "behavior", "advanced"]}
                   >
                     <AccordionItem value="appearance">
-                      <AccordionTrigger>{t("hosts.appearance")}</AccordionTrigger>
+                      <AccordionTrigger>
+                        {t("hosts.appearance")}
+                      </AccordionTrigger>
                       <AccordionContent className="space-y-4 pt-4">
                         <FormField
                           control={form.control}

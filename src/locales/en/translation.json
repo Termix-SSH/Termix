@@ -652,6 +652,7 @@
     "failedToLoadHosts": "Failed to load hosts",
     "retry": "Retry",
     "refresh": "Refresh",
+    "optional": "Optional",
     "hostsCount": "{{count}} hosts",
     "importJson": "Import JSON",
     "importing": "Importing...",
