@@ -40,6 +40,7 @@ export interface SSHHost {
   enableTerminal: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
+  enableDocker: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
@@ -82,6 +83,7 @@ export interface SSHHostData {
   enableTerminal?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
+  enableDocker?: boolean;
   defaultPath?: string;
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
@@ -344,13 +346,14 @@ export interface TerminalConfig {
 export interface TabContextTab {
   id: number;
   type:
-  | "home"
-  | "terminal"
-  | "ssh_manager"
-  | "server"
-  | "admin"
-  | "file_manager"
-  | "user_profile";
+    | "home"
+    | "terminal"
+    | "ssh_manager"
+    | "server"
+    | "admin"
+    | "file_manager"
+    | "user_profile"
+    | "docker";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;
@@ -675,4 +678,56 @@ export interface ExportPreviewBody {
 export interface RestoreRequestBody {
   backupPath: string;
   targetPath?: string;
+}
+
+// ============================================================================
+// DOCKER TYPES
+// ============================================================================
+
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+  state:
+    | "created"
+    | "running"
+    | "paused"
+    | "restarting"
+    | "removing"
+    | "exited"
+    | "dead";
+  ports: string;
+  created: string;
+  command?: string;
+  labels?: Record<string, string>;
+  networks?: string[];
+  mounts?: string[];
+}
+
+export interface DockerStats {
+  cpu: string;
+  memoryUsed: string;
+  memoryLimit: string;
+  memoryPercent: string;
+  netInput: string;
+  netOutput: string;
+  blockRead: string;
+  blockWrite: string;
+  pids?: string;
+}
+
+export interface DockerLogOptions {
+  tail?: number;
+  timestamps?: boolean;
+  since?: string;
+  until?: string;
+  follow?: boolean;
+}
+
+export interface DockerValidation {
+  available: boolean;
+  version?: string;
+  error?: string;
+  code?: string;
 }

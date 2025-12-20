@@ -86,6 +86,9 @@ export const sshData = sqliteTable("ssh_data", {
   enableFileManager: integer("enable_file_manager", { mode: "boolean" })
     .notNull()
     .default(true),
+  enableDocker: integer("enable_docker", { mode: "boolean" })
+    .notNull()
+    .default(false),
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
   terminalConfig: text("terminal_config"),

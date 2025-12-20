@@ -237,6 +237,7 @@ router.post(
       enableTerminal,
       enableTunnel,
       enableFileManager,
+      enableDocker,
       defaultPath,
       tunnelConnections,
       jumpHosts,
@@ -282,6 +283,7 @@ router.post(
         ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
+      enableDocker: enableDocker ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
@@ -343,6 +345,7 @@ router.post(
           ? JSON.parse(createdHost.jumpHosts as string)
           : [],
         enableFileManager: !!createdHost.enableFileManager,
+        enableDocker: !!createdHost.enableDocker,
         statsConfig: createdHost.statsConfig
           ? JSON.parse(createdHost.statsConfig as string)
           : undefined,
@@ -459,6 +462,7 @@ router.put(
       enableTerminal,
       enableTunnel,
       enableFileManager,
+      enableDocker,
       defaultPath,
       tunnelConnections,
       jumpHosts,
@@ -505,6 +509,7 @@ router.put(
         ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
+      enableDocker: enableDocker ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
@@ -584,8 +589,12 @@ router.put(
           ? JSON.parse(updatedHost.jumpHosts as string)
           : [],
         enableFileManager: !!updatedHost.enableFileManager,
+        enableDocker: !!updatedHost.enableDocker,
         statsConfig: updatedHost.statsConfig
           ? JSON.parse(updatedHost.statsConfig as string)
+          : undefined,
+        dockerConfig: updatedHost.dockerConfig
+          ? JSON.parse(updatedHost.dockerConfig as string)
           : undefined,
       };
 
@@ -775,6 +784,7 @@ router.get(
               ? JSON.parse(row.quickActions as string)
               : [],
             enableFileManager: !!row.enableFileManager,
+            enableDocker: !!row.enableDocker,
             statsConfig: row.statsConfig
               ? JSON.parse(row.statsConfig as string)
               : undefined,

@@ -567,6 +567,7 @@ export function HostManagerEditor({
           }),
         )
         .default([]),
+      enableDocker: z.boolean().default(false),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -659,6 +660,7 @@ export function HostManagerEditor({
       statsConfig: DEFAULT_STATS_CONFIG,
       terminalConfig: DEFAULT_TERMINAL_CONFIG,
       forceKeyboardInteractive: false,
+      enableDocker: false,
     },
   });
 
@@ -754,6 +756,7 @@ export function HostManagerEditor({
             : [],
         },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
+        enableDocker: Boolean(cleanedHost.enableDocker),
       };
 
       if (defaultAuthType === "password") {
@@ -805,6 +808,7 @@ export function HostManagerEditor({
         statsConfig: DEFAULT_STATS_CONFIG,
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
+        enableDocker: false,
       };
 
       form.reset(defaultFormData);
@@ -862,6 +866,7 @@ export function HostManagerEditor({
         authType: data.authType,
         overrideCredentialUsername: Boolean(data.overrideCredentialUsername),
         enableTerminal: Boolean(data.enableTerminal),
+        enableDocker: Boolean(data.enableDocker),
         enableTunnel: Boolean(data.enableTunnel),
         enableFileManager: Boolean(data.enableFileManager),
         defaultPath: data.defaultPath || "/",
@@ -949,9 +954,8 @@ export function HostManagerEditor({
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
       if (savedHost?.id) {
-        const { notifyHostCreatedOrUpdated } = await import(
-          "@/ui/main-axios.ts"
-        );
+        const { notifyHostCreatedOrUpdated } =
+          await import("@/ui/main-axios.ts");
         notifyHostCreatedOrUpdated(savedHost.id);
       }
     } catch (error) {
@@ -984,6 +988,8 @@ export function HostManagerEditor({
       setActiveTab("general");
     } else if (errors.enableTerminal || errors.terminalConfig) {
       setActiveTab("terminal");
+    } else if (errors.enableDocker) {
+      setActiveTab("docker");
     } else if (errors.enableTunnel || errors.tunnelConnections) {
       setActiveTab("tunnel");
     } else if (errors.enableFileManager || errors.defaultPath) {
@@ -1176,6 +1182,7 @@ export function HostManagerEditor({
                   <TabsTrigger value="terminal">
                     {t("hosts.terminal")}
                   </TabsTrigger>
+                  <TabsTrigger value="docker">Docker</TabsTrigger>
                   <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
                   <TabsTrigger value="file_manager">
                     {t("hosts.fileManager")}
@@ -2550,6 +2557,26 @@ export function HostManagerEditor({
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
+                </TabsContent>
+                <TabsContent value="docker" className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="enableDocker"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Enable Docker</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Enable Docker integration for this host
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
                 </TabsContent>
                 <TabsContent value="tunnel">
                   <FormField

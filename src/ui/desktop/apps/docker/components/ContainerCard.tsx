@@ -1,0 +1,446 @@
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
+import {
+  Play,
+  Square,
+  RotateCw,
+  Pause,
+  Trash2,
+  PlayCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import type { DockerContainer } from "@/types/index.js";
+import {
+  startDockerContainer,
+  stopDockerContainer,
+  restartDockerContainer,
+  pauseDockerContainer,
+  unpauseDockerContainer,
+  removeDockerContainer,
+} from "@/ui/main-axios.ts";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip.tsx";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog.tsx";
+
+interface ContainerCardProps {
+  container: DockerContainer;
+  sessionId: string;
+  onSelect?: () => void;
+  isSelected?: boolean;
+  onRefresh?: () => void;
+}
+
+export function ContainerCard({
+  container,
+  sessionId,
+  onSelect,
+  isSelected = false,
+  onRefresh,
+}: ContainerCardProps): React.ReactElement {
+  const [isStarting, setIsStarting] = React.useState(false);
+  const [isStopping, setIsStopping] = React.useState(false);
+  const [isRestarting, setIsRestarting] = React.useState(false);
+  const [isPausing, setIsPausing] = React.useState(false);
+  const [isRemoving, setIsRemoving] = React.useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = React.useState(false);
+
+  const statusColors = {
+    running: {
+      bg: "bg-green-500/10",
+      border: "border-green-500/20",
+      text: "text-green-400",
+      badge: "bg-green-500/20 text-green-300 border-green-500/30",
+    },
+    exited: {
+      bg: "bg-red-500/10",
+      border: "border-red-500/20",
+      text: "text-red-400",
+      badge: "bg-red-500/20 text-red-300 border-red-500/30",
+    },
+    paused: {
+      bg: "bg-yellow-500/10",
+      border: "border-yellow-500/20",
+      text: "text-yellow-400",
+      badge: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
+    },
+    created: {
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/20",
+      text: "text-blue-400",
+      badge: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    },
+    restarting: {
+      bg: "bg-orange-500/10",
+      border: "border-orange-500/20",
+      text: "text-orange-400",
+      badge: "bg-orange-500/20 text-orange-300 border-orange-500/30",
+    },
+    removing: {
+      bg: "bg-purple-500/10",
+      border: "border-purple-500/20",
+      text: "text-purple-400",
+      badge: "bg-purple-500/20 text-purple-300 border-purple-500/30",
+    },
+    dead: {
+      bg: "bg-gray-500/10",
+      border: "border-gray-500/20",
+      text: "text-gray-400",
+      badge: "bg-gray-500/20 text-gray-300 border-gray-500/30",
+    },
+  };
+
+  const colors = statusColors[container.state] || statusColors.created;
+
+  const handleStart = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsStarting(true);
+    try {
+      await startDockerContainer(sessionId, container.id);
+      toast.success(`Container ${container.name} started`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(
+        `Failed to start container: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleStop = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsStopping(true);
+    try {
+      await stopDockerContainer(sessionId, container.id);
+      toast.success(`Container ${container.name} stopped`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(
+        `Failed to stop container: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsStopping(false);
+    }
+  };
+
+  const handleRestart = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsRestarting(true);
+    try {
+      await restartDockerContainer(sessionId, container.id);
+      toast.success(`Container ${container.name} restarted`);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(
+        `Failed to restart container: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsRestarting(false);
+    }
+  };
+
+  const handlePause = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsPausing(true);
+    try {
+      if (container.state === "paused") {
+        await unpauseDockerContainer(sessionId, container.id);
+        toast.success(`Container ${container.name} unpaused`);
+      } else {
+        await pauseDockerContainer(sessionId, container.id);
+        toast.success(`Container ${container.name} paused`);
+      }
+      onRefresh?.();
+    } catch (error) {
+      toast.error(
+        `Failed to ${container.state === "paused" ? "unpause" : "pause"} container: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsPausing(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    setIsRemoving(true);
+    try {
+      const force = container.state === "running";
+      await removeDockerContainer(sessionId, container.id, force);
+      toast.success(`Container ${container.name} removed`);
+      setShowRemoveDialog(false);
+      onRefresh?.();
+    } catch (error) {
+      toast.error(
+        `Failed to remove container: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  const isLoading =
+    isStarting || isStopping || isRestarting || isPausing || isRemoving;
+
+  // Format the created date to be more readable
+  const formatCreatedDate = (dateStr: string): string => {
+    try {
+      // Remove the timezone suffix like "+0000 UTC"
+      const cleanDate = dateStr.replace(/\s*\+\d{4}\s*UTC\s*$/, "").trim();
+      return cleanDate;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Parse ports into array of port mappings
+  const parsePorts = (portsStr: string | undefined): string[] => {
+    if (!portsStr || portsStr.trim() === "") return [];
+
+    // Split by comma and clean up
+    return portsStr
+      .split(",")
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+  };
+
+  const portsList = parsePorts(container.ports);
+
+  return (
+    <>
+      <Card
+        className={`cursor-pointer transition-all hover:shadow-lg ${
+          isSelected
+            ? "ring-2 ring-primary border-primary"
+            : `border-2 ${colors.border}`
+        } ${colors.bg} pt-3 pb-0`}
+        onClick={onSelect}
+      >
+        <CardHeader className="pb-2 px-4">
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle className="text-base font-semibold truncate flex-1">
+              {container.name.startsWith("/")
+                ? container.name.slice(1)
+                : container.name}
+            </CardTitle>
+            <Badge className={`${colors.badge} border shrink-0`}>
+              {container.state}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3 px-4 pb-3">
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 min-w-[50px] text-xs">Image:</span>
+              <span className="truncate text-gray-200 text-xs">
+                {container.image}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 min-w-[50px] text-xs">ID:</span>
+              <span className="font-mono text-xs text-gray-200">
+                {container.id.substring(0, 12)}
+              </span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-gray-400 min-w-[50px] text-xs shrink-0">
+                Ports:
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {portsList.length > 0 ? (
+                  portsList.map((port, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className="text-xs font-mono bg-gray-500/10 text-gray-400 border-gray-500/30"
+                    >
+                      {port}
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-gray-500/10 text-gray-400 border-gray-500/30"
+                  >
+                    None
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 min-w-[50px] text-xs">
+                Created:
+              </span>
+              <span className="text-gray-200 text-xs">
+                {formatCreatedDate(container.created)}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-700/50">
+            <TooltipProvider>
+              {container.state !== "running" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={handleStart}
+                      disabled={isLoading}
+                    >
+                      {isStarting ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Start</TooltipContent>
+                </Tooltip>
+              )}
+
+              {container.state === "running" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={handleStop}
+                      disabled={isLoading}
+                    >
+                      {isStopping ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Stop</TooltipContent>
+                </Tooltip>
+              )}
+
+              {(container.state === "running" ||
+                container.state === "paused") && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={handlePause}
+                      disabled={isLoading}
+                    >
+                      {isPausing ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                      ) : container.state === "paused" ? (
+                        <PlayCircle className="h-4 w-4" />
+                      ) : (
+                        <Pause className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {container.state === "paused" ? "Unpause" : "Pause"}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={handleRestart}
+                    disabled={isLoading || container.state === "exited"}
+                  >
+                    {isRestarting ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                    ) : (
+                      <RotateCw className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Restart</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRemoveDialog(true);
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Remove</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Container</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove container{" "}
+              <span className="font-semibold">
+                {container.name.startsWith("/")
+                  ? container.name.slice(1)
+                  : container.name}
+              </span>
+              ?
+              {container.state === "running" && (
+                <div className="mt-2 text-yellow-400">
+                  Warning: This container is currently running and will be
+                  force-removed.
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleRemove();
+              }}
+              disabled={isRemoving}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isRemoving ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
