@@ -14,17 +14,6 @@ export interface QuickAction {
   snippetId: number;
 }
 
-export interface DockerConfig {
-  connectionType: "socket" | "tcp" | "tls";
-  socketPath?: string;
-  host?: string;
-  port?: number;
-  tlsVerify?: boolean;
-  tlsCaCert?: string;
-  tlsCert?: string;
-  tlsKey?: string;
-}
-
 export interface SSHHost {
   id: number;
   name: string;
@@ -57,7 +46,6 @@ export interface SSHHost {
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
   statsConfig?: string;
-  dockerConfig?: string;
   terminalConfig?: TerminalConfig;
   createdAt: string;
   updatedAt: string;
@@ -97,7 +85,6 @@ export interface SSHHostData {
   jumpHosts?: JumpHostData[];
   quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
-  dockerConfig?: DockerConfig | string;
   terminalConfig?: TerminalConfig;
 }
 
@@ -686,4 +673,56 @@ export interface ExportPreviewBody {
 export interface RestoreRequestBody {
   backupPath: string;
   targetPath?: string;
+}
+
+// ============================================================================
+// DOCKER TYPES
+// ============================================================================
+
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+  state:
+    | "created"
+    | "running"
+    | "paused"
+    | "restarting"
+    | "removing"
+    | "exited"
+    | "dead";
+  ports: string;
+  created: string;
+  command?: string;
+  labels?: Record<string, string>;
+  networks?: string[];
+  mounts?: string[];
+}
+
+export interface DockerStats {
+  cpu: string;
+  memoryUsed: string;
+  memoryLimit: string;
+  memoryPercent: string;
+  netInput: string;
+  netOutput: string;
+  blockRead: string;
+  blockWrite: string;
+  pids?: string;
+}
+
+export interface DockerLogOptions {
+  tail?: number;
+  timestamps?: boolean;
+  since?: string;
+  until?: string;
+  follow?: boolean;
+}
+
+export interface DockerValidation {
+  available: boolean;
+  version?: string;
+  error?: string;
+  code?: string;
 }

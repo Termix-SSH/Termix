@@ -241,7 +241,6 @@ router.post(
       jumpHosts,
       quickActions,
       statsConfig,
-      dockerConfig,
       terminalConfig,
       forceKeyboardInteractive,
     } = hostData;
@@ -285,7 +284,6 @@ router.post(
       enableDocker: enableDocker ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
-      dockerConfig: dockerConfig ? JSON.stringify(dockerConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
     };
@@ -348,9 +346,6 @@ router.post(
         enableDocker: !!createdHost.enableDocker,
         statsConfig: createdHost.statsConfig
           ? JSON.parse(createdHost.statsConfig as string)
-          : undefined,
-        dockerConfig: createdHost.dockerConfig
-          ? JSON.parse(createdHost.dockerConfig as string)
           : undefined,
       };
 
@@ -471,7 +466,6 @@ router.put(
       jumpHosts,
       quickActions,
       statsConfig,
-      dockerConfig,
       terminalConfig,
       forceKeyboardInteractive,
     } = hostData;
@@ -516,7 +510,6 @@ router.put(
       enableDocker: enableDocker ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
-      dockerConfig: dockerConfig ? JSON.stringify(dockerConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
     };
@@ -702,9 +695,6 @@ router.get(
             enableDocker: !!row.enableDocker,
             statsConfig: row.statsConfig
               ? JSON.parse(row.statsConfig as string)
-              : undefined,
-            dockerConfig: row.dockerConfig
-              ? JSON.parse(row.dockerConfig as string)
               : undefined,
             terminalConfig: row.terminalConfig
               ? JSON.parse(row.terminalConfig as string)
