@@ -37,6 +37,7 @@ import {
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/desktop/apps/credentials/CredentialSelector.tsx";
+import { HostSharingTab } from "./HostSharingTab.tsx";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
@@ -1189,6 +1190,11 @@ export function HostManagerEditor({
                   <TabsTrigger value="statistics">
                     {t("hosts.statistics")}
                   </TabsTrigger>
+                  {!editingHost?.isShared && (
+                    <TabsTrigger value="sharing">
+                      {t("rbac.sharing")}
+                    </TabsTrigger>
+                  )}
                 </TabsList>
                 <TabsContent value="general" className="pt-2">
                   <FormLabel className="mb-3 font-bold">
@@ -3327,18 +3333,27 @@ export function HostManagerEditor({
                     />
                   </div>
                 </TabsContent>
+
+                <TabsContent value="sharing" className="space-y-6">
+                  <HostSharingTab
+                    hostId={editingHost?.id}
+                    isNewHost={!editingHost?.id}
+                  />
+                </TabsContent>
               </Tabs>
             </div>
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
-            <Button className="translate-y-2" type="submit" variant="outline">
-              {editingHost
-                ? editingHost.id
-                  ? t("hosts.updateHost")
-                  : t("hosts.cloneHost")
-                : t("hosts.addHost")}
-            </Button>
+            {!(editingHost?.permissionLevel === "view") && (
+              <Button className="translate-y-2" type="submit" variant="outline">
+                {editingHost
+                  ? editingHost.id
+                    ? t("hosts.updateHost")
+                    : t("hosts.cloneHost")
+                  : t("hosts.addHost")}
+              </Button>
+            )}
           </footer>
         </form>
       </Form>

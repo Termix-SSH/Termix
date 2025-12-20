@@ -19,6 +19,8 @@ import {
   deleteAccount,
   logoutUser,
   isElectron,
+  getUserRoles,
+  type UserRole,
 } from "@/ui/main-axios.ts";
 import { PasswordReset } from "@/ui/desktop/user/PasswordReset.tsx";
 import { useTranslation } from "react-i18next";
@@ -105,6 +107,7 @@ export function UserProfile({
     useState<boolean>(
       localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
     );
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
     fetchUserInfo();
@@ -133,6 +136,15 @@ export function UserProfile({
         is_dual_auth: info.is_dual_auth || false,
         totp_enabled: info.totp_enabled || false,
       });
+
+      // Fetch user roles
+      try {
+        const rolesResponse = await getUserRoles(info.userId);
+        setUserRoles(rolesResponse.roles || []);
+      } catch (rolesErr) {
+        console.error("Failed to fetch user roles:", rolesErr);
+        setUserRoles([]);
+      }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
       setError(error?.response?.data?.error || t("errors.loadFailed"));
@@ -304,11 +316,26 @@ export function UserProfile({
                       <Label className="text-gray-300">
                         {t("profile.role")}
                       </Label>
-                      <p className="text-lg font-medium mt-1 text-white">
-                        {userInfo.is_admin
-                          ? t("interface.administrator")
-                          : t("interface.user")}
-                      </p>
+                      <div className="mt-1">
+                        {userRoles.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {userRoles.map((role) => (
+                              <span
+                                key={role.roleId}
+                                className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-muted/50 text-white border border-border"
+                              >
+                                {t(role.roleDisplayName)}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-lg font-medium text-white">
+                            {userInfo.is_admin
+                              ? t("interface.administrator")
+                              : t("interface.user")}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <Label className="text-gray-300">
